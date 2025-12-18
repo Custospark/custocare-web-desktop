@@ -7,7 +7,7 @@ type InternalItem =
   | (BreadcrumbItem & { type?: 'item' })
   | { type: 'ellipsis'; id: 'ellipsis' };
 
-export const Breadcrumb: React.FC<BreadcrumbProps> = ({
+export const Breadcrumb: React.FC<BreadcrumbProps> = React.memo(({
   items = [],
   className,
   theme = 'dark',
@@ -15,15 +15,12 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
   maxItems = 4,
   onItemClick,
 }) => {
-  /* ---------------------------- hooks FIRST ---------------------------- */
   const [expanded, setExpanded] = useState(false);
 
-  /* ---------------------------- guards ---------------------------- */
   if (!items.length) return null;
 
   const isDark = theme === 'dark';
 
-  /* ---------------------------- collapse logic ---------------------------- */
   const visibleItems: InternalItem[] = useMemo(() => {
     if (expanded || items.length <= maxItems) {
       return items.map(i => ({ ...i, type: 'item' }));
@@ -36,12 +33,10 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
     ];
   }, [expanded, items, maxItems]);
 
-  /* ---------------------------- handlers ---------------------------- */
   const handleItemClick = (item: BreadcrumbItem, index: number) => {
     onItemClick?.(item, index);
   };
 
-  /* ---------------------------- render ---------------------------- */
   return (
     <nav
       aria-label="Breadcrumb"
@@ -134,6 +129,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
       </ol>
     </nav>
   );
-};
+});
 
+Breadcrumb.displayName = 'Breadcrumb';
 export default Breadcrumb;

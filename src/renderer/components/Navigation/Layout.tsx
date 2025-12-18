@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { memo, useMemo, useEffect, useCallback } from 'react';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { Footer } from './Footer';
 import { LayoutProps } from '../../types/index';
 import { cn } from '../../types/cn';
 import { Sun, Moon, Settings, Bell, Activity } from 'lucide-react';
+import { useAppContext } from '../../store/state/AppContext';
 
 // Constants outside component to prevent recreation
 const STATUS_CONFIG = {
@@ -29,7 +30,7 @@ const StatusIcons = {
   error: <Bell className="w-3 h-3" />
 } as const;
 
-// Plus Icon Component (already optimized)
+// Plus Icon Component
 const PlusIcon = memo(({ className }: { className?: string }) => (
   <svg
     className={className}
@@ -47,15 +48,10 @@ PlusIcon.displayName = 'PlusIcon';
  * Masterpiece Layout Component - Optimized Version
  */
 export const Layout: React.FC<LayoutProps> = memo(({
-  children,
-  sidebarOpen,
-  onSidebarToggle,
-  theme: initialTheme = 'dark',
-  onThemeToggle
+  children
 }) => {
-  const [theme, setTheme] = useState<'light' | 'dark'>(initialTheme);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [systemStatus, setSystemStatus] = useState<'online' | 'warning' | 'error'>('online');
+  const { state, toggleTheme, setSystemStatus } = useAppContext();
+  const { theme, sidebarOpen, systemStatus } = state;
 
   // Memoized theme-based classes
   const themeClasses = useMemo(() => {
@@ -123,16 +119,13 @@ export const Layout: React.FC<LayoutProps> = memo(({
 
   // Memoized event handlers
   const handleThemeToggle = useCallback(() => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
-    onThemeToggle?.();
-  }, [theme, onThemeToggle]);
+    toggleTheme();
+    document.documentElement.classList.toggle('dark', theme === 'light');
+  }, [theme, toggleTheme]);
 
-  const handleSearch = useCallback((query: string) => {
-    console.log('Search query:', query);
-    // Implement search functionality here
-  }, []);
+//   const handleSearch = useCallback((query: string) => {
+//     console.log('Search query:', query);
+//   }, []);
 
   // Memoized theme icon
   const themeIcon = useMemo(() => 
@@ -143,25 +136,16 @@ export const Layout: React.FC<LayoutProps> = memo(({
     ),
   [theme]);
 
-  // Handle scroll for navbar effects
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   // Mock system status updates
   useEffect(() => {
     const interval = setInterval(() => {
       const statuses: Array<'online' | 'warning' | 'error'> = ['online', 'warning', 'error'];
       const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
       setSystemStatus(randomStatus);
-    }, 30000); // Change every 30 seconds for demo
+    }, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [setSystemStatus]);
 
   return (
     <div className={cn(
@@ -222,11 +206,7 @@ export const Layout: React.FC<LayoutProps> = memo(({
       {/* Main Layout Container */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
-        <Sidebar 
-          isOpen={sidebarOpen} 
-          onClose={onSidebarToggle} 
-          theme={theme}
-        />
+        <Sidebar />
 
         {/* Main Content Area */}
         <div className={cn(
@@ -235,20 +215,12 @@ export const Layout: React.FC<LayoutProps> = memo(({
           sidebarOpen && 'lg:ml-80'
         )}>
           {/* Navbar with scroll effect */}
-          <div className={cn(
-            'sticky top-0 z-40',
-            'transition-all duration-300',
-            isScrolled && 'shadow-2xl'
-          )}>
+          <div className="sticky top-0 z-40">
             <div className={cn(
               'backdrop-blur-xl transition-all duration-300',
               themeClasses.navBackground
             )}>
-              <Navbar 
-                onMenuClick={onSidebarToggle} 
-                onSearch={handleSearch}
-                theme={theme}
-              />
+              <Navbar />
             </div>
           </div>
 
@@ -269,13 +241,7 @@ export const Layout: React.FC<LayoutProps> = memo(({
             'transition-colors duration-300',
             themeClasses.footer
           )}>
-            <Footer
-              theme={theme}
-              showContact={true}
-              showSocial={true}
-              showCopyright={true}
-              compact={false}
-            />
+            <Footer />
           </div>
         </div>
       </div>

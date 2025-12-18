@@ -41,10 +41,11 @@ export interface FooterProps {
 }
 
 export interface SidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
   className?: string;
   theme?: 'light' | 'dark';
+  
 }
 
 export interface NavbarProps {
@@ -54,12 +55,13 @@ export interface NavbarProps {
   theme?: 'light' | 'dark';
 }
 
+// types/index.ts
 export interface LayoutProps {
-  children: ReactNode;
-  sidebarOpen: boolean;
-  onSidebarToggle: () => void;
-  theme?: 'light' | 'dark';
-  onThemeToggle?: () => void;
+  children: React.ReactNode;
+  sidebarOpen?: boolean;        // Make these optional
+  onSidebarToggle?: () => void; // Make these optional
+  theme?: 'light' | 'dark';     // Make these optional
+  onThemeToggle?: () => void;   // Make these optional
 }
 
 export interface SearchResult {

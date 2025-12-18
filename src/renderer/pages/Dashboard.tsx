@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
-import { Layout } from '../components/Navigation/Layout';
+import React, { useMemo } from 'react';
 import Breadcrumb from '../components/Navigation/Breadcrumbs';
 import ContentSection from '../components/Navigation/ContentSection';
-import Footer from '../components/Navigation/Footer';
 import {
    Plus, FileText, 
   Sparkles, Users,
@@ -11,22 +9,14 @@ import {
   Heart, Brain, Eye, 
 } from 'lucide-react';
 import { cn } from '../types/cn';
+import { useAppContext } from '../store/state/AppContext'
 
 /**
  * Premium Dashboard Component
- * 
- * After 80 years of design evolution, this dashboard embodies:
- * - Timeless information architecture
- * - Perfect data density hierarchy
- * - Exceptional visual analytics
- * - Unobtrusive sophistication
- * - Seamless healthcare workflow
  */
 export const Dashboard: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-//   const [activeView, setActiveView] = useState<'overview' | 'patients' | 'analytics'>('overview');
-  const [searchQuery, setSearchQuery] = useState('');
+  const { state, setSearchQuery } = useAppContext();
+  const { theme } = state;
 
   const breadcrumbItems = [
     { label: 'Dashboard', href: '/dashboard', icon: <Sparkles className="w-4 h-4" /> },
@@ -34,7 +24,7 @@ export const Dashboard: React.FC = () => {
     { label: 'Live Overview' },
   ];
 
-  const statsCards = [
+  const statsCards = useMemo(() => [
     {
       title: 'Active Patients',
       value: '2,427',
@@ -71,9 +61,9 @@ export const Dashboard: React.FC = () => {
       color: 'from-amber-500 to-orange-500',
       detail: 'Based on 12.4K diagnoses'
     }
-  ];
+  ], []);
 
-  const recentPatients = [
+  const recentPatients = useMemo(() => [
     {
       id: 'PT-2023-8492',
       name: 'John Doe',
@@ -114,18 +104,18 @@ export const Dashboard: React.FC = () => {
       doctor: 'Dr. Brown',
       condition: 'Asthma'
     }
-  ];
+  ], []);
 
-  const quickActions = [
+  const quickActions = useMemo(() => [
     { icon: <Plus className="w-5 h-5" />, label: 'New Patient', color: 'bg-blue-500' },
     { icon: <FileText className="w-5 h-5" />, label: 'Quick Report', color: 'bg-emerald-500' },
     { icon: <Calendar className="w-5 h-5" />, label: 'Schedule', color: 'bg-purple-500' },
     { icon: <MessageSquare className="w-5 h-5" />, label: 'Messages', color: 'bg-amber-500' },
     { icon: <Video className="w-5 h-5" />, label: 'Telehealth', color: 'bg-rose-500' },
     { icon: <Bell className="w-5 h-5" />, label: 'Alerts', color: 'bg-red-500' },
-  ];
+  ], []);
 
-  const renderStatsGrid = () => (
+  const renderStatsGrid = useMemo(() => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {statsCards.map((stat, index) => (
         <div
@@ -215,9 +205,9 @@ export const Dashboard: React.FC = () => {
         </div>
       ))}
     </div>
-  );
+  ), [statsCards, theme]);
 
-  const renderPatientTable = () => (
+  const renderPatientTable = useMemo(() => (
     <div className={cn(
       'rounded-xl border overflow-hidden',
       theme === 'dark' ? 'border-gray-800/50' : 'border-gray-200/60'
@@ -371,9 +361,9 @@ export const Dashboard: React.FC = () => {
         </table>
       </div>
     </div>
-  );
+  ), [recentPatients, theme]);
 
-  const renderQuickActions = () => (
+  const renderQuickActions = useMemo(() => (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       {quickActions.map((action, index) => (
         <button
@@ -404,207 +394,191 @@ export const Dashboard: React.FC = () => {
         </button>
       ))}
     </div>
-  );
+  ), [quickActions, theme]);
 
   return (
-    <Layout
-      sidebarOpen={sidebarOpen}
-      onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}
-      theme={theme}
-      onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-    >
-      <div className="space-y-6">
-        {/* Breadcrumb */}
-        <Breadcrumb
-          items={breadcrumbItems}
-          theme={theme}
-          onItemClick={(item: string, index: numbe) => console.log('Breadcrumb clicked:', item, index)}
-          maxItems={3}
-        />
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={breadcrumbItems}
+        theme={theme}
+        onItemClick={(item: string, index: number) => console.log('Breadcrumb clicked:', item, index)}
+        maxItems={3}
+      />
 
-        {/* Main Content Section */}
-        <ContentSection
-          title="Healthcare Dashboard"
-          subtitle="Live Overview"
-          description="Real-time analytics and insights for your healthcare practice. Monitor patient flow, satisfaction scores, and AI-powered diagnostics."
-          theme={theme}
-          showViewToggle={true}
-          showFilters={true}
-          viewMode="list"
-          onViewModeChange={(mode: any) => console.log('View mode:', mode)}
-          filters={
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className={cn(
-                  'block text-xs font-medium mb-2',
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                )}>
-                  Time Range
-                </label>
-                <select className={cn(
-                  'w-full px-3 py-2 rounded-lg text-sm',
-                  'border transition-colors',
-                  theme === 'dark'
-                    ? 'bg-gray-900 border-gray-800 text-gray-300'
-                    : 'bg-white border-gray-300 text-gray-700'
-                )}>
-                  <option>Last 24 hours</option>
-                  <option>Last 7 days</option>
-                  <option>Last 30 days</option>
-                  <option>Last quarter</option>
-                </select>
-              </div>
-              <div>
-                <label className={cn(
-                  'block text-xs font-medium mb-2',
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                )}>
-                  Department
-                </label>
-                <select className={cn(
-                  'w-full px-3 py-2 rounded-lg text-sm',
-                  'border transition-colors',
-                  theme === 'dark'
-                    ? 'bg-gray-900 border-gray-800 text-gray-300'
-                    : 'bg-white border-gray-300 text-gray-700'
-                )}>
-                  <option>All Departments</option>
-                  <option>Emergency</option>
-                  <option>Cardiology</option>
-                  <option>Neurology</option>
-                  <option>Pediatrics</option>
-                </select>
-              </div>
-              <div>
-                <label className={cn(
-                  'block text-xs font-medium mb-2',
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                )}>
-                  Search
-                </label>
-                <div className="relative">
-                  <Search className={cn(
-                    "absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4",
-                    theme === 'dark' ? "text-gray-500" : "text-gray-400"
-                  )} />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search patients, conditions..."
-                    className={cn(
-                      "w-full pl-10 pr-4 py-2 rounded-lg text-sm",
-                      "border transition-colors",
-                      theme === 'dark'
-                        ? "bg-gray-900 border-gray-800 text-gray-300 placeholder-gray-500"
-                        : "bg-white border-gray-300 text-gray-700 placeholder-gray-400"
-                    )}
-                  />
-                </div>
-              </div>
-            </div>
-          }
-        >
-          {/* Stats Grid */}
-          <div className="mb-8">
-            {renderStatsGrid()}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="mb-8">
-            <div className={cn(
-              'flex items-center justify-between mb-4',
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            )}>
-              <h3 className="text-lg font-semibold">Quick Actions</h3>
-              <span className="text-xs">Click to navigate</span>
-            </div>
-            {renderQuickActions()}
-          </div>
-
-          {/* Patient Table */}
-          <div className="mb-8">
-            <div className={cn(
-              'flex items-center justify-between mb-4',
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            )}>
-              <h3 className="text-lg font-semibold">Patient Activity</h3>
-              <button className={cn(
-                'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors',
+      {/* Main Content Section */}
+      <ContentSection
+        title="Healthcare Dashboard"
+        subtitle="Live Overview"
+        description="Real-time analytics and insights for your healthcare practice. Monitor patient flow, satisfaction scores, and AI-powered diagnostics."
+        theme={theme}
+        showViewToggle={true}
+        showFilters={true}
+        viewMode="list"
+        onViewModeChange={(mode: any) => console.log('View mode:', mode)}
+        filters={
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className={cn(
+                'block text-xs font-medium mb-2',
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              )}>
+                Time Range
+              </label>
+              <select className={cn(
+                'w-full px-3 py-2 rounded-lg text-sm',
+                'border transition-colors',
                 theme === 'dark'
-                  ? 'text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10'
-                  : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+                  ? 'bg-gray-900 border-gray-800 text-gray-300'
+                  : 'bg-white border-gray-300 text-gray-700'
               )}>
-                <Download className="w-4 h-4" />
-                Export CSV
-              </button>
+                <option>Last 24 hours</option>
+                <option>Last 7 days</option>
+                <option>Last 30 days</option>
+                <option>Last quarter</option>
+              </select>
             </div>
-            {renderPatientTable()}
-          </div>
-
-          {/* Charts Placeholder */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className={cn(
-              'p-6 rounded-2xl border',
-              theme === 'dark'
-                ? 'bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-800/50'
-                : 'bg-gradient-to-br from-white/50 to-gray-50/50 border-gray-200/60'
-            )}>
-              <h4 className={cn(
-                'text-sm font-semibold mb-4',
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+            <div>
+              <label className={cn(
+                'block text-xs font-medium mb-2',
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
               )}>
-                Patient Visits Trend
-              </h4>
-              <div className={cn(
-                'h-48 rounded-lg flex items-center justify-center',
-                theme === 'dark' ? 'bg-gray-900/50' : 'bg-gray-100/50'
+                Department
+              </label>
+              <select className={cn(
+                'w-full px-3 py-2 rounded-lg text-sm',
+                'border transition-colors',
+                theme === 'dark'
+                  ? 'bg-gray-900 border-gray-800 text-gray-300'
+                  : 'bg-white border-gray-300 text-gray-700'
               )}>
-                <span className={cn(
-                  'text-sm',
-                  theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                )}>
-                  Chart visualization
-                </span>
-              </div>
+                <option>All Departments</option>
+                <option>Emergency</option>
+                <option>Cardiology</option>
+                <option>Neurology</option>
+                <option>Pediatrics</option>
+              </select>
             </div>
-            <div className={cn(
-              'p-6 rounded-2xl border',
-              theme === 'dark'
-                ? 'bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-800/50'
-                : 'bg-gradient-to-br from-white/50 to-gray-50/50 border-gray-200/60'
-            )}>
-              <h4 className={cn(
-                'text-sm font-semibold mb-4',
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+            <div>
+              <label className={cn(
+                'block text-xs font-medium mb-2',
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
               )}>
-                Condition Distribution
-              </h4>
-              <div className={cn(
-                'h-48 rounded-lg flex items-center justify-center',
-                theme === 'dark' ? 'bg-gray-900/50' : 'bg-gray-100/50'
-              )}>
-                <span className={cn(
-                  'text-sm',
-                  theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                )}>
-                  Pie chart visualization
-                </span>
+                Search
+              </label>
+              <div className="relative">
+                <Search className={cn(
+                  "absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4",
+                  theme === 'dark' ? "text-gray-500" : "text-gray-400"
+                )} />
+                <input
+                  type="text"
+                  value={state.searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search patients, conditions..."
+                  className={cn(
+                    "w-full pl-10 pr-4 py-2 rounded-lg text-sm",
+                    "border transition-colors",
+                    theme === 'dark'
+                      ? "bg-gray-900 border-gray-800 text-gray-300 placeholder-gray-500"
+                      : "bg-white border-gray-300 text-gray-700 placeholder-gray-400"
+                  )}
+                />
               </div>
             </div>
           </div>
-        </ContentSection>
+        }
+      >
+        {/* Stats Grid */}
+        <div className="mb-8">
+          {renderStatsGrid}
+        </div>
 
-        {/* Footer */}
-        <Footer
-          theme={theme}
-          showContact={true}
-          showSocial={true}
-          showCopyright={true}
-          compact={false}
-        />
-      </div>
-    </Layout>
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <div className={cn(
+            'flex items-center justify-between mb-4',
+            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+          )}>
+            <h3 className="text-lg font-semibold">Quick Actions</h3>
+            <span className="text-xs">Click to navigate</span>
+          </div>
+          {renderQuickActions}
+        </div>
+
+        {/* Patient Table */}
+        <div className="mb-8">
+          <div className={cn(
+            'flex items-center justify-between mb-4',
+            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+          )}>
+            <h3 className="text-lg font-semibold">Patient Activity</h3>
+            <button className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors',
+              theme === 'dark'
+                ? 'text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10'
+                : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+            )}>
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+          </div>
+          {renderPatientTable}
+        </div>
+
+        {/* Charts Placeholder */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className={cn(
+            'p-6 rounded-2xl border',
+            theme === 'dark'
+              ? 'bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-800/50'
+              : 'bg-gradient-to-br from-white/50 to-gray-50/50 border-gray-200/60'
+          )}>
+            <h4 className={cn(
+              'text-sm font-semibold mb-4',
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+            )}>
+              Patient Visits Trend
+            </h4>
+            <div className={cn(
+              'h-48 rounded-lg flex items-center justify-center',
+              theme === 'dark' ? 'bg-gray-900/50' : 'bg-gray-100/50'
+            )}>
+              <span className={cn(
+                'text-sm',
+                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+              )}>
+                Chart visualization
+              </span>
+            </div>
+          </div>
+          <div className={cn(
+            'p-6 rounded-2xl border',
+            theme === 'dark'
+              ? 'bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-800/50'
+              : 'bg-gradient-to-br from-white/50 to-gray-50/50 border-gray-200/60'
+          )}>
+            <h4 className={cn(
+              'text-sm font-semibold mb-4',
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+            )}>
+              Condition Distribution
+            </h4>
+            <div className={cn(
+              'h-48 rounded-lg flex items-center justify-center',
+              theme === 'dark' ? 'bg-gray-900/50' : 'bg-gray-100/50'
+            )}>
+              <span className={cn(
+                'text-sm',
+                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+              )}>
+                Pie chart visualization
+              </span>
+            </div>
+          </div>
+        </div>
+      </ContentSection>
+    </div>
   );
 };
 

@@ -1,27 +1,13 @@
-import React, { useState, useEffect, Suspense,  } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Dashboard } from './pages/Dashboard';
 import { Layout } from './components/Navigation/Layout';
 import { cn } from './types/cn';
-import { Activity, Shield, Sparkles } from 'lucide-react';
-import './App.css'
-/**
- * Premium App Component
- * 
- * After 80 years of design evolution, this app embodies:
- * - Timeless software architecture
- * - Perfect application flow
- * - Exceptional performance engineering
- * - Unobtrusive sophistication
- * - Seamless user journey
- */
-
-// Lazy load additional pages for better performance
-// const PatientsPage = lazy(() => import('./pages/Patients'));
-// const AnalyticsPage = lazy(() => import('./pages/Analytics'));
-// const SettingsPage = lazy(() => import('./pages/Settings'));
+import { Activity, Shield } from 'lucide-react';
+import { AppProvider } from './store/state/AppContext';
+import './App.css';
 
 // Loading fallback component
-const LoadingScreen = () => (
+const LoadingScreen = React.memo(() => (
   <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-950 to-gray-900">
     <div className="relative">
       {/* Animated logo */}
@@ -74,7 +60,9 @@ const LoadingScreen = () => (
       </div>
     </div>
   </div>
-);
+));
+
+LoadingScreen.displayName = 'LoadingScreen';
 
 // Error boundary component
 class ErrorBoundary extends React.Component<
@@ -121,10 +109,7 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [currentPage, ] = useState<'dashboard' | 'patients' | 'analytics' | 'settings'>('dashboard');
+function AppContent() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize app
@@ -133,103 +118,29 @@ function App() {
       // Simulate initialization tasks
       await new Promise(resolve => setTimeout(resolve, 1500));
       setIsInitialized(true);
-      
-      // Set theme on initial load
-      document.documentElement.classList.toggle('dark', theme === 'dark');
     };
 
     initApp();
-  }, [theme]);
-
-  const handleThemeToggle = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-  };
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'patients':
-        return (
-          <Suspense fallback={<LoadingScreen />}>
-            {/* <PatientsPage /> */}
-          </Suspense>
-        );
-      case 'analytics':
-        return (
-          <Suspense fallback={<LoadingScreen />}>
-            {/* <AnalyticsPage /> */}
-          </Suspense>
-        );
-      case 'settings':
-        return (
-          <Suspense fallback={<LoadingScreen />}>
-            {/* <SettingsPage /> */}
-          </Suspense>
-        );
-      default:
-        return <Dashboard />;
-    }
-  };
+  }, []);
 
   if (!isInitialized) {
     return <LoadingScreen />;
   }
 
   return (
-    <ErrorBoundary>
-      <div className={cn(
-        'transition-colors duration-500',
-        theme === 'dark' ? 'dark' : ''
-      )}>
-        <Layout
-          sidebarOpen={sidebarOpen}
-          onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}
-          theme={theme}
-          onThemeToggle={handleThemeToggle}
-        >
-          {renderPage()}
-        </Layout>
-      </div>
+    <div className="transition-colors duration-500">
+      <Layout>
+        <Dashboard />
+      </Layout>
 
       {/* Global notifications/toasts */}
       <div className="fixed top-4 right-4 z-50 space-y-2">
         {/* Example notification */}
         <div className={cn(
           'max-w-sm p-4 rounded-2xl backdrop-blur-xl border shadow-2xl',
-          'animate-slide-in-right',
-          theme === 'dark'
-            ? 'bg-gradient-to-r from-gray-900/95 to-gray-800/95 border-gray-700/50'
-            : 'bg-gradient-to-r from-white/95 to-gray-50/95 border-gray-300'
+          'animate-slide-in-right'
         )}>
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 rounded-lg">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
-            </div>
-            <div className="flex-1">
-              <p className={cn(
-                'text-sm font-medium',
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              )}>
-                System Updated
-              </p>
-              <p className={cn(
-                'text-xs mt-1',
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              )}>
-                New AI diagnostic features are now available
-              </p>
-            </div>
-            <button className={cn(
-              'p-1 rounded-lg transition-colors',
-              theme === 'dark'
-                ? 'hover:bg-gray-800'
-                : 'hover:bg-gray-100'
-            )}>
-              <span className="sr-only">Dismiss</span>
-              <span className="text-lg">×</span>
-            </button>
-          </div>
+        
         </div>
       </div>
 
@@ -239,9 +150,7 @@ function App() {
         'px-4 py-2 rounded-full backdrop-blur-xl border',
         'text-xs font-medium',
         'transition-all duration-300 opacity-0 hover:opacity-100',
-        theme === 'dark'
-          ? 'bg-gray-900/80 border-gray-700/50 text-gray-400'
-          : 'bg-white/80 border-gray-300 text-gray-600'
+        'bg-gray-900/80 border-gray-700/50 text-gray-400'
       )}>
         Press <kbd className="px-1.5 py-0.5 mx-1 bg-gray-800 text-gray-300 rounded text-xs">⌘</kbd> + 
         <kbd className="px-1.5 py-0.5 mx-1 bg-gray-800 text-gray-300 rounded text-xs">K</kbd> for quick search
@@ -251,9 +160,7 @@ function App() {
       <div className="fixed bottom-4 left-4 z-40">
         <div className={cn(
           'px-2 py-1 rounded-lg text-xs font-medium backdrop-blur-xl border',
-          theme === 'dark'
-            ? 'bg-gray-900/80 border-gray-700/50 text-gray-400'
-            : 'bg-white/80 border-gray-300 text-gray-600'
+          'bg-gray-900/80 border-gray-700/50 text-gray-400'
         )}>
           <div className="flex items-center gap-2">
             <Activity className="w-3 h-3" />
@@ -261,6 +168,18 @@ function App() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <AppProvider>
+        <Suspense fallback={<LoadingScreen />}>
+          <AppContent />
+        </Suspense>
+      </AppProvider>
     </ErrorBoundary>
   );
 }
