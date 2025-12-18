@@ -1,0 +1,12 @@
+{
+  "files": [],
+  // "exclude": ["src/renderer/"],
+  "compilerOptions": {
+    "jsx": "react-jsx",       // ← Add this
+    "types": ["vite/client", "node"]  // include Node types if using process
+  },
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}
