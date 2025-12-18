@@ -1,34 +1,38 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   Menu, Search, Bell, User, ChevronDown, 
   Sparkles, Shield, Settings, LogOut, X,
   Sun, Moon, Clock, Calendar, FileText, Users as UsersIcon
 } from 'lucide-react';
-import { NavbarProps, SearchResult } from '../../types/index';
+import { SearchResult } from '../../types/index';
 import { cn } from '../../types/cn';
+
+export interface NavbarProps {
+  theme?: 'light' | 'dark';
+  onMenuClick?: () => void;
+  onThemeToggle?: () => void;
+  onSearch?: (query: string) => void;
+  searchQuery?: string;
+  className?: string;
+}
 
 /**
  * Premium Navbar Component
- * 
- * Enhanced Features:
- * - Glass-morphism effect with backdrop blur
- * - Advanced search with dropdown suggestions
- * - Enhanced notification system
- * - Sophisticated user dropdown
- * - Micro-interactions and animations
- * - Premium gradient accents
- * - Full theme support
+ * Receives all state and handlers as props from parent Layout
  */
 export const Navbar: React.FC<NavbarProps> = ({ 
-  onMenuClick, 
-  className,
+  theme = 'dark',
+  onMenuClick,
+  onThemeToggle,
   onSearch,
-  theme = 'dark'
+  searchQuery = '',
+  className
 }) => {
+  // Local state management
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -76,8 +80,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const unreadCount = notifications.filter(n => !n.read).length;
 
   // Handle search input
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
+  const handleSearch = useCallback((query: string) => {
+    setLocalSearchQuery(query);
+    
     if (query.trim()) {
       const filtered = mockSearchResults.filter(result =>
         result.title.toLowerCase().includes(query.toLowerCase()) ||
@@ -88,10 +93,16 @@ export const Navbar: React.FC<NavbarProps> = ({
       setSearchResults([]);
     }
     
+    // Call parent callback if provided
     if (onSearch) {
       onSearch(query);
     }
-  };
+  }, [onSearch]);
+
+  // Sync local search query with prop
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery);
+  }, [searchQuery]);
 
   // Handle click outside to close search dropdown
   useEffect(() => {
@@ -104,6 +115,15 @@ export const Navbar: React.FC<NavbarProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Clear search
+  const clearSearch = useCallback(() => {
+    setLocalSearchQuery('');
+    setSearchResults([]);
+    if (onSearch) {
+      onSearch('');
+    }
+  }, [onSearch]);
 
   return (
     <nav
@@ -177,7 +197,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           )} />
           <input
             type="text"
-            value={searchQuery}
+            value={localSearchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             onFocus={() => setIsSearchFocused(true)}
             placeholder="Search patients, reports, medications..."
@@ -193,12 +213,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           />
           
           {/* Clear search button */}
-          {searchQuery && (
+          {localSearchQuery && (
             <button
-              onClick={() => {
-                setSearchQuery('');
-                setSearchResults([]);
-              }}
+              onClick={clearSearch}
               className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
             >
               <X className="w-4 h-4 text-gray-500" />
@@ -206,7 +223,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
 
           {/* Search Suggestions Dropdown */}
-          {isSearchFocused && (searchResults.length > 0 || searchQuery) && (
+          {isSearchFocused && (searchResults.length > 0 || localSearchQuery) && (
             <div className={cn(
               'absolute top-full mt-2 w-full rounded-2xl shadow-2xl border z-50 animate-fade-in',
               isDark 
@@ -216,7 +233,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               {/* Search results */}
               {searchResults.length > 0 ? (
                 <>
-                  <div className="p-3 border-b border-gray-800/50 dark:border-gray-700">
+                  <div className={cn(
+                    "p-3 border-b",
+                    isDark ? "border-gray-800/50" : "border-gray-200"
+                  )}>
                     <p className={cn(
                       'text-xs font-semibold uppercase tracking-wider px-2',
                       isDark ? 'text-gray-500' : 'text-gray-400'
@@ -236,7 +256,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                             : 'hover:bg-gray-50 border-gray-100'
                         )}
                         onClick={() => {
-                          setSearchQuery(result.title);
+                          setLocalSearchQuery(result.title);
+                          if (onSearch) onSearch(result.title);
                           setIsSearchFocused(false);
                         }}
                       >
@@ -355,6 +376,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Theme Toggle */}
         <button
+          onClick={onThemeToggle}
           className={cn(
             'p-2.5 rounded-xl transition-all duration-200 hover:scale-105',
             isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100/80'
@@ -676,4 +698,4 @@ export const Navbar: React.FC<NavbarProps> = ({
   );
 };
 
-export default Navbar;
+export default React.memo(Navbar);

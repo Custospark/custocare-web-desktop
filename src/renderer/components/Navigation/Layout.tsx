@@ -206,8 +206,11 @@ export const Layout: React.FC<LayoutProps> = memo(({
       {/* Main Layout Container */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
-        <Sidebar />
-
+        {/* Sidebar with props */}
+        <Sidebar 
+        isOpen={sidebarOpen}
+        theme={theme}
+        />
         {/* Main Content Area */}
         <div className={cn(
           'flex-1 flex flex-col min-w-0 overflow-hidden',
@@ -220,8 +223,11 @@ export const Layout: React.FC<LayoutProps> = memo(({
               'backdrop-blur-xl transition-all duration-300',
               themeClasses.navBackground
             )}>
-              <Navbar />
-            </div>
+                <Navbar 
+                theme={theme}
+                onThemeToggle={handleThemeToggle}
+                />           
+                 </div>
           </div>
 
           {/* Page Content */}
@@ -241,7 +247,13 @@ export const Layout: React.FC<LayoutProps> = memo(({
             'transition-colors duration-300',
             themeClasses.footer
           )}>
-            <Footer />
+            <Footer 
+            theme={theme}
+            showContact={true}
+            showSocial={true}
+            showCopyright={true}
+            compact={false}
+            />
           </div>
         </div>
       </div>

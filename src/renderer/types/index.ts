@@ -49,7 +49,7 @@ export interface SidebarProps {
 }
 
 export interface NavbarProps {
-  onMenuClick: () => void;
+  onMenuClick?: () => void;
   className?: string;
   onSearch?: (query: string) => void;
   theme?: 'light' | 'dark';
