@@ -2,11 +2,16 @@
   "name": "custocare-ai",
   "private": true,
   "version": "0.0.0",
+  "description": "Custocare AI Desktop and Web App",
+  "author": "Custospark Company Ltd info@custosparkcom",
   "type": "module",
   "main": "dist/desktop/main/main.js",
-    "compilerOptions": {
-    "jsx": "react-jsx",      
-    "types": ["vite/client", "node"] 
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "types": [
+      "vite/client",
+      "node"
+    ]
   },
   "scripts": {
     "dev": "npm-run-all --parallel dev:react dev:electron",
@@ -23,8 +28,6 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
-    "electron": "^39.2.7",
-    "electron-builder": "^26.0.12",
     "npm-run-all": "^4.1.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -38,6 +41,8 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "cross-env": "^10.1.0",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
@@ -60,7 +65,7 @@
     ],
     "extraFiles": [
       {
-        "from": "dist/desktop/preload.js",
+        "from": "dist/desktop/preload/preload.js",
         "to": "preload.js"
       }
     ],
@@ -79,7 +84,7 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "public/assets/icon.icns"
+      "icon": "public/assets/icon.nng"
     },
     "linux": {
       "target": [
@@ -89,7 +94,7 @@
       "icon": "public/assets/icon.png"
     },
     "extraMetadata": {
-      "main": "dist/desktop/main.js"
+      "main": "dist/desktop/main/main.js"
     },
     "publish": null
   }

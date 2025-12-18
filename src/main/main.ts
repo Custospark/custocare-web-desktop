@@ -1,11 +1,7 @@
 // electron/main.ts
-import { app, BrowserWindow } from 'electron';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { isDev } from '../renderer/utils/env.js'; // Keep .js extension for TypeScript with ESM
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { app, BrowserWindow } from 'electron'
+import path from 'path'
+import { isDev } from '../renderer/utils/env.js' // keep .js for ESM
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -14,32 +10,28 @@ function createWindow(): void {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-    }
-  });
+    },
+  })
 
-  // Use the environment variable if available, otherwise default
-  const devServerUrl ="http://localhost:5173";
-  
+  const devServerUrl = 'http://localhost:5173'
+
   if (isDev()) {
-    win.loadURL(devServerUrl);
-    // win.webContents.openDevTools();
+    win.loadURL(devServerUrl)
+    // win.webContents.openDevTools()
   } else {
+    //  from app root, not __dirname
     win.loadFile(
-      path.join(__dirname, '../../dist/web/index.html')
-    );
+      path.join(app.getAppPath(), 'dist/web/index.html')
+    )
   }
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(createWindow)
 
-app.on('window-all-closed', (): void => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit()
+})
 
-app.on('activate', (): void => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
-});
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) createWindow()
+})
