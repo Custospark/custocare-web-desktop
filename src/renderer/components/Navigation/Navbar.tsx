@@ -8,6 +8,16 @@ import {
   Brain, Rocket , BarChart3
 } from 'lucide-react';
 import { cn } from '../../types/cn';
+import { useNavigate } from 'react-router-dom';
+// import { Mail, Lock } from 'lucide-react';
+// import { useLogin } from '../../api/queries/authQueries';
+// import { useAppDispatch } from '../../store/hooks/useApp';
+// import { loginSuccess } from '../../store/slices/authSlice'
+// import { useNotification } from '../../store/hooks/useNotifications';
+// import Button from '../Common/Button';
+import { ROUTES } from '../../routes/routeConstants';
+// import { useAppDispatch, useAppSelector } from '../../store/hooks/useApp';
+// import { logout } from '../../store/slices/authSlice';
 
 export interface NavbarProps {
   theme?: 'light' | 'dark';
@@ -63,7 +73,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   theme = 'dark',
   onThemeToggle,
   className
-}) => {
+}) => 
+  {
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
@@ -87,6 +98,14 @@ export const Navbar: React.FC<NavbarProps> = ({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+  
+  // const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // dispatch(logout());
+    navigate(ROUTES.LOGIN);
+  };
 
   // Enhanced notifications with actions
   const notifications: Notification[] = [
@@ -996,13 +1015,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               {/* Sign Out */}
               <div className="p-2 border-t border-gray-200/50 dark:border-gray-800/50">
-                <button className={cn(
+                <button onClick={handleLogout} className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                   isDark 
                     ? "text-gray-400 hover:bg-red-500/10 hover:text-red-400" 
                     : "text-gray-700 hover:bg-red-50 hover:text-red-600"
                 )}>
                   <LogOut className="w-4 h-4" />
+                  
                   Sign Out
                 </button>
               </div>

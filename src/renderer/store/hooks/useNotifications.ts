@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
-import { useAppDispatch } from '../store/hooks';
+import { useAppDispatch } from './useApp';
 import {
   addNotification,
   removeNotification,
   Notification,
-} from '../store/slices/notificationSlice'
+} from '../slices/notificationSlice'
 
 interface UseNotificationReturn {
   success: (message: string, duration?: number) => void;

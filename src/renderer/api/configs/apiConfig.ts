@@ -13,16 +13,14 @@ const isProduction = process.env.NODE_ENV === 'production';
    Base URL & Timeout
 ====================================================== */
 
-  export const API_BASE_URL =
-    process.env.REACT_APP_API_URL || // override via environment variable
-    (isDevelopment
-      ? 'http://localhost:3000/api/v1' // local dev
-      : 'https://custocareai-api.custospark.com/api/v1'); // production
+  export const API_BASE_URL =isDevelopment
+                            ? 'http://localhost:3000/api/v1' // local dev
+                            : 'https://custocareai-api.custospark.com/api/v1'; // production
 
 
 
 export const API_TIMEOUT = parseInt(
-  process.env.REACT_APP_API_TIMEOUT || '30000',
+  '30000',
   10
 ); // 30 seconds by default
 

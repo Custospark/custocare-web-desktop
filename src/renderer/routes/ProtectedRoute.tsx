@@ -1,7 +1,7 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import Layout from '../components/Navigation/Layout';
-import { useAppSelector } from '../store/hooks';
+import { useAppSelector } from '../store/hooks/useApp';
 import { ROUTES } from './routeConstants';
 
 /**
@@ -20,7 +20,6 @@ function ProtectedRoute() {
   // If authenticated, render the layout with the requested component
   return (
     <Layout>
-      <Outlet />
     </Layout>
   );
 }

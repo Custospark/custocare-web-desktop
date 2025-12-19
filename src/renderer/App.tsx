@@ -3,30 +3,26 @@ import { Provider } from 'react-redux';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter as Router } from 'react-router-dom';
-import { store } from './store/index'
-import { queryClient } from './api/configs/axiosConfig'
+import { store } from './store/index';
+import { queryClient } from './api/configs/axiosConfig';
 import AppRoutes from './routes';
 import ErrorBoundary from './components/Loading/ErrorBoundary';
-import { useAppDispatch } from './store/hooks';
-import { setInitialized } from './store/slices/uiSlice'
+import { useAppDispatch } from './store/hooks/useApp';
+import { setInitialized } from './store/slices/uiSlice';
+import { AppProvider } from './store/state/AppContext';
 import './App.css';
 
-/**
- * App Initializer Component
- * Handles app initialization and shows loading state
- */
 function AppInitializer() {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Simulate app initialization
         await new Promise(resolve => setTimeout(resolve, 3000));
         dispatch(setInitialized(true));
       } catch (error) {
         console.error('App initialization failed:', error);
-        dispatch(setInitialized(true)); // Still set as initialized to prevent infinite loading
+        dispatch(setInitialized(true));
       }
     };
 
@@ -36,20 +32,17 @@ function AppInitializer() {
   return <AppRoutes />;
 }
 
-/**
- * Root App Component
- * Sets up all providers and error boundaries
- */
 function App() {
   return (
     <ErrorBoundary>
       <Provider store={store}>
         <QueryClientProvider client={queryClient}>
-          <Router>
-            <AppInitializer />
-          </Router>
-          
-          {/* React Query Devtools - Development Only */}
+          <AppProvider>  {/* <-- Wrap here */}
+            <Router>
+              <AppInitializer />
+            </Router>
+          </AppProvider>
+
           {process.env.NODE_ENV === 'development' && (
             <ReactQueryDevtools 
               initialIsOpen={false}

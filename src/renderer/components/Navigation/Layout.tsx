@@ -1,11 +1,12 @@
-import React, { memo, useMemo, useCallback, useEffect, useState, useRef } from 'react';
+import React, {useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { Footer } from './Footer';
-import {type LayoutProps } from '../../types/index';
+// import {type LayoutProps } from '../../types/index';
 import { cn } from '../../types/cn';
 import { Sun, Moon, Settings, Bell, Activity, Menu, X, Search, Command } from 'lucide-react';
 import { useAppContext } from '../../store/state/AppContext';
+import { Outlet } from 'react-router-dom';
 
 // Constants
 const STATUS_CONFIG = {
@@ -44,7 +45,7 @@ interface LayoutState {
  * 4. Smooth animations and transitions
  * 5. Contextual tooltips and micro-interactions
  */
-export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
+export const Layout: React.FC = () => {
   const { state, toggleTheme, setSystemStatus } = useAppContext();
   const { theme, systemStatus } = state;
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -375,8 +376,9 @@ export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
               'min-h-[calc(100vh-12rem)]',
               themeClasses.contentArea
             )}>
-              {children}
-            </div>
+
+        <Outlet></Outlet>        
+    </div>
           </main>
 
           <footer className={cn(
@@ -435,7 +437,7 @@ export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
       </div>
     </div>
   );
-});
+};
 
 Layout.displayName = 'Layout';
 export default Layout;
