@@ -4,7 +4,7 @@ import {
   X, Shield, Activity, TrendingUp, Cpu, Lock, BarChart3,
   Home, Database, AlertCircle, Heart, Bell, MessageSquare
 } from 'lucide-react';
-import { SidebarProps, MenuItem } from '../../types/index';
+import { type SidebarProps,type MenuItem } from '../../types/index';
 import { cn } from '../../types/cn';
 
 interface EnhancedMenuItem extends MenuItem {
@@ -345,7 +345,7 @@ export const Sidebar: React.FC<SidebarProps & {
                   'font-bold text-base truncate',
                   isDark ? 'text-white' : 'text-gray-900'
                 )}>
-                  CustoCare
+                  CustoCare AI
                 </h2>
                 <p className={cn(
                   'text-xs truncate',
@@ -467,7 +467,7 @@ export const Sidebar: React.FC<SidebarProps & {
                   'text-sm font-semibold truncate',
                   isDark ? 'text-white' : 'text-gray-900'
                 )}>
-                  Dr. Alexander
+                  Dr. Steve Okello
                 </p>
                 <p className={cn(
                   'text-xs truncate',

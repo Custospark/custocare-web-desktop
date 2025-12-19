@@ -1,5 +1,5 @@
 import React from 'react';
-import { IconType } from 'react-icons';
+import type { IconType } from 'react-icons';
 import { FaCheckCircle, FaExclamationTriangle, FaTimesCircle, FaInfoCircle } from 'react-icons/fa';
 
 type AlertVariant = 'success' | 'warning' | 'error' | 'info';

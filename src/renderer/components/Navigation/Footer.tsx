@@ -5,7 +5,7 @@ import {
   Twitter, Linkedin, Github,
   Copyright, Sparkles, Activity
 } from 'lucide-react';
-import { FooterProps } from '../../types/index';
+import {type FooterProps } from '../../types/index';
 import { cn } from '../../types/cn';
 
 /**

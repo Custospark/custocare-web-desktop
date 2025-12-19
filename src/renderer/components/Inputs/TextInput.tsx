@@ -1,5 +1,5 @@
 import React, { forwardRef, useState } from 'react';
-import { IconType } from 'react-icons';
+import type { IconType } from 'react-icons';
 import { FaExclamationCircle } from 'react-icons/fa';
 
 interface TextInputProps extends React.InputHTMLAttributes<HTMLInputElement> {

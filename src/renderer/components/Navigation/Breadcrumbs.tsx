@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronRight, Home, MoreHorizontal } from 'lucide-react';
-import { BreadcrumbProps, BreadcrumbItem } from '../../types';
+import {type BreadcrumbProps,type BreadcrumbItem } from '../../types';
 import { cn } from '../../types/cn';
 
 type InternalItem =

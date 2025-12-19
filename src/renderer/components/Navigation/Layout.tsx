@@ -2,7 +2,7 @@ import React, { memo, useMemo, useCallback, useEffect, useState, useRef } from '
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import { Footer } from './Footer';
-import { LayoutProps } from '../../types/index';
+import {type LayoutProps } from '../../types/index';
 import { cn } from '../../types/cn';
 import { Sun, Moon, Settings, Bell, Activity, Menu, X, Search, Command } from 'lucide-react';
 import { useAppContext } from '../../store/state/AppContext';

@@ -1,360 +1,83 @@
-import React, { useState } from 'react';
-import { FaUser, FaBell, FaChevronDown, FaSignOutAlt, FaCog } from 'react-icons/fa';
-
-interface TopNavProps {
-  logoSrc?: string;
-  facilityName: string;
-  userName: string;
-  userRole?: string;
-  notificationCount?: number;
-  onProfileClick?: () => void;
-  onSettingsClick?: () => void;
-  onLogoutClick?: () => void;
-  className?: string;
-}
-
-/**
- * TopNav Component
- * 
- * Fixed top navigation bar with branding and user menu
- * 
- * Usage:
- * <TopNav 
- *   facilityName="Mulago Hospital"
- *   userName="Dr. Sarah Johnson"
- *   userRole="Physician"
- *   notificationCount={3}
- *   onLogoutClick={handleLogout}
- * />
- */
-const TopNav: React.FC<TopNavProps> = ({
-  logoSrc,
-  facilityName,
-  userName,
-  userRole,
-  notificationCount = 0,
-  onProfileClick,
-  onSettingsClick,
-  onLogoutClick,
-  className = ''
-}) => {
-  const [showDropdown, setShowDropdown] = useState(false);
-
-  return (
-    <nav className={`h-64 bg-primary shadow-md sticky top-0 z-40 ${className}`}>
-      <div className="h-full px-24 flex items-center justify-between">
-        {/* Left: Logo and Facility Name */}
-        <div className="flex items-center gap-16">
-          {logoSrc ? (
-            <img src={logoSrc} alt="Logo" className="h-40 w-auto" />
-          ) : (
-            <div className="h-40 w-40 rounded bg-neutral-white flex items-center justify-center">
-              <span className="text-primary font-bold text-body-lg">CA</span>
-            </div>
-          )}
-          <div className="text-neutral-white">
-            <h1 className="text-body-lg font-semibold">{facilityName}</h1>
-            <p className="text-body-sm opacity-90">Medical Decision Support</p>
-          </div>
-        </div>
-
-        {/* Right: Notifications and User Menu */}
-        <div className="flex items-center gap-16">
-          {/* Notifications */}
-          <button 
-            className="relative p-8 text-neutral-white hover:bg-primary-hover rounded-md transition-colors"
-            aria-label="Notifications"
-          >
-            <FaBell className="w-20 h-20" />
-            {notificationCount > 0 && (
-              <span className="absolute top-4 right-4 w-16 h-16 bg-critical rounded-full flex items-center justify-center text-neutral-white text-[10px] font-bold">
-                {notificationCount > 9 ? '9+' : notificationCount}
-              </span>
-            )}
-          </button>
-
-          {/* User Menu */}
-          <div className="relative">
-            <button
-              onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center gap-12 px-12 py-8 text-neutral-white hover:bg-primary-hover rounded-md transition-colors"
-            >
-              <div className="w-32 h-32 rounded-full bg-neutral-white flex items-center justify-center">
-                <FaUser className="w-16 h-16 text-primary" />
-              </div>
-              <div className="text-left hidden md:block">
-                <p className="text-body-sm font-medium">{userName}</p>
-                {userRole && <p className="text-body-sm opacity-90">{userRole}</p>}
-              </div>
-              <FaChevronDown className="w-12 h-12" />
-            </button>
-
-            {/* Dropdown Menu */}
-            {showDropdown && (
-              <>
-                <div 
-                  className="fixed inset-0 z-10" 
-                  onClick={() => setShowDropdown(false)}
-                />
-                <div className="absolute right-0 mt-8 w-200 bg-neutral-white rounded-lg shadow-modal py-8 z-20">
-                  <button
-                    onClick={() => {
-                      onProfileClick?.();
-                      setShowDropdown(false);
-                    }}
-                    className="w-full px-16 py-12 text-left text-body text-neutral-black hover:bg-neutral-gray-bg flex items-center gap-12"
-                  >
-                    <FaUser className="w-16 h-16" />
-                    <span>My Profile</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      onSettingsClick?.();
-                      setShowDropdown(false);
-                    }}
-                    className="w-full px-16 py-12 text-left text-body text-neutral-black hover:bg-neutral-gray-bg flex items-center gap-12"
-                  >
-                    <FaCog className="w-16 h-16" />
-                    <span>Settings</span>
-                  </button>
-                  <hr className="my-8 border-neutral-gray-light" />
-                  <button
-                    onClick={() => {
-                      onLogoutClick?.();
-                      setShowDropdown(false);
-                    }}
-                    className="w-full px-16 py-12 text-left text-body text-critical hover:bg-critical-light flex items-center gap-12"
-                  >
-                    <FaSignOutAlt className="w-16 h-16" />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </nav>
-  );
-};
-
-export default TopNav;
-
-import React, { useState } from 'react';
-import { IconType } from 'react-icons';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-
-export interface NavItem {
-  id: string;
-  label: string;
-  icon: IconType;
-  href?: string;
-  onClick?: () => void;
-  badge?: number;
-}
-
-interface SideNavProps {
-  items: NavItem[];
-  activeItemId?: string;
-  defaultCollapsed?: boolean;
-  onItemClick?: (itemId: string) => void;
-  className?: string;
-}
-
-/**
- * SideNav Component
- * 
- * Collapsible side navigation for module switching
- * 
- * Usage:
- * const navItems = [
- *   { id: 'patients', label: 'Patients', icon: FaUsers },
- *   { id: 'lab', label: 'Laboratory', icon: FaFlask, badge: 5 },
- *   { id: 'pharmacy', label: 'Pharmacy', icon: FaPills },
- * ];
- * 
- * <SideNav 
- *   items={navItems}
- *   activeItemId="patients"
- *   onItemClick={handleNavigation}
- * />
- */
-const SideNav: React.FC<SideNavProps> = ({
-  items,
-  activeItemId,
-  defaultCollapsed = false,
-  onItemClick,
-  className = ''
-}) => {
-  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
-
-  const handleItemClick = (item: NavItem) => {
-    if (item.onClick) {
-      item.onClick();
-    }
-    if (onItemClick) {
-      onItemClick(item.id);
-    }
-  };
-
-  return (
-    <aside 
-      className={`bg-neutral-white border-r border-neutral-gray-light transition-all duration-300 ${isCollapsed ? 'w-64' : 'w-240'} ${className}`}
-    >
-      <nav className="h-full flex flex-col">
-        {/* Navigation Items */}
-        <ul className="flex-1 py-16">
-          {items.map((item) => {
-            const Icon = item.icon;
-            const isActive = item.id === activeItemId;
-
-            return (
-              <li key={item.id}>
-                <button
-                  onClick={() => handleItemClick(item)}
-                  className={`w-full flex items-center gap-12 px-16 py-12 text-body transition-colors relative ${
-                    isActive
-                      ? 'bg-primary-light text-primary'
-                      : 'text-neutral-gray-dark hover:bg-neutral-gray-bg'
-                  }`}
-                >
-                  {isActive && (
-                    <div className="absolute left-0 top-0 bottom-0 w-4 bg-primary" />
-                  )}
-                  
-                  <Icon className="w-20 h-20 flex-shrink-0" />
-                  
-                  {!isCollapsed && (
-                    <>
-                      <span className="flex-1 text-left font-medium">{item.label}</span>
-                      {item.badge && item.badge > 0 && (
-                        <span className="px-8 py-2 bg-critical text-neutral-white text-body-sm font-bold rounded-full min-w-20 text-center">
-                          {item.badge > 99 ? '99+' : item.badge}
-                        </span>
-                      )}
-                    </>
-                  )}
-
-                  {isCollapsed && item.badge && item.badge > 0 && (
-                    <span className="absolute top-8 right-8 w-8 h-8 bg-critical rounded-full" />
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-
-        {/* Collapse Toggle */}
-        <div className="p-16 border-t border-neutral-gray-light">
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="w-full flex items-center justify-center py-8 text-neutral-gray-dark hover:text-neutral-black transition-colors"
-            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {isCollapsed ? (
-              <FaChevronRight className="w-16 h-16" />
-            ) : (
-              <div className="flex items-center gap-8">
-                <FaChevronLeft className="w-16 h-16" />
-                <span className="text-body-sm">Collapse</span>
-              </div>
-            )}
-          </button>
-        </div>
-      </nav>
-    </aside>
-  );
-};
-
-export default SideNav;
-import React from 'react';
-import { FaChevronRight, FaHome } from 'react-icons/fa';
-
-export interface BreadcrumbItem {
-  label: string;
-  href?: string;
-  onClick?: () => void;
-}
-
-interface BreadcrumbsProps {
-  items: BreadcrumbItem[];
-  showHomeIcon?: boolean;
-  className?: string;
-}
-
-/**
- * Breadcrumbs Component
- * 
- * Navigation breadcrumb trail showing user's location in hierarchy
- * 
- * Usage:
- * <Breadcrumbs 
- *   items={[
- *     { label: 'Patients', href: '/patients' },
- *     { label: 'John Doe', href: '/patients/123' },
- *     { label: 'Visit History' }
- *   ]}
- *   showHomeIcon
- * />
- */
-const Breadcrumbs: React.FC<BreadcrumbsProps> = ({
-  items,
-  showHomeIcon = true,
-  className = ''
-}) => {
-  if (items.length === 0) return null;
-
-  return (
-    <nav 
-      aria-label="Breadcrumb"
-      className={`flex items-center gap-8 text-body ${className}`}
-    >
-      {showHomeIcon && items.length > 0 && (
-        <>
-          {items[0].href || items[0].onClick ? (
-            <button
-              onClick={items[0].onClick}
-              className="text-primary hover:text-primary-hover transition-colors"
-              aria-label="Home"
-            >
-              <FaHome className="w-16 h-16" />
-            </button>
-          ) : (
-            <FaHome className="w-16 h-16 text-neutral-gray-medium" />
-          )}
-          <FaChevronRight className="w-12 h-12 text-neutral-gray-medium" />
-        </>
-      )}
-
-      <ol className="flex items-center gap-8">
-        {items.map((item, index) => {
-          const isLast = index === items.length - 1;
-          const isClickable = !isLast && (item.href || item.onClick);
-
-          return (
-            <li key={index} className="flex items-center gap-8">
-              {isClickable ? (
-                <button
-                  onClick={item.onClick}
-                  className="text-primary hover:text-primary-hover transition-colors hover:underline"
-                >
-                  {item.label}
-                </button>
-              ) : (
-                <span className={isLast ? 'text-neutral-black font-medium' : 'text-neutral-gray-medium'}>
-                  {item.label}
-                </span>
-              )}
-              
-              {!isLast && (
-                <FaChevronRight className="w-12 h-12 text-neutral-gray-medium" />
-              )}
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
-  );
-};
-
-export default Breadcrumbs;
+npm install @tanstack/react-query @tanstack/react-query-devtools @reduxjs/toolkit react-redux axios react-router-dom
+src/
+├── index.tsx                          # Entry point
+├── App.tsx                            # Clean root component
+├── App.css                            # Global styles
+│
+├── api/
+│   ├── axiosConfig.ts                 # Axios instance & interceptors
+│   ├── endpoints.ts                   # API endpoint constants
+│   └── queries/
+│       ├── patientQueries.ts          # Patient-related queries
+│       ├── dashboardQueries.ts        # Dashboard queries
+│       └── authQueries.ts             # Auth queries
+│
+├── config/
+│   ├── apiConfig.ts                   # API configuration
+│   └── appConfig.ts                   # App-wide configuration
+│
+├── store/
+│   ├── index.ts                       # Redux store configuration
+│   ├── hooks.ts                       # Redux typed hooks
+│   └── slices/
+│       ├── authSlice.ts               # Auth reducer
+│       ├── uiSlice.ts                 # UI state (loading, modals, etc)
+│       ├── patientSlice.ts            # Patient data reducer
+│       └── notificationSlice.ts       # Notification reducer
+│
+├── routes/
+│   ├── index.tsx                      # Route configuration
+│   ├── ProtectedRoute.tsx             # Route guards
+│   └── routeConstants.ts              # Route paths constants
+│
+├── components/
+│   ├── Layout/
+│   │   ├── Layout.tsx
+│   │   ├── Header.tsx
+│   │   ├── Sidebar.tsx
+│   │   └── Footer.tsx
+│   ├── Loading/
+│   │   ├── LoadingScreen.tsx          # Refactored loading screen
+│   │   ├── LoadingSkeletons.tsx
+│   │   └── Spinners.tsx
+│   ├── Errors/
+│   │   ├── ErrorBoundary.tsx          # Refactored error boundary
+│   │   └── ErrorFallback.tsx
+│   ├── Common/
+│   │   ├── Toast.tsx
+│   │   ├── Modal.tsx
+│   │   └── Button.tsx
+│   └── Features/
+│       ├── Dashboard/
+│       │   ├── Dashboard.tsx
+│       │   ├── DashboardSection.tsx
+│       │   └── DashboardCard.tsx
+│       ├── Patients/
+│       │   ├── PatientList.tsx
+│       │   ├── PatientDetail.tsx
+│       │   └── PatientForm.tsx
+│       └── Auth/
+│           ├── LoginPage.tsx
+│           └── LogoutButton.tsx
+│
+├── hooks/
+│   ├── useNotification.ts             # Toast/notification hook
+│   ├── useAsync.ts                    # Async operations hook
+│   └── useLocalStorage.ts             # LocalStorage hook
+│
+├── utils/
+│   ├── classNameUtils.ts              # cn() utility
+│   ├── dateUtils.ts                   # Date formatting
+│   ├── validators.ts                  # Input validation
+│   └── errorHandler.ts                # Error handling utilities
+│
+├── types/
+│   ├── index.ts                       # Global types
+│   ├── api.ts                         # API response types
+│   ├── models.ts                      # Data model types
+│   └── redux.ts                       # Redux types
+│
+└── constants/
+    ├── strings.ts                     # UI strings/messages
+    ├── colors.ts                      # Color constants
+    └── apiConstants.ts                # API constants

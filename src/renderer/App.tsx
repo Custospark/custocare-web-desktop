@@ -2,7 +2,7 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { Dashboard } from './pages/Dashboard';
 import { Layout } from './components/Navigation/Layout';
 import { cn } from './types/cn';
-import { Activity, Shield, Zap, Cpu, Database } from 'lucide-react';
+import { Shield, Zap, Cpu, Database } from 'lucide-react';
 import { AppProvider } from './store/state/AppContext';
 import './App.css';
 

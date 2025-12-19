@@ -1,5 +1,5 @@
 import React from 'react';
-import { IconType } from 'react-icons';
+import type { IconType } from 'react-icons';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'success' | 'warning' | 'ghost';
 type ButtonSize = 'small' | 'medium' | 'large';

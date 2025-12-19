@@ -820,8 +820,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 'text-sm font-semibold',
                 isDark ? 'text-gray-200' : 'text-gray-900'
               )}>
-                Dr. Okafor
-              </p>
+          Dr. Steve Okello         
+     </p>
               <p className={cn(
                 'text-xs',
                 isDark ? 'text-gray-500' : 'text-gray-600'
@@ -868,7 +868,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       'font-bold',
                       isDark ? 'text-gray-200' : 'text-gray-900'
                     )}>
-                      Dr. Alexander Okafor
+                      Dr. Steve Okello
                     </p>
                     <p className={cn(
                       'text-sm',

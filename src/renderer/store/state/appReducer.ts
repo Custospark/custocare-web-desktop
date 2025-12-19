@@ -1,4 +1,4 @@
-import { AppState, Action } from './appTypes';
+import {type AppState,type Action } from './appTypes';
 
 export const initialState: AppState = {
   sidebarOpen: false,
