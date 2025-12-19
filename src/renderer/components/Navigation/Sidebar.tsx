@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   LayoutDashboard, Users, ClipboardList, FileText, Settings, HelpCircle,
   X, Shield, Activity, TrendingUp, Cpu, Lock, BarChart3,
-  Moon, Sun, Home, Database, AlertCircle, Heart, Bell, MessageSquare
+  Home, Database, AlertCircle, Heart, Bell, MessageSquare
 } from 'lucide-react';
 import { SidebarProps, MenuItem } from '../../types/index';
 import { cn } from '../../types/cn';
@@ -15,14 +15,14 @@ interface EnhancedMenuItem extends MenuItem {
 }
 
 /**
- * Masterpiece Sidebar - Intelligent Navigation
+ * Masterpiece Sidebar - 8 Decades of Design Excellence
  * 
  * Key Innovations:
- * 1. Fixed positioning with smooth transitions
- * 2. Mobile-first touch gestures
- * 3. Clear toggle states
- * 4. Spatial hierarchy
- * 5. Professional craftsmanship
+ * 1. Mobile-first with proper z-index layering
+ * 2. Clear close button always visible on mobile
+ * 3. Smooth touch gestures
+ * 4. Spatial hierarchy and visual feedback
+ * 5. Accessible keyboard navigation
  */
 export const Sidebar: React.FC<SidebarProps & {
   collapsed: boolean;
@@ -68,7 +68,7 @@ export const Sidebar: React.FC<SidebarProps & {
       active: true,
       description: 'Holistic system overview',
       stats: '98% uptime',
-      shortcut: '⌘ + 1',
+      shortcut: '⌘1',
       glowColor: 'from-blue-500 to-cyan-400'
     },
     {
@@ -80,7 +80,7 @@ export const Sidebar: React.FC<SidebarProps & {
       badge: 12,
       description: 'Comprehensive care management',
       stats: '2.4K active',
-      shortcut: '⌘ + 2',
+      shortcut: '⌘2',
       glowColor: 'from-emerald-500 to-teal-400'
     },
     {
@@ -93,7 +93,7 @@ export const Sidebar: React.FC<SidebarProps & {
       badgeVariant: 'urgent' as const,
       description: 'Real-time consultations',
       stats: 'Live monitoring',
-      shortcut: '⌘ + 3',
+      shortcut: '⌘3',
       glowColor: 'from-amber-500 to-orange-400'
     },
     {
@@ -104,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps & {
       href: '/reports',
       description: 'Predictive analytics',
       stats: 'AI-powered',
-      shortcut: '⌘ + 4',
+      shortcut: '⌘4',
       glowColor: 'from-purple-500 to-pink-400'
     },
     {
@@ -115,7 +115,7 @@ export const Sidebar: React.FC<SidebarProps & {
       href: '/analytics',
       description: 'Advanced metrics',
       stats: 'Real-time data',
-      shortcut: '⌘ + 5',
+      shortcut: '⌘5',
       glowColor: 'from-indigo-500 to-blue-400'
     },
     {
@@ -126,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps & {
       href: '/system',
       description: 'Infrastructure health',
       stats: 'Optimal',
-      shortcut: '⌘ + 6',
+      shortcut: '⌘6',
       glowColor: 'from-gray-700 to-gray-600'
     },
   ];
@@ -139,7 +139,7 @@ export const Sidebar: React.FC<SidebarProps & {
       premiumIcon: <Settings className="w-5 h-5" />,
       href: '/settings',
       description: 'Master configuration',
-      shortcut: '⌘ + ,',
+      shortcut: '⌘,',
       glowColor: 'from-gray-600 to-gray-500'
     },
     {
@@ -151,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps & {
       description: 'Advanced protection',
       badge: 'PRO',
       badgeVariant: 'pro' as const,
-      shortcut: '⌘ + ;',
+      shortcut: '⌘;',
       glowColor: 'from-green-600 to-emerald-500'
     },
     {
@@ -161,7 +161,7 @@ export const Sidebar: React.FC<SidebarProps & {
       premiumIcon: <MessageSquare className="w-5 h-5" />,
       href: '/help',
       description: 'Expert training',
-      shortcut: '⌘ + ?',
+      shortcut: '⌘?',
       glowColor: 'from-violet-600 to-purple-500'
     },
   ];
@@ -189,18 +189,18 @@ export const Sidebar: React.FC<SidebarProps & {
         href={item.href}
         className={cn(
           'group relative flex items-center',
-          'rounded-xl transition-all duration-300 ease-out-expo',
+          'rounded-xl transition-all duration-300 ease-out',
           'border',
           isActive
             ? cn(
-                'bg-gradient-to-r from-blue-500/10 to-cyan-500/10',
+                'bg-gradient-to-r shadow-lg',
                 isDark 
-                  ? 'border-blue-500/20' 
-                  : 'border-blue-200'
+                  ? 'from-blue-500/10 to-cyan-500/10 border-blue-500/30' 
+                  : 'from-blue-50 to-cyan-50 border-blue-200'
               )
             : cn(
-                'border-transparent hover:border-gray-300/50',
-                isDark ? 'hover:bg-gray-800/50' : 'hover:bg-gray-100/50'
+                'border-transparent',
+                isDark ? 'hover:bg-gray-800/50 hover:border-gray-700/50' : 'hover:bg-gray-100/50 hover:border-gray-200/50'
               ),
           collapsed ? 'p-3 justify-center' : 'p-3 gap-3'
         )}
@@ -210,7 +210,7 @@ export const Sidebar: React.FC<SidebarProps & {
       >
         {/* Active indicator */}
         {isActive && !collapsed && (
-          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-gradient-to-b from-blue-400 to-cyan-400" />
+          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-10 rounded-r-full bg-gradient-to-b from-blue-400 via-cyan-400 to-blue-400 shadow-lg shadow-blue-400/50" />
         )}
 
         {/* Icon */}
@@ -219,12 +219,13 @@ export const Sidebar: React.FC<SidebarProps & {
           collapsed ? 'mx-auto' : ''
         )}>
           <div className={cn(
-            'p-2 rounded-lg transition-all duration-300',
+            'p-2.5 rounded-xl transition-all duration-300',
+            'border',
             isDark 
-              ? 'bg-gray-800/50 border border-gray-700/50' 
-              : 'bg-gray-100 border border-gray-200',
-            isActive && (isDark ? 'border-blue-500/30' : 'border-blue-300'),
-            isHovered && 'scale-110'
+              ? 'bg-gray-800/50 border-gray-700/50' 
+              : 'bg-gray-50 border-gray-200',
+            isActive && (isDark ? 'border-blue-500/30 bg-blue-500/10' : 'border-blue-300 bg-blue-50'),
+            isHovered && 'scale-110 shadow-lg'
           )}>
             <div className={cn(
               'transition-colors duration-300',
@@ -235,14 +236,29 @@ export const Sidebar: React.FC<SidebarProps & {
               {item.premiumIcon || item.icon}
             </div>
           </div>
+
+          {/* Badge on icon for collapsed state */}
+          {collapsed && item.badge && (
+            <span className={cn(
+              'absolute -top-1 -right-1 w-5 h-5 text-xs font-bold rounded-full border-2 flex items-center justify-center',
+              isDark ? 'border-gray-900' : 'border-white',
+              item.badgeVariant === 'urgent'
+                ? 'bg-red-500 text-white'
+                : item.badgeVariant === 'pro'
+                ? 'bg-purple-500 text-white'
+                : 'bg-blue-500 text-white'
+            )}>
+              {item.badge}
+            </span>
+          )}
         </div>
 
         {/* Text content - hidden when collapsed */}
         {!collapsed && (
-          <div className="flex-1 min-w-0 space-y-1">
-            <div className="flex items-center justify-between">
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
               <span className={cn(
-                'font-medium text-sm truncate',
+                'font-semibold text-sm truncate',
                 isActive 
                   ? (isDark ? 'text-white' : 'text-gray-900')
                   : (isDark ? 'text-gray-300' : 'text-gray-700')
@@ -252,7 +268,7 @@ export const Sidebar: React.FC<SidebarProps & {
               
               {item.badge && (
                 <span className={cn(
-                  'px-2 py-0.5 text-xs font-bold rounded-full border',
+                  'px-2 py-0.5 text-xs font-bold rounded-full border shrink-0',
                   item.badgeVariant === 'urgent'
                     ? 'bg-red-500/10 text-red-400 border-red-500/20'
                     : item.badgeVariant === 'pro'
@@ -265,13 +281,13 @@ export const Sidebar: React.FC<SidebarProps & {
             </div>
             
             <p className={cn(
-              'text-xs truncate',
-              isDark ? 'text-gray-500' : 'text-gray-500'
+              'text-xs truncate leading-relaxed',
+              isDark ? 'text-gray-500' : 'text-gray-600'
             )}>
               {item.description}
             </p>
             
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pt-0.5">
               {item.stats && (
                 <span className={cn(
                   'text-xs font-medium',
@@ -282,7 +298,7 @@ export const Sidebar: React.FC<SidebarProps & {
               )}
               {item.shortcut && (
                 <kbd className={cn(
-                  'px-1.5 py-0.5 text-xs rounded border',
+                  'px-1.5 py-0.5 text-xs rounded border font-mono',
                   isDark 
                     ? 'bg-gray-800 text-gray-400 border-gray-700' 
                     : 'bg-gray-100 text-gray-600 border-gray-300'
@@ -302,39 +318,37 @@ export const Sidebar: React.FC<SidebarProps & {
       ref={sidebarRef}
       className={cn(
         'h-full flex flex-col',
-        'backdrop-blur-xl border-r',
+        'backdrop-blur-xl',
         'transition-all duration-300 ease-in-out',
         // Theme
         isDark 
-          ? 'bg-gray-900/95 border-gray-800/50' 
-          : 'bg-white/95 border-gray-200/60',
-        // Collapsed state
-        collapsed ? 'w-20' : 'w-80',
+          ? 'bg-gray-900/98' 
+          : 'bg-white/98',
         className
       )}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
     >
-      {/* Header */}
+      {/* Header - Enhanced for mobile */}
       <div className={cn(
-        'p-4 border-b',
+        'shrink-0 p-4 border-b',
         isDark ? 'border-gray-800/50' : 'border-gray-200/50'
       )}>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           {!collapsed && (
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center">
-                <Shield className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-11 h-11 bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shrink-0">
+                <Shield className="w-6 h-6 text-white" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h2 className={cn(
-                  'font-bold',
+                  'font-bold text-base truncate',
                   isDark ? 'text-white' : 'text-gray-900'
                 )}>
                   CustoCare
                 </h2>
                 <p className={cn(
-                  'text-xs',
+                  'text-xs truncate',
                   isDark ? 'text-gray-400' : 'text-gray-600'
                 )}>
                   Healthcare Pro
@@ -343,27 +357,29 @@ export const Sidebar: React.FC<SidebarProps & {
             </div>
           )}
           
-          {/* Close button for mobile */}
+          {/* Close button - Always visible on mobile, prominent */}
           <button
             onClick={() => onClose?.()}
             className={cn(
-              'lg:hidden p-2 rounded-lg',
+              'lg:hidden p-2.5 rounded-xl transition-all duration-300',
+              'hover:scale-105 active:scale-95 shrink-0',
               isDark 
-                ? 'hover:bg-gray-800 text-gray-400' 
-                : 'hover:bg-gray-100 text-gray-600'
+                ? 'hover:bg-red-500/10 text-gray-400 hover:text-red-400' 
+                : 'hover:bg-red-50 text-gray-600 hover:text-red-600'
             )}
+            aria-label="Close sidebar"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-2">
+      {/* Navigation - Scrollable */}
+      <nav className="flex-1 overflow-y-auto p-4 space-y-2 overscroll-contain">
         {!collapsed && (
-          <div className="mb-4">
+          <div className="mb-3">
             <p className={cn(
-              'text-xs font-semibold uppercase tracking-wider px-2',
+              'text-xs font-bold uppercase tracking-wider px-2',
               isDark ? 'text-gray-500' : 'text-gray-400'
             )}>
               Navigation
@@ -371,15 +387,27 @@ export const Sidebar: React.FC<SidebarProps & {
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {menuItems.map((item) => renderMenuItem(item))}
         </div>
 
         {!collapsed && (
           <>
-            <div className="my-6 border-t border-gray-200/50 dark:border-gray-800/50" />
+            <div className={cn(
+              "my-6 border-t",
+              isDark ? 'border-gray-800/50' : 'border-gray-200/50'
+            )} />
             
-            <div className="space-y-2">
+            <div className="mb-3">
+              <p className={cn(
+                'text-xs font-bold uppercase tracking-wider px-2',
+                isDark ? 'text-gray-500' : 'text-gray-400'
+              )}>
+                System
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
               {secondaryMenuItems.map((item) => renderMenuItem(item))}
             </div>
           </>
@@ -388,20 +416,21 @@ export const Sidebar: React.FC<SidebarProps & {
 
       {/* Footer */}
       <div className={cn(
-        'p-4 border-t',
+        'shrink-0 p-4 border-t',
         isDark ? 'border-gray-800/50' : 'border-gray-200/50'
       )}>
         {!collapsed ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
+            {/* Quick Support Card */}
             <div className={cn(
-              'p-3 rounded-lg border',
+              'p-3 rounded-xl border',
               isDark 
-                ? 'bg-gray-800/50 border-gray-700/50' 
-                : 'bg-gray-100/50 border-gray-200/50'
+                ? 'bg-gradient-to-br from-gray-800/50 to-gray-800/30 border-gray-700/50' 
+                : 'bg-gradient-to-br from-gray-50 to-gray-100/50 border-gray-200/50'
             )}>
               <div className="flex items-center gap-3">
                 <div className={cn(
-                  'p-2 rounded-lg',
+                  'p-2 rounded-lg shrink-0',
                   isDark ? 'bg-cyan-500/20' : 'bg-cyan-100'
                 )}>
                   <Bell className={cn(
@@ -409,15 +438,15 @@ export const Sidebar: React.FC<SidebarProps & {
                     isDark ? 'text-cyan-400' : 'text-cyan-600'
                   )} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className={cn(
-                    'text-sm font-medium',
+                    'text-sm font-semibold truncate',
                     isDark ? 'text-white' : 'text-gray-900'
                   )}>
                     Quick Support
                   </p>
                   <p className={cn(
-                    'text-xs',
+                    'text-xs truncate',
                     isDark ? 'text-gray-400' : 'text-gray-600'
                   )}>
                     24/7 priority assistance
@@ -426,15 +455,16 @@ export const Sidebar: React.FC<SidebarProps & {
               </div>
             </div>
 
+            {/* User Profile */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-700 to-gray-800 overflow-hidden">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 overflow-hidden shrink-0">
                 <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-white/70" />
+                  <Users className="w-5 h-5 text-white/80" />
                 </div>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className={cn(
-                  'text-sm font-medium truncate',
+                  'text-sm font-semibold truncate',
                   isDark ? 'text-white' : 'text-gray-900'
                 )}>
                   Dr. Alexander
@@ -446,19 +476,20 @@ export const Sidebar: React.FC<SidebarProps & {
                   Chief Physician
                 </p>
               </div>
-              <button className="p-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-800/50">
-                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
             </div>
           </div>
         ) : (
           <div className="space-y-2">
-            <button className="w-full p-3 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-800/50">
+            <button className={cn(
+              'w-full p-2.5 rounded-xl transition-all duration-300',
+              'hover:scale-105 active:scale-95',
+              isDark ? 'hover:bg-gray-800/50' : 'hover:bg-gray-100/50'
+            )}>
               <Bell className="w-5 h-5 mx-auto text-gray-500 dark:text-gray-400" />
             </button>
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-700 to-gray-800 mx-auto overflow-hidden">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-700 to-gray-800 mx-auto overflow-hidden">
               <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
-                <Users className="w-4 h-4 text-white/70" />
+                <Users className="w-5 h-5 text-white/80" />
               </div>
             </div>
           </div>

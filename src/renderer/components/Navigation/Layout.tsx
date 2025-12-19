@@ -33,18 +33,18 @@ interface LayoutState {
 }
 
 /**
- * Masterpiece Layout - Fixed Architecture
+ * Masterpiece Layout - Fixed Sidebar Architecture
  * 
  * Key Principles Applied:
- * 1. Fixed sidebar positioning
- * 2. Clear spatial separation
+ * 1. Fixed sidebar positioning (truly fixed to viewport)
+ * 2. Main content and footer scroll together
  * 3. Independent scrolling regions
  * 4. Mobile-first navigation
  * 5. World-class UX refinements
  */
 export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
   const { state, toggleTheme, setSystemStatus } = useAppContext();
-  const { theme, sidebarOpen, systemStatus } = state;
+  const { theme, systemStatus } = state;
   
   // Local state for layout behavior
   const [layoutState, setLayoutState] = useState<LayoutState>({
@@ -121,17 +121,18 @@ export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
   }, [setSystemStatus]);
 
   // Calculate sidebar width
-  const sidebarWidth = layoutState.sidebarCollapsed ? 'w-20' : 'w-80';
+  const sidebarWidthClass = layoutState.sidebarCollapsed ? 'w-20' : 'w-80';
+  const contentMarginClass = layoutState.sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-80';
 
   return (
     <div className={cn(
-      'min-h-screen flex flex-col overflow-hidden',
+      'min-h-screen',
       'transition-colors duration-500',
       themeClasses.background
     )}>
-      {/* System Status Bar */}
+      {/* System Status Bar - Fixed at top */}
       <div className={cn(
-        'sticky top-0 z-50 px-4 py-2',
+        'fixed top-0 left-0 right-0 z-50 px-4 py-2',
         'border-b backdrop-blur-xl',
         themeClasses.backdrop,
         theme === 'dark' ? 'border-gray-800/50' : 'border-gray-200/60'
@@ -186,8 +187,8 @@ export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
         </div>
       </div>
 
-      {/* Main Layout Container */}
-      <div className="flex-1 flex min-h-0 relative">
+      {/* Main Layout Container - Account for status bar */}
+      <div className="pt-14">
         {/* Mobile Sidebar Overlay */}
         {layoutState.mobileSidebarOpen && (
           <div
@@ -196,15 +197,18 @@ export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
           />
         )}
 
-        {/* Fixed Sidebar */}
-        <div className={cn(
-          'fixed lg:sticky top-0 left-0 z-40 h-screen',
-          'transition-transform duration-300 ease-in-out lg:transition-all',
-          'lg:flex flex-col',
-          sidebarWidth,
+        {/* Fixed Sidebar - Truly fixed to viewport */}
+        <aside className={cn(
+          'fixed top-14 left-0 bottom-0 z-40',
+          'transition-all duration-300 ease-in-out',
+          'flex flex-col',
+          sidebarWidthClass,
           themeClasses.sidebarBorder,
           themeClasses.backdrop,
-          layoutState.mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          // Mobile: slide in/out
+          layoutState.mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          // Desktop: always visible
+          'lg:translate-x-0'
         )}>
           <Sidebar 
             isOpen={layoutState.mobileSidebarOpen}
@@ -213,16 +217,16 @@ export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
             onToggleCollapse={toggleSidebarCollapse}
             theme={theme}
           />
-        </div>
+        </aside>
 
-        {/* Main Content Area - Independently Scrollable */}
+        {/* Main Content Area - Scrollable with Footer */}
         <div className={cn(
-          'flex-1 flex flex-col min-w-0',
+          'min-h-screen flex flex-col',
           'transition-all duration-300',
-          // Desktop spacing when sidebar is open
-          sidebarOpen && `lg:ml-${layoutState.sidebarCollapsed ? '20' : '80'}`
+          // Add left margin on desktop to account for fixed sidebar
+          contentMarginClass
         )}>
-          {/* Navbar with Mobile Menu Button */}
+          {/* Navbar - Scrolls with content */}
           <div className={cn(
             'sticky top-0 z-30 border-b backdrop-blur-xl',
             themeClasses.glass
@@ -275,11 +279,8 @@ export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
             </div>
           </div>
 
-          {/* Scrollable Content Area */}
-          <main 
-            className="flex-1 overflow-y-auto scroll-smooth"
-            onScroll={handleScroll}
-          >
+          {/* Main Content - Scrolls naturally */}
+          <main className="flex-1">
             <div className={cn(
               'px-4 sm:px-6 lg:px-8 py-6 lg:py-8',
               'min-h-[calc(100vh-12rem)]',
@@ -289,8 +290,8 @@ export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
             </div>
           </main>
 
-          {/* Fixed Footer */}
-          <div className={cn(
+          {/* Footer - Scrolls with content */}
+          <footer className={cn(
             'border-t backdrop-blur-xl',
             themeClasses.glass
           )}>
@@ -301,7 +302,7 @@ export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
               showCopyright={true}
               compact={false}
             />
-          </div>
+          </footer>
         </div>
       </div>
 

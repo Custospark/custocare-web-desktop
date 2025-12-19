@@ -136,22 +136,35 @@ export const Navbar: React.FC<NavbarProps> = ({
             onFocus={() => setIsSearchFocused(true)}
             placeholder="Search patients, reports, medications..."
             className={cn(
-              "w-full pl-12 pr-10 py-2.5 rounded-xl text-sm",
-              "border transition-all duration-300",
-              isDark
-                ? "bg-gray-800/50 border-gray-700/50 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
-                : "bg-gray-50/80 border-gray-300/50 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20",
-              "placeholder-gray-500"
-            )}
+                    "w-full pl-12 pr-10 py-2.5 rounded-xl text-sm",
+                    "border transition-all duration-300",
+                    isDark
+                      ? "bg-slate-900/60 border-blue-900/40 text-slate-100 placeholder-slate-400 focus:border-blue-400/60 focus:ring-2 focus:ring-blue-500/25"
+                      : "bg-blue-50/70 border-blue-200/60 text-slate-900 placeholder-slate-500 focus:border-blue-500/60 focus:ring-2 focus:ring-blue-400/25"
+                  )
+}
           />
           
           {localSearchQuery && (
             <button
-              onClick={clearSearch}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
-            >
-              <X className="w-4 h-4 text-gray-500" />
-            </button>
+  onClick={clearSearch}
+  className={cn(
+    "absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full",
+    "transition-all duration-200",
+    "hover:scale-105 active:scale-95",
+    isDark
+      ? "hover:bg-blue-500/15"
+      : "hover:bg-blue-100/70"
+  )}
+>
+  <X
+    className={cn(
+      "w-4 h-4 transition-colors duration-200",
+      isDark ? "text-blue-300" : "text-blue-500"
+    )}
+  />
+</button>
+
           )}
         </div>
       </div>
