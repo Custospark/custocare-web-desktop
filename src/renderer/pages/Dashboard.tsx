@@ -402,7 +402,7 @@ export const Dashboard: React.FC = () => {
       <Breadcrumb
         items={breadcrumbItems}
         theme={theme}
-        onItemClick={(item: string, index: number) => console.log('Breadcrumb clicked:', item, index)}
+        onItemClick={(item, index) => console.log('Breadcrumb clicked:', item, index)}
         maxItems={3}
       />
 
@@ -415,7 +415,7 @@ export const Dashboard: React.FC = () => {
         showViewToggle={true}
         showFilters={true}
         viewMode="list"
-        onViewModeChange={(mode: any) => console.log('View mode:', mode)}
+        onViewModeChange={(mode) => console.log('View mode:', mode)}
         filters={
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>

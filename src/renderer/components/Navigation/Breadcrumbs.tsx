@@ -4,7 +4,7 @@ import { BreadcrumbProps, BreadcrumbItem } from '../../types';
 import { cn } from '../../types/cn';
 
 type InternalItem =
-  | (BreadcrumbItem & { type?: 'item' })
+  | (BreadcrumbItem & { type: 'item' })
   | { type: 'ellipsis'; id: 'ellipsis' };
 
 export const Breadcrumb: React.FC<BreadcrumbProps> = React.memo(({
@@ -17,21 +17,29 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = React.memo(({
 }) => {
   const [expanded, setExpanded] = useState(false);
 
-  if (!items.length) return null;
-
   const isDark = theme === 'dark';
 
   const visibleItems: InternalItem[] = useMemo(() => {
+    if (!items.length) return [];
+
     if (expanded || items.length <= maxItems) {
-      return items.map(i => ({ ...i, type: 'item' }));
+      return items.map(i => ({
+        ...i,
+        type: 'item' as const,
+      }));
     }
 
     return [
-      { ...items[0], type: 'item' },
-      { type: 'ellipsis', id: 'ellipsis' },
-      ...items.slice(-2).map(i => ({ ...i, type: 'item' })),
+      { ...items[0], type: 'item' as const },
+      { type: 'ellipsis' as const, id: 'ellipsis' },
+      ...items.slice(-2).map(i => ({
+        ...i,
+        type: 'item' as const,
+      })),
     ];
   }, [expanded, items, maxItems]);
+
+  if (!items.length) return null;
 
   const handleItemClick = (item: BreadcrumbItem, index: number) => {
     onItemClick?.(item, index);
@@ -52,7 +60,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = React.memo(({
         {visibleItems.map((item, index) => {
           const isFirst = index === 0;
           const isLast = index === visibleItems.length - 1;
-          const isActive = item.type !== 'ellipsis' && isLast;
+          const isActive = item.type === 'item' && isLast;
 
           return (
             <li key={item.id ?? index} className="flex items-center">
@@ -65,7 +73,6 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = React.memo(({
                 />
               )}
 
-              {/* Ellipsis */}
               {item.type === 'ellipsis' ? (
                 <button
                   onClick={() => setExpanded(true)}
@@ -101,9 +108,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = React.memo(({
                       : 'text-gray-700 hover:bg-gray-100'
                   )}
                 >
-                  {isFirst && showHome && (
-                    <Home className="h-4 w-4" />
-                  )}
+                  {isFirst && showHome && <Home className="h-4 w-4" />}
 
                   <span className="whitespace-nowrap font-medium">
                     {item.label}
