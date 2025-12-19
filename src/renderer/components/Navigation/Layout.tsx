@@ -219,58 +219,57 @@ export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
           />
         </aside>
 
-        {/* Main Content Area - Scrollable with Footer */}
+        {/* Navbar - Fixed to top right, occupies available left space */}
         <div className={cn(
-          'min-h-screen flex flex-col',
+          'fixed top-14 right-0 z-30',
+          'border-b backdrop-blur-xl',
           'transition-all duration-300',
-          // Add left margin on desktop to account for fixed sidebar
-          contentMarginClass
+          themeClasses.glass,
+          // Left position adjusts based on sidebar width
+          layoutState.sidebarCollapsed ? 'left-0 lg:left-20' : 'left-0 lg:left-80'
         )}>
-          {/* Navbar - Scrolls with content */}
-          <div className={cn(
-            'sticky top-0 z-30 border-b backdrop-blur-xl',
-            themeClasses.glass
-          )}>
-            <div className="flex items-center px-6 py-4">
-              {/* Mobile Menu Toggle */}
-              <button
-                onClick={toggleMobileSidebar}
-                className={cn(
-                  'lg:hidden mr-4 p-2 rounded-lg transition-all duration-300',
-                  theme === 'dark'
-                    ? 'hover:bg-gray-800 text-gray-400'
-                    : 'hover:bg-gray-100 text-gray-600'
-                )}
-              >
-                {layoutState.mobileSidebarOpen ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <Menu className="w-5 h-5" />
-                )}
-              </button>
+          <div className="flex items-center px-6 py-4">
+            {/* Mobile Menu Toggle */}
+            <button
+              onClick={toggleMobileSidebar}
+              className={cn(
+                'lg:hidden mr-4 p-2 rounded-lg transition-all duration-300',
+                theme === 'dark'
+                  ? 'hover:bg-gray-800 text-gray-400'
+                  : 'hover:bg-gray-100 text-gray-600'
+              )}
+            >
+              {layoutState.mobileSidebarOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </button>
 
-              {/* Desktop Collapse Toggle */}
-              <button
-                onClick={toggleSidebarCollapse}
-                className={cn(
-                  'hidden lg:flex mr-4 p-2 rounded-lg transition-all duration-300',
-                  theme === 'dark'
-                    ? 'hover:bg-gray-800 text-gray-400'
-                    : 'hover:bg-gray-100 text-gray-600'
-                )}
-                title={layoutState.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              >
-                {layoutState.sidebarCollapsed ? (
-                  <div className="w-5 h-5 flex items-center justify-center">
-                    <div className="w-3 h-3 border-r-2 border-t-2 border-current transform rotate-45" />
-                  </div>
-                ) : (
-                  <div className="w-5 h-5 flex items-center justify-center">
-                    <div className="w-3 h-3 border-l-2 border-t-2 border-current transform -rotate-45" />
-                  </div>
-                )}
-              </button>
+            {/* Desktop Collapse Toggle */}
+            <button
+              onClick={toggleSidebarCollapse}
+              className={cn(
+                'hidden lg:flex mr-4 p-2 rounded-lg transition-all duration-300',
+                theme === 'dark'
+                  ? 'hover:bg-gray-800 text-gray-400'
+                  : 'hover:bg-gray-100 text-gray-600'
+              )}
+              title={layoutState.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {layoutState.sidebarCollapsed ? (
+                <div className="w-5 h-5 flex items-center justify-center cursor-pointer hover:text-blue-400 ">
+                  <div className="w-3 h-3 border-r-2 border-t-2 border-current transform rotate-45" />
+                </div>
+              ) : (
+                <div className="w-5 h-5 flex items-center justify-center cursor-pointer hover:text-blue-400 ">
+                  <div className="w-3 h-3 border-l-2 border-t-2 border-current transform -rotate-45" />
+                </div>
+              )}
+            </button>
 
+            {/* Navbar Component - Takes remaining space */}
+            <div className="flex-1">
               <Navbar 
                 theme={theme}
                 onThemeToggle={toggleTheme}
@@ -278,7 +277,16 @@ export const Layout: React.FC<LayoutProps> = memo(({ children }) => {
               />
             </div>
           </div>
+        </div>
 
+        {/* Main Content Area - Scrollable with Footer */}
+        <div className={cn(
+          'min-h-screen flex flex-col',
+          'transition-all duration-300',
+          // Add top padding for fixed navbar and left margin for sidebar
+          'pt-[4.5rem]', // Account for navbar height
+          contentMarginClass
+        )}>
           {/* Main Content - Scrolls naturally */}
           <main className="flex-1">
             <div className={cn(
