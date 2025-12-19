@@ -1,0 +1,100 @@
+/**
+ * API Configuration & Endpoints
+ * Centralized configuration for API calls, feature flags, and endpoints
+ */
+
+/* ======================================================
+   Environment
+====================================================== */
+const isDevelopment = process.env.NODE_ENV === 'development';
+const isProduction = process.env.NODE_ENV === 'production';
+
+/* ======================================================
+   Base URL & Timeout
+====================================================== */
+
+  export const API_BASE_URL =
+    process.env.REACT_APP_API_URL || // override via environment variable
+    (isDevelopment
+      ? 'http://localhost:3000/api/v1' // local dev
+      : 'https://custocareai-api.custospark.com/api/v1'); // production
+
+
+
+export const API_TIMEOUT = parseInt(
+  process.env.REACT_APP_API_TIMEOUT || '30000',
+  10
+); // 30 seconds by default
+
+/* ======================================================
+   Feature Flags
+====================================================== */
+export const FEATURES = {
+  ENABLE_ANALYTICS: !isDevelopment,
+  ENABLE_ERROR_LOGGING: isProduction,
+  ENABLE_PERFORMANCE_MONITORING: isProduction,
+  ENABLE_DEBUG_MODE: isDevelopment,
+} as const;
+
+/* ======================================================
+   API Config
+====================================================== */
+export const API_CONFIG = {
+  retryAttempts: 3,
+  retryDelay: 1000, // 1 second
+  cacheDuration: {
+    short: 1000 * 60 * 1,   // 1 minute
+    medium: 1000 * 60 * 5,  // 5 minutes
+    long: 1000 * 60 * 30,   // 30 minutes
+  },
+} as const;
+
+/* ======================================================
+   Rate Limiting
+====================================================== */
+export const RATE_LIMIT = {
+  maxRequests: 100,
+  windowMs: 1000 * 60, // 1 minute
+} as const;
+
+/* ======================================================
+   API Endpoints
+====================================================== */
+export const API_ENDPOINTS = {
+  // Auth
+  AUTH: {
+    LOGIN: '/auth/login',
+    LOGOUT: '/auth/logout',
+    REFRESH: '/auth/refresh',
+    PROFILE: '/auth/profile',
+  },
+
+  // Patients
+  PATIENTS: {
+    LIST: '/patients',
+    GET: (id: string) => `/patients/${id}`,
+    CREATE: '/patients',
+    UPDATE: (id: string) => `/patients/${id}`,
+    DELETE: (id: string) => `/patients/${id}`,
+    SEARCH: '/patients/search',
+  },
+
+  // Dashboard
+  DASHBOARD: {
+    STATS: '/dashboard/stats',
+    ANALYTICS: '/dashboard/analytics',
+    REPORTS: '/dashboard/reports',
+  },
+} as const;
+
+/* ======================================================
+   Default Export
+====================================================== */
+export default {
+  API_BASE_URL,
+  API_TIMEOUT,
+  FEATURES,
+  API_CONFIG,
+  RATE_LIMIT,
+  API_ENDPOINTS,
+};
