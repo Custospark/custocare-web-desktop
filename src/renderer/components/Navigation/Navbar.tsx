@@ -314,11 +314,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     <nav className={cn('flex items-center justify-between gap-2 sm:gap-4', className)}>
       {/* Left: Brand & Context */}
       <div className="flex items-center gap-2 sm:gap-4">
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 lg:ms-7">
           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20">
             <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-          </div>
-          
+          </div> 
+           
           <div className="hidden xl:block">
             <div className="flex items-center gap-2">
               <span className={cn(
@@ -341,7 +341,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               'text-xs mt-0.5',
               isDark ? 'text-gray-500' : 'text-gray-600'
             )}>
-              Healthcare Management System
+              AI Powered Health Management System.
             </p>
           </div>
         </div>

@@ -388,28 +388,52 @@ export const Layout: React.FC = () => {
                 <Menu className="w-4.5 h-4.5" />
               )}
             </button>
+<button
+  onClick={handleToggleSidebar}
+  aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+  aria-expanded={sidebarOpen}
+  title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+  className={cn(
+    'hidden lg:flex items-center justify-center relative',
+    'h-9 w-9 p-2 rounded-xl mr-4',
+    'transition-all duration-300 ease-out',
+    'focus:outline-none focus:ring-2 focus:ring-offset-2',
+    'backdrop-blur-md',
+    'group hover:scale-110 active:scale-95',
+    'shadow-lg hover:shadow-xl',
+    theme === 'dark'
+      ? [
+          'bg-gray-900/70 text-gray-400',
+          'hover:text-cyan-400 hover:bg-gray-800/75',
+          'focus:ring-cyan-500/50 focus:ring-offset-gray-950',
+          'ring-1 ring-gray-700/40 hover:ring-cyan-500/50',
+          'bg-gradient-to-br from-gray-900/60 via-gray-900/70 to-gray-900/60 hover:via-cyan-800/50',
+        ].join(' ')
+      : [
+          'bg-white/80 text-gray-600',
+          'hover:text-blue-600 hover:bg-gray-100/85',
+          'focus:ring-blue-500/50 focus:ring-offset-white',
+          'ring-1 ring-gray-300/40 hover:ring-blue-500/50',
+          'bg-gradient-to-br from-white/70 via-white/80 to-white/70 hover:via-blue-100/50',
+        ].join(' ')
+  )}
+>
+  {/* Intelligent Chevron */}
+  <span
+    className={cn(
+      'flex items-center justify-center transition-transform duration-300 ease-out',
+      sidebarOpen ? 'rotate-180' : 'rotate-0'
+    )}
+  >
+    <span
+      className={cn(
+        'w-2.5 h-2.5 border-t-2 border-r-2 transform rotate-45',
+        theme === 'dark' ? 'border-current' : 'border-current'
+      )}
+    />
+  </span>
+</button>
 
-            <button
-              onClick={handleToggleSidebar}
-              aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-              aria-expanded={sidebarOpen}
-              className={cn(
-                'hidden lg:flex mr-3 p-1.5 rounded-lg transition-colors duration-200',
-                theme === 'dark'
-                  ? 'hover:bg-gray-800/40 text-gray-400 hover:text-cyan-400'
-                  : 'hover:bg-gray-100/60 text-gray-600 hover:text-blue-500'
-              )}
-            >
-              {sidebarOpen ? (
-                <div className="w-4.5 h-4.5 flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 border-l-2 border-t-2 border-current transform -rotate-45" />
-                </div>
-              ) : (
-                <div className="w-4.5 h-4.5 flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 border-r-2 border-t-2 border-current transform rotate-45" />
-                </div>
-              )}
-            </button>
 
             <div className="flex-1">
               <Navbar 
