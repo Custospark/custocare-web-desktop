@@ -15,7 +15,7 @@ const TwoFactorAuthPage = React.lazy(() => import('../features/auth/TwoFactorAut
 
 // Dashboard & Main Pages
 const Dashboard = React.lazy(() => import('../pages/Dashboard'));
-const PatientList = React.lazy(() => import('../features/patients/PatientList'));
+const PatientModule = React.lazy(() => import('../features/patients/PatientModule'));
 const PatientDetail = React.lazy(() => import('../features/patients/PatientDetail'));
 
 // Error Pages
@@ -144,16 +144,20 @@ function AppRoutes() {
             } 
           />
           
-          {/* Patient Management */}
+          {/* 
+            Patient Management Module
+            Uses ContentLayout with right sidebar for contextual operations
+          */}
           <Route 
             path={ROUTES.PATIENTS} 
             element={
               <Suspense fallback={<LoadingSkeleton variant="table" />}>
-                <PatientList />
+                <PatientModule />
               </Suspense>
             } 
           />
           
+          {/* Patient Detail View */}
           <Route 
             path={ROUTES.PATIENT_DETAIL} 
             element={

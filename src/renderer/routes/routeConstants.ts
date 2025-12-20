@@ -30,6 +30,9 @@ export const ROUTES = {
   PATIENTS: '/patients',
   PATIENT_DETAIL: '/patients/:id',
   PATIENT_CREATE: '/patients/new',
+  PATIENT_SEARCH: '/patients/search',
+  PATIENT_REGISTER: '/patients/register',
+  PATIENT_DISCHARGE: '/patients/discharge',
 
   // Clinical Modules
   APPOINTMENTS: '/appointments',
