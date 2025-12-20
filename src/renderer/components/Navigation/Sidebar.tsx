@@ -1,27 +1,33 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, ClipboardList, FileText, Settings, HelpCircle,
   X, Shield, Activity, TrendingUp, Cpu, Lock, BarChart3,
   Home, Database, AlertCircle, Heart, Bell, MessageSquare
 } from 'lucide-react';
-import { type SidebarProps,type MenuItem } from '../../types/index';
+import { type SidebarProps, type MenuItem } from '../../types/index';
 import { cn } from '../../types/cn';
+import { ROUTES } from '../../routes/routeConstants';
 
 interface EnhancedMenuItem extends MenuItem {
   premiumIcon?: React.ReactNode;
   glowColor?: string;
   stats?: string;
   shortcut?: string;
+  route?: string;
 }
 
 /**
+ * Enterprise-Grade Sidebar Component
  * 
- * Key Innovations:
- * 1. Mobile-first with proper z-index layering
- * 2. Clear close button always visible on mobile
- * 3. Smooth touch gestures
- * 4. Spatial hierarchy and visual feedback
- * 5. Accessible keyboard navigation
+ * Key Features:
+ * 1. React Router integration for seamless navigation
+ * 2. Active route detection and highlighting
+ * 3. Mobile-first with proper z-index layering
+ * 4. Smooth touch gestures
+ * 5. Spatial hierarchy and visual feedback
+ * 6. Accessible keyboard navigation
+ * 7. No app reinitialization on navigation
  */
 export const Sidebar: React.FC<SidebarProps & {
   collapsed: boolean;
@@ -33,6 +39,8 @@ export const Sidebar: React.FC<SidebarProps & {
   className,
   theme = 'dark'
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeHover, setActiveHover] = useState<string | null>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -56,15 +64,34 @@ export const Sidebar: React.FC<SidebarProps & {
     }
   }, [touchStart, isOpen, onClose]);
 
-  // Enhanced menu items
+  // Navigation handler - prevents default link behavior and uses React Router
+  const handleNavigation = useCallback((e: React.MouseEvent, route: string) => {
+    e.preventDefault();
+    navigate(route);
+    // Close sidebar on mobile after navigation
+    if (window.innerWidth < 1024) {
+      onClose?.();
+    }
+  }, [navigate, onClose]);
+
+  // Check if route is active
+  const isRouteActive = useCallback((route: string) => {
+    if (route === ROUTES.DASHBOARD) {
+      return location.pathname === ROUTES.DASHBOARD;
+    }
+    return location.pathname.startsWith(route);
+  }, [location.pathname]);
+
+  // Enhanced menu items with routes
   const menuItems: EnhancedMenuItem[] = [
     {
       id: 'dashboard',
       label: 'Dashboard',
       icon: <LayoutDashboard className="w-5 h-5" />,
       premiumIcon: <Home className="w-5 h-5" />,
-      href: '/dashboard',
-      active: true,
+      href: ROUTES.DASHBOARD,
+      route: ROUTES.DASHBOARD,
+      active: isRouteActive(ROUTES.DASHBOARD),
       description: 'Holistic system overview',
       stats: '98% uptime',
       shortcut: '⌘1',
@@ -75,7 +102,9 @@ export const Sidebar: React.FC<SidebarProps & {
       label: 'Patients',
       icon: <Users className="w-5 h-5" />,
       premiumIcon: <Heart className="w-5 h-5" />,
-      href: '/patients',
+      href: ROUTES.PATIENTS,
+      route: ROUTES.PATIENTS,
+      active: isRouteActive(ROUTES.PATIENTS),
       badge: 12,
       description: 'Comprehensive care management',
       stats: '2.4K active',
@@ -88,6 +117,8 @@ export const Sidebar: React.FC<SidebarProps & {
       icon: <ClipboardList className="w-5 h-5" />,
       premiumIcon: <Activity className="w-5 h-5" />,
       href: '/encounters',
+      route: '/encounters',
+      active: isRouteActive('/encounters'),
       badge: 3,
       badgeVariant: 'urgent' as const,
       description: 'Real-time consultations',
@@ -101,6 +132,8 @@ export const Sidebar: React.FC<SidebarProps & {
       icon: <FileText className="w-5 h-5" />,
       premiumIcon: <Database className="w-5 h-5" />,
       href: '/reports',
+      route: '/reports',
+      active: isRouteActive('/reports'),
       description: 'Predictive analytics',
       stats: 'AI-powered',
       shortcut: '⌘4',
@@ -112,6 +145,8 @@ export const Sidebar: React.FC<SidebarProps & {
       icon: <BarChart3 className="w-5 h-5" />,
       premiumIcon: <TrendingUp className="w-5 h-5" />,
       href: '/analytics',
+      route: '/analytics',
+      active: isRouteActive('/analytics'),
       description: 'Advanced metrics',
       stats: 'Real-time data',
       shortcut: '⌘5',
@@ -123,6 +158,8 @@ export const Sidebar: React.FC<SidebarProps & {
       icon: <Cpu className="w-5 h-5" />,
       premiumIcon: <AlertCircle className="w-5 h-5" />,
       href: '/system',
+      route: '/system',
+      active: isRouteActive('/system'),
       description: 'Infrastructure health',
       stats: 'Optimal',
       shortcut: '⌘6',
@@ -136,7 +173,9 @@ export const Sidebar: React.FC<SidebarProps & {
       label: 'Settings',
       icon: <Settings className="w-5 h-5" />,
       premiumIcon: <Settings className="w-5 h-5" />,
-      href: '/settings',
+      href: ROUTES.SETTINGS,
+      route: ROUTES.SETTINGS,
+      active: isRouteActive(ROUTES.SETTINGS),
       description: 'Master configuration',
       shortcut: '⌘,',
       glowColor: 'from-gray-600 to-gray-500'
@@ -147,6 +186,8 @@ export const Sidebar: React.FC<SidebarProps & {
       icon: <Shield className="w-5 h-5" />,
       premiumIcon: <Lock className="w-5 h-5" />,
       href: '/security',
+      route: '/security',
+      active: isRouteActive('/security'),
       description: 'Advanced protection',
       badge: 'PRO',
       badgeVariant: 'pro' as const,
@@ -159,6 +200,8 @@ export const Sidebar: React.FC<SidebarProps & {
       icon: <HelpCircle className="w-5 h-5" />,
       premiumIcon: <MessageSquare className="w-5 h-5" />,
       href: '/help',
+      route: '/help',
+      active: isRouteActive('/help'),
       description: 'Expert training',
       shortcut: '⌘?',
       glowColor: 'from-violet-600 to-purple-500'
@@ -172,11 +215,35 @@ export const Sidebar: React.FC<SidebarProps & {
       if (e.key === 'Escape' && isOpen) {
         onClose?.();
       }
+
+      // Navigation shortcuts (Cmd/Ctrl + number)
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+        const shortcuts: Record<string, string> = {
+          '1': ROUTES.DASHBOARD,
+          '2': ROUTES.PATIENTS,
+          '3': '/encounters',
+          '4': '/reports',
+          '5': '/analytics',
+          '6': '/system',
+        };
+
+        const route = shortcuts[e.key];
+        if (route) {
+          e.preventDefault();
+          navigate(route);
+        }
+
+        // Settings shortcut (Cmd/Ctrl + ,)
+        if (e.key === ',') {
+          e.preventDefault();
+          navigate(ROUTES.SETTINGS);
+        }
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, navigate]);
 
   const renderMenuItem = (item: EnhancedMenuItem) => {
     const isActive = item.active;
@@ -186,6 +253,7 @@ export const Sidebar: React.FC<SidebarProps & {
       <a
         key={item.id}
         href={item.href}
+        onClick={(e) => item.route && handleNavigation(e, item.route)}
         className={cn(
           'group relative flex items-center',
           'rounded-xl transition-all duration-300 ease-out',
@@ -206,6 +274,7 @@ export const Sidebar: React.FC<SidebarProps & {
         onMouseEnter={() => setActiveHover(item.id)}
         onMouseLeave={() => setActiveHover(null)}
         title={collapsed ? `${item.label} • ${item.description}` : undefined}
+        aria-current={isActive ? 'page' : undefined}
       >
         {/* Active indicator */}
         {isActive && !collapsed && (

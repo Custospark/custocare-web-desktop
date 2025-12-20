@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Shield, Zap, Cpu, Database } from 'lucide-react';
-import { cn } from '../../utils/classNameUtils'
+import { cn } from '../../utils/classNameUtils';
 
 interface LoadingPhase {
   icon: React.ComponentType<{ className: string }>;
@@ -10,9 +10,21 @@ interface LoadingPhase {
 
 interface LoadingScreenProps {
   duration?: number;
+  message?: string;
 }
 
-const LoadingScreen: React.FC<LoadingScreenProps> = () => {
+/**
+ * Full-Screen Loading Component
+ * 
+ * Used for:
+ * - Initial app load
+ * - Authentication flows
+ * - Critical data fetching
+ * 
+ * Note: This component is now ONLY used for initial app bootstrap.
+ * For route transitions, use LoadingSkeleton instead.
+ */
+const LoadingScreen: React.FC<LoadingScreenProps> = ({ message }) => {
   const [progress, setProgress] = useState(0);
   const [loadingPhase, setLoadingPhase] = useState(0);
 
@@ -102,7 +114,9 @@ const LoadingScreen: React.FC<LoadingScreenProps> = () => {
           </div>
 
           <div className="flex justify-between items-center mt-3">
-            <span className="text-xs text-gray-500 font-medium">Loading...</span>
+            <span className="text-xs text-gray-500 font-medium">
+              {message || 'Loading...'}
+            </span>
             <span className="text-sm font-bold text-cyan-400">{progress}%</span>
           </div>
         </div>

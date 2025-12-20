@@ -7,28 +7,38 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 interface UIState {
   isInitialized: boolean;
   isLoading: boolean;
+  loadingMessage: string | null;
   sidebarOpen: boolean;
+  sidebarCollapsed: boolean;
   theme: 'dark' | 'light';
   modalOpen: Record<string, boolean>;
 }
 
-type UIPreferences = Pick<UIState, 'theme' | 'sidebarOpen'>;
+type UIPreferences = Pick<UIState, 'theme' | 'sidebarOpen' | 'sidebarCollapsed'>;
 
 /* =========================
    Local Storage Helpers
 ========================= */
 
-const UI_STORAGE_KEY = 'ui_preferences';
+const UI_STORAGE_KEY = 'custocare_ui_preferences';
 
 const loadUIPreferences = (): UIPreferences => {
   try {
     const stored = localStorage.getItem(UI_STORAGE_KEY);
     if (!stored) {
-      return { theme: 'dark', sidebarOpen: true };
+      return { 
+        theme: 'dark', 
+        sidebarOpen: true,
+        sidebarCollapsed: false 
+      };
     }
     return JSON.parse(stored);
   } catch {
-    return { theme: 'dark', sidebarOpen: true };
+    return { 
+      theme: 'dark', 
+      sidebarOpen: true,
+      sidebarCollapsed: false 
+    };
   }
 };
 
@@ -47,9 +57,11 @@ const saveUIPreferences = (prefs: UIPreferences) => {
 const persistedPrefs = loadUIPreferences();
 
 const initialState: UIState = {
-  isInitialized: false,
+  isInitialized: true, // Initialize immediately - no artificial loading
   isLoading: false,
+  loadingMessage: null,
   sidebarOpen: persistedPrefs.sidebarOpen,
+  sidebarCollapsed: persistedPrefs.sidebarCollapsed,
   theme: persistedPrefs.theme,
   modalOpen: {},
 };
@@ -70,6 +82,16 @@ const uiSlice = createSlice({
 
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
+      if (!action.payload) {
+        state.loadingMessage = null;
+      }
+    },
+
+    setLoadingMessage: (state, action: PayloadAction<string | null>) => {
+      state.loadingMessage = action.payload;
+      if (action.payload) {
+        state.isLoading = true;
+      }
     },
 
     /* ---------- Sidebar ---------- */
@@ -79,6 +101,7 @@ const uiSlice = createSlice({
       saveUIPreferences({
         theme: state.theme,
         sidebarOpen: state.sidebarOpen,
+        sidebarCollapsed: state.sidebarCollapsed,
       });
     },
 
@@ -87,6 +110,25 @@ const uiSlice = createSlice({
       saveUIPreferences({
         theme: state.theme,
         sidebarOpen: state.sidebarOpen,
+        sidebarCollapsed: state.sidebarCollapsed,
+      });
+    },
+
+    toggleSidebarCollapse: (state) => {
+      state.sidebarCollapsed = !state.sidebarCollapsed;
+      saveUIPreferences({
+        theme: state.theme,
+        sidebarOpen: state.sidebarOpen,
+        sidebarCollapsed: state.sidebarCollapsed,
+      });
+    },
+
+    setSidebarCollapsed: (state, action: PayloadAction<boolean>) => {
+      state.sidebarCollapsed = action.payload;
+      saveUIPreferences({
+        theme: state.theme,
+        sidebarOpen: state.sidebarOpen,
+        sidebarCollapsed: state.sidebarCollapsed,
       });
     },
 
@@ -97,6 +139,7 @@ const uiSlice = createSlice({
       saveUIPreferences({
         theme: state.theme,
         sidebarOpen: state.sidebarOpen,
+        sidebarCollapsed: state.sidebarCollapsed,
       });
     },
 
@@ -105,6 +148,7 @@ const uiSlice = createSlice({
       saveUIPreferences({
         theme: state.theme,
         sidebarOpen: state.sidebarOpen,
+        sidebarCollapsed: state.sidebarCollapsed,
       });
     },
 
@@ -131,8 +175,11 @@ const uiSlice = createSlice({
 export const {
   setInitialized,
   setLoading,
+  setLoadingMessage,
   toggleSidebar,
   setSidebarOpen,
+  toggleSidebarCollapse,
+  setSidebarCollapsed,
   setTheme,
   toggleTheme,
   openModal,
