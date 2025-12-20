@@ -1,25 +1,23 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../store/index';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronRight, ChevronLeft, MoreVertical, X, Sparkles } from 'lucide-react';
 import { cn } from '../../utils/classNameUtils';
 
 /**
  * ============================================================================
- * CONTENT LAYOUT COMPONENT - PREMIUM FULL-SPACE EDITION
+ * CONTENT LAYOUT COMPONENT - ULTIMATE RING & BORDER EDITION
  * ============================================================================
  * 
- * Enterprise-Grade Right Sidebar Architecture
+ * Enterprise-Grade Right Sidebar with Supreme Active State Design
  * 
  * Premium Features:
- * - Content occupies 100% available height
- * - No gaps between content and sidebar
- * - Right sidebar dynamically scales to content
- * - Smooth intelligent toggle with premium animations
- * - Fantastic user experience with proper spacing
- * - Mobile overlay with smooth transitions
- * - Theme-aware with perfect contrast
- * - Accessibility first approach
+ * - Active items with BOTH prominent ring AND thick right border
+ * - Diamond indicator on LEFT side
+ * - Bluish ring surrounds entire active item
+ * - Thick border accentuates right edge
+ * - Perfect color contrast and visual hierarchy
+ * - Exceptional user experience with premium animations
  */
 
 /* ============================================================================
@@ -46,6 +44,7 @@ export interface ContentLayoutProps {
   hideSidebar?: boolean;
   sidebarHeader?: React.ReactNode;
   sidebarFooter?: React.ReactNode;
+  headerTitle?: string;
 }
 
 /* ============================================================================
@@ -53,7 +52,6 @@ export interface ContentLayoutProps {
 ============================================================================ */
 
 const MOBILE_BREAKPOINT = 1024;
-// const SIDEBAR_WIDTH = 340;
 
 /* ============================================================================
    MAIN COMPONENT
@@ -69,6 +67,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
   hideSidebar = false,
   sidebarHeader,
   sidebarFooter,
+  headerTitle,
 }) => {
   /**
    * REDUX STATE
@@ -83,6 +82,8 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : false
   );
+  const contentStartRef = useRef<HTMLDivElement>(null);
+  const [contentTopOffset, setContentTopOffset] = useState(0);
 
   /**
    * EFFECTS - WINDOW RESIZE LISTENER
@@ -95,9 +96,20 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
       if (!mobile && isMobileOpen) {
         setIsMobileOpen(false);
       }
+
+      if (contentStartRef.current) {
+        const rect = contentStartRef.current.getBoundingClientRect();
+        setContentTopOffset(rect.top);
+      }
     };
 
     window.addEventListener('resize', handleResize);
+
+    if (contentStartRef.current) {
+      const rect = contentStartRef.current.getBoundingClientRect();
+      setContentTopOffset(rect.top);
+    }
+
     return () => window.removeEventListener('resize', handleResize);
   }, [isMobileOpen]);
 
@@ -145,35 +157,56 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
   );
 
   /**
-   * RENDER SIDEBAR OPERATIONS LIST
+   * RENDER SIDEBAR OPERATIONS LIST - ULTIMATE RING & BORDER DESIGN
    */
   const renderOperationsList = useCallback(
     (showHeader = true) => (
       <nav className="flex flex-col h-full">
-        {/* Header Section */}
-        {showHeader && (
+        {/* Header Section - Premium Design */}
+        {showHeader && !isMobile && (
           <div
             className={cn(
-              'px-4 py-3 border-b flex-shrink-0',
-              theme === 'dark' ? 'border-gray-800/50' : 'border-gray-200/60'
+              'px-4 py-3.5 border-b flex-shrink-0',
+              theme === 'dark' ? 'border-gray-800/40' : 'border-gray-200/50'
             )}
           >
             {sidebarHeader ? (
               sidebarHeader
             ) : (
-              <h3
-                className={cn(
-                  'text-xs font-bold uppercase tracking-widest',
-                  theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                )}
-              >
-                Quick Actions
-              </h3>
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  'w-6 h-6 rounded-lg flex items-center justify-center relative',
+                  theme === 'dark' 
+                    ? 'bg-gradient-to-br from-cyan-500/20 to-blue-500/20 ring-2 ring-cyan-500/30' 
+                    : 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 ring-2 ring-blue-500/30'
+                )}>
+                  <Sparkles className={cn(
+                    'w-3.5 h-3.5',
+                    theme === 'dark' ? 'text-cyan-400' : 'text-blue-600'
+                  )} />
+                </div>
+                <div>
+                  <h3
+                    className={cn(
+                      'text-sm font-semibold',
+                      theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                    )}
+                  >
+                    Quick Actions
+                  </h3>
+                  <p className={cn(
+                    'text-xs mt-1',
+                    theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                  )}>
+                    Frequently used tools
+                  </p>
+                </div>
+              </div>
             )}
           </div>
         )}
 
-        {/* Operations List - Scales with content */}
+        {/* Operations List - ULTIMATE Ring & Border Design */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2">
           <ul className="space-y-2">
             {operations.map((operation) => {
@@ -181,96 +214,160 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
               const isDisabled = operation.disabled;
 
               return (
-                <li key={operation.id}>
-                  <button
-                    onClick={() => !isDisabled && handleOperationClick(operation.id)}
-                    disabled={isDisabled}
-                    className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg',
-                      'text-sm font-medium transition-all duration-200 ease-out',
-                      'focus:outline-none focus:ring-2 focus:ring-offset-0',
-                      'group relative',
+                <li key={operation.id} className="relative">
+                  {/* DIAMOND INDICATOR - LEFT SIDE */}
+                  {isActive && (
+                    <div className={cn(
+                      'absolute -left-2 top-1/2 -translate-y-1/2 z-20',
+                      'w-3 h-3 transform rotate-45',
+                      'transition-all duration-300 ease-out',
+                      theme === 'dark' 
+                        ? 'bg-gradient-to-br from-cyan-400 to-blue-500 shadow-lg shadow-cyan-500/60'
+                        : 'bg-gradient-to-br from-blue-500 to-cyan-600 shadow-lg shadow-blue-500/60'
+                    )} />
+                  )}
 
-                      // Active state - Premium gradient
-                      isActive && theme === 'dark' && 'bg-linear-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/30 shadow-md shadow-cyan-500/10',
-                      isActive && theme === 'light' && 'bg-linear-to-r from-blue-500/15 to-cyan-500/15 text-blue-700 border border-blue-300/50 shadow-md shadow-blue-500/10',
+                  {/* ACTIVE ITEM OUTER CONTAINER - For combined ring + thick border effect */}
+                 
 
-                      // Inactive state - Smooth hover
-                      !isActive && !isDisabled && theme === 'dark' && 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/60 border border-transparent',
-                      !isActive && !isDisabled && theme === 'light' && 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/80 border border-transparent',
+<div
+  className={cn(
+    'relative',
+    isActive &&
+      (theme === 'dark'
+        ? 'ring-2 ring-cyan-500/80 rounded-xl shadow-lg shadow-cyan-500/30 mr-[2px]'
+        : 'ring-2 ring-blue-500/80 rounded-xl shadow-lg shadow-blue-500/30 mr-[2px]')
+  )}
+>
+  <button
+    type="button"
+    onClick={() => !isDisabled && handleOperationClick(operation.id)}
+    disabled={isDisabled}
+    aria-label={operation.description || operation.label}
+    aria-current={isActive ? 'page' : undefined}
+    title={operation.description}
+    className={cn(
+      // ==================================================
+      // Base
+      // ==================================================
+      'w-full flex items-center gap-3 px-3.5 py-2.5 relative z-10',
+      'text-sm font-medium transition-all duration-300 ease-out',
+      'focus:outline-none focus:ring-2 focus:ring-offset-0',
+      'group',
 
-                      // Disabled state
-                      isDisabled && 'opacity-50 cursor-not-allowed',
+      // ==================================================
+      // Active
+      // ==================================================
+      isActive &&
+        (theme === 'dark'
+          ? 'bg-gray-900 text-cyan-300 rounded-xl border-r-4 border-cyan-500/90 shadow-inner shadow-cyan-500/10'
+          : 'bg-white text-blue-700 rounded-xl border-r-4 border-blue-500/90 shadow-inner shadow-blue-500/10'),
 
-                      // Focus ring
-                      theme === 'dark' ? 'focus:ring-cyan-500/50' : 'focus:ring-blue-500/50'
-                    )}
-                    aria-label={operation.description || operation.label}
-                    aria-current={isActive ? 'page' : undefined}
-                    title={operation.description}
-                  >
-                    {/* Icon Container */}
-                    {operation.icon && (
-                      <span
-                        className={cn(
-                          'flex-shrink-0 w-5 h-5 flex items-center justify-center',
-                          'transition-all duration-200',
-                          isActive && theme === 'dark' && 'text-cyan-400 drop-shadow-lg',
-                          isActive && theme === 'light' && 'text-blue-600 drop-shadow-lg',
-                          !isActive && theme === 'dark' && 'text-gray-500 group-hover:text-gray-400',
-                          !isActive && theme === 'light' && 'text-gray-400 group-hover:text-gray-500'
-                        )}
-                      >
-                        {operation.icon}
-                      </span>
-                    )}
+      // ==================================================
+      // Inactive
+      // ==================================================
+      !isActive &&
+        !isDisabled &&
+        (theme === 'dark'
+          ? 'text-gray-400 bg-gray-900/30 hover:text-gray-200 hover:bg-gray-800/40 rounded-lg hover:ring-1 hover:ring-gray-700/40 hover:border-r-2 hover:border-gray-700/50 hover:shadow-md hover:shadow-gray-900/20 hover:-translate-x-[1px]'
+          : 'text-gray-600 bg-gray-100/30 hover:text-gray-900 hover:bg-gray-100/50 rounded-lg hover:ring-1 hover:ring-gray-300/40 hover:border-r-2 hover:border-gray-300/50 hover:shadow-md hover:shadow-gray-200/20 hover:-translate-x-[1px]'),
 
-                    {/* Label & Badge */}
-                    <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                      <span className="flex-1 text-left truncate text-sm">
-                        {operation.label}
-                      </span>
+      // ==================================================
+      // Disabled
+      // ==================================================
+      isDisabled &&
+        (theme === 'dark'
+          ? 'opacity-40 cursor-not-allowed text-gray-600'
+          : 'opacity-40 cursor-not-allowed text-gray-400'),
 
-                      {/* Badge */}
-                      {operation.badge && (
-                        <span
-                          className={cn(
-                            'flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold',
-                            'transition-all duration-200',
-                            isActive && theme === 'dark' && 'bg-cyan-500/30 text-cyan-300',
-                            isActive && theme === 'light' && 'bg-blue-500/20 text-blue-700',
-                            !isActive && theme === 'dark' && 'bg-gray-800 text-gray-400',
-                            !isActive && theme === 'light' && 'bg-gray-200 text-gray-600'
-                          )}
-                        >
-                          {operation.badge}
-                        </span>
-                      )}
-                    </div>
+      // ==================================================
+      // Focus Ring
+      // ==================================================
+      theme === 'dark'
+        ? 'focus:ring-cyan-500/50'
+        : 'focus:ring-blue-500/50'
+    )}
+  >
+    {/* ==================================================
+        Left: Icon
+       ================================================== */}
+    {operation.icon && (
+      <span
+        className={cn(
+          'flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-md transition-all duration-300',
 
-                    {/* Active Indicator Dot */}
-                    {isActive && (
-                      <span
-                        className={cn(
-                          'w-2 h-2 rounded-full flex-shrink-0',
-                          'animate-pulse',
-                          theme === 'dark' ? 'bg-cyan-400' : 'bg-blue-600'
-                        )}
-                      />
-                    )}
-                  </button>
+          isActive &&
+            (theme === 'dark'
+              ? 'text-cyan-400 bg-cyan-500/15 ring-1 ring-cyan-500/40 shadow-sm shadow-cyan-500/30'
+              : 'text-blue-600 bg-blue-500/15 ring-1 ring-blue-500/40 shadow-sm shadow-blue-500/30'),
+
+          !isActive &&
+            (theme === 'dark'
+              ? 'text-gray-500 bg-gray-800/30 group-hover:text-cyan-400 group-hover:bg-cyan-500/10 group-hover:ring-1 group-hover:ring-cyan-500/20'
+              : 'text-gray-500 bg-gray-200/50 group-hover:text-blue-600 group-hover:bg-blue-500/10 group-hover:ring-1 group-hover:ring-blue-500/20')
+        )}
+      >
+        {operation.icon}
+      </span>
+    )}
+
+    {/* ==================================================
+        Center: Label + Badge
+       ================================================== */}
+    <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+      <span className="truncate text-left">
+        {operation.label}
+      </span>
+
+      {operation.badge && (
+        <span
+          className={cn(
+            'px-2 py-0.5 rounded-full text-xs font-bold transition-all duration-300',
+
+            isActive &&
+              (theme === 'dark'
+                ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 ring-1 ring-cyan-500/40 shadow-md shadow-cyan-500/20'
+                : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-700 ring-1 ring-blue-500/40 shadow-md shadow-blue-500/20'),
+
+            !isActive &&
+              (theme === 'dark'
+                ? 'bg-gray-800 text-gray-400 ring-1 ring-gray-700/30 group-hover:bg-gray-700 group-hover:text-gray-300'
+                : 'bg-gray-200 text-gray-600 ring-1 ring-gray-300/30 group-hover:bg-gray-300 group-hover:text-gray-700')
+          )}
+        >
+          {operation.badge}
+        </span>
+      )}
+    </div>
+
+    {/* ==================================================
+        Right: Active Diamond Indicator
+       ================================================== */}
+    {isActive && (
+      <div className="flex-shrink-0 ml-2 opacity-80">
+        <div
+          className={cn(
+            'w-2 h-2 rotate-45',
+            theme === 'dark' ? 'bg-cyan-400' : 'bg-blue-600'
+          )}
+        />
+      </div>
+    )}
+  </button>
+</div>
+
                 </li>
               );
             })}
           </ul>
         </div>
 
-        {/* Footer Section */}
+        {/* Footer Section - Premium Design */}
         {sidebarFooter && (
           <div
             className={cn(
-              'px-4 py-3 border-t flex-shrink-0',
-              theme === 'dark' ? 'border-gray-800/50' : 'border-gray-200/60'
+              'px-4 py-3.5 border-t flex-shrink-0',
+              theme === 'dark' ? 'border-gray-800/40' : 'border-gray-200/50'
             )}
           >
             {sidebarFooter}
@@ -278,7 +375,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
         )}
       </nav>
     ),
-    [operations, activeOperation, theme, handleOperationClick, sidebarHeader, sidebarFooter]
+    [operations, activeOperation, theme, handleOperationClick, sidebarHeader, sidebarFooter, isMobile]
   );
 
   /**
@@ -293,85 +390,116 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
   }
 
   /**
-   * MAIN RENDER - PERFECT SPACING STRUCTURE
+   * MAIN RENDER - EXCEPTIONAL EXPERIENCE
    */
 
   return (
     <div className={cn('relative w-full h-full flex flex-col', className)}>
-      {/* Main Container - Full Height Flex */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Primary Workspace - Fills available space perfectly */}
-        <div className="flex-1 overflow-auto relative flex flex-col">
-          {/* Content fills entire workspace */}
-          <div className="flex-1 w-full">
-            {children}
+      {/* Mobile Header - Premium Design */}
+      {isMobile && (
+        <div
+          ref={contentStartRef}
+          className={cn(
+            'flex items-center justify-between gap-3 px-4 py-3.5 border-b flex-shrink-0 w-full',
+            'transition-colors duration-300',
+            theme === 'dark'
+              ? 'bg-gray-900/80 border-gray-800/40 backdrop-blur-xl'
+              : 'bg-white/80 border-gray-200/50 backdrop-blur-xl'
+          )}
+        >
+          <div className="flex-1 min-w-0">
+            {headerTitle && (
+              <h1
+                className={cn(
+                  'text-base font-semibold tracking-tight truncate',
+                  theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+                )}
+              >
+                {headerTitle}
+              </h1>
+            )}
           </div>
 
-          {/* Desktop Toggle Button - Positioned absolutely */}
-          {!isMobile && (
-            <button
-              onClick={handleToggleCollapse}
-              className={cn(
-                'absolute top-6 right-6 p-2.5 rounded-lg',
-                'transition-all duration-300 ease-out',
-                'focus:outline-none focus:ring-2 focus:ring-offset-2',
-                'z-20 backdrop-blur-xl',
-                'group',
-                theme === 'dark'
-                  ? 'bg-gray-900/90 border border-gray-800/60 text-gray-400 hover:text-white hover:bg-gray-800/90 focus:ring-cyan-500/50 focus:ring-offset-gray-950'
-                  : 'bg-white/90 border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-white/95 focus:ring-blue-500/50 focus:ring-offset-white',
-                'shadow-lg hover:shadow-xl hover:scale-110 active:scale-95'
-              )}
-              aria-label={isCollapsed ? 'Show actions' : 'Hide actions'}
-              aria-expanded={!isCollapsed}
-              title={isCollapsed ? 'Show quick actions (→)' : 'Hide quick actions (←)'}
-            >
-              {isCollapsed ? (
-                <ChevronLeft className="w-5 h-5 group-hover:scale-125 transition-transform" />
-              ) : (
-                <ChevronRight className="w-5 h-5 group-hover:scale-125 transition-transform" />
-              )}
-            </button>
-          )}
+          {/* Quick Actions Button - Premium Design */}
+          <button
+            onClick={handleToggleMobile}
+            className={cn(
+              'flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-300',
+              'focus:outline-none focus:ring-2 focus:ring-offset-0',
+              'group/btn',
+              theme === 'dark'
+                ? 'text-gray-300 hover:text-cyan-400 bg-gray-800/50 hover:bg-gray-800/70 focus:ring-cyan-500/50'
+                : 'text-gray-700 hover:text-blue-600 bg-gray-100/50 hover:bg-gray-100/70 focus:ring-blue-500/50',
+              'backdrop-blur-xl',
+              'shadow-lg hover:shadow-xl hover:scale-105 active:scale-95'
+            )}
+            aria-label="Open quick actions"
+            aria-expanded={isMobileOpen}
+            title="Quick actions"
+          >
+            <MoreVertical className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+            <span className="text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
+              Actions
+            </span>
+          </button>
+        </div>
+      )}
 
-          {/* Mobile Toggle Button */}
-          {isMobile && (
-            <button
-              onClick={handleToggleMobile}
-              className={cn(
-                'fixed bottom-6 right-6 p-3 rounded-xl shadow-2xl',
-                'z-40 transition-all duration-300 ease-out',
-                'focus:outline-none focus:ring-2 focus:ring-offset-2',
-                theme === 'dark'
-                  ? 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-950'
-                  : 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500/50 focus:ring-offset-white',
-                'hover:scale-110 active:scale-95',
-                isMobileOpen && 'opacity-0 pointer-events-none'
-              )}
-              aria-label="Toggle quick actions"
-              aria-expanded={isMobileOpen}
-              title="Show quick actions"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          )}
+      {/* Main Container - Premium Layout */}
+      <div className="flex-1 flex overflow-hidden relative">
+        <div className="flex-1 overflow-auto relative flex flex-col">
+          <div
+            ref={!isMobile ? contentStartRef : undefined}
+            className="flex-1 w-full relative group flex flex-col"
+          >
+            <div className="flex-1 w-full">
+              {children}
+            </div>
+
+            {/* Desktop Toggle Button - Premium Design */}
+            {!isMobile && (
+              <button
+                onClick={handleToggleCollapse}
+                className={cn(
+                  'absolute top-6 right-6 p-2.5 rounded-xl',
+                  'transition-all duration-300 ease-out',
+                  'focus:outline-none focus:ring-2 focus:ring-offset-2',
+                  'z-20 backdrop-blur-xl',
+                  'group/toggle',
+                  theme === 'dark'
+                    ? 'bg-gray-900/80 border border-gray-700/50 text-gray-400 hover:text-cyan-400 hover:border-cyan-500/50 focus:ring-cyan-500/50 focus:ring-offset-gray-950'
+                    : 'bg-white/80 border border-gray-300/50 text-gray-600 hover:text-blue-600 hover:border-blue-500/50 focus:ring-blue-500/50 focus:ring-offset-white',
+                  'shadow-xl hover:shadow-2xl hover:scale-110 active:scale-95'
+                )}
+                aria-label={isCollapsed ? 'Show actions' : 'Hide actions'}
+                aria-expanded={!isCollapsed}
+                title={isCollapsed ? 'Show quick actions' : 'Hide quick actions'}
+              >
+                {isCollapsed ? (
+                  <ChevronLeft className="w-4 h-4 group-hover/toggle:scale-125 transition-transform" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 group-hover/toggle:scale-125 transition-transform" />
+                )}
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Desktop Right Sidebar - Adjacent to content, no gap */}
+        {/* Desktop Right Sidebar - Premium Design */}
         {!isMobile && !isCollapsed && (
           <aside
             className={cn(
-              'w-[340px] border-l transition-all duration-300 ease-out',
+              'w-[320px] border-l transition-all duration-300 ease-out',
               'flex flex-col overflow-hidden',
               'flex-shrink-0',
               theme === 'dark'
-                ? 'bg-gray-900/95 backdrop-blur-xl border-gray-800/50'
-                : 'bg-white/95 backdrop-blur-xl border-gray-200/60'
+                ? 'bg-gray-900/95 backdrop-blur-xl border-gray-800/40'
+                : 'bg-white/95 backdrop-blur-xl border-gray-200/50',
+              'shadow-xl'
             )}
             role="complementary"
             aria-label="Quick actions sidebar"
           >
-            {/* Sidebar Content - Full Height, Dynamic Scaling */}
             <div className="h-full flex flex-col min-w-0 overflow-hidden">
               {renderOperationsList(true)}
             </div>
@@ -379,71 +507,98 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
         )}
       </div>
 
-      {/* Mobile Overlay & Sidebar */}
+      {/* Mobile Overlay & Sidebar - Premium Experience */}
       {isMobile && (
         <>
-          {/* Premium Backdrop */}
           <div
             className={cn(
-              'fixed inset-0 z-30',
+              'fixed inset-0 z-30 pointer-events-none',
               'transition-all duration-300 ease-out',
-              isMobileOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              isMobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0'
             )}
             onClick={handleCloseMobile}
             aria-hidden="true"
             style={{
-              backgroundColor: theme === 'dark' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.4)',
-              backdropFilter: 'blur(8px)',
+              backgroundColor: theme === 'dark' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.3)',
+              backdropFilter: isMobileOpen ? 'blur(8px)' : 'blur(0px)',
             }}
           />
 
-          {/* Mobile Sidebar Panel - Full Height, Dynamic Content */}
+          {/* Mobile Sidebar Panel - Premium Design */}
           <aside
             className={cn(
-              'fixed top-0 right-0 h-full w-[340px]',
-              'border-l transition-all duration-300 ease-out',
-              'z-40 flex flex-col overflow-hidden',
+              'fixed right-0 w-[300px] transition-all duration-300 ease-out',
+              'z-40 flex flex-col overflow-hidden border-l',
               theme === 'dark'
-                ? 'bg-gray-900/98 border-gray-800/50'
-                : 'bg-white/98 border-gray-200/60',
-              isMobileOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full shadow-lg'
+                ? 'bg-gray-900/95 border-gray-800/40'
+                : 'bg-white/95 border-gray-200/50',
+              isMobileOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full shadow-xl',
+              'backdrop-blur-xl'
             )}
+            style={{
+              top: `${contentTopOffset}px`,
+              height: `calc(100vh - ${contentTopOffset}px)`,
+            }}
             aria-hidden={!isMobileOpen}
             role="complementary"
             aria-label="Quick actions sidebar"
           >
-            {/* Mobile Header with Close Button */}
+            {/* Mobile Header - Premium Design */}
             <div
               className={cn(
-                'flex items-center justify-between px-4 py-3 border-b flex-shrink-0',
-                theme === 'dark' ? 'border-gray-800/50' : 'border-gray-200/60'
+                'flex items-center justify-between px-4 py-3.5 border-b flex-shrink-0 gap-3',
+                theme === 'dark' 
+                  ? 'border-gray-800/40 bg-gray-900/80' 
+                  : 'border-gray-200/50 bg-white/80'
               )}
             >
-              <h3
-                className={cn(
-                  'text-xs font-bold uppercase tracking-widest',
-                  theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                )}
-              >
-                Quick Actions
-              </h3>
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className={cn(
+                  'w-6 h-6 rounded-lg flex items-center justify-center',
+                  theme === 'dark' 
+                    ? 'bg-gradient-to-br from-cyan-500/20 to-blue-500/20 ring-2 ring-cyan-500/30' 
+                    : 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 ring-2 ring-blue-500/30'
+                )}>
+                  <Sparkles className={cn(
+                    'w-3.5 h-3.5',
+                    theme === 'dark' ? 'text-cyan-400' : 'text-blue-600'
+                  )} />
+                </div>
+                <div className="min-w-0">
+                  <h3
+                    className={cn(
+                      'text-sm font-semibold truncate',
+                      theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                    )}
+                  >
+                    Quick Actions
+                  </h3>
+                  <p className={cn(
+                    'text-xs mt-1 truncate',
+                    theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                  )}>
+                    Tap to navigate
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={handleCloseMobile}
                 className={cn(
-                  'p-1.5 rounded-lg transition-all duration-200',
+                  'p-2 rounded-lg transition-all duration-300 flex-shrink-0',
                   'focus:outline-none focus:ring-2 focus:ring-offset-0',
-                  'group',
+                  'group/close',
                   theme === 'dark'
-                    ? 'text-gray-400 hover:text-white hover:bg-gray-800 focus:ring-cyan-500'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:ring-blue-500'
+                    ? 'text-gray-400 hover:text-cyan-400 hover:bg-gray-800/60 focus:ring-cyan-500/50'
+                    : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100/60 focus:ring-blue-500/50',
+                  'hover:scale-110 active:scale-95'
                 )}
                 aria-label="Close quick actions"
+                title="Close"
               >
-                <ChevronLeft className="w-5 h-5 group-hover:scale-125 transition-transform" />
+                <X className="w-4 h-4 group-hover/close:rotate-90 transition-transform" />
               </button>
             </div>
 
-            {/* Mobile Sidebar Content - Full Height, Dynamic */}
             <div className="flex-1 overflow-hidden flex flex-col min-w-0">
               {renderOperationsList(false)}
             </div>
