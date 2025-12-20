@@ -15,7 +15,6 @@ interface EnhancedMenuItem extends MenuItem {
 }
 
 /**
- * Masterpiece Sidebar - 8 Decades of Design Excellence
  * 
  * Key Innovations:
  * 1. Mobile-first with proper z-index layering

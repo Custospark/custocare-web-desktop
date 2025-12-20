@@ -21,6 +21,8 @@ function AppRoutes() {
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
         {/* Public Routes */}
+        {/* Redirect root to login */}
+        <Route path={ROUTES.HOME} element={<Navigate to={ROUTES.LOGIN} replace />} />
         <Route path={ROUTES.LOGIN} element={<LoginPage />} />
 
         {/* Protected / Layout Routes */}
