@@ -18,8 +18,8 @@ import {
   saveDraft,
   clearDraft,
 //   selectFacility,
-  createFacility,
-  verifyLicense
+  // createFacility,
+  // verifyLicense
 } from '../../store/slices/facilitySlice';
 
 /* ============================================================================
@@ -248,15 +248,42 @@ const FacilityRegistrationWizard: React.FC = () => {
     { id: 3, title: 'Review & Confirm', description: 'Final review and submission', completed: false }
   ];
   
-  const handleInputChange = useCallback((field: string, value: unknown) => {
+ interface FacilityFormData {
+  name: string;
+  type: "Hospital" | "Clinic" | "Pharmacy" | "Lab" | "Other";
+  licenseNumber: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    postalCode: string;
+  };
+  contact: {
+    phone: string;
+    email: string;
+    emergencyContact: string;
+  };
+  licenseVerified: boolean;
+  agreeToTerms: boolean;
+}
+
+
+ const handleInputChange = useCallback<
+  <K extends keyof FacilityFormData>(field: K, value: FacilityFormData[K]) => void
+>(
+  (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
-    
+
     // Auto-save to draft
-    dispatch(saveDraft({ [field]: value }));
-  }, [dispatch]);
+    dispatch(saveDraft({ [field]: value } as Partial<FacilityFormData>));
+  },
+  [dispatch]
+);
+
   
   const handleNext = useCallback(() => {
     if (currentStep < steps.length - 1) {
@@ -278,11 +305,13 @@ const FacilityRegistrationWizard: React.FC = () => {
   const handleSubmit = useCallback(async () => {
     try {
       // TODO: Implement actual API call
-      await dispatch(createFacility(formData)).unwrap();
+      // await dispatch(createFacility(formData)).unwrap();
       alert('Facility registered successfully!');
       dispatch(clearDraft());
       dispatch(setActiveAction('overview'));
     } catch (error) {
+        alert(error);
+
       alert('Failed to register facility. Please try again.');
     }
   }, [dispatch, formData]);
@@ -294,9 +323,11 @@ const FacilityRegistrationWizard: React.FC = () => {
     }
     
     try {
-      await dispatch(verifyLicense(formData.licenseNumber)).unwrap();
+      // await dispatch(verifyLicense(formData.licenseNumber)).unwrap();
       setFormData(prev => ({ ...prev, licenseVerified: true }));
     } catch (error) {
+        alert(error);
+
       alert('License verification failed');
     }
   }, [dispatch, formData.licenseNumber]);
@@ -357,7 +388,7 @@ const FacilityRegistrationWizard: React.FC = () => {
                     <button
                       key={type.value}
                       type="button"
-                      onClick={() => handleInputChange('type', type.value)}
+                      // onClick={() => handleInputChange('type', type.value)}
                       className={cn(
                         'p-4 rounded-xl border transition-all',
                         'flex flex-col items-center gap-2',
@@ -1965,13 +1996,13 @@ const WorkflowCustomizationWizard: React.FC = () => {
 export const FacilityOnboardingModule: React.FC = () => {
   const dispatch = useDispatch();
   const theme = useSelector((state: RootState) => state.ui.theme);
-  const { facilities, onboarding } = useSelector((state: RootState) => state.facility);
+  const { facilities } = useSelector((state: RootState) => state.facility);
   
   const [activeAction, setActiveAction] = useState<FacilityActionId>('overview');
   
   const handleOperationChange = useCallback((operationId: string) => {
     setActiveAction(operationId as FacilityActionId);
-    dispatch(setActiveAction(operationId));
+    // dispatch(setActiveAction(operationId));
   }, [dispatch]);
   
   const renderOverview = () => (

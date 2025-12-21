@@ -4,12 +4,13 @@ import { v4 as uuidv4 } from 'uuid';
 /* =========================
    Types
 ========================= */
+export type FacilityType = "Hospital" | "Clinic" | "Pharmacy" | "Lab" | "Other";
 
 export interface Facility {
   id: string;
   organizationId: string;
   name: string;
-  type: 'Hospital' | 'Clinic' | 'Pharmacy' | 'Lab' | 'Other';
+  type: FacilityType;
   licenseNumber: string;
   status: 'Active' | 'Inactive' | 'Pending';
   registrationStatus: 'Not Started' | 'In Progress' | 'Completed';
