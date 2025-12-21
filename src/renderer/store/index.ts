@@ -3,6 +3,8 @@ import authSlice from './slices/authSlice';
 import uiSlice from './slices/uiSlice';
 import patientSlice from './slices/patientSlice';
 import notificationSlice from './slices/notificationSlice';
+import facilitySlice from './slices/facilitySlice'; 
+
 
 /**
  * Redux Store Configuration
@@ -26,6 +28,8 @@ export const store = configureStore({
     ui: uiSlice,
     patient: patientSlice,
     notification: notificationSlice,
+    facility: facilitySlice,
+
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

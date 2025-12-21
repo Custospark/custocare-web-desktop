@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, ClipboardList, FileText, Settings, HelpCircle,
   X, Shield, Activity, TrendingUp, Cpu, Lock, BarChart3,
-  Home, Database, AlertCircle, Heart, Bell, MessageSquare
+  Home, Database, AlertCircle, Heart, Bell, MessageSquare,Building2
 } from 'lucide-react';
 import { type SidebarProps, type MenuItem } from '../../types/index';
 import { cn } from '../../types/cn';
@@ -83,89 +83,104 @@ export const Sidebar: React.FC<SidebarProps & {
   }, [location.pathname]);
 
   // Enhanced menu items with routes
-  const menuItems: EnhancedMenuItem[] = [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: <LayoutDashboard className="w-5 h-5" />,
-      premiumIcon: <Home className="w-5 h-5" />,
-      href: ROUTES.DASHBOARD,
-      route: ROUTES.DASHBOARD,
-      active: isRouteActive(ROUTES.DASHBOARD),
-      description: 'Holistic system overview',
-      stats: '98% uptime',
-      shortcut: '⌘1',
-      glowColor: 'from-blue-500 to-cyan-400'
-    },
-    {
-      id: 'patients',
-      label: 'Patients',
-      icon: <Users className="w-5 h-5" />,
-      premiumIcon: <Heart className="w-5 h-5" />,
-      href: ROUTES.PATIENTS,
-      route: ROUTES.PATIENTS,
-      active: isRouteActive(ROUTES.PATIENTS),
-      badge: 12,
-      description: 'Comprehensive care management',
-      stats: '2.4K active',
-      shortcut: '⌘2',
-      glowColor: 'from-emerald-500 to-teal-400'
-    },
-    {
-      id: 'encounters',
-      label: 'Encounters',
-      icon: <ClipboardList className="w-5 h-5" />,
-      premiumIcon: <Activity className="w-5 h-5" />,
-      href: '/encounters',
-      route: '/encounters',
-      active: isRouteActive('/encounters'),
-      badge: 3,
-      badgeVariant: 'urgent' as const,
-      description: 'Real-time consultations',
-      stats: 'Live monitoring',
-      shortcut: '⌘3',
-      glowColor: 'from-amber-500 to-orange-400'
-    },
-    {
-      id: 'reports',
-      label: 'Intelligence',
-      icon: <FileText className="w-5 h-5" />,
-      premiumIcon: <Database className="w-5 h-5" />,
-      href: '/reports',
-      route: '/reports',
-      active: isRouteActive('/reports'),
-      description: 'Predictive analytics',
-      stats: 'AI-powered',
-      shortcut: '⌘4',
-      glowColor: 'from-purple-500 to-pink-400'
-    },
-    {
-      id: 'analytics',
-      label: 'Analytics',
-      icon: <BarChart3 className="w-5 h-5" />,
-      premiumIcon: <TrendingUp className="w-5 h-5" />,
-      href: '/analytics',
-      route: '/analytics',
-      active: isRouteActive('/analytics'),
-      description: 'Advanced metrics',
-      stats: 'Real-time data',
-      shortcut: '⌘5',
-      glowColor: 'from-indigo-500 to-blue-400'
-    },
-    {
-      id: 'system',
-      label: 'System',
-      icon: <Cpu className="w-5 h-5" />,
-      premiumIcon: <AlertCircle className="w-5 h-5" />,
-      href: '/system',
-      route: '/system',
-      active: isRouteActive('/system'),
-      description: 'Infrastructure health',
-      stats: 'Optimal',
-      shortcut: '⌘6',
-      glowColor: 'from-gray-700 to-gray-600'
-    },
-  ];
+const menuItems: EnhancedMenuItem[] = [
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: <LayoutDashboard className="w-5 h-5" />,
+    premiumIcon: <Home className="w-5 h-5" />,
+    href: ROUTES.DASHBOARD,
+    route: ROUTES.DASHBOARD,
+    active: isRouteActive(ROUTES.DASHBOARD),
+    description: 'Holistic system overview',
+    stats: '98% uptime',
+    shortcut: '⌘1',
+    glowColor: 'from-blue-500 to-cyan-400'
+  },
+  {
+    id: 'patients',
+    label: 'Patients',
+    icon: <Users className="w-5 h-5" />,
+    premiumIcon: <Heart className="w-5 h-5" />,
+    href: ROUTES.PATIENTS,
+    route: ROUTES.PATIENTS,
+    active: isRouteActive(ROUTES.PATIENTS),
+    badge: 12,
+    description: 'Comprehensive care management',
+    stats: '2.4K active',
+    shortcut: '⌘2',
+    glowColor: 'from-emerald-500 to-teal-400'
+  },
+  {
+    id: 'facilities',
+    label: 'Facilities',
+    icon: <Building2 className="w-5 h-5" />,
+    premiumIcon: <Building2 className="w-5 h-5" />,
+    href: ROUTES.FACILITIES,
+    route: ROUTES.FACILITIES,
+    active: isRouteActive(ROUTES.FACILITIES),
+    badge: 'NEW',
+    description: 'Facility management and onboarding',
+    stats: 'Manage your facilities',
+    shortcut: '⌘3',
+    glowColor: 'from-yellow-500 to-orange-400'
+  },
+  {
+    id: 'encounters',
+    label: 'Encounters',
+    icon: <ClipboardList className="w-5 h-5" />,
+    premiumIcon: <Activity className="w-5 h-5" />,
+    href: '/encounters',
+    route: '/encounters',
+    active: isRouteActive('/encounters'),
+    badge: 3,
+    badgeVariant: 'urgent' as const,
+    description: 'Real-time consultations',
+    stats: 'Live monitoring',
+    shortcut: '⌘4',
+    glowColor: 'from-amber-500 to-orange-400'
+  },
+  {
+    id: 'reports',
+    label: 'Intelligence',
+    icon: <FileText className="w-5 h-5" />,
+    premiumIcon: <Database className="w-5 h-5" />,
+    href: '/reports',
+    route: '/reports',
+    active: isRouteActive('/reports'),
+    description: 'Predictive analytics',
+    stats: 'AI-powered',
+    shortcut: '⌘5',
+    glowColor: 'from-purple-500 to-pink-400'
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: <BarChart3 className="w-5 h-5" />,
+    premiumIcon: <TrendingUp className="w-5 h-5" />,
+    href: '/analytics',
+    route: '/analytics',
+    active: isRouteActive('/analytics'),
+    description: 'Advanced metrics',
+    stats: 'Real-time data',
+    shortcut: '⌘6',
+    glowColor: 'from-indigo-500 to-blue-400'
+  },
+  {
+    id: 'system',
+    label: 'System',
+    icon: <Cpu className="w-5 h-5" />,
+    premiumIcon: <AlertCircle className="w-5 h-5" />,
+    href: '/system',
+    route: '/system',
+    active: isRouteActive('/system'),
+    description: 'Infrastructure health',
+    stats: 'Optimal',
+    shortcut: '⌘7',
+    glowColor: 'from-gray-700 to-gray-600'
+  },
+];
+
 
   const secondaryMenuItems: EnhancedMenuItem[] = [
     {

@@ -26,6 +26,11 @@ export const ROUTES = {
   TWO_FACTOR_AUTH: '/verify-2fa',
   VERIFY_EMAIL: '/verify-email',
 
+   // Facility Management Module
+  FACILITIES: '/facilities',
+  FACILITY_DETAIL: '/facilities/:id',
+  FACILITY_ONBOARDING: '/facilities/onboarding',
+
   // Patient Management
   PATIENTS: '/patients',
   PATIENT_DETAIL: '/patients/:id',
@@ -78,6 +83,8 @@ export const generateRoute = {
   encounterDetail: (id: string) => `/encounters/${id}`,
   resetPassword: (token: string, email?: string) =>
     `/reset-password?token=${token}${email ? `&email=${encodeURIComponent(email)}` : ''}`,
+  facilityDetail: (id: string) => `/facilities/${id}`,
+
 } as const;
 
 /* ============================================================================

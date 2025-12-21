@@ -12,6 +12,8 @@ const SignUpPage = React.lazy(() => import('../features/auth/SignUp'));
 const ForgotPasswordPage = React.lazy(() => import('../features/auth/ForgotPassword'));
 const ResetPasswordPage = React.lazy(() => import('../features/auth/ResetPassword'));
 const TwoFactorAuthPage = React.lazy(() => import('../features/auth/TwoFactorAuthPage'));
+const FacilityOnboardingModule = React.lazy(() => import('../features/facilities/FacilityOnboardingModule'));
+
 
 // Dashboard & Main Pages
 const Dashboard = React.lazy(() => import('../pages/Dashboard'));
@@ -134,6 +136,26 @@ function AppRoutes() {
         */}
         
         <Route element={<Layout />}>
+
+
+
+        <Route 
+          path={ROUTES.FACILITIES} 
+          element={
+            <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+              <FacilityOnboardingModule />
+            </Suspense>
+          } 
+        />
+
+        <Route 
+          path={ROUTES.FACILITY_ONBOARDING} 
+          element={
+            <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+              <FacilityOnboardingModule />
+            </Suspense>
+          } 
+        />
           {/* Dashboard */}
           <Route 
             path={ROUTES.DASHBOARD} 
