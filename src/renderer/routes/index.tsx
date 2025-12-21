@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import LoadingSkeleton from '../components/Loading/LoadingSkeletons';
 import { ROUTES } from './routeConstants';
 import Layout from '../components/Navigation/Layout';
+import ClinicalEncounterModule from '../features/clinical/ClinicalEncounterModule';
 
 // Lazy load pages for code splitting and performance optimization
 
@@ -194,10 +195,7 @@ function AppRoutes() {
             path={ROUTES.ENCOUNTERS} 
             element={
               <Suspense fallback={<LoadingSkeleton variant="table" />}>
-                <div className="p-8">
-                  <h1 className="text-3xl font-bold text-white">Encounters</h1>
-                  <p className="text-gray-400 mt-2">Clinical encounters management coming soon...</p>
-                </div>
+                <ClinicalEncounterModule />
               </Suspense>
             } 
           />
