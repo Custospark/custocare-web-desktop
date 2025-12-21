@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '../../store/index';
 import { ChevronRight, ChevronLeft, MoreVertical, X, Sparkles } from 'lucide-react';
 import { cn } from '../../utils/classNameUtils';
+import { ReactNode } from 'react';
 
 /**
  * ============================================================================
@@ -27,7 +28,7 @@ import { cn } from '../../utils/classNameUtils';
 export interface Operation {
   id: string;
   label: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;           // JSX elements are allowed
   description?: string;
   disabled?: boolean;
   badge?: number | string;
