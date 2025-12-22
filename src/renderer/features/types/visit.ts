@@ -9,7 +9,7 @@ import {
   PaginatedResponse as SharedPaginatedResponse
 } from './shared';
 import { PatientDemographics } from './patient';
-export { PriorityLevel };
+export { PriorityLevel,VisitStatus };
 
 
 // Enhanced disposition types
