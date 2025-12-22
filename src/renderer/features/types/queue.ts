@@ -62,3 +62,26 @@ export interface QueueStats {
     patientName: string;
   };
 }
+
+// Generic API response wrapper
+export interface ApiResponse<T> {
+  data: T;
+  message: string;
+  success: boolean;
+  timestamp: string;
+}
+
+// Queue mutation responses
+export interface PriorityUpdateResult {
+  visitId: string;
+  oldPriority: PriorityLevel;
+  newPriority: PriorityLevel;
+  updatedAt: string;
+}
+
+export interface QueueAssignmentResult {
+  visitId: string;
+  assignedToUserId: string;
+  assignedByUserId: string;
+  assignedAt: string;
+}

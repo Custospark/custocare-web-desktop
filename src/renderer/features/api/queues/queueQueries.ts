@@ -6,6 +6,7 @@ import {
   PriorityUpdate,
   QueueFilter,
   QueueStats,
+  QueueItem,
 } from '../../types/queue';
 import { visitQueryKeys } from '../visits/visitQueries';
 
@@ -80,25 +81,34 @@ export const useQueueStats = (roleId?: string) => {
 // Mutation hooks
 export const useUpdateQueuePriority = () => {
   const queryClient = useQueryClient();
-  
-  return useMutation<ApiResponse<any>, Error, PriorityUpdate>({
+
+  return useMutation<
+    ApiResponse<QueueItem>, // ✅ what the API RETURNS
+    Error,
+    PriorityUpdate               // ✅ what the mutation ACCEPTS
+  >({
     mutationFn: queueApi.updateQueuePriority,
-    onSuccess: (data, variables) => {
-      // Invalidate all queue queries
-      queryClient.invalidateQueries({ queryKey: queueQueryKeys.all });
-      
-      // Update visit cache with new priority
-      queryClient.invalidateQueries({ 
-        queryKey: visitQueryKeys.detail(variables.visitId) 
+
+    onSuccess: (response, variables) => {
+      // Invalidate queues
+      queryClient.invalidateQueries({
+        queryKey: queueQueryKeys.all,
+      });
+
+      // Invalidate visit detail
+      queryClient.invalidateQueries({
+        queryKey: visitQueryKeys.detail(variables.visitId),
       });
     },
   });
 };
+;
+
 
 export const useAssignQueueVisit = () => {
   const queryClient = useQueryClient();
   
-  return useMutation<ApiResponse<any>, Error, QueueAssignment>({
+  return useMutation<ApiResponse<QueueItem>, Error, QueueAssignment>({
     mutationFn: queueApi.assignQueueVisit,
     onSuccess: (data, variables) => {
       // Invalidate all queue queries

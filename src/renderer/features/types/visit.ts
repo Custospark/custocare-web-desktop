@@ -236,6 +236,11 @@ export interface VisitStatsResponse extends SharedApiResponse<VisitStatistics> {
   departmentId?: string;
 }
 
+export interface TransitionVisitOptimisticContext {
+  previousVisit?: ApiResponse<Visit>;
+}
+
+
 export interface VisitQueueItem {
   visitId: string;
   patientId: string;

@@ -12,6 +12,7 @@ import {
 } from '../../types/visit';
 import { patientQueryKeys } from '../patients/patientQueries';
 import { queueQueryKeys } from '../queues/queueQueries';
+import { VisitStatus } from '../../types/shared';
 
 // Query keys
 export const visitQueryKeys = {
@@ -50,7 +51,8 @@ export const useVisits = (
     queryFn: () => visitApi.filterVisits({ 
       ...params, 
       page: params.page || 1, 
-      pageSize: params.pageSize || 50 
+      pageSize: params.pageSize || 50 ,
+      limit:100
     }),
     ...options,
   });
@@ -118,7 +120,7 @@ export const useCreateVisit = () => {
 export const useCreateEmergencyVisit = () => {
   const queryClient = useQueryClient();
   
-  return useMutation<ApiResponse<Visit>, Error, EmergencyVisitData>({
+  return useMutation<ApiResponse<Visit>, Error, EmergencyVisitData,EmergencyVisitOptimisticContext>({
     mutationFn: visitApi.createEmergencyVisit,
     onSuccess: (data) => {
       // Invalidate all relevant queries
@@ -130,62 +132,125 @@ export const useCreateEmergencyVisit = () => {
       queryClient.setQueryData(visitQueryKeys.detail(data.data.id), data);
     },
     // Optimistic update for emergency cases
-    onMutate: async () => {
-      const tempId = `temp-visit-${Date.now()}`;
-      const tempPatientId = `temp-patient-${Date.now()}`;
-      
-      // Cancel outgoing queries
-      await Promise.all([
-        queryClient.cancelQueries({ queryKey: visitQueryKeys.lists() }),
-        queryClient.cancelQueries({ queryKey: queueQueryKeys.all }),
-      ]);
-      
-      // Snapshot previous values with proper typing
-      const previousVisits = queryClient.getQueryData<PaginatedResponse<Visit>>(
-        visitQueryKeys.lists()
-      );
-      
-      // Optimistically create visit
-     queryClient.setQueryData<PaginatedResponse<Visit>>(
-  queryKey,
-  (oldData) => {
-    if (!oldData) {
+  onMutate: async () => {
+  const tempId = `temp-visit-${Date.now()}`;
+  const tempPatientId = `temp-patient-${Date.now()}`;
+
+  await Promise.all([
+    queryClient.cancelQueries({ queryKey: visitQueryKeys.lists() }),
+    queryClient.cancelQueries({ queryKey: queueQueryKeys.all }),
+  ]);
+
+  const previousVisits = queryClient.getQueryData<PaginatedResponse<Visit>>(
+    visitQueryKeys.lists()
+  );
+
+  // Create optimistic emergency visit
+ const newVisit: Visit = {
+  // BaseEntity fields
+  id: tempId,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  createdBy: 'system',
+  updatedBy: 'system',
+
+  // Visit-specific fields
+  patientId: tempPatientId,
+  visitNumber: `EV-${Date.now()}`, // temp visit number
+  status: VisitStatus.REGISTERED,
+  priority: PriorityLevel.ROUTINE,
+  facilityId: 'temp-facility',
+  departmentId: 'temp-department',
+
+  // Clinical data
+  chiefComplaint: 'Emergency visit',
+  symptoms: [],
+  initialAssessment: '',
+  triageNotes: '',
+  physicianNotes: '',
+  nursingNotes: [],
+  diagnosis: [],
+  treatmentPlan: [],
+  vitalSigns: [],
+
+  // Timing
+  registrationTime: new Date().toISOString(),
+  triageTime: undefined,
+  physicianSeenTime: undefined,
+  treatmentStartTime: undefined,
+  dischargeTime: undefined,
+  estimatedWaitTime: 0,
+  actualWaitTime: 0,
+
+  // Assignment
+  assignedNurseId: undefined,
+  assignedPhysicianId: undefined,
+  assignedRoom: undefined,
+  bedNumber: undefined,
+  assignedAt: undefined,
+
+  // Disposition
+  disposition: undefined,
+
+  // Billing
+  billingStatus: 'PENDING',
+  isEmergency: true,
+  requiresInsuranceVerification: false,
+  insuranceVerified: false,
+  insuranceVerifiedAt: undefined,
+  insuranceVerifiedBy: undefined,
+
+  // Audit trail
+  auditTrail: [],
+
+  // Metadata
+  tags: [],
+  urgencyScore: 5,
+  complexityScore: 1,
+  isReadmitted: false,
+  previousVisitId: undefined,
+};
+
+
+  queryClient.setQueryData<PaginatedResponse<Visit>>(
+    visitQueryKeys.lists(), // ✅ Use the actual query key
+    (oldData) => {
+      if (!oldData) {
+        return {
+          success: true,
+          message: 'Initialized visits',
+          timestamp: new Date().toISOString(),
+          data: [newVisit],
+          pagination: {
+            total: 1,
+            page: 1,
+            limit: 10,
+            totalPages: 1,
+          },
+        };
+      }
+
       return {
-        success: true,
-        message: 'Initialized visits',
-        timestamp: new Date().toISOString(),
-        data: [],
+        ...oldData,
+        data: [...oldData.data, newVisit],
         pagination: {
-          total: 0,
-          page: 1,
-          limit: 10,
-          totalPages: 0,
+          ...oldData.pagination,
+          total: oldData.pagination.total + 1,
+          totalPages: Math.ceil(
+            (oldData.pagination.total + 1) / oldData.pagination.limit
+          ),
         },
       };
     }
+  );
 
-    return {
-      ...oldData,
-      data: [...oldData.data, newVisit],
-      pagination: {
-        ...oldData.pagination,
-        total: oldData.pagination.total + 1,
-        totalPages: Math.ceil(
-          (oldData.pagination.total + 1) / oldData.pagination.limit
-        ),
-      },
-    };
-  }
-);
+  return {
+    previousVisits,
+    tempId,
+    tempPatientId,
+  } as EmergencyVisitOptimisticContext;
+},
 
-      
-      // Return context with proper typing
-      return {
-        previousVisits,
-        tempId,
-        tempPatientId,
-      } as EmergencyVisitOptimisticContext;
-    },
     onError: (error, variables, context) => {
       // Rollback on error
       if (context) {
@@ -205,7 +270,7 @@ export const useCreateEmergencyVisit = () => {
 export const useTransitionVisit = () => {
   const queryClient = useQueryClient();
   
-  return useMutation<ApiResponse<Visit>, Error, VisitTransitionData>({
+  return useMutation<ApiResponse<Visit>, Error, VisitTransitionData,TransitionVisitOptimisticContext >({
     mutationFn: visitApi.transitionVisit,
     onSuccess: (data, variables) => {
       // Update the visit in cache
