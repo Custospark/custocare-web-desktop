@@ -1,4 +1,5 @@
 import { VisitStatus, PriorityLevel } from './shared';
+export {PriorityLevel}
 
 export interface QueueItem {
   visitId: string;
