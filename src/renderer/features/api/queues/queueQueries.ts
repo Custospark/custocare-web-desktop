@@ -1,0 +1,113 @@
+import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
+import { queueApi } from './queueApi';
+import {
+  RoleQueue,
+  QueueAssignment,
+  PriorityUpdate,
+  QueueFilter,
+  QueueStats,
+} from '../../types/queue';
+import { visitQueryKeys } from '../visits/visitQueries';
+
+    // Shared API response types
+
+        export interface ApiResponse<T> {
+        data: T;
+        message: string;
+        success: boolean;
+        timestamp: string;
+        }
+
+        export interface PaginationMeta {
+        total: number;
+        page: number;
+        pageSize: number;
+        totalPages: number;
+        }
+
+        export interface PaginatedResponse<T> extends ApiResponse<T[]> {
+        pagination: PaginationMeta;
+        }
+
+// Query keys
+export const queueQueryKeys = {
+  all: ['queues'] as const,
+  roleQueues: () => [...queueQueryKeys.all, 'role'] as const,
+  roleQueue: (roleId: string, filters?: QueueFilter) => 
+    [...queueQueryKeys.roleQueues(), roleId, filters] as const,
+  myQueue: (userId: string, filters?: QueueFilter) => 
+    [...queueQueryKeys.all, 'my', userId, filters] as const,
+  stats: (roleId?: string) => 
+    [...queueQueryKeys.all, 'stats', roleId] as const,
+};
+
+// Query hooks
+export const useRoleQueue = (
+  roleId: string,
+  filters?: QueueFilter,
+  options?: UseQueryOptions<ApiResponse<RoleQueue>, Error>
+) => {
+  return useQuery<ApiResponse<RoleQueue>, Error>({
+    queryKey: queueQueryKeys.roleQueue(roleId, filters),
+    queryFn: () => queueApi.getRoleQueue(roleId, filters),
+    enabled: !!roleId,
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    ...options,
+  });
+};
+
+export const useMyQueue = (
+  userId: string,
+  filters?: QueueFilter,
+  options?: UseQueryOptions<ApiResponse<RoleQueue>, Error>
+) => {
+  return useQuery<ApiResponse<RoleQueue>, Error>({
+    queryKey: queueQueryKeys.myQueue(userId, filters),
+    queryFn: () => queueApi.getMyQueue(userId, filters),
+    enabled: !!userId,
+    refetchInterval: 30000,
+    ...options,
+  });
+};
+
+export const useQueueStats = (roleId?: string) => {
+  return useQuery<ApiResponse<QueueStats>, Error>({
+    queryKey: queueQueryKeys.stats(roleId),
+    queryFn: () => queueApi.getQueueStats(roleId),
+  });
+};
+
+// Mutation hooks
+export const useUpdateQueuePriority = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation<ApiResponse<any>, Error, PriorityUpdate>({
+    mutationFn: queueApi.updateQueuePriority,
+    onSuccess: (data, variables) => {
+      // Invalidate all queue queries
+      queryClient.invalidateQueries({ queryKey: queueQueryKeys.all });
+      
+      // Update visit cache with new priority
+      queryClient.invalidateQueries({ 
+        queryKey: visitQueryKeys.detail(variables.visitId) 
+      });
+    },
+  });
+};
+
+export const useAssignQueueVisit = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation<ApiResponse<any>, Error, QueueAssignment>({
+    mutationFn: queueApi.assignQueueVisit,
+    onSuccess: (data, variables) => {
+      // Invalidate all queue queries
+      queryClient.invalidateQueries({ queryKey: queueQueryKeys.all });
+      
+      // Update visit cache with assignment
+      queryClient.invalidateQueries({ 
+        queryKey: visitQueryKeys.detail(variables.visitId) 
+      });
+    },
+  });
+};

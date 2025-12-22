@@ -446,14 +446,16 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
         </div>
       )}
 
-      {/* Main Container - Premium Layout */}
+      {/* Main Container - Premium Layout with independent scrolling */}
       <div className="flex-1 flex overflow-hidden relative">
-        <div className="flex-1 overflow-auto relative flex flex-col">
+        {/* Main Content Area - Scrolls independently */}
+        <div className="flex-1 flex flex-col min-w-0">
           <div
             ref={!isMobile ? contentStartRef : undefined}
-            className="flex-1 w-full relative group flex flex-col"
+            className="flex-1 w-full relative group flex flex-col min-h-0"
           >
-            <div className="flex-1 w-full">
+            {/* Scrollable content container */}
+            <div className="flex-1 overflow-auto w-full">
               {children}
             </div>
 
@@ -486,7 +488,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
           </div>
         </div>
 
-        {/* Desktop Right Sidebar - Premium Design */}
+        {/* Desktop Right Sidebar - Premium Design with independent scrolling */}
         {!isMobile && !isCollapsed && (
           <aside
             className={cn(
@@ -501,7 +503,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
             role="complementary"
             aria-label="Quick actions sidebar"
           >
-            <div className="h-full flex flex-col min-w-0 overflow-hidden">
+            <div className="h-full flex flex-col min-h-0 min-w-0">
               {renderOperationsList(true)}
             </div>
           </aside>
@@ -600,7 +602,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
               </button>
             </div>
 
-            <div className="flex-1 overflow-hidden flex flex-col min-w-0">
+            <div className="flex-1 overflow-hidden flex flex-col min-h-0 min-w-0">
               {renderOperationsList(false)}
             </div>
           </aside>
