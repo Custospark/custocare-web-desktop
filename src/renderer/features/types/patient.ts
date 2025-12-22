@@ -6,6 +6,7 @@ import {
   BaseFilterParams,
   DateRangeFilter
 } from './shared';
+export {Gender}
 
 // Define shared types that might be missing
 export interface Address {
