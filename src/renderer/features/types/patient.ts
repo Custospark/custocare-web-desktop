@@ -1,13 +1,42 @@
+// patientTypes.ts
 import { 
   Gender, 
-  PatientStatus, 
   InsuranceType, 
-  Address, 
-  ContactInfo,
   BaseEntity,
   BaseFilterParams,
   DateRangeFilter
 } from './shared';
+
+// Define shared types that might be missing
+export interface Address {
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country?: string;
+  type?: 'HOME' | 'WORK' | 'OTHER';
+}
+
+export interface ContactInfo {
+  phone: string;
+  email?: string;
+  alternativePhone?: string;
+  preferredContactMethod?: 'PHONE' | 'EMAIL' | 'SMS' | 'MAIL';
+  emergencyContact?: {
+    name: string;
+    phone: string;
+    relationship: string;
+  };
+}
+
+// Patient Status Enum
+export enum PatientStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  ARCHIVED = 'ARCHIVED',
+  DECEASED = 'DECEASED',
+  TRANSFERRED = 'TRANSFERRED'
+}
 
 export interface PatientInsurance {
   provider: string;
@@ -38,6 +67,7 @@ export interface PatientMedicalInfo {
 }
 
 export interface PatientDemographics {
+  id?: number | string;
   firstName: string;
   middleName?: string;
   lastName: string;
@@ -249,4 +279,17 @@ export interface PaginatedResponse<T> {
   page: number;         // current page
   pageSize: number;     // items per page
   totalPages: number;   // total pages available
+}
+
+// Export type guard for Patient
+export function isPatient(obj: Patient) {
+  return (
+    obj &&
+    typeof obj.id === 'string' &&
+    typeof obj.medicalRecordNumber === 'string' &&
+    obj.demographics &&
+    typeof obj.demographics.firstName === 'string' &&
+    typeof obj.demographics.lastName === 'string' &&
+    obj.status in PatientStatus
+  );
 }

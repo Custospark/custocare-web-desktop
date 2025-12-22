@@ -2,7 +2,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authSlice from './slices/authSlice';
 import uiSlice from './slices/uiSlice';
-import patientSlice from './slices/patientSlice';
+import patientSlice from './slices/patientSlice_';
 import notificationSlice from './slices/notificationSlice';
 import facilitySlice from './slices/facilitySlice';
 import clinicalEncounterSlice from './slices/clinicalEncounterSlice';
