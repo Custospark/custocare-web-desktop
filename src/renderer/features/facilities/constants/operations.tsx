@@ -1,4 +1,4 @@
-import { Operation } from '../../../components/content/ContentLayout';
+import { type Operation } from '../../../components/content/ContentLayout';
 import { Home, Building2, Users, GitBranch, Building } from 'lucide-react';
 
 export const FACILITY_OPERATIONS: Operation[] = [

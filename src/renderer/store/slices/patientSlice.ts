@@ -1,6 +1,6 @@
 // patientSlice.ts
-import { createSlice, createEntityAdapter, PayloadAction } from '@reduxjs/toolkit';
-import {
+import { createSlice, createEntityAdapter, type PayloadAction } from '@reduxjs/toolkit';
+import type {
   Patient,
   PatientStatus,
   PatientSearchParams,

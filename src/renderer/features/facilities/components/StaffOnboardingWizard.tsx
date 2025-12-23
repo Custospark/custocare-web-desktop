@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../utils/classNameUtils';
 import WizardStepper from './WizardStepper';
-import { StepConfig } from '../types/onboarding';
+import { type StepConfig } from '../types/onboarding';
 import { setOnboardingStep, saveDraft } from '../../../store/slices/facilitySlice';
 
 const StaffOnboardingWizard: React.FC = () => {

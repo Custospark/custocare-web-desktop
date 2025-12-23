@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import { roleApi } from '../roles/roleApi';
-import {
+import type {
   Role,
   RolePermission,
   QueueConfiguration,
@@ -388,6 +388,7 @@ export const useAssignUserRole = () => {
     mutationFn: ({ userId, roleId, facilityId, departmentId }) => 
       roleApi.assignUserRole(userId, roleId, facilityId, departmentId),
     onSuccess: (data, variables) => {
+      console.log(data)
       // Invalidate user roles queries
       queryClient.invalidateQueries({ queryKey: roleQueryKeys.userRoles.all(variables.userId) });
       queryClient.invalidateQueries({ queryKey: roleQueryKeys.currentUserRoles() });

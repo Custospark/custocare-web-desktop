@@ -3,7 +3,6 @@
  * FILE: src/components/Layout/Header.tsx
  */
 
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, Bell, Settings, LogOut } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../store/hooks/useApp';

@@ -1,10 +1,12 @@
 // patientTypes.ts
-import { 
-  Gender, 
+import type { 
   InsuranceType, 
   BaseEntity,
   BaseFilterParams,
   DateRangeFilter
+} from './shared';
+import  { 
+  Gender
 } from './shared';
 export {Gender}
 

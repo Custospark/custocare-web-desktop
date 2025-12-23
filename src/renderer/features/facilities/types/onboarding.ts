@@ -1,4 +1,4 @@
-import { Facility,Organization,PredefinedDepartment,Role } from './index';
+import type { Facility,Organization,PredefinedDepartment,Role } from './index';
 
 export type FacilityActionId = 'overview' | 'registration' | 'departments' | 'staff' | 'workflows';
 

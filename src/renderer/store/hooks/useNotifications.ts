@@ -3,7 +3,7 @@ import { useAppDispatch } from './useApp';
 import {
   addNotification,
   removeNotification,
-  Notification,
+  type Notification,
 } from '../slices/notificationSlice'
 
 interface UseNotificationReturn {

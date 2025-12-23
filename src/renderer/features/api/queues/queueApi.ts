@@ -1,6 +1,6 @@
 import axiosInstance from '../configs/axiosConfig';
 import { ENDPOINTS } from '../endpoints/endpoints';
-import {
+import type {
   RoleQueue,
   QueueAssignment,
   PriorityUpdate,
@@ -8,7 +8,7 @@ import {
   QueueStats,
   ApiResponse,
 } from '../../types/queue';
-import { VisitQueueItem } from '../../types/visit';
+import { type VisitQueueItem } from '../../types/visit';
 
 export const queueApi = {
   // Get role-specific queue

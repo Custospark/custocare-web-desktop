@@ -1,20 +1,20 @@
-import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import { billingApi } from './billingApi';
 import {
-  Invoice,
-  InvoiceCreateData,
-  InvoiceUpdateData,
-  InvoiceFilterParams,
-  Payment,
-  PaymentCreateData,
-  PaymentFilterParams,
-  InsuranceClaim,
-  InsuranceClaimCreateData,
-  ClaimFilterParams,
-  BillingSummary,
-  BillingStatistics,
-  PaginatedResponse,
-  ApiResponse,
+  type Invoice,
+  type InvoiceCreateData,
+  type InvoiceUpdateData,
+  type InvoiceFilterParams,
+  type Payment,
+  type PaymentCreateData,
+  type PaymentFilterParams,
+  type InsuranceClaim,
+  type InsuranceClaimCreateData,
+  type ClaimFilterParams,
+  type BillingSummary,
+  type BillingStatistics,
+  type PaginatedResponse,
+  type ApiResponse,
 } from '../../types/billing';
 import { visitQueryKeys } from '../visits/visitQueries';
 
@@ -499,6 +499,7 @@ export const useCreatePayment = () => {
     // FIXED: Correct parameter order - context is the third parameter
     onError: (error, variables, context) => {
       // Rollback to previous state on error
+      console.log(error);
       if (context?.previousInvoice) {
         queryClient.setQueryData(
           billingQueryKeys.invoiceDetail(variables.invoiceId),

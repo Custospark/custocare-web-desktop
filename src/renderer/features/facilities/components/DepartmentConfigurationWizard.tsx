@@ -11,7 +11,7 @@ import {
 import { cn } from '../../../utils/classNameUtils';
 import { setOnboardingStep } from '../../../store/slices/facilitySlice';
 import WizardStepper from './WizardStepper';
-import { StepConfig } from '../types/onboarding';
+import { type StepConfig } from '../types/onboarding';
 
 const DepartmentConfigurationWizard: React.FC = () => {
   const dispatch = useDispatch();

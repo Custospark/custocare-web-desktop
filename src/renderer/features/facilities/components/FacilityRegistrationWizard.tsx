@@ -16,13 +16,12 @@ import {
   Globe,
   FileText,
   Users,
-  Calendar,
   Clock,
   Search
 } from 'lucide-react';
 import { cn } from '../../../utils/classNameUtils';
 import WizardStepper from './WizardStepper';
-import { StepConfig } from '../types/onboarding';
+import { type StepConfig } from '../types/onboarding';
 import { setOnboardingStep, saveDraft, clearDraft } from '../../../store/slices/facilitySlice';
 
 const FACILITY_TYPES = [
@@ -99,17 +98,31 @@ const FacilityRegistrationWizard: React.FC = () => {
     { id: 3, title: 'Review & Confirm', description: 'Final review and submission', completed: false }
   ];
   
-  const handleInputChange = useCallback((field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+const handleInputChange = (field: string, value: any) => {
+  setFormData(prev => {
+    const fields = field.split('.');
+    if (fields.length === 1) {
+      return { ...prev, [field]: value };
+    }
     
-    // Auto-save to draft
-    dispatch(saveDraft({ [field]: value }));
-  }, [dispatch]);
+    const [parent, child] = fields;
+    
+    // Cast to Record type for safe access
+    const prevAny = prev as Record<string, any>;
+    
+    return {
+      ...prev,
+      [parent]: {
+        ...prevAny[parent],
+        [child]: value
+      }
+    };
+  });
+};
+
+// Usage remains the same
   
-  const handleNestedInputChange = useCallback((section: string, field: string, value: any) => {
+  const handleNestedInputChange = useCallback((section: string, field: string, value: string | number) => {
     setFormData(prev => ({
       ...prev,
       [section]: {
@@ -142,14 +155,14 @@ const FacilityRegistrationWizard: React.FC = () => {
       const facilityId = `FAC-${new Date().getFullYear()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
       
       // Create final facility object
-      const finalFacilityData = {
-        ...formData,
-        id: facilityId,
-        status: 'Pending',
-        registrationStatus: 'In Progress',
-        createdAt: new Date().toISOString(),
-        facilityId: facilityId
-      };
+      // const finalFacilityData = {
+      //   ...formData,
+      //   id: facilityId,
+      //   status: 'Pending',
+      //   registrationStatus: 'In Progress',
+      //   createdAt: new Date().toISOString(),
+      //   facilityId: facilityId
+      // };
       
       alert(`Facility "${formData.name}" registered successfully!\nFacility ID: ${facilityId}`);
       dispatch(clearDraft());

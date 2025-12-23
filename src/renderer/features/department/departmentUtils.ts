@@ -1,6 +1,6 @@
 // utils/departmentUtils.ts
 
-import { Department, DepartmentFormData, DepartmentType } from '../../../renderer/features/types/department';
+import type { Department, DepartmentFormData, DepartmentType } from '../../../renderer/features/types/department';
 
 export const generateDepartmentCode = (name: string): string => {
   // Extract first letters of words, max 5 characters

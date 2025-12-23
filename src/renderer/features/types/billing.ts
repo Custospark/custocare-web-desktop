@@ -1,7 +1,7 @@
-import { BaseEntity} from './shared';
-import { InsuranceType, PaginatedResponse,
-  ApiResponse, } from './shared';
-  export { PaginatedResponse,
+import { type BaseEntity} from './shared';
+import { InsuranceType,  type PaginatedResponse,
+  type ApiResponse, } from './shared';
+  export type { PaginatedResponse,
   ApiResponse}
 
 // Payment types

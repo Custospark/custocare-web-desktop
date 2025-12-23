@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosError, AxiosResponse } from 'axios';
+import axios, { type AxiosInstance, AxiosError,type AxiosResponse } from 'axios';
 import { QueryClient } from '@tanstack/react-query';
 import { API_BASE_URL, API_TIMEOUT } from './apiConfig';
 

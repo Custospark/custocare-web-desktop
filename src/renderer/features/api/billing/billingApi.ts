@@ -1,21 +1,21 @@
 import axiosInstance from '../configs/axiosConfig';
 import { ENDPOINTS } from '../endpoints/endpoints';
-import {
-  Invoice,
-  InvoiceCreateData,
-  InvoiceUpdateData,
-  InvoiceFilterParams,
-  Payment,
-  PaymentCreateData,
-  PaymentUpdateData,
-  PaymentFilterParams,
-  InsuranceClaim,
-  InsuranceClaimCreateData,
-  ClaimFilterParams,
-  BillingSummary,
-  BillingStatistics,
-  PaginatedResponse,
-  ApiResponse,
+import  {
+  type Invoice,
+  type InvoiceCreateData,
+  type InvoiceUpdateData,
+  type InvoiceFilterParams,
+  type Payment,
+  type PaymentCreateData,
+  type PaymentUpdateData,
+  type PaymentFilterParams,
+  type InsuranceClaim,
+  type InsuranceClaimCreateData,
+  type ClaimFilterParams,
+  type BillingSummary,
+  type BillingStatistics,
+  type PaginatedResponse,
+  type ApiResponse,
 } from '../../types/billing';
 
 /**

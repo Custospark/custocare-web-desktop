@@ -9,7 +9,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { cn } from '../../../utils/classNameUtils';
-import { WizardStepProps } from '../types/onboarding';
+import { type WizardStepProps } from '../types/onboarding';
 
 const WizardStepper: React.FC<WizardStepProps> = ({
   currentStep,

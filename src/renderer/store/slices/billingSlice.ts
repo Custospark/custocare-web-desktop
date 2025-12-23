@@ -1,5 +1,5 @@
-import { createSlice, createEntityAdapter, PayloadAction } from '@reduxjs/toolkit';
-import {
+import { createSlice, createEntityAdapter, type PayloadAction } from '@reduxjs/toolkit';
+import type {
   Invoice,
   InsuranceClaim,
   Payment,

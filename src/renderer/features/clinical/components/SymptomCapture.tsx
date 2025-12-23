@@ -21,7 +21,6 @@ interface SymptomCaptureProps {
 }
 
 export const SymptomCapture: React.FC<SymptomCaptureProps> = ({
-  patient,
   onDataChange
 }) => {
   const theme = useSelector((state: RootState) => state.ui.theme);
@@ -67,7 +66,7 @@ export const SymptomCapture: React.FC<SymptomCaptureProps> = ({
     setSymptoms(prev => [...prev, newSymptom]);
   }, []);
 
-  const updateSymptom = useCallback((id: string, field: keyof Symptom, value: any) => {
+  const updateSymptom = useCallback((id: string, field: keyof Symptom, value: string | number) => {
     setSymptoms(prev => prev.map(s => 
       s.id === id ? { ...s, [field]: value } : s
     ));

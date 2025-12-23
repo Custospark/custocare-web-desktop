@@ -13,7 +13,7 @@ import {
 import { cn } from '../../utils/classNameUtils';
 // import { setActiveAction } from '../../store/slices/facilitySlice';
 import { FACILITY_OPERATIONS } from './constants/operations';
-import { FacilityActionId } from './types/onboarding';
+import { type FacilityActionId } from './types/onboarding';
 import FacilityRegistrationWizard from './components/FacilityRegistrationWizard';
 import DepartmentConfigurationWizard from './components/DepartmentConfigurationWizard';
 import StaffOnboardingWizard from './components/StaffOnboardingWizard';

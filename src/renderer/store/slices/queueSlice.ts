@@ -1,12 +1,14 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import {
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type {
   RoleQueue,
   QueueItem,
   QueueFilter,
   QueueStats,
+} from '../../features/types/queue';
+import  {
   PriorityLevel,
 } from '../../features/types/queue';
-import { Visit, VisitStatus } from '../../features/types/visit';
+import type { Visit, VisitStatus } from '../../features/types/visit';
 
 export interface QueueState {
   roleQueues: Record<string, RoleQueue>;

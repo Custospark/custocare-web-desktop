@@ -1,10 +1,12 @@
-import { 
+import type { 
   Visit, 
-  VisitStatus, 
-  PriorityLevel,
   VisitTransitionData 
 } from '../../features/types/visit';
-import { ValidationError } from '../../features/types/shared';
+import  { 
+  VisitStatus,  PriorityLevel,
+
+} from '../../features/types/visit';
+import { type ValidationError } from '../../features/types/shared';
 
 // Clinical workflow rules
 const ALLOWED_TRANSITIONS: Record<VisitStatus, VisitStatus[]> = {

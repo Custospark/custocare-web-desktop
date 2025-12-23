@@ -1,6 +1,6 @@
 import axiosInstance from '../configs/axiosConfig';
 import { ENDPOINTS } from '../endpoints/endpoints';
-import {
+import type {
   Visit,
   VisitCreateData,
   VisitTransitionData,

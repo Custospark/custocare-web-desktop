@@ -1,5 +1,5 @@
 // store/slices/clinicalEncounterSlice.ts
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
 
 // Types
 export interface Symptom {

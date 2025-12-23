@@ -1,11 +1,11 @@
-import { createSlice, createEntityAdapter, PayloadAction } from '@reduxjs/toolkit';
-import { 
+import { createSlice, createEntityAdapter, type PayloadAction } from '@reduxjs/toolkit';
+import type { 
   Visit, 
-  VisitStatus, 
   PriorityLevel,
   VisitFilterParams,
   DispositionType
 } from '../../features/types/visit';
+import { VisitStatus } from '../../features/types/visit';
 import { PatientStatus } from '../../features/types/patient';
 
 export interface VisitState {

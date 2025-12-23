@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '../../store/store';
 import { ChevronRight, ChevronLeft, MoreVertical, X, Sparkles } from 'lucide-react';
 import { cn } from '../../utils/classNameUtils';
-import { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 
 /**
  * ============================================================================

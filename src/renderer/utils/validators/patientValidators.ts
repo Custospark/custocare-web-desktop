@@ -1,17 +1,19 @@
-import { 
-  Patient, 
-  PatientDemographics,
-  PatientCreateData,
-  PatientUpdateData,
-  EmergencyPatientData,
-  ContactInfo,
-  Address,
-  PatientInsurance,
-  PatientMedicalInfo,
-  Gender,
-  PatientStatus
+import  { 
+  type Patient, 
+  type PatientDemographics,
+  type PatientCreateData,
+  type PatientUpdateData,
+  type EmergencyPatientData,
+  type ContactInfo,
+  type Address,
+  type PatientInsurance,
+  type PatientMedicalInfo,
 } from '../../features/types/patient';
-import { ValidationError } from '../../features/types/shared';
+import  { 
+   Gender,
+   PatientStatus
+} from '../../features/types/patient';
+import { type ValidationError } from '../../features/types/shared';
 
 /**
  * Validates patient demographics data
@@ -503,7 +505,7 @@ export const validateEmergencyPatientData = (data: EmergencyPatientData): Valida
  * @returns Array of validation errors
  */
 export const validatePatientUpdate = (
-  currentPatient: Patient,
+  // currentPatient: Patient,
   updates: Partial<PatientUpdateData>
 ): ValidationError[] => {
   const errors: ValidationError[] = [];

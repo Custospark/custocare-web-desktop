@@ -1,14 +1,14 @@
-import { useQuery, useMutation, useQueryClient, UseQueryOptions, QueryKey } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions, type QueryKey } from '@tanstack/react-query';
 import { patientApi } from './patientApi';
 import {
-  Patient,
-  PatientCreateData,
-  PatientSearchParams,
-  PatientDuplicateCheck,
-  PatientMergeData,
-  EmergencyPatientData,
-  PaginatedResponse,
-  ApiResponse,
+  type Patient,
+  type PatientCreateData,
+  type PatientSearchParams,
+  type PatientDuplicateCheck,
+  type PatientMergeData,
+  type EmergencyPatientData,
+  type PaginatedResponse,
+  type ApiResponse,
 } from '../../types/patient';
 import { Gender, PatientStatus } from '../../types/shared';
 
@@ -285,6 +285,7 @@ export const useCreateEmergencyPatient = () => {
     onError: (error, variables, context) => {
       // Rollback on error
       if (context) {
+        console.log(variables);
         const typedContext = context as EmergencyPatientOptimisticContext;
         if (typedContext.previousPatients) {
           queryClient.setQueryData(

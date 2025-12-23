@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import { queueApi } from './queueApi';
-import {
+import type {
   RoleQueue,
   QueueAssignment,
   PriorityUpdate,
@@ -89,7 +89,7 @@ export const useUpdateQueuePriority = () => {
   >({
     mutationFn: queueApi.updateQueuePriority,
 
-    onSuccess: (response, variables) => {
+    onSuccess: (variables) => {
       // Invalidate queues
       queryClient.invalidateQueries({
         queryKey: queueQueryKeys.all,
@@ -97,7 +97,7 @@ export const useUpdateQueuePriority = () => {
 
       // Invalidate visit detail
       queryClient.invalidateQueries({
-        queryKey: visitQueryKeys.detail(variables.visitId),
+        queryKey: visitQueryKeys.detail(variables.timestamp),
       });
     },
   });
@@ -105,18 +105,19 @@ export const useUpdateQueuePriority = () => {
 ;
 
 
+
 export const useAssignQueueVisit = () => {
   const queryClient = useQueryClient();
   
   return useMutation<ApiResponse<QueueItem>, Error, QueueAssignment>({
     mutationFn: queueApi.assignQueueVisit,
-    onSuccess: (data, variables) => {
+    onSuccess: ( variables) => {
       // Invalidate all queue queries
       queryClient.invalidateQueries({ queryKey: queueQueryKeys.all });
       
       // Update visit cache with assignment
       queryClient.invalidateQueries({ 
-        queryKey: visitQueryKeys.detail(variables.visitId) 
+        queryKey: visitQueryKeys.detail(variables.timestamp) 
       });
     },
   });

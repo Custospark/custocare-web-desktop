@@ -1,14 +1,14 @@
-import { useQuery, useMutation, useQueryClient, UseQueryOptions, QueryKey } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions,type QueryKey } from '@tanstack/react-query';
 import { visitApi } from './visitApi';
-import {
-  Visit,
-  VisitCreateData,
-  VisitTransitionData,
-  EmergencyVisitData,
-  VisitFilterParams,
-  PaginatedResponse,
-  ApiResponse,
-  PriorityLevel,
+import  {
+  type Visit,
+  type VisitCreateData,
+  type VisitTransitionData,
+  type EmergencyVisitData,
+  type VisitFilterParams,
+  type PaginatedResponse,
+  type ApiResponse,
+  type PriorityLevel,
 } from '../../types/visit';
 import { patientQueryKeys } from '../patients/patientQueries';
 import { queueQueryKeys } from '../queues/queueQueries';
@@ -158,7 +158,7 @@ export const useCreateEmergencyVisit = () => {
   patientId: tempPatientId,
   visitNumber: `EV-${Date.now()}`, // temp visit number
   status: VisitStatus.REGISTERED,
-  priority: PriorityLevel.ROUTINE,
+  priority: "ROUTINE" as PriorityLevel,
   facilityId: 'temp-facility',
   departmentId: 'temp-department',
 
@@ -252,6 +252,7 @@ export const useCreateEmergencyVisit = () => {
 },
 
     onError: (error, variables, context) => {
+      console.log(variables)
       // Rollback on error
       if (context) {
         const typedContext = context as EmergencyVisitOptimisticContext;
@@ -325,6 +326,7 @@ export const useTransitionVisit = () => {
       return context;
     },
     onError: (error, variables, context) => {
+      console.log(error)
       // Rollback on error
       if (context?.previousVisit) {
         const typedContext = context as TransitionVisitOptimisticContext;

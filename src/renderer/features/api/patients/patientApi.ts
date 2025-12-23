@@ -1,16 +1,16 @@
 import axiosInstance from '../configs/axiosConfig';
 import { ENDPOINTS } from '../endpoints/endpoints';
 import {
-  Patient,
-  PatientCreateData,
-  PatientSearchParams,
-  PatientDuplicateCheck,
-  PatientMergeData,
-  EmergencyPatientData,
-  PaginatedResponse,
-  ApiResponse,
-  PatientStats,
-  PatientActivity,
+  type Patient,
+  type PatientCreateData,
+  type PatientSearchParams,
+  type PatientDuplicateCheck,
+  type PatientMergeData,
+  type EmergencyPatientData,
+  type PaginatedResponse,
+  type ApiResponse,
+  type PatientStats,
+  type PatientActivity,
 } from '../../types/patient';
 
 export const patientApi = {

@@ -2,7 +2,6 @@
  * FILE: src/components/Errors/NotFound.tsx
  */
 
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
 import { ROUTES } from '../../routes/routeConstants';
