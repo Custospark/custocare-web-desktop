@@ -253,7 +253,7 @@ export const ClinicalEncounterModule: React.FC = () => {
   ]);
   
   // Billing State
-  const [billingItems, setBillingItems] = useState<BillingItem[]>([
+  const [billingItems] = useState<BillingItem[]>([
     { service: 'Consultation', quantity: 1, unitPrice: 50, total: 50, insuranceCovered: true },
     { service: 'Malaria RDT', quantity: 1, unitPrice: 15, total: 15, insuranceCovered: true },
     { service: 'Paracetamol', quantity: 9, unitPrice: 0.5, total: 4.5, insuranceCovered: true },
@@ -271,7 +271,7 @@ export const ClinicalEncounterModule: React.FC = () => {
     setSymptoms(prev => [...prev, { name: '', severity: 5, duration: '' }]);
   }, []);
 
-  const updateSymptom = useCallback((index: number, field: keyof Symptom, value: any) => {
+  const updateSymptom = useCallback((index: number, field: keyof Symptom, value: string | number) => {
     setSymptoms(prev => prev.map((s, i) => 
       i === index ? { ...s, [field]: value } : s
     ));
