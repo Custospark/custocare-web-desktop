@@ -40,6 +40,17 @@ export const ROUTES = {
 
   // Support & Help
   HELP: '/help',
+
+  // Role-Based Clinical Modules
+  FRONT_DESK: '/front-desk',
+  NURSING: '/nursing',
+  CLINICAL_WORKSPACE: '/clinical-workspace',
+  LABORATORY: '/laboratory',
+  PHARMACY: '/pharmacy',
+  BILLING: '/billing',
+  CLINICAL_SERVICES: '/clinical-services',
+  ADMINISTRATION: '/administration',
+
 } as const;
 
 /**

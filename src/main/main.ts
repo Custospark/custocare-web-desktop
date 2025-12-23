@@ -1,16 +1,28 @@
 // electron/main.ts
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, Menu } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Get __dirname equivalent in ESM
+// ==========================================
+// Utility to get __dirname in ESM
+// ==========================================
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Check if running in development
+// ==========================================
+// Determine if running in development mode
+// ==========================================
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
-function createWindow() {
+/**
+ * Creates the main application window.
+ * Configured for production-grade use:
+ * - Minimum dimensions
+ * - Hidden inset title bar (macOS style)
+ * - Preload and security settings
+ * - Graceful error handling
+ */
+function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -18,34 +30,31 @@ function createWindow() {
     minHeight: 700,
     frame: true,
     titleBarStyle: 'hiddenInset', // macOS style
+    show: false, // Show when ready
+    icon: path.join(__dirname, 'assets/icon.png'), // App icon
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      webSecurity: false, // Required for file:// protocol in dev
+      webSecurity: !isDev, // Disable in dev for local file access
       devTools: isDev,
     },
-    icon: path.join(__dirname, 'assets/icon.png'), // Optional: app icon
-    show: false, // Don't show until ready
   });
 
-  // Load the app
+  // ==========================================
+  // Load URL or file depending on environment
+  // ==========================================
   if (isDev) {
-    // Development: Load from dev server
-    const devServerUrl = 'http://localhost:5173'; // Vite default
+    // Development: Load Vite dev server
+    const devServerUrl = 'http://localhost:5173';
     console.log(`Loading dev server: ${devServerUrl}`);
-    mainWindow.loadURL(devServerUrl);
-    
-    // Open DevTools
+    mainWindow.loadURL(devServerUrl).catch(console.error);
     mainWindow.webContents.openDevTools();
   } else {
-    // Production: Load from built files
+    // Production: Load built index.html
     const indexPath = path.join(app.getAppPath(), 'dist', 'web', 'index.html');
     console.log(`Loading production file: ${indexPath}`);
-    
-    // Load with file:// protocol
     mainWindow.loadFile(indexPath).catch(err => {
       console.error('Failed to load index.html:', err);
-      // Fallback: show error page
       mainWindow.loadURL(`data:text/html;charset=utf-8,
         <html>
           <body style="font-family: Arial; padding: 40px; text-align: center;">
@@ -58,52 +67,56 @@ function createWindow() {
     });
   }
 
+  // ==========================================
   // Show window when ready
+  // ==========================================
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
-    console.log('Window ready to show');
-    
-    // Focus the window
     mainWindow.focus();
+    console.log('Main window ready to show');
   });
 
-  // Handle window events
+  // ==========================================
+  // Handle window closed
+  // ==========================================
   mainWindow.on('closed', () => {
-    // Dereference the window object
     mainWindow.destroy();
   });
 
   return mainWindow;
 }
 
+// ==========================================
 // App lifecycle events
+// ==========================================
 app.whenReady().then(() => {
   console.log('Electron app starting...');
-  
+
+  // Remove default menu (File/Edit/View/Window/Help)
+  Menu.setApplicationMenu(null);
+
   // Create main window
   createWindow();
-  
+
   // macOS: Re-create window when dock icon is clicked
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
-// Quit when all windows are closed (except on macOS)
+// Quit app when all windows are closed (except macOS)
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
-// Handle app-specific events
+// Optional: Log app quitting
 app.on('before-quit', () => {
   console.log('App quitting...');
 });
 
-// Optional: Handle uncaught exceptions
+// Global uncaught exception handler
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
 });

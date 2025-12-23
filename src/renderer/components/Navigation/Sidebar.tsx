@@ -1,9 +1,20 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, ClipboardList, FileText, Settings, HelpCircle,
-  X, Shield, Activity, TrendingUp, Cpu, Lock, BarChart3,
-  Home, Database, AlertCircle, Heart, Bell, MessageSquare,Building2
+  LayoutDashboard, Users, Settings, HelpCircle,
+  X, Shield, Activity,  Lock,
+  Bell, MessageSquare,Stethoscope,
+  FlaskConical,
+  CreditCard,
+  Settings2,
+  Hospital,
+  HeartIcon,
+  ClipboardCheck,
+  HeartPulse,
+  Building2,
+  UserPlus,
+  Ambulance,
+  PillIcon,
 } from 'lucide-react';
 import { type SidebarProps, type MenuItem } from '../../types/index';
 import { cn } from '../../types/cn';
@@ -85,101 +96,163 @@ export const Sidebar: React.FC<SidebarProps & {
   // Enhanced menu items with routes
 const menuItems: EnhancedMenuItem[] = [
   {
+    id: 'registration',
+    label: 'Registration',
+    icon: <UserPlus className="w-5 h-5" />,
+    href: ROUTES.FRONT_DESK,
+    route: ROUTES.FRONT_DESK,
+    active: isRouteActive(ROUTES.FRONT_DESK),
+    description: 'Patient registration & records',
+    stats: 'Reception',
+    glowColor: 'from-sky-500 to-blue-400',
+  },
+
+  {
+    id: 'nursing-care',
+    label: 'Nursing Care',
+    icon: <HeartPulse className="w-5 h-5" />,
+    href: ROUTES.NURSING,
+    route: ROUTES.NURSING,
+    active: isRouteActive(ROUTES.NURSING),
+    description: 'Vitals, triage & ward care',
+    stats: 'Nursing',
+    glowColor: 'from-green-500 to-emerald-400',
+  },
+
+{
+  id: 'physician-workspace',
+  label: 'Physician Workspace',
+  icon: <Stethoscope className="w-5 h-5" />,
+  href: ROUTES.CLINICAL_WORKSPACE,
+  route: ROUTES.CLINICAL_WORKSPACE,
+  active: isRouteActive(ROUTES.CLINICAL_WORKSPACE),
+  description: 'Consultation, diagnosis & orders',
+  stats: 'Doctors',
+  glowColor: 'from-indigo-500 to-purple-400',
+},
+
+
+  {
+    id: 'laboratory-services',
+    label: 'Laboratory Services',
+    icon: <FlaskConical className="w-5 h-5" />,
+    href: ROUTES.LABORATORY,
+    route: ROUTES.LABORATORY,
+    active: isRouteActive(ROUTES.LABORATORY),
+    description: 'Diagnostics & test results',
+    stats: 'Lab',
+    glowColor: 'from-rose-500 to-pink-400',
+  },
+
+  {
+    id: 'pharmacy-services',
+    label: 'Pharmacy Services',
+    icon: <PillIcon className="w-5 h-5" />,
+    href: ROUTES.PHARMACY,
+    route: ROUTES.PHARMACY,
+    active: isRouteActive(ROUTES.PHARMACY),
+    description: 'Medication dispensing',
+    stats: 'Pharmacy',
+    glowColor: 'from-orange-500 to-amber-400',
+  },
+
+  {
+    id: 'billing-finance',
+    label: 'Billing & Payments',
+    icon: <CreditCard className="w-5 h-5" />,
+    href: ROUTES.BILLING,
+    route: ROUTES.BILLING,
+    active: isRouteActive(ROUTES.BILLING),
+    description: 'Invoices, payments & claims',
+    stats: 'Finance',
+    glowColor: 'from-yellow-500 to-orange-400',
+  },
+
+{
+  id: 'care-coordination',
+  label: 'Care Coordination',
+  icon: <Ambulance className="w-5 h-5" />,
+  href: ROUTES.CLINICAL_SERVICES,
+  route: ROUTES.CLINICAL_SERVICES,
+  active: isRouteActive(ROUTES.CLINICAL_SERVICES),
+  description: 'Referrals, transfers & emergency transport',
+  stats: 'Referrals',
+  glowColor: 'from-cyan-500 to-teal-400',
+},
+
+
+  {
+    id: 'administration',
+    label: 'Administration',
+    icon: <Settings2 className="w-5 h-5" />,
+    href: ROUTES.ADMINISTRATION,
+    route: ROUTES.ADMINISTRATION,
+    active: isRouteActive(ROUTES.ADMINISTRATION),
+    description: 'Users, roles & configuration',
+    stats: 'Admin',
+    glowColor: 'from-gray-600 to-gray-500',
+  },
+
+  {
     id: 'dashboard',
-    label: 'Dashboard',
+    label: 'Overview',
     icon: <LayoutDashboard className="w-5 h-5" />,
-    premiumIcon: <Home className="w-5 h-5" />,
+    premiumIcon: <Hospital className="w-5 h-5" />,
     href: ROUTES.DASHBOARD,
     route: ROUTES.DASHBOARD,
     active: isRouteActive(ROUTES.DASHBOARD),
-    description: 'Holistic system overview',
-    stats: '98% uptime',
+    description: 'Facility-wide overview',
+    stats: 'Live',
     shortcut: '⌘1',
-    glowColor: 'from-blue-500 to-cyan-400'
+    glowColor: 'from-blue-500 to-cyan-400',
   },
+
   {
     id: 'patients',
     label: 'Patients',
     icon: <Users className="w-5 h-5" />,
-    premiumIcon: <Heart className="w-5 h-5" />,
+    premiumIcon: <HeartIcon className="w-5 h-5" />,
     href: ROUTES.PATIENTS,
     route: ROUTES.PATIENTS,
     active: isRouteActive(ROUTES.PATIENTS),
     badge: 12,
-    description: 'Comprehensive care management',
-    stats: '2.4K active',
+    description: 'Patient records & care history',
+    stats: 'Active',
     shortcut: '⌘2',
-    glowColor: 'from-emerald-500 to-teal-400'
+    glowColor: 'from-emerald-500 to-teal-400',
   },
+
   {
     id: 'facilities',
     label: 'Facilities',
     icon: <Building2 className="w-5 h-5" />,
-    premiumIcon: <Building2 className="w-5 h-5" />,
     href: ROUTES.FACILITIES,
     route: ROUTES.FACILITIES,
     active: isRouteActive(ROUTES.FACILITIES),
     badge: 'NEW',
-    description: 'Facility management and onboarding',
-    stats: 'Manage your facilities',
+    description: 'Clinics, departments & units',
+    stats: 'Facilities',
     shortcut: '⌘3',
-    glowColor: 'from-yellow-500 to-orange-400'
+    glowColor: 'from-yellow-500 to-orange-400',
   },
+
   {
     id: 'encounters',
     label: 'Encounters',
-    icon: <ClipboardList className="w-5 h-5" />,
+    icon: <ClipboardCheck className="w-5 h-5" />,
     premiumIcon: <Activity className="w-5 h-5" />,
-    href: '/encounters',
-    route: '/encounters',
-    active: isRouteActive('/encounters'),
+    href: ROUTES.ENCOUNTERS,
+    route: ROUTES.ENCOUNTERS,
+    active: isRouteActive(ROUTES.ENCOUNTERS),
     badge: 3,
     badgeVariant: 'urgent' as const,
-    description: 'Real-time consultations',
-    stats: 'Live monitoring',
+    description: 'Ongoing visits & consultations',
+    stats: 'In progress',
     shortcut: '⌘4',
-    glowColor: 'from-amber-500 to-orange-400'
-  },
-  {
-    id: 'reports',
-    label: 'Intelligence',
-    icon: <FileText className="w-5 h-5" />,
-    premiumIcon: <Database className="w-5 h-5" />,
-    href: '/reports',
-    route: '/reports',
-    active: isRouteActive('/reports'),
-    description: 'Predictive analytics',
-    stats: 'AI-powered',
-    shortcut: '⌘5',
-    glowColor: 'from-purple-500 to-pink-400'
-  },
-  {
-    id: 'analytics',
-    label: 'Analytics',
-    icon: <BarChart3 className="w-5 h-5" />,
-    premiumIcon: <TrendingUp className="w-5 h-5" />,
-    href: '/analytics',
-    route: '/analytics',
-    active: isRouteActive('/analytics'),
-    description: 'Advanced metrics',
-    stats: 'Real-time data',
-    shortcut: '⌘6',
-    glowColor: 'from-indigo-500 to-blue-400'
-  },
-  {
-    id: 'system',
-    label: 'System',
-    icon: <Cpu className="w-5 h-5" />,
-    premiumIcon: <AlertCircle className="w-5 h-5" />,
-    href: '/system',
-    route: '/system',
-    active: isRouteActive('/system'),
-    description: 'Infrastructure health',
-    stats: 'Optimal',
-    shortcut: '⌘7',
-    glowColor: 'from-gray-700 to-gray-600'
+    glowColor: 'from-amber-500 to-orange-400',
   },
 ];
+
 
 
   const secondaryMenuItems: EnhancedMenuItem[] = [

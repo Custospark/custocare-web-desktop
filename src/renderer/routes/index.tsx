@@ -186,6 +186,104 @@ function AppRoutes() {
               </Suspense>
             } 
           />
+          {/* ================= ROLE-BASED MODULES (UNDER DEVELOPMENT) ================= */}
+
+      <Route
+        path={ROUTES.FRONT_DESK}
+        element={
+          <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+            <div className="p-8">
+              <h1 className="text-3xl font-bold text-white">Front Desk</h1>
+              <p className="text-gray-400 mt-2">Reception & medical records module under development.</p>
+            </div>
+          </Suspense>
+        }
+      />
+
+      <Route
+        path={ROUTES.NURSING}
+        element={
+          <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+            <div className="p-8">
+              <h1 className="text-3xl font-bold text-white">Nursing Station</h1>
+              <p className="text-gray-400 mt-2">Vitals, triage & ward workflows coming soon.</p>
+            </div>
+          </Suspense>
+        }
+      />
+
+      <Route
+        path={ROUTES.CLINICAL_WORKSPACE}
+        element={
+          <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+            <div className="p-8">
+              <h1 className="text-3xl font-bold text-white">Clinical Workspace</h1>
+              <p className="text-gray-400 mt-2">Doctor consultations & AI-assisted diagnosis coming soon.</p>
+            </div>
+          </Suspense>
+        }
+      />
+
+      <Route
+        path={ROUTES.LABORATORY}
+        element={
+          <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+            <div className="p-8">
+              <h1 className="text-3xl font-bold text-white">Laboratory</h1>
+              <p className="text-gray-400 mt-2">Lab orders, tests & results under development.</p>
+            </div>
+          </Suspense>
+        }
+      />
+
+      <Route
+        path={ROUTES.PHARMACY}
+        element={
+          <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+            <div className="p-8">
+              <h1 className="text-3xl font-bold text-white">Pharmacy</h1>
+              <p className="text-gray-400 mt-2">Medication dispensing workflows coming soon.</p>
+            </div>
+          </Suspense>
+        }
+      />
+
+      <Route
+        path={ROUTES.BILLING}
+        element={
+          <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+            <div className="p-8">
+              <h1 className="text-3xl font-bold text-white">Billing & Claims</h1>
+              <p className="text-gray-400 mt-2">Invoices, payments & claims under development.</p>
+            </div>
+          </Suspense>
+        }
+      />
+
+      <Route
+        path={ROUTES.CLINICAL_SERVICES}
+        element={
+          <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+            <div className="p-8">
+              <h1 className="text-3xl font-bold text-white">Clinical Services</h1>
+              <p className="text-gray-400 mt-2">Radiology & specialized services coming soon.</p>
+            </div>
+          </Suspense>
+        }
+      />
+
+      <Route
+        path={ROUTES.ADMINISTRATION}
+        element={
+          <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+            <div className="p-8">
+              <h1 className="text-3xl font-bold text-white">Administration</h1>
+              <p className="text-gray-400 mt-2">User management, roles & system governance.</p>
+            </div>
+          </Suspense>
+        }
+      />
+
           
           <Route 
             path={ROUTES.SETTINGS} 
