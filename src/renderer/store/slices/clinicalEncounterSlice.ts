@@ -1,6 +1,5 @@
 // store/slices/clinicalEncounterSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-// import type { RootState } from '../index';
 
 // Types
 export interface Symptom {
@@ -68,7 +67,7 @@ export interface LabOrder {
   specimenType: string;
   instructions?: string;
   status: 'pending' | 'in-progress' | 'completed' | 'cancelled';
-  result?: any;
+  result?: string | number;
   orderedAt: string;
   completedAt?: string;
 }
@@ -111,6 +110,7 @@ export interface ClinicalEncounter {
     cost: number;
     quantity: number;
     department: string;
+    priority?: string;
   }>;
   allergies: Array<{
     allergen: string;
@@ -257,6 +257,21 @@ const initialState: ClinicalEncounterState = {
   error: null,
 };
 
+      // Helper function to create a valid DepartmentTransfer
+      const createDepartmentTransfer = (payload: {
+        timestamp: string;
+        staffId: string;
+        encounterId: string;
+        fromDepartment: string;
+        toDepartment: string;
+        reason: string;
+        priority?: string;
+      }): DepartmentTransfer => ({
+        ...payload,
+        priority: payload.priority || 'routine',
+        // Add any other required fields with defaults
+      });
+
 const clinicalEncounterSlice = createSlice({
   name: 'clinicalEncounter',
   initialState,
@@ -386,13 +401,16 @@ const clinicalEncounterSlice = createSlice({
           ...action.payload,
         ];
       })
-      .addCase(forwardToDepartment.fulfilled, (state, action) => {
-        if (state.currentEncounter) {
-          state.currentEncounter.departmentTransfers.push(action.payload);
-          state.currentEncounter.status = 'forwarded';
-          state.currentEncounter.updatedAt = new Date().toISOString();
-        }
-      });
+
+        // In your reducer
+        .addCase(forwardToDepartment.fulfilled, (state, action) => {
+          if (state.currentEncounter) {
+            const validTransfer = createDepartmentTransfer(action.payload);
+            state.currentEncounter.departmentTransfers.push(validTransfer);
+            state.currentEncounter.status = 'forwarded';
+            state.currentEncounter.updatedAt = new Date().toISOString();
+          }
+})
   },
 });
 
