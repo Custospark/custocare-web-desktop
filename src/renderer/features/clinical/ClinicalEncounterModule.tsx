@@ -218,11 +218,11 @@ export const ClinicalEncounterModule: React.FC = () => {
     weight: 65,
   });
   const [examFindings, setExamFindings] = useState('');
-  const [allergies, setAllergies] = useState<string[]>(['Penicillin']);
-  const [currentMedications, setCurrentMedications] = useState<string[]>(['Metformin 500mg']);
+  const [allergies] = useState<string[]>(['Penicillin']);
+  const [currentMedications] = useState<string[]>(['Metformin 500mg']);
   
   // Differential AI State
-  const [differentials, setDifferentials] = useState<DifferentialDiagnosis[]>(MOCK_DIFFERENTIALS);
+  const [differentials] = useState<DifferentialDiagnosis[]>(MOCK_DIFFERENTIALS);
   const [selectedDiagnosis, setSelectedDiagnosis] = useState<string>('');
   
   // E-Prescribing State
@@ -685,13 +685,13 @@ export const ClinicalEncounterModule: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-3">
                     <h4 className="font-semibold text-lg">{diff.condition}</h4>
-                    <span className={cn('px-2 py-1 text-xs rounded-full', {
-                      'bg-green-100 text-green-800': diff.confidence === 'high',
-                      'bg-yellow-100 text-yellow-800': diff.confidence === 'medium',
-                      'bg-gray-100 text-gray-800': diff.confidence === 'low',
-                    })}>
-                      {diff.confidence.toUpperCase()} CONFIDENCE
-                    </span>
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                    diff.confidence === 'high' 
+                      ? 'bg-green-100 text-green-800'
+                      : diff.confidence === 'medium'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}/>
                   </div>
                   
                   <div className="mt-2">
@@ -1125,13 +1125,13 @@ export const ClinicalEncounterModule: React.FC = () => {
                 <div className="font-medium">{inv.testName}</div>
                 <div className="text-sm opacity-75 mt-1">
                   Type: {inv.type} • Priority: 
-                  <span className={cn('ml-1 px-2 py-0.5 rounded text-xs', {
-                    'bg-red-100 text-red-800': inv.priority === 'urgent',
-                    'bg-yellow-100 text-yellow-800': inv.priority === 'stat',
-                    'bg-gray-100 text-gray-800': inv.priority === 'routine',
-                  })}>
-                    {inv.priority.toUpperCase()}
-                  </span>
+              <span className={`ml-1 px-2 py-0.5 rounded text-xs ${
+                inv.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                inv.priority === 'stat' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {inv.priority.toUpperCase()}
+              </span>
                 </div>
               </div>
               
@@ -1242,32 +1242,32 @@ export const ClinicalEncounterModule: React.FC = () => {
                 details: 'Total estimate: $69.50'
               },
             ].map((step, index) => (
-              <div key={index} className="relative">
-                <div className={cn('absolute -left-7 w-4 h-4 rounded-full border-4', {
-                  'bg-green-500 border-green-500': step.status === 'completed',
-                  'bg-yellow-500 border-yellow-500 animate-pulse': step.status === 'in-progress',
-                  'bg-gray-300 border-gray-300': step.status === 'pending',
-                })} />
-                
-                <div className={cn('p-4 rounded-xl', theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50')}>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-semibold text-lg">{step.title}</h4>
-                      <p className="text-sm mt-1">{step.action}</p>
-                      <p className="text-xs opacity-75 mt-2">{step.details}</p>
-                    </div>
-                    
-                    <span className={cn('px-3 py-1 rounded-full text-xs font-medium', {
-                      'bg-green-100 text-green-800': step.status === 'completed',
-                      'bg-yellow-100 text-yellow-800': step.status === 'in-progress',
-                      'bg-gray-100 text-gray-800': step.status === 'pending',
-                    })}>
-                      {step.status.toUpperCase()}
-                    </span>
+            <div key={index} className="relative">
+              <div className={`absolute -left-7 w-4 h-4 rounded-full border-4 ${
+                step.status === 'completed' ? 'bg-green-500 border-green-500' :
+                step.status === 'in-progress' ? 'bg-yellow-500 border-yellow-500 animate-pulse' :
+                'bg-gray-300 border-gray-300'
+              }`} />
+              
+              <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-semibold text-lg">{step.title}</h4>
+                    <p className="text-sm mt-1">{step.action}</p>
+                    <p className="text-xs opacity-75 mt-2">{step.details}</p>
                   </div>
+                  
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    step.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    step.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {step.status.toUpperCase()}
+                  </span>
                 </div>
               </div>
-            ))}
+            </div>
+          ))}
           </div>
         </div>
       </div>
@@ -1291,11 +1291,13 @@ export const ClinicalEncounterModule: React.FC = () => {
               <div className="font-medium">{dept.name}</div>
               <div className={cn('mt-2 flex items-center justify-between', theme === 'dark' ? 'text-gray-400' : 'text-gray-600')}>
                 <span className="text-sm">Queue:</span>
-                <span className={cn('px-2 py-0.5 rounded text-xs font-bold', {
-                  'bg-red-100 text-red-800': dept.queue > 4,
-                  'bg-yellow-100 text-yellow-800': dept.queue > 2 && dept.queue <= 4,
-                  'bg-green-100 text-green-800': dept.queue <= 2,
-                })}>
+               <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                  dept.queue > 4 
+                    ? 'bg-red-100 text-red-800'
+                    : dept.queue > 2 && dept.queue <= 4
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-green-100 text-green-800'
+                }`}>
                   {dept.queue} patients
                 </span>
               </div>
@@ -1327,12 +1329,13 @@ export const ClinicalEncounterModule: React.FC = () => {
                 </div>
               </div>
               
-              <span className={cn('px-3 py-1 rounded-full text-xs font-medium', {
-                'bg-green-100 text-green-800': route.status === 'completed',
-                'bg-yellow-100 text-yellow-800': route.status === 'in-progress',
-                'bg-gray-100 text-gray-800': route.status === 'pending',
-              })}>
-                {route.status.toUpperCase()}
+             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                route.status === 'completed' 
+                  ? 'bg-green-100 text-green-800'
+                  : route.status === 'in-progress'
+                  ? 'bg-yellow-100 text-yellow-800'
+                  : 'bg-gray-100 text-gray-800'
+              }`}>  {route.status.toUpperCase()} 
               </span>
             </div>
           ))}

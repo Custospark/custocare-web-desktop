@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { store } from '../../store/store';
+import { store } from '../../../../renderer/store/store';
 import { logout } from '../../../store/slices/authSlice';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000/api';
