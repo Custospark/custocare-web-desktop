@@ -3,10 +3,13 @@ import {
   VisitStatus, 
   PriorityLevel,
   BaseEntity,
-  BaseFilterParams
+  BaseFilterParams,
+    PaginatedResponse,
+  ApiResponse,
 } from './shared';
 
-export {RoleType}
+export {RoleType , PaginatedResponse,
+  ApiResponse,}
 
 
 // Resource types for permissions
