@@ -1,86 +1,51 @@
+// src/routes/AppRoutes.tsx
 import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import LoadingSkeleton from '../components/Loading/LoadingSkeletons';
 import { ROUTES } from './routeConstants';
 import Layout from '../components/Navigation/Layout';
-import ClinicalEncounterModule from '../features/clinical/ClinicalEncounterModule';
 
-// Lazy load pages for code splitting and performance optimization
-
-// Authentication Pages
+// Lazy load pages for code splitting
 const LoginPage = React.lazy(() => import('../features/auth/Login'));
 const SignUpPage = React.lazy(() => import('../features/auth/SignUp'));
 const ForgotPasswordPage = React.lazy(() => import('../features/auth/ForgotPassword'));
 const ResetPasswordPage = React.lazy(() => import('../features/auth/ResetPassword'));
 const TwoFactorAuthPage = React.lazy(() => import('../features/auth/TwoFactorAuthPage'));
 const FacilityOnboardingModule = React.lazy(() => import('../features/facilities/FacilityOnboardingModule'));
-
-
-// Dashboard & Main Pages
 const Dashboard = React.lazy(() => import('../pages/Dashboard'));
 const PatientModule = React.lazy(() => import('../features/patients/PatientModule'));
 const PatientDetail = React.lazy(() => import('../features/patients/PatientDetail'));
-
-// Error Pages
+const ClinicalEncounterModule = React.lazy(() => import('../features/clinical/ClinicalEncounterModule'));
 const NotFound = React.lazy(() => import('../components/Errors/NotFound'));
 
 /**
- * ============================================================================
- * APPLICATION ROUTES CONFIGURATION
- * ============================================================================
+ * Application Routes Configuration
  * 
- * Enterprise-Grade Routing Strategy:
- * - Lazy loading for optimal bundle size and performance
- * - Persistent layout across protected routes (no re-initialization)
- * - Loading skeletons for smooth transitions and perceived performance
- * - Clear separation of public/protected routes
- * - Centralized route management via constants
- * - Suspense boundaries for error handling
+ * Architecture:
+ * 1. Public routes (no authentication, no layout)
+ * 2. Protected routes (authentication required, with layout)
+ * 3. Catch-all 404 route
  * 
- * Route Architecture:
- * 
- * 1. Public Routes (No Authentication Required):
- *    - Login, Sign Up, Forgot Password, Reset Password
- *    - 2FA Verification
- *    - These routes render without the main application layout
- * 
- * 2. Protected Routes (Authentication Required):
- *    - Dashboard, Patients, Encounters, etc.
- *    - Wrapped in persistent Layout component
- *    - Layout includes sidebar, header, and navigation
- *    - Shared layout prevents full app re-initialization
- * 
- * 3. Loading Strategy:
- *    - Suspense with LoadingSkeleton for lazy-loaded components
- *    - Variant-specific skeletons match page type
- *    - Provides instant visual feedback during loading
- * 
- * Security Considerations:
- * - Protected routes should implement authentication guards
- * - Redirect unauthenticated users to login
- * - Preserve intended destination for post-login redirect
- * - Session validation on route changes
- * 
- * @returns {JSX.Element} Application routing configuration
+ * Note: All routes use HashRouter syntax (#/path)
  */
 function AppRoutes() {
   return (
     <Suspense fallback={<LoadingSkeleton />}>
       <Routes>
-        {/* 
-          ======================================================================
-          PUBLIC ROUTES - No Layout, No Authentication Required
-          ======================================================================
-          These routes are accessible to all users and render without the
-          main application layout. Ideal for authentication flows and
-          public-facing pages.
-        */}
+        {/* ============================================= */}
+        {/* PUBLIC ROUTES - No Authentication Required */}
+        {/* ============================================= */}
         
-        {/* Authentication Routes */}
+        {/* Default route - redirects to login or dashboard based on auth state */}
+        <Route 
+          path={ROUTES.HOME} 
+          element={<Navigate to={ROUTES.LOGIN} replace />}
+        />
+        
         <Route 
           path={ROUTES.LOGIN} 
           element={
-            <Suspense fallback={<LoadingSkeleton  />}>
+            <Suspense fallback={<LoadingSkeleton />}>
               <LoginPage />
             </Suspense>
           } 
@@ -89,7 +54,7 @@ function AppRoutes() {
         <Route 
           path={ROUTES.SIGNUP} 
           element={
-            <Suspense fallback={<LoadingSkeleton/>}>
+            <Suspense fallback={<LoadingSkeleton />}>
               <SignUpPage />
             </Suspense>
           } 
@@ -116,47 +81,16 @@ function AppRoutes() {
         <Route 
           path={ROUTES.TWO_FACTOR_AUTH} 
           element={
-            <Suspense fallback={<LoadingSkeleton  />}>
+            <Suspense fallback={<LoadingSkeleton />}>
               <TwoFactorAuthPage />
             </Suspense>
           } 
         />
 
-        {/* 
-          ======================================================================
-          PROTECTED ROUTES - With Persistent Layout
-          ======================================================================
-          These routes require authentication and render within the main
-          application layout. The Layout component persists across route
-          changes, preventing unnecessary re-initialization.
-          
-          TODO: Implement authentication guard/middleware
-          - Check authentication status
-          - Redirect to login if not authenticated
-          - Preserve intended route for post-login redirect
-        */}
-        
+        {/* ============================================= */}
+        {/* PROTECTED ROUTES - With Layout & Authentication */}
+        {/* ============================================= */}
         <Route element={<Layout />}>
-
-
-
-        <Route 
-          path={ROUTES.FACILITIES} 
-          element={
-            <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
-              <FacilityOnboardingModule />
-            </Suspense>
-          } 
-        />
-
-        <Route 
-          path={ROUTES.FACILITY_ONBOARDING} 
-          element={
-            <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
-              <FacilityOnboardingModule />
-            </Suspense>
-          } 
-        />
           {/* Dashboard */}
           <Route 
             path={ROUTES.DASHBOARD} 
@@ -167,10 +101,26 @@ function AppRoutes() {
             } 
           />
           
-          {/* 
-            Patient Management Module
-            Uses ContentLayout with right sidebar for contextual operations
-          */}
+          {/* Facility Management */}
+          <Route 
+            path={ROUTES.FACILITIES} 
+            element={
+              <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+                <FacilityOnboardingModule />
+              </Suspense>
+            } 
+          />
+
+          <Route 
+            path={ROUTES.FACILITY_ONBOARDING} 
+            element={
+              <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+                <FacilityOnboardingModule />
+              </Suspense>
+            } 
+          />
+          
+          {/* Patient Management */}
           <Route 
             path={ROUTES.PATIENTS} 
             element={
@@ -180,7 +130,6 @@ function AppRoutes() {
             } 
           />
           
-          {/* Patient Detail View */}
           <Route 
             path={ROUTES.PATIENT_DETAIL} 
             element={
@@ -190,7 +139,7 @@ function AppRoutes() {
             } 
           />
           
-          {/* Clinical Modules - Placeholder Pages */}
+          {/* Clinical Modules */}
           <Route 
             path={ROUTES.ENCOUNTERS} 
             element={
@@ -276,18 +225,10 @@ function AppRoutes() {
           />
         </Route>
 
-        {/* 
-          ======================================================================
-          SPECIAL ROUTES
-          ======================================================================
-        */}
+        {/* ============================================= */}
+        {/* ERROR & CATCH-ALL ROUTES */}
+        {/* ============================================= */}
         
-        {/* Root redirect to dashboard (or login if not authenticated) */}
-        <Route 
-          path={ROUTES.HOME} 
-          element={<Navigate to={ROUTES.DASHBOARD} replace />} 
-        />
-
         {/* 404 Not Found - Catch all unmatched routes */}
         <Route 
           path="*" 
