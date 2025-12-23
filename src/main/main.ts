@@ -3,24 +3,28 @@ import { app, BrowserWindow, Menu } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// ==========================================
-// Utility to get __dirname in ESM
-// ==========================================
+/**
+ * ESM compatibility: Convert import.meta.url to __dirname equivalent
+ * Required for proper path resolution in ES modules
+ */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ==========================================
-// Determine if running in development mode
-// ==========================================
+/**
+ * Environment detection: Determine if running in development mode
+ * Checks NODE_ENV or falls back to app.isPackaged status
+ */
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 /**
- * Creates the main application window.
- * Configured for production-grade use:
- * - Minimum dimensions
- * - Hidden inset title bar (macOS style)
- * - Preload and security settings
- * - Graceful error handling
+ * Creates and configures the main application window
+ * 
+ * Window configuration includes:
+ * - Standard frame with custom menu bar control
+ * - Minimum size constraints for optimal layout
+ * - Secure web preferences with development tools in dev mode
+ * 
+ * @returns {BrowserWindow} The configured main window instance
  */
 function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
@@ -29,56 +33,66 @@ function createWindow(): BrowserWindow {
     minWidth: 1200,
     minHeight: 700,
     frame: true,
-    titleBarStyle: 'hiddenInset', // macOS style
-    show: false, // Show when ready
-    icon: path.join(__dirname, 'assets/icon.png'), // App icon
+    autoHideMenuBar: true, // Hide menu bar (can be toggled with Alt key)
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      webSecurity: !isDev, // Disable in dev for local file access
+      webSecurity: !isDev, // Disable only in development for local resources
       devTools: isDev,
     },
+    icon: path.join(__dirname, 'assets/icon.png'),
+    show: false, // Prevent flash of unstyled content
+    backgroundColor: '#ffffff', // Fallback background color
   });
 
-  // ==========================================
-  // Load URL or file depending on environment
-  // ==========================================
+  /**
+   * Remove the default application menu entirely
+   * This removes File, Edit, View, Window, Help menus
+   * Set to null to completely disable the menu bar
+   */
+  Menu.setApplicationMenu(null);
+
+  /**
+   * Load application content based on environment
+   * Development: Connects to Vite dev server for HMR
+   * Production: Loads from compiled static files
+   */
   if (isDev) {
-    // Development: Load Vite dev server
     const devServerUrl = 'http://localhost:5173';
-    console.log(`Loading dev server: ${devServerUrl}`);
-    mainWindow.loadURL(devServerUrl).catch(console.error);
+    mainWindow.loadURL(devServerUrl);
     mainWindow.webContents.openDevTools();
   } else {
-    // Production: Load built index.html
     const indexPath = path.join(app.getAppPath(), 'dist', 'web', 'index.html');
-    console.log(`Loading production file: ${indexPath}`);
+    
     mainWindow.loadFile(indexPath).catch(err => {
       console.error('Failed to load index.html:', err);
+      
+      // Fallback: Display user-friendly error page
       mainWindow.loadURL(`data:text/html;charset=utf-8,
         <html>
-          <body style="font-family: Arial; padding: 40px; text-align: center;">
-            <h1>Application Error</h1>
-            <p>Failed to load application files.</p>
-            <p>${err.message}</p>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial; padding: 40px; text-align: center; background: #f5f5f5;">
+            <h1 style="color: #333;">Application Error</h1>
+            <p style="color: #666;">Failed to load application files.</p>
+            <p style="color: #999; font-size: 0.9em;">${err.message}</p>
           </body>
         </html>
       `);
     });
   }
 
-  // ==========================================
-  // Show window when ready
-  // ==========================================
+  /**
+   * Optimize window display: Show only when content is fully loaded
+   * Prevents visual artifacts and improves perceived performance
+   */
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     mainWindow.focus();
-    console.log('Main window ready to show');
   });
 
-  // ==========================================
-  // Handle window closed
-  // ==========================================
+  /**
+   * Clean up window resources on close
+   * Ensures proper memory management
+   */
   mainWindow.on('closed', () => {
     mainWindow.destroy();
   });
@@ -86,39 +100,50 @@ function createWindow(): BrowserWindow {
   return mainWindow;
 }
 
-// ==========================================
-// App lifecycle events
-// ==========================================
+/**
+ * Application initialization
+ * Waits for Electron to be fully ready before creating windows
+ */
 app.whenReady().then(() => {
-  console.log('Electron app starting...');
-
-  // Remove default menu (File/Edit/View/Window/Help)
-  Menu.setApplicationMenu(null);
-
-  // Create main window
   createWindow();
 
-  // macOS: Re-create window when dock icon is clicked
+  /**
+   * macOS-specific behavior: Recreate window when dock icon is clicked
+   * Standard pattern for macOS applications
+   */
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
   });
 });
 
-// Quit app when all windows are closed (except macOS)
+/**
+ * Application termination handler
+ * Quits app when all windows are closed, except on macOS
+ * where apps typically stay active until explicitly quit
+ */
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
-// Optional: Log app quitting
+/**
+ * Pre-quit cleanup handler
+ * Placeholder for any cleanup operations before app termination
+ */
 app.on('before-quit', () => {
-  console.log('App quitting...');
+  // Perform cleanup operations if needed
 });
 
-// Global uncaught exception handler
-process.on('uncaughtException', (error) => {
+/**
+ * Global error handler for uncaught exceptions
+ * Logs errors to help with debugging and crash reporting
+ */
+process.on('uncaughtException', (error: Error) => {
   console.error('Uncaught Exception:', error);
+  // In production, consider sending to error tracking service
 });
 
 export { createWindow };
