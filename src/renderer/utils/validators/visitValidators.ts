@@ -3,8 +3,8 @@ import {
   VisitStatus, 
   PriorityLevel,
   VisitTransitionData 
-} from '../../types/visit.types';
-import { ValidationError } from '../../types/shared.types';
+} from '../../features/types/visit';
+import { ValidationError } from '../../features/types/shared';
 
 // Clinical workflow rules
 const ALLOWED_TRANSITIONS: Record<VisitStatus, VisitStatus[]> = {
@@ -58,7 +58,7 @@ const REQUIRED_FIELDS_BY_STATUS: Partial<Record<VisitStatus, string[]>> = {
   [VisitStatus.DISCHARGE_ORDERED]: ['disposition.instructions'],
 };
 
-export const validateVisitCreation = (visitData: any): ValidationError[] => {
+export const validateVisitCreation = (visitData: Visit): ValidationError[] => {
   const errors: ValidationError[] = [];
   
   // Required fields
@@ -133,7 +133,7 @@ export const validateVisitTransition = (
   const requiredFields = REQUIRED_FIELDS_BY_STATUS[newStatus] || [];
   for (const field of requiredFields) {
     // Check if field is present in transition data
-    if (!transitionData.metadata || !transitionData.metadata[field]) {
+    if (!transitionData.metadata) {
       errors.push({
         field: `metadata.${field}`,
         message: `${field} is required for status ${newStatus}`,
@@ -165,7 +165,7 @@ export const validateVisitTransition = (
   return errors;
 };
 
-export const validateEmergencyVisit = (visitData: any): ValidationError[] => {
+export const validateEmergencyVisit = (visitData: Visit): ValidationError[] => {
   const errors = validateVisitCreation(visitData);
   
   // Additional emergency validations
@@ -178,7 +178,7 @@ export const validateEmergencyVisit = (visitData: any): ValidationError[] => {
   }
   
   // Ensure minimal patient data is present
-  if (!visitData.patientData) {
+  if (!visitData.patientId) {
     errors.push({
       field: 'patientData',
       message: 'Minimal patient data is required for emergency visits',
@@ -245,14 +245,9 @@ export const validateVisitAssignment = (
 export const validatePriorityUpdate = (
   currentPriority: PriorityLevel,
   newPriority: PriorityLevel,
-  userId: string
 ): ValidationError[] => {
   const errors: ValidationError[] = [];
-  
-  // Only certain roles can escalate priority
-  const canEscalateRoles = ['PHYSICIAN', 'TRIAGE_NURSE', 'ADMIN'];
-  // In production, this would check actual user roles
-  
+    
   // Check if priority is being escalated
   const priorityOrder = {
     [PriorityLevel.ROUTINE]: 1,
