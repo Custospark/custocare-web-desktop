@@ -38,7 +38,7 @@ export interface ContentLayoutProps {
   operations: Operation[];
   activeOperation: string;
   onOperationChange: (operationId: string) => void;
-  defaultOperation: string;
+  defaultOperation?: string;
   children: React.ReactNode;
   initialCollapsed?: boolean;
   className?: string;
