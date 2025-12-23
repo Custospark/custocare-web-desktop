@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState } from 'react';
 import { useSelector } from 'react-redux';
-import type { RootState } from '../store/index';
+import type { RootState } from '../store/store';
 import Breadcrumb from '../components/Navigation/Breadcrumbs';
 import ContentSection from '../components/Navigation/ContentSection';
 import {

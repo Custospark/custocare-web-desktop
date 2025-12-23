@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSelector } from 'react-redux';
-import type { RootState } from '../../store/index';
+import type { RootState } from '../../store/store';
 import { ChevronRight, ChevronLeft, MoreVertical, X, Sparkles } from 'lucide-react';
 import { cn } from '../../utils/classNameUtils';
 import { ReactNode } from 'react';

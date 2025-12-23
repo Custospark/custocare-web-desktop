@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import type { RootState } from '../../store/index';
+import type { RootState } from '../../store/store';
 import { ContentLayout, Operation } from  '../../components/content/ContentLayout'
 import {
   Home, Search, UserPlus, UserMinus, AlertCircle, FileText, Activity, Heart, User, Download, Eye, Phone, Mail

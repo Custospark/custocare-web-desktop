@@ -6,7 +6,7 @@ import {
   Brain, TrendingUp, Activity, AlertCircle, CheckCircle,
   Zap, Globe, Calendar, Users, FlaskConical
 } from 'lucide-react';
-import type { RootState } from '../../../store';
+import type { RootState } from '../../../store/store';
 import { cn } from '../../../utils/classNameUtils';
 import type {
   Symptom,

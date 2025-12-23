@@ -6,6 +6,9 @@ import {
   BaseFilterParams
 } from './shared';
 
+export {RoleType}
+
+
 // Resource types for permissions
 export type ResourceType = 
   | 'PATIENT' 

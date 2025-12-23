@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Search, UserPlus, User, AlertCircle, Phone, Calendar, FileText } from 'lucide-react';
-import type { RootState } from '../../../store';
+import type { RootState } from '../../../store/store';
 import { cn } from '../../../utils/classNameUtils';
 import type { Patient } from '../types/clinicalEncounterTypes';
 

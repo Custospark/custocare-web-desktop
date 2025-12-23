@@ -1,6 +1,6 @@
 // store/slices/departmentSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import type { RootState } from '../../store/index';
+import type { RootState } from '../store';
 
 // ==================== TYPES ====================
 

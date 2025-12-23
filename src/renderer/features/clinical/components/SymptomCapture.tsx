@@ -6,7 +6,7 @@ import {
   MessageSquare, Plus, Trash2, Activity, Thermometer,
   Heart, Droplets, Weight, AlertCircle, Stethoscope
 } from 'lucide-react';
-import type { RootState } from '../../../store';
+import type { RootState } from '../../../store/store';
 import { cn } from '../../../utils/classNameUtils';
 import type { Symptom, PatientVitals, Patient } from '../types/clinicalEncounterTypes';
 

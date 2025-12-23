@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import type { RootState } from '../../../store/index';
+import type { RootState } from '../../../store/store';
 import {
   Stethoscope,
   Settings,

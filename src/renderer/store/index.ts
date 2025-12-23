@@ -1,33 +1,21 @@
 // store/index.ts
-import { configureStore } from '@reduxjs/toolkit';
-import authSlice from './slices/authSlice';
-import uiSlice from './slices/uiSlice';
-import patientSlice from './slices/patientSlice_';
-import notificationSlice from './slices/notificationSlice';
-import facilitySlice from './slices/facilitySlice';
-import clinicalEncounterSlice from './slices/clinicalEncounterSlice';
+export { store, type RootState, type AppDispatch } from './store';
+export { rootReducer } from './rootReducer';
 
-export const store = configureStore({
-  reducer: {
-    auth: authSlice,
-    ui: uiSlice,
-    patient: patientSlice,
-    notification: notificationSlice,
-    facility: facilitySlice,
-    clinicalEncounter: clinicalEncounterSlice,
-  },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: ['notification/addNotification'],
-        ignoredActionPaths: ['meta.arg', 'payload.timestamp'],
-        ignoredPaths: ['notification.notifications'],
-      },
-    }),
-  devTools: process.env.NODE_ENV !== 'production',
-});
+// Export all slice actions and selectors
+export * from './slices/authSlice';
+export * from './slices/uiSlice';
+export * from './slices/patientSlice';
+export * from './slices/notificationSlice';
+export * from './slices/facilitySlice';
+export * from './slices/clinicalEncounterSlice';
+export * from './slices/visitSlice';
+export * from './slices/queueSlice';
+export * from './slices/billingSlice';
+export * from './slices/roleSlice';
+export * from './slices/auditSlice';
 
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
-
-export default store;
+// Export all selectors
+export * from './selectors/patientSelectors';
+export * from './selectors/visitSelectors';
+export * from './selectors/integratedSelectors';

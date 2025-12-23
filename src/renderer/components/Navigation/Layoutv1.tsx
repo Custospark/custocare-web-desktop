@@ -6,7 +6,7 @@ import { cn } from '../../types/cn';
 import { Sun, Moon, Settings, Bell, Activity, Menu, X, Search, Command } from 'lucide-react';
 import { Outlet } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '../../store/index'
+import type { RootState, AppDispatch } from '../../store/store'
 import { toggleSidebar, setSidebarOpen, toggleTheme } from '../../store/slices/uiSlice';
 
 /**

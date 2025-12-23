@@ -1,7 +1,7 @@
 // features/department/DepartmentQueuesModule.tsx
 import React from 'react';
 import { useSelector } from 'react-redux';
-import type { RootState } from '../../store/index';
+import type { RootState } from '../../store/store';
 import { ContentLayout } from '../../components/content/ContentLayout';
 import { Microscope, Pill, FileText, Users, CheckCircle } from 'lucide-react';
 import { cn } from '../../utils/classNameUtils';
