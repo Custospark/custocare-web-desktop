@@ -1,6 +1,6 @@
 // utils/departmentUtils.ts
 
-import { Department, DepartmentFormData, DepartmentType } from '../../store/slices/departmentSlice';
+import { Department, DepartmentFormData, DepartmentType } from '../../../renderer/features/types/department';
 
 export const generateDepartmentCode = (name: string): string => {
   // Extract first letters of words, max 5 characters
@@ -102,6 +102,7 @@ export const getDefaultDepartmentFormData = (): Partial<DepartmentFormData> => (
     waitingCapacity: 0,
     maxCapacity: 0,
     currentUtilization: 0,
+     totalStaff:0
   },
   equipment: [],
   staffing: {
