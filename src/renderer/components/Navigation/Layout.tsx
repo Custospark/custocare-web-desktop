@@ -244,7 +244,7 @@ export const Layout: React.FC = () => {
                 ? 'bg-gray-800/40 text-gray-400 border-gray-700/40'
                 : 'bg-gray-100/60 text-gray-600 border-gray-200'
             )}>
-              v4.2.1
+            v{process.env.REACT_APP_VERSION}
             </span>
           </div>
 

@@ -80,6 +80,7 @@ function createWindow(): BrowserWindow {
     });
   }
 
+
   /**
    * Optimize window display: Show only when content is fully loaded
    * Prevents visual artifacts and improves perceived performance
