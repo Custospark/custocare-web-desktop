@@ -6,6 +6,9 @@
 
 import {type ReactNode } from 'react';
 
+declare const __APP_VERSION__: string;
+export {__APP_VERSION__}
+
 export interface MenuItem {
   id: string;
   label: string;

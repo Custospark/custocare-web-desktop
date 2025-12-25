@@ -460,7 +460,7 @@ export const Footer: React.FC<FooterProps> = ({
                 ? 'bg-gray-800 text-gray-400' 
                 : 'bg-gray-100 text-gray-600'
             )}>
-              v4.2.1
+        Version {__APP_VERSION__}
             </span>
           </div>
         </div>
