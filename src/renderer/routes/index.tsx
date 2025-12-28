@@ -4,6 +4,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import LoadingSkeleton from '../components/Loading/LoadingSkeletons';
 import { ROUTES } from './routeConstants';
 import Layout from '../components/Navigation/Layout';
+import ReceptionistDashboard from '../features/receptionist/ReceptionistDashboard';
+import HospitalBillReceipt from '../features/billing/HospitalBillReceipt';
 
 // Lazy load pages for code splitting
 const LoginPage = React.lazy(() => import('../features/auth/Login'));
@@ -192,10 +194,7 @@ function AppRoutes() {
         path={ROUTES.FRONT_DESK}
         element={
           <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
-            <div className="p-8">
-              <h1 className="text-3xl font-bold text-white">Front Desk</h1>
-              <p className="text-gray-400 mt-2">Reception & medical records module under development.</p>
-            </div>
+            <ReceptionistDashboard></ReceptionistDashboard>
           </Suspense>
         }
       />
@@ -252,10 +251,7 @@ function AppRoutes() {
         path={ROUTES.BILLING}
         element={
           <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
-            <div className="p-8">
-              <h1 className="text-3xl font-bold text-white">Billing & Claims</h1>
-              <p className="text-gray-400 mt-2">Invoices, payments & claims under development.</p>
-            </div>
+            <HospitalBillReceipt/>
           </Suspense>
         }
       />
