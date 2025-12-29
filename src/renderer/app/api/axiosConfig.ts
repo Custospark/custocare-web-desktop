@@ -1,4 +1,4 @@
-import axios, { type AxiosInstance, AxiosError,type AxiosResponse } from 'axios';
+import axios, { type AxiosInstance } from 'axios';
 import { QueryClient } from '@tanstack/react-query';
 import { API_BASE_URL, API_TIMEOUT } from './apiConfig';
 
@@ -33,28 +33,35 @@ axiosInstance.interceptors.request.use(
 
 /**
  * Response Interceptor
- * Handles common error scenarios
+ * Fixed: Only redirects to login on 401 if NOT already on login page
  */
-axiosInstance.interceptors.response.use(
-  (response: AxiosResponse) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Unauthorized - Clear token and redirect to login
-      localStorage.removeItem('authToken');
-      window.location.href = '/login';
-    }
+// axiosInstance.interceptors.response.use(
+//   (response: AxiosResponse) => response,
+//   (error: AxiosError) => {
+//     const currentPath = window.location.pathname;
+//     const isLoginPage = currentPath === '/login' || currentPath === '/#/login';
+    
+//     // Only redirect to login on 401 if we're NOT already on the login page
+//     if (error.response?.status === 401 && !isLoginPage) {
+//       // Unauthorized - Clear token and redirect to login
+//       localStorage.removeItem('authToken');
+//       window.location.href = '/login';
+//       return Promise.reject(error);
+//     }
+    
+//     // If we're on login page and get 401, just pass the error through
+//     // This allows the login component to display the error properly
+//     if (error.response?.status === 403) {
+//       console.error('Access denied: You do not have permission to access this resource');
+//     }
 
-    if (error.response?.status === 403) {
-      console.error('Access denied: You do not have permission to access this resource');
-    }
+//     if (error.response?.status === 500) {
+//       console.error('Server error: Please try again later');
+//     }
 
-    if (error.response?.status === 500) {
-      console.error('Server error: Please try again later');
-    }
-
-    return Promise.reject(error);
-  }
-);
+//     return Promise.reject(error);
+//   }
+// );
 
 /**
  * React Query Client Configuration
