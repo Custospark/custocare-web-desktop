@@ -2,11 +2,11 @@ import { Provider } from 'react-redux';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { HashRouter as Router } from 'react-router-dom';
-import { store } from './store/store';
-import { queryClient } from './api/configs/axiosConfig';
-import AppRoutes from './routes';
-import ErrorBoundary from './components/Loading/ErrorBoundary';
-import { AppProvider } from './store/state/AppContext';
+import { store } from './app/store/store';
+import { queryClient } from './app/api/axiosConfig';
+import AppRoutes from './app/routes';
+import ErrorBoundary from './shared/components/Loading/ErrorBoundary';
+import { AppProvider } from './app/store/state/AppContext';
 import './App.css';
 
 /**
