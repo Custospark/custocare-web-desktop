@@ -1,7 +1,7 @@
 {
   "name": "custocare-ai",
   "private": true,
-  "version": "1.0.5",
+  "version": "1.1.0",
   "description": "Custocare AI Desktop and Web App",
   "author": "Custospark Company Ltd info@custospark.com",
   "type": "module",
