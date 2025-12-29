@@ -8,7 +8,7 @@ const NotFound = React.lazy(() => import('../../shared/components/Errors/NotFoun
 /**
  * Error & Catch-All Routes
  */
-export const ErrorRoutes = () => (
+export const ErrorRoutes = () => [
   <>
     {/* 404 Not Found - Catch all unmatched routes */}
     <Route 
@@ -20,4 +20,4 @@ export const ErrorRoutes = () => (
       } 
     />
   </>
-);
+];

@@ -307,7 +307,7 @@ export const Login: React.FC = () => {
           </label>
 
           <Link
-            to="/forgot-password"
+            to="/role-selection"
             className={cn(
               'text-sm font-semibold transition-colors',
               theme === 'dark'
@@ -358,7 +358,8 @@ export const Login: React.FC = () => {
               theme === 'dark'
                 ? 'text-cyan-400 hover:text-cyan-300'
                 : 'text-blue-600 hover:text-blue-700'
-            )}
+
+              )}
           >
             Create Account
           </Link>

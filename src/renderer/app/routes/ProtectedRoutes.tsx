@@ -21,7 +21,7 @@ const HospitalBillReceipt = React.lazy(() => import('../../shared/features/billi
  * All routes in this file are PROTECTED (authentication required)
  * They all use the Layout component as a wrapper
  */
-export const ProtectedRoutes = () => (
+export const ProtectedRoutes = () => [
   <Route element={<Layout />}>
     {/* Dashboard */}
     <Route 
@@ -247,4 +247,4 @@ export const ProtectedRoutes = () => (
       } 
     />
   </Route>
-);
+];

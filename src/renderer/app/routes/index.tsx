@@ -22,13 +22,14 @@ function AppRoutes() {
       />
       
       {/* Authentication Routes */}
-      <OnboardingRoutes />
+        {...OnboardingRoutes()}
       
       {/* Protected Routes */}
-      <ProtectedRoutes />
+      {...ProtectedRoutes()}
+
       
       {/* Error Routes */}
-      <ErrorRoutes />
+      {...ErrorRoutes()}
     </Routes>
   );
 }

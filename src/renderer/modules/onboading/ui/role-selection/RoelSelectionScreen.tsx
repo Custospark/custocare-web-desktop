@@ -1,395 +1,507 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+/**
+ * ============================================================================
+ * ROLE SELECTION - MODERNIZED ONBOARDING
+ * ============================================================================
+ * 
+ * Clean, conversion-focused role selection screen.
+ * Removes unnecessary elements and focuses on fast decision-making.
+ * 
+ * Key Features:
+ * - Single-screen focus (no distracting sidebars)
+ * - Clear role differentiation with visual hierarchy
+ * - Progressive disclosure of features
+ * - Mobile-optimized card layout
+ * - Smooth transitions without overdoing animations
+ */
+
+import React, { useState, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Building2, 
   Stethoscope, 
   User, 
-  ChevronRight,
-  LogOut,
-  Quote,
+  Check,
+  ArrowRight,
   Shield,
-  Activity,
   Moon,
-  Sun
+  Sun,
+  ChevronDown
 } from 'lucide-react';
+import { cn } from '../../../../shared/types/cn';
+
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../app/store/slices/uiSlice';
-import { cn } from '../../../../shared/types/cn';
+
+import { motion, AnimatePresence } from 'framer-motion';
+
+/* ==========================================================================
+   TYPE DEFINITIONS
+   ========================================================================== */
 
 interface RoleOption {
   id: string;
   title: string;
+  subtitle: string;
   description: string;
-  icon: React.ReactNode;
+  icon: React.ComponentType<{ className?: string }>;
+  gradient: string;
+  features: string[];
+  targetAudience: string;
 }
 
-const RoleSelectionScreen: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const theme = useAppSelector((state) => state.ui.theme);
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+/* ==========================================================================
+   MAIN COMPONENT
+   ========================================================================== */
 
-  const roleOptions: RoleOption[] = [
+export const RoleSelection: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const theme = useAppSelector((state) => state.ui.theme);
+
+  /* State Management */
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [expandedRole, setExpandedRole] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  /* Role Options Configuration */
+  const roleOptions: RoleOption[] = useMemo(() => [
     {
       id: 'facility-owner',
       title: 'Facility Owner',
-      description: 'For administrators managing clinics, hospitals, or care facilities.',
-      icon: <Building2 className="w-5 h-5" />
+      subtitle: 'Manage Your Practice',
+      description: 'Full administrative control for clinic and hospital owners',
+      icon: Building2,
+      gradient: 'from-emerald-500 to-teal-600',
+      features: [
+        'Multi-facility dashboard',
+        'Staff & resource management',
+        'Financial reporting & analytics',
+        'Compliance monitoring'
+      ],
+      targetAudience: 'Clinic owners, hospital administrators, practice managers'
     },
     {
       id: 'medical-professional',
       title: 'Medical Professional',
-      description: 'For doctors, nurses, and support staff providing direct care.',
-      icon: <Stethoscope className="w-5 h-5" />
+      subtitle: 'Deliver Better Care',
+      description: 'Clinical tools designed for healthcare providers',
+      icon: Stethoscope,
+      gradient: 'from-blue-500 to-indigo-600',
+      features: [
+        'Patient records & history',
+        'AI-assisted diagnostics',
+        'Treatment planning tools',
+        'Secure team collaboration'
+      ],
+      targetAudience: 'Doctors, nurses, therapists, medical assistants'
     },
     {
       id: 'patient',
       title: 'Patient',
-      description: 'For individuals seeking care, monitoring health, or managing appointments.',
-      icon: <User className="w-5 h-5" />
+      subtitle: 'Take Control of Your Health',
+      description: 'Easy access to care and health management',
+      icon: User,
+      gradient: 'from-purple-500 to-pink-600',
+      features: [
+        'Book & manage appointments',
+        'Access medical records',
+        'Secure messaging with providers',
+        'Health tracking & reminders'
+      ],
+      targetAudience: 'Individuals seeking healthcare services'
     }
-  ];
+  ], []);
 
-  const testimonialImage = 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=1200&q=80';
-  const backgroundImage = 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1200&q=80';
-
-  const handleContinue = () => {
-    if (selectedRole) {
-      // Redirect to role-specific setup portal
-      console.log(`Redirecting to ${selectedRole} setup portal`);
-      // You would typically use navigate() here
-      // navigate(`/onboarding/${selectedRole}`);
+  /* Event Handlers */
+  const handleRoleSelect = useCallback((roleId: string) => {
+    setSelectedRole(roleId);
+    setExpandedRole(null);
+    
+    // Smooth scroll to continue button on mobile
+    if (window.innerWidth < 768) {
+      setTimeout(() => {
+        document.getElementById('continue-section')?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'nearest' 
+        });
+      }, 300);
     }
-  };
+  }, []);
+
+  const toggleExpand = useCallback((roleId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedRole(expandedRole === roleId ? null : roleId);
+  }, [expandedRole]);
+
+  const handleContinue = useCallback(() => {
+    if (!selectedRole) return;
+    
+    setIsTransitioning(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      navigate(`/onboarding/${selectedRole}`, {
+        state: { role: selectedRole }
+      });
+    }, 400);
+  }, [selectedRole, navigate]);
+
+  const selectedRoleData = useMemo(
+    () => roleOptions.find(role => role.id === selectedRole),
+    [selectedRole, roleOptions]
+  );
+
+  /* ==========================================================================
+     RENDER
+     ========================================================================== */
 
   return (
     <div className={cn(
-      'min-h-screen flex flex-col lg:flex-row',
+      'min-h-screen flex flex-col',
       theme === 'dark'
         ? 'bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950'
-        : 'bg-gradient-to-br from-slate-50 via-white to-slate-50'
+        : 'bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50'
     )}>
-      {/* Left Panel - Main Content */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="flex items-center justify-between px-5 py-4 lg:px-8 lg:py-6">
-          <Link to="/" className="inline-flex items-center gap-2.5 group">
+      {/* Simplified Header */}
+      <header className="w-full px-4 py-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center gap-2">
             <div className={cn(
-              'w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105',
-              theme === 'dark'
-                ? 'bg-gradient-to-br from-cyan-500 to-blue-600'
-                : 'bg-gradient-to-br from-blue-500 to-cyan-600'
+              'w-8 h-8 rounded-lg flex items-center justify-center',
+              'bg-gradient-to-br from-blue-600 to-cyan-600'
             )}>
-              <Activity className="w-5 h-5 text-white" strokeWidth={2.5} />
+              <div className="w-4 h-4 border-2 border-white rounded-full" />
             </div>
-            <div className="flex flex-col">
+            <div>
               <span className={cn(
-                'text-lg font-bold leading-tight',
+                'text-lg font-bold',
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
               )}>
                 CustoCare AI
               </span>
-              <span className="text-xs text-gray-500">Medical Decision Support</span>
             </div>
-          </Link>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => dispatch(toggleTheme())}
-              className={cn(
-                'p-2 rounded-lg transition-all duration-200',
-                'hover:scale-105 focus:outline-none focus:ring-2',
-                theme === 'dark'
-                  ? 'bg-gray-800/60 hover:bg-gray-700/60 text-amber-300 focus:ring-cyan-500/50'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-600 focus:ring-blue-500/50'
-              )}
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-
-            <button
-              className={cn(
-                'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
-                theme === 'dark'
-                  ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              )}
-            >
-              <LogOut className="w-4 h-4" />
-              Log Out
-            </button>
           </div>
-        </header>
 
-        {/* Main Content */}
-        <main className="flex-1 flex items-center justify-center px-5 py-4 lg:px-8 lg:py-6 overflow-y-auto">
-          <div className="w-full max-w-2xl">
-            <div className="text-center mb-10">
-              <h1 className={cn(
-                'text-3xl lg:text-4xl font-bold mb-3',
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              )}>
-                Test
-              </h1>
-              <h2 className={cn(
-                'text-xl lg:text-2xl font-semibold',
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-              )}>
-                Tell us who you are
-              </h2>
-              <p className={cn(
-                'mt-2 text-base',
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              )}>
-                Select your primary role below so we can customize your onboarding experience.
-              </p>
+          {/* Theme Toggle */}
+          <button
+            onClick={() => dispatch(toggleTheme())}
+            className={cn(
+              'p-2 rounded-lg transition-colors',
+              'focus:outline-none focus:ring-2 focus:ring-blue-500',
+              theme === 'dark'
+                ? 'bg-gray-800 text-amber-400 hover:bg-gray-700'
+                : 'bg-white text-gray-600 hover:bg-gray-50 shadow-sm'
+            )}
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 w-full px-4 py-8 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto">
+          {/* Progress Indicator */}
+          <div className="mb-8">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <div className="w-8 h-1 rounded-full bg-blue-600" />
+              <div className="w-8 h-1 rounded-full bg-gray-300 dark:bg-gray-700" />
+              <div className="w-8 h-1 rounded-full bg-gray-300 dark:bg-gray-700" />
             </div>
+            <p className={cn(
+              'text-center text-sm font-medium',
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            )}>
+              Step 1 of 3
+            </p>
+          </div>
 
-            {/* Role Selection Cards */}
-            <div className="space-y-4 mb-10">
-              {roleOptions.map((role) => (
-                <button
+          {/* Header Section */}
+          <div className="text-center mb-12">
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={cn(
+                'text-3xl sm:text-4xl lg:text-5xl font-bold mb-4',
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              )}
+            >
+              How will you use CustoCare?
+            </motion.h1>
+            
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className={cn(
+                'text-lg sm:text-xl max-w-2xl mx-auto',
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              )}
+            >
+              Choose your role to personalize your experience
+            </motion.p>
+          </div>
+
+          {/* Role Cards */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+          >
+            {roleOptions.map((role, index) => {
+              const isSelected = selectedRole === role.id;
+              const isExpanded = expandedRole === role.id;
+              const Icon = role.icon;
+
+              return (
+                <motion.button
                   key={role.id}
-                  onClick={() => setSelectedRole(role.id)}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + index * 0.1 }}
+                  onClick={() => handleRoleSelect(role.id)}
                   className={cn(
-                    'w-full text-left p-5 rounded-xl border transition-all duration-200',
-                    'hover:scale-[1.02] focus:outline-none focus:ring-2',
-                    selectedRole === role.id
+                    'relative p-6 rounded-2xl border-2 text-left transition-all duration-300',
+                    'focus:outline-none focus:ring-4',
+                    'group',
+                    isSelected
                       ? theme === 'dark'
-                        ? 'bg-gradient-to-r from-cyan-900/30 to-blue-900/30 border-cyan-500/50 ring-2 ring-cyan-500/50'
-                        : 'bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-500 ring-2 ring-blue-500/50'
+                        ? 'bg-gray-800 border-blue-500 shadow-lg shadow-blue-500/20 focus:ring-blue-500/30'
+                        : 'bg-white border-blue-600 shadow-lg shadow-blue-600/20 focus:ring-blue-600/30'
                       : theme === 'dark'
-                        ? 'bg-gray-800/50 border-gray-700 hover:bg-gray-800 hover:border-gray-600 focus:ring-cyan-500/30'
-                        : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 focus:ring-blue-500/30'
+                        ? 'bg-gray-900/50 border-gray-700 hover:border-gray-600 hover:bg-gray-800/50 focus:ring-gray-600/30'
+                        : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-md focus:ring-gray-300'
+                  )}
+                  aria-pressed={isSelected}
+                >
+                  {/* Selection Indicator */}
+                  <AnimatePresence>
+                    {isSelected && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        className="absolute top-4 right-4 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center"
+                      >
+                        <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Icon */}
+                  <div className={cn(
+                    'w-14 h-14 rounded-xl mb-4 flex items-center justify-center',
+                    'bg-gradient-to-br transition-transform duration-300',
+                    role.gradient,
+                    'group-hover:scale-110'
+                  )}>
+                    <Icon className="w-7 h-7 text-white" />
+                  </div>
+
+                  {/* Title & Subtitle */}
+                  <h3 className={cn(
+                    'text-xl font-bold mb-1',
+                    isSelected
+                      ? theme === 'dark' ? 'text-blue-300' : 'text-blue-700'
+                      : theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  )}>
+                    {role.title}
+                  </h3>
+                  
+                  <p className={cn(
+                    'text-sm font-medium mb-3',
+                    isSelected
+                      ? theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+                      : theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  )}>
+                    {role.subtitle}
+                  </p>
+
+                  {/* Description */}
+                  <p className={cn(
+                    'text-sm mb-4 leading-relaxed',
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  )}>
+                    {role.description}
+                  </p>
+
+                  {/* Expand Button */}
+                  <button
+                    onClick={(e) => toggleExpand(role.id, e)}
+                    className={cn(
+                      'flex items-center gap-2 text-sm font-medium transition-colors',
+                      'focus:outline-none',
+                      theme === 'dark'
+                        ? 'text-cyan-400 hover:text-cyan-300'
+                        : 'text-blue-600 hover:text-blue-700'
+                    )}
+                  >
+                    {isExpanded ? 'Hide' : 'Show'} features
+                    <ChevronDown className={cn(
+                      'w-4 h-4 transition-transform',
+                      isExpanded && 'rotate-180'
+                    )} />
+                  </button>
+
+                  {/* Expanded Features */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <ul className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                          {role.features.map((feature, idx) => (
+                            <li
+                              key={idx}
+                              className="flex items-start gap-2 text-sm"
+                            >
+                              <Check className={cn(
+                                'w-4 h-4 flex-shrink-0 mt-0.5',
+                                theme === 'dark' ? 'text-cyan-400' : 'text-blue-600'
+                              )} />
+                              <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+                                {feature}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        
+                        <p className={cn(
+                          'mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 text-xs',
+                          theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                        )}>
+                          <strong>Perfect for:</strong> {role.targetAudience}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+              );
+            })}
+          </motion.div>
+
+          {/* Continue Section */}
+          <div id="continue-section" className="text-center mb-12">
+            <AnimatePresence mode="wait">
+              {selectedRole ? (
+                <motion.div
+                  key="continue-button"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <button
+                    onClick={handleContinue}
+                    disabled={isTransitioning}
+                    className={cn(
+                      'inline-flex items-center justify-center gap-3',
+                      'px-8 py-4 rounded-xl font-semibold text-lg',
+                      'bg-gradient-to-r from-blue-600 to-cyan-600',
+                      'text-white shadow-lg',
+                      'transition-all duration-300',
+                      'hover:from-blue-700 hover:to-cyan-700 hover:shadow-xl hover:scale-105',
+                      'focus:outline-none focus:ring-4 focus:ring-blue-500/50',
+                      'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
+                    )}
+                  >
+                    {isTransitioning ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Setting up...
+                      </>
+                    ) : (
+                      <>
+                        Continue as {selectedRoleData?.title}
+                        <ArrowRight className="w-5 h-5" />
+                      </>
+                    )}
+                  </button>
+                  
+                  <p className={cn(
+                    'mt-4 text-sm',
+                    theme === 'dark' ? 'text-gray-500' : 'text-gray-600'
+                  )}>
+                    You can change this later in settings
+                  </p>
+                </motion.div>
+              ) : (
+                <motion.p
+                  key="select-prompt"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className={cn(
+                    'text-sm',
+                    theme === 'dark' ? 'text-gray-500' : 'text-gray-600'
                   )}
                 >
-                  <div className="flex items-start gap-4">
-                    <div className={cn(
-                      'w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0',
-                      selectedRole === role.id
-                        ? theme === 'dark'
-                          ? 'bg-gradient-to-br from-cyan-500 to-blue-600'
-                          : 'bg-gradient-to-br from-blue-500 to-cyan-600'
-                        : theme === 'dark'
-                          ? 'bg-gray-700 text-gray-300'
-                          : 'bg-gray-100 text-gray-600'
-                    )}>
-                      {role.icon}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h3 className={cn(
-                          'text-lg font-semibold',
-                          selectedRole === role.id
-                            ? theme === 'dark'
-                              ? 'text-cyan-300'
-                              : 'text-blue-700'
-                            : theme === 'dark'
-                              ? 'text-white'
-                              : 'text-gray-900'
-                        )}>
-                          {role.title}
-                        </h3>
-                        <ChevronRight className={cn(
-                          'w-5 h-5 transition-transform',
-                          selectedRole === role.id
-                            ? theme === 'dark'
-                              ? 'text-cyan-400'
-                              : 'text-blue-600'
-                            : 'text-gray-400',
-                          selectedRole === role.id && 'translate-x-1'
-                        )} />
-                      </div>
-                      <p className={cn(
-                        'mt-1.5 text-sm',
-                        selectedRole === role.id
-                          ? theme === 'dark'
-                            ? 'text-cyan-100/80'
-                            : 'text-blue-600/90'
-                          : theme === 'dark'
-                            ? 'text-gray-400'
-                            : 'text-gray-600'
-                      )}>
-                        {role.description}
-                      </p>
-                    </div>
-                  </div>
-                </button>
+                  Select a role above to continue
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Trust Indicators */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="border-t border-gray-200 dark:border-gray-800 pt-8"
+          >
+            <div className="flex flex-wrap items-center justify-center gap-6">
+              {[
+                { icon: Shield, label: 'HIPAA Compliant' },
+                { icon: Shield, label: 'SOC 2 Certified' },
+                { icon: Shield, label: 'End-to-End Encrypted' }
+              ].map((badge, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  <badge.icon className={cn(
+                    'w-4 h-4',
+                    theme === 'dark' ? 'text-gray-600' : 'text-gray-400'
+                  )} />
+                  <span className={theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}>
+                    {badge.label}
+                  </span>
+                </div>
               ))}
             </div>
-
-            {/* Divider */}
-            <div className="relative mb-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className={cn(
-                  'w-full border-t',
-                  theme === 'dark' ? 'border-gray-800' : 'border-gray-200'
-                )} />
-              </div>
-            </div>
-
-            {/* Continue Button */}
-            <div className="text-center">
-              <button
-                onClick={handleContinue}
-                disabled={!selectedRole}
-                className={cn(
-                  'w-full max-w-sm mx-auto px-6 py-3 rounded-lg font-semibold',
-                  'transition-all duration-200 transform hover:scale-[1.02]',
-                  'focus:outline-none focus:ring-2',
-                  selectedRole
-                    ? theme === 'dark'
-                      ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white focus:ring-cyan-500/50'
-                      : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white focus:ring-blue-500/50'
-                    : theme === 'dark'
-                      ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                )}
-              >
-                Continue
-              </button>
-              <p className={cn(
-                'mt-3 text-sm',
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-600'
-              )}>
-                You will be redirected to the specific setup portal for your selected role.
-              </p>
-            </div>
-
-            {/* Divider */}
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className={cn(
-                  'w-full border-t',
-                  theme === 'dark' ? 'border-gray-800' : 'border-gray-200'
-                )} />
-              </div>
-            </div>
-
-            {/* Help Section */}
-            <div className="text-center">
-              <p className={cn(
-                'text-sm',
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              )}>
-                <span className="font-medium">Need Help?</span>{' '}
-                <Link
-                  to="/help"
-                  className={cn(
-                    'font-medium transition-colors',
-                    theme === 'dark'
-                      ? 'text-cyan-400 hover:text-cyan-300'
-                      : 'text-blue-600 hover:text-blue-700'
-                  )}
-                >
-                  Contact Support
-                </Link>
-              </p>
-            </div>
-          </div>
-        </main>
-
-        {/* Footer */}
-        <footer className="px-5 py-4 lg:px-8 lg:py-6">
-          <div className={cn(
-            'text-center text-xs',
-            theme === 'dark' ? 'text-gray-600' : 'text-gray-500'
-          )}>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-4">
-              <span>© 2023 CustoCare AI. All rights reserved.</span>
-              <span className="hidden sm:inline">•</span>
-              <div className="flex items-center gap-4">
-                <Link
-                  to="/privacy"
-                  className={cn(
-                    'transition-colors',
-                    theme === 'dark'
-                      ? 'text-gray-500 hover:text-gray-400'
-                      : 'text-gray-600 hover:text-gray-900'
-                  )}
-                >
-                  Privacy Policy
-                </Link>
-                <span>•</span>
-                <Link
-                  to="/terms"
-                  className={cn(
-                    'transition-colors',
-                    theme === 'dark'
-                      ? 'text-gray-500 hover:text-gray-400'
-                      : 'text-gray-600 hover:text-gray-900'
-                  )}
-                >
-                  Terms of Service
-                </Link>
-              </div>
-            </div>
-          </div>
-        </footer>
-      </div>
-
-      {/* Right Panel - Testimonial */}
-      <div className="hidden lg:flex lg:w-[40%] relative overflow-hidden">
-        <div className={cn(
-          'absolute inset-0 z-10',
-          theme === 'dark'
-            ? 'bg-gradient-to-br from-cyan-900/40 via-blue-900/30 to-purple-900/40'
-            : 'bg-gradient-to-br from-blue-600/20 via-cyan-600/10 to-purple-600/15'
-        )} />
-        
-        <img
-          src={backgroundImage}
-          alt="Healthcare background"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        
-        <div className="relative z-20 flex flex-col justify-between p-8 xl:p-12 text-white w-full">
-          {/* Top Section */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Shield className="w-5 h-5 text-cyan-300" />
-              <span className="text-sm font-medium">HIPAA Compliant</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-cyan-300" />
-              <span className="text-xs text-cyan-100/80">SOC 2 Certified</span>
-            </div>
-          </div>
-
-          {/* Testimonial Section */}
-          <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-2xl p-6 xl:p-8">
-            <Quote className="w-8 h-8 text-cyan-300 mb-4" />
-            <p className="text-lg xl:text-xl italic leading-relaxed mb-6">
-              "CustoCare AI has streamlined how our entire facility operates, connecting doctors and patients seamlessly."
-            </p>
-            
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white/20">
-                <img
-                  src={testimonialImage}
-                  alt="Dr. Sarah Jansen"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div>
-                <h4 className="font-bold text-lg">Dr. Sarah Jansen</h4>
-                <p className="text-sm text-cyan-100/90">Chief of Medicine</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Text */}
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 text-sm text-cyan-100/80">
-              <div className="w-8 h-0.5 bg-gradient-to-r from-cyan-400 to-transparent rounded-full" />
-              <span>Connecting Care</span>
-              <div className="w-8 h-0.5 bg-gradient-to-l from-cyan-400 to-transparent rounded-full" />
-            </div>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </main>
+
+      {/* Loading Overlay */}
+      <AnimatePresence>
+        {isTransitioning && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/90 backdrop-blur-sm"
+          >
+            <div className="text-center">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                className="w-16 h-16 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full mx-auto mb-4"
+              />
+              <p className="text-white text-lg font-medium">
+                Preparing your workspace...
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
-export default RoleSelectionScreen;
+export default RoleSelection;
