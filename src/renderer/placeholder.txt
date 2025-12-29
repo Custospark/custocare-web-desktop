@@ -86,3 +86,6 @@ src/
     ├── strings.ts                     # UI strings/messages
     ├── colors.ts                      # Color constants
     └── apiConstants.ts                # API constants
+
+
+StrongPass123!
