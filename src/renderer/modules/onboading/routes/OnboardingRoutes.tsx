@@ -12,6 +12,7 @@ const ForgotPasswordPage = React.lazy(() => import('../ui/auth/ForgotPassword'))
 const ResetPasswordPage = React.lazy(() => import('../ui/auth/ResetPassword'));
 const TwoFactorAuthPage = React.lazy(() => import('../ui/auth/TwoFactorAuthPage'));
 const RoleSelectionScreen = React.lazy(() => import('../ui/role-selection/RoelSelectionScreen'));
+const PatientOnboarding = React.lazy(() => import('../ui/role-selection/PatientOnboarding'));
 
 /**
  * Authentication Routes Configuration
@@ -74,6 +75,35 @@ export const OnboardingRoutes = () => [
     element={
       <Suspense fallback={<LoadingSkeleton />}>
         <RoleSelectionScreen />
+      </Suspense>
+    } 
+  />,
+  <Route 
+    key="patient-onboarding"
+    path={ROUTES.PATIENT_ONBOARDING} 
+    element={
+      <Suspense fallback={<LoadingSkeleton />}>
+        <PatientOnboarding />
+      </Suspense>
+    } 
+  />
+ ,
+  <Route 
+    key="role-selection"
+    path={ROUTES.STAFF_ONBOARDING} 
+    element={
+      <Suspense fallback={<LoadingSkeleton />}>
+        <PatientOnboarding />
+      </Suspense>
+    } 
+
+  />,
+  <Route 
+    key="role-selection"
+    path={ROUTES.FACILITY_OWNER_ONBOARDING} 
+    element={
+      <Suspense fallback={<LoadingSkeleton />}>
+        <PatientOnboarding />
       </Suspense>
     } 
   />
