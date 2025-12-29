@@ -1,19 +1,13 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-}
+import type { UserProfile } from '../../../modules/onboading/api/auth';// Adjust path as needed
 
 interface AuthState {
-  user: User | null;
+  user: UserProfile | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  loginError: string | null; // Separate field for login-specific errors
+  loginError: string | null;
 }
 
 const initialState: AuthState = {
@@ -29,27 +23,24 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    // Login
     loginStart: (state) => {
       state.isLoading = true;
       state.error = null;
-      state.loginError = null; // Clear previous login errors
+      state.loginError = null;
     },
-    loginSuccess: (state, action: PayloadAction<{ user: User; token: string }>) => {
+    loginSuccess: (state, action: PayloadAction<{ user: UserProfile; token: string }>) => {
       state.isLoading = false;
       state.user = action.payload.user;
       state.token = action.payload.token;
       state.isAuthenticated = true;
-      state.loginError = null; // Clear login error on success
+      state.loginError = null;
       localStorage.setItem('authToken', action.payload.token);
     },
     loginFailure: (state, action: PayloadAction<string>) => {
       state.isLoading = false;
-      state.loginError = action.payload; // Use loginError instead of error
+      state.loginError = action.payload;
       state.isAuthenticated = false;
     },
-
-    // Logout
     logout: (state) => {
       state.user = null;
       state.token = null;
@@ -58,26 +49,18 @@ const authSlice = createSlice({
       state.loginError = null;
       localStorage.removeItem('authToken');
     },
-
-    // Set user
-    setUser: (state, action: PayloadAction<User>) => {
+    setUser: (state, action: PayloadAction<UserProfile>) => {
       state.user = action.payload;
     },
-
-    // Set token
     setToken: (state, action: PayloadAction<string>) => {
       state.token = action.payload;
       state.isAuthenticated = true;
       localStorage.setItem('authToken', action.payload);
     },
-
-    // Clear all errors
     clearError: (state) => {
       state.error = null;
       state.loginError = null;
     },
-
-    // Clear only login error
     clearLoginError: (state) => {
       state.loginError = null;
     },
