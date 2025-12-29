@@ -13,6 +13,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  loginError: string | null; // Separate field for login-specific errors
 }
 
 const initialState: AuthState = {
@@ -21,6 +22,7 @@ const initialState: AuthState = {
   isAuthenticated: !!localStorage.getItem('authToken'),
   isLoading: false,
   error: null,
+  loginError: null,
 };
 
 const authSlice = createSlice({
@@ -31,17 +33,19 @@ const authSlice = createSlice({
     loginStart: (state) => {
       state.isLoading = true;
       state.error = null;
+      state.loginError = null; // Clear previous login errors
     },
     loginSuccess: (state, action: PayloadAction<{ user: User; token: string }>) => {
       state.isLoading = false;
       state.user = action.payload.user;
       state.token = action.payload.token;
       state.isAuthenticated = true;
+      state.loginError = null; // Clear login error on success
       localStorage.setItem('authToken', action.payload.token);
     },
     loginFailure: (state, action: PayloadAction<string>) => {
       state.isLoading = false;
-      state.error = action.payload;
+      state.loginError = action.payload; // Use loginError instead of error
       state.isAuthenticated = false;
     },
 
@@ -51,6 +55,7 @@ const authSlice = createSlice({
       state.token = null;
       state.isAuthenticated = false;
       state.error = null;
+      state.loginError = null;
       localStorage.removeItem('authToken');
     },
 
@@ -66,9 +71,15 @@ const authSlice = createSlice({
       localStorage.setItem('authToken', action.payload);
     },
 
-    // Clear error
+    // Clear all errors
     clearError: (state) => {
       state.error = null;
+      state.loginError = null;
+    },
+
+    // Clear only login error
+    clearLoginError: (state) => {
+      state.loginError = null;
     },
   },
 });
@@ -81,6 +92,7 @@ export const {
   setUser,
   setToken,
   clearError,
+  clearLoginError,
 } = authSlice.actions;
 
 export default authSlice.reducer;

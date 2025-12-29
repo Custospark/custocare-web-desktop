@@ -6,6 +6,7 @@ import { ROUTES } from './routeConstants';
 import Layout from '../../shared/components/Navigation/Layout';
 import ReceptionistDashboard from '../../shared/features/receptionist/ReceptionistDashboard';
 import HospitalBillReceipt from '../../shared/features/billing/HospitalBillReceipt';
+import LoadingScreen from '../../shared/components/Loading/LoadingScreen';
 
 // Lazy load pages for code splitting
 const LoginPage = React.lazy(() => import('../../modules/onboading/ui/auth/Login'));
@@ -47,7 +48,7 @@ function AppRoutes() {
         <Route 
           path={ROUTES.LOGIN} 
           element={
-            <Suspense fallback={<LoadingSkeleton />}>
+            <Suspense fallback={<LoadingScreen />}>
               <LoginPage />
             </Suspense>
           } 

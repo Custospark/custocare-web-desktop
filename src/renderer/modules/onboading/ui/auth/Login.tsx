@@ -1,41 +1,16 @@
 import React, { useState, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
-import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp'
-import { loginStart, loginSuccess, loginFailure } from '../../../../app/store/slices/authSlice';
+import { useAppSelector } from '../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../shared/types/cn';
-
-/**
- * ============================================================================
- * LOGIN PAGE COMPONENT
- * ============================================================================
- * 
- * Enterprise-grade login interface for Custocare AI healthcare platform.
- * Implements secure authentication with comprehensive error handling,
- * accessibility features, and clinical-appropriate UX patterns.
- * 
- * Key Features:
- * - Email and password authentication
- * - Real-time validation with user feedback
- * - Password visibility toggle
- * - Remember me functionality
- * - Comprehensive error states
- * - Loading states with skeleton UI
- * - Keyboard navigation support
- * - Screen reader compatible
- * 
- * Security Considerations:
- * - Input sanitization
- * - Rate limiting (implemented server-side)
- * - Secure token storage
- * - HIPAA-compliant session management
- */
+import { useLoginMutation } from './../../api/queries/index';
 
 interface FormState {
   email: string;
   password: string;
   rememberMe: boolean;
+  mfa_code?: string;
 }
 
 interface FormErrors {
@@ -45,14 +20,12 @@ interface FormErrors {
 }
 
 export const Login: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const theme = useAppSelector((state) => state.ui.theme);
-  const { isLoading, error } = useAppSelector((state) => state.auth);
-
-  /* ==========================================================================
-     LOCAL STATE MANAGEMENT
-     ========================================================================== */
+  const { error: authError } = useAppSelector((state) => state.auth);
+  
+  const loginMutation = useLoginMutation();
+  const isLoading = loginMutation.isPending;
+  const error = authError || loginMutation.error?.message;
 
   const [formState, setFormState] = useState<FormState>({
     email: '',
@@ -66,10 +39,6 @@ export const Login: React.FC = () => {
     email: false,
     password: false,
   });
-
-  /* ==========================================================================
-     VALIDATION LOGIC
-     ========================================================================== */
 
   const validateEmail = useCallback((email: string): string | undefined => {
     if (!email) return 'Email address is required';
@@ -94,16 +63,11 @@ export const Login: React.FC = () => {
     return !errors.email && !errors.password;
   }, [formState, validateEmail, validatePassword]);
 
-  /* ==========================================================================
-     EVENT HANDLERS
-     ========================================================================== */
-
   const handleInputChange = useCallback((field: keyof FormState) => {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = field === 'rememberMe' ? e.target.checked : e.target.value;
       setFormState((prev) => ({ ...prev, [field]: value }));
 
-      // Clear field-specific error on change
       if (field !== 'rememberMe') {
         setFormErrors((prev) => ({ ...prev, [field]: undefined, general: undefined }));
       }
@@ -114,7 +78,6 @@ export const Login: React.FC = () => {
     return () => {
       setTouched((prev) => ({ ...prev, [field]: true }));
 
-      // Validate on blur
       const error =
         field === 'email'
           ? validateEmail(formState.email)
@@ -130,59 +93,26 @@ export const Login: React.FC = () => {
     async (e: React.FormEvent) => {
       e.preventDefault();
 
-      // Mark all fields as touched
       setTouched({ email: true, password: true });
 
-      // Validate form
       if (!validateForm()) return;
 
-      try {
-        dispatch(loginStart());
-
-        // TODO: Replace with actual API call
-        // Simulated API call
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-
-        // Mock successful response
-        const mockResponse = {
-          user: {
-            id: '1',
-            email: formState.email,
-            name: 'Dr. Sarah Johnson',
-            role: 'Physician',
-          },
-          token: 'mock_jwt_token_' + Date.now(),
-        };
-
-        dispatch(loginSuccess(mockResponse));
-        navigate('/dashboard');
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : 'Login failed. Please check your credentials and try again.';
-        dispatch(loginFailure(errorMessage));
-        setFormErrors({ general: errorMessage });
-      }
+      loginMutation.mutate({
+        email: formState.email.toLowerCase(),
+        password: formState.password,
+        rememberMe: formState.rememberMe,
+      });
     },
-    [formState, dispatch, navigate, validateForm]
+    [formState, loginMutation, validateForm]
   );
 
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword((prev) => !prev);
   }, []);
 
-  /* ==========================================================================
-     COMPUTED VALUES
-     ========================================================================== */
-
   const showEmailError = touched.email && formErrors.email;
   const showPasswordError = touched.password && formErrors.password;
   const isFormValid = formState.email && formState.password && !formErrors.email && !formErrors.password;
-
-  /* ==========================================================================
-     RENDER
-     ========================================================================== */
 
   return (
     <AuthLayout
@@ -193,7 +123,6 @@ export const Login: React.FC = () => {
       heroSubtext="Join thousands of healthcare professionals using AI-powered decision support to improve patient care."
     >
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-        {/* General error message */}
         {(formErrors.general || error) && (
           <div
             className={cn(
@@ -209,7 +138,6 @@ export const Login: React.FC = () => {
           </div>
         )}
 
-        {/* Email field */}
         <div className="space-y-2">
           <label
             htmlFor="email"
@@ -272,7 +200,6 @@ export const Login: React.FC = () => {
           )}
         </div>
 
-        {/* Password field */}
         <div className="space-y-2">
           <label
             htmlFor="password"
@@ -351,7 +278,6 @@ export const Login: React.FC = () => {
           )}
         </div>
 
-        {/* Remember me & Forgot password */}
         <div className="flex items-center justify-between">
           <label className="flex items-center gap-2 cursor-pointer group">
             <input
@@ -393,7 +319,6 @@ export const Login: React.FC = () => {
           </Link>
         </div>
 
-        {/* Submit button */}
         <button
           type="submit"
           disabled={isLoading || !isFormValid}
@@ -419,7 +344,6 @@ export const Login: React.FC = () => {
           )}
         </button>
 
-        {/* Sign up link */}
         <div
           className={cn(
             'text-center text-sm pt-4',

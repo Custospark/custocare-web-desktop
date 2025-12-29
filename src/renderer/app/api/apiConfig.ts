@@ -14,7 +14,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 ====================================================== */
 
   export const API_BASE_URL =isDevelopment
-                            ? 'http://localhost:3000/api/v1' // local dev
+                            ? 'http://127.0.0.1:8000/api' // local dev
                             : 'https://custocareai-api.custospark.com/api/v1'; // production
 
 
