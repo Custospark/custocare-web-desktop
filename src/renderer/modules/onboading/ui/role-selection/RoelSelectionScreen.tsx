@@ -55,7 +55,7 @@ import { cn } from '../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../app/store/slices/uiSlice';
 import {ROUTES} from '../../routes/onboardingRouteConstants'
-import { ComponentType, SVGProps } from 'react';
+import { type ComponentType, type SVGProps } from 'react';
 
 
 /* ==========================================================================
