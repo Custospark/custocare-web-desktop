@@ -13,12 +13,25 @@ const ResetPasswordPage = React.lazy(() => import('../ui/auth/ResetPassword'));
 const TwoFactorAuthPage = React.lazy(() => import('../ui/auth/TwoFactorAuthPage'));
 const RoleSelectionScreen = React.lazy(() => import('../ui/role-selection/RoelSelectionScreen'));
 const PatientOnboarding = React.lazy(() => import('../ui/role-selection/PatientOnboarding'));
+const MedicalProfessionalOnboarding = React.lazy(() => import('../ui/role-selection/MedicalProfessionalOnboarding'));
+const HealthcareFacilityOnboarding = React.lazy(() => import('../ui/role-selection/HealthcareFacilityOnboarding'));
+const Landing = React.lazy(() => import('../ui/role-selection/Landing'));
+const PortalSelector = React.lazy(() => import('../ui/role-selection/PortalSelector'));
 
 /**
  * Authentication Routes Configuration
  * Returns an array of Route components
  */
 export const OnboardingRoutes = () => [
+  <Route 
+    key="landing"
+    path={ROUTES.LANDING} 
+    element={
+      <Suspense fallback={<LoadingScreen />}>
+        <Landing />
+      </Suspense>
+    } 
+  />,
   <Route 
     key="login"
     path={ROUTES.LOGIN} 
@@ -70,6 +83,15 @@ export const OnboardingRoutes = () => [
   />,
   
   <Route 
+    key="portal-selector"
+    path={ROUTES.PORTAL_SELECTOR} 
+    element={
+      <Suspense fallback={<LoadingSkeleton />}>
+        <PortalSelector />
+      </Suspense>
+    } 
+  />,
+  <Route 
     key="role-selection"
     path={ROUTES.ROLE_SELECTION} 
     element={
@@ -89,21 +111,21 @@ export const OnboardingRoutes = () => [
   />
  ,
   <Route 
-    key="role-selection"
+    key="medical-professional-onboarding"
     path={ROUTES.STAFF_ONBOARDING} 
     element={
       <Suspense fallback={<LoadingSkeleton />}>
-        <PatientOnboarding />
+        <MedicalProfessionalOnboarding />
       </Suspense>
     } 
 
   />,
   <Route 
     key="role-selection"
-    path={ROUTES.FACILITY_OWNER_ONBOARDING} 
+    path={ROUTES.HEALTHCARE_ONBOARDING} 
     element={
       <Suspense fallback={<LoadingSkeleton />}>
-        <PatientOnboarding />
+        <HealthcareFacilityOnboarding />
       </Suspense>
     } 
   />

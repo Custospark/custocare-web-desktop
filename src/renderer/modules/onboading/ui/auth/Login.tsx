@@ -307,7 +307,7 @@ export const Login: React.FC = () => {
           </label>
 
           <Link
-            to="/patient-onboarding"
+            to="/landing"
             className={cn(
               'text-sm font-semibold transition-colors',
               theme === 'dark'

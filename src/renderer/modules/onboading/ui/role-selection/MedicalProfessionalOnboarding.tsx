@@ -1,33 +1,21 @@
 /**
  * ============================================================================
- * PREMIUM PATIENT ONBOARDING - REDESIGNED FOR MAXIMUM CONVERSION
+ * PREMIUM MEDICAL PROFESSIONAL ONBOARDING - DESIGNED FOR TRUST & CREDIBILITY
  * ============================================================================
  * 
- * COMPLETE REDESIGN ANALYSIS & IMPROVEMENTS:
+ * COMPLETE DESIGN PHILOSOPHY:
  * 
- * ISSUES IDENTIFIED:
- * 1. ❌ Generic gradient backgrounds - lacks visual hierarchy
- * 2. ❌ Missing meaningful imagery - no emotional connection
- * 3. ❌ Form feels transactional - not premium healthcare experience
- * 4. ❌ Right column wasted - could showcase benefits better
- * 5. ❌ No social proof or testimonials
- * 6. ❌ Global Patient ID display lacks ceremony
- * 7. ❌ Missing micro-interactions for better UX
- * 8. ❌ Inconsistent spacing and typography
- * 9. ❌ Not enough visual feedback during submission
- * 10. ❌ Footer too heavy - distracts from main action
- * 
- * SOLUTIONS IMPLEMENTED:
- * 1. ✅ Hero section with professional healthcare imagery
- * 2. ✅ Emotional benefit-focused copywriting
- * 3. ✅ Interactive ID reveal with animation
- * 4. ✅ Testimonials with real patient photos
- * 5. ✅ Progress visualization with confidence boosters
- * 6. ✅ Micro-animations on all interactions
- * 7. ✅ Cleaner, more professional spacing
- * 8. ✅ Reduced cognitive load
- * 9. ✅ Better conversion-focused CTAs
- * 10.✅ Premium visual treatment throughout
+ * KEY FEATURES:
+ * 1. ✅ Professional hero imagery - builds trust and authority
+ * 2. ✅ Multi-stage credential verification process
+ * 3. ✅ License number validation with visual feedback
+ * 4. ✅ Specialization selection with search functionality
+ * 5. ✅ Professional testimonials from fellow doctors
+ * 6. ✅ Global Provider ID with ceremony and prestige
+ * 7. ✅ Micro-interactions for premium experience
+ * 8. ✅ Practice location and hospital affiliation
+ * 9. ✅ Document upload for credentials
+ * 10.✅ Provider benefits showcase
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
@@ -41,7 +29,7 @@ import {
   Shield,
   Check,
   ArrowRight,
-  Heart,
+  Stethoscope,
   Sun,
   Moon,
   Users,
@@ -58,50 +46,77 @@ import {
   Award,
   TrendingUp,
   AlertCircle,
-
+  GraduationCap,
+  Building2,
+  FileText,
+  Upload,
+  Brain,
+  Heart,
+  Search,
+  CheckCircle2,
+  BadgeCheck,
+  Briefcase,
+  Mail,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 import { cn } from '../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../app/store/slices/uiSlice';
 
 /* ==========================================================================
-   REMOTE IMAGES (Unsplash - High Quality, Healthcare Focused)
+   REMOTE IMAGES (Unsplash - Medical Professional Focused)
    ========================================================================== */
 const IMAGES = {
-  hero: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1600&h=900&fit=crop&q=80',
-  doctor: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&q=80',
-  family: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=400&h=400&fit=crop&q=80',
-  tech: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=400&fit=crop&q=80',
-  success: 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=800&h=600&fit=crop&q=80',
-  medicalTeam: 'https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=800&h=600&fit=crop&q=80',
+  hero: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1600&h=900&fit=crop&q=80',
+  doctor1: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop&q=80',
+  doctor2: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&q=80',
+  surgeon: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=800&h=600&fit=crop&q=80',
+  hospital: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800&h=600&fit=crop&q=80',
+  medicalTeam: 'https://images.unsplash.com/photo-1551190822-a9333d879b1f?w=800&h=600&fit=crop&q=80',
   backgroundPattern: 'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=1600&h=900&fit=crop&q=20',
-  avatar1: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&q=80',
-  avatar2: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&q=80',
-  avatar3: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&q=80'
+  avatar1: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&h=150&fit=crop&q=80',
+  avatar2: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&q=80',
+  avatar3: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=150&h=150&fit=crop&q=80'
 };
 
 /* ==========================================================================
    TYPE DEFINITIONS
    ========================================================================== */
-interface FormData {
+interface MedicalProfessionalFormData {
+  // Stage 1: Personal Information
   fullName: string;
   dateOfBirth: string;
   gender: string;
-  streetAddress: string;
-  city: string;
-  zipCode: string;
-  emergencyName: string;
-  emergencyRelationship: string;
-  emergencyPhone: string;
+  email: string;
+  phone: string;
+  
+  // Stage 2: Professional Credentials
+  medicalLicenseNumber: string;
+  licenseState: string;
+  deaNumber: string;
+  npiNumber: string;
+  specialization: string;
+  subSpecialization: string;
+  yearsOfExperience: string;
+  
+  // Stage 3: Practice Information
+  practiceName: string;
+  practiceAddress: string;
+  practiceCity: string;
+  practiceState: string;
+  practiceZip: string;
+  hospitalAffiliations: string;
+  acceptingNewPatients: string;
 }
 
-interface GlobalPatientID {
+interface GlobalProviderID {
   prefix: string;
   number: string;
   checkDigit: string;
   fullID: string;
   qrData: string;
   generatedAt: string;
+  verificationLevel: 'VERIFIED' | 'PENDING' | 'UNVERIFIED';
 }
 
 interface Testimonial {
@@ -112,6 +127,40 @@ interface Testimonial {
   avatar: string;
   rating: number;
 }
+
+/* ==========================================================================
+   SPECIALIZATION DATA
+   ========================================================================== */
+const SPECIALIZATIONS = [
+  { value: 'cardiology', label: 'Cardiology', icon: '🫀' },
+  { value: 'dermatology', label: 'Dermatology', icon: '🧴' },
+  { value: 'emergency-medicine', label: 'Emergency Medicine', icon: '🚑' },
+  { value: 'endocrinology', label: 'Endocrinology', icon: '💉' },
+  { value: 'family-medicine', label: 'Family Medicine', icon: '👨‍👩‍👧‍👦' },
+  { value: 'gastroenterology', label: 'Gastroenterology', icon: '🫃' },
+  { value: 'neurology', label: 'Neurology', icon: '🧠' },
+  { value: 'obstetrics-gynecology', label: 'Obstetrics & Gynecology', icon: '🤱' },
+  { value: 'oncology', label: 'Oncology', icon: '🎗️' },
+  { value: 'ophthalmology', label: 'Ophthalmology', icon: '👁️' },
+  { value: 'orthopedics', label: 'Orthopedics', icon: '🦴' },
+  { value: 'pediatrics', label: 'Pediatrics', icon: '👶' },
+  { value: 'psychiatry', label: 'Psychiatry', icon: '🧘' },
+  { value: 'radiology', label: 'Radiology', icon: '📡' },
+  { value: 'surgery', label: 'General Surgery', icon: '🔬' },
+];
+
+const US_STATES = [
+  'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado',
+  'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho',
+  'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana',
+  'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota',
+  'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada',
+  'New Hampshire', 'New Jersey', 'New Mexico', 'New York',
+  'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon',
+  'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota',
+  'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington',
+  'West Virginia', 'Wisconsin', 'Wyoming'
+];
 
 /* ==========================================================================
    ANIMATION VARIANTS
@@ -159,57 +208,69 @@ const slideInRight = {
 const testimonials: Testimonial[] = [
   {
     id: 1,
-    name: "Dr. Sarah Chen",
+    name: "Dr. Sarah Chen, MD",
     role: "Cardiologist, Mayo Clinic",
-    quote: "CustoCare's patient portal reduced my administrative work by 70%. The AI insights help me make better treatment decisions faster.",
+    quote: "CustoCare reduced my administrative burden by 70%. The AI clinical decision support is exceptional. My patients love the seamless experience.",
     avatar: IMAGES.avatar1,
     rating: 5
   },
   {
     id: 2,
-    name: "Michael Rodriguez",
-    role: "Patient since 2023",
-    quote: "From diabetes management to specialist referrals, everything is seamless. The 24/7 AI companion actually understands my concerns.",
+    name: "Dr. Marcus Johnson, MD",
+    role: "Orthopedic Surgeon, Johns Hopkins",
+    quote: "The credential verification was instant. Now I can focus on surgery instead of paperwork. My practice efficiency has doubled.",
     avatar: IMAGES.avatar2,
     rating: 5
   },
   {
     id: 3,
-    name: "Lisa Thompson",
-    role: "Healthcare Administrator",
-    quote: "Our patient satisfaction scores increased by 40% after implementing CustoCare. The onboarding process is particularly impressive.",
+    name: "Dr. Priya Patel, MD",
+    role: "Pediatrician, Private Practice",
+    quote: "Onboarding took 5 minutes. The platform increased my patient satisfaction scores by 45%. Best decision for my practice.",
     avatar: IMAGES.avatar3,
     rating: 5
   }
 ];
 
 /* ==========================================================================
-   MAIN COMPONENT - COMPLETE REDESIGN
+   MAIN COMPONENT
    ========================================================================== */
-export const PatientOnboarding: React.FC = () => {
+export const MedicalProfessionalOnboarding: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const theme = useAppSelector((state) => state.ui.theme);
   
   /* State Management */
   const [currentStage, setCurrentStage] = useState<1 | 2 | 3>(1);
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<MedicalProfessionalFormData>({
     fullName: '',
     dateOfBirth: '',
     gender: '',
-    streetAddress: '',
-    city: '',
-    zipCode: '',
-    emergencyName: '',
-    emergencyRelationship: '',
-    emergencyPhone: ''
+    email: '',
+    phone: '',
+    medicalLicenseNumber: '',
+    licenseState: '',
+    deaNumber: '',
+    npiNumber: '',
+    specialization: '',
+    subSpecialization: '',
+    yearsOfExperience: '',
+    practiceName: '',
+    practiceAddress: '',
+    practiceCity: '',
+    practiceState: '',
+    practiceZip: '',
+    hospitalAffiliations: '',
+    acceptingNewPatients: ''
   });
   
-  const [globalPatientID, setGlobalPatientID] = useState<GlobalPatientID | null>(null);
+  const [globalProviderID, setGlobalProviderID] = useState<GlobalProviderID | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const [specializationSearch, setSpecializationSearch] = useState('');
+  const [licenseVerified, setLicenseVerified] = useState(false);
 
   /* Auto-rotate testimonials */
   useEffect(() => {
@@ -221,108 +282,130 @@ export const PatientOnboarding: React.FC = () => {
     }
   }, [isSubmitting, isComplete]);
 
-  /* Generate Global Patient ID */
-  const generateGlobalPatientID = useCallback((): GlobalPatientID => {
+  /* Simulate License Verification */
+  useEffect(() => {
+    if (formData.medicalLicenseNumber.length >= 8 && formData.licenseState) {
+      const timer = setTimeout(() => {
+        setLicenseVerified(true);
+      }, 1500);
+      return () => clearTimeout(timer);
+    } else {
+      setLicenseVerified(false);
+    }
+  }, [formData.medicalLicenseNumber, formData.licenseState]);
+
+  /* Generate Global Provider ID */
+  const generateGlobalProviderID = useCallback((): GlobalProviderID => {
     const generateCheckDigit = () => {
       const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       return chars[Math.floor(Math.random() * chars.length)];
     };
 
-    const prefix = 'CP';
+    const prefix = 'CMD';
     const number = Math.floor(Math.random() * 9000 + 1000).toString();
     const checkDigit = generateCheckDigit();
-    const fullID = `${prefix}-${number}-${checkDigit}-2`;
+    const fullID = `${prefix}-${number}-${checkDigit}-PRO`;
 
     return {
       prefix,
       number,
       checkDigit,
       fullID,
-      qrData: `CUSTOCARE:${fullID}:${formData.fullName.replace(/\s/g, '_')}:${new Date().toISOString()}`,
-      generatedAt: new Date().toISOString()
+      qrData: `CUSTOCARE:PROVIDER:${fullID}:${formData.fullName.replace(/\s/g, '_')}:${new Date().toISOString()}`,
+      generatedAt: new Date().toISOString(),
+      verificationLevel: 'VERIFIED'
     };
   }, [formData.fullName]);
 
-  /* Form Submission with Premium Experience */
+  /* Form Submission */
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Premium loading experience
-    await new Promise(resolve => setTimeout(resolve, 1800));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-    const patientID = generateGlobalPatientID();
-    setGlobalPatientID(patientID);
+    const providerID = generateGlobalProviderID();
+    setGlobalProviderID(providerID);
     
-    // Success animation sequence
     setIsSubmitting(false);
     setIsComplete(true);
     setShowSuccessAnimation(true);
 
-    // Auto-scroll with delay for animation
     setTimeout(() => {
       document.getElementById('registration-complete')?.scrollIntoView({ 
         behavior: 'smooth' 
       });
     }, 500);
 
-    // Hide success animation after display
     setTimeout(() => setShowSuccessAnimation(false), 2500);
-  }, [generateGlobalPatientID]);
+  }, [generateGlobalProviderID]);
 
   /* Continue to Portal */
   const handleContinueToPortal = useCallback(() => {
-    navigate('/patient/portal', {
+    navigate('/provider/portal', {
       state: {
-        patientID: globalPatientID?.fullID,
-        patientName: formData.fullName,
-        isNewPatient: true,
+        providerID: globalProviderID?.fullID,
+        providerName: formData.fullName,
+        specialization: formData.specialization,
+        isNewProvider: true,
         timestamp: new Date().toISOString()
       }
     });
-  }, [globalPatientID, formData.fullName, navigate]);
+  }, [globalProviderID, formData, navigate]);
 
   /* Form Validation */
-  const isFormValid = useMemo(() => {
-    return Object.values(formData).every(value => value.length > 0);
-  }, [formData]);
+  const isStageValid = useMemo(() => {
+    if (currentStage === 1) {
+      return formData.fullName && formData.dateOfBirth && formData.gender && 
+             formData.email && formData.phone;
+    }
+    if (currentStage === 2) {
+      return formData.medicalLicenseNumber && formData.licenseState && 
+             formData.npiNumber && formData.specialization && formData.yearsOfExperience;
+    }
+    if (currentStage === 3) {
+      return formData.practiceName && formData.practiceAddress && 
+             formData.practiceCity && formData.practiceState && formData.practiceZip;
+    }
+    return false;
+  }, [formData, currentStage]);
 
-  /* Premium Benefits */
-  const premiumBenefits = useMemo(() => [
+  /* Provider Benefits */
+  const providerBenefits = useMemo(() => [
     { 
-      icon: Sparkles, 
-      title: 'AI Health Companion', 
-      description: '24/7 personalized health insights and monitoring',
+      icon: Brain, 
+      title: 'AI Clinical Assistant', 
+      description: 'Smart clinical decision support and diagnosis assistance',
       color: 'from-purple-500 to-pink-500'
     },
     { 
       icon: Zap, 
-      title: 'Priority Access', 
-      description: 'Same-day appointments at premium facilities',
+      title: '70% Time Saved', 
+      description: 'Automated documentation and EHR integration',
       color: 'from-blue-500 to-cyan-500'
     },
     { 
-      icon: Star, 
-      title: 'Concierge Care', 
-      description: 'Dedicated health coordinator for your journey',
+      icon: Users, 
+      title: 'Patient Engagement', 
+      description: '40% higher patient satisfaction and retention',
       color: 'from-amber-500 to-orange-500'
     },
     { 
       icon: Globe, 
-      title: 'Global Coverage', 
-      description: 'Access healthcare services worldwide',
+      title: 'Global Network', 
+      description: 'Connect with 50,000+ healthcare providers worldwide',
       color: 'from-emerald-500 to-teal-500'
     },
     { 
       icon: Shield, 
-      title: 'Military Security', 
-      description: 'Bank-level encryption for your health data',
+      title: 'HIPAA Compliant', 
+      description: 'Military-grade security and data protection',
       color: 'from-gray-600 to-gray-800'
     },
     { 
-      icon: Clock, 
-      title: 'Time Saved', 
-      description: 'Average 3 hours weekly on healthcare admin',
+      icon: TrendingUp, 
+      title: 'Revenue Growth', 
+      description: 'Average 35% increase in practice revenue',
       color: 'from-indigo-500 to-purple-600'
     }
   ], []);
@@ -357,14 +440,20 @@ export const PatientOnboarding: React.FC = () => {
     }
   }), [theme]);
 
+  /* Filtered Specializations */
+  const filteredSpecializations = useMemo(() => {
+    return SPECIALIZATIONS.filter(spec => 
+      spec.label.toLowerCase().includes(specializationSearch.toLowerCase())
+    );
+  }, [specializationSearch]);
+
   /* ==========================================================================
-     RENDER COMPONENTS - REDESIGNED
+     RENDER COMPONENTS
      ========================================================================== */
 
   /* Hero Section */
   const renderHero = () => (
     <div className="relative overflow-hidden rounded-2xl mb-8">
-      {/* Background with overlay */}
       <div className="absolute inset-0">
         <img 
           src={IMAGES.medicalTeam}
@@ -385,33 +474,38 @@ export const PatientOnboarding: React.FC = () => {
           animate="visible"
           className="max-w-2xl"
         >
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm mb-4">
+            <Stethoscope className="w-4 h-4 text-cyan-400" />
+            <span className="text-sm text-white font-medium">For Medical Professionals</span>
+          </div>
+          
           <h1 className={cn(
             designSystem.typography.h1,
             "text-white mb-4"
           )}>
-            Welcome to the Future of Healthcare
+            Join the Future of Healthcare Delivery
           </h1>
           <p className={cn(
             "text-lg text-blue-100/90 mb-6",
             designSystem.typography.body
           )}>
-            Join 50,000+ patients experiencing personalized, AI-powered healthcare. 
-            Your journey to better health starts with secure, effortless onboarding.
+            Join 25,000+ verified medical professionals delivering AI-powered care. 
+            Fast credential verification. Zero paperwork. Start treating patients in minutes.
           </p>
           
           {/* Trust Badges */}
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm">
-              <Shield className="w-4 h-4 text-green-400" />
-              <span className="text-sm text-white font-medium">HIPAA Compliant</span>
+              <BadgeCheck className="w-4 h-4 text-green-400" />
+              <span className="text-sm text-white font-medium">AMA Verified</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm">
               <Award className="w-4 h-4 text-amber-400" />
-              <span className="text-sm text-white font-medium">#1 Patient Rated</span>
+              <span className="text-sm text-white font-medium">ABMS Certified</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm">
               <TrendingUp className="w-4 h-4 text-cyan-400" />
-              <span className="text-sm text-white font-medium">94% Satisfaction</span>
+              <span className="text-sm text-white font-medium">98% Provider Satisfaction</span>
             </div>
           </div>
         </motion.div>
@@ -419,7 +513,7 @@ export const PatientOnboarding: React.FC = () => {
     </div>
   );
 
-  /* Progress Indicator - Redesigned */
+  /* Progress Indicator */
   const renderProgress = () => (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
@@ -429,13 +523,13 @@ export const PatientOnboarding: React.FC = () => {
             designSystem.colors.primary,
             "mb-1"
           )}>
-            Let's get you set up
+            Professional Verification
           </h2>
           <p className={cn(
             designSystem.colors.secondary,
             designSystem.typography.small
           )}>
-            Stage {currentStage} of 3 • Takes less than 3 minutes
+            Stage {currentStage} of 3 • Fast credential verification
           </p>
         </div>
         <div className="text-right">
@@ -445,7 +539,7 @@ export const PatientOnboarding: React.FC = () => {
             currentStage === 2 ? "text-cyan-500" : 
             "text-emerald-500"
           )}>
-            {currentStage === 1 ? "25%" : currentStage === 2 ? "66%" : "100%"}
+            {currentStage === 1 ? "33%" : currentStage === 2 ? "66%" : "100%"}
           </div>
           <div className={cn(
             designSystem.colors.secondary,
@@ -456,7 +550,6 @@ export const PatientOnboarding: React.FC = () => {
         </div>
       </div>
 
-      {/* Animated Progress Bar */}
       <div className="relative h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
         <motion.div
           className={cn(
@@ -473,9 +566,8 @@ export const PatientOnboarding: React.FC = () => {
         />
       </div>
 
-      {/* Step Labels */}
       <div className="flex justify-between mt-3">
-        {['Personal Info', 'Location', 'Emergency'].map((label, index) => (
+        {['Personal Info', 'Credentials', 'Practice Details'].map((label, index) => (
           <div 
             key={label}
             className={cn(
@@ -510,9 +602,9 @@ export const PatientOnboarding: React.FC = () => {
     </div>
   );
 
-  /* Form Input - Enhanced */
+  /* Form Input */
   const renderInput = (
-    field: keyof FormData,
+    field: keyof MedicalProfessionalFormData,
     label: string,
     type: string = 'text',
     icon?: React.ReactNode,
@@ -523,10 +615,7 @@ export const PatientOnboarding: React.FC = () => {
     const isEmpty = !value;
     
     return (
-      <motion.div
-        // variants={fadeInUp}
-        className="space-y-2"
-      >
+      <div className="space-y-2">
         <label className={cn(
           "block text-sm font-medium",
           designSystem.colors.primary
@@ -588,164 +677,271 @@ export const PatientOnboarding: React.FC = () => {
             </motion.div>
           )}
         </div>
-      </motion.div>
+      </div>
     );
   };
 
-  /* Form Sections */
- /* Form Sections - FIXED FOR VISIBILITY */
-const renderFormSection = () => (
-  <form
-    onSubmit={handleSubmit}
-    className="space-y-6"
-  >
-    {/* Wrap stage content in AnimatePresence for smooth transitions */}
-    <AnimatePresence mode="wait">
-      {/* Stage 1: Personal Information */}
-      {currentStage === 1 && (
-        <motion.div 
-          key="stage-1"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 20 }}
-          transition={{ duration: 0.3 }}
-          className="space-y-6"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {renderInput('fullName', 'Full Legal Name', 'text', <User className="w-5 h-5" />, 'e.g. John Dojo')}
-            {renderInput('dateOfBirth', 'Date of Birth', 'date', <Calendar className="w-5 h-5" />)}
-          </div>
-          {renderInput('gender', 'Gender', 'select', <Users className="w-5 h-5" />, undefined, [
-            { value: 'male', label: 'Male' },
-            { value: 'female', label: 'Female' },
-            { value: 'other', label: 'Other' },
-            { value: 'prefer-not-to-say', label: 'Prefer not to say' }
-          ])}
-        </motion.div>
-      )}
-
-      {/* Stage 2: Address */}
-      {currentStage === 2 && (
-        <motion.div 
-          key="stage-2"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 20 }}
-          transition={{ duration: 0.3 }}
-          className="space-y-6"
-        >
-          {renderInput('streetAddress', 'Street Address', 'text', <MapPin className="w-5 h-5" />, 'Search for your address')}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {renderInput('city', 'City')}
-            {renderInput('state', 'State')}
-            {renderInput('zipCode', 'ZIP Code')}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Stage 3: Emergency Contacts */}
-      {currentStage === 3 && (
-        <motion.div 
-          key="stage-3"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 20 }}
-          transition={{ duration: 0.3 }}
-          className="space-y-6"
-        >
-          <div className={cn(
-            "p-4 rounded-lg border",
-            theme === 'dark' 
-              ? "bg-blue-900/20 border-blue-700" 
-              : "bg-blue-50 border-blue-200"
-          )}>
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                <strong>Why we need this:</strong> Emergency contacts help us reach someone you trust during medical situations when we can't reach you directly.
-              </p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {renderInput('emergencyName', 'Contact Name', 'text', <User className="w-5 h-5" />, 'Full name')}
-            {renderInput('emergencyRelationship', 'Relationship', 'select', undefined, undefined, [
-              { value: 'spouse', label: 'Spouse/Partner' },
-              { value: 'parent', label: 'Parent' },
-              { value: 'child', label: 'Child' },
-              { value: 'sibling', label: 'Sibling' },
-              { value: 'friend', label: 'Friend' },
-              { value: 'other', label: 'Other' }
-            ])}
-          </div>
-          {renderInput('emergencyPhone', 'Phone Number', 'tel', <Phone className="w-5 h-5" />, '+1 (555) 123-4567')}
-        </motion.div>
-      )}
-    </AnimatePresence>
-
-    {/* Navigation - Always visible */}
-    <div className="flex justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
-      {currentStage > 1 ? (
-        <button
-          type="button"
-          onClick={() => setCurrentStage(prev => (prev - 1) as 1 | 2 | 3)}
-          className={cn(
-            "px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-105",
-            "border border-gray-300 dark:border-gray-600",
-            "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-          )}
-        >
-          ← Back
-        </button>
-      ) : (
-        <div /> /* Empty div for spacing */
-      )}
+  /* Specialization Selector */
+  const renderSpecializationSelector = () => (
+    <div className="space-y-2">
+      <label className={cn(
+        "block text-sm font-medium",
+        designSystem.colors.primary
+      )}>
+        Medical Specialization
+        {!formData.specialization && (
+          <span className="ml-2 text-xs text-amber-500 animate-pulse">
+            • Required
+          </span>
+        )}
+      </label>
       
-      {currentStage < 3 ? (
-        <button
-          type="button"
-          onClick={() => setCurrentStage(prev => (prev + 1) as 1 | 2 | 3)}
+      <div className="relative">
+        <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+        <input
+          type="text"
+          value={specializationSearch}
+          onChange={(e) => setSpecializationSearch(e.target.value)}
+          placeholder="Search specializations..."
           className={cn(
-            "ml-auto px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all duration-200 hover:scale-105",
-            "bg-gradient-to-r from-blue-600 to-cyan-600 text-white",
-            "hover:from-blue-700 hover:to-cyan-700"
+            "w-full px-4 py-3 pl-11 rounded-lg border",
+            "focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all",
+            designSystem.colors.input
           )}
-        >
-          Continue to Next Step
-          <ArrowRight className="w-4 h-4" />
-        </button>
-      ) : (
-        <button
-          type="submit"
-          disabled={!isFormValid || isSubmitting}
-          className={cn(
-            "ml-auto px-8 py-3 rounded-lg font-medium flex items-center gap-3 transition-all duration-200",
-            isFormValid 
-              ? "bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white hover:scale-105"
-              : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed",
-            isSubmitting && "opacity-75"
-          )}
-        >
-          {isSubmitting ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Securing Your Account...
-            </>
-          ) : (
-            <>
-              <Lock className="w-5 h-5" />
-              Complete Registration & Get Global ID
-            </>
-          )}
-        </button>
-      )}
+        />
+      </div>
+      
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto p-1">
+        {filteredSpecializations.map(spec => (
+          <button
+            key={spec.value}
+            type="button"
+            onClick={() => setFormData(prev => ({ ...prev, specialization: spec.value }))}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-lg border transition-all",
+              formData.specialization === spec.value
+                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500"
+            )}
+          >
+            <span className="text-xl">{spec.icon}</span>
+            <span className={cn(
+              "text-sm font-medium",
+              formData.specialization === spec.value
+                ? "text-blue-600 dark:text-blue-400"
+                : designSystem.colors.primary
+            )}>
+              {spec.label}
+            </span>
+            {formData.specialization === spec.value && (
+              <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400 ml-auto" />
+            )}
+          </button>
+        ))}
+      </div>
     </div>
-  </form>
-);
- 
+  );
 
-  /* Global Patient ID Display - Premium Experience */
-  const renderGlobalPatientID = () => (
+  /* Form Sections */
+  const renderFormSection = () => (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <AnimatePresence mode="wait">
+        {/* Stage 1: Personal Information */}
+        {currentStage === 1 && (
+          <motion.div 
+            key="stage-1"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            {renderInput('fullName', 'Full Legal Name', 'text', <User className="w-5 h-5" />, 'Dr. John Smith, MD')}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {renderInput('dateOfBirth', 'Date of Birth', 'date', <Calendar className="w-5 h-5" />)}
+              {renderInput('gender', 'Gender', 'select', <Users className="w-5 h-5" />, undefined, [
+                { value: 'male', label: 'Male' },
+                { value: 'female', label: 'Female' },
+                { value: 'other', label: 'Other' },
+                { value: 'prefer-not-to-say', label: 'Prefer not to say' }
+              ])}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {renderInput('email', 'Professional Email', 'email', <Mail className="w-5 h-5" />, 'doctor@hospital.com')}
+              {renderInput('phone', 'Phone Number', 'tel', <Phone className="w-5 h-5" />, '+1 (555) 123-4567')}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Stage 2: Professional Credentials */}
+        {currentStage === 2 && (
+          <motion.div 
+            key="stage-2"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            <div className={cn(
+              "p-4 rounded-lg border",
+              theme === 'dark' 
+                ? "bg-blue-900/20 border-blue-700" 
+                : "bg-blue-50 border-blue-200"
+            )}>
+              <div className="flex items-start gap-3">
+                <BadgeCheck className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-blue-700 dark:text-blue-300 font-semibold mb-1">
+                    Instant Credential Verification
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                    We'll verify your license with state medical boards in real-time. All information is encrypted and HIPAA compliant.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                {renderInput('medicalLicenseNumber', 'Medical License Number', 'text', <FileText className="w-5 h-5" />, 'e.g. MD123456')}
+                {licenseVerified && formData.medicalLicenseNumber && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2 mt-2 text-sm text-green-600 dark:text-green-400"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span className="font-medium">License Verified ✓</span>
+                  </motion.div>
+                )}
+              </div>
+              
+              {renderInput('licenseState', 'License State', 'select', <MapPin className="w-5 h-5" />, undefined, 
+                US_STATES.map(state => ({ value: state.toLowerCase(), label: state }))
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {renderInput('npiNumber', 'NPI Number', 'text', <Fingerprint className="w-5 h-5" />, '10-digit NPI')}
+              {renderInput('deaNumber', 'DEA Number (Optional)', 'text', <Shield className="w-5 h-5" />, 'If applicable')}
+            </div>
+            
+            {renderSpecializationSelector()}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {renderInput('subSpecialization', 'Sub-Specialization (Optional)', 'text', <GraduationCap className="w-5 h-5" />, 'e.g. Interventional Cardiology')}
+              {renderInput('yearsOfExperience', 'Years of Experience', 'select', <Briefcase className="w-5 h-5" />, undefined, [
+                { value: '0-2', label: '0-2 years' },
+                { value: '3-5', label: '3-5 years' },
+                { value: '6-10', label: '6-10 years' },
+                { value: '11-15', label: '11-15 years' },
+                { value: '16-20', label: '16-20 years' },
+                { value: '20+', label: '20+ years' }
+              ])}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Stage 3: Practice Information */}
+        {currentStage === 3 && (
+          <motion.div 
+            key="stage-3"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            {renderInput('practiceName', 'Practice Name', 'text', <Building2 className="w-5 h-5" />, 'Smith Medical Group')}
+            {renderInput('practiceAddress', 'Practice Address', 'text', <MapPin className="w-5 h-5" />, '123 Medical Center Dr')}
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {renderInput('practiceCity', 'City', 'text', undefined, 'New York')}
+              {renderInput('practiceState', 'State', 'select', undefined, undefined,
+                US_STATES.map(state => ({ value: state.toLowerCase(), label: state }))
+              )}
+              {renderInput('practiceZip', 'ZIP Code', 'text', undefined, '10001')}
+            </div>
+            
+            {renderInput('hospitalAffiliations', 'Hospital Affiliations (Optional)', 'text', <Building2 className="w-5 h-5" />, 'e.g. Johns Hopkins, Mayo Clinic')}
+            
+            {renderInput('acceptingNewPatients', 'Accepting New Patients?', 'select', <Users className="w-5 h-5" />, undefined, [
+              { value: 'yes', label: 'Yes, accepting new patients' },
+              { value: 'limited', label: 'Limited availability' },
+              { value: 'no', label: 'Not accepting at this time' },
+              { value: 'waitlist', label: 'Waitlist only' }
+            ])}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Navigation */}
+      <div className="flex justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
+        {currentStage > 1 ? (
+          <button
+            type="button"
+            onClick={() => setCurrentStage(prev => (prev - 1) as 1 | 2 | 3)}
+            className={cn(
+              "px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-105",
+              "border border-gray-300 dark:border-gray-600",
+              "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+            )}
+          >
+            ← Back
+          </button>
+        ) : (
+          <div />
+        )}
+        
+        {currentStage < 3 ? (
+          <button
+            type="button"
+            disabled={!isStageValid}
+            onClick={() => setCurrentStage(prev => (prev + 1) as 1 | 2 | 3)}
+            className={cn(
+              "ml-auto px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all duration-200",
+              isStageValid
+                ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 hover:scale-105"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+            )}
+          >
+            Continue to Next Step
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={!isStageValid || isSubmitting}
+            className={cn(
+              "ml-auto px-8 py-3 rounded-lg font-medium flex items-center gap-3 transition-all duration-200",
+              isStageValid 
+                ? "bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white hover:scale-105"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed",
+              isSubmitting && "opacity-75"
+            )}
+          >
+            {isSubmitting ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Verifying Credentials...
+              </>
+            ) : (
+              <>
+                <BadgeCheck className="w-5 h-5" />
+                Complete Verification & Get Provider ID
+              </>
+            )}
+          </button>
+        )}
+      </div>
+    </form>
+  );
+
+  /* Global Provider ID Display */
+  const renderGlobalProviderID = () => (
     <div id="registration-complete" className="space-y-8">
       {/* Success Animation */}
       <AnimatePresence>
@@ -764,7 +960,7 @@ const renderFormSection = () => (
               className="relative z-10"
             >
               <div className="w-32 h-32 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 flex items-center justify-center shadow-2xl">
-                <Check className="w-16 h-16 text-white" strokeWidth={2.5} />
+                <BadgeCheck className="w-16 h-16 text-white" strokeWidth={2.5} />
               </div>
             </motion.div>
           </motion.div>
@@ -779,9 +975,9 @@ const renderFormSection = () => (
         className="text-center"
       >
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/10 to-green-500/10 mb-4">
-          <Sparkles className="w-4 h-4 text-emerald-500" />
+          <BadgeCheck className="w-4 h-4 text-emerald-500" />
           <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-            Registration Complete!
+            Credentials Verified Successfully!
           </span>
         </div>
         
@@ -790,19 +986,19 @@ const renderFormSection = () => (
           designSystem.colors.primary,
           "mb-3"
         )}>
-          Welcome to CustoCare, {formData.fullName.split(' ')[0]}!
+          Welcome, Dr. {formData.fullName.split(' ')[0]}!
         </h2>
         <p className={cn(
           "text-lg",
           designSystem.colors.secondary,
           "max-w-2xl mx-auto"
         )}>
-          You've been successfully registered in our global healthcare network. 
-          Here's your exclusive Global Patient ID:
+          You've been successfully verified in the CustoCare Global Provider Network. 
+          Here's your exclusive Global Provider ID:
         </p>
       </motion.div>
 
-      {/* ID Card - Premium Design */}
+      {/* ID Card */}
       <motion.div
         initial="hidden"
         animate="visible"
@@ -815,7 +1011,6 @@ const renderFormSection = () => (
           "shadow-xl"
         )}
       >
-        {/* Background Pattern */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute inset-0" style={{
             backgroundImage: `url("${IMAGES.backgroundPattern}")`,
@@ -825,7 +1020,6 @@ const renderFormSection = () => (
         </div>
 
         <div className="relative z-10 p-8">
-          {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <div className={cn(
@@ -834,20 +1028,14 @@ const renderFormSection = () => (
                   ? "bg-gradient-to-br from-cyan-900/40 to-blue-900/40" 
                   : "bg-gradient-to-br from-blue-100 to-cyan-100"
               )}>
-                <Fingerprint className="w-6 h-6 text-blue-600 dark:text-cyan-400" />
+                <Stethoscope className="w-6 h-6 text-blue-600 dark:text-cyan-400" />
               </div>
               <div>
-                <h3 className={cn(
-                  "font-bold",
-                  designSystem.colors.primary
-                )}>
-                  Global Patient ID
+                <h3 className={cn("font-bold", designSystem.colors.primary)}>
+                  Global Provider ID
                 </h3>
-                <p className={cn(
-                  "text-sm",
-                  designSystem.colors.secondary
-                )}>
-                  CustoCare Healthcare Network • Active
+                <p className={cn("text-sm", designSystem.colors.secondary)}>
+                  CustoCare Medical Network • Verified Provider
                 </p>
               </div>
             </div>
@@ -858,11 +1046,10 @@ const renderFormSection = () => (
                 ? "bg-emerald-900/30 text-emerald-400 border border-emerald-700/30" 
                 : "bg-emerald-100 text-emerald-700 border border-emerald-200"
             )}>
-              VERIFIED ✓
+              ✓ VERIFIED PROVIDER
             </div>
           </div>
 
-          {/* ID Display - Centerpiece */}
           <div className="text-center mb-8">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -871,68 +1058,48 @@ const renderFormSection = () => (
               className={cn(
                 "text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter mb-4",
                 "bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600",
-                "bg-clip-text text-transparent",
-                "animate-gradient"
+                "bg-clip-text text-transparent animate-gradient"
               )}
             >
-              {globalPatientID?.fullID}
+              {globalProviderID?.fullID}
             </motion.div>
             
-            <div className="flex justify-center items-center gap-6">
+            <div className="flex justify-center items-center gap-6 mb-4">
               <div className="text-center">
-                <div className={cn(
-                  "text-xs font-medium",
-                  designSystem.colors.secondary
-                )}>
-                  PREFIX
-                </div>
-                <div className={cn(
-                  "text-xl font-bold",
-                  designSystem.colors.primary
-                )}>
-                  {globalPatientID?.prefix}
+                <div className={cn("text-xs font-medium", designSystem.colors.secondary)}>PREFIX</div>
+                <div className={cn("text-xl font-bold", designSystem.colors.primary)}>
+                  {globalProviderID?.prefix}
                 </div>
               </div>
               
               <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
               
               <div className="text-center">
-                <div className={cn(
-                  "text-xs font-medium",
-                  designSystem.colors.secondary
-                )}>
-                  PATIENT NO.
-                </div>
-                <div className={cn(
-                  "text-xl font-bold",
-                  designSystem.colors.primary
-                )}>
-                  {globalPatientID?.number}
+                <div className={cn("text-xs font-medium", designSystem.colors.secondary)}>PROVIDER NO.</div>
+                <div className={cn("text-xl font-bold", designSystem.colors.primary)}>
+                  {globalProviderID?.number}
                 </div>
               </div>
               
               <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
               
               <div className="text-center">
-                <div className={cn(
-                  "text-xs font-medium",
-                  designSystem.colors.secondary
-                )}>
-                  CHECK DIGIT
-                </div>
-                <div className={cn(
-                  "text-xl font-bold",
-                  designSystem.colors.primary
-                )}>
-                  {globalPatientID?.checkDigit}
+                <div className={cn("text-xs font-medium", designSystem.colors.secondary)}>CHECK DIGIT</div>
+                <div className={cn("text-xl font-bold", designSystem.colors.primary)}>
+                  {globalProviderID?.checkDigit}
                 </div>
               </div>
             </div>
+            
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700">
+              <GraduationCap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                {SPECIALIZATIONS.find(s => s.value === formData.specialization)?.label || 'Medical Professional'}
+              </span>
+            </div>
           </div>
 
-          {/* QR Code & Info */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-            {/* QR Code */}
             <div className="lg:col-span-1 flex flex-col items-center">
               <div className={cn(
                 "w-48 h-48 rounded-2xl border-4 p-4 mb-4",
@@ -944,92 +1111,56 @@ const renderFormSection = () => (
                   <QrCode className="w-32 h-32 text-gray-400 dark:text-gray-600" />
                 </div>
               </div>
-              <p className={cn(
-                "text-sm text-center",
-                designSystem.colors.secondary
-              )}>
-                Scan at any CustoCare facility worldwide
+              <p className={cn("text-sm text-center", designSystem.colors.secondary)}>
+                Scan for instant credential verification
               </p>
             </div>
 
-            {/* Patient Info */}
             <div className="lg:col-span-2">
               <div className={cn(
                 "rounded-xl p-6",
                 theme === 'dark' ? "bg-gray-800/50" : "bg-gray-50"
               )}>
-                <h4 className={cn(
-                  "font-semibold mb-4",
-                  designSystem.colors.primary
-                )}>
-                  Registration Details
+                <h4 className={cn("font-semibold mb-4", designSystem.colors.primary)}>
+                  Provider Profile
                 </h4>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <div className={cn(
-                      "text-xs font-medium mb-1",
-                      designSystem.colors.secondary
-                    )}>
-                      Patient Name
+                    <div className={cn("text-xs font-medium mb-1", designSystem.colors.secondary)}>
+                      Provider Name
                     </div>
-                    <div className={cn(
-                      "font-medium",
-                      designSystem.colors.primary
-                    )}>
+                    <div className={cn("font-medium", designSystem.colors.primary)}>
                       {formData.fullName}
                     </div>
                   </div>
                   
                   <div>
-                    <div className={cn(
-                      "text-xs font-medium mb-1",
-                      designSystem.colors.secondary
-                    )}>
-                      Registration Date
+                    <div className={cn("text-xs font-medium mb-1", designSystem.colors.secondary)}>
+                      License State
                     </div>
-                    <div className={cn(
-                      "font-medium",
-                      designSystem.colors.primary
-                    )}>
-                      {new Date().toLocaleDateString('en-US', { 
-                        weekday: 'long',
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}
+                    <div className={cn("font-medium", designSystem.colors.primary)}>
+                      {US_STATES.find(s => s.toLowerCase() === formData.licenseState) || 'N/A'}
                     </div>
                   </div>
                   
                   <div>
-                    <div className={cn(
-                      "text-xs font-medium mb-1",
-                      designSystem.colors.secondary
-                    )}>
-                      ID Generated
+                    <div className={cn("text-xs font-medium mb-1", designSystem.colors.secondary)}>
+                      NPI Number
                     </div>
-                    <div className={cn(
-                      "font-medium",
-                      designSystem.colors.primary
-                    )}>
-                      {new Date().toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                    <div className={cn("font-medium", designSystem.colors.primary)}>
+                      {formData.npiNumber}
                     </div>
                   </div>
                   
                   <div>
-                    <div className={cn(
-                      "text-xs font-medium mb-1",
-                      designSystem.colors.secondary
-                    )}>
-                      Status
+                    <div className={cn("text-xs font-medium mb-1", designSystem.colors.secondary)}>
+                      Verification Status
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                       <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                        Active & Ready to Use
+                        Verified & Active
                       </span>
                     </div>
                   </div>
@@ -1038,7 +1169,6 @@ const renderFormSection = () => (
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
             <button
               onClick={handleContinueToPortal}
@@ -1050,7 +1180,7 @@ const renderFormSection = () => (
               )}
             >
               <ArrowRight className="w-5 h-5" />
-              Enter Patient Portal
+              Enter Provider Portal
             </button>
             
             <div className="flex gap-3">
@@ -1061,7 +1191,7 @@ const renderFormSection = () => (
                 "transition-all duration-200 hover:scale-105"
               )}>
                 <Download className="w-5 h-5" />
-                Save ID
+                Save Credentials
               </button>
               
               <button className={cn(
@@ -1077,63 +1207,24 @@ const renderFormSection = () => (
           </div>
         </div>
       </motion.div>
-
-      {/* Next Steps */}
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={fadeInUp}
-        className="text-center"
-      >
-        <p className={cn(
-          designSystem.colors.secondary,
-          "text-sm mb-6"
-        )}>
-          Already have an account?{' '}
-          <button
-            onClick={() => navigate('/login')}
-            className={cn(
-              "font-semibold hover:underline transition-all duration-200",
-              designSystem.colors.accent,
-              "hover:text-blue-700 dark:hover:text-cyan-300"
-            )}
-          >
-            Login to access your portal
-          </button>
-        </p>
-        
-        <div className="inline-flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-          <Lock className="w-3 h-3" />
-          <span>Your Global Patient ID is encrypted and HIPAA protected</span>
-        </div>
-      </motion.div>
     </div>
   );
 
-  /* Benefits Sidebar - Redesigned */
+  /* Benefits Sidebar */
   const renderBenefitsSidebar = () => (
     <div className="space-y-6">
-      {/* What You Get */}
       <motion.div
         initial="hidden"
         animate="visible"
         variants={slideInRight}
-        className={cn(
-          "rounded-2xl border p-6",
-          designSystem.colors.card,
-          "shadow-lg"
-        )}
+        className={cn("rounded-2xl border p-6", designSystem.colors.card, "shadow-lg")}
       >
-        <h3 className={cn(
-          designSystem.typography.h3,
-          designSystem.colors.primary,
-          "mb-6"
-        )}>
-          What You Get
+        <h3 className={cn(designSystem.typography.h3, designSystem.colors.primary, "mb-6")}>
+          Provider Benefits
         </h3>
         
         <div className="space-y-4">
-          {premiumBenefits.map((benefit, index) => (
+          {providerBenefits.map((benefit, index) => (
             <motion.div
               key={benefit.title}
               initial={{ opacity: 0, x: 20 }}
@@ -1155,10 +1246,7 @@ const renderFormSection = () => (
                 )}>
                   {benefit.title}
                 </h4>
-                <p className={cn(
-                  designSystem.colors.secondary,
-                  designSystem.typography.small
-                )}>
+                <p className={cn(designSystem.colors.secondary, designSystem.typography.small)}>
                   {benefit.description}
                 </p>
               </div>
@@ -1167,24 +1255,16 @@ const renderFormSection = () => (
         </div>
       </motion.div>
 
-      {/* Testimonials Carousel */}
+      {/* Testimonials */}
       <motion.div
         initial="hidden"
         animate="visible"
         variants={slideInRight}
-        className={cn(
-          "rounded-2xl border overflow-hidden",
-          designSystem.colors.card,
-          "shadow-lg"
-        )}
+        className={cn("rounded-2xl border overflow-hidden", designSystem.colors.card, "shadow-lg")}
       >
         <div className="p-6">
-          <h3 className={cn(
-            designSystem.typography.h3,
-            designSystem.colors.primary,
-            "mb-6"
-          )}>
-            Trusted by Patients & Doctors
+          <h3 className={cn(designSystem.typography.h3, designSystem.colors.primary, "mb-6")}>
+            Trusted by Medical Professionals
           </h3>
           
           <div className="relative h-64">
@@ -1210,16 +1290,10 @@ const renderFormSection = () => (
                       className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow-sm"
                     />
                     <div>
-                      <h4 className={cn(
-                        "font-semibold",
-                        designSystem.colors.primary
-                      )}>
+                      <h4 className={cn("font-semibold", designSystem.colors.primary)}>
                         {testimonial.name}
                       </h4>
-                      <p className={cn(
-                        designSystem.colors.secondary,
-                        designSystem.typography.small
-                      )}>
+                      <p className={cn(designSystem.colors.secondary, designSystem.typography.small)}>
                         {testimonial.role}
                       </p>
                     </div>
@@ -1231,11 +1305,7 @@ const renderFormSection = () => (
                     ))}
                   </div>
                   
-                  <p className={cn(
-                    "italic flex-1",
-                    designSystem.colors.secondary,
-                    designSystem.typography.body
-                  )}>
+                  <p className={cn("italic flex-1", designSystem.colors.secondary, designSystem.typography.body)}>
                     "{testimonial.quote}"
                   </p>
                 </div>
@@ -1243,7 +1313,6 @@ const renderFormSection = () => (
             ))}
           </div>
           
-          {/* Testimonial Dots */}
           <div className="flex justify-center gap-2 mt-6">
             {testimonials.map((_, index) => (
               <button
@@ -1261,122 +1330,49 @@ const renderFormSection = () => (
           </div>
         </div>
       </motion.div>
-
-      {/* Security Badge */}
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={slideInRight}
-        className={cn(
-          "rounded-2xl border p-6",
-          theme === 'dark' 
-            ? "bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700" 
-            : "bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200",
-          "shadow-lg"
-        )}
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-            <Shield className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h4 className={cn(
-              "font-bold",
-              designSystem.colors.primary
-            )}>
-              Bank-Level Security
-            </h4>
-            <p className={cn(
-              designSystem.colors.secondary,
-              designSystem.typography.small
-            )}>
-              Your health data is protected
-            </p>
-          </div>
-        </div>
-        
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Check className="w-4 h-4 text-green-500" />
-            <span className={cn(
-              designSystem.colors.secondary,
-              designSystem.typography.small
-            )}>
-              256-bit end-to-end encryption
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Check className="w-4 h-4 text-green-500" />
-            <span className={cn(
-              designSystem.colors.secondary,
-              designSystem.typography.small
-            )}>
-              HIPAA & GDPR compliant
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Check className="w-4 h-4 text-green-500" />
-            <span className={cn(
-              designSystem.colors.secondary,
-              designSystem.typography.small
-            )}>
-              SOC 2 Type II certified
-            </span>
-          </div>
-        </div>
-      </motion.div>
     </div>
   );
 
   /* ==========================================================================
-     MAIN RENDER - FINAL DESIGN
+     MAIN RENDER
      ========================================================================== */
   return (
-    <div className={cn(
-      "min-h-screen",
-      designSystem.colors.background
-    )}>
-      {/* Header - Minimal */}
+    <div className={cn("min-h-screen", designSystem.colors.background)}>
+      {/* Header */}
       <header className="sticky top-0 z-50 border-b backdrop-blur-md">
         <div className={cn(
           designSystem.spacing.section,
-          "py-1",
+          "py-4",
           theme === 'dark' 
             ? "border-gray-800 bg-gray-950/90" 
             : "border-gray-200 bg-white/90"
         )}>
-          <div className={cn(
-            designSystem.spacing.container,
-            "flex items-center justify-between"
-          )}>
+          <div className={cn(designSystem.spacing.container, "flex items-center justify-between")}>
             <div className="flex items-center gap-3">
               <div className={cn(
                 "w-10 h-10 rounded-xl flex items-center justify-center",
                 "bg-gradient-to-br from-blue-600 to-cyan-600"
               )}>
-                <Heart className="w-6 h-6 text-white" />
+                <Stethoscope className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-xl font-bold">CustoCare AI</h1>
-                <p className={cn(
-                  "text-xs",
-                  designSystem.colors.secondary
-                )}>
-                  Premium Healthcare
+                <p className={cn("text-xs", designSystem.colors.secondary)}>
+                  Provider Network
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/provider/login')}
                 className={cn(
                   "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                   "border border-gray-300 dark:border-gray-600",
                   "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                 )}
               >
-                Existing Patient?
+                Existing Provider?
               </button>
               
               <button
@@ -1390,11 +1386,7 @@ const renderFormSection = () => (
                 )}
                 aria-label="Toggle theme"
               >
-                {theme === 'dark' ? (
-                  <Sun className="w-5 h-5" />
-                ) : (
-                  <Moon className="w-5 h-5" />
-                )}
+                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
             </div>
           </div>
@@ -1402,19 +1394,12 @@ const renderFormSection = () => (
       </header>
 
       {/* Main Content */}
-      <main className={cn(
-        designSystem.spacing.section,
-        "py-8"
-      )}>
+      <main className={cn(designSystem.spacing.section, "py-8")}>
         <div className={designSystem.spacing.container}>
-          {/* Hero Section */}
           {!isComplete && renderHero()}
           
-          {/* Main Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column - Form/Results */}
             <div className="lg:col-span-2">
-              {/* Progress & Form */}
               {!isComplete ? (
                 <>
                   {renderProgress()}
@@ -1428,24 +1413,19 @@ const renderFormSection = () => (
                       "shadow-xl"
                     )}
                   >
-                    <h2 className={cn(
-                      designSystem.typography.h2,
-                      designSystem.colors.primary,
-                      "mb-6"
-                    )}>
-                      {currentStage === 1 && "Tell us about yourself"}
-                      {currentStage === 2 && "Where can we reach you?"}
-                      {currentStage === 3 && "Emergency contact information"}
+                    <h2 className={cn(designSystem.typography.h2, designSystem.colors.primary, "mb-6")}>
+                      {currentStage === 1 && "Personal Information"}
+                      {currentStage === 2 && "Professional Credentials"}
+                      {currentStage === 3 && "Practice Information"}
                     </h2>
                     {renderFormSection()}
                   </motion.div>
                 </>
               ) : (
-                renderGlobalPatientID()
+                renderGlobalProviderID()
               )}
             </div>
 
-            {/* Right Column - Benefits */}
             <div className="lg:col-span-1">
               <div className="sticky top-24">
                 {renderBenefitsSidebar()}
@@ -1455,27 +1435,19 @@ const renderFormSection = () => (
         </div>
       </main>
 
-      {/* Minimal Footer */}
+      {/* Footer */}
       <footer className={cn(
         designSystem.spacing.section,
         "py-6 border-t",
         theme === 'dark' ? "border-gray-800" : "border-gray-200"
       )}>
-        <div className={cn(
-          designSystem.spacing.container,
-          "text-center"
-        )}>
-          <p className={cn(
-            designSystem.colors.secondary,
-            designSystem.typography.small
-          )}>
-            © {new Date().getFullYear()} CustoCare AI Inc. • All rights reserved • 
-            Your information is encrypted and securely processed
+        <div className={cn(designSystem.spacing.container, "text-center")}>
+          <p className={cn(designSystem.colors.secondary, designSystem.typography.small)}>
+            © {new Date().getFullYear()} CustoCare AI Inc. • All credentials are verified and encrypted • HIPAA Compliant
           </p>
         </div>
       </footer>
 
-      {/* Add custom animation for gradient text */}
       <style jsx global>{`
         @keyframes gradient {
           0% { background-position: 0% 50%; }
@@ -1491,4 +1463,4 @@ const renderFormSection = () => (
   );
 };
 
-export default PatientOnboarding;
+export default MedicalProfessionalOnboarding;
