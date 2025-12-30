@@ -1,3 +1,13 @@
+import { motion } from 'framer-motion';
+import { 
+  Shield, 
+  Lock,
+  Award
+} from 'lucide-react';
+import { cn } from '../../../shared/types/cn';
+import { containerVariants} from '../../../shared/components/animations/motionVariants'
+import { itemVariants} from '../../../shared/components/animations/motionVariants'
+   
    const TrustBadges = () => (
     <motion.div 
       variants={containerVariants}
