@@ -34,8 +34,6 @@ import {
   Sun,
   Moon,
   Users,
-  Lock,
-  Sparkles,
   Fingerprint,
   Globe,
   Star,
@@ -46,26 +44,17 @@ import {
   QrCode,
   Award,
   TrendingUp,
-  AlertCircle,
   FileText,
-  Upload,
   Brain,
-  Heart,
   Search,
   CheckCircle2,
   BadgeCheck,
-  Briefcase,
   Mail,
-  Activity,
   Bed,
   Ambulance,
-  FlaskConical,
-  Microscope,
   Stethoscope,
-  UserCheck,
   CreditCard,
   Building,
-  MapPinned,
 } from 'lucide-react';
 import { cn } from '../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
@@ -87,6 +76,9 @@ const IMAGES = {
   avatar3: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&h=150&fit=crop&q=80'
 };
 
+import { slideInRight} from '../../../../shared/components/animations/motionVariants'
+import { fadeInUp} from '../../../../shared/components/animations/motionVariants'
+import { scaleIn} from '../../../../shared/components/animations/motionVariants'
 /* ==========================================================================
    TYPE DEFINITIONS
    ========================================================================== */
@@ -180,45 +172,7 @@ const ACCREDITATIONS = [
   { value: 'none', label: 'Accreditation Pending' },
 ];
 
-/* ==========================================================================
-   ANIMATION VARIANTS
-   ========================================================================== */
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
-    y: 0,
-    transition: { duration: 0.6, ease: "easeOut" }
-  }
-};
 
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
-const scaleIn = {
-  hidden: { scale: 0.8, opacity: 0 },
-  visible: { 
-    scale: 1, 
-    opacity: 1,
-    transition: { type: "spring", stiffness: 100 }
-  }
-};
-
-const slideInRight = {
-  hidden: { x: 50, opacity: 0 },
-  visible: { 
-    x: 0, 
-    opacity: 1,
-    transition: { duration: 0.5, ease: "easeOut" }
-  }
-};
 
 /* ==========================================================================
    TESTIMONIAL DATA
@@ -310,7 +264,7 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
       }, 1500);
       return () => clearTimeout(timer);
     } else {
-      setLicenseVerified(false);
+    //   setLicenseVerified(false);
     }
   }, [formData.facilityLicenseNumber, formData.licenseState]);
 
@@ -1491,7 +1445,7 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
         </div>
       </footer>
 
-      <style jsx global>{`
+      <style>{`
         @keyframes gradient {
           0% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }
