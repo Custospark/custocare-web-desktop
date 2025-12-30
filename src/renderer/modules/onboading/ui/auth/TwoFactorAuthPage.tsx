@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useA
 import { loginSuccess } from '../../../../app/store/slices/authSlice';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../shared/types/cn';
+import {ROUTES} from '../../routes/onboardingRouteConstants'
 
 /**
  * ============================================================================
@@ -94,7 +95,7 @@ export const TwoFactorAuthPage: React.FC = () => {
   useEffect(() => {
     if (isSuccess) {
       const timer = setTimeout(() => {
-        navigate('/dashboard');
+        navigate(ROUTES.ROLE_SELECTION);
       }, 2000);
 
       return () => clearTimeout(timer);

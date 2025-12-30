@@ -62,6 +62,7 @@ import {
 import { cn } from '../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../app/store/slices/uiSlice';
+import {ROUTES} from '../../routes/onboardingRouteConstants'
 
 /* ==========================================================================
    REMOTE IMAGES (Unsplash - Medical Professional Focused)
@@ -342,7 +343,7 @@ export const MedicalProfessionalOnboarding: React.FC = () => {
 
   /* Continue to Portal */
   const handleContinueToPortal = useCallback(() => {
-    navigate('/provider/portal', {
+    navigate(ROUTES.STAFF_DASHBOARD, {
       state: {
         providerID: globalProviderID?.fullID,
         providerName: formData.fullName,

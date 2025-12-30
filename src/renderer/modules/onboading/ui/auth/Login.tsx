@@ -5,6 +5,7 @@ import { useAppSelector } from '../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../shared/types/cn';
 import { useLoginMutation } from './../../api/queries/index';
+import {ROUTES} from '../../routes/onboardingRouteConstants'
 
 interface FormState {
   email: string;
@@ -116,8 +117,8 @@ export const Login: React.FC = () => {
 
   return (
     <AuthLayout
-      title="Welcome Back"
-      subtitle="Sign in to access your clinical dashboard"
+      title="Let’s confirm it’s you.."
+      subtitle="Sign in to securely access your clinical dashboard."
       heroImage="https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1200&q=80"
       heroHeadline="Secure. Intelligent. Trusted."
       heroSubtext="Join thousands of healthcare professionals using AI-powered decision support to improve patient care."
@@ -307,7 +308,7 @@ export const Login: React.FC = () => {
           </label>
 
           <Link
-            to="/landing"
+            to={ROUTES.FORGOT_PASSWORD}
             className={cn(
               'text-sm font-semibold transition-colors',
               theme === 'dark'

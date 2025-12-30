@@ -21,6 +21,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import {ROUTES} from '../../routes/onboardingRouteConstants'
 import { 
   Building2,
   Phone,
@@ -361,7 +362,7 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
 
   /* Continue to Portal */
   const handleContinueToPortal = useCallback(() => {
-    navigate('/facility/portal', {
+    navigate(ROUTES.STAFF_DASHBOARD, {
       state: {
         facilityID: globalFacilityID?.fullID,
         facilityName: formData.facilityName,

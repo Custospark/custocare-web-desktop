@@ -104,7 +104,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleLogout = () => {
     // dispatch(logout());
-    navigate(ROUTES.LOGIN);
+    navigate(ROUTES.LANDING);
   };
 
   // Enhanced notifications with actions

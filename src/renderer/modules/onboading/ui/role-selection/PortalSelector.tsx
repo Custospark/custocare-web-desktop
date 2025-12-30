@@ -23,6 +23,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import {ROUTES} from '../../routes/onboardingRouteConstants'
 import { 
   Heart,
   Building2,
@@ -152,7 +153,7 @@ export const PortalSelectorV2: React.FC = () => {
       status: 'active',
       location: 'Downtown Medical District',
       patients: 247,
-      route: '/workspace/city-hospital'
+      route: ROUTES.STAFF_DASHBOARD
     },
     {
       id: 'northside-clinic',
@@ -164,7 +165,7 @@ export const PortalSelectorV2: React.FC = () => {
       status: 'active',
       location: 'Northside Medical Plaza',
       patients: 189,
-      route: '/workspace/northside-clinic'
+      route: ROUTES.STAFF_DASHBOARD
     },
     {
       id: 'emerald-medical',
@@ -176,7 +177,7 @@ export const PortalSelectorV2: React.FC = () => {
       status: 'active',
       location: 'Emerald Health Campus',
       patients: 156,
-      route: '/workspace/emerald-medical'
+      route: ROUTES.STAFF_DASHBOARD
     }
   ], []);
 
@@ -214,7 +215,7 @@ export const PortalSelectorV2: React.FC = () => {
   };
 
   const handlePatientPortal = () => {
-    navigate('/patient-portal', {
+    navigate(ROUTES.PATIENT_DASHBOARD, {
       state: {
         user,
         timestamp: new Date().toISOString()
@@ -231,7 +232,7 @@ export const PortalSelectorV2: React.FC = () => {
   };
 
   const handleLogout = () => {
-    navigate('/login');
+    navigate(ROUTES.LANDING);
   };
 
   /* ==========================================================================

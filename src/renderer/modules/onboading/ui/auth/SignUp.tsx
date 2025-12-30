@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useA
 import { loginSuccess } from '../../../../app/store/slices/authSlice';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../shared/types/cn';
+import {ROUTES} from '../../routes/onboardingRouteConstants'
 
 interface FormState {
   fullName: string;
@@ -141,7 +142,7 @@ export const SignUp: React.FC = () => {
         user: { id: Date.now().toString(), email: formState.email, name: formState.fullName, role: formState.role },
         token: 'mock_jwt_' + Date.now(),
       }));
-      navigate('/verify-2fa');
+      navigate(ROUTES.TWO_FACTOR_AUTH);
     } finally {
       setIsLoading(false);
     }

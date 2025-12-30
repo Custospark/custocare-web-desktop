@@ -17,7 +17,8 @@ const MedicalProfessionalOnboarding = React.lazy(() => import('../ui/role-select
 const HealthcareFacilityOnboarding = React.lazy(() => import('../ui/role-selection/HealthcareFacilityOnboarding'));
 const Landing = React.lazy(() => import('../ui/role-selection/Landing'));
 const PortalSelector = React.lazy(() => import('../ui/role-selection/PortalSelector'));
-
+const Dashboard = React.lazy(() => import('../../../shared/pages/Dashboard'));
+import Layout from '../../../shared/components/Navigation/Layout';
 /**
  * Authentication Routes Configuration
  * Returns an array of Route components
@@ -128,5 +129,26 @@ export const OnboardingRoutes = () => [
         <HealthcareFacilityOnboarding />
       </Suspense>
     } 
-  />
+  />,
+  <Route key="dashboard-layout" element={<Layout />}>
+    <Route
+      key="patient-dashboard"
+      path={ROUTES.PATIENT_DASHBOARD}
+      element={
+        <Suspense fallback={<LoadingSkeleton />}>
+          <Dashboard />
+        </Suspense>
+      }
+    />
+
+    <Route
+      key="staff-dashboard"
+      path={ROUTES.STAFF_DASHBOARD}
+      element={
+        <Suspense fallback={<LoadingSkeleton />}>
+          <Dashboard />
+        </Suspense>
+      }
+    />
+  </Route>,
 ];

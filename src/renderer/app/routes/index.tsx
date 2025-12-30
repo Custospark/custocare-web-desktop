@@ -18,7 +18,7 @@ function AppRoutes() {
       {/* Default route - redirects to login */}
       <Route 
         path={ROUTES.HOME} 
-        element={<Navigate to={ROUTES.LOGIN} replace />} 
+        element={<Navigate to={ROUTES.LANDING} replace />} 
       />
       
       {/* Authentication Routes */}

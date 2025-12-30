@@ -60,6 +60,7 @@ import {
 import { cn } from '../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../app/store/slices/uiSlice';
+import {ROUTES} from '../../routes/onboardingRouteConstants'
 
 /* ==========================================================================
    REMOTE IMAGES (Unsplash - Healthcare Focused)
@@ -101,7 +102,7 @@ interface Role {
 }
 
 /* ==========================================================================
-   ROLE DATA
+   ROLE DATA - UPDATED ROUTES
    ========================================================================== */
 const ROLES: Role[] = [
   {
@@ -113,7 +114,7 @@ const ROLES: Role[] = [
     gradient: 'from-blue-600 via-cyan-500 to-blue-600',
     hoverGradient: 'from-blue-700 via-cyan-600 to-blue-700',
     image: IMAGES.medicalProfessional,
-    route: '/onboarding/medical-professional',
+    route: ROUTES.STAFF_ONBOARDING, // ✅ UPDATED ROUTE
     benefits: [
       'Instant credential verification',
       'AI-powered patient management',
@@ -150,7 +151,7 @@ const ROLES: Role[] = [
     gradient: 'from-emerald-600 via-teal-500 to-emerald-600',
     hoverGradient: 'from-emerald-700 via-teal-600 to-emerald-700',
     image: IMAGES.patient,
-    route: '/onboarding/patient',
+    route: ROUTES.PATIENT_ONBOARDING, // ✅ UPDATED ROUTE
     benefits: [
       'Find verified healthcare providers',
       'Instant appointment booking',
@@ -187,7 +188,7 @@ const ROLES: Role[] = [
     gradient: 'from-purple-600 via-pink-500 to-purple-600',
     hoverGradient: 'from-purple-700 via-pink-600 to-purple-700',
     image: IMAGES.facility,
-    route: '/onboarding/facility',
+    route: ROUTES.HEALTHCARE_ONBOARDING, 
     benefits: [
       'AI operations management',
       '60% efficiency improvement',
@@ -333,10 +334,10 @@ export const RoleSelection: React.FC = () => {
     setShowDetails(true);
   };
 
-  /* Handle continue to onboarding */
+  /* Handle continue to onboarding - UPDATED TO USE NEW ROUTES */
   const handleContinue = () => {
     if (selectedRoleData) {
-      navigate(selectedRoleData.route);
+      navigate(selectedRoleData.route); // This will now navigate to /patient, /professional, or /facility
     }
   };
 
@@ -738,10 +739,7 @@ export const RoleSelection: React.FC = () => {
                         : "bg-gray-50"
                     )}
                   >
-                    <CheckCircle2 className={cn(
-                      "w-5 h-5 flex-shrink-0",
-                      `text-${selectedRoleData.gradient.split('-')[1]}-500`
-                    )} />
+                    <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-green-500" />
                     <span className={cn(
                       "font-medium",
                       designSystem.colors.primary

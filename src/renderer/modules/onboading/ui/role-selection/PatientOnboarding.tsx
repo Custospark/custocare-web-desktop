@@ -5,17 +5,6 @@
  * 
  * COMPLETE REDESIGN ANALYSIS & IMPROVEMENTS:
  * 
- * ISSUES IDENTIFIED:
- * 1. ❌ Generic gradient backgrounds - lacks visual hierarchy
- * 2. ❌ Missing meaningful imagery - no emotional connection
- * 3. ❌ Form feels transactional - not premium healthcare experience
- * 4. ❌ Right column wasted - could showcase benefits better
- * 5. ❌ No social proof or testimonials
- * 6. ❌ Global Patient ID display lacks ceremony
- * 7. ❌ Missing micro-interactions for better UX
- * 8. ❌ Inconsistent spacing and typography
- * 9. ❌ Not enough visual feedback during submission
- * 10. ❌ Footer too heavy - distracts from main action
  * 
  * SOLUTIONS IMPLEMENTED:
  * 1. ✅ Hero section with professional healthcare imagery
@@ -63,6 +52,7 @@ import {
 import { cn } from '../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../app/store/slices/uiSlice';
+import {ROUTES} from '../../routes/onboardingRouteConstants'
 
 /* ==========================================================================
    REMOTE IMAGES (Unsplash - High Quality, Healthcare Focused)
@@ -272,7 +262,7 @@ export const PatientOnboarding: React.FC = () => {
 
   /* Continue to Portal */
   const handleContinueToPortal = useCallback(() => {
-    navigate('/patient/portal', {
+    navigate(ROUTES.PATIENT_DASHBOARD, {
       state: {
         patientID: globalPatientID?.fullID,
         patientName: formData.fullName,

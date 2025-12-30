@@ -9,6 +9,7 @@
 export const ROUTES = {
   // Home & Dashboard
   HOME: '/',
+  LANDING: '/landing',
   DASHBOARD: '/dashboard',
 
   // Authentication Routes

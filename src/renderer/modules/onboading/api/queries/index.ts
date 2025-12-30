@@ -4,6 +4,7 @@ import { useAppDispatch } from '../../../../app/store/hooks/useApp';
 import { loginStart, loginSuccess, loginFailure } from '../../../../app/store/slices/authSlice';
 import { authApi } from '../endpoints/index';
 import type { LoginRequest, LoginResponse, UserProfile } from '../auth';
+import {ROUTES} from '../../routes/onboardingRouteConstants'
 
 export const useLoginMutation = () => {
   const dispatch = useAppDispatch();
@@ -51,10 +52,10 @@ export const useLoginMutation = () => {
       if (data) {
         // Successful login
         dispatch(loginSuccess(data));
-        navigate('/dashboard');
+        navigate(ROUTES.PORTAL_SELECTOR);
       } else {
         // MFA required - navigate to MFA page
-        navigate('/verify-mfa');
+        navigate(ROUTES.TWO_FACTOR_AUTH);
       }
     },
     onError: (error: Error) => {

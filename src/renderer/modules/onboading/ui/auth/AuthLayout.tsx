@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Moon, Sun, Shield, Activity } from 'lucide-react';
+import { Moon, Sun, Shield, Activity, Home } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../app/store/slices/uiSlice';
 import { cn } from '../../../../shared/types/cn';
@@ -111,19 +111,58 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
             </span>
           </Link>
 
-          <button
-            onClick={() => dispatch(toggleTheme())}
-            className={cn(
-              'ml-auto p-2 rounded-lg transition-all duration-200',
-              'hover:scale-105 focus:outline-none focus:ring-2',
-              theme === 'dark'
-                ? 'bg-gray-800/60 hover:bg-gray-700/60 text-amber-300 focus:ring-cyan-500/50'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-600 focus:ring-blue-500/50'
-            )}
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-          >
-            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
+        <div className="ml-auto flex items-center gap-2">
+            {/* Home Menu Option */}
+            <Link
+              to="/"
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all duration-200',
+                'hover:scale-105 focus:outline-none focus:ring-2 cursor-pointer',
+                theme === 'dark'
+                  ? 'bg-gray-800/60 hover:bg-gray-700/60 text-gray-300 focus:ring-cyan-500/50'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-600 focus:ring-blue-500/50'
+              )}
+              aria-label="Go to Home"
+              title="Return to Home."
+            >
+              <Home className="w-4 h-4" />
+              <span className="text-sm font-medium hidden sm:inline">Home</span>
+            </Link>
+
+            {/* Theme Toggle with Label */}
+            <div className="relative group">
+              <button
+                onClick={() => dispatch(toggleTheme())}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all duration-200',
+                  'hover:scale-105 focus:outline-none focus:ring-2 cursor-pointer',
+                  theme === 'dark'
+                    ? 'bg-gray-800/60 hover:bg-gray-700/60 text-amber-300 focus:ring-cyan-500/50'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600 focus:ring-blue-500/50'
+                )}
+                aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                title="Toggle Theme"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="w-4 h-4" />
+                ) : (
+                  <Moon className="w-4 h-4" />
+                )}
+                <span className="text-sm font-medium hidden sm:inline">Theme</span>
+              </button>
+              
+              {/* Subtle Theme Indicator */}
+              <div className={cn(
+                'absolute -bottom-1 left-1/2 transform -translate-x-1/2',
+                'text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap',
+                'opacity-0 group-hover:opacity-100 transition-opacity duration-200',
+                theme === 'dark'
+                  ? 'bg-gray-800 text-amber-300 border border-gray-700'
+                  : 'bg-gray-100 text-gray-600 border border-gray-300'
+              )}>
+              </div>
+            </div>
+          </div>
         </header>
 
         {/* Main Content - Starts immediately after header */}
