@@ -257,16 +257,18 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
   }, [isSubmitting, isComplete]);
 
   /* Simulate License Verification */
-  useEffect(() => {
+useEffect(() => {
+  const timer = setTimeout(() => {
     if (formData.facilityLicenseNumber.length >= 8 && formData.licenseState) {
-      const timer = setTimeout(() => {
-        setLicenseVerified(true);
-      }, 1500);
-      return () => clearTimeout(timer);
+      setLicenseVerified(true);
     } else {
-    //   setLicenseVerified(false);
+      setLicenseVerified(false);
     }
-  }, [formData.facilityLicenseNumber, formData.licenseState]);
+  }, 0);
+
+  return () => clearTimeout(timer);
+}, [formData.facilityLicenseNumber, formData.licenseState]);
+
 
   /* Generate Global Facility ID */
   const generateGlobalFacilityID = useCallback((): GlobalFacilityID => {

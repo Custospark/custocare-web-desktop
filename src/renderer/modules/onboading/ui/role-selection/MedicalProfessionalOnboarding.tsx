@@ -241,16 +241,16 @@ export const MedicalProfessionalOnboarding: React.FC = () => {
   }, [isSubmitting, isComplete]);
 
   /* Simulate License Verification */
-  useEffect(() => {
-    if (formData.medicalLicenseNumber.length >= 8 && formData.licenseState) {
-      const timer = setTimeout(() => {
-        setLicenseVerified(true);
-      }, 1500);
-      return () => clearTimeout(timer);
-    } else {
-    //   setLicenseVerified(false);
-    }
-  }, [formData.medicalLicenseNumber, formData.licenseState]);
+useEffect(() => {
+  const verified = formData.medicalLicenseNumber.length >= 8 && !!formData.licenseState;
+
+  const timer = setTimeout(() => {
+    setLicenseVerified(verified);
+  }, 1500);
+
+  return () => clearTimeout(timer);
+}, [formData.medicalLicenseNumber, formData.licenseState]);
+
 
   /* Generate Global Provider ID */
   const generateGlobalProviderID = useCallback((): GlobalProviderID => {
