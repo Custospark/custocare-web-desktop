@@ -31,7 +31,71 @@ export const fadeInUp: Variants = {
     y: 0,
     transition: {
       duration: 0.6,
-      ease: "easeOut",
+      ease: "easeOut" as const,
     },
   },
 };
+
+
+
+export const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.15
+    }
+  }
+};
+
+export const itemVariants = {
+  hidden: { opacity: 0, y: 24 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 120,
+      damping: 18
+    }
+  }
+};
+
+export const cardHoverVariants = {
+  rest: { scale: 1, y: 0 },
+  hover: {
+    scale: 1.03,
+    y: -6,
+    transition: {
+      type: "spring" as const,
+      stiffness: 400,
+      damping: 20
+    }
+  }
+};
+
+export const floatingVariants = {
+  animate: {
+    y: [-12, 12, -12],
+    transition: {
+      duration: 7,
+      repeat: Infinity,
+      ease: "easeInOut" as const
+    }
+  }
+};
+
+export const pulseGlowVariants = {
+  animate: {
+    scale: [1, 1.08, 1],
+    opacity: [0.4, 0.7, 0.4],
+    transition: {
+      duration: 4,
+      repeat: Infinity,
+      ease: "easeInOut" as const
+    }
+  }
+};
+
+

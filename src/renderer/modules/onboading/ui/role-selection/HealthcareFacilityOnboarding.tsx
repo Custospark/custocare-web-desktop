@@ -664,7 +664,7 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
                 "w-full px-4 py-3 rounded-lg border appearance-none pr-10",
                 "focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all",
                 designSystem.colors.input,
-                icon && "pl-11"
+                icon ? "pl-11" : undefined,
               )}
             >
               <option value="">Select {label.toLowerCase()}</option>
@@ -682,7 +682,7 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
                 "w-full px-4 py-3 rounded-lg border resize-none",
                 "focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all",
                 designSystem.colors.input,
-                icon && "pl-11",
+                icon ? "pl-11" : undefined,
                 !isEmpty && "border-green-500/30"
               )}
             />
@@ -696,7 +696,7 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
                 "w-full px-4 py-3 rounded-lg border",
                 "focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all",
                 designSystem.colors.input,
-                icon && "pl-11",
+                icon ? "pl-11" : undefined,
                 !isEmpty && "border-green-500/30"
               )}
             />
