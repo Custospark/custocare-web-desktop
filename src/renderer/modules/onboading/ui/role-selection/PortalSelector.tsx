@@ -22,36 +22,24 @@
 
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {ROUTES} from '../../routes/onboardingRouteConstants'
 import { 
   Heart,
-  Building2,
-  UserCircle,
   ArrowRight,
   Shield,
   Activity,
   Users,
   FileText,
   Calendar,
-  Stethoscope,
-  Hospital,
   Briefcase,
-  ChevronRight,
-  CheckCircle2,
   Sparkles,
-  Lock,
   Sun,
   Moon,
-  LogOut,
-  Home,
   Plus,
   HeadphonesIcon,
   MapPin,
-  Clock,
-  BadgeCheck,
   User,
-  Zap
 } from 'lucide-react';
 import { cn } from '../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
@@ -110,17 +98,6 @@ const containerVariants = {
   }
 };
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
-    y: 0,
-    transition: {
-      duration: 0.4,
-      ease: "easeOut"
-    }
-  }
-};
 
 /* ==========================================================================
    MAIN COMPONENT
@@ -360,7 +337,6 @@ export const PortalSelectorV2: React.FC = () => {
         {professionalWorkspaces.map((workspace) => (
           <motion.div
             key={workspace.id}
-            variants={cardVariants}
             onHoverStart={() => setHoveredCard(workspace.id)}
             onHoverEnd={() => setHoveredCard(null)}
             onClick={() => handleWorkspaceSelect(workspace)}
