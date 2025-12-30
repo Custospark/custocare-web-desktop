@@ -171,8 +171,8 @@ export const SignUp: React.FC = () => {
 
   return (
     <AuthLayout
-      title="Create Account"
-      subtitle="Join healthcare's AI revolution"
+      title="Let’s get you started…"
+      subtitle="Sign up to access your clinical dashboard."
       heroHeadline="Transform Patient Care"
       heroSubtext="Access cutting-edge AI-powered clinical decision support trusted by leading healthcare institutions."
       showBackToLogin

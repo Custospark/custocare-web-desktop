@@ -216,7 +216,7 @@ const ForgotPassword: React.FC = () => {
   // -------------------------------
   return (
     <AuthLayout
-      title="Reset Password"
+      title="Let’s reset your password"
       subtitle="Enter your email to receive reset instructions"
       heroImage="https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=1200&q=80"
       heroHeadline="Secure Account Recovery"
