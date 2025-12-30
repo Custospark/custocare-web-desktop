@@ -23,7 +23,6 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Hospital,
-  User,
   Building2,
   Stethoscope,
   Heart,
@@ -44,16 +43,11 @@ import {
   Star,
   ChevronRight,
   Brain,
-  Briefcase,
   UserCheck,
   Building,
-  Microscope,
   Pill,
-  Syringe,
   FileHeart,
   HeartPulse,
-  BedDouble,
-  Ambulance,
   Calendar,
   MessageSquare
 } from 'lucide-react';
@@ -61,6 +55,8 @@ import { cn } from '../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../app/store/slices/uiSlice';
 import {ROUTES} from '../../routes/onboardingRouteConstants'
+import { ComponentType, SVGProps } from 'react';
+
 
 /* ==========================================================================
    REMOTE IMAGES (Unsplash - Healthcare Focused)
@@ -79,18 +75,28 @@ const IMAGES = {
 /* ==========================================================================
    TYPE DEFINITIONS
    ========================================================================== */
+   type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 interface Role {
   id: string;
   title: string;
   subtitle: string;
   description: string;
-  icon: React.ComponentType<any>;
+
+  icon: IconComponent;
+
   gradient: string;
   hoverGradient: string;
   image: string;
   route: string;
+
   benefits: string[];
-  stats: { label: string; value: string; icon: React.ComponentType<any> }[];
+
+  stats: {
+    label: string;
+    value: string;
+    icon: IconComponent;
+  }[];
+
   testimonial: {
     name: string;
     role: string;
@@ -98,8 +104,13 @@ interface Role {
     avatar: string;
     rating: number;
   };
-  features: { icon: React.ComponentType<any>; text: string }[];
+
+  features: {
+    icon: IconComponent;
+    text: string;
+  }[];
 }
+
 
 /* ==========================================================================
    ROLE DATA - UPDATED ROUTES
@@ -221,14 +232,6 @@ const ROLES: Role[] = [
 /* ==========================================================================
    ANIMATION VARIANTS
    ========================================================================== */
-const fadeInUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { 
-    opacity: 1, 
-    y: 0,
-    transition: { duration: 0.6, ease: "easeOut" }
-  }
-};
 
 const staggerContainer = {
   hidden: { opacity: 0 },
@@ -241,32 +244,7 @@ const staggerContainer = {
   }
 };
 
-const scaleIn = {
-  hidden: { scale: 0.9, opacity: 0 },
-  visible: { 
-    scale: 1, 
-    opacity: 1,
-    transition: { type: "spring", stiffness: 100, damping: 15 }
-  }
-};
 
-const slideInFromLeft = {
-  hidden: { x: -50, opacity: 0 },
-  visible: { 
-    x: 0, 
-    opacity: 1,
-    transition: { duration: 0.6, ease: "easeOut" }
-  }
-};
-
-const slideInFromRight = {
-  hidden: { x: 50, opacity: 0 },
-  visible: { 
-    x: 0, 
-    opacity: 1,
-    transition: { duration: 0.6, ease: "easeOut" }
-  }
-};
 
 /* ==========================================================================
    MAIN COMPONENT
@@ -350,7 +328,6 @@ export const RoleSelection: React.FC = () => {
     <motion.div 
       initial="hidden"
       animate="visible"
-      variants={fadeInUp}
       className="relative overflow-hidden rounded-3xl mb-12"
     >
       <div className="absolute inset-0">
@@ -453,7 +430,6 @@ export const RoleSelection: React.FC = () => {
         return (
           <motion.div
             key={role.id}
-            variants={fadeInUp}
             onMouseEnter={() => setHoveredRole(role.id)}
             onMouseLeave={() => setHoveredRole(null)}
             onClick={() => handleRoleSelect(role.id)}
@@ -965,18 +941,6 @@ export const RoleSelection: React.FC = () => {
           </div>
         </div>
       </footer>
-
-      <style jsx global>{`
-        @keyframes gradient {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        .animate-gradient {
-          background-size: 200% 200%;
-          animation: gradient 3s ease infinite;
-        }
-      `}</style>
     </div>
   );
 };
