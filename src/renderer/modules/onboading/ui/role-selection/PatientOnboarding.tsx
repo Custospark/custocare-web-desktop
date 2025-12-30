@@ -52,7 +52,12 @@ import {
 import { cn } from '../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../app/store/slices/uiSlice';
-import {ROUTES} from '../../routes/onboardingRouteConstants'
+import {ROUTES} from '../../routes/onboardingRouteConstants';
+import { scaleIn} from '../../../../shared/components/animations/motionVariants'
+import { fadeInUp} from '../../../../shared/components/animations/motionVariants'
+import { slideInRight} from '../../../../shared/components/animations/motionVariants'
+
+
 
 /* ==========================================================================
    REMOTE IMAGES (Unsplash - High Quality, Healthcare Focused)
@@ -83,6 +88,7 @@ interface FormData {
   emergencyName: string;
   emergencyRelationship: string;
   emergencyPhone: string;
+  state?: string; 
 }
 
 interface GlobalPatientID {
@@ -103,45 +109,8 @@ interface Testimonial {
   rating: number;
 }
 
-/* ==========================================================================
-   ANIMATION VARIANTS
-   ========================================================================== */
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
-    y: 0,
-    transition: { duration: 0.6, ease: "easeOut" }
-  }
-};
 
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
 
-const scaleIn = {
-  hidden: { scale: 0.8, opacity: 0 },
-  visible: { 
-    scale: 1, 
-    opacity: 1,
-    transition: { type: "spring", stiffness: 100 }
-  }
-};
-
-const slideInRight = {
-  hidden: { x: 50, opacity: 0 },
-  visible: { 
-    x: 0, 
-    opacity: 1,
-    transition: { duration: 0.5, ease: "easeOut" }
-  }
-};
 
 /* ==========================================================================
    TESTIMONIAL DATA
@@ -544,7 +513,7 @@ export const PatientOnboarding: React.FC = () => {
                 "w-full px-4 py-3 rounded-lg border appearance-none pr-10",
                 "focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all",
                 designSystem.colors.input,
-                icon && "pl-11"
+                icon ? "pl-11" : undefined,
               )}
             >
               <option value="">Select {label.toLowerCase()}</option>
@@ -558,13 +527,14 @@ export const PatientOnboarding: React.FC = () => {
               value={value}
               onChange={(e) => setFormData(prev => ({ ...prev, [field]: e.target.value }))}
               placeholder={placeholder}
-              className={cn(
+           className={cn(
                 "w-full px-4 py-3 rounded-lg border",
                 "focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all",
                 designSystem.colors.input,
-                icon && "pl-11",
-                !isEmpty && "border-green-500/30"
-              )}
+                icon ? "pl-11" : undefined,
+                !isEmpty ? "border-green-500/30" : undefined
+                )}
+
             />
           )}
           
@@ -1466,17 +1436,19 @@ const renderFormSection = () => (
       </footer>
 
       {/* Add custom animation for gradient text */}
-      <style jsx global>{`
+      <style>{`
         @keyframes gradient {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
+
         .animate-gradient {
-          background-size: 200% 200%;
-          animation: gradient 3s ease infinite;
+            background-size: 200% 200%;
+            animation: gradient 3s ease infinite;
         }
-      `}</style>
+        `}</style>
+
     </div>
   );
 };
