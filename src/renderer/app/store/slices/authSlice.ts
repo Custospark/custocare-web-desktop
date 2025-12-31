@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { UserProfile } from '../../../modules/onboading/api/auth';// Adjust path as needed
+import type { UserProfile } from '../../../modules/onboading/api/queries/login/loginTypes';// Adjust path as needed
 
 interface AuthState {
   user: UserProfile | null;

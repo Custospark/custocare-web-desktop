@@ -4,7 +4,7 @@ import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAppSelector } from '../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../shared/types/cn';
-import { useLoginMutation } from '../../api/queries/loginQuery';
+import { useLoginMutation } from '../../api/queries/login/loginQuery';
 import {ROUTES} from '../../routes/onboardingRouteConstants'
 
 interface FormState {
@@ -22,11 +22,11 @@ interface FormErrors {
 
 export const Login: React.FC = () => {
   const theme = useAppSelector((state) => state.ui.theme);
-  const { error: authError } = useAppSelector((state) => state.auth);
+  // const { error: authError } = useAppSelector((state) => state.auth);
   
   const loginMutation = useLoginMutation();
   const isLoading = loginMutation.isPending;
-  const error = authError || loginMutation.error?.message;
+  // const error = authError || loginMutation.error?.message;
 
   const [formState, setFormState] = useState<FormState>({
     email: '',
@@ -124,7 +124,7 @@ export const Login: React.FC = () => {
       heroSubtext="Join thousands of healthcare professionals using AI-powered decision support to improve patient care."
     >
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-        {(formErrors.general || error) && (
+        {(formErrors.general) && (
           <div
             className={cn(
               'flex items-start gap-3 p-4 rounded-xl border',
@@ -135,7 +135,7 @@ export const Login: React.FC = () => {
             role="alert"
           >
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <p className="text-sm">{formErrors.general || error}</p>
+            <p className="text-sm">{formErrors.general}</p>
           </div>
         )}
 

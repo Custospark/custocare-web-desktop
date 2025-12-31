@@ -16,7 +16,7 @@ import AuthLayout from './AuthLayout';
 import { cn } from '../../../../shared/types/cn';
 import { countryCodes } from './countryCodes';
 // Import the useRegister hook from the API layer
-import { useRegister } from '../../api/queries/registerQuery'
+import { useRegister } from '../../api/queries/register/registerUserQuery'
 
 interface FormState {
   email: string;

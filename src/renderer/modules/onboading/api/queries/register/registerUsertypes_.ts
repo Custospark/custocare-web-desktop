@@ -1,5 +1,5 @@
-import { axiosInstance } from '../../../../app/api/axiosConfig';
-import { AUTH_ENDPOINTS } from '../constants'
+import { axiosInstance } from '../../../../../app/api/axiosConfig';
+import { AUTH_ENDPOINTS } from '../../api-endpoints';
 
 export interface RegisterRequest {
   email: string;
@@ -70,14 +70,21 @@ export interface RegisterResponse {
 
 export interface RegisterErrorResponse {
   success: false;
-  code: 'EMAIL_ALREADY_REGISTERED' | 'NATIONAL_ID_ALREADY_REGISTERED' | 'REGISTRATION_FAILED';
+  code:
+    | 'EMAIL_ALREADY_REGISTERED'
+    | 'NATIONAL_ID_ALREADY_REGISTERED'
+    | 'REGISTRATION_FAILED'
+    | 'NETWORK_ERROR'
+    | 'VALIDATION_FAILED';
   message: string;
   user: null;
   token: null;
   requires_mfa: false;
 }
 
-export const registerUser = async (data: RegisterRequest): Promise<RegisterResponse> => {
+export const registerUser = async (
+  data: RegisterRequest
+): Promise<RegisterResponse> => {
   const response = await axiosInstance.post<RegisterResponse>(
     AUTH_ENDPOINTS.REGISTER,
     data

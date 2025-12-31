@@ -1,6 +1,6 @@
 import { axiosInstance } from '../../../../app/api/axiosConfig';
-import { AUTH_ENDPOINTS } from '../constants/index';
-import type { LoginRequest, BackendLoginResponse } from '../auth';
+import { AUTH_ENDPOINTS } from '../api-endpoints/index';
+import type { LoginRequest, BackendLoginResponse } from '../queries/login/loginTypes';
 import { AxiosError } from 'axios';
 
 export const authApi = {
