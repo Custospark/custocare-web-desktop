@@ -33,7 +33,7 @@ export const useRegister = (
 
     onSuccess: (data) => {
       // Show success toast
-      showToast('success', data.message || 'Account created successfully!');
+      showToast('success', data.message+" Please Choose your role." || 'Account created successfully!');
 
       // Dispatch login and navigate
       if (data.user && data.token) {
