@@ -6,7 +6,8 @@ import { store } from './app/store/store';
 import { queryClient } from './app/api/axiosConfig';
 import AppRoutes from './app/routes';
 import ErrorBoundary from './shared/components/Loading/ErrorBoundary';
-import { AppProvider } from './app/store/state/AppContext';
+import { AppProvider } from './app/store/contexts/app/AppContext';
+import { ToastProvider } from './app/store/contexts/toast/ToastContext';
 import './App.css';
 
 /**
@@ -27,15 +28,15 @@ import './App.css';
  */
 function App() {
   return (
-    <ErrorBoundary>
+      <ToastProvider>
+          <ErrorBoundary>
       <Provider store={store}>
         <QueryClientProvider client={queryClient}>
+         <Router>
           <AppProvider>
-            <Router>
-              <AppRoutes />
-            </Router>
+            <AppRoutes />
           </AppProvider>
-
+        </Router>
           {process.env.NODE_ENV === 'development' && (
             <ReactQueryDevtools 
               initialIsOpen={false}
@@ -45,6 +46,8 @@ function App() {
         </QueryClientProvider>
       </Provider>
     </ErrorBoundary>
+    </ToastProvider>
+    
   );
 }
 

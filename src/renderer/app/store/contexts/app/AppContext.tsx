@@ -1,18 +1,7 @@
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
-import { appReducer, initialState } from './appReducer';
-import {type AppState } from './appTypes';
-
-interface AppContextType {
-  state: AppState;
-  toggleSidebar: () => void;
-  toggleTheme: () => void;
-  setSystemStatus: (status: AppState['systemStatus']) => void;
-  setSearchQuery: (query: string) => void;
-  setCurrentPage: (page: AppState['currentPage']) => void;
-}
-
-const AppContext = createContext<AppContextType | undefined>(undefined);
-
+import React, { useReducer, useCallback } from 'react';
+import { appReducer, initialState } from '../../state/appReducer';
+import {type AppState } from '../../state/appTypes';
+import { AppContext } from './useApp';
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
@@ -60,10 +49,4 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useAppContext() {
-  const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useAppContext must be used within AppProvider');
-  }
-  return context;
-}
+
