@@ -247,11 +247,11 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
             {/* Theme Toggle */}
             <motion.button
-              whileHover={{ scale: 1.05, rotate: 15 }}
+              whileHover={{ scale: 1.05, rotate: 2 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => dispatch(toggleTheme())}
               className={cn(
-                'flex items-center gap-2 px-3.5 py-2.5 rounded-xl transition-all duration-300 border-2 shadow-sm',
+                'flex items-center cursor-pointer gap-2 px-3.5 py-2.5 rounded-xl transition-all duration-300 border-2 shadow-sm',
                 'hover:shadow-md focus:outline-none focus:ring-2',
                 theme === 'dark'
                   ? 'bg-slate-800/60 hover:bg-slate-800 border-slate-700/60 text-amber-300 focus:ring-cyan-500/50'
