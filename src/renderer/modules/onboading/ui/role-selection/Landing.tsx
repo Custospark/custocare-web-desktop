@@ -295,7 +295,11 @@ export const Landing: React.FC = () => {
                 >
                   Transforming healthcare through AI-powered intelligence 
                   and compassionate care delivery.
-                </motion.p>
+                  {/* CustoCare AI is an African-owned, secure healthcare operating system designed for national data sovereignty, local workflows, and long-term public health resilience. */}
+                {/* CustoCare AI is an African-owned, secure healthcare operating system, designed for national data sovereignty, local workflows, and long-term public health resilience—transforming healthcare through AI-powered intelligence and compassionate care delivery. */}
+                  </motion.p>
+
+
               </div>
 
               {/* MOBILE ONLY: Access Panel After Description */}
