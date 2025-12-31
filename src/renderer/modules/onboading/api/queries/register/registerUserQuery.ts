@@ -1,13 +1,15 @@
-import { useMutation, UseMutationResult } from '@tanstack/react-query';
+import { useMutation, type UseMutationResult } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch } from '../../../../../app/store/hooks/useApp';
 import { loginSuccess } from '../../../../../app/store/slices/authSlice';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
-import {
-  registerUser,
-  RegisterRequest,
+import type{
+   RegisterRequest,
   RegisterResponse,
   RegisterErrorResponse,
+} from './registerUserTypes';
+import {
+  registerUser,
 } from './registerUserTypes';
 import { ROUTES } from '../../../routes/onboardingRouteConstants';
 import { mapRegisterError } from './registerErrorMapper';

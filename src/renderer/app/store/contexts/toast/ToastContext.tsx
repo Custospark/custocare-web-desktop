@@ -1,6 +1,6 @@
 import React, {  useState, useCallback } from 'react';
 import Toast, { ToastContainer } from '../../../../shared/components/Feedback/Toast';
-import { ToastVariant,ToastContext } from './useToast';
+import { type ToastVariant,ToastContext } from './useToast';
 
 interface ToastMessage {
   id: string;
