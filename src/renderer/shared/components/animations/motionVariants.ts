@@ -99,3 +99,34 @@ export const pulseGlowVariants = {
 };
 
 
+export const glowVariants = {
+  rest: { opacity: 0, scale: 0.8 },
+  hover: { 
+    opacity: 1, 
+    scale: 1.1,
+    transition: { duration: 0.4 }
+  }
+};
+
+export const iconVariants = {
+  rest: { rotate: 0, scale: 1 },
+  hover: { 
+    rotate: [0, -5, 5, -5, 0],
+    scale: 1.1,
+    transition: { duration: 0.6 }
+  }
+};
+
+export const checkmarkVariants = {
+  hidden: { scale: 0, rotate: -180, opacity: 0 },
+  visible: { 
+    scale: 1, 
+    rotate: 0, 
+    opacity: 1,
+    transition: { 
+      type: "spring" as const, 
+      stiffness: 200, 
+      damping: 15 
+    }
+  }
+};

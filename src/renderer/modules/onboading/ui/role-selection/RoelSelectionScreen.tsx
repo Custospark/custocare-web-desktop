@@ -173,7 +173,7 @@ export const RoleSelection: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-4 py-12 relative z-10">
+      <main className="flex-1 flex items-center justify-center px-2 py-6 relative z-10">
         <div className="w-full max-w-6xl">
           <motion.div
             variants={containerVariants}
@@ -328,7 +328,7 @@ export const RoleSelection: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 20 }}
-                  className="flex justify-center pt-6"
+                  className="flex justify-center pt-2"
                 >
                   <motion.button
                     onClick={handleContinue}
