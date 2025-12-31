@@ -1331,10 +1331,16 @@ const renderFormSection = () => (
               <button
                 onClick={() => navigate('/login')}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-                  "border border-gray-300 dark:border-gray-600",
-                  "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                )}
+                           'px-5 py-2.5 rounded-lg text-sm text-white cursor-pointer font-semibold transition-all duration-200',
+                           'border',
+                           // Light mode
+                           'border-gray-400 bg-gray-700 hover:bg-gray-700',
+                           // Dark mode
+                           'dark:border-gray-500 dark:text-gray-900 dark:hover:bg-gray-700',
+                           // Interaction
+                           'hover:scale-[1.03] focus:outline-none focus:ring-4',
+                           'focus:ring-blue-500/30 dark:focus:ring-blue-400/30'
+                         )}
               >
                 Existing Patient?
               </button>
@@ -1342,7 +1348,7 @@ const renderFormSection = () => (
               <button
                 onClick={() => dispatch(toggleTheme())}
                 className={cn(
-                  "p-2.5 rounded-lg transition-all duration-200 hover:scale-110",
+                  "p-2.5 rounded-lg transition-all duration-200 cursor-pointer hover:scale-110",
                   "focus:outline-none focus:ring-2 focus:ring-blue-500",
                   theme === 'dark'
                     ? "bg-gray-800 text-amber-400 hover:bg-gray-700"

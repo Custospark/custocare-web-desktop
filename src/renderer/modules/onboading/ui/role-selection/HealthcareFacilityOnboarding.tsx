@@ -1364,7 +1364,7 @@ useEffect(() => {
 
             <div className="flex items-center gap-3">
               <button
-                onClick={() => navigate('/facility/login')}
+                onClick={() => navigate('/login')}
                 className={cn(
                   "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                   "border border-gray-300 dark:border-gray-600",

@@ -548,31 +548,38 @@ export const SignUp: React.FC = () => {
         </div>
 
         {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isLoading || !isFormValid}
-          className={cn(
-            'w-full py-3 rounded-lg font-semibold text-sm mt-6',
-            'transition-all duration-200 flex items-center justify-center gap-2',
-            'focus:outline-none focus:ring-4',
-            isFormValid && !isLoading
-              ? theme === 'dark'
-                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 focus:ring-blue-500/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
-                : 'bg-gradient-to-r from-blue-600 to-blue-600 text-white hover:from-blue-700 hover:to-blue-700 focus:ring-blue-400/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
-              : theme === 'dark'
-                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-          )}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Creating your account...
-            </>
-          ) : (
-            'Create Account'
-          )}
-        </button>
+            <button
+        type="submit"
+        disabled={isLoading || !isFormValid}
+        className={cn(
+          'w-full py-3 rounded-lg font-semibold text-sm mt-6',
+          'transition-all duration-200 flex items-center justify-center gap-2',
+          'focus:outline-none focus:ring-4',
+          isFormValid && !isLoading
+            ? cn(
+                'cursor-pointer',
+                theme === 'dark'
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 focus:ring-blue-500/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
+                  : 'bg-gradient-to-r from-blue-600 to-blue-600 text-white hover:from-blue-700 hover:to-blue-700 focus:ring-blue-400/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
+              )
+            : cn(
+                'cursor-not-allowed',
+                theme === 'dark'
+                  ? 'bg-gray-700 text-gray-500'
+                  : 'bg-gray-200 text-gray-400'
+              )
+        )}
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Creating your account...
+          </>
+        ) : (
+          'Create Account'
+        )}
+      </button>
+
 
         {/* Sign in link */}
         <p className={cn('text-center text-xs pt-1', theme === 'dark' ? 'text-gray-500' : 'text-gray-600')}>
