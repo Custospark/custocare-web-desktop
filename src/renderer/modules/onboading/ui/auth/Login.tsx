@@ -4,7 +4,7 @@ import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAppSelector } from '../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../shared/types/cn';
-import { useLoginMutation } from './../../api/queries/index';
+import { useLoginMutation } from '../../api/queries/loginQuery';
 import {ROUTES} from '../../routes/onboardingRouteConstants'
 
 interface FormState {

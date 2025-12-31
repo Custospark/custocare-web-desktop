@@ -229,8 +229,8 @@ export const SignUp: React.FC = () => {
 
   return (
     <AuthLayout
-      title="Create your account"
-      subtitle="Join us in just a few steps"
+      title="Let’s get you started…"
+      subtitle="Sign up to access your clinical dashboard."
       heroHeadline="Welcome aboard!"
       heroSubtext="Quick signup, lifetime access. Your journey starts now."
       showBackToLogin
@@ -437,9 +437,9 @@ export const SignUp: React.FC = () => {
           </p>
         )}
 
-        <p className={cn('text-xs mt-1', theme === 'dark' ? 'text-gray-500' : 'text-gray-600')}>
+        {/* <p className={cn('text-xs mt-1', theme === 'dark' ? 'text-gray-500' : 'text-gray-600')}>
           We'll send verification codes via WhatsApp
-        </p>
+        </p> */}
       </div>
         {/* Password */}
         <div>

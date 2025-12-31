@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch } from '../../../../app/store/hooks/useApp';
 import { loginStart, loginSuccess, loginFailure } from '../../../../app/store/slices/authSlice';
-import { authApi } from '../endpoints/index';
+import { authApi } from '../endpoints/login';
 import type { LoginRequest, LoginResponse, UserProfile } from '../auth';
 import {ROUTES} from '../../routes/onboardingRouteConstants'
 
