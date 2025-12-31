@@ -8,7 +8,7 @@ import {
   RegisterRequest,
   RegisterResponse,
   RegisterErrorResponse,
-} from './registerUsertypes_';
+} from './registerUserTypes';
 import { ROUTES } from '../../../routes/onboardingRouteConstants';
 import { mapRegisterError } from './registerErrorMapper';
 
@@ -32,17 +32,10 @@ export const useRegister = (
     mutationFn: registerUser,
 
     onSuccess: (data) => {
-      // Business failure: success = false
-      if (!data.success) {
-        const { message, variant } = mapRegisterError(data.code);
-        showToast(variant, message, 7000);
-        options?.onError?.(data as RegisterErrorResponse);
-        return;
-      }
-
-      // Successful registration
+      // Show success toast
       showToast('success', data.message || 'Account created successfully!');
 
+      // Dispatch login and navigate
       if (data.user && data.token) {
         dispatch(
           loginSuccess({
@@ -56,18 +49,21 @@ export const useRegister = (
           })
         );
 
-        navigate(data.requires_mfa ? ROUTES.TWO_FACTOR_AUTH : ROUTES.STAFF_DASHBOARD);
+        navigate(data.requires_mfa ? ROUTES.TWO_FACTOR_AUTH : ROUTES.ROLE_SELECTION);
       }
 
       options?.onSuccess?.(data);
     },
 
-    onError: () => {
-      showToast(
-        'error',
-        'Unable to connect to the server. Please check your internet connection.',
-        7000
-      );
+    onError: (error: RegisterErrorResponse) => {
+      // Map error code to user-friendly message
+      const { message, variant } = mapRegisterError(error.code);
+      
+      // Show error toast
+      showToast(variant, message, 7000);
+
+      // Call custom error handler if provided
+      options?.onError?.(error);
     },
   });
 };

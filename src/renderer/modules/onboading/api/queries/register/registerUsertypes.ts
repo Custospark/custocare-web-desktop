@@ -1,5 +1,6 @@
 import { axiosInstance } from '../../../../../app/api/axiosConfig';
 import { AUTH_ENDPOINTS } from '../../api-endpoints';
+import { AxiosError } from 'axios';
 
 export interface RegisterRequest {
   email: string;
@@ -75,7 +76,8 @@ export interface RegisterErrorResponse {
     | 'NATIONAL_ID_ALREADY_REGISTERED'
     | 'REGISTRATION_FAILED'
     | 'NETWORK_ERROR'
-    | 'VALIDATION_FAILED';
+    | 'VALIDATION_FAILED'
+    | 'UNKNOWN_ERROR';
   message: string;
   user: null;
   token: null;
@@ -85,9 +87,57 @@ export interface RegisterErrorResponse {
 export const registerUser = async (
   data: RegisterRequest
 ): Promise<RegisterResponse> => {
-  const response = await axiosInstance.post<RegisterResponse>(
-    AUTH_ENDPOINTS.REGISTER,
-    data
-  );
-  return response.data;
+  try {
+    const response = await axiosInstance.post<RegisterResponse>(
+      AUTH_ENDPOINTS.REGISTER,
+      data
+    );
+
+    // If API returns success: false, treat it as an error
+    if (!response.data.success) {
+      throw new Error(response.data.code || 'REGISTRATION_FAILED');
+    }
+
+    return response.data;
+  } catch (error) {
+    // Transform Axios errors into RegisterErrorResponse
+    if (error instanceof Error && error.message) {
+      // Check if it's a business logic error (API returned success: false)
+      const axiosError = error as AxiosError<RegisterResponse>;
+      
+      if (axiosError.response?.data) {
+        const apiError = axiosError.response.data;
+        throw {
+          success: false,
+          code: apiError.code || 'REGISTRATION_FAILED',
+          message: apiError.message || 'Registration failed',
+          user: null,
+          token: null,
+          requires_mfa: false,
+        } as RegisterErrorResponse;
+      }
+
+      // Network error
+      if (!axiosError.response) {
+        throw {
+          success: false,
+          code: 'NETWORK_ERROR',
+          message: 'Unable to connect to the server',
+          user: null,
+          token: null,
+          requires_mfa: false,
+        } as RegisterErrorResponse;
+      }
+    }
+
+    // Unknown error
+    throw {
+      success: false,
+      code: 'UNKNOWN_ERROR',
+      message: 'An unexpected error occurred',
+      user: null,
+      token: null,
+      requires_mfa: false,
+    } as RegisterErrorResponse;
+  }
 };

@@ -1,4 +1,3 @@
-
 export type ToastVariant = 'error' | 'warning';
 
 interface MappedError {
@@ -44,6 +43,13 @@ export const mapRegisterError = (code: string): MappedError => {
       return {
         message:
           'Unable to connect to the server. Please check your internet connection.',
+        variant: 'error',
+      };
+
+    case 'UNKNOWN_ERROR':
+      return {
+        message:
+          'An unexpected error occurred. Please try again.',
         variant: 'error',
       };
 
