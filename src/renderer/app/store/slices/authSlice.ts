@@ -1,8 +1,8 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { UserProfile } from '../../../modules/onboading/api/queries/login/loginTypes';// Adjust path as needed
+import type { UnifiedUserProfile } from '../../../shared/types/userTypes';
 
 interface AuthState {
-  user: UserProfile | null;
+  user: UnifiedUserProfile | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -10,6 +10,7 @@ interface AuthState {
   loginError: string | null;
 }
 
+// Initial state remains the same
 const initialState: AuthState = {
   user: null,
   token: localStorage.getItem('authToken'),
@@ -28,7 +29,7 @@ const authSlice = createSlice({
       state.error = null;
       state.loginError = null;
     },
-    loginSuccess: (state, action: PayloadAction<{ user: UserProfile; token: string }>) => {
+    loginSuccess: (state, action: PayloadAction<{ user: UnifiedUserProfile; token: string }>) => {
       state.isLoading = false;
       state.user = action.payload.user;
       state.token = action.payload.token;
@@ -49,7 +50,7 @@ const authSlice = createSlice({
       state.loginError = null;
       localStorage.removeItem('authToken');
     },
-    setUser: (state, action: PayloadAction<UserProfile>) => {
+    setUser: (state, action: PayloadAction<UnifiedUserProfile>) => {
       state.user = action.payload;
     },
     setToken: (state, action: PayloadAction<string>) => {

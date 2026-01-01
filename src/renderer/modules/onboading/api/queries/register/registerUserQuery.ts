@@ -3,16 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useAppDispatch } from '../../../../../app/store/hooks/useApp';
 import { loginSuccess } from '../../../../../app/store/slices/authSlice';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
-import type{
-   RegisterRequest,
+import type {
+  RegisterRequest,
   RegisterResponse,
   RegisterErrorResponse,
 } from './registerUserTypes';
-import {
-  registerUser,
-} from './registerUserTypes';
+import { registerUser } from './registerUserTypes';
 import { ROUTES } from '../../../routes/onboardingRouteConstants';
 import { mapRegisterError } from './registerErrorMapper';
+import { mapUserResourceToProfile } from '../../../../../shared/types/userTypes';
 
 interface UseRegisterOptions {
   onSuccess?: (data: RegisterResponse) => void;
@@ -34,22 +33,16 @@ export const useRegister = (
     mutationFn: registerUser,
 
     onSuccess: (data) => {
-      // Show success toast
-      showToast('success', data.message+" Please Choose your role." || 'Account created successfully!');
+      showToast('success', data.message + " Please Choose your role." || 'Account created successfully!');
 
-      // Dispatch login and navigate
       if (data.user && data.token) {
-        dispatch(
-          loginSuccess({
-            user: {
-              id: data.user.id,
-              email: data.user.contact.email || '',
-              name: `${data.user.profile.first_name} ${data.user.profile.last_name}`,
-              role: 'user',
-            },
-            token: data.token,
-          })
-        );
+        // Map UserResource to UserProfile
+        const userProfile = mapUserResourceToProfile(data.user);
+        
+        dispatch(loginSuccess({
+          user: userProfile,
+          token: data.token,
+        }));
 
         navigate(data.requires_mfa ? ROUTES.TWO_FACTOR_AUTH : ROUTES.ROLE_SELECTION);
       }
@@ -58,13 +51,8 @@ export const useRegister = (
     },
 
     onError: (error: RegisterErrorResponse) => {
-      // Map error code to user-friendly message
       const { message, variant } = mapRegisterError(error.code);
-      
-      // Show error toast
       showToast(variant, message, 7000);
-
-      // Call custom error handler if provided
       options?.onError?.(error);
     },
   });

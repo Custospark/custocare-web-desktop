@@ -7,18 +7,29 @@ import {
   loginFailure,
 } from '../../../../../app/store/slices/authSlice';
 import { authApi } from '../../endpoints/login';
-import type { LoginRequest, LoginResponse, UserProfile } from './loginTypes';
 import { ROUTES } from '../../../routes/onboardingRouteConstants';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
+import { 
+  LoginRequest, 
+  BackendLoginResponse, 
+  UnifiedUserProfile, 
+  mapLoginUserToProfile 
+} from '../../../../../shared/types/userTypes';
+
+// What we return from mutation (matches what loginSuccess expects)
+interface AuthData {
+  user: UnifiedUserProfile;
+  token: string;
+}
 
 export const useLoginMutation = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  return useMutation<LoginResponse | null, Error, LoginRequest>({
-    mutationFn: async (credentials) => {
-      const response = await authApi.login(credentials);
+  return useMutation<AuthData | null, Error, LoginRequest>({
+    mutationFn: async (credentials): Promise<AuthData | null> => {
+      const response: BackendLoginResponse = await authApi.login(credentials);
 
       switch (response.code) {
         case 'LOGIN_SUCCESS': {
@@ -26,20 +37,9 @@ export const useLoginMutation = () => {
             throw new Error('Invalid login response from server.');
           }
 
-          const userProfile: UserProfile = {
-            id: response.user.id.toString(),
-            uuid: response.user.uuid,
-            email: response.user.email || '',
-            name:
-              response.user.name ||
-              response.user.profile?.full_name ||
-              '',
-            role: response.user.role || 'user',
-            national_id_country_code:
-              response.user.national_id_country_code,
-            profile: response.user.profile,
-          };
-
+          // Map to UnifiedUserProfile
+          const userProfile: UnifiedUserProfile = mapLoginUserToProfile(response.user);
+          
           return {
             user: userProfile,
             token: response.token,
@@ -58,26 +58,13 @@ export const useLoginMutation = () => {
       dispatch(loginStart());
     },
 
-    onSuccess: (data) => {
+    onSuccess: (data: AuthData | null) => {
       if (data) {
-        // ✅ Successful login
         dispatch(loginSuccess(data));
-
-        showToast(
-          'success',
-          'Login successful. Welcome back!',
-          3000
-        );
-
+        showToast('success', 'Login successful. Welcome back!', 3000);
         navigate(ROUTES.PORTAL_SELECTOR);
       } else {
-        // 🔐 MFA required
-        showToast(
-          'info',
-          'Two-factor authentication required.',
-          4000
-        );
-
+        showToast('info', 'Two-factor authentication required.', 4000);
         navigate(ROUTES.TWO_FACTOR_AUTH);
       }
     },
@@ -85,19 +72,13 @@ export const useLoginMutation = () => {
     onError: (error) => {
       let message = error.message;
 
-      // Network / infra errors
-      if (
-        message.toLowerCase().includes('network') ||
-        message.toLowerCase().includes('timeout')
-      ) {
-        message =
-          'Unable to connect to the server. Please check your internet connection.';
+      if (message.toLowerCase().includes('network') || 
+          message.toLowerCase().includes('timeout')) {
+        message = 'Unable to connect to the server. Please check your internet connection.';
       }
 
       dispatch(loginFailure(message));
-
       showToast('error', message, 7000);
-
       console.error('Login error:', error);
     },
   });
