@@ -7,9 +7,10 @@ import { AxiosError } from 'axios';
  * Minimal data collection as per requirements
  */
 export interface RegisterPatientRequest {
+  user_id:string;
   date_of_birth: string; // Format: YYYY-MM-DD
   biological_sex: 'male' | 'female' | 'intersex' | 'unknown';
-  emergency_contact: {
+  emergency_contact_chain_encrypted: {
     full_name: string;
     phone: string;
     relationship: string;

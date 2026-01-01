@@ -67,7 +67,7 @@ const ROLES = [
   },
   {
     id: 'facility-owner',
-    title: 'Healthcare Facility',
+    title: 'Healthcare Facility Owner',
     subtitle: 'Hospitals, Clinics & Organizations',
     description: 'Transform operations with enterprise-grade AI tools and boost efficiency by 40% on average.',
     icon: Building2,
@@ -100,6 +100,9 @@ export const RoleSelection: React.FC = () => {
       navigate(selectedRoleData.route);
     }
   };
+
+    const { user } = useAppSelector((state) => state.auth);
+    const loggInUserName=user?.profile.first_name
 
   return (
     <div className={cn(
@@ -183,12 +186,27 @@ export const RoleSelection: React.FC = () => {
           >
             {/* Header Section */}
               <motion.div variants={itemVariants} className="text-center space-y-2">
-                  <h1 className={cn(
-                    "text-3xl sm:text-4xl font-bold tracking-tight",
+                <h1
+                  className={cn(
+                    "text-3xl sm:text-4xl font-semibold tracking-tight",
                     theme === 'dark' ? "text-white" : "text-slate-900"
-                  )}>
-                    Choose your role to continue
-                  </h1>
+                  )}
+                >
+                  Hi{" "}
+                  <span
+                    className={cn(
+                      "font-medium",
+                      theme === 'dark'
+                        ? "text-indigo-300"
+                        : "text-indigo-600"
+                    )}
+                  >
+                    {loggInUserName}
+                  </span>
+                  , choose your role to continue..
+                </h1>
+
+
                 </motion.div>
             {/* Role Cards */}
             <motion.div
