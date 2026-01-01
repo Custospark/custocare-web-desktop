@@ -8,6 +8,7 @@ import AppRoutes from './app/routes';
 import ErrorBoundary from './shared/components/Loading/ErrorBoundary';
 import { AppProvider } from './app/store/contexts/app/AppContext';
 import { ToastProvider } from './app/store/contexts/toast/ToastContext';
+import AppInitializer from './AppInitializer';
 import './App.css';
 
 /**
@@ -28,28 +29,29 @@ import './App.css';
  */
 function App() {
   return (
-      <ToastProvider>
-          <ErrorBoundary>
-      <Provider store={store}>
-        <QueryClientProvider client={queryClient}>
-         <Router>
-          <AppProvider>
-            <AppRoutes />
-          </AppProvider>
-        </Router>
-          {process.env.NODE_ENV === 'development' && (
-            <ReactQueryDevtools 
-              initialIsOpen={false}
-              buttonPosition="bottom-right"
-            />
-          )}
-        </QueryClientProvider>
-      </Provider>
-    </ErrorBoundary>
+    <ToastProvider>
+      <ErrorBoundary>
+        <Provider store={store}>
+          <QueryClientProvider client={queryClient}>
+            <Router>
+              <AppProvider>
+                {/* Wrap AppRoutes with AppInitializer */}
+                <AppInitializer>
+                  <AppRoutes />
+                </AppInitializer>
+              </AppProvider>
+            </Router>
+            {process.env.NODE_ENV === 'development' && (
+              <ReactQueryDevtools 
+                initialIsOpen={false}
+                buttonPosition="bottom-right"
+              />
+            )}
+          </QueryClientProvider>
+        </Provider>
+      </ErrorBoundary>
     </ToastProvider>
-    
   );
 }
 
 export default App;
-

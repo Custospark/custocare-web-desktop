@@ -44,6 +44,8 @@ import {
 import { cn } from '../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../app/store/slices/uiSlice';
+import { useToast } from '../../../../app/store/contexts/toast/useToast';
+import { logout } from '../../../../app/store/slices/authSlice';
 
 /* ==========================================================================
    REMOTE IMAGES (Professional Healthcare)
@@ -208,9 +210,17 @@ export const PortalSelectorV2: React.FC = () => {
     navigate('/support');
   };
 
-  const handleLogout = () => {
-    navigate(ROUTES.LANDING);
-  };
+ const {showToast}=useToast();
+ 
+   const handleLogout = () => {
+     dispatch(logout());
+     showToast(
+       'info',
+       'You’ve been logged out successfully. Thank you for using CustoCare AI — see you again soon!',
+       8000
+     );
+     navigate(ROUTES.LANDING);
+   };
 
   /* ==========================================================================
      RENDER COMPONENTS

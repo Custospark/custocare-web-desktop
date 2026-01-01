@@ -9,16 +9,10 @@ import {
 } from 'lucide-react';
 import { cn } from '../../types/cn';
 import { useNavigate } from 'react-router-dom';
-// import { Mail, Lock } from 'lucide-react';
-// import { useLogin } from '../../api/queries/authQueries';
-// import { useAppDispatch } from '../../store/hooks/useApp';
-// import { loginSuccess } from '../../store/slices/authSlice'
-// import { useNotification } from '../../store/hooks/useNotifications';
-// import Button from '../Common/Button';
 import { ROUTES } from '../../../app/routes/routeConstants';
-// import { useAppDispatch, useAppSelector } from '../../store/hooks/useApp';
-// import { logout } from '../../store/slices/authSlice';
-
+import {logout} from '../../../app/store/slices/authSlice';
+import { useAppDispatch } from '../../../app/store/hooks/useApp';
+import { useToast } from '../../../app/store/contexts/toast/useToast';
 export interface NavbarProps {
   theme?: 'light' | 'dark';
   onMenuClick?: () => void;
@@ -55,20 +49,6 @@ interface SmartSearch {
   icon: React.ReactNode;
 }
 
-/**
- * World-Class Premium Navbar Component
- * 
- * Enhanced Features:
- * ✨ Centered dropdowns on mobile (< 768px)
- * 🎨 Smart search with AI-powered suggestions
- * 🚀 Quick actions with keyboard shortcuts
- * 🔔 Rich notification system with actions
- * 👤 Premium user profile management
- * 🎯 Workflow automation shortcuts
- * 📊 Real-time analytics preview
- * 🌐 Multi-language support
- * ♿ Full accessibility (WCAG 2.1 AAA)
- */
 export const Navbar: React.FC<NavbarProps> = ({ 
   theme = 'dark',
   onThemeToggle,
@@ -89,6 +69,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const smartSearchRef = useRef<HTMLDivElement>(null);
   const workflowRef = useRef<HTMLDivElement>(null);
 
+
   const isDark = theme === 'dark';
 
   // Detect screen size
@@ -99,11 +80,17 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   
-  // const dispatch = useAppDispatch();
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const {showToast}=useToast();
 
   const handleLogout = () => {
-    // dispatch(logout());
+    dispatch(logout());
+    showToast(
+      'info',
+      'You’ve been logged out successfully. Thank you for using CustoCare AI — see you again soon!',
+      8000
+    );
     navigate(ROUTES.LANDING);
   };
 

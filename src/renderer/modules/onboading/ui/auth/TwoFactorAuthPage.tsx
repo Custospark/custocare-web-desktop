@@ -2,7 +2,6 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Shield, AlertCircle, Loader2, CheckCircle, Mail, Smartphone, RefreshCw } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
-import { loginSuccess } from '../../../../app/store/slices/authSlice';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../shared/types/cn';
 import {ROUTES} from '../../routes/onboardingRouteConstants'
@@ -215,17 +214,8 @@ export const TwoFactorAuthPage: React.FC = () => {
       // Simulating success for demo (accept any 6-digit code)
       
       // Mock successful authentication
-      const mockResponse = {
-        user: {
-          id: '1',
-          email: email || 'user@hospital.com',
-          name: 'Dr. Sarah Johnson',
-          role: 'Physician',
-        },
-        token: 'mock_jwt_token_2fa_' + Date.now(),
-      };
 
-      dispatch(loginSuccess(mockResponse));
+      // dispatch(loginSuccess(mockResponse));
       setIsSuccess(true);
     } catch (err) {
       setError(

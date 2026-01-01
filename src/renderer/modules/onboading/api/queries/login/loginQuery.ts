@@ -61,7 +61,11 @@ export const useLoginMutation = () => {
     onSuccess: (data: AuthData | null) => {
       if (data) {
         dispatch(loginSuccess(data));
-        showToast('success', 'Login successful. Welcome back!', 3000);
+      showToast(
+          'success',
+          'Login successful. Welcome back to CustoCare AI.',
+          5000
+        );
         navigate(ROUTES.PORTAL_SELECTOR);
       } else {
         showToast('info', 'Two-factor authentication required.', 4000);
