@@ -1,1158 +1,1353 @@
 /**
  * ============================================================================
- * MASTER CRAFTSMAN'S HEALTHCARE FACILITY ONBOARDING
+ * HEALTHCARE FACILITY ONBOARDING - COMPACT & RESPONSIVE
  * ============================================================================
  * 
- * DESIGN MASTERY (8 Decades of Wisdom Applied):
+ * DESIGN PHILOSOPHY: Streamlined 3-step registration with minimal scrolling
  * 
- * HUMAN-CENTERED ENHANCEMENTS:
- * 1. ✅ Contextual inline help tooltips - guide without cluttering
- * 2. ✅ Real-time field validation - instant feedback loop
- * 3. ✅ Auto-save progress - psychological safety net
- * 4. ✅ Trust signals at each stage - reduce credential anxiety
- * 5. ✅ Keyboard shortcuts (Tab, Enter, Esc) - power user support
- * 6. ✅ Micro-celebrations - dopamine-driven progress
- * 7. ✅ Smart defaults & autocomplete - reduce cognitive load
- * 8. ✅ Privacy indicators - transparency builds trust
- * 9. ✅ Accessible error messaging - clear recovery paths
- * 10. ✅ Next steps preview - maintain momentum
- * 11. ✅ Graceful degradation - works without JavaScript animations
+ * OPTIMIZATIONS:
+ * - Compact spacing while maintaining readability
+ * - Efficient use of horizontal space
+ * - Responsive grid layouts for all devices
+ * - Reduced header/section heights
+ * - Better mobile experience
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {ROUTES} from '../../routes/onboardingRouteConstants'
 import { 
   Building2,
-  Phone,
-  MapPin,
-  Calendar,
   Shield,
   Check,
   ArrowRight,
   Hospital,
   Sun,
   Moon,
-  Fingerprint,
   BadgeCheck,
-  Mail,
-  FileText,
-  ChevronLeft,
-  AlertCircle,
-  Save,
-  Sparkles,
-  Lock,
-  Eye,
-  CheckCircle2,
-  Zap,
-  TrendingUp,
+  MapPin,
+  Phone,
   Clock,
-  HelpCircle,
   Users,
-  Bed,
-  Ambulance,
   Stethoscope,
-  CreditCard,
-  Building,
-  Search,
+  ChevronLeft,
+  Loader2,
   Award,
+  Search,
+  CheckCircle2,
+  Building,
+  Landmark,
+  School,
+  Church,
+  Briefcase,
+  Zap,
+  Mail,
+  Globe,
+  Sparkles,
+  AlertCircle,
 } from 'lucide-react';
 import { cn } from '../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../app/store/slices/uiSlice';
-
-/* ==========================================================================
-   TYPE DEFINITIONS
-   ========================================================================== */
-interface FacilityFormData {
-  // Stage 1: Facility Information
-  facilityName: string;
-  facilityType: string;
-  establishedYear: string;
-  taxId: string;
-  email: string;
-  phone: string;
-  
-  // Stage 2: Licensing & Accreditation
-  facilityLicenseNumber: string;
-  licenseState: string;
-  npiNumber: string;
-  accreditation: string;
-  medicareProviderNumber: string;
-  medicaidProviderNumber: string;
-  
-  // Stage 3: Facility Details
-  totalBeds: string;
-  departments: string;
-  specialties: string;
-  emergencyServices: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  operatingHours: string;
-}
-
-interface FieldError {
-  [key: string]: string;
-}
-
-interface GlobalFacilityID {
-  fullID: string;
-  generatedAt: string;
-}
+import { ROUTES } from '../../routes/onboardingRouteConstants';
+import { useRegisterFacility } from '../facility-owner/registerFacilityQuery';
+import { 
+  RegisterFacilityRequest,
+  NatureOfFacility,
+  FacilityType,
+  FacilityTier,
+  OperationalStatus,
+  OperatingHours
+} from '../facility-owner/registerFacilityTypes';
+import { countryCodes } from '../auth/countryCodes';
 
 /* ==========================================================================
    DATA CONSTANTS
    ========================================================================== */
-const FACILITY_TYPES = [
-  { value: 'general-hospital', label: 'General Hospital', icon: '🏥', description: 'Acute care facility' },
-  { value: 'specialty-hospital', label: 'Specialty Hospital', icon: '🏨', description: 'Focused care center' },
-  { value: 'outpatient-clinic', label: 'Outpatient Clinic', icon: '🏢', description: 'Ambulatory care' },
-  { value: 'urgent-care', label: 'Urgent Care Center', icon: '🚑', description: 'Immediate care' },
-  { value: 'diagnostic-lab', label: 'Diagnostic Laboratory', icon: '🔬', description: 'Testing facility' },
-  { value: 'imaging-center', label: 'Imaging Center', icon: '📡', description: 'Radiology services' },
-  { value: 'surgical-center', label: 'Surgical Center', icon: '⚕️', description: 'Outpatient surgery' },
-  { value: 'rehabilitation', label: 'Rehabilitation Facility', icon: '🏃', description: 'Recovery center' },
-  { value: 'mental-health', label: 'Mental Health Facility', icon: '🧠', description: 'Psychiatric care' },
-  { value: 'long-term-care', label: 'Long-Term Care Facility', icon: '🏠', description: 'Extended care' },
-  { value: 'dialysis-center', label: 'Dialysis Center', icon: '💉', description: 'Renal care' },
-  { value: 'birthing-center', label: 'Birthing Center', icon: '👶', description: 'Maternity services' },
+
+const NATURE_OF_FACILITY_OPTIONS: Array<{
+  value: NatureOfFacility;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+}> = [
+  { 
+    value: 'government', 
+    label: 'Government', 
+    icon: <Building className="w-4 h-4" />,
+    description: 'Public/gov'
+  },
+  { 
+    value: 'private', 
+    label: 'Private', 
+    icon: <Briefcase className="w-4 h-4" />,
+    description: 'Private owned'
+  },
+  { 
+    value: 'faith_based', 
+    label: 'Faith-based', 
+    icon: <Church className="w-4 h-4" />,
+    description: 'Religious org'
+  },
+  { 
+    value: 'ngo', 
+    label: 'NGO', 
+    icon: <Users className="w-4 h-4" />,
+    description: 'Non-gov'
+  },
+  { 
+    value: 'military', 
+    label: 'Military', 
+    icon: <Shield className="w-4 h-4" />,
+    description: 'Military'
+  },
+  { 
+    value: 'academic', 
+    label: 'Academic', 
+    icon: <School className="w-4 h-4" />,
+    description: 'Teaching'
+  },
+  { 
+    value: 'public_private_partnership', 
+    label: 'Public Private Partnership', 
+    icon: <Landmark className="w-4 h-4" />,
+    description: 'Public-private'
+  },
 ];
 
-const US_STATES = [
-  'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado',
-  'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho',
-  'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana',
-  'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota',
-  'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada',
-  'New Hampshire', 'New Jersey', 'New Mexico', 'New York',
-  'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon',
-  'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota',
-  'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington',
-  'West Virginia', 'Wisconsin', 'Wyoming'
+const FACILITY_TYPE_OPTIONS: FacilityType[] = [
+  'hospital',
+  'clinic',
+  'urgent_care',
+  'emergency_department',
+  'ambulatory_surgery_center',
+  'diagnostic_center',
+  'rehabilitation_center',
+  'long_term_care',
+  'hospice',
+  'community_health_center',
+  'specialty_center',
+  'telehealth_hub',
+  'pharmacy',
+  'laboratory'
 ];
 
-const ACCREDITATIONS = [
-  { value: 'jcaho', label: 'The Joint Commission (JCAHO)' },
-  { value: 'dnv', label: 'DNV Healthcare' },
-  { value: 'clia', label: 'CLIA Certified' },
-  { value: 'cap', label: 'CAP Accredited' },
-  { value: 'aaahc', label: 'AAAHC Accredited' },
-  { value: 'carf', label: 'CARF Accredited' },
-  { value: 'achc', label: 'ACHC Accredited' },
-  { value: 'none', label: 'Accreditation Pending' },
-];
-
-const EMERGENCY_SERVICES = [
-  { value: 'yes-24-7', label: 'Yes - 24/7 Emergency Department' },
-  { value: 'urgent-care', label: 'Urgent Care Only' },
-  { value: 'no', label: 'No Emergency Services' }
-];
-
-const OPERATING_HOURS = [
-  { value: '24-7', label: '24/7 - Open All Day, Every Day' },
-  { value: 'weekdays', label: 'Weekdays Only (Mon-Fri)' },
-  { value: 'extended', label: 'Extended Hours (Mon-Sat)' },
-  { value: 'appointment', label: 'By Appointment Only' }
-];
-
-// Field help tooltips
-const FIELD_HELP: { [key: string]: string } = {
-  facilityLicenseNumber: 'Your state health department facility license number',
-  npiNumber: 'National Provider Identifier - unique 10-digit facility number',
-  taxId: 'Federal Employer Identification Number (EIN) in format XX-XXXXXXX',
-  accreditation: 'Primary accrediting organization for your facility',
-  medicareProviderNumber: 'CMS Medicare Provider Number if participating in Medicare',
-  totalBeds: 'Total licensed bed capacity (if applicable)',
+const FACILITY_TYPE_LABELS: Record<FacilityType, string> = {
+  hospital: 'Hospital',
+  clinic: 'Clinic',
+  urgent_care: 'Urgent Care',
+  emergency_department: 'Emergency Department',
+  ambulatory_surgery_center: 'Ambulatory Surgery Center',
+  diagnostic_center: 'Diagnostic Center',
+  rehabilitation_center: 'Rehabilitation Center',
+  long_term_care: 'Long-term Care',
+  hospice: 'Hospice',
+  community_health_center: 'Community Health Center',
+  specialty_center: 'Specialty Center',
+  telehealth_hub: 'Telehealth Hub',
+  pharmacy: 'Pharmacy',
+  laboratory: 'Laboratory'
 };
+
+const FACILITY_TIER_OPTIONS: FacilityTier[] = ['primary', 'secondary', 'tertiary', 'specialized'];
+
+const FACILITY_TIER_LABELS: Record<FacilityTier, string> = {
+  primary: 'Primary Care',
+  secondary: 'Secondary Care',
+  tertiary: 'Tertiary Care',
+  specialized: 'Specialized Care'
+};
+
+const OPERATIONAL_STATUS_OPTIONS: OperationalStatus[] = [
+  'fully_operational',
+  'limited_services',
+  'emergency_only',
+  'temporarily_closed',
+  'permanently_closed',
+  'under_construction'
+];
+
+const OPERATIONAL_STATUS_LABELS: Record<OperationalStatus, string> = {
+  fully_operational: 'Fully Operational',
+  limited_services: 'Limited Services',
+  emergency_only: 'Emergency Only',
+  temporarily_closed: 'Temporarily Closed',
+  permanently_closed: 'Permanently Closed',
+  under_construction: 'Under Construction'
+};
+
+const DEFAULT_OPERATING_HOURS: OperatingHours = {
+  monday: { open: '08:00', close: '18:00', is_closed: false },
+  tuesday: { open: '08:00', close: '18:00', is_closed: false },
+  wednesday: { open: '08:00', close: '18:00', is_closed: false },
+  thursday: { open: '08:00', close: '18:00', is_closed: false },
+  friday: { open: '08:00', close: '18:00', is_closed: false },
+  saturday: { open: '09:00', close: '13:00', is_closed: false },
+  sunday: { open: '09:00', close: '13:00', is_closed: false }
+};
+
+const HEALTHCARE_SERVICES = [
+  'Emergency Care',
+  'Primary Care',
+  'Specialty Consultation',
+  'Diagnostic Imaging',
+  'Laboratory Services',
+  'Pharmacy',
+  'Physical Therapy',
+  'Mental Health Services',
+  'Maternity Care',
+  'Pediatric Care',
+  'Geriatric Care',
+  'Surgical Services',
+  'Dental Services',
+  'Optometry',
+  'Vaccinations',
+  'Chronic Disease Management'
+];
 
 /* ==========================================================================
-   VALIDATION UTILITIES
+   TYPE DEFINITIONS
    ========================================================================== */
-const validateEmail = (email: string): boolean => {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-};
 
-const validatePhone = (phone: string): boolean => {
-  return /^[\d\s\-+()]{10,}$/.test(phone);
-};
-
-const validateNPI = (npi: string): boolean => {
-  return /^\d{10}$/.test(npi.replace(/\s/g, ''));
-};
-
-const validateZip = (zip: string): boolean => {
-  return /^\d{5}(-\d{4})?$/.test(zip);
-};
-
-const validateTaxId = (taxId: string): boolean => {
-  return /^\d{2}-?\d{7}$/.test(taxId);
-};
-
-const validateYear = (year: string): boolean => {
-  const yearNum = parseInt(year);
-  const currentYear = new Date().getFullYear();
-  return yearNum >= 1800 && yearNum <= currentYear;
-};
-
-/* ==========================================================================
-   CUSTOM HOOK: TIME AGO
-   ========================================================================== */
-function useTimeAgo(lastSaved: Date | null) {
-  const [secondsAgo, setSecondsAgo] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!lastSaved) return;
-
-    const update = () => {
-      setSecondsAgo(Math.round((Date.now() - lastSaved.getTime()) / 1000));
-    };
-
-    update();
-    const interval = setInterval(update, 1000);
-
-    return () => clearInterval(interval);
-  }, [lastSaved]);
-
-  return secondsAgo;
+interface FacilityFormData {
+  // Step 1: Identity
+  facility_name: string;
+  legal_entity_name: string;
+  nature_of_facility: NatureOfFacility | '';
+  facility_type: FacilityType | '';
+  facility_tier: FacilityTier | '';
+  
+  // Step 2: Location & Contact
+  address_line1: string;
+  city: string;
+  state_province: string;
+  postal_code: string;
+  country_code: string;
+  main_phone: string;
+  email: string;
+  website: string;
+  
+  // Step 3: Services & Operations
+  operating_hours: OperatingHours;
+  available_services: string[];
+  operational_status: OperationalStatus | '';
 }
 
 /* ==========================================================================
    MAIN COMPONENT
    ========================================================================== */
+
 export const HealthcareFacilityOnboarding: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const theme = useAppSelector((state) => state.ui.theme);
+  const { user } = useAppSelector((state) => state.auth);
   
-  const [currentStage, setCurrentStage] = useState<1 | 2 | 3>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [formData, setFormData] = useState<FacilityFormData>({
-    facilityName: '',
-    facilityType: '',
-    establishedYear: '',
-    taxId: '',
-    email: '',
-    phone: '',
-    facilityLicenseNumber: '',
-    licenseState: '',
-    npiNumber: '',
-    accreditation: '',
-    medicareProviderNumber: '',
-    medicaidProviderNumber: '',
-    totalBeds: '',
-    departments: '',
-    specialties: '',
-    emergencyServices: '',
-    address: '',
+    facility_name: '',
+    legal_entity_name: '',
+    nature_of_facility: '',
+    facility_type: '',
+    facility_tier: '',
+    address_line1: '',
     city: '',
-    state: '',
-    zipCode: '',
-    operatingHours: ''
+    state_province: '',
+    postal_code: '',
+    country_code: 'US',
+    main_phone: '',
+    email: '',
+    website: '',
+    operating_hours: DEFAULT_OPERATING_HOURS,
+    available_services: [],
+    operational_status: 'fully_operational'
   });
   
-  const [fieldErrors, setFieldErrors] = useState<FieldError>({});
-  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
-  const [globalFacilityID, setGlobalFacilityID] = useState<GlobalFacilityID | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [showTooltip, setShowTooltip] = useState<string | null>(null);
-  const [stageCompletionCelebration, setStageCompletionCelebration] = useState(false);
-  const [facilityTypeSearch, setFacilityTypeSearch] = useState('');
+  const [countrySearch, setCountrySearch] = useState('');
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   
-  const secondsAgo = useTimeAgo(lastSaved);
-
-  // Auto-save progress to localStorage
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!isComplete && Object.values(formData).some(v => v !== '')) {
-        localStorage.setItem('facility_onboarding_draft', JSON.stringify({
-          formData,
-          currentStage,
-          timestamp: new Date().toISOString()
-        }));
-        setLastSaved(new Date());
-      }
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [formData, currentStage, isComplete]);
-
-  // Load saved progress on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('facility_onboarding_draft');
-    if (saved) {
-      try {
-        // const { formData: savedData, currentStage: savedStage, timestamp } = JSON.parse(saved);
-        // setFormData(savedData);
-        // console.log(savedData)
-        // setCurrentStage(savedStage);
-        // setLastSaved(new Date(timestamp));
-      } catch (e) {
-        console.error('Failed to restore saved progress:', e);
-      }
+  const registerFacilityMutation = useRegisterFacility({
+    onSuccess: (data) => {
+      console.log('Facility registered:', data.data.facility_uuid);
+    },
+    onError: (error) => {
+      console.error('Registration failed:', error);
     }
-  }, []);
+  });
 
-  // Real-time field validation
-  const validateField = useCallback((field: keyof FacilityFormData, value: string): string => {
-    if (!value && touchedFields.has(field)) {
-      // Check if field is optional
-      const optionalFields = ['medicareProviderNumber', 'medicaidProviderNumber', 'totalBeds', 'departments', 'specialties'];
-      if (optionalFields.includes(field)) return '';
-      return 'This field is required';
-    }
+  /* ==========================================================================
+     FORM HANDLERS
+     ========================================================================== */
 
-    switch (field) {
-      case 'email':
-        return value && !validateEmail(value) ? 'Please enter a valid email address' : '';
-      case 'phone':
-        return value && !validatePhone(value) ? 'Please enter a valid phone number' : '';
-      case 'npiNumber':
-        return value && !validateNPI(value) ? 'NPI must be exactly 10 digits' : '';
-      case 'zipCode':
-        return value && !validateZip(value) ? 'Please enter a valid ZIP code' : '';
-      case 'taxId':
-        return value && !validateTaxId(value) ? 'Tax ID format: XX-XXXXXXX' : '';
-      case 'establishedYear':
-        return value && !validateYear(value) ? 'Please enter a valid year' : '';
-      case 'facilityLicenseNumber':
-        return value && value.length < 4 ? 'License number seems too short' : '';
-      default:
-        return '';
-    }
-  }, [touchedFields]);
-
-  // Update field with validation
-  const handleFieldChange = useCallback((field: keyof FacilityFormData, value: string) => {
+  const updateField = useCallback((
+    field: keyof FacilityFormData, 
+    value: string | OperatingHours | string[]
+  ) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Validate on change if field was touched
-    if (touchedFields.has(field)) {
-      const error = validateField(field, value);
-      setFieldErrors(prev => ({ ...prev, [field]: error }));
-    }
-  }, [touchedFields, validateField]);
-
-  // Mark field as touched on blur
-  const handleFieldBlur = useCallback((field: keyof FacilityFormData) => {
-    setTouchedFields(prev => new Set(prev).add(field));
-    const error = validateField(field, formData[field]);
-    setFieldErrors(prev => ({ ...prev, [field]: error }));
-  }, [formData, validateField]);
-
-  // Generate Global Facility ID
-  const generateGlobalFacilityID = useCallback((): GlobalFacilityID => {
-    const prefix = 'CFD';
-    const number = Math.floor(Math.random() * 9000 + 1000).toString();
-    const checkDigit = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-    const fullID = `${prefix}-${number}-${checkDigit}-FAC`;
-
-    return {
-      fullID,
-      generatedAt: new Date().toISOString(),
-    };
   }, []);
 
-  // Form Submission
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    // Final validation
-    const errors: FieldError = {};
-    Object.keys(formData).forEach(key => {
-      const error = validateField(key as keyof FacilityFormData, formData[key as keyof FacilityFormData]);
-      if (error) errors[key] = error;
+  const toggleService = useCallback((service: string) => {
+    setFormData(prev => {
+      const newServices = prev.available_services.includes(service)
+        ? prev.available_services.filter(s => s !== service)
+        : [...prev.available_services, service];
+      return { ...prev, available_services: newServices };
     });
+  }, []);
 
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      setIsSubmitting(false);
+  const updateOperatingHours = useCallback((
+    day: string, 
+    field: 'open' | 'close' | 'is_closed', 
+    value: string | boolean
+  ) => {
+    setFormData(prev => ({
+      ...prev,
+      operating_hours: {
+        ...prev.operating_hours,
+        [day]: {
+          ...prev.operating_hours[day],
+          [field]: value
+        }
+      }
+    }));
+  }, []);
+
+  const applyToAllDays = useCallback(() => {
+    const mondayHours = formData.operating_hours.monday;
+    const newHours = { ...formData.operating_hours };
+    
+    Object.keys(newHours).forEach(day => {
+      if (day !== 'monday') {
+        newHours[day] = { ...mondayHours };
+      }
+    });
+    
+    setFormData(prev => ({ ...prev, operating_hours: newHours }));
+  }, [formData.operating_hours]);
+
+  /* ==========================================================================
+     VALIDATION
+     ========================================================================== */
+
+  const isStep1Valid = useMemo(() => {
+    return formData.facility_name.trim() !== '' && 
+           formData.legal_entity_name.trim() !== '' && 
+           formData.nature_of_facility !== '' &&
+           formData.facility_type !== '' &&
+           formData.facility_tier !== '';
+  }, [formData]);
+
+  const isStep2Valid = useMemo(() => {
+    return formData.address_line1.trim() !== '' && 
+           formData.city.trim() !== '' && 
+           formData.state_province.trim() !== '' && 
+           formData.postal_code.trim() !== '' && 
+           formData.country_code !== '' && 
+           formData.main_phone.trim() !== '';
+  }, [formData]);
+
+  const isStep3Valid = useMemo(() => {
+    return formData.available_services.length > 0 && 
+           formData.operational_status !== '';
+  }, [formData.available_services, formData.operational_status]);
+
+  const isCurrentStepValid = useMemo(() => {
+    switch (currentStep) {
+      case 1: return isStep1Valid;
+      case 2: return isStep2Valid;
+      case 3: return isStep3Valid;
+      default: return false;
+    }
+  }, [currentStep, isStep1Valid, isStep2Valid, isStep3Valid]);
+
+  /* ==========================================================================
+     SUBMISSION
+     ========================================================================== */
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user?.id || !isStep1Valid || !isStep2Valid || !isStep3Valid) {
       return;
     }
 
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    const facilityID = generateGlobalFacilityID();
-    setGlobalFacilityID(facilityID);
+    const payload: RegisterFacilityRequest = {
+      facility_name: formData.facility_name,
+      legal_entity_name: formData.legal_entity_name,
+      nature_of_facility: formData.nature_of_facility as NatureOfFacility,
+      facility_type: formData.facility_type as FacilityType,
+      facility_tier: formData.facility_tier as FacilityTier,
+      address_line1: formData.address_line1,
+      city: formData.city,
+      state_province: formData.state_province,
+      postal_code: formData.postal_code,
+      country_code: formData.country_code,
+      main_phone: formData.main_phone,
+      operating_hours: formData.operating_hours,
+      available_services: formData.available_services,
+      data_residency_region: 'US-East',
+      operational_status: formData.operational_status as OperationalStatus,
+      user_id: user.id,
+    };
     
-    // Clear saved draft
-    localStorage.removeItem('facility_onboarding_draft');
-    
-    setIsSubmitting(false);
-    setIsComplete(true);
-  }, [formData, generateGlobalFacilityID, validateField]);
+    registerFacilityMutation.mutate(payload);
+  }, [formData, user, isStep1Valid, isStep2Valid, isStep3Valid, registerFacilityMutation]);
 
-  // Continue to Portal
-  const handleContinueToPortal = useCallback(() => {
+  const handleContinueToDashboard = useCallback(() => {
+    if (!registerFacilityMutation.data?.data) return;
+
+    const facilityData = registerFacilityMutation.data.data;
     navigate(ROUTES.STAFF_DASHBOARD, {
       state: {
-        facilityID: globalFacilityID?.fullID,
-        facilityName: formData.facilityName,
-        facilityType: formData.facilityType,
+        facilityID: facilityData.facility_uuid,
+        facilityCode: facilityData.facility_code,
+        facilityName: facilityData.facility_name,
         isNewFacility: true,
       }
     });
-  }, [globalFacilityID, formData, navigate]);
-
-  // Stage navigation with celebration
-  const handleStageComplete = useCallback(() => {
-    setStageCompletionCelebration(true);
-    setTimeout(() => {
-      setStageCompletionCelebration(false);
-      setCurrentStage(prev => (prev + 1) as 1 | 2 | 3);
-    }, 800);
-  }, []);
-
-  // Form Validation
-  const isStageValid = useMemo(() => {
-    if (currentStage === 1) {
-      return formData.facilityName && formData.facilityType && 
-             formData.establishedYear && formData.taxId &&
-             formData.email && formData.phone &&
-             !fieldErrors.email && !fieldErrors.phone && 
-             !fieldErrors.taxId && !fieldErrors.establishedYear;
-    }
-    if (currentStage === 2) {
-      return formData.facilityLicenseNumber && formData.licenseState && 
-             formData.npiNumber && formData.accreditation &&
-             !fieldErrors.facilityLicenseNumber && !fieldErrors.npiNumber;
-    }
-    if (currentStage === 3) {
-      return formData.address && formData.city && 
-             formData.state && formData.zipCode && 
-             formData.operatingHours &&
-             !fieldErrors.zipCode;
-    }
-    return false;
-  }, [formData, currentStage, fieldErrors]);
-
-  // Calculate overall completion
-  const overallCompletion = useMemo(() => {
-    const totalFields = Object.keys(formData).length;
-    const filledFields = Object.values(formData).filter(v => v !== '').length;
-    return Math.round((filledFields / totalFields) * 100);
-  }, [formData]);
-
-  // Filtered Facility Types
-  const filteredFacilityTypes = useMemo(() => {
-    return FACILITY_TYPES.filter(type => 
-      type.label.toLowerCase().includes(facilityTypeSearch.toLowerCase()) ||
-      type.description.toLowerCase().includes(facilityTypeSearch.toLowerCase())
-    );
-  }, [facilityTypeSearch]);
+  }, [registerFacilityMutation.data, navigate]);
 
   /* ==========================================================================
-     RENDER COMPONENTS
+     COMPUTED VALUES
      ========================================================================== */
 
-  // Stage Completion Celebration
-  const renderStageCelebration = () => (
-    <AnimatePresence>
-      {stageCompletionCelebration && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.5 }}
-          className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
-        >
-          <motion.div
-            animate={{
-              scale: [1, 1.2, 1],
-              rotate: [0, 360],
-            }}
-            transition={{ duration: 0.6 }}
-            className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-2xl"
-          >
-            <Sparkles className="w-12 h-12 text-white" />
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
+  const isSubmitting = registerFacilityMutation.isPending;
+  const isComplete = registerFacilityMutation.isSuccess;
 
-  // Enhanced Progress Indicator
-  const renderProgress = () => {
-    const progress = currentStage === 1 ? 33 : currentStage === 2 ? 66 : 100;
-    
-    return (
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className={cn(
-              "text-2xl font-bold flex items-center gap-2",
-              theme === 'dark' ? "text-white" : "text-slate-900"
-            )}>
-              {currentStage === 1 && (
-                <>
-                  <Building2 className="w-6 h-6 text-blue-600" />
-                  Facility Information
-                </>
-              )}
-              {currentStage === 2 && (
-                <>
-                  <BadgeCheck className="w-6 h-6 text-blue-600" />
-                  Licensing & Accreditation
-                </>
-              )}
-              {currentStage === 3 && (
-                <>
-                  <Hospital className="w-6 h-6 text-blue-600" />
-                  Facility Details
-                </>
-              )}
-            </h2>
+  const filteredCountries = useMemo(() => {
+    return countryCodes.filter(country => 
+      country.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
+      country.code.toLowerCase().includes(countrySearch.toLowerCase())
+    ).slice(0, 8);
+  }, [countrySearch]);
 
-            {secondsAgo !== null && (
-              <p className={cn(
-                "text-sm mt-1 flex items-center gap-2",
-                theme === 'dark' ? "text-slate-400" : "text-slate-600"
-              )}>
-                <span className="flex items-center gap-1 text-emerald-600">
-                  <Save className="w-3 h-3" />
-                  Saved {secondsAgo}s ago
-                </span>
-              </p>
+  const filteredServices = useMemo(() => {
+    return HEALTHCARE_SERVICES.filter(service => 
+      service.toLowerCase().includes(serviceSearch.toLowerCase())
+    );
+  }, [serviceSearch]);
+
+  const selectedCountry = useMemo(() => {
+    return countryCodes.find(country => country.code === formData.country_code);
+  }, [formData.country_code]);
+
+  const completionPercentage = useMemo(() => {
+    const step1Progress = isStep1Valid ? 33.33 : 0;
+    const step2Progress = isStep2Valid ? 33.33 : 0;
+    const step3Progress = isStep3Valid ? 33.34 : 0;
+    return step1Progress + (currentStep > 1 ? step2Progress : 0) + (currentStep > 2 ? step3Progress : 0);
+  }, [currentStep, isStep1Valid, isStep2Valid, isStep3Valid]);
+
+  /* ==========================================================================
+     RENDER HELPERS
+     ========================================================================== */
+
+  const renderProgressIndicator = () => (
+    <div className="mb-6">
+      {/* Compact Step Labels */}
+      <div className="flex justify-between mb-4">
+        {[
+          { num: 1, label: 'Facility Identity', icon: Building2 },
+          { num: 2, label: 'Location & Contact', icon: MapPin },
+          { num: 3, label: 'Services & Operations', icon: Stethoscope }
+        ].map((step, idx) => (
+          <div key={step.num} className="flex-1 relative">
+            <div className="flex flex-col items-center">
+              <motion.div
+                className={cn(
+                  "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-2 relative z-10 transition-all duration-300",
+                  currentStep >= step.num
+                    ? "bg-gradient-to-br from-blue-600 to-emerald-600 shadow-lg shadow-blue-500/30"
+                    : theme === 'dark'
+                    ? "bg-slate-800 border-2 border-slate-700"
+                    : "bg-slate-100 border-2 border-slate-200"
+                )}
+                animate={{
+                  scale: currentStep === step.num ? 1.05 : 1,
+                }}
+              >
+                {currentStep > step.num ? (
+                  <Check className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                ) : (
+                  <step.icon className={cn(
+                    "w-4 h-4 sm:w-5 sm:h-5",
+                    currentStep >= step.num ? "text-white" : "text-slate-400"
+                  )} />
+                )}
+              </motion.div>
+              
+              <div className="text-center">
+                <div className={cn(
+                  "text-[10px] sm:text-sm font-bold",
+                  currentStep >= step.num
+                    ? "text-blue-600 dark:text-blue-400"
+                    : theme === 'dark' ? "text-slate-500" : "text-slate-400"
+                )}>
+                  {step.label}
+                </div>
+              </div>
+            </div>
+            
+            {/* Connector Line */}
+            {idx < 2 && (
+              <div className={cn(
+                "absolute top-5 sm:top-6 left-1/2 w-full h-0.5 -z-0",
+                currentStep > step.num
+                  ? "bg-gradient-to-r from-blue-600 to-emerald-600"
+                  : theme === 'dark'
+                  ? "bg-slate-700"
+                  : "bg-slate-200"
+              )} />
             )}
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-blue-600">
-              {progress}%
-            </div>
-            <div className="text-xs text-slate-500">
-              {overallCompletion}% overall
-            </div>
-          </div>
-        </div>
-
-        {/* Progress bar */}
-        <div className="relative h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-          <motion.div
-            className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-blue-600 to-emerald-600"
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-          />
-        </div>
-
-        {/* Stage indicators */}
-        <div className="flex justify-between mt-3">
-          {['Facility', 'Licensing', 'Details'].map((label, idx) => (
-            <div 
-              key={label}
-              className="flex items-center gap-2"
-            >
-              <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
-                currentStage > idx + 1
-                  ? "bg-emerald-500 text-white"
-                  : currentStage === idx + 1
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-500"
-              )}>
-                {currentStage > idx + 1 ? <Check className="w-4 h-4" /> : idx + 1}
-              </div>
-              <span className={cn(
-                "text-xs font-medium hidden sm:inline",
-                currentStage >= idx + 1 
-                  ? theme === 'dark' ? "text-white" : "text-slate-900"
-                  : "text-slate-400"
-              )}>
-                {label}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  // Trust signal banner
-  const renderTrustSignal = () => {
-    const signals = [
-      { icon: Lock, text: 'HIPAA Compliant', color: 'text-emerald-600' },
-      { icon: Shield, text: '256-bit Encryption', color: 'text-blue-600' },
-      { icon: Eye, text: 'Your data is never shared', color: 'text-purple-600' },
-    ];
-
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={cn(
-          "mb-6 p-4 rounded-xl border-2 flex items-center justify-between flex-wrap gap-3",
-          theme === 'dark'
-            ? "bg-slate-800/50 border-slate-700"
-            : "bg-blue-50/50 border-blue-200"
-        )}
-      >
-        {signals.map((signal, idx) => (
-          <div key={idx} className="flex items-center gap-2">
-            <signal.icon className={cn("w-4 h-4", signal.color)} />
-            <span className={cn(
-              "text-xs font-semibold",
-              theme === 'dark' ? "text-slate-300" : "text-slate-700"
-            )}>
-              {signal.text}
-            </span>
-          </div>
         ))}
-      </motion.div>
-    );
-  };
+      </div>
 
-  // Enhanced Form Input with Validation & Tooltips
+      {/* Compact Progress Bar */}
+      <div className="relative h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+        <motion.div
+          className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-blue-600 via-blue-500 to-emerald-600"
+          initial={{ width: 0 }}
+          animate={{ width: `${(currentStep / 3) * 100}%` }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+        </motion.div>
+      </div>
+
+      <div className="flex justify-between items-center mt-2">
+        <span className={cn(
+          "text-sm font-medium",
+          theme === 'dark' ? "text-slate-400" : "text-slate-600"
+        )}>
+          {Math.round(completionPercentage)}% complete
+        </span>
+        <span className={cn(
+          "text-[10px] font-medium px-2 py-0.5 rounded-full",
+          theme === 'dark'
+            ? "bg-slate-800 text-slate-300"
+            : "bg-slate-100 text-slate-700"
+        )}>
+          Step {currentStep}/3
+        </span>
+      </div>
+    </div>
+  );
+
   const renderInput = (
     field: keyof FacilityFormData,
     label: string,
-    type: string = 'text',
+    placeholder: string,
     icon?: React.ReactNode,
-    placeholder?: string,
-    options?: Array<{ value: string; label: string; description?: string }>
+    type: string = 'text',
+    required: boolean = true
   ) => {
-    const value = formData[field];
+    const value = formData[field] as string;
     const isEmpty = !value;
-    const error = fieldErrors[field];
-    const hasHelp = FIELD_HELP[field];
-    const isTouched = touchedFields.has(field);
+    const showError = required && isEmpty && currentStep > 1;
     
     return (
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <label className={cn(
-          "block text-sm font-medium flex items-center gap-2",
-          theme === 'dark' ? "text-white" : "text-slate-900"
+          "block text-sm font-semibold",
+          theme === 'dark' ? "text-slate-200" : "text-slate-800"
         )}>
           {label}
-          {hasHelp && (
-            <button
-              type="button"
-              onMouseEnter={() => setShowTooltip(field)}
-              onMouseLeave={() => setShowTooltip(null)}
-              className="relative"
-            >
-              <HelpCircle className="w-4 h-4 text-slate-400 hover:text-blue-500 transition-colors" />
-              {showTooltip === field && (
-                <motion.div
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={cn(
-                    "absolute left-0 top-6 z-10 p-3 rounded-lg shadow-xl text-xs w-64",
-                    theme === 'dark' 
-                      ? "bg-slate-700 text-white border border-slate-600" 
-                      : "bg-white text-slate-900 border border-slate-200"
-                  )}
-                >
-                  {FIELD_HELP[field]}
-                </motion.div>
-              )}
-            </button>
-          )}
+          {required && <span className="text-red-500 ml-1">*</span>}
         </label>
         
-        <div className="relative">
+        <div className="relative group">
           {icon && (
             <div className={cn(
               "absolute left-3 top-1/2 -translate-y-1/2 transition-colors",
-              error ? "text-red-500" : 
-              !isEmpty ? "text-emerald-500" : 
-              "text-gray-400"
+              !isEmpty ? "text-blue-500" : "text-slate-400 group-focus-within:text-blue-500"
             )}>
               {icon}
             </div>
           )}
           
-          {type === 'select' && options ? (
-            <select
-              value={value}
-              onChange={(e) => handleFieldChange(field, e.target.value)}
-              onBlur={() => handleFieldBlur(field)}
-              className={cn(
-                "w-full px-4 py-3 rounded-xl border-2 appearance-none transition-all",
-                "focus:outline-none focus:ring-2 focus:ring-blue-500",
-                theme === 'dark'
-                  ? "bg-slate-800 text-white"
-                  : "bg-white text-slate-900",
-                icon ? "pl-11" : undefined,
-                error && isTouched 
-                  ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" 
-                  : !isEmpty 
-                  ? "border-emerald-500" 
-                  : theme === 'dark' ? "border-slate-700" : "border-slate-200"
-              )}
-            >
-              <option value="">Select {label.toLowerCase()}</option>
-              {options.map(opt => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                  {opt.description && ` - ${opt.description}`}
-                </option>
-              ))}
-            </select>
-          ) : type === 'textarea' ? (
-            <textarea
-              value={value}
-              onChange={(e) => handleFieldChange(field, e.target.value)}
-              onBlur={() => handleFieldBlur(field)}
-              placeholder={placeholder}
-              rows={3}
-              className={cn(
-                "w-full px-4 py-3 rounded-xl border-2 transition-all resize-none",
-                "focus:outline-none focus:ring-2 focus:ring-blue-500",
-                theme === 'dark'
-                  ? "bg-slate-800 text-white placeholder-slate-500"
-                  : "bg-white text-slate-900 placeholder-slate-400",
-                icon ? "pl-11" : undefined,
-                error && isTouched 
-                  ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" 
-                  : !isEmpty 
-                  ? "border-emerald-500" 
-                  : theme === 'dark' ? "border-slate-700" : "border-slate-200"
-              )}
-            />
-          ) : (
-            <input
-              type={type}
-              value={value}
-              onChange={(e) => handleFieldChange(field, e.target.value)}
-              onBlur={() => handleFieldBlur(field)}
-              placeholder={placeholder}
-              className={cn(
-                "w-full px-4 py-3 rounded-xl border-2 transition-all",
-                "focus:outline-none focus:ring-2 focus:ring-blue-500",
-                theme === 'dark'
-                  ? "bg-slate-800 text-white placeholder-slate-500"
-                  : "bg-white text-slate-900 placeholder-slate-400",
-                icon ? "pl-11" : undefined,
-                error && isTouched 
-                  ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" 
-                  : !isEmpty 
-                  ? "border-emerald-500" 
-                  : theme === 'dark' ? "border-slate-700" : "border-slate-200"
-              )}
-            />
-          )}
+          <input
+            type={type}
+            value={value}
+            onChange={(e) => updateField(field, e.target.value)}
+            placeholder={placeholder}
+            className={cn(
+              "w-full px-3 py-2.5 rounded-lg border-2 transition-all duration-200 text-sm",
+              "focus:outline-none focus:ring-2 focus:ring-blue-500/20",
+              icon ? "pl-10" : "",
+              theme === 'dark'
+                ? "bg-slate-800/50 border-slate-700 text-white placeholder-slate-500"
+                : "bg-white border-slate-200 text-slate-900 placeholder-slate-400",
+              !isEmpty && "border-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10",
+              showError && "border-red-500"
+            )}
+          />
           
-          {/* Validation indicator */}
-          {!isEmpty && !error && (
+          {!isEmpty && (
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
               className="absolute right-3 top-1/2 -translate-y-1/2"
             >
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
+                <Check className="w-3 h-3 text-white" />
+              </div>
             </motion.div>
           )}
-          
-          {error && isTouched && (
+
+          {showError && (
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
               className="absolute right-3 top-1/2 -translate-y-1/2"
             >
-              <AlertCircle className="w-5 h-5 text-red-500" />
+              <AlertCircle className="w-4 h-4 text-red-500" />
             </motion.div>
           )}
         </div>
-        
-        {/* Error message */}
-        {error && isTouched && (
+
+        {showError && (
           <motion.p
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-sm text-red-500 flex items-center gap-1"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="text-[10px] text-red-500 flex items-center gap-1"
           >
-            <AlertCircle className="w-4 h-4" />
-            {error}
+            <AlertCircle className="w-3 h-3" />
+            Required field
           </motion.p>
         )}
       </div>
     );
   };
 
-  // Facility Type Selector
-  const renderFacilityTypeSelector = () => (
-    <div className="space-y-2">
-      <label className={cn(
-        "block text-sm font-medium",
-        theme === 'dark' ? "text-white" : "text-slate-900"
-      )}>
-        Facility Type
-      </label>
-      
-      <div className="relative">
-        <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-        <input
-          type="text"
-          value={facilityTypeSearch}
-          onChange={(e) => setFacilityTypeSearch(e.target.value)}
-          placeholder="Search facility types..."
-          className={cn(
-            "w-full px-4 py-3 pl-11 rounded-xl border-2 transition-all",
-            "focus:outline-none focus:ring-2 focus:ring-blue-500",
-            theme === 'dark'
-              ? "bg-slate-800 text-white placeholder-slate-500 border-slate-700"
-              : "bg-white text-slate-900 placeholder-slate-400 border-slate-200"
-          )}
-        />
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto p-1">
-        {filteredFacilityTypes.map(type => (
-          <button
-            key={type.value}
-            type="button"
-            onClick={() => handleFieldChange('facilityType', type.value)}
-            className={cn(
-              "flex flex-col items-start gap-2 px-4 py-3 rounded-xl border-2 transition-all text-left",
-              formData.facilityType === type.value
-                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md"
-                : theme === 'dark'
-                ? "border-slate-700 hover:border-blue-500 hover:bg-slate-800"
-                : "border-slate-200 hover:border-blue-400 hover:bg-slate-50"
-            )}
-          >
-            <div className="flex items-center gap-2 w-full">
-              <span className="text-2xl">{type.icon}</span>
-              <span className={cn(
-                "text-sm font-semibold flex-1",
-                formData.facilityType === type.value
-                  ? "text-blue-600 dark:text-blue-400"
-                  : theme === 'dark' ? "text-white" : "text-slate-900"
-              )}>
-                {type.label}
-              </span>
-              {formData.facilityType === type.value && (
-                <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              )}
-            </div>
-            <span className={cn(
-              "text-xs",
-              formData.facilityType === type.value
-                ? "text-blue-600/80 dark:text-blue-400/80"
-                : theme === 'dark' ? "text-slate-400" : "text-slate-600"
-            )}>
-              {type.description}
-            </span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  // Enhanced Form Sections
-  const renderFormSection = () => (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {renderTrustSignal()}
-      
-      <AnimatePresence mode="wait">
-        {/* Stage 1: Facility Information */}
-        {currentStage === 1 && (
-          <motion.div 
-            key="stage-1"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            className="space-y-6"
-          >
-            {renderInput('facilityName', 'Facility Legal Name', 'text', <Building2 className="w-5 h-5" />, 'Memorial Medical Center')}
-            
-            {renderFacilityTypeSelector()}
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {renderInput('establishedYear', 'Year Established', 'text', <Calendar className="w-5 h-5" />, '1995')}
-              {renderInput('taxId', 'Tax ID (EIN)', 'text', <FileText className="w-5 h-5" />, 'XX-XXXXXXX')}
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {renderInput('email', 'Facility Email', 'email', <Mail className="w-5 h-5" />, 'contact@facility.com')}
-              {renderInput('phone', 'Main Phone Number', 'tel', <Phone className="w-5 h-5" />, '+1 (555) 123-4567')}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Stage 2: Licensing & Accreditation */}
-        {currentStage === 2 && (
-          <motion.div 
-            key="stage-2"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            className="space-y-6"
-          >
-            <div className={cn(
-              "p-4 rounded-xl border-2",
-              theme === 'dark' 
-                ? "bg-blue-900/20 border-blue-700" 
-                : "bg-blue-50 border-blue-200"
-            )}>
-              <div className="flex items-start gap-3">
-                <BadgeCheck className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm text-blue-700 dark:text-blue-300 font-semibold mb-1">
-                    Instant License Verification
-                  </p>
-                  <p className="text-xs text-blue-600 dark:text-blue-400">
-                    We'll verify your facility license with state health departments in real-time. All data is encrypted and HIPAA compliant.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {renderInput('facilityLicenseNumber', 'Facility License Number', 'text', <FileText className="w-5 h-5" />, 'FL123456')}
-              {renderInput('licenseState', 'License State', 'select', <MapPin className="w-5 h-5" />, undefined, 
-                US_STATES.map(state => ({ value: state.toLowerCase(), label: state }))
-              )}
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {renderInput('npiNumber', 'Facility NPI Number', 'text', <Fingerprint className="w-5 h-5" />, '10-digit NPI')}
-              {renderInput('accreditation', 'Primary Accreditation', 'select', <Award className="w-5 h-5" />, undefined, ACCREDITATIONS)}
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {renderInput('medicareProviderNumber', 'Medicare Provider Number (Optional)', 'text', <CreditCard className="w-5 h-5" />, 'If applicable')}
-              {renderInput('medicaidProviderNumber', 'Medicaid Provider Number (Optional)', 'text', <CreditCard className="w-5 h-5" />, 'If applicable')}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Stage 3: Facility Details */}
-        {currentStage === 3 && (
-          <motion.div 
-            key="stage-3"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            className="space-y-6"
-          >
-            {renderInput('address', 'Facility Address', 'text', <MapPin className="w-5 h-5" />, '123 Medical Center Drive')}
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {renderInput('city', 'City', 'text', undefined, 'New York')}
-              {renderInput('state', 'State', 'select', undefined, undefined,
-                US_STATES.map(state => ({ value: state.toLowerCase(), label: state }))
-              )}
-              {renderInput('zipCode', 'ZIP Code', 'text', undefined, '10001')}
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {renderInput('totalBeds', 'Total Beds (Optional)', 'text', <Bed className="w-5 h-5" />, '250')}
-              {renderInput('emergencyServices', 'Emergency Services', 'select', <Ambulance className="w-5 h-5" />, undefined, EMERGENCY_SERVICES)}
-            </div>
-            
-            {renderInput('departments', 'Key Departments (Optional)', 'textarea', <Building className="w-5 h-5" />, 'Cardiology, Oncology, Pediatrics')}
-            
-            {renderInput('specialties', 'Medical Specialties (Optional)', 'textarea', <Stethoscope className="w-5 h-5" />, 'Cardiac Surgery, Interventional Radiology')}
-            
-            {renderInput('operatingHours', 'Operating Hours', 'select', <Clock className="w-5 h-5" />, undefined, OPERATING_HOURS)}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Navigation */}
-      <div className="flex justify-between pt-6">
-        {currentStage > 1 ? (
-          <button
-            type="button"
-            onClick={() => setCurrentStage(prev => (prev - 1) as 1 | 2 | 3)}
-            className={cn(
-              "flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all hover:scale-105",
-              theme === 'dark'
-                ? "border-2 border-slate-700 text-slate-300 hover:bg-slate-800"
-                : "border-2 border-slate-300 text-slate-700 hover:bg-slate-50"
-            )}
-          >
-            <ChevronLeft className="w-5 h-5" />
-            Back
-          </button>
-        ) : (
-          <div />
-        )}
-        
-        {currentStage < 3 ? (
-          <button
-            type="button"
-            disabled={!isStageValid}
-            onClick={handleStageComplete}
-            className={cn(
-              "ml-auto flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all",
-              isStageValid
-                ? "bg-gradient-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 hover:scale-105"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
-            )}
-          >
-            Continue
-            <ArrowRight className="w-5 h-5" />
-          </button>
-        ) : (
-          <button
-            type="submit"
-            disabled={!isStageValid || isSubmitting}
-            className={cn(
-              "ml-auto flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all",
-              isStageValid 
-                ? "bg-gradient-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 hover:scale-105"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
-            )}
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Verifying Facility...
-              </>
-            ) : (
-              <>
-                <BadgeCheck className="w-5 h-5" />
-                Complete Verification
-              </>
-            )}
-          </button>
-        )}
-      </div>
-    </form>
-  );
-
-  // Enhanced Completion Screen with Next Steps
-  const renderGlobalFacilityID = () => (
-    <div className="space-y-8">
-      {/* Success header */}
-      <div className="text-center">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", duration: 0.6 }}
-        >
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 mb-6 shadow-xl">
-            <BadgeCheck className="w-10 h-10 text-white" />
-          </div>
-        </motion.div>
-
-        <h2 className={cn(
-          "text-3xl font-bold mb-3",
-          theme === 'dark' ? "text-white" : "text-slate-900"
+  const renderSelect = (
+    value: string,
+    onChange: (value: string) => void,
+    label: string,
+    options: Array<{ value: string; label: string }>,
+    icon?: React.ReactNode,
+    required: boolean = true
+  ) => {
+    const isEmpty = !value;
+    
+    return (
+      <div className="space-y-1.5">
+        <label className={cn(
+          "block text-sm font-semibold",
+          theme === 'dark' ? "text-slate-200" : "text-slate-800"
         )}>
-          Welcome, {formData.facilityName}!
-        </h2>
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </label>
+        
+        <div className="relative group">
+          {icon && (
+            <div className={cn(
+              "absolute left-3 top-1/2 -translate-y-1/2 transition-colors z-10",
+              !isEmpty ? "text-blue-500" : "text-slate-400 group-focus-within:text-blue-500"
+            )}>
+              {icon}
+            </div>
+          )}
+          
+          <select
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className={cn(
+              "w-full px-3 py-2.5 rounded-lg border-2 appearance-none transition-all duration-200 text-sm",
+              "focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer",
+              icon ? "pl-10" : "",
+              theme === 'dark'
+                ? "bg-slate-800/50 border-slate-700 text-white"
+                : "bg-white border-slate-200 text-slate-900",
+              !isEmpty && "border-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
+            )}
+          >
+            <option value="">Select {label.toLowerCase()}</option>
+            {options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          
+          {!isEmpty && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute right-10 top-1/2 -translate-y-1/2"
+            >
+              <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
+                <Check className="w-3 h-3 text-white" />
+              </div>
+            </motion.div>
+          )}
+
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+            <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /* ==========================================================================
+     FORM SECTIONS
+     ========================================================================== */
+
+  const renderStep1 = () => (
+    <motion.div 
+      key="step-1"
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      className="space-y-5"
+    >
+      {/* Compact Header */}
+      <div className="text-center mb-2">
         <p className={cn(
-          "text-lg",
+          "text-sm",
           theme === 'dark' ? "text-slate-400" : "text-slate-600"
         )}>
-          Your facility has been successfully verified
+          Basic information about your healthcare facility
         </p>
       </div>
 
-      {/* Facility ID Card */}
+      {/* Basic Information */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {renderInput('facility_name', 'Facility Name', 'e.g., Memorial Medical Center', <Building2 className="w-4 h-4" />)}
+        {renderInput('legal_entity_name', 'Legal Entity Name', 'e.g., Healthcare Systems Inc.', <Briefcase className="w-4 h-4" />)}
+      </div>
+
+      {/* Nature of Facility */}
+      <div className="space-y-2">
+        <label className={cn(
+          "block text-sm font-semibold",
+          theme === 'dark' ? "text-slate-200" : "text-slate-800"
+        )}>
+          Nature of Facility <span className="text-red-500">*</span>
+        </label>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+          {NATURE_OF_FACILITY_OPTIONS.map(option => (
+            <motion.button
+              key={option.value}
+              type="button"
+              onClick={() => updateField('nature_of_facility', option.value)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={cn(
+                "relative flex flex-col items-center gap-2 px-2 py-3 rounded-lg border-2 transition-all",
+                formData.nature_of_facility === option.value
+                  ? "border-blue-500 bg-gradient-to-br from-blue-50 to-emerald-50 dark:from-blue-900/20 dark:to-emerald-900/20 shadow-md"
+                  : theme === 'dark'
+                  ? "border-slate-700 hover:border-blue-500/50 bg-slate-800/30"
+                  : "border-slate-200 hover:border-blue-400/50 bg-white hover:bg-slate-50"
+              )}
+            >
+              <div className={cn(
+                "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+                formData.nature_of_facility === option.value
+                  ? "bg-gradient-to-br from-blue-600 to-emerald-600 text-white"
+                  : theme === 'dark'
+                  ? "bg-slate-700 text-slate-400"
+                  : "bg-slate-100 text-slate-600"
+              )}>
+                {option.icon}
+              </div>
+              
+              <div className="text-center">
+                <span className={cn(
+                  "text-[10px] font-bold block",
+                  formData.nature_of_facility === option.value
+                    ? "text-blue-600 dark:text-blue-400"
+                    : theme === 'dark' ? "text-white" : "text-slate-900"
+                )}>
+                  {option.label}
+                </span>
+              </div>
+
+              {formData.nature_of_facility === option.value && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute top-1 right-1"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </motion.div>
+              )}
+            </motion.button>
+          ))}
+        </div>
+      </div>
+
+      {/* Classification */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {renderSelect(
+          formData.facility_type,
+          (value) => updateField('facility_type', value),
+          'Facility Type',
+          FACILITY_TYPE_OPTIONS.map(type => ({
+            value: type,
+            label: FACILITY_TYPE_LABELS[type]
+          })),
+          <Hospital className="w-4 h-4" />
+        )}
+        
+        {renderSelect(
+          formData.facility_tier,
+          (value) => updateField('facility_tier', value),
+          'Care Level',
+          FACILITY_TIER_OPTIONS.map(tier => ({
+            value: tier,
+            label: FACILITY_TIER_LABELS[tier]
+          })),
+          <Award className="w-4 h-4" />
+        )}
+      </div>
+    </motion.div>
+  );
+
+  const renderStep2 = () => (
+    <motion.div 
+      key="step-2"
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      className="space-y-5"
+    >
+      {/* Compact Header */}
+      <div className="text-center mb-4">
+        <p className={cn(
+          "text-sm",
+          theme === 'dark' ? "text-slate-400" : "text-slate-600"
+        )}>
+          Where can patients and staff reach your facility?
+        </p>
+      </div>
+
+      {/* Address */}
+      <div className="space-y-4">
+        {renderInput('address_line1', 'Street Address', '123 Medical Center Drive', <MapPin className="w-4 h-4" />)}
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {renderInput('city', 'City', 'New York')}
+          {renderInput('state_province', 'State', 'NY')}
+          {renderInput('postal_code', 'ZIP', '10001')}
+          
+          {/* Inline Country */}
+          <div className="space-y-1.5">
+            <label className={cn(
+              "block text-sm font-semibold",
+              theme === 'dark' ? "text-slate-200" : "text-slate-800"
+            )}>
+              Country <span className="text-red-500">*</span>
+            </label>
+            
+            <div className="relative">
+              <input
+                type="text"
+                value={countrySearch}
+                onChange={(e) => {
+                  setCountrySearch(e.target.value);
+                  setShowCountryDropdown(true);
+                }}
+                onFocus={() => setShowCountryDropdown(true)}
+                placeholder="Search..."
+                className={cn(
+                  "w-full px-3 py-2.5 rounded-lg border-2 transition-all text-sm",
+                  "focus:outline-none focus:ring-2 focus:ring-blue-500/20",
+                  theme === 'dark'
+                    ? "bg-slate-800/50 text-white placeholder-slate-500 border-slate-700"
+                    : "bg-white text-slate-900 placeholder-slate-400 border-slate-200",
+                  selectedCountry && "border-emerald-500"
+                )}
+              />
+              
+              {selectedCountry && !showCountryDropdown && (
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
+                  <span className="text-lg">{selectedCountry.flag}</span>
+                  <span className="text-sm font-medium text-slate-900 dark:text-white">
+                    {selectedCountry.code}
+                  </span>
+                </div>
+              )}
+
+              {showCountryDropdown && filteredCountries.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={cn(
+                    "absolute z-50 w-full mt-1 rounded-lg border-2 shadow-xl max-h-48 overflow-y-auto",
+                    theme === 'dark'
+                      ? "bg-slate-800 border-slate-700"
+                      : "bg-white border-slate-200"
+                  )}
+                >
+                  {filteredCountries.map(country => (
+                    <button
+                      key={country.code}
+                      type="button"
+                      onClick={() => {
+                        updateField('country_code', country.code);
+                        setCountrySearch(country.name);
+                        setShowCountryDropdown(false);
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 w-full px-3 py-2 transition-colors text-left",
+                        theme === 'dark'
+                          ? "hover:bg-slate-700"
+                          : "hover:bg-slate-50",
+                        formData.country_code === country.code && "bg-blue-50 dark:bg-blue-900/20"
+                      )}
+                    >
+                      <span className="text-lg">{country.flag}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className={cn(
+                          "text-sm font-semibold truncate",
+                          theme === 'dark' ? "text-white" : "text-slate-900"
+                        )}>
+                          {country.name}
+                        </div>
+                      </div>
+                      {formData.country_code === country.code && (
+                        <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Information */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {renderInput('main_phone', 'Phone', '+1 (555) 123-4567', <Phone className="w-4 h-4" />, 'tel')}
+        {renderInput('email', 'Email', 'contact@facility.com', <Mail className="w-4 h-4" />, 'email', false)}
+        {renderInput('website', 'Website', 'www.facility.com', <Globe className="w-4 h-4" />, 'url', false)}
+      </div>
+    </motion.div>
+  );
+
+  const renderStep3 = () => (
+    <motion.div 
+      key="step-3"
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      className="space-y-5"
+    >
+      {/* Compact Header */}
+      <div className="text-center mb-4">
+        <p className={cn(
+          "text-sm",
+          theme === 'dark' ? "text-slate-400" : "text-slate-600"
+        )}>
+          What services do you provide?
+        </p>
+      </div>
+
+      {/* Operational Status */}
+      <div>
+        {renderSelect(
+          formData.operational_status,
+          (value) => updateField('operational_status', value),
+          'Operational Status',
+          OPERATIONAL_STATUS_OPTIONS.map(status => ({
+            value: status,
+            label: OPERATIONAL_STATUS_LABELS[status]
+          })),
+          <Zap className="w-4 h-4" />
+        )}
+      </div>
+
+      {/* Available Services */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className={cn(
+            "block text-sm font-semibold",
+            theme === 'dark' ? "text-slate-200" : "text-slate-800"
+          )}>
+            Services <span className="text-red-500">*</span>
+          </label>
+          <span className={cn(
+            "text-[10px] font-medium px-2 py-1 rounded-full",
+            formData.available_services.length > 0
+              ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+              : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+          )}>
+            {formData.available_services.length} selected
+          </span>
+        </div>
+        
+        <div className="relative">
+          <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            value={serviceSearch}
+            onChange={(e) => setServiceSearch(e.target.value)}
+            placeholder="Search services..."
+            className={cn(
+              "w-full px-3 py-2.5 pl-10 rounded-lg border-2 transition-all text-sm",
+              "focus:outline-none focus:ring-2 focus:ring-blue-500/20",
+              theme === 'dark'
+                ? "bg-slate-800/50 text-white placeholder-slate-500 border-slate-700"
+                : "bg-white text-slate-900 placeholder-slate-400 border-slate-200"
+            )}
+          />
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1">
+          {filteredServices.map(service => {
+            const isSelected = formData.available_services.includes(service);
+            
+            return (
+              <motion.button
+                key={service}
+                type="button"
+                onClick={() => toggleService(service)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={cn(
+                  "flex items-center justify-between px-3 py-2 rounded-lg border-2 transition-all text-left",
+                  isSelected
+                    ? "border-blue-500 bg-gradient-to-br from-blue-50 to-emerald-50 dark:from-blue-900/20 dark:to-emerald-900/20"
+                    : theme === 'dark'
+                    ? "border-slate-700 hover:border-blue-500/50 bg-slate-800/30"
+                    : "border-slate-200 hover:border-blue-400/50 bg-white hover:bg-slate-50"
+                )}
+              >
+                <span className={cn(
+                  "text-sm font-medium",
+                  isSelected
+                    ? "text-blue-600 dark:text-blue-400"
+                    : theme === 'dark' ? "text-white" : "text-slate-900"
+                )}>
+                  {service}
+                </span>
+                {isSelected && (
+                  <motion.div
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  </motion.div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Operating Hours */}
+      <div className={cn(
+        "p-4 rounded-xl border-2",
+        theme === 'dark' 
+          ? "bg-slate-800/50 border-slate-700" 
+          : "bg-slate-50 border-slate-200"
+      )}>
+        <div className="flex items-center justify-between mb-4">
+          <h4 className={cn(
+            "text-sm font-bold flex items-center gap-2",
+            theme === 'dark' ? "text-white" : "text-slate-900"
+          )}>
+            <Clock className="w-4 h-4 text-blue-500" />
+            Operating Hours
+          </h4>
+          <button
+            type="button"
+            onClick={applyToAllDays}
+            className={cn(
+              "text-[10px] font-medium px-3 py-1.5 rounded-lg transition-all",
+              "border-2 hover:scale-105",
+              theme === 'dark'
+                ? "border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
+                : "border-blue-400 text-blue-600 hover:bg-blue-50"
+            )}
+          >
+            Copy Mon to All
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {Object.entries(formData.operating_hours).map(([day, hours]) => (
+            <div 
+              key={day}
+              className={cn(
+                "flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg transition-all",
+                theme === 'dark'
+                  ? "bg-slate-900/50 hover:bg-slate-900/70"
+                  : "bg-white hover:bg-slate-50"
+              )}
+            >
+              <div className="flex items-center gap-2 min-w-[100px]">
+                <div className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-[10px]",
+                  theme === 'dark'
+                    ? "bg-slate-700 text-slate-300"
+                    : "bg-slate-100 text-slate-700"
+                )}>
+                  {day.substring(0, 3).toUpperCase()}
+                </div>
+                <span className={cn(
+                  "text-sm font-semibold capitalize",
+                  theme === 'dark' ? "text-white" : "text-slate-900"
+                )}>
+                  {day}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!hours.is_closed}
+                    onChange={(e) => updateOperatingHours(day, 'is_closed', !e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className={cn(
+                    "text-sm font-medium",
+                    theme === 'dark' ? "text-slate-300" : "text-slate-700"
+                  )}>
+                    Open
+                  </span>
+                </label>
+
+                {!hours.is_closed && (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="time"
+                      value={hours.open}
+                      onChange={(e) => updateOperatingHours(day, 'open', e.target.value)}
+                      className={cn(
+                        "px-2 py-1 rounded-md border-2 text-sm font-medium transition-all",
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500",
+                        theme === 'dark'
+                          ? "bg-slate-700 border-slate-600 text-white"
+                          : "bg-white border-slate-200 text-slate-900"
+                      )}
+                    />
+                    <span className="text-slate-400 text-sm">to</span>
+                    <input
+                      type="time"
+                      value={hours.close}
+                      onChange={(e) => updateOperatingHours(day, 'close', e.target.value)}
+                      className={cn(
+                        "px-2 py-1 rounded-md border-2 text-sm font-medium transition-all",
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500",
+                        theme === 'dark'
+                          ? "bg-slate-700 border-slate-600 text-white"
+                          : "bg-white border-slate-200 text-slate-900"
+                      )}
+                    />
+                  </div>
+                )}
+
+                {hours.is_closed && (
+                  <span className="text-sm text-red-500 font-medium">Closed</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Compact Security Notice */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={cn(
+          "p-3 rounded-xl border-2",
+          theme === 'dark' 
+            ? "bg-blue-900/20 border-blue-700/50" 
+            : "bg-blue-50 border-blue-200"
+        )}
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-emerald-600 flex items-center justify-center flex-shrink-0">
+            <Shield className="w-4 h-4 text-white" />
+          </div>
+          <div className="flex-1">
+            <h5 className="text-sm font-bold text-blue-700 dark:text-blue-300 mb-1">
+              Security & Compliance
+            </h5>
+            <p className="text-[10px] text-blue-600 dark:text-blue-400 mb-2">
+              Your data is protected with enterprise-grade security.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { icon: BadgeCheck, text: 'HIPAA' },
+                { icon: Shield, text: '256-bit' },
+                { icon: CheckCircle2, text: 'SOC 2' }
+              ].map((item, idx) => (
+                <div 
+                  key={idx}
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-1 rounded-md",
+                    theme === 'dark'
+                      ? "bg-slate-800/50"
+                      : "bg-white/70"
+                  )}
+                >
+                  <item.icon className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+                  <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300">
+                    {item.text}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+
+  const renderSuccessScreen = () => (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="space-y-6 text-center py-6"
+    >
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", duration: 0.6, delay: 0.2 }}
+      >
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 mb-4 shadow-2xl">
+          <BadgeCheck className="w-10 h-10 text-white" />
+        </div>
+      </motion.div>
+
+      <div>
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className={cn(
+            "text-3xl font-black mb-2",
+            theme === 'dark' ? "text-white" : "text-slate-900"
+          )}
+        >
+          Registration Complete!
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className={cn(
+            "text-sm",
+            theme === 'dark' ? "text-slate-400" : "text-slate-600"
+          )}
+        >
+          Your healthcare facility is now registered
+        </motion.p>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
         className={cn(
-          "rounded-2xl border-2 p-8",
+          "rounded-2xl border-2 p-6",
           theme === 'dark'
-            ? "bg-slate-800 border-slate-700"
+            ? "bg-slate-800/50 border-slate-700"
             : "bg-white border-slate-200"
         )}
       >
         <div className="mb-6">
           <p className={cn(
-            "text-sm font-medium mb-2",
-            theme === 'dark' ? "text-slate-400" : "text-slate-600"
+            "text-sm font-semibold mb-3 uppercase tracking-wider",
+            theme === 'dark' ? "text-slate-500" : "text-slate-500"
           )}>
-            Your Global Facility ID
+            Facility Identifiers
           </p>
-          <div className="text-4xl font-black tracking-tight bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-            {globalFacilityID?.fullID}
-          </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="text-left">
-            <div className={cn(
-              "text-xs font-medium mb-1",
-              theme === 'dark' ? "text-slate-500" : "text-slate-500"
-            )}>
-              Facility Type
-            </div>
-            <div className={cn(
-              "font-semibold",
-              theme === 'dark' ? "text-white" : "text-slate-900"
-            )}>
-              {FACILITY_TYPES.find(f => f.value === formData.facilityType)?.label}
-            </div>
-          </div>
-          
-          <div className="text-right">
-            <div className={cn(
-              "text-xs font-medium mb-1",
-              theme === 'dark' ? "text-slate-500" : "text-slate-500"
-            )}>
-              Status
-            </div>
-            <div className="flex items-center justify-end gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="font-semibold text-emerald-600">Verified</span>
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={handleContinueToPortal}
-          className="w-full flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 transition-all hover:scale-105"
-        >
-          Enter Facility Portal
-          <ArrowRight className="w-6 h-6" />
-        </button>
-      </motion.div>
-
-      {/* Next Steps Preview */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className={cn(
-          "rounded-2xl border-2 p-6",
-          theme === 'dark'
-            ? "bg-slate-800/50 border-slate-700"
-            : "bg-blue-50/50 border-blue-200"
-        )}
-      >
-        <h3 className={cn(
-          "text-lg font-bold mb-4 flex items-center gap-2",
-          theme === 'dark' ? "text-white" : "text-slate-900"
-        )}>
-          <Zap className="w-5 h-5 text-blue-600" />
-          What's Next?
-        </h3>
-        
-        <div className="space-y-3">
-          {[
-            { icon: TrendingUp, text: 'Set up facility operational dashboard' },
-            { icon: Users, text: 'Add staff members and providers' },
-            { icon: Clock, text: 'Configure scheduling and availability' },
-          ].map((item, idx) => (
-            <div key={idx} className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <item.icon className="w-4 h-4 text-blue-600" />
+          <div className="space-y-4">
+            <div>
+              <div className="text-[10px] text-slate-500 mb-1 font-medium">UUID</div>
+              <div className="text-lg md:text-xl font-black tracking-tight bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent break-all">
+                {registerFacilityMutation.data?.data?.facility_uuid}
               </div>
-              <span className={cn(
-                "text-sm font-medium",
-                theme === 'dark' ? "text-slate-300" : "text-slate-700"
-              )}>
-                {item.text}
-              </span>
             </div>
-          ))}
+
+            <div className={cn(
+              "inline-block px-4 py-3 rounded-xl",
+              theme === 'dark'
+                ? "bg-blue-900/30 border-2 border-blue-700/50"
+                : "bg-blue-50 border-2 border-blue-200"
+            )}>
+              <div className="text-[10px] text-blue-600 dark:text-blue-400 mb-1 font-medium">Code</div>
+              <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
+                {registerFacilityMutation.data?.data?.facility_code}
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* Summary */}
+        <div className={cn(
+          "p-4 rounded-xl border-2 mb-6 text-left",
+          theme === 'dark'
+            ? "bg-slate-900/50 border-slate-700"
+            : "bg-slate-50 border-slate-200"
+        )}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <p className="text-[10px] font-semibold text-slate-500 mb-1 uppercase tracking-wider">
+                Facility Name
+              </p>
+              <p className={cn(
+                "font-bold text-sm",
+                theme === 'dark' ? "text-white" : "text-slate-900"
+              )}>
+                {formData.facility_name}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-slate-500 mb-1 uppercase tracking-wider">
+                Type
+              </p>
+              <p className="font-bold text-sm text-blue-600 dark:text-blue-400">
+                {formData.facility_type && FACILITY_TYPE_LABELS[formData.facility_type as FacilityType]}
+              </p>
+            </div>
+            <div className="sm:col-span-2">
+              <p className="text-[10px] font-semibold text-slate-500 mb-1 uppercase tracking-wider">
+                Location
+              </p>
+              <p className={cn(
+                "font-bold text-sm",
+                theme === 'dark' ? "text-white" : "text-slate-900"
+              )}>
+                {formData.city}, {formData.state_province}, {selectedCountry?.name}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleContinueToDashboard}
+          className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-black text-base bg-gradient-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl"
+        >
+          <Sparkles className="w-5 h-5" />
+          Continue to Portal
+          <ArrowRight className="w-5 h-5" />
+        </motion.button>
       </motion.div>
-    </div>
+    </motion.div>
   );
 
   /* ==========================================================================
      MAIN RENDER
      ========================================================================== */
+
   return (
     <div className={cn(
       "min-h-screen flex flex-col relative",
@@ -1160,111 +1355,244 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
         ? "bg-gradient-to-br from-slate-950 via-gray-900 to-slate-950" 
         : "bg-gradient-to-br from-slate-50 via-white to-blue-50/40"
     )}>
-      {/* Decorative Background */}
+      {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className={cn(
-          "absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full blur-3xl",
-          theme === 'dark' ? "bg-blue-600/20" : "bg-blue-400/15"
-        )} />
-        <div className={cn(
-          "absolute -bottom-32 -left-32 w-[600px] h-[600px] rounded-full blur-3xl",
-          theme === 'dark' ? "bg-emerald-600/20" : "bg-emerald-400/15"
-        )} />
+        <motion.div
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className={cn(
+            "absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full blur-3xl",
+            theme === 'dark' ? "bg-blue-600/20" : "bg-blue-400/15"
+          )}
+        />
+        <motion.div
+          animate={{
+            scale: [1, 1.3, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1
+          }}
+          className={cn(
+            "absolute -bottom-32 -left-32 w-[600px] h-[600px] rounded-full blur-3xl",
+            theme === 'dark' ? "bg-emerald-600/20" : "bg-emerald-400/15"
+          )}
+        />
       </div>
 
-      {renderStageCelebration()}
-
-      {/* Header */}
+      {/* Compact Header */}
       <header className={cn(
         "sticky top-0 z-50 border-b backdrop-blur-xl",
         theme === 'dark' 
-          ? "bg-slate-900/75 border-slate-800/60" 
-          : "bg-white/75 border-slate-200/60"
+          ? "bg-slate-900/80 border-slate-800/60" 
+          : "bg-white/80 border-slate-200/60"
       )}>
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+        <nav className="max-w-5xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-emerald-600 flex items-center justify-center shadow-lg">
-                <Hospital className="w-6 h-6 text-white" />
-              </div>
+            <div className="flex items-center gap-2">
+              <motion.div
+                whileHover={{ rotate: 360 }}
+                transition={{ duration: 0.6 }}
+                className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-emerald-600 flex items-center justify-center shadow-lg"
+              >
+                <Hospital className="w-5 h-5 text-white" />
+              </motion.div>
               <div>
-                <div className="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+                <div className="text-base font-black tracking-tight bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
                   CustoCare AI
                 </div>
                 <div className={cn(
-                  "text-[11px] font-semibold tracking-wide uppercase",
+                  "text-[9px] font-bold tracking-wider uppercase",
                   theme === 'dark' ? "text-slate-500" : "text-slate-500"
                 )}>
-                  Healthcare Facility Setup
+                  Registration
                 </div>
               </div>
             </div>
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05, rotate: 180 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => dispatch(toggleTheme())}
               className={cn(
-                "p-3 rounded-xl transition-all border-2 hover:scale-105",
+                "p-2 rounded-lg transition-all border-2",
                 theme === 'dark'
-                  ? 'bg-slate-800/60 border-slate-700/60 text-amber-300'
-                  : 'bg-slate-100 border-slate-200 text-slate-600'
+                  ? 'bg-slate-800/60 border-slate-700/60 text-amber-400'
+                  : 'bg-slate-100 border-slate-200 text-slate-700'
               )}
             >
-              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </motion.button>
           </div>
         </nav>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-4 py-12 relative z-10">
-        <div className="w-full max-w-2xl">
+      <main className="flex-1 flex items-center justify-center px-3 sm:px-4 py-6 relative z-10">
+        <div className="w-full max-w-5xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className={cn(
-              "rounded-3xl border-2 p-8 backdrop-blur-xl shadow-2xl",
+              "rounded-2xl border-2 p-5 sm:p-6 md:p-8 backdrop-blur-xl shadow-2xl",
               theme === 'dark'
-                ? "bg-slate-800/85 border-slate-700/60"
-                : "bg-white/90 border-slate-200/60"
+                ? "bg-slate-800/90 border-slate-700/60"
+                : "bg-white/95 border-slate-200/60"
             )}
           >
             {!isComplete ? (
               <>
-                {renderProgress()}
-                {renderFormSection()}
+                {renderProgressIndicator()}
+                
+                <form onSubmit={handleSubmit}>
+                  <AnimatePresence mode="wait">
+                    {currentStep === 1 && renderStep1()}
+                    {currentStep === 2 && renderStep2()}
+                    {currentStep === 3 && renderStep3()}
+                  </AnimatePresence>
+
+                  {/* Compact Navigation */}
+                  <div className="flex items-center justify-between pt-6 mt-6 border-t-2 border-slate-200 dark:border-slate-700">
+                    {currentStep > 1 ? (
+                      <motion.button
+                        type="button"
+                        onClick={() => setCurrentStep(prev => (prev - 1) as 1 | 2 | 3)}
+                        disabled={isSubmitting}
+                        whileHover={{ scale: 1.02, x: -5 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={cn(
+                          "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all border-2",
+                          theme === 'dark'
+                            ? "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-600"
+                            : "border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400",
+                          isSubmitting && "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Back
+                      </motion.button>
+                    ) : (
+                      <div />
+                    )}
+                    
+                    {currentStep < 3 ? (
+                      <motion.button
+                        type="button"
+                        disabled={!isCurrentStepValid}
+                        onClick={() => setCurrentStep(prev => (prev + 1) as 1 | 2 | 3)}
+                        whileHover={isCurrentStepValid ? { scale: 1.02, x: 5 } : {}}
+                        whileTap={isCurrentStepValid ? { scale: 0.98 } : {}}
+                        className={cn(
+                          "ml-auto flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-black transition-all shadow-lg",
+                          isCurrentStepValid
+                            ? "bg-gradient-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 hover:shadow-xl"
+                            : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                        )}
+                      >
+                        Continue
+                        <ArrowRight className="w-4 h-4" />
+                      </motion.button>
+                    ) : (
+                      <motion.button
+                        type="submit"
+                        disabled={!isCurrentStepValid || isSubmitting}
+                        whileHover={isCurrentStepValid && !isSubmitting ? { scale: 1.02 } : {}}
+                        whileTap={isCurrentStepValid && !isSubmitting ? { scale: 0.98 } : {}}
+                        className={cn(
+                          "ml-auto flex items-center gap-2 px-8 py-3 rounded-lg font-black transition-all shadow-lg text-base",
+                          isCurrentStepValid && !isSubmitting
+                            ? "bg-gradient-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 hover:shadow-xl"
+                            : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                        )}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Registering...
+                          </>
+                        ) : (
+                          <>
+                            <BadgeCheck className="w-5 h-5" />
+                            Complete
+                          </>
+                        )}
+                      </motion.button>
+                    )}
+                  </div>
+                </form>
               </>
             ) : (
-              renderGlobalFacilityID()
+              renderSuccessScreen()
             )}
           </motion.div>
         </div>
       </main>
 
-      {/* Footer */}
+      {/* Compact Footer */}
       <footer className={cn(
-        "py-6 px-4 border-t backdrop-blur-xl",
+        "py-4 px-4 border-t backdrop-blur-xl",
         theme === 'dark' 
-          ? "bg-slate-900/60 border-slate-800/60" 
-          : "bg-white/60 border-slate-200/60"
+          ? "bg-slate-900/70 border-slate-800/60" 
+          : "bg-white/70 border-slate-200/60"
       )}>
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Shield className="w-4 h-4 text-emerald-500" />
-            <span className={cn(
-              "text-sm font-semibold",
-              theme === 'dark' ? "text-slate-300" : "text-slate-700"
-            )}>
-              HIPAA Compliant • 256-bit Encryption
-            </span>
+        <div className="max-w-5xl mx-auto text-center">
+          <div className="flex items-center justify-center gap-2 mb-2 flex-wrap">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+              <Shield className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
+                HIPAA
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30">
+              <BadgeCheck className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+              <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400">
+                256-bit
+              </span>
+            </div>
           </div>
           <p className={cn(
-            "text-xs",
+            "text-[10px]",
             theme === 'dark' ? "text-slate-500" : "text-slate-500"
           )}>
-            © {new Date().getFullYear()} CustoCare AI. All credentials are verified and encrypted.
+            © 2024 CustoCare AI. All data encrypted and protected.
           </p>
         </div>
       </footer>
+
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        .animate-shimmer {
+          animation: shimmer 2s infinite;
+        }
+        
+        /* Custom scrollbar */
+        .overflow-y-auto::-webkit-scrollbar {
+          width: 6px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+          background: ${theme === 'dark' ? 'rgb(71, 85, 105)' : 'rgb(203, 213, 225)'};
+          border-radius: 3px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+          background: ${theme === 'dark' ? 'rgb(100, 116, 139)' : 'rgb(148, 163, 184)'};
+        }
+      `}</style>
     </div>
   );
 };
