@@ -147,6 +147,7 @@ export const MedicalProfessionalOnboarding: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const theme = useAppSelector((state) => state.ui.theme);
+  const { user } = useAppSelector((state) => state.auth);
   
   // Form state
   const [currentStage, setCurrentStage] = useState<1 | 2>(1);
@@ -169,30 +170,37 @@ export const MedicalProfessionalOnboarding: React.FC = () => {
   });
 
   /* ==========================================================================
-     FORM HANDLERS
+     FORM HANDLERS - FIXED VERSION
      ========================================================================== */
 
   /**
-   * Update form fields
+   * Update form fields with proper type safety
    */
   const updateField = useCallback((
     field: keyof StaffFormData, 
     value: string
   ) => {
     setFormData(prev => {
-      // If employment status changes and is not "employed", clear employment_type
-      if (field === 'employment_status' && value !== 'employed') {
-        return {
-          ...prev,
-          [field]: value,
-          employment_type: ''
-        };
+      const newData: StaffFormData = { ...prev };
+      
+      // Type-safe field assignment
+      switch (field) {
+        case 'professional_title':
+          newData.professional_title = value as ProfessionalTitle | '';
+          break;
+        case 'employment_status':
+          newData.employment_status = value as EmploymentStatus | '';
+          // Clear employment_type if status is not 'employed'
+          if (value !== 'employed') {
+            newData.employment_type = '';
+          }
+          break;
+        case 'employment_type':
+          newData.employment_type = value as EmploymentType | '';
+          break;
       }
       
-      return {
-        ...prev,
-        [field]: value
-      };
+      return newData;
     });
   }, []);
 
@@ -241,8 +249,6 @@ export const MedicalProfessionalOnboarding: React.FC = () => {
   /**
    * Prepare clean payload for backend submission
    */
-  const { user } = useAppSelector((state) => state.auth);
-
   const prepareSubmissionPayload = useCallback((): RegisterStaffRequest => {
     if (!user?.id) {
       throw new Error('User ID is required to register a staff member');
@@ -725,7 +731,7 @@ export const MedicalProfessionalOnboarding: React.FC = () => {
                     : "bg-red-500"
                 )} />
                 <span className="font-semibold text-blue-500">
-                  {EMPLOYMENT_STATUS_LABELS[formData.employment_status as EmploymentStatus]}
+                  {formData.employment_status && EMPLOYMENT_STATUS_LABELS[formData.employment_status as EmploymentStatus]}
                 </span>
               </div>
             </div>
