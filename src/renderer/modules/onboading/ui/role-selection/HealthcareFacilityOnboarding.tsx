@@ -1219,7 +1219,7 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
         transition={{ type: "spring", duration: 0.6, delay: 0.2 }}
       >
         <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 mb-4 shadow-2xl">
-          <BadgeCheck className="w-10 h-10 text-white" />
+          <BadgeCheck className="w-8 h-8 text-white" />
         </div>
       </motion.div>
 
@@ -1244,7 +1244,7 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
             theme === 'dark' ? "text-slate-400" : "text-slate-600"
           )}
         >
-          Your healthcare facility is now registered
+          Your healthcare facility is now registered on CustoCare AI.
         </motion.p>
       </div>
 
@@ -1264,26 +1264,13 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
             "text-sm font-semibold mb-3 uppercase tracking-wider",
             theme === 'dark' ? "text-slate-500" : "text-slate-500"
           )}>
-            Facility Identifiers
+            Your Facility Registration Number is:
           </p>
 
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div>
-              <div className="text-[10px] text-slate-500 mb-1 font-medium">UUID</div>
               <div className="text-lg md:text-xl font-black tracking-tight bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent break-all">
                 {registerFacilityMutation.data?.data?.facility_uuid}
-              </div>
-            </div>
-
-            <div className={cn(
-              "inline-block px-4 py-3 rounded-xl",
-              theme === 'dark'
-                ? "bg-blue-900/30 border-2 border-blue-700/50"
-                : "bg-blue-50 border-2 border-blue-200"
-            )}>
-              <div className="text-[10px] text-blue-600 dark:text-blue-400 mb-1 font-medium">Code</div>
-              <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
-                {registerFacilityMutation.data?.data?.facility_code}
               </div>
             </div>
           </div>
@@ -1314,17 +1301,6 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
               </p>
               <p className="font-bold text-sm text-blue-600 dark:text-blue-400">
                 {formData.facility_type && FACILITY_TYPE_LABELS[formData.facility_type as FacilityType]}
-              </p>
-            </div>
-            <div className="sm:col-span-2">
-              <p className="text-[10px] font-semibold text-slate-500 mb-1 uppercase tracking-wider">
-                Location
-              </p>
-              <p className={cn(
-                "font-bold text-sm",
-                theme === 'dark' ? "text-white" : "text-slate-900"
-              )}>
-                {formData.city}, {formData.state_province}, {selectedCountry?.name}
               </p>
             </div>
           </div>
