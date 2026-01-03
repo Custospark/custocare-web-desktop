@@ -1270,7 +1270,7 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
           <div className="space-y-2">
             <div>
               <div className="text-lg md:text-xl font-black tracking-tight bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent break-all">
-                {registerFacilityMutation.data?.data?.facility_uuid}
+                {registerFacilityMutation.data?.data?.facility_code}
               </div>
             </div>
           </div>
