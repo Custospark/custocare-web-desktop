@@ -9,10 +9,12 @@ import {
 import { authApi } from '../../endpoints/login';
 import { ROUTES } from '../../../routes/onboardingRouteConstants';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
-import { 
+import type { 
   LoginRequest, 
   BackendLoginResponse, 
   UnifiedUserProfile, 
+} from '../../../../../shared/types/userTypes';
+import  { 
   mapLoginUserToProfile 
 } from '../../../../../shared/types/userTypes';
 

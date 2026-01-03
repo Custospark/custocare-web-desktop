@@ -51,7 +51,7 @@ import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useA
 import { toggleTheme } from '../../../../app/store/slices/uiSlice';
 import { ROUTES } from '../../routes/onboardingRouteConstants';
 import { useRegisterFacility } from '../facility-owner/registerFacilityQuery';
-import { 
+import type { 
   RegisterFacilityRequest,
   NatureOfFacility,
   FacilityType,
