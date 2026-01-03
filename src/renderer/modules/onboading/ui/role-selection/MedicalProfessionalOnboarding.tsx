@@ -40,7 +40,7 @@ import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useA
 import { toggleTheme } from '../../../../app/store/slices/uiSlice';
 import { ROUTES } from '../../routes/onboardingRouteConstants';
 import { useRegisterStaff } from '../../../staff/registration/queries/registerStaffQuery';
-import { RegisterStaffRequest } from '../../../staff/registration/queries/registerStaffTypes';
+import { type RegisterStaffRequest } from '../../../staff/registration/queries/registerStaffTypes';
 
 /* ==========================================================================
    TYPE DEFINITIONS
