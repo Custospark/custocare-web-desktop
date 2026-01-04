@@ -2,17 +2,25 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Bell, User, ChevronDown, Shield, Settings, LogOut,
   Sparkles, Users, FileText, Calendar, TrendingUp,
-  MessageSquare, Zap, Award, Clock, CheckCircle2,
-  Search, Command, Moon, Sun, Palette, Globe,
-  Heart, Star, BookOpen, Activity, Workflow,
-  Brain, Rocket , BarChart3
+  Zap, CheckCircle2,
+  Search, Command, Moon, Sun,
+  Heart, Activity, Workflow,
+  Brain, Rocket, BarChart3, Clock,
+  Building2, Briefcase, ChevronRight, Check
 } from 'lucide-react';
 import { cn } from '../../types/cn';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../app/routes/routeConstants';
-import {logout} from '../../../app/store/slices/authSlice';
-import { useAppDispatch } from '../../../app/store/hooks/useApp';
+import { logout } from '../../../app/store/slices/authSlice';
+import { useAppDispatch, useAppSelector } from '../../../app/store/hooks/useApp';
 import { useToast } from '../../../app/store/contexts/toast/useToast';
+import { 
+  switchFacilityRole, 
+  switchToPatientMode,
+  getRoleDisplayName,
+  type FacilityRole 
+} from '../../../app/store/slices/activeContextSlice';
+
 export interface NavbarProps {
   theme?: 'light' | 'dark';
   onMenuClick?: () => void;
@@ -53,13 +61,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   theme = 'dark',
   onThemeToggle,
   className
-}) => 
-  {
+}) => {
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
   const [isSmartSearchOpen, setIsSmartSearchOpen] = useState(false);
   const [isWorkflowOpen, setIsWorkflowOpen] = useState(false);
+  const [isPortalSwitcherOpen, setIsPortalSwitcherOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobile, setIsMobile] = useState(false);
   
@@ -68,9 +76,26 @@ export const Navbar: React.FC<NavbarProps> = ({
   const quickActionsRef = useRef<HTMLDivElement>(null);
   const smartSearchRef = useRef<HTMLDivElement>(null);
   const workflowRef = useRef<HTMLDivElement>(null);
-
+  const portalSwitcherRef = useRef<HTMLDivElement>(null);
 
   const isDark = theme === 'dark';
+
+  // Redux state
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+  const activeContext = useAppSelector((state) => state.activeContext);
+
+  const {
+    user,
+    facilityRoles,
+    activeFacilityId,
+    activeRoleCode,
+    isPatient,
+    isStaff,
+    isStaffWithFacility,
+    hasMultipleFacilities,
+  } = activeContext;
 
   // Detect screen size
   useEffect(() => {
@@ -79,22 +104,66 @@ export const Navbar: React.FC<NavbarProps> = ({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-  
-  const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-  const {showToast}=useToast();
 
   const handleLogout = () => {
     dispatch(logout());
     showToast(
       'info',
-      'You’ve been logged out successfully. Thank you for using CustoCare AI — see you again soon!',
-      8000
+      "You've been logged out successfully. Thank you for using CustoCare AI — see you again soon!",
+      5000
     );
     navigate(ROUTES.LANDING);
   };
 
-  // Enhanced notifications with actions
+  // Portal/Role switching handlers
+  const handleSwitchToStaffRole = (facilityRole: FacilityRole) => {
+    dispatch(
+      switchFacilityRole({
+        facilityId: facilityRole.facility_id,
+        roleCode: facilityRole.role_code,
+      })
+    );
+    setIsPortalSwitcherOpen(false);
+    showToast('success', `Switched to ${getRoleDisplayName(facilityRole.role_code)} at ${facilityRole.facility_name}`, 3000);
+  };
+
+  const handleSwitchToPatientPortal = () => {
+    dispatch(switchToPatientMode());
+    setIsPortalSwitcherOpen(false);
+    showToast('success', 'Switched to Patient Portal', 3000);
+  };
+
+  // Get current context display
+  const getCurrentContextDisplay = () => {
+    if (activeRoleCode && activeFacilityId) {
+      const currentRole = facilityRoles.find(
+        r => r.facility_id === activeFacilityId && r.role_code === activeRoleCode
+      );
+      return {
+        title: getRoleDisplayName(activeRoleCode),
+        subtitle: currentRole?.facility_name || `Facility ${activeFacilityId}`,
+        icon: <Briefcase className="w-4 h-4" />,
+        type: 'staff' as const,
+      };
+    } else if (isPatient && !activeRoleCode) {
+      return {
+        title: 'Patient Portal',
+        subtitle: 'Personal Health',
+        icon: <Heart className="w-4 h-4" />,
+        type: 'patient' as const,
+      };
+    }
+    return {
+      title: 'No Context',
+      subtitle: 'Select workspace',
+      icon: <User className="w-4 h-4" />,
+      type: 'none' as const,
+    };
+  };
+
+  const currentContext = getCurrentContextDisplay();
+
+  // Enhanced notifications
   const notifications: Notification[] = [
     { 
       id: 1, 
@@ -126,28 +195,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       icon: <Clock className="w-4 h-4" />,
       actionLabel: 'Confirm'
     },
-    { 
-      id: 4, 
-      title: 'System Update Available', 
-      message: 'New AI diagnostic features and performance improvements',
-      time: '3 hours ago', 
-      read: true, 
-      type: 'info',
-      icon: <Sparkles className="w-4 h-4" />,
-      actionLabel: 'Learn More'
-    },
-    { 
-      id: 5, 
-      title: 'Appointment Reminder', 
-      message: 'Dr. Martinez consultation in 30 minutes',
-      time: '4 hours ago', 
-      read: true, 
-      type: 'info',
-      icon: <Calendar className="w-4 h-4" />
-    },
   ];
 
-  // Enhanced quick actions
   const quickActions: QuickAction[] = [
     { 
       id: 'patients', 
@@ -184,46 +233,22 @@ export const Navbar: React.FC<NavbarProps> = ({
       description: 'View insights & trends',
       shortcut: '⌘L'
     },
-    { 
-      id: 'messages', 
-      label: 'Messages', 
-      icon: <MessageSquare className="w-4 h-4" />, 
-      badge: 3, 
-      color: 'cyan',
-      description: 'Team communications',
-      shortcut: '⌘M'
-    },
-    { 
-      id: 'tasks', 
-      label: 'Tasks', 
-      icon: <CheckCircle2 className="w-4 h-4" />, 
-      badge: 7, 
-      color: 'pink',
-      description: 'Daily task management',
-      shortcut: '⌘T'
-    },
   ];
 
-  // Smart search suggestions
   const smartSearchItems: SmartSearch[] = [
     { id: '1', category: 'Patients', title: 'Sarah Johnson - Ward 3B', path: '/patients/101', icon: <Users className="w-4 h-4" /> },
     { id: '2', category: 'Reports', title: 'Monthly Analytics Report', path: '/reports/monthly', icon: <BarChart3 className="w-4 h-4" /> },
     { id: '3', category: 'Appointments', title: 'Surgery Schedule - Dr. Martinez', path: '/appointments/surgery', icon: <Calendar className="w-4 h-4" /> },
-    { id: '4', category: 'Settings', title: 'User Preferences', path: '/settings/preferences', icon: <Settings className="w-4 h-4" /> },
-    { id: '5', category: 'Analytics', title: 'Patient Flow Analysis', path: '/analytics/flow', icon: <Activity className="w-4 h-4" /> },
   ];
 
-  // Workflow automation shortcuts
   const workflows = [
     { id: 'admit', label: 'Admit Patient', icon: <Users className="w-4 h-4" />, color: 'blue' },
     { id: 'discharge', label: 'Discharge Patient', icon: <CheckCircle2 className="w-4 h-4" />, color: 'green' },
     { id: 'labs', label: 'Order Lab Tests', icon: <FileText className="w-4 h-4" />, color: 'purple' },
-    { id: 'prescription', label: 'Write Prescription', icon: <BookOpen className="w-4 h-4" />, color: 'orange' },
   ];
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // Filtered search results
   const filteredSearchResults = searchQuery 
     ? smartSearchItems.filter(item => 
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -249,6 +274,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       if (workflowRef.current && !workflowRef.current.contains(event.target as Node)) {
         setIsWorkflowOpen(false);
       }
+      if (portalSwitcherRef.current && !portalSwitcherRef.current.contains(event.target as Node)) {
+        setIsPortalSwitcherOpen(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -268,7 +296,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Notification colors
   const getNotificationColor = (type: Notification['type']) => {
     const colors = {
       success: isDark ? 'text-emerald-400' : 'text-emerald-600',
@@ -289,7 +316,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     return colors[type];
   };
 
-  // Dropdown position classes
   const getDropdownPosition = () => {
     if (isMobile) {
       return 'fixed left-1/2 -translate-x-1/2 top-20';
@@ -304,8 +330,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-2 sm:gap-3 lg:ms-7">
           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20">
             <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-          </div> 
-           
+          </div>
+          
           <div className="hidden xl:block">
             <div className="flex items-center gap-2">
               <span className={cn(
@@ -328,7 +354,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               'text-xs mt-0.5',
               isDark ? 'text-gray-500' : 'text-gray-600'
             )}>
-              AI Powered Health Management System.
+              AI Powered Health Management System
             </p>
           </div>
         </div>
@@ -336,21 +362,212 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Right: Action Buttons */}
       <div className="flex items-center gap-1 sm:gap-2">
+        {/* Portal/Role Switcher - NEW */}
+        {(isStaff || isPatient) && (hasMultipleFacilities || (isStaff && isPatient)) && (
+          <div ref={portalSwitcherRef} className="relative">
+            <button
+              onClick={() => setIsPortalSwitcherOpen(!isPortalSwitcherOpen)}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300 hover:scale-105',
+                'border',
+                isDark 
+                  ? 'bg-gray-800/50 border-gray-700 hover:bg-gray-800' 
+                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+              )}
+              title="Switch workspace or portal"
+            >
+              <div className={cn(
+                'p-1.5 rounded-md',
+                currentContext.type === 'staff' 
+                  ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600')
+                  : (isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600')
+              )}>
+                {currentContext.icon}
+              </div>
+              <div className="hidden lg:block text-left">
+                <p className={cn(
+                  'text-xs font-semibold leading-tight',
+                  isDark ? 'text-gray-200' : 'text-gray-900'
+                )}>
+                  {currentContext.title}
+                </p>
+                <p className={cn(
+                  'text-xs leading-tight',
+                  isDark ? 'text-gray-500' : 'text-gray-600'
+                )}>
+                  {currentContext.subtitle}
+                </p>
+              </div>
+              <ChevronDown className={cn(
+                'w-4 h-4 transition-transform',
+                isPortalSwitcherOpen && 'rotate-180',
+                isDark ? 'text-gray-400' : 'text-gray-600'
+              )} />
+            </button>
+
+            {isPortalSwitcherOpen && (
+              <div className={cn(
+                'w-80 rounded-xl border shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200',
+                getDropdownPosition(),
+                isDark 
+                  ? 'bg-gray-900 border-gray-800' 
+                  : 'bg-white border-gray-200'
+              )}>
+                <div className="p-4 border-b border-gray-200/50 dark:border-gray-800/50">
+                  <h3 className={cn(
+                    'font-semibold flex items-center gap-2',
+                    isDark ? 'text-gray-200' : 'text-gray-900'
+                  )}>
+                    <Workflow className="w-4 h-4 text-purple-500" />
+                    Switch Workspace
+                  </h3>
+                  <p className={cn(
+                    'text-xs mt-1',
+                    isDark ? 'text-gray-500' : 'text-gray-600'
+                  )}>
+                    {user?.full_name || 'User'}
+                  </p>
+                </div>
+
+                <div className="max-h-96 overflow-y-auto p-3 space-y-2">
+                  {/* Staff Workspaces */}
+                  {isStaffWithFacility && (
+                    <>
+                      <p className={cn(
+                        'text-xs font-bold uppercase tracking-wide px-2 mb-2',
+                        isDark ? 'text-gray-500' : 'text-gray-600'
+                      )}>
+                        Professional Workspaces
+                      </p>
+                      {facilityRoles.map((role) => {
+                        const isActive = activeFacilityId === role.facility_id && activeRoleCode === role.role_code;
+                        return (
+                          <button
+                            key={`${role.facility_id}-${role.role_code}`}
+                            onClick={() => handleSwitchToStaffRole(role)}
+                            className={cn(
+                              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
+                              'border',
+                              isActive
+                                ? (isDark 
+                                  ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' 
+                                  : 'bg-blue-50 border-blue-200 text-blue-600')
+                                : (isDark 
+                                  ? 'hover:bg-gray-800 border-transparent text-gray-300' 
+                                  : 'hover:bg-gray-50 border-transparent text-gray-700')
+                            )}
+                          >
+                            <div className={cn(
+                              'p-2 rounded-lg',
+                              isActive
+                                ? (isDark ? 'bg-blue-500/20' : 'bg-blue-100')
+                                : (isDark ? 'bg-gray-800' : 'bg-gray-100')
+                            )}>
+                              <Briefcase className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-semibold truncate">
+                                  {getRoleDisplayName(role.role_code)}
+                                </p>
+                                {role.is_primary_facility && (
+                                  <span className={cn(
+                                    'px-1.5 py-0.5 text-xs font-bold rounded-full',
+                                    isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700'
+                                  )}>
+                                    Primary
+                                  </span>
+                                )}
+                              </div>
+                              <p className={cn(
+                                'text-xs truncate',
+                                isDark ? 'text-gray-500' : 'text-gray-600'
+                              )}>
+                                {role.facility_name || `Facility ${role.facility_id}`}
+                              </p>
+                            </div>
+                            {isActive && (
+                              <Check className="w-4 h-4 text-blue-500" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {/* Patient Portal */}
+                  {isPatient && (
+                    <>
+                      {isStaff && (
+                        <div className={cn(
+                          'my-4 border-t',
+                          isDark ? 'border-gray-800' : 'border-gray-200'
+                        )} />
+                      )}
+                      <p className={cn(
+                        'text-xs font-bold uppercase tracking-wide px-2 mb-2',
+                        isDark ? 'text-gray-500' : 'text-gray-600'
+                      )}>
+                        Personal Access
+                      </p>
+                      <button
+                        onClick={handleSwitchToPatientPortal}
+                        className={cn(
+                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
+                          'border',
+                          !activeRoleCode
+                            ? (isDark 
+                              ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' 
+                              : 'bg-purple-50 border-purple-200 text-purple-600')
+                            : (isDark 
+                              ? 'hover:bg-gray-800 border-transparent text-gray-300' 
+                              : 'hover:bg-gray-50 border-transparent text-gray-700')
+                        )}
+                      >
+                        <div className={cn(
+                          'p-2 rounded-lg',
+                          !activeRoleCode
+                            ? (isDark ? 'bg-purple-500/20' : 'bg-purple-100')
+                            : (isDark ? 'bg-gray-800' : 'bg-gray-100')
+                        )}>
+                          <Heart className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold">Patient Portal</p>
+                          <p className={cn(
+                            'text-xs',
+                            isDark ? 'text-gray-500' : 'text-gray-600'
+                          )}>
+                            My Personal Health
+                          </p>
+                        </div>
+                        {!activeRoleCode && (
+                          <Check className="w-4 h-4 text-purple-500" />
+                        )}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Smart Search */}
         <div ref={smartSearchRef} className="relative">
           <button
             onClick={() => setIsSmartSearchOpen(!isSmartSearchOpen)}
             className={cn(
-              "p-2 rounded-lg transition-all duration-300 hover:scale-105 relative",
-              isDark ? "hover:bg-gray-800" : "hover:bg-gray-100"
+              'p-2 rounded-lg transition-all duration-300 hover:scale-105 relative',
+              isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
             )}
             title="Smart search (⌘K)"
           >
             <Search className={cn(
-              "w-5 h-5 transition-colors",
+              'w-5 h-5 transition-colors',
               isSmartSearchOpen 
-                ? (isDark ? "text-cyan-400" : "text-blue-500") 
-                : (isDark ? "text-gray-400" : "text-gray-600")
+                ? (isDark ? 'text-cyan-400' : 'text-blue-500') 
+                : (isDark ? 'text-gray-400' : 'text-gray-600')
             )} />
           </button>
 
@@ -365,8 +582,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="p-3 border-b border-gray-200/50 dark:border-gray-800/50">
                 <div className="relative">
                   <Search className={cn(
-                    "absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4",
-                    isDark ? "text-gray-500" : "text-gray-400"
+                    'absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4',
+                    isDark ? 'text-gray-500' : 'text-gray-400'
                   )} />
                   <input
                     type="text"
@@ -374,18 +591,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search patients, reports, settings..."
                     className={cn(
-                      "w-full pl-10 pr-4 py-2 rounded-lg text-sm border transition-all",
+                      'w-full pl-10 pr-4 py-2 rounded-lg text-sm border transition-all',
                       isDark 
-                        ? "bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-cyan-500" 
-                        : "bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500"
+                        ? 'bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-cyan-500' 
+                        : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
                     )}
                     autoFocus
                   />
                   <div className={cn(
-                    "absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border",
+                    'absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border',
                     isDark 
-                      ? "bg-gray-800 border-gray-700 text-gray-500" 
-                      : "bg-gray-100 border-gray-300 text-gray-600"
+                      ? 'bg-gray-800 border-gray-700 text-gray-500' 
+                      : 'bg-gray-100 border-gray-300 text-gray-600'
                   )}>
                     <Command className="w-3 h-3" />K
                   </div>
@@ -398,15 +615,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <button
                       key={item.id}
                       className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all hover:scale-[1.02]",
+                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all hover:scale-[1.02]',
                         isDark 
-                          ? "hover:bg-gray-800 text-gray-300" 
-                          : "hover:bg-gray-50 text-gray-700"
+                          ? 'hover:bg-gray-800 text-gray-300' 
+                          : 'hover:bg-gray-50 text-gray-700'
                       )}
                     >
                       <div className={cn(
-                        "p-2 rounded-lg",
-                        isDark ? "bg-blue-500/10 text-blue-400" : "bg-blue-50 text-blue-600"
+                        'p-2 rounded-lg',
+                        isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600'
                       )}>
                         {item.icon}
                       </div>
@@ -424,14 +641,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                           {item.title}
                         </p>
                       </div>
-                      <Command className="w-4 h-4 text-gray-500" />
+                      <ChevronRight className="w-4 h-4 text-gray-500" />
                     </button>
                   ))
                 ) : (
                   <div className="text-center py-8">
                     <Brain className={cn(
-                      "w-12 h-12 mx-auto mb-3",
-                      isDark ? "text-gray-700" : "text-gray-300"
+                      'w-12 h-12 mx-auto mb-3',
+                      isDark ? 'text-gray-700' : 'text-gray-300'
                     )} />
                     <p className={cn(
                       'text-sm font-medium',
@@ -461,16 +678,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => setIsWorkflowOpen(!isWorkflowOpen)}
             className={cn(
-              "p-2 rounded-lg transition-all duration-300 hover:scale-105",
-              isDark ? "hover:bg-gray-800" : "hover:bg-gray-100"
+              'p-2 rounded-lg transition-all duration-300 hover:scale-105',
+              isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
             )}
             title="Workflow automation"
           >
             <Workflow className={cn(
-              "w-5 h-5 transition-colors",
+              'w-5 h-5 transition-colors',
               isWorkflowOpen 
-                ? (isDark ? "text-cyan-400" : "text-blue-500") 
-                : (isDark ? "text-gray-400" : "text-gray-600")
+                ? (isDark ? 'text-cyan-400' : 'text-blue-500') 
+                : (isDark ? 'text-gray-400' : 'text-gray-600')
             )} />
           </button>
 
@@ -503,14 +720,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button
                     key={workflow.id}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all hover:scale-[1.02]",
+                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all hover:scale-[1.02]',
                       isDark 
-                        ? "hover:bg-gray-800 border border-gray-800" 
-                        : "hover:bg-gray-50 border border-gray-200"
+                        ? 'hover:bg-gray-800 border border-gray-800' 
+                        : 'hover:bg-gray-50 border border-gray-200'
                     )}
                   >
                     <div className={cn(
-                      "p-2 rounded-lg",
+                      'p-2 rounded-lg',
                       `bg-${workflow.color}-500/10`
                     )}>
                       {workflow.icon}
@@ -534,16 +751,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => setIsQuickActionsOpen(!isQuickActionsOpen)}
             className={cn(
-              "p-2 rounded-lg transition-all duration-300 hover:scale-105 relative",
-              isDark ? "hover:bg-gray-800" : "hover:bg-gray-100"
+              'p-2 rounded-lg transition-all duration-300 hover:scale-105 relative',
+              isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
             )}
             title="Quick actions"
           >
             <Zap className={cn(
-              "w-5 h-5 transition-colors",
+              'w-5 h-5 transition-colors',
               isQuickActionsOpen 
-                ? (isDark ? "text-cyan-400" : "text-blue-500") 
-                : (isDark ? "text-gray-400" : "text-gray-600")
+                ? (isDark ? 'text-cyan-400' : 'text-blue-500') 
+                : (isDark ? 'text-gray-400' : 'text-gray-600')
             )} />
           </button>
 
@@ -576,15 +793,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button
                     key={action.id}
                     className={cn(
-                      "relative p-3 rounded-lg text-left transition-all duration-200 hover:scale-105 active:scale-95 group",
+                      'relative p-3 rounded-lg text-left transition-all duration-200 hover:scale-105 active:scale-95 group',
                       isDark 
-                        ? "hover:bg-gray-800 border border-gray-800" 
-                        : "hover:bg-gray-50 border border-gray-200"
+                        ? 'hover:bg-gray-800 border border-gray-800' 
+                        : 'hover:bg-gray-50 border border-gray-200'
                     )}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <div className={cn(
-                        "p-1.5 rounded-lg",
+                        'p-1.5 rounded-lg',
                         `bg-${action.color}-500/10`
                       )}>
                         {action.icon}
@@ -647,8 +864,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         <button
           onClick={onThemeToggle}
           className={cn(
-            "p-2 rounded-lg transition-all duration-300 hover:scale-105 hidden sm:block",
-            isDark ? "hover:bg-gray-800" : "hover:bg-gray-100"
+            'p-2 rounded-lg transition-all duration-300 hover:scale-105 hidden sm:block',
+            isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
           )}
           title="Toggle theme"
         >
@@ -659,21 +876,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </button>
 
-        {/* Notifications - Mobile Centered */}
+        {/* Notifications */}
         <div ref={notificationsRef} className="relative">
           <button
             onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
             className={cn(
-              "p-2 rounded-lg transition-all duration-300 hover:scale-105 relative",
-              isDark ? "hover:bg-gray-800" : "hover:bg-gray-100"
+              'p-2 rounded-lg transition-all duration-300 hover:scale-105 relative',
+              isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
             )}
             title="Notifications"
           >
             <Bell className={cn(
-              "w-5 h-5 transition-colors",
+              'w-5 h-5 transition-colors',
               isNotificationsOpen 
-                ? (isDark ? "text-cyan-400" : "text-blue-500") 
-                : (isDark ? "text-gray-400" : "text-gray-600")
+                ? (isDark ? 'text-cyan-400' : 'text-blue-500') 
+                : (isDark ? 'text-gray-400' : 'text-gray-600')
             )} />
             
             {unreadCount > 0 && (
@@ -689,7 +906,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           {isNotificationsOpen && (
             <div className={cn(
               'rounded-xl border shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200',
-              // Mobile: centered, Desktop: right-aligned
               isMobile 
                 ? 'fixed left-1/2 -translate-x-1/2 top-20 w-[calc(100vw-2rem)] max-w-sm' 
                 : 'absolute right-0 mt-2 w-96',
@@ -732,16 +948,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div
                     key={notification.id}
                     className={cn(
-                      "p-4 border-b last:border-0 transition-all duration-200 cursor-pointer",
+                      'p-4 border-b last:border-0 transition-all duration-200 cursor-pointer',
                       isDark 
-                        ? "hover:bg-gray-800 border-gray-800" 
-                        : "hover:bg-gray-50 border-gray-100",
-                      !notification.read && (isDark ? "bg-cyan-500/5 border-l-2 border-l-cyan-500" : "bg-blue-50/50 border-l-2 border-l-blue-500")
+                        ? 'hover:bg-gray-800 border-gray-800' 
+                        : 'hover:bg-gray-50 border-gray-100',
+                      !notification.read && (isDark ? 'bg-cyan-500/5 border-l-2 border-l-cyan-500' : 'bg-blue-50/50 border-l-2 border-l-blue-500')
                     )}
                   >
                     <div className="flex items-start gap-3">
                       <div className={cn(
-                        "p-2 rounded-lg flex-shrink-0",
+                        'p-2 rounded-lg flex-shrink-0',
                         getNotificationBg(notification.type)
                       )}>
                         <div className={getNotificationColor(notification.type)}>
@@ -758,8 +974,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                           </p>
                           {!notification.read && (
                             <div className={cn(
-                              "w-2 h-2 rounded-full flex-shrink-0 mt-1",
-                              isDark ? "bg-cyan-500" : "bg-blue-500"
+                              'w-2 h-2 rounded-full flex-shrink-0 mt-1',
+                              isDark ? 'bg-cyan-500' : 'bg-blue-500'
                             )} />
                           )}
                         </div>
@@ -810,15 +1026,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* User Profile - Mobile Centered */}
+        {/* User Profile */}
         <div ref={userDropdownRef} className="relative">
           <button
             onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
             className={cn(
-              "flex items-center gap-1 sm:gap-2 pl-1 sm:pl-2 pr-1 sm:pr-1.5 py-1 sm:py-1.5 rounded-xl transition-all duration-300 hover:scale-105",
+              'flex items-center gap-1 sm:gap-2 pl-1 sm:pl-2 pr-1 sm:pr-1.5 py-1 sm:py-1.5 rounded-xl transition-all duration-300 hover:scale-105',
               isDark 
-                ? "hover:bg-gray-800" 
-                : "hover:bg-gray-100"
+                ? 'hover:bg-gray-800' 
+                : 'hover:bg-gray-100'
             )}
           >
             <div className="text-right hidden lg:block">
@@ -826,13 +1042,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                 'text-sm font-semibold',
                 isDark ? 'text-gray-200' : 'text-gray-900'
               )}>
-          Dr. Steve Okello         
-     </p>
+                {user?.full_name || 'User'}
+              </p>
               <p className={cn(
                 'text-xs',
                 isDark ? 'text-gray-500' : 'text-gray-600'
               )}>
-                Chief Physician
+                {currentContext.title}
               </p>
             </div>
             
@@ -844,15 +1060,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             
             <ChevronDown className={cn(
-              "w-4 h-4 transition-transform duration-200 hidden sm:block",
-              isUserDropdownOpen && "rotate-180"
+              'w-4 h-4 transition-transform duration-200 hidden sm:block',
+              isUserDropdownOpen && 'rotate-180'
             )} />
           </button>
 
           {isUserDropdownOpen && (
             <div className={cn(
               'rounded-xl border shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200',
-              // Mobile: centered, Desktop: right-aligned
               isMobile 
                 ? 'fixed left-1/2 -translate-x-1/2 top-20 w-[calc(100vw-2rem)] max-w-xs' 
                 : 'absolute right-0 mt-2 w-72',
@@ -874,72 +1089,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                       'font-bold',
                       isDark ? 'text-gray-200' : 'text-gray-900'
                     )}>
-                      Dr. Steve Okello
+                      {user?.full_name || 'User'}
                     </p>
                     <p className={cn(
                       'text-sm',
                       isDark ? 'text-gray-500' : 'text-gray-600'
                     )}>
-                      Chief Physician
-                    </p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Award className="w-3 h-3 text-amber-500" />
-                      <span className="text-xs text-amber-500 font-medium">Premium Member</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Stats */}
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  <div className={cn(
-                    'text-center p-2 rounded-lg',
-                    isDark ? 'bg-gray-800/50' : 'bg-gray-50'
-                  )}>
-                    <p className={cn(
-                      'text-lg font-bold',
-                      isDark ? 'text-cyan-400' : 'text-blue-600'
-                    )}>
-                      124
+                      {currentContext.title}
                     </p>
                     <p className={cn(
-                      'text-xs',
-                      isDark ? 'text-gray-500' : 'text-gray-600'
+                      'text-xs mt-0.5',
+                      isDark ? 'text-gray-600' : 'text-gray-500'
                     )}>
-                      Patients
-                    </p>
-                  </div>
-                  <div className={cn(
-                    'text-center p-2 rounded-lg',
-                    isDark ? 'bg-gray-800/50' : 'bg-gray-50'
-                  )}>
-                    <p className={cn(
-                      'text-lg font-bold',
-                      isDark ? 'text-emerald-400' : 'text-emerald-600'
-                    )}>
-                      98%
-                    </p>
-                    <p className={cn(
-                      'text-xs',
-                      isDark ? 'text-gray-500' : 'text-gray-600'
-                    )}>
-                      Success
-                    </p>
-                  </div>
-                  <div className={cn(
-                    'text-center p-2 rounded-lg',
-                    isDark ? 'bg-gray-800/50' : 'bg-gray-50'
-                  )}>
-                    <p className={cn(
-                      'text-lg font-bold',
-                      isDark ? 'text-purple-400' : 'text-purple-600'
-                    )}>
-                      15
-                    </p>
-                    <p className={cn(
-                      'text-xs',
-                      isDark ? 'text-gray-500' : 'text-gray-600'
-                    )}>
-                      Years
+                      {user?.email || 'No email'}
                     </p>
                   </div>
                 </div>
@@ -948,68 +1110,50 @@ export const Navbar: React.FC<NavbarProps> = ({
               {/* Menu Items */}
               <div className="p-2">
                 {[
-                  { icon: User, label: 'My Profile', shortcut: '⌘P', color: 'blue' },
-                  { icon: Settings, label: 'Settings', shortcut: '⌘,', color: 'gray' },
-                  { icon: Shield, label: 'Privacy & Security', color: 'purple' },
-                  { icon: Heart, label: 'Saved Items', badge: 5, color: 'pink' },
-                  { icon: Star, label: 'Achievements', badge: 12, color: 'amber' },
-                  { icon: Globe, label: 'Language: English', color: 'cyan' },
-                  { icon: Palette, label: 'Appearance', color: 'orange' },
-                  { icon: Sparkles, label: 'Upgrade to Pro', highlight: true, color: 'gradient' },
+                  { icon: User, label: 'My Profile', shortcut: '⌘P' },
+                  { icon: Settings, label: 'Settings', shortcut: '⌘,' },
+                  { icon: Building2, label: 'Workspaces' },
+                  { icon: Activity, label: 'Activity Log' },
                 ].map((item) => (
                   <button
                     key={item.label}
                     className={cn(
-                      "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group",
-                      item.highlight
-                        ? (isDark 
-                          ? "text-cyan-300 hover:bg-gradient-to-r hover:from-cyan-500/10 hover:to-blue-500/10 font-medium" 
-                          : "text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 font-medium")
-                        : (isDark 
-                          ? "text-gray-400 hover:bg-gray-800 hover:text-gray-200" 
-                          : "text-gray-700 hover:bg-gray-50 hover:text-gray-900")
+                      'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group',
+                      isDark 
+                        ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-200' 
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                     )}
                   >
                     <div className="flex items-center gap-3">
                       <item.icon className="w-4 h-4" />
                       <span>{item.label}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {item.badge && (
-                        <span className={cn(
-                          'text-xs font-bold px-1.5 py-0.5 rounded-full',
-                          isDark 
-                            ? 'bg-cyan-500/20 text-cyan-300' 
-                            : 'bg-blue-100 text-blue-700'
-                        )}>
-                          {item.badge}
-                        </span>
-                      )}
-                      {item.shortcut && (
-                        <span className={cn(
-                          'text-xs px-1.5 py-0.5 rounded border',
-                          isDark 
-                            ? 'bg-gray-800 border-gray-700 text-gray-500' 
-                            : 'bg-gray-100 border-gray-300 text-gray-600'
-                        )}>
-                          {item.shortcut}
-                        </span>
-                      )}
-                    </div>
+                    {item.shortcut && (
+                      <span className={cn(
+                        'text-xs px-1.5 py-0.5 rounded border',
+                        isDark 
+                          ? 'bg-gray-800 border-gray-700 text-gray-500' 
+                          : 'bg-gray-100 border-gray-300 text-gray-600'
+                      )}>
+                        {item.shortcut}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
 
               {/* Sign Out */}
               <div className="p-2 border-t border-gray-200/50 dark:border-gray-800/50">
-                <button onClick={handleLogout} className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                  isDark 
-                    ? "text-gray-400 hover:bg-red-500/10 hover:text-red-400" 
-                    : "text-gray-700 hover:bg-red-50 hover:text-red-600"
-                )}>
+                <button 
+                  onClick={handleLogout}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                    isDark 
+                      ? 'text-gray-400 hover:bg-red-500/10 hover:text-red-400' 
+                      : 'text-gray-700 hover:bg-red-50 hover:text-red-600'
+                  )}
+                >
                   <LogOut className="w-4 h-4" />
-                  
                   Sign Out
                 </button>
               </div>
