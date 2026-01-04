@@ -1,8 +1,9 @@
-// api/axiosConfig.ts
+// src/renderer/app/api/axiosConfig.ts
+
 import axios, {
+  AxiosError,
   type AxiosInstance,
   type InternalAxiosRequestConfig,
-  AxiosError,
 } from 'axios';
 import { QueryClient } from '@tanstack/react-query';
 
@@ -10,9 +11,10 @@ import { store } from '../store/store';
 import { API_BASE_URL, API_TIMEOUT } from './apiConfig';
 import type { RoleCode } from '../store/slices/activeContextSlice';
 
-/**
- * Axios instance
- */
+/* -------------------------------------------------------------------------- */
+/*                                AXIOS INSTANCE                               */
+/* -------------------------------------------------------------------------- */
+
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: API_TIMEOUT,
@@ -22,28 +24,21 @@ const axiosInstance: AxiosInstance = axios.create({
   },
 });
 
-/**
- * REQUEST INTERCEPTOR
- * Injects:
- * - Authorization token
- * - Active context headers (facility / role)
- * - Optional staff_id / patient_id
- */
+/* -------------------------------------------------------------------------- */
+/*                             REQUEST INTERCEPTOR                             */
+/* -------------------------------------------------------------------------- */
+
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const state = store.getState();
 
-    /**
-     * 1️⃣ Authorization
-     */
+    /* ---------------------------- Authorization ---------------------------- */
     const token = state.auth.token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    /**
-     * 2️⃣ Active Context
-     */
+    /* ---------------------------- Active Context ---------------------------- */
     const {
       activeFacilityId,
       activeRoleCode,
@@ -53,7 +48,8 @@ axiosInstance.interceptors.request.use(
     } = state.activeContext;
 
     /**
-     * Facility + Role headers (STAFF WITH FACILITY ONLY)
+     * STAFF MODE
+     * Facility + Role headers are mandatory for staff-with-facility requests
      */
     if (isStaffWithFacility && activeFacilityId && activeRoleCode) {
       config.headers['X-Active-Facility-Id'] = String(activeFacilityId);
@@ -61,9 +57,10 @@ axiosInstance.interceptors.request.use(
     }
 
     /**
-     * Patient mode (NO role code)
+     * PATIENT MODE
+     * No role code, only patient identity
      */
-    if (isPatient && !activeRoleCode) {
+    if (isPatient) {
       const patientId = capabilities.patient?.patient_id;
       if (patientId) {
         config.headers['X-Patient-Id'] = String(patientId);
@@ -71,7 +68,8 @@ axiosInstance.interceptors.request.use(
     }
 
     /**
-     * Optional: Staff ID (auditing / logging)
+     * OPTIONAL STAFF ID
+     * Useful for auditing & backend tracing
      */
     const staffId = capabilities.staff?.staff_id;
     if (staffId) {
@@ -83,33 +81,38 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-/**
- * RESPONSE INTERCEPTOR
- * - Do NOT swallow errors
- * - Let React Query + hooks decide how to handle them
- */
+/* -------------------------------------------------------------------------- */
+/*                            RESPONSE INTERCEPTOR                             */
+/* -------------------------------------------------------------------------- */
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    // Optional: centralized auth failure logging
     if (error.response?.status === 401) {
       console.warn('[API] Unauthorized (401)');
-      // DO NOT logout here — let auth slice / React Query decide
+      /**
+       * ❗ DO NOT logout here
+       * Let:
+       * - authSlice
+       * - React Query
+       * - AppInitializer
+       * decide what to do
+       */
     }
 
     return Promise.reject(error);
   }
 );
 
-/**
- * React Query Client
- * Centralized defaults
- */
+/* -------------------------------------------------------------------------- */
+/*                           REACT QUERY CLIENT                                */
+/* -------------------------------------------------------------------------- */
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 min
-      gcTime: 1000 * 60 * 10,   // 10 min
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 10,   // 10 minutes
       retry: 1,
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
@@ -121,4 +124,13 @@ export const queryClient = new QueryClient({
   },
 });
 
+/* -------------------------------------------------------------------------- */
+/*                                   EXPORTS                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * ✅ BOTH exports supported
+ * Prevents ESM import errors across the app
+ */
+export { axiosInstance };
 export default axiosInstance;

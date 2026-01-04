@@ -89,6 +89,7 @@ export const OnboardingRoutes = () => [
     element={
       <Suspense fallback={<LoadingSkeleton />}>
         <PortalSelector />
+        {/* <RoleSwitcher /> */}
       </Suspense>
     } 
   />,
