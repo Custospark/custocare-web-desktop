@@ -1,6 +1,7 @@
 import { axiosInstance } from '../../../../../app/api/axiosConfig';
 import { AUTH_ENDPOINTS } from '../../api-endpoints';
 import { AxiosError } from 'axios';
+import { UserContext } from '../../../../../app/store/slices/activeContextSlice';
 
 export interface RegisterRequest {
   email: string;
@@ -65,6 +66,7 @@ export interface RegisterResponse {
   code: string;
   message: string;
   user: UserResource | null;
+  context?: UserContext; 
   token: string | null;
   requires_mfa: boolean;
 }

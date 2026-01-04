@@ -7,6 +7,8 @@ export const ROUTES = {
   RESET_PASSWORD: '/reset-password',
   TWO_FACTOR_AUTH: '/two-factor-auth',
   PORTAL_SELECTOR: '/portal-selector', 
+  PATIENT_PORTAL: '/portal/patient', 
+  DASHBOARD: '/dashboard/staff', 
   ROLE_SELECTION: '/role-selection', 
   PATIENT_ONBOARDING: '/patient-onboarding', 
   STAFF_ONBOARDING: '/staff-onboarding', 

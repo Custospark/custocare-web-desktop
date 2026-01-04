@@ -1,5 +1,6 @@
 // ========== REGISTER TYPES ==========
 // These match the registerUserTypes.ts structure
+import type { UserContext } from "../../app/store/slices/activeContextSlice";
 export interface UserResource {
   id: string;
   uuid: string;
@@ -74,6 +75,8 @@ export interface BackendLoginResponse {
   message: string;
   requires_mfa: boolean;
   user: LoginUserProfile | null;
+  context?: UserContext; // Add this
+
   token: string | null;
 }
 

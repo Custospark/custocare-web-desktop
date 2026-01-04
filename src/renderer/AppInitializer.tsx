@@ -1,25 +1,38 @@
 // AppInitializer.tsx
-import { useEffect } from 'react';
-import { useAppDispatch } from './app/store/hooks/useApp';
+import React, { useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from './app/store/hooks/useApp';
 import { initializeAuth } from './app/store/slices/authSlice';
+import { useUserContext } from './app/store/hooks/useUserContext';
 
 interface AppInitializerProps {
   children: React.ReactNode;
 }
 
 /**
- * Component that initializes auth state on app load
- * Place this at the root of your app
+ * AppInitializer
+ * - Restores auth state
+ * - Fetches user context when authenticated
+ * - Active context is derived inside activeContextSlice
  */
-function AppInitializer({ children }: AppInitializerProps) {
+const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   const dispatch = useAppDispatch();
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { activeRoleCode, user } = useAppSelector((state) => state.activeContext);
+  const { refetch } = useUserContext();
 
+  // 1️⃣ Restore auth once
   useEffect(() => {
-    // Initialize auth once when app loads
     dispatch(initializeAuth());
   }, [dispatch]);
 
+  // 2️⃣ Fetch backend context if needed
+  useEffect(() => {
+    if (isAuthenticated && !user && !activeRoleCode) {
+      refetch();
+    }
+  }, [isAuthenticated, user, activeRoleCode, refetch]);
+
   return <>{children}</>;
-}
+};
 
 export default AppInitializer;

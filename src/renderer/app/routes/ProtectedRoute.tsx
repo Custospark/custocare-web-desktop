@@ -1,98 +1,78 @@
-// components/routing/ProtectedRoute.tsx
+// components/ProtectedRoute.tsx
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAppSelector } from '../../app/store/hooks/useApp';
-import { AlertTriangle } from 'lucide-react';
+import { useActiveContext } from '../store/hooks/useActiveContext';
+import type { RoleCode } from '../store/slices/activeContextSlice';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredModule?: string; // e.g., 'pharmacy', 'lab', 'billing'
-  requiredPermission?: string; // e.g., 'pharmacy:write', 'lab:read'
-  requiredRole?: string; // e.g., 'pharmacist', 'physician'
+  requiredRole?: RoleCode;
+  requiredModule?: string;
   fallbackPath?: string;
+  allowPatient?: boolean;
 }
 
-/**
- * Route protection based on active role's permissions
- */
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
-  requiredModule,
-  requiredPermission,
   requiredRole,
+  requiredModule,
   fallbackPath = '/unauthorized',
+  allowPatient = false,
 }) => {
-  const { isAuthenticated } = useAppSelector(state => state.auth);
-  const { activeRole } = useAppSelector(state => state.activeContext);
+  const { hasRole, canAccess, activeRoleCode, isPatientMode } = useActiveContext();
 
-  // Not authenticated - redirect to login
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+  // Allow patient access if specified
+  if (allowPatient && isPatientMode) {
+    return <>{children}</>;
   }
 
-  // No active role - redirect to role selection
-  if (!activeRole) {
-    return <Navigate to="/role-selection" replace />;
-  }
-
-  // Check module access
-  if (requiredModule && !activeRole.modules.includes(requiredModule)) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="max-w-md p-8 bg-white rounded-xl shadow-lg text-center">
-          <AlertTriangle className="w-16 h-16 mx-auto text-orange-500 mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Module Not Accessible
-          </h2>
-          <p className="text-gray-600 mb-6">
-            Your current role ({activeRole.roleName}) at {activeRole.facilityName} 
-            does not have access to the <strong>{requiredModule}</strong> module.
-          </p>
-          <p className="text-sm text-gray-500 mb-4">
-            Available modules: {activeRole.modules.join(', ')}
-          </p>
-          <button
-            onClick={() => window.history.back()}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Go Back
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Check specific permission
-  if (requiredPermission && !activeRole.permissions.includes(requiredPermission)) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="max-w-md p-8 bg-white rounded-xl shadow-lg text-center">
-          <AlertTriangle className="w-16 h-16 mx-auto text-red-500 mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Insufficient Permissions
-          </h2>
-          <p className="text-gray-600 mb-6">
-            Your current role does not have the required permission: 
-            <strong className="block mt-2">{requiredPermission}</strong>
-          </p>
-          <button
-            onClick={() => window.history.back()}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Go Back
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Check role code
-  if (requiredRole && activeRole.roleCode !== requiredRole) {
+  // Check role requirement
+  if (requiredRole && !hasRole(requiredRole)) {
+    console.warn(`Access denied: User has role ${activeRoleCode}, requires ${requiredRole}`);
     return <Navigate to={fallbackPath} replace />;
   }
 
-  // All checks passed
+  // Check module access requirement
+  if (requiredModule && !canAccess(requiredModule)) {
+    console.warn(`Access denied: User cannot access module ${requiredModule}`);
+    return <Navigate to={fallbackPath} replace />;
+  }
+
   return <>{children}</>;
 };
 
-export default ProtectedRoute;
+// components/ConditionalRender.tsx
+interface ConditionalRenderProps {
+  children: React.ReactNode;
+  roles?: RoleCode[];
+  modules?: string[];
+  fallback?: React.ReactNode;
+  requirePatient?: boolean;
+}
+
+export const ConditionalRender: React.FC<ConditionalRenderProps> = ({
+  children,
+  roles,
+  modules,
+  fallback = null,
+  requirePatient = false,
+}) => {
+  const { hasRole, canAccess, isPatientMode } = useActiveContext();
+
+  // Check patient requirement
+  if (requirePatient && !isPatientMode) {
+    return <>{fallback}</>;
+  }
+
+  // Check if user has required role
+  const hasRequiredRole = !roles || roles.some(role => hasRole(role));
+  
+  // Check if user can access required modules
+  const hasRequiredModule = !modules || modules.some(module => canAccess(module));
+
+  if (hasRequiredRole && hasRequiredModule) {
+    return <>{children}</>;
+  }
+
+  return <>{fallback}</>;
+};

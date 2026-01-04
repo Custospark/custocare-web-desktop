@@ -4,12 +4,7 @@ import { store } from '../store/store';
 import { API_BASE_URL, API_TIMEOUT } from './apiConfig';
 
 /**
- * ======================================================
- * Axios Instance
- * - No redirects
- * - No side effects
- * - Only request enrichment
- * ======================================================
+ * Axios Instance with automatic context header injection
  */
 export const axiosInstance: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -21,37 +16,45 @@ export const axiosInstance: AxiosInstance = axios.create({
 });
 
 /**
- * ======================================================
  * REQUEST INTERCEPTOR
- * - Inject auth token
- * - Inject active role & facility context
- * ======================================================
+ * Automatically injects:
+ * - Authorization token
+ * - X-Active-Facility-Id (from activeContext)
+ * - X-Active-Role-Code (from activeContext)
  */
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const state = store.getState();
 
-    // Auth token (patients + staff)
+    // 1. Inject auth token
     const token = state.auth.token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    /**
-     * Active context
-     * - Present for staff & facility-bound users
-     * - Absent for patients (safe to skip)
-     */
-    const { activeRoleId, activeFacilityId } = state.activeContext;
-
-    if (activeRoleId) {
-      config.headers['X-Active-Role-Id'] = activeRoleId.toString();
-    }
-
+    // 2. Inject active facility ID (for multi-facility staff)
+    const { activeFacilityId, activeRoleCode } = state.activeContext;
+    
     if (activeFacilityId) {
-      config.headers['X-Active-Facility-Id'] =
-        activeFacilityId.toString();
+      config.headers['X-Active-Facility-Id'] = activeFacilityId.toString();
     }
+
+    // 3. Inject active role code (DOCTOR, NURSE, PATIENT, etc.)
+    if (activeRoleCode) {
+      config.headers['X-Active-Role-Code'] = activeRoleCode;
+    }
+
+    // 4. Optional: Add staff_id if needed
+    const staffId = state.activeContext.capabilities.staff?.staff_id;
+    if (staffId) {
+      config.headers['X-Staff-Id'] = staffId.toString();
+    }
+
+    // // 5. Optional: Add patient_id if in patient mode
+    // const patientId = state.activeContext.capabilities.patient?.patient_id;
+    // if (patientId && activeRoleCode === 'PATIENT') {
+    //   config.headers['X-Patient-Id'] = patientId.toString();
+    // }
 
     return config;
   },
@@ -59,29 +62,30 @@ axiosInstance.interceptors.request.use(
 );
 
 /**
- * ======================================================
  * RESPONSE INTERCEPTOR
- * - DO NOT redirect
- * - DO NOT swallow errors
- * - React Query handles everything
- * ======================================================
+ * Let React Query handle errors naturally
  */
 axiosInstance.interceptors.response.use(
   (response) => response,
-  (error) => Promise.reject(error)
+  (error) => {
+    // Optional: Handle 401 globally
+    if (error.response?.status === 401) {
+      // Let auth slice handle logout via React Query error boundary
+      console.warn('Unauthorized request detected');
+    }
+    
+    return Promise.reject(error);
+  }
 );
 
 /**
- * ======================================================
  * React Query Client
- *
- * ======================================================
  */
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 10, // 10 minutes (formerly cacheTime)
+      gcTime: 1000 * 60 * 10, // 10 minutes
       retry: 1,
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
@@ -94,3 +98,12 @@ export const queryClient = new QueryClient({
 });
 
 export default axiosInstance;
+
+/**
+ * Helper: Fetch user context from backend
+ * Call this after login to get updated context
+ */
+export const fetchUserContext = async () => {
+  const response = await axiosInstance.get('/api/user/context');
+  return response.data.data; // Returns UserContext
+};
