@@ -278,7 +278,7 @@ export const Sidebar: React.FC<SidebarProps & {
       description: 'Users, roles & configuration',
       stats: 'Admin',
       glowColor: 'from-gray-600 to-gray-500',
-      requiredModules: ['admin', 'staff_management'],
+      requiredModules: ['staff_management'],
     },
     {
       id: 'patients',
@@ -293,7 +293,7 @@ export const Sidebar: React.FC<SidebarProps & {
       stats: 'Active',
       shortcut: '⌘2',
       glowColor: 'from-emerald-500 to-teal-400',
-      requiredModules: ['clinical'],
+      requiredModules: ['clinical','admin'],
     },
     {
       id: 'encounters',
@@ -398,7 +398,7 @@ export const Sidebar: React.FC<SidebarProps & {
 
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
         const shortcuts: Record<string, string> = {
-          '1': isPatientMode ? '/patient/dashbaord' : ROUTES.DASHBOARD,
+          '1': isPatientMode ? ROUTES.PATIENT_DASHBOARD : ROUTES.DASHBOARD,
           '2': isPatientMode ? '/patient/appointments' : ROUTES.PATIENTS,
           '3': isPatientMode ? '/patient/records' : ROUTES.ENCOUNTERS,
           '4': isPatientMode ? '/patient/medications' : '/reports',
