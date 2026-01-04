@@ -143,11 +143,11 @@ export const PortalSelector: React.FC = () => {
   };
 
   const handleRegisterFacility = () => {
-    navigate('/register-facility');
+    navigate(ROUTES.HEALTHCARE_ONBOARDING);
   };
 
   const handleActivatePatientPortal = () => {
-    navigate('/activate-patient-portal');
+    navigate(ROUTES.PATIENT_ONBOARDING);
   };
 
   const handleLogout = () => {
