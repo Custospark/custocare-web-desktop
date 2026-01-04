@@ -1540,7 +1540,7 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
             "text-[10px]",
             theme === 'dark' ? "text-slate-500" : "text-slate-500"
           )}>
-            © 2024 CustoCare AI. All data encrypted and protected.
+            © {new Date().getFullYear()} CustoCare AI. All data encrypted and protected.
           </p>
         </div>
       </footer>

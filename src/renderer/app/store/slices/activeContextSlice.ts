@@ -392,7 +392,7 @@ const ROLE_PERMISSIONS: Record<RoleCode, string[]> = {
   nurse_manager: ['clinical', 'prescriptions', 'lab', 'staff_management', 'scheduling', 'reports', 'encounters'],
   
   // Pharmacy
-  pharmacist: ['pharmacy', 'prescriptions', 'medication_dispensing', 'drug_interactions', 'billing'],
+  pharmacist: ['pharmacy', 'prescriptions'],
   pharmacy_technician: ['pharmacy', 'medication_dispensing', 'inventory'],
   
   // Radiology

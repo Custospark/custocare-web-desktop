@@ -632,7 +632,7 @@ export const Landing: React.FC = () => {
               : "border-slate-200 text-slate-500"
           )}>
             <p>
-              © 2024 CustoCare AI Health Platform. HIPAA-compliant healthcare data protection. 
+              © {new Date().getFullYear()} CustoCare AI Health Platform. HIPAA-compliant healthcare data protection. 
               For authorized healthcare use only.
             </p>
           </div>

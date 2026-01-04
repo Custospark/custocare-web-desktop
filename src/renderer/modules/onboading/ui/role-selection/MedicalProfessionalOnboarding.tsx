@@ -876,7 +876,7 @@ export const MedicalProfessionalOnboarding: React.FC = () => {
             "text-xs",
             theme === 'dark' ? "text-slate-500" : "text-slate-500"
           )}>
-            © 2024 CustoCare AI. All professional information is encrypted and protected.
+            © {new Date().getFullYear()} CustoCare AI. All professional information is encrypted and protected.
           </p>
         </div>
       </footer>

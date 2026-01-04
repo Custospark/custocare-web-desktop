@@ -197,16 +197,59 @@ export const PortalSelector: React.FC = () => {
     </header>
   );
 
-  const renderWelcomeHeader = () => (
+ const getTimeGreeting = () => {
+  const hour = new Date().getHours();
+
+  if (hour < 12) {
+    return {
+      text: 'Good morning',
+      emoji: '👋',
+    };
+  }
+
+  if (hour < 18) {
+    return {
+      text: 'Good afternoon',
+      emoji: '🤝',
+    };
+  }
+
+  return {
+    text: 'Good evening',
+    emoji: '🙌',
+  };
+};
+
+const capitalizeName = (name?: string) => {
+  if (!name) return 'User';
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+};
+
+
+const renderWelcomeHeader = () => {
+  const { text, emoji } = getTimeGreeting();
+  const userName = user?.first_name || user?.full_name || 'User';
+
+  return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       className="mb-8"
     >
-      <h1 className={cn('text-3xl font-bold mb-2', designSystem.colors.primary)}>
-        Welcome back, {user?.first_name || user?.full_name || 'User'}
+      <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
+        <span className={designSystem.colors.primary}>
+          {text}
+        </span>
+
+        <span className="text-emerald-500">
+          {capitalizeName(userName)}
+        </span>
+         <span className="text-2xl leading-none">
+          {emoji}
+        </span>
       </h1>
+
       <p className={cn('text-base', designSystem.colors.secondary)}>
         {isStaffWithFacility && isPatient
           ? 'Select a professional workspace or access your personal patient portal.'
@@ -218,6 +261,10 @@ export const PortalSelector: React.FC = () => {
       </p>
     </motion.div>
   );
+};
+
+
+
 
   const renderProfessionalWorkspaces = () => {
     if (!isStaff) return null;
@@ -661,7 +708,7 @@ export const PortalSelector: React.FC = () => {
       </button>
 
       <div className="ml-auto text-xs text-gray-500 dark:text-gray-600">
-        © 2024 CustoCare AI. All rights reserved.
+        © {new Date().getFullYear()} CustoCare AI. All rights reserved.
       </div>
     </motion.div>
   );

@@ -778,7 +778,7 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
             "text-xs",
             theme === 'dark' ? "text-slate-500" : "text-slate-500"
           )}>
-            © 2024 CustoCare AI. All information is encrypted and protected.
+            © {new Date().getFullYear()} CustoCare AI. All information is encrypted and protected.
           </p>
         </div>
       </footer>
