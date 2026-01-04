@@ -112,21 +112,65 @@ interface ActiveContextState {
   error: string | null;
 }
 
-const initialState: ActiveContextState = {
-  user: null,
-  capabilities: {},
-  facilityRoles: [],
-  activeFacilityId: null,
-  activeRoleCode: null,
-  isPatient: false,
-  isStaff: false,
-  isStaffWithFacility: false,
-  isPatientOnly: false,
-  isStaffWithoutFacility: false,
-  hasMultipleFacilities: false,
-  isLoading: false,
-  error: null,
+/**
+ * Load initial state from localStorage
+ */
+const loadInitialState = (): ActiveContextState => {
+  const baseState: ActiveContextState = {
+    user: null,
+    capabilities: {},
+    facilityRoles: [],
+    activeFacilityId: null,
+    activeRoleCode: null,
+    isPatient: false,
+    isStaff: false,
+    isStaffWithFacility: false,
+    isPatientOnly: false,
+    isStaffWithoutFacility: false,
+    hasMultipleFacilities: false,
+    isLoading: false,
+    error: null,
+  };
+
+  try {
+    // Load persisted user context
+    const persistedUserContext = localStorage.getItem('userContext');
+    if (persistedUserContext) {
+      const userContext: UserContext = JSON.parse(persistedUserContext);
+      
+      baseState.user = userContext.user;
+      baseState.capabilities = userContext.capabilities;
+      baseState.facilityRoles = userContext.facility_roles;
+      
+      // Set derived flags
+      baseState.isPatient = !!userContext.capabilities.patient;
+      baseState.isStaff = !!userContext.capabilities.staff;
+      baseState.isStaffWithFacility = !!userContext.capabilities.staff && userContext.facility_roles.length > 0;
+      baseState.isStaffWithoutFacility = !!userContext.capabilities.staff && userContext.facility_roles.length === 0;
+      baseState.isPatientOnly = !!userContext.capabilities.patient && !userContext.capabilities.staff;
+      baseState.hasMultipleFacilities = userContext.facility_roles.length > 1;
+    }
+
+    // Load active facility and role
+    const storedFacilityId = localStorage.getItem('activeFacilityId');
+    const storedRoleCode = localStorage.getItem('activeRoleCode');
+    
+    if (storedFacilityId) {
+      baseState.activeFacilityId = parseInt(storedFacilityId, 10);
+    }
+    
+    if (storedRoleCode && isValidRoleCode(storedRoleCode)) {
+      baseState.activeRoleCode = storedRoleCode as RoleCode;
+    }
+  } catch (error) {
+    console.error('Error loading state from localStorage:', error);
+    // Return base state if there's an error
+  }
+
+  return baseState;
 };
+
+const initialState: ActiveContextState = loadInitialState();
 
 const activeContextSlice = createSlice({
   name: 'activeContext',
@@ -149,6 +193,9 @@ const activeContextSlice = createSlice({
       state.isStaffWithoutFacility = !!capabilities.staff && facility_roles.length === 0;
       state.isPatientOnly = !!capabilities.patient && !capabilities.staff;
       state.hasMultipleFacilities = facility_roles.length > 1;
+      
+      // Persist user context to localStorage
+      localStorage.setItem('userContext', JSON.stringify(action.payload));
       
       // Auto-select active context based on user type
       if (facility_roles.length > 0) {
@@ -235,7 +282,7 @@ const activeContextSlice = createSlice({
     },
 
     /**
-     * Initialize context from localStorage
+     * Initialize context from localStorage (legacy support - now handled in loadInitialState)
      */
     initializeActiveContext: (state) => {
       const storedFacilityId = localStorage.getItem('activeFacilityId');
@@ -261,7 +308,22 @@ const activeContextSlice = createSlice({
      * Clear active context (on logout)
      */
     clearActiveContext: (state) => {
-      Object.assign(state, initialState);
+      Object.assign(state, {
+        user: null,
+        capabilities: {},
+        facilityRoles: [],
+        activeFacilityId: null,
+        activeRoleCode: null,
+        isPatient: false,
+        isStaff: false,
+        isStaffWithFacility: false,
+        isPatientOnly: false,
+        isStaffWithoutFacility: false,
+        hasMultipleFacilities: false,
+        isLoading: false,
+        error: null,
+      });
+      localStorage.removeItem('userContext');
       localStorage.removeItem('activeFacilityId');
       localStorage.removeItem('activeRoleCode');
     },
