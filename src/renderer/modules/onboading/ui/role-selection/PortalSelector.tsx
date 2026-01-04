@@ -1,10 +1,15 @@
 /**
  * ============================================================================
- * PORTAL SELECTOR - CONTEXT-DRIVEN VERSION (REFINED)
+ * PORTAL SELECTOR - ENHANCED VERSION WITH STAFF DASHBOARD ACCESS
  * ============================================================================
  * 
- * No changes to logic - only refinements for perfect integration
- * with the new Navbar and Sidebar components
+ * Features:
+ * ✅ Staff without facility can access dashboard (Invitations + Profile)
+ * ✅ Staff with facility can also access Invitations + Profile
+ * ✅ Patient portal activation available for all
+ * ✅ Facility registration available for all
+ * ✅ No "contact admin" - self-service model
+ * ✅ Users can be Patient, Staff (with/without facility), or both
  */
 
 import React, { useState, useMemo } from 'react';
@@ -23,11 +28,11 @@ import {
   Sun,
   Moon,
   Plus,
-  HeadphonesIcon,
   Users,
   User,
-  AlertCircle,
   Building2,
+  Mail,
+  UserCog,
 } from 'lucide-react';
 import { cn } from '../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
@@ -84,16 +89,16 @@ export const PortalSelector: React.FC = () => {
           theme === 'dark'
             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
             : 'bg-emerald-50 text-emerald-700 border-emerald-200',
-        warning:
+        info:
           theme === 'dark'
-            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-            : 'bg-amber-50 text-amber-700 border-amber-200',
+            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+            : 'bg-blue-50 text-blue-700 border-blue-200',
       },
     }),
     [theme]
   );
 
-  const handleWorkspaceSelect = (facilityRole: FacilityRole) => {
+  const handleWorkspaceSelect = (facilityRole: FacilityRole): void => {
     dispatch(
       switchFacilityRole({
         facilityId: facilityRole.facility_id,
@@ -110,7 +115,16 @@ export const PortalSelector: React.FC = () => {
     });
   };
 
-  const handlePatientPortal = () => {
+  const handleStaffDashboard = (): void => {
+    navigate('/staff/dashboard', {
+      state: {
+        user,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  };
+
+  const handlePatientPortal = (): void => {
     dispatch(switchToPatientMode());
 
     navigate(ROUTES.PATIENT_DASHBOARD, {
@@ -121,15 +135,15 @@ export const PortalSelector: React.FC = () => {
     });
   };
 
-  const handleRegisterFacility = () => {
+  const handleRegisterFacility = (): void => {
     navigate('/register-facility');
   };
 
-  const handleContactSupport = () => {
-    navigate('/support');
+  const handleActivatePatientPortal = (): void => {
+    navigate('/activate-patient-portal');
   };
 
-  const handleLogout = () => {
+  const handleLogout = (): void => {
     dispatch(logout());
     showToast(
       'info',
@@ -197,74 +211,65 @@ export const PortalSelector: React.FC = () => {
     </header>
   );
 
- const getTimeGreeting = () => {
-  const hour = new Date().getHours();
+  const getTimeGreeting = (): { text: string; emoji: string } => {
+    const hour = new Date().getHours();
 
-  if (hour < 12) {
+    if (hour < 12) {
+      return {
+        text: 'Good morning',
+        emoji: '👋',
+      };
+    }
+
+    if (hour < 18) {
+      return {
+        text: 'Good afternoon',
+        emoji: '🤝',
+      };
+    }
+
     return {
-      text: 'Good morning',
-      emoji: '👋',
+      text: 'Good evening',
+      emoji: '🙌',
     };
-  }
-
-  if (hour < 18) {
-    return {
-      text: 'Good afternoon',
-      emoji: '🤝',
-    };
-  }
-
-  return {
-    text: 'Good evening',
-    emoji: '🙌',
   };
-};
 
-const capitalizeName = (name?: string) => {
-  if (!name) return 'User';
-  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-};
+  const capitalizeName = (name?: string): string => {
+    if (!name) return 'User';
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+  };
 
+  const renderWelcomeHeader = () => {
+    const { text, emoji } = getTimeGreeting();
+    const userName = user?.first_name || user?.full_name || 'User';
 
-const renderWelcomeHeader = () => {
-  const { text, emoji } = getTimeGreeting();
-  const userName = user?.first_name || user?.full_name || 'User';
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mb-8"
+      >
+        <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
+          <span className={designSystem.colors.primary}>{text}</span>
+          <span className="text-emerald-500">{capitalizeName(userName)}</span>
+          <span className="text-2xl leading-none">{emoji}</span>
+        </h1>
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="mb-8"
-    >
-      <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-        <span className={designSystem.colors.primary}>
-          {text}
-        </span>
-
-        <span className="text-emerald-500">
-          {capitalizeName(userName)}
-        </span>
-         <span className="text-2xl leading-none">
-          {emoji}
-        </span>
-      </h1>
-
-      <p className={cn('text-base', designSystem.colors.secondary)}>
-        {isStaffWithFacility && isPatient
-          ? 'Select a professional workspace or access your personal patient portal.'
-          : isStaffWithFacility
-          ? 'Please select a workspace to continue.'
-          : isPatientOnly
-          ? 'Access your personal health portal below.'
-          : 'Please complete your account setup to get started.'}
-      </p>
-    </motion.div>
-  );
-};
-
-
-
+        <p className={cn('text-base', designSystem.colors.secondary)}>
+          {isStaffWithFacility && isPatient
+            ? 'Select a professional workspace, access your staff dashboard, or view your personal patient portal.'
+            : isStaffWithFacility
+            ? 'Select a workspace or access your staff dashboard to manage invitations and profile.'
+            : isStaffWithoutFacility
+            ? 'Access your staff dashboard to manage invitations and profile, or register a new facility.'
+            : isPatientOnly
+            ? 'Access your personal health portal below.'
+            : 'Please select an option to continue.'}
+        </p>
+      </motion.div>
+    );
+  };
 
   const renderProfessionalWorkspaces = () => {
     if (!isStaff) return null;
@@ -291,9 +296,84 @@ const renderWelcomeHeader = () => {
             </h2>
           </div>
 
+          {/* Staff Dashboard Card - For Staff Without Facility */}
+          <motion.div
+            whileHover={{ scale: 1.01 }}
+            transition={{ duration: 0.2 }}
+            className={cn(
+              'rounded-xl border p-8 mb-4',
+              designSystem.colors.card,
+              'shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer'
+            )}
+            onClick={handleStaffDashboard}
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <div
+                    className={cn(
+                      'w-12 h-12 rounded-xl flex items-center justify-center',
+                      'bg-gradient-to-br from-blue-500 to-indigo-500'
+                    )}
+                  >
+                    <UserCog className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className={cn('text-lg font-bold', designSystem.colors.primary)}>
+                      My Staff Dashboard
+                    </h3>
+                    <p className={cn('text-sm', designSystem.colors.tertiary)}>
+                      Manage your professional profile
+                    </p>
+                  </div>
+                </div>
+
+                <p className={cn('text-sm mb-4', designSystem.colors.secondary)}>
+                  Access your invitations from facilities, update your professional profile, and manage your staff settings.
+                </p>
+
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { icon: Mail, label: 'Invitations' },
+                    { icon: User, label: 'Profile' },
+                    { icon: Shield, label: 'Settings' },
+                  ].map((feature, index) => (
+                    <div
+                      key={index}
+                      className={cn(
+                        'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium',
+                        theme === 'dark'
+                          ? 'bg-gray-800 text-gray-300'
+                          : 'bg-gray-100 text-gray-700'
+                      )}
+                    >
+                      <feature.icon className="w-3.5 h-3.5" />
+                      {feature.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                className={cn(
+                  'px-6 py-3 rounded-lg font-medium text-sm',
+                  'flex items-center gap-2 flex-shrink-0',
+                  'transition-all duration-300',
+                  'bg-gradient-to-r from-blue-600 to-indigo-600 text-white',
+                  'hover:from-blue-700 hover:to-indigo-700',
+                  'transform hover:scale-105 shadow-md hover:shadow-lg'
+                )}
+              >
+                <Sparkles className="w-4 h-4" />
+                Access Dashboard
+              </button>
+            </div>
+          </motion.div>
+
+          {/* Info Card */}
           <div
             className={cn(
-              'rounded-xl border p-8',
+              'rounded-xl border p-6',
               designSystem.colors.card,
               'shadow-sm'
             )}
@@ -302,23 +382,25 @@ const renderWelcomeHeader = () => {
               <div
                 className={cn(
                   'w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0',
-                  'bg-amber-500/10'
+                  'bg-blue-500/10'
                 )}
               >
-                <AlertCircle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="flex-1">
                 <h3 className={cn('text-lg font-bold mb-2', designSystem.colors.primary)}>
-                  No Facility Assignment
+                  No Facility Assignment Yet
                 </h3>
                 <p className={cn('text-sm mb-4', designSystem.colors.secondary)}>
-                  You're registered as a healthcare professional, but haven't been assigned to
-                  any facilities yet. Please contact your facility administrator or register
-                  a new facility.
+                  You're registered as a healthcare professional but haven't been assigned to any facilities yet. 
+                  Check your invitations or register a new facility to get started.
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <button
-                    onClick={handleRegisterFacility}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRegisterFacility();
+                    }}
                     className={cn(
                       'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
                       'bg-blue-600 text-white hover:bg-blue-700',
@@ -327,19 +409,6 @@ const renderWelcomeHeader = () => {
                   >
                     <Plus className="w-4 h-4" />
                     Register New Facility
-                  </button>
-                  <button
-                    onClick={handleContactSupport}
-                    className={cn(
-                      'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
-                      'transition-all duration-200',
-                      theme === 'dark'
-                        ? 'text-gray-300 hover:bg-gray-800 border border-gray-700'
-                        : 'text-gray-700 hover:bg-gray-100 border border-gray-300'
-                    )}
-                  >
-                    <HeadphonesIcon className="w-4 h-4" />
-                    Contact Support
                   </button>
                 </div>
               </div>
@@ -370,6 +439,77 @@ const renderWelcomeHeader = () => {
           </h2>
         </div>
 
+        {/* Staff Dashboard Card - For Staff WITH Facility */}
+        <motion.div
+          variants={cardVariants}
+          whileHover={{ scale: 1.01 }}
+          transition={{ duration: 0.2 }}
+          className={cn(
+            'rounded-xl border p-6 mb-4',
+            designSystem.colors.card,
+            'shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer'
+          )}
+          onClick={handleStaffDashboard}
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className={cn(
+                    'w-10 h-10 rounded-xl flex items-center justify-center',
+                    'bg-gradient-to-br from-blue-500 to-indigo-500'
+                  )}
+                >
+                  <UserCog className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className={cn('text-base font-bold', designSystem.colors.primary)}>
+                    My Staff Dashboard
+                  </h3>
+                  <p className={cn('text-xs', designSystem.colors.tertiary)}>
+                    Invitations & Profile Management
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { icon: Mail, label: 'Invitations' },
+                  { icon: User, label: 'Profile' },
+                  { icon: Shield, label: 'Settings' },
+                ].map((feature, index) => (
+                  <div
+                    key={index}
+                    className={cn(
+                      'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium',
+                      theme === 'dark'
+                        ? 'bg-gray-800 text-gray-300'
+                        : 'bg-gray-100 text-gray-700'
+                    )}
+                  >
+                    <feature.icon className="w-3 h-3" />
+                    {feature.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              className={cn(
+                'px-5 py-2.5 rounded-lg font-medium text-sm',
+                'flex items-center gap-2 flex-shrink-0',
+                'transition-all duration-300',
+                'bg-blue-600 text-white hover:bg-blue-700',
+                'transform hover:scale-105 shadow-sm hover:shadow-md'
+              )}
+            >
+              Access Dashboard
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Facility Workspaces */}
         <div className="space-y-4">
           {facilityRoles.map((facilityRole) => (
             <motion.div
@@ -530,31 +670,28 @@ const renderWelcomeHeader = () => {
               <div
                 className={cn(
                   'w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0',
-                  'bg-amber-500/10'
+                  'bg-purple-500/10'
                 )}
               >
-                <AlertCircle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                <Heart className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div className="flex-1">
                 <h3 className={cn('text-lg font-bold mb-2', designSystem.colors.primary)}>
                   Patient Portal Not Activated
                 </h3>
                 <p className={cn('text-sm mb-4', designSystem.colors.secondary)}>
-                  You don't currently have patient portal access. Contact your healthcare
-                  provider to activate your patient portal.
+                  You don't currently have patient portal access. You can activate your patient portal to access personal health records, appointments, and more.
                 </p>
                 <button
-                  onClick={handleContactSupport}
+                  onClick={handleActivatePatientPortal}
                   className={cn(
                     'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
-                    'transition-all duration-200',
-                    theme === 'dark'
-                      ? 'text-gray-300 hover:bg-gray-800 border border-gray-700'
-                      : 'text-gray-700 hover:bg-gray-100 border border-gray-300'
+                    'bg-purple-600 text-white hover:bg-purple-700',
+                    'transition-all duration-200'
                   )}
                 >
-                  <HeadphonesIcon className="w-4 h-4" />
-                  Contact Support
+                  <Plus className="w-4 h-4" />
+                  Activate Patient Portal
                 </button>
               </div>
             </div>
@@ -672,7 +809,7 @@ const renderWelcomeHeader = () => {
     );
   };
 
-  const renderFooterActions = () => (
+  const renderFooterActions = ()=> (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -693,19 +830,21 @@ const renderWelcomeHeader = () => {
         Register New Facility
       </button>
 
-      <button
-        onClick={handleContactSupport}
-        className={cn(
-          'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
-          'transition-all duration-200',
-          theme === 'dark'
-            ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
-            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-        )}
-      >
-        <HeadphonesIcon className="w-4 h-4" />
-        Contact Support
-      </button>
+      {!isPatient && (
+        <button
+          onClick={handleActivatePatientPortal}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
+            'transition-all duration-200',
+            theme === 'dark'
+              ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          )}
+        >
+          <Heart className="w-4 h-4" />
+          Activate Patient Portal
+        </button>
+      )}
 
       <div className="ml-auto text-xs text-gray-500 dark:text-gray-600">
         © {new Date().getFullYear()} CustoCare AI. All rights reserved.
