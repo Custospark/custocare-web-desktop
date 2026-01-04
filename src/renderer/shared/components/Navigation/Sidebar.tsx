@@ -194,7 +194,7 @@ export const Sidebar: React.FC<SidebarProps & {
       description: 'Patient registration & records',
       stats: 'Reception',
       glowColor: 'from-sky-500 to-blue-400',
-      requiredModules: ['front_desk', 'registration','admin'],
+      requiredModules: ['front_desk', 'registration'],
     },
     {
       id: 'nursing-care',
@@ -218,7 +218,7 @@ export const Sidebar: React.FC<SidebarProps & {
       description: 'Consultation, diagnosis & orders',
       stats: 'Doctors',
       glowColor: 'from-indigo-500 to-purple-400',
-      requiredModules: ['clinical', 'prescriptions','admin'],
+      requiredModules: ['clinical', 'prescriptions'],
     },
     {
       id: 'laboratory-services',
@@ -293,7 +293,7 @@ export const Sidebar: React.FC<SidebarProps & {
       stats: 'Active',
       shortcut: '⌘2',
       glowColor: 'from-emerald-500 to-teal-400',
-      requiredModules: ['clinical','admin'],
+      requiredModules: ['clinical'],
     },
     {
       id: 'encounters',
