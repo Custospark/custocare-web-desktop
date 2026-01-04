@@ -1,3 +1,16 @@
+/**
+ * ============================================================================
+ * SIDEBAR - CONTEXT-AWARE VERSION WITH STAFF-WITHOUT-FACILITY SUPPORT
+ * ============================================================================
+ * 
+ * Features:
+ * ✅ Staff without facility get dashboard access (invitations, profile)
+ * ✅ Staff with facility get full module access + profile/invitations
+ * ✅ Patient mode shows patient-specific items
+ * ✅ Dynamic modules based on role permissions
+ * ✅ Clean TypeScript with no 'any' types
+ */
+
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -27,6 +40,9 @@ import {
   Pill,
   FileSearch,
   CreditCard as BillIcon,
+  Inbox,
+  UserCog,
+  Mail,
 } from 'lucide-react';
 import { type SidebarProps, type MenuItem } from '../../types/index';
 import { cn } from '../../types/cn';
@@ -42,17 +58,6 @@ interface EnhancedMenuItem extends MenuItem {
   route?: string;
   requiredModules?: string[];
 }
-
-/**
- * Context-Aware Sidebar Component
- * 
- * Features:
- * ✅ Dynamic modules based on active context (patient/staff)
- * ✅ Role-based access control
- * ✅ Patient portal specific items
- * ✅ Staff portal specific items
- * ✅ Smooth transitions and animations
- */
 
 export const Sidebar: React.FC<SidebarProps & {
   collapsed: boolean;
@@ -74,7 +79,7 @@ export const Sidebar: React.FC<SidebarProps & {
   const activeContext = useAppSelector((state) => state.activeContext);
   const isPatientMode = useAppSelector(selectIsPatientMode);
   const accessibleModules = useAppSelector(selectAccessibleModules);
-  const { user } = activeContext;
+  const { user, isStaffWithoutFacility, isStaffWithFacility } = activeContext;
 
   const isDark = theme === 'dark';
 
@@ -91,6 +96,46 @@ export const Sidebar: React.FC<SidebarProps & {
     }
     return location.pathname.startsWith(route);
   }, [location.pathname]);
+
+  // Staff without facility menu items - NEW
+  const staffWithoutFacilityItems: EnhancedMenuItem[] = useMemo(() => [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: <LayoutDashboard className="w-5 h-5" />,
+      href: ROUTES.STAFF_DASHBOARD,
+      route: ROUTES.STAFF_DASHBOARD,
+      active: isRouteActive(ROUTES.STAFF_DASHBOARD),
+      description: 'Overview & invitations',
+      stats: 'Home',
+      shortcut: '⌘1',
+      glowColor: 'from-blue-500 to-cyan-400',
+    },
+    {
+      id: 'invitations',
+      label: 'Invitations',
+      icon: <Mail className="w-5 h-5" />,
+      href: '/staff/invitations',
+      route: '/staff/invitations',
+      active: isRouteActive('/staff/invitations'),
+      description: 'Facility invitations',
+      stats: 'Pending',
+      shortcut: '⌘2',
+      glowColor: 'from-purple-500 to-pink-400',
+    },
+    {
+      id: 'profile',
+      label: 'My Profile',
+      icon: <UserCog className="w-5 h-5" />,
+      href: '/staff/profile',
+      route: '/staff/profile',
+      active: isRouteActive('/staff/profile'),
+      description: 'Professional profile',
+      stats: 'Settings',
+      shortcut: '⌘3',
+      glowColor: 'from-emerald-500 to-teal-400',
+    },
+  ], [isRouteActive]);
 
   // Patient-specific menu items
   const patientMenuItems: EnhancedMenuItem[] = useMemo(() => [
@@ -168,8 +213,8 @@ export const Sidebar: React.FC<SidebarProps & {
     },
   ], [isRouteActive]);
 
-  // Staff-specific menu items (based on role permissions)
-  const staffMenuItems: EnhancedMenuItem[] = useMemo(() => [
+  // Staff with facility menu items
+  const staffWithFacilityItems: EnhancedMenuItem[] = useMemo(() => [
     {
       id: 'dashboard',
       label: 'Overview',
@@ -311,9 +356,32 @@ export const Sidebar: React.FC<SidebarProps & {
       glowColor: 'from-amber-500 to-orange-400',
       requiredModules: ['clinical', 'encounters'],
     },
+    // Staff profile & invitations (also available to staff WITH facility)
+    {
+      id: 'my-invitations',
+      label: 'My Invitations',
+      icon: <Inbox className="w-5 h-5" />,
+      href: '/staff/invitations',
+      route: '/staff/invitations',
+      active: isRouteActive('/staff/invitations'),
+      description: 'Facility invitations',
+      stats: 'Inbox',
+      glowColor: 'from-purple-500 to-pink-400',
+    },
+    {
+      id: 'my-profile',
+      label: 'My Profile',
+      icon: <UserCog className="w-5 h-5" />,
+      href: '/staff/profile',
+      route: '/staff/profile',
+      active: isRouteActive('/staff/profile'),
+      description: 'Professional profile',
+      stats: 'Settings',
+      glowColor: 'from-emerald-500 to-teal-400',
+    },
   ], [isRouteActive]);
 
-  // System menu items (common for both)
+  // System menu items (common for all)
   const systemMenuItems: EnhancedMenuItem[] = useMemo(() => [
     {
       id: 'settings',
@@ -360,9 +428,15 @@ export const Sidebar: React.FC<SidebarProps & {
     if (isPatientMode) {
       return patientMenuItems;
     }
-    // Filter staff items based on accessible modules
-    return staffMenuItems.filter(item => canAccess(item.requiredModules));
-  }, [isPatientMode, patientMenuItems, staffMenuItems, canAccess]);
+    if (isStaffWithoutFacility) {
+      return staffWithoutFacilityItems;
+    }
+    if (isStaffWithFacility) {
+      // Filter staff items based on accessible modules
+      return staffWithFacilityItems.filter(item => canAccess(item.requiredModules));
+    }
+    return [];
+  }, [isPatientMode, isStaffWithoutFacility, isStaffWithFacility, patientMenuItems, staffWithoutFacilityItems, staffWithFacilityItems, canAccess]);
 
   // Touch gesture handling
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -398,9 +472,9 @@ export const Sidebar: React.FC<SidebarProps & {
 
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
         const shortcuts: Record<string, string> = {
-          '1': isPatientMode ? ROUTES.PATIENT_DASHBOARD : ROUTES.DASHBOARD,
-          '2': isPatientMode ? '/patient/appointments' : ROUTES.PATIENTS,
-          '3': isPatientMode ? '/patient/records' : ROUTES.ENCOUNTERS,
+          '1': isPatientMode ? ROUTES.PATIENT_DASHBOARD : (isStaffWithoutFacility ? ROUTES.STAFF_DASHBOARD : ROUTES.DASHBOARD),
+          '2': isPatientMode ? '/patient/appointments' : (isStaffWithoutFacility ? '/staff/invitations' : ROUTES.PATIENTS),
+          '3': isPatientMode ? '/patient/records' : (isStaffWithoutFacility ? '/staff/profile' : ROUTES.ENCOUNTERS),
           '4': isPatientMode ? '/patient/medications' : '/reports',
           '5': isPatientMode ? '/patient/results' : '/analytics',
           '6': isPatientMode ? '/patient/billing' : '/system',
@@ -421,7 +495,7 @@ export const Sidebar: React.FC<SidebarProps & {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, navigate, isPatientMode]);
+  }, [isOpen, onClose, navigate, isPatientMode, isStaffWithoutFacility]);
 
   const renderMenuItem = (item: EnhancedMenuItem) => {
     const isActive = item.active;
@@ -555,6 +629,21 @@ export const Sidebar: React.FC<SidebarProps & {
     );
   };
 
+  const getSectionTitle = () => {
+    if (isPatientMode) return 'My Health';
+    if (isStaffWithoutFacility) return 'Staff Portal';
+    return 'Navigation';
+  };
+
+  const getContextSubtitle = () => {
+    if (isPatientMode) return 'Patient Portal';
+    if (isStaffWithoutFacility) return 'Staff - No Facility';
+    if (isStaffWithFacility) {
+      return `${activeContext.facilityRoles} - Professional`;
+    }
+    return 'CustoCare AI';
+  };
+
   return (
     <aside
       ref={sidebarRef}
@@ -583,7 +672,7 @@ export const Sidebar: React.FC<SidebarProps & {
                   CustoCare AI
                 </h2>
                 <p className={cn('text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                  {isPatientMode ? 'Patient Portal' : `${activeContext.user?.first_name || 'Staff'} - ${activeContext.activeRoleCode || 'Professional'}`}
+                  {getContextSubtitle()}
                 </p>
               </div>
             </div>
@@ -613,7 +702,7 @@ export const Sidebar: React.FC<SidebarProps & {
               'text-xs font-bold uppercase tracking-wider px-2',
               isDark ? 'text-gray-500' : 'text-gray-400'
             )}>
-              {isPatientMode ? 'My Health' : 'Navigation'}
+              {getSectionTitle()}
             </p>
           </div>
         )}
@@ -678,7 +767,7 @@ export const Sidebar: React.FC<SidebarProps & {
                   {user?.first_name || user?.full_name || 'User'}
                 </p>
                 <p className={cn('text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                  {isPatientMode ? 'Patient' : activeContext.activeRoleCode || 'Staff'}
+                  {isPatientMode ? 'Patient' : (isStaffWithoutFacility ? 'Staff' : activeContext.activeRoleCode || 'Staff')}
                 </p>
               </div>
             </div>

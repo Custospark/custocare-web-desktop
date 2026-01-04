@@ -22,6 +22,7 @@ export const ROUTES = {
   // Facility Management
   FACILITIES: '/facilities',
   FACILITY_ONBOARDING: '/facilities/onboarding',
+  STAFF_DASHBOARD: '/staff/dashboard',
 
   // Patient Management
   PATIENTS: '/patients',

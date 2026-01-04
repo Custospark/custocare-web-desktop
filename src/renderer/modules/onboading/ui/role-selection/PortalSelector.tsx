@@ -1,15 +1,13 @@
 /**
  * ============================================================================
- * PORTAL SELECTOR - ENHANCED VERSION WITH STAFF DASHBOARD ACCESS
+ * PORTAL SELECTOR - ENHANCED VERSION
  * ============================================================================
  * 
  * Features:
- * ✅ Staff without facility can access dashboard (Invitations + Profile)
- * ✅ Staff with facility can also access Invitations + Profile
- * ✅ Patient portal activation available for all
- * ✅ Facility registration available for all
- * ✅ No "contact admin" - self-service model
- * ✅ Users can be Patient, Staff (with/without facility), or both
+ * ✅ Staff without facility can access dashboard for invitations & profile
+ * ✅ Clear paths to register facility or activate patient portal
+ * ✅ No admin contact required - self-service approach
+ * ✅ Support for all user types (patient, staff with/without facility)
  */
 
 import React, { useState, useMemo } from 'react';
@@ -33,6 +31,9 @@ import {
   Building2,
   Mail,
   UserCog,
+  CheckCircle,
+  Inbox,
+  Settings,
 } from 'lucide-react';
 import { cn } from '../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
@@ -89,6 +90,10 @@ export const PortalSelector: React.FC = () => {
           theme === 'dark'
             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
             : 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        warning:
+          theme === 'dark'
+            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+            : 'bg-amber-50 text-amber-700 border-amber-200',
         info:
           theme === 'dark'
             ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
@@ -98,7 +103,7 @@ export const PortalSelector: React.FC = () => {
     [theme]
   );
 
-  const handleWorkspaceSelect = (facilityRole: FacilityRole): void => {
+  const handleWorkspaceSelect = (facilityRole: FacilityRole) => {
     dispatch(
       switchFacilityRole({
         facilityId: facilityRole.facility_id,
@@ -115,16 +120,18 @@ export const PortalSelector: React.FC = () => {
     });
   };
 
-  const handleStaffDashboard = (): void => {
-    navigate('/staff/dashboard', {
+  const handleStaffWithoutFacilityDashboard = () => {
+    // Navigate to staff dashboard even without facility assignment
+    navigate(ROUTES.STAFF_DASHBOARD, {
       state: {
         user,
+        staffWithoutFacility: true,
         timestamp: new Date().toISOString(),
       },
     });
   };
 
-  const handlePatientPortal = (): void => {
+  const handlePatientPortal = () => {
     dispatch(switchToPatientMode());
 
     navigate(ROUTES.PATIENT_DASHBOARD, {
@@ -135,15 +142,15 @@ export const PortalSelector: React.FC = () => {
     });
   };
 
-  const handleRegisterFacility = (): void => {
+  const handleRegisterFacility = () => {
     navigate('/register-facility');
   };
 
-  const handleActivatePatientPortal = (): void => {
+  const handleActivatePatientPortal = () => {
     navigate('/activate-patient-portal');
   };
 
-  const handleLogout = (): void => {
+  const handleLogout = () => {
     dispatch(logout());
     showToast(
       'info',
@@ -211,7 +218,7 @@ export const PortalSelector: React.FC = () => {
     </header>
   );
 
-  const getTimeGreeting = (): { text: string; emoji: string } => {
+  const getTimeGreeting = () => {
     const hour = new Date().getHours();
 
     if (hour < 12) {
@@ -234,7 +241,7 @@ export const PortalSelector: React.FC = () => {
     };
   };
 
-  const capitalizeName = (name?: string): string => {
+  const capitalizeName = (name?: string) => {
     if (!name) return 'User';
     return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
   };
@@ -252,20 +259,21 @@ export const PortalSelector: React.FC = () => {
       >
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
           <span className={designSystem.colors.primary}>{text}</span>
+
           <span className="text-emerald-500">{capitalizeName(userName)}</span>
           <span className="text-2xl leading-none">{emoji}</span>
         </h1>
 
         <p className={cn('text-base', designSystem.colors.secondary)}>
           {isStaffWithFacility && isPatient
-            ? 'Select a professional workspace, access your staff dashboard, or view your personal patient portal.'
+            ? 'Select a professional workspace or access your personal patient portal.'
             : isStaffWithFacility
-            ? 'Select a workspace or access your staff dashboard to manage invitations and profile.'
+            ? 'Please select a workspace to continue.'
             : isStaffWithoutFacility
-            ? 'Access your staff dashboard to manage invitations and profile, or register a new facility.'
+            ? 'Manage your invitations, profile, and register new facilities.'
             : isPatientOnly
             ? 'Access your personal health portal below.'
-            : 'Please select an option to continue.'}
+            : 'Please complete your account setup to get started.'}
         </p>
       </motion.div>
     );
@@ -292,11 +300,11 @@ export const PortalSelector: React.FC = () => {
               <Briefcase className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <h2 className={cn('text-xl font-bold', designSystem.colors.primary)}>
-              Professional Workspaces
+              Professional Workspace
             </h2>
           </div>
 
-          {/* Staff Dashboard Card - For Staff Without Facility */}
+          {/* Staff Dashboard Access - NEW */}
           <motion.div
             whileHover={{ scale: 1.01 }}
             transition={{ duration: 0.2 }}
@@ -305,7 +313,7 @@ export const PortalSelector: React.FC = () => {
               designSystem.colors.card,
               'shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer'
             )}
-            onClick={handleStaffDashboard}
+            onClick={handleStaffWithoutFacilityDashboard}
           >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
               <div className="flex-1">
@@ -313,30 +321,42 @@ export const PortalSelector: React.FC = () => {
                   <div
                     className={cn(
                       'w-12 h-12 rounded-xl flex items-center justify-center',
-                      'bg-gradient-to-br from-blue-500 to-indigo-500'
+                      'bg-gradient-to-br from-blue-500 to-cyan-500'
                     )}
                   >
                     <UserCog className="w-6 h-6 text-white" />
                   </div>
                   <div>
                     <h3 className={cn('text-lg font-bold', designSystem.colors.primary)}>
-                      My Staff Dashboard
+                      Staff Dashboard
                     </h3>
                     <p className={cn('text-sm', designSystem.colors.tertiary)}>
-                      Manage your professional profile
+                      Manage invitations & profile
                     </p>
                   </div>
                 </div>
 
                 <p className={cn('text-sm mb-4', designSystem.colors.secondary)}>
-                  Access your invitations from facilities, update your professional profile, and manage your staff settings.
+                  Access your facility invitations, update your professional profile, and manage your
+                  healthcare credentials.
                 </p>
+
+                {capabilities.staff && (
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className={cn('text-xs font-medium', designSystem.colors.tertiary)}>
+                      Staff ID:
+                    </span>
+                    <span className={cn('text-xs font-mono', designSystem.colors.secondary)}>
+                      {capabilities.staff.staff_id}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex flex-wrap gap-3">
                   {[
-                    { icon: Mail, label: 'Invitations' },
-                    { icon: User, label: 'Profile' },
-                    { icon: Shield, label: 'Settings' },
+                    { icon: Inbox, label: 'Invitations' },
+                    { icon: Settings, label: 'Profile' },
+                    { icon: FileText, label: 'Credentials' },
                   ].map((feature, index) => (
                     <div
                       key={index}
@@ -359,13 +379,13 @@ export const PortalSelector: React.FC = () => {
                   'px-6 py-3 rounded-lg font-medium text-sm',
                   'flex items-center gap-2 flex-shrink-0',
                   'transition-all duration-300',
-                  'bg-gradient-to-r from-blue-600 to-indigo-600 text-white',
-                  'hover:from-blue-700 hover:to-indigo-700',
+                  'bg-gradient-to-r from-blue-600 to-cyan-600 text-white',
+                  'hover:from-blue-700 hover:to-cyan-700',
                   'transform hover:scale-105 shadow-md hover:shadow-lg'
                 )}
               >
                 <Sparkles className="w-4 h-4" />
-                Access Dashboard
+                View Dashboard
               </button>
             </div>
           </motion.div>
@@ -385,22 +405,19 @@ export const PortalSelector: React.FC = () => {
                   'bg-blue-500/10'
                 )}
               >
-                <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <Mail className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="flex-1">
                 <h3 className={cn('text-lg font-bold mb-2', designSystem.colors.primary)}>
-                  No Facility Assignment Yet
+                  Facility Invitations
                 </h3>
                 <p className={cn('text-sm mb-4', designSystem.colors.secondary)}>
-                  You're registered as a healthcare professional but haven't been assigned to any facilities yet. 
-                  Check your invitations or register a new facility to get started.
+                  You can receive invitations from healthcare facilities to join their team. Check your
+                  dashboard for pending invitations or register a new facility.
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRegisterFacility();
-                    }}
+                    onClick={handleRegisterFacility}
                     className={cn(
                       'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
                       'bg-blue-600 text-white hover:bg-blue-700',
@@ -439,77 +456,6 @@ export const PortalSelector: React.FC = () => {
           </h2>
         </div>
 
-        {/* Staff Dashboard Card - For Staff WITH Facility */}
-        <motion.div
-          variants={cardVariants}
-          whileHover={{ scale: 1.01 }}
-          transition={{ duration: 0.2 }}
-          className={cn(
-            'rounded-xl border p-6 mb-4',
-            designSystem.colors.card,
-            'shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer'
-          )}
-          onClick={handleStaffDashboard}
-        >
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className={cn(
-                    'w-10 h-10 rounded-xl flex items-center justify-center',
-                    'bg-gradient-to-br from-blue-500 to-indigo-500'
-                  )}
-                >
-                  <UserCog className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className={cn('text-base font-bold', designSystem.colors.primary)}>
-                    My Staff Dashboard
-                  </h3>
-                  <p className={cn('text-xs', designSystem.colors.tertiary)}>
-                    Invitations & Profile Management
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { icon: Mail, label: 'Invitations' },
-                  { icon: User, label: 'Profile' },
-                  { icon: Shield, label: 'Settings' },
-                ].map((feature, index) => (
-                  <div
-                    key={index}
-                    className={cn(
-                      'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium',
-                      theme === 'dark'
-                        ? 'bg-gray-800 text-gray-300'
-                        : 'bg-gray-100 text-gray-700'
-                    )}
-                  >
-                    <feature.icon className="w-3 h-3" />
-                    {feature.label}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <button
-              className={cn(
-                'px-5 py-2.5 rounded-lg font-medium text-sm',
-                'flex items-center gap-2 flex-shrink-0',
-                'transition-all duration-300',
-                'bg-blue-600 text-white hover:bg-blue-700',
-                'transform hover:scale-105 shadow-sm hover:shadow-md'
-              )}
-            >
-              Access Dashboard
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </motion.div>
-
-        {/* Facility Workspaces */}
         <div className="space-y-4">
           {facilityRoles.map((facilityRole) => (
             <motion.div
@@ -677,20 +623,22 @@ export const PortalSelector: React.FC = () => {
               </div>
               <div className="flex-1">
                 <h3 className={cn('text-lg font-bold mb-2', designSystem.colors.primary)}>
-                  Patient Portal Not Activated
+                  Activate Patient Portal
                 </h3>
                 <p className={cn('text-sm mb-4', designSystem.colors.secondary)}>
-                  You don't currently have patient portal access. You can activate your patient portal to access personal health records, appointments, and more.
+                  Access your personal health records, appointments, test results, and billing information
+                  by activating your patient portal.
                 </p>
                 <button
                   onClick={handleActivatePatientPortal}
                   className={cn(
                     'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
-                    'bg-purple-600 text-white hover:bg-purple-700',
+                    'bg-gradient-to-r from-purple-600 to-pink-600 text-white',
+                    'hover:from-purple-700 hover:to-pink-700',
                     'transition-all duration-200'
                   )}
                 >
-                  <Plus className="w-4 h-4" />
+                  <CheckCircle className="w-4 h-4" />
                   Activate Patient Portal
                 </button>
               </div>
@@ -753,8 +701,7 @@ export const PortalSelector: React.FC = () => {
               </div>
 
               <p className={cn('text-sm mb-4', designSystem.colors.secondary)}>
-                Access your test results, appointments, medical history, and billing
-                information.
+                Access your test results, appointments, medical history, and billing information.
               </p>
 
               {capabilities.patient && (
@@ -809,7 +756,7 @@ export const PortalSelector: React.FC = () => {
     );
   };
 
-  const renderFooterActions = ()=> (
+  const renderFooterActions = () => (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}

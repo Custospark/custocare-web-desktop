@@ -1,3 +1,15 @@
+/**
+ * ============================================================================
+ * NAVBAR - ENHANCED WITH PORTAL SWITCHING & PROFILE MANAGEMENT
+ * ============================================================================
+ * 
+ * Features:
+ * ✅ Portal/workspace switcher for all user types
+ * ✅ Profile management access
+ * ✅ Context-aware display
+ * ✅ Clean TypeScript with no 'any' types
+ */
+
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Bell, User, ChevronDown, Shield, Settings, LogOut,
@@ -94,7 +106,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     isPatient,
     isStaff,
     isStaffWithFacility,
-    hasMultipleFacilities,
+    isStaffWithoutFacility,
   } = activeContext;
 
   // Detect screen size
@@ -133,6 +145,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     showToast('success', 'Switched to Patient Portal', 3000);
   };
 
+  const handleSwitchToStaffWithoutFacility = () => {
+    // Navigate to staff dashboard without facility
+    navigate(ROUTES.STAFF_DASHBOARD);
+    setIsPortalSwitcherOpen(false);
+    showToast('success', 'Switched to Staff Portal', 3000);
+  };
+
   // Get current context display
   const getCurrentContextDisplay = () => {
     if (activeRoleCode && activeFacilityId) {
@@ -151,6 +170,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         subtitle: 'Personal Health',
         icon: <Heart className="w-4 h-4" />,
         type: 'patient' as const,
+      };
+    } else if (isStaffWithoutFacility) {
+      return {
+        title: 'Staff Portal',
+        subtitle: 'No Facility',
+        icon: <User className="w-4 h-4" />,
+        type: 'staff_no_facility' as const,
       };
     }
     return {
@@ -323,6 +349,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     return 'absolute right-0 mt-2';
   };
 
+  // Show portal switcher for: staff with facility, patient, or staff without facility
+  const shouldShowPortalSwitcher = isStaff || isPatient;
+
   return (
     <nav className={cn('flex items-center justify-between gap-2 sm:gap-4', className)}>
       {/* Left: Brand & Context */}
@@ -362,8 +391,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Right: Action Buttons */}
       <div className="flex items-center gap-1 sm:gap-2">
-        {/* Portal/Role Switcher - NEW */}
-        {(isStaff || isPatient) && (hasMultipleFacilities || (isStaff && isPatient)) && (
+        {/* Portal/Role Switcher */}
+        {shouldShowPortalSwitcher && (
           <div ref={portalSwitcherRef} className="relative">
             <button
               onClick={() => setIsPortalSwitcherOpen(!isPortalSwitcherOpen)}
@@ -380,7 +409,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 'p-1.5 rounded-md',
                 currentContext.type === 'staff' 
                   ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600')
-                  : (isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600')
+                  : currentContext.type === 'patient'
+                  ? (isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600')
+                  : (isDark ? 'bg-gray-500/20 text-gray-400' : 'bg-gray-100 text-gray-600')
               )}>
                 {currentContext.icon}
               </div>
@@ -495,6 +526,53 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </>
                   )}
 
+                  {/* Staff without facility */}
+                  {isStaffWithoutFacility && (
+                    <>
+                      <p className={cn(
+                        'text-xs font-bold uppercase tracking-wide px-2 mb-2',
+                        isDark ? 'text-gray-500' : 'text-gray-600'
+                      )}>
+                        Staff Portal
+                      </p>
+                      <button
+                        onClick={handleSwitchToStaffWithoutFacility}
+                        className={cn(
+                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
+                          'border',
+                          currentContext.type === 'staff_no_facility'
+                            ? (isDark 
+                              ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' 
+                              : 'bg-blue-50 border-blue-200 text-blue-600')
+                            : (isDark 
+                              ? 'hover:bg-gray-800 border-transparent text-gray-300' 
+                              : 'hover:bg-gray-50 border-transparent text-gray-700')
+                        )}
+                      >
+                        <div className={cn(
+                          'p-2 rounded-lg',
+                          currentContext.type === 'staff_no_facility'
+                            ? (isDark ? 'bg-blue-500/20' : 'bg-blue-100')
+                            : (isDark ? 'bg-gray-800' : 'bg-gray-100')
+                        )}>
+                          <User className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold">Staff Dashboard</p>
+                          <p className={cn(
+                            'text-xs',
+                            isDark ? 'text-gray-500' : 'text-gray-600'
+                          )}>
+                            Invitations & Profile
+                          </p>
+                        </div>
+                        {currentContext.type === 'staff_no_facility' && (
+                          <Check className="w-4 h-4 text-blue-500" />
+                        )}
+                      </button>
+                    </>
+                  )}
+
                   {/* Patient Portal */}
                   {isPatient && (
                     <>
@@ -515,7 +593,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         className={cn(
                           'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
                           'border',
-                          !activeRoleCode
+                          currentContext.type === 'patient'
                             ? (isDark 
                               ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' 
                               : 'bg-purple-50 border-purple-200 text-purple-600')
@@ -526,7 +604,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       >
                         <div className={cn(
                           'p-2 rounded-lg',
-                          !activeRoleCode
+                          currentContext.type === 'patient'
                             ? (isDark ? 'bg-purple-500/20' : 'bg-purple-100')
                             : (isDark ? 'bg-gray-800' : 'bg-gray-100')
                         )}>
@@ -541,7 +619,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             My Personal Health
                           </p>
                         </div>
-                        {!activeRoleCode && (
+                        {currentContext.type === 'patient' && (
                           <Check className="w-4 h-4 text-purple-500" />
                         )}
                       </button>
@@ -1110,13 +1188,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               {/* Menu Items */}
               <div className="p-2">
                 {[
-                  { icon: User, label: 'My Profile', shortcut: '⌘P' },
-                  { icon: Settings, label: 'Settings', shortcut: '⌘,' },
-                  { icon: Building2, label: 'Workspaces' },
-                  { icon: Activity, label: 'Activity Log' },
+                  { icon: User, label: 'My Profile', shortcut: '⌘P', route: '/staff/profile' },
+                  { icon: Settings, label: 'Settings', shortcut: '⌘,', route: ROUTES.SETTINGS },
+                  { icon: Building2, label: 'Workspaces', route: '/workspaces' },
+                  { icon: Activity, label: 'Activity Log', route: '/activity' },
                 ].map((item) => (
                   <button
                     key={item.label}
+                    onClick={() => {
+                      navigate(item.route);
+                      setIsUserDropdownOpen(false);
+                    }}
                     className={cn(
                       'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group',
                       isDark 
