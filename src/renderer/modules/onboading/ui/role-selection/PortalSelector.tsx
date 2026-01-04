@@ -1,24 +1,10 @@
 /**
  * ============================================================================
- * PORTAL SELECTOR - CONTEXT-DRIVEN VERSION
+ * PORTAL SELECTOR - CONTEXT-DRIVEN VERSION (REFINED)
  * ============================================================================
  * 
- * Real data from activeContext slice:
- * - User info from activeContext.user
- * - Facility roles from activeContext.facilityRoles
- * - Patient capability from activeContext.capabilities.patient
- * - Dynamic workspace generation based on actual assignments
- * 
- * FEATURES:
- * ✅ No hardcoded data - all from Redux store
- * ✅ Handles patient-only, staff-only, and dual capability users
- * ✅ Handles staff without facility assignment
- * ✅ Dynamic facility role cards with real information
- * ✅ Patient portal access when patient capability exists
- * ✅ Informative messages for users without assignments
- * ✅ Theme support (dark/light mode)
- * ✅ Smooth animations with Framer Motion
- * ✅ Enterprise-grade UI polish
+ * No changes to logic - only refinements for perfect integration
+ * with the new Navbar and Sidebar components
  */
 
 import React, { useState, useMemo } from 'react';
@@ -54,24 +40,17 @@ import {
   getRoleDisplayName,
   type FacilityRole 
 } from '../../../../app/store/slices/activeContextSlice';
-import { containerVariants,cardVariants } from '../../../../shared/components/animations/motionVariants';
+import { containerVariants, cardVariants } from '../../../../shared/components/animations/motionVariants';
 
-/* ==========================================================================
-   DEFAULT IMAGE FOR ALL WORKSPACES
-   ========================================================================== */
+/* Default images */
 const DEFAULT_WORKSPACE_IMAGE = 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=400&h=300&fit=crop&q=80';
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&q=80';
 
-
-/* ==========================================================================
-   MAIN COMPONENT
-   ========================================================================== */
 export const PortalSelector: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  /* Redux State */
   const theme = useAppSelector((state) => state.ui.theme);
   const activeContext = useAppSelector((state) => state.activeContext);
 
@@ -86,10 +65,8 @@ export const PortalSelector: React.FC = () => {
     isPatientOnly,
   } = activeContext;
 
-  /* Local State */
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
-  /* Theme-aware Design System */
   const designSystem = useMemo(
     () => ({
       colors: {
@@ -116,9 +93,7 @@ export const PortalSelector: React.FC = () => {
     [theme]
   );
 
-  /* Navigation Handlers */
   const handleWorkspaceSelect = (facilityRole: FacilityRole) => {
-    // Switch to selected facility role in Redux
     dispatch(
       switchFacilityRole({
         facilityId: facilityRole.facility_id,
@@ -126,7 +101,6 @@ export const PortalSelector: React.FC = () => {
       })
     );
 
-    // Navigate to staff dashboard
     navigate(ROUTES.STAFF_DASHBOARD, {
       state: {
         user,
@@ -137,10 +111,8 @@ export const PortalSelector: React.FC = () => {
   };
 
   const handlePatientPortal = () => {
-    // Switch to patient mode
     dispatch(switchToPatientMode());
 
-    // Navigate to patient dashboard
     navigate(ROUTES.PATIENT_DASHBOARD, {
       state: {
         user,
@@ -167,9 +139,6 @@ export const PortalSelector: React.FC = () => {
     navigate(ROUTES.LANDING);
   };
 
-  /* ==========================================================================
-     RENDER: HEADER
-     ========================================================================== */
   const renderHeader = () => (
     <header
       className={cn(
@@ -179,7 +148,6 @@ export const PortalSelector: React.FC = () => {
     >
       <div className="max-w-6xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
-          {/* Logo */}
           <div className="flex items-center gap-3">
             <div
               className={cn(
@@ -194,9 +162,7 @@ export const PortalSelector: React.FC = () => {
             </span>
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-3">
-            {/* Theme Toggle */}
             <button
               onClick={() => dispatch(toggleTheme())}
               className={cn(
@@ -210,7 +176,6 @@ export const PortalSelector: React.FC = () => {
               {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
 
-            {/* Logout Button */}
             <button
               onClick={handleLogout}
               className={cn(
@@ -221,7 +186,6 @@ export const PortalSelector: React.FC = () => {
               Logout
             </button>
 
-            {/* User Avatar */}
             <img
               src={DEFAULT_AVATAR}
               alt={user?.full_name || 'User'}
@@ -233,9 +197,6 @@ export const PortalSelector: React.FC = () => {
     </header>
   );
 
-  /* ==========================================================================
-     RENDER: WELCOME HEADER
-     ========================================================================== */
   const renderWelcomeHeader = () => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -258,9 +219,6 @@ export const PortalSelector: React.FC = () => {
     </motion.div>
   );
 
-  /* ==========================================================================
-     RENDER: PROFESSIONAL WORKSPACES
-     ========================================================================== */
   const renderProfessionalWorkspaces = () => {
     if (!isStaff) return null;
 
@@ -272,7 +230,6 @@ export const PortalSelector: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="mb-12"
         >
-          {/* Section Header */}
           <div className="flex items-center gap-3 mb-6">
             <div
               className={cn(
@@ -287,7 +244,6 @@ export const PortalSelector: React.FC = () => {
             </h2>
           </div>
 
-          {/* No Facility Assignment Card */}
           <div
             className={cn(
               'rounded-xl border p-8',
@@ -310,9 +266,8 @@ export const PortalSelector: React.FC = () => {
                 </h3>
                 <p className={cn('text-sm mb-4', designSystem.colors.secondary)}>
                   You're registered as a healthcare professional, but haven't been assigned to
-                  any facilities yet. Please contact your facility administrator to activate
-                  your workspace access, or register a new facility if you're setting up your
-                  own practice.
+                  any facilities yet. Please contact your facility administrator or register
+                  a new facility.
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <button
@@ -347,7 +302,6 @@ export const PortalSelector: React.FC = () => {
       );
     }
 
-    // Staff with facility assignments
     return (
       <motion.div
         initial="hidden"
@@ -355,7 +309,6 @@ export const PortalSelector: React.FC = () => {
         variants={containerVariants}
         className="mb-12"
       >
-        {/* Section Header */}
         <div className="flex items-center gap-3 mb-6">
           <div
             className={cn(
@@ -370,7 +323,6 @@ export const PortalSelector: React.FC = () => {
           </h2>
         </div>
 
-        {/* Workspace Cards */}
         <div className="space-y-4">
           {facilityRoles.map((facilityRole) => (
             <motion.div
@@ -390,14 +342,12 @@ export const PortalSelector: React.FC = () => {
               )}
             >
               <div className="flex flex-col sm:flex-row">
-                {/* Image Section */}
                 <div className="relative w-full sm:w-64 h-48 sm:h-auto overflow-hidden flex-shrink-0">
                   <img
                     src={DEFAULT_WORKSPACE_IMAGE}
                     alt={facilityRole.facility_name || `Facility ${facilityRole.facility_id}`}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  {/* Gradient Overlay */}
                   <div
                     className={cn(
                       'absolute inset-0',
@@ -408,7 +358,6 @@ export const PortalSelector: React.FC = () => {
                   />
                 </div>
 
-                {/* Content Section */}
                 <div className="flex-1 p-6">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
@@ -416,7 +365,6 @@ export const PortalSelector: React.FC = () => {
                         <h3 className={cn('text-lg font-bold', designSystem.colors.primary)}>
                           {facilityRole.facility_name || `Facility ${facilityRole.facility_id}`}
                         </h3>
-                        {/* Active Badge */}
                         <div
                           className={cn(
                             'px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1',
@@ -427,7 +375,6 @@ export const PortalSelector: React.FC = () => {
                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                           Active
                         </div>
-                        {/* Primary Badge */}
                         {facilityRole.is_primary_facility && (
                           <div
                             className={cn(
@@ -440,7 +387,6 @@ export const PortalSelector: React.FC = () => {
                         )}
                       </div>
 
-                      {/* Role */}
                       <div className="flex items-center gap-2 mb-3">
                         <span
                           className={cn(
@@ -452,13 +398,11 @@ export const PortalSelector: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Description */}
                       <p className={cn('text-sm mb-4', designSystem.colors.secondary)}>
                         Access your {getRoleDisplayName(facilityRole.role_code).toLowerCase()}{' '}
                         dashboard to manage patients, review clinical data, and coordinate care.
                       </p>
 
-                      {/* Meta Info */}
                       <div className="flex items-center gap-4 text-xs">
                         <div className="flex items-center gap-1.5">
                           <Building2
@@ -477,7 +421,6 @@ export const PortalSelector: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Action Button */}
                     <button
                       className={cn(
                         'ml-4 px-5 py-2.5 rounded-lg font-medium text-sm',
@@ -506,9 +449,6 @@ export const PortalSelector: React.FC = () => {
     );
   };
 
-  /* ==========================================================================
-     RENDER: PERSONAL ACCESS (PATIENT PORTAL)
-     ========================================================================== */
   const renderPersonalAccess = () => {
     if (!isPatient) {
       return (
@@ -518,7 +458,6 @@ export const PortalSelector: React.FC = () => {
           transition={{ delay: 0.3, duration: 0.5 }}
           className="mb-12"
         >
-          {/* Section Header */}
           <div className="flex items-center gap-3 mb-6">
             <div
               className={cn(
@@ -533,7 +472,6 @@ export const PortalSelector: React.FC = () => {
             </h2>
           </div>
 
-          {/* No Patient Portal Card */}
           <div
             className={cn(
               'rounded-xl border p-8',
@@ -555,8 +493,7 @@ export const PortalSelector: React.FC = () => {
                   Patient Portal Not Activated
                 </h3>
                 <p className={cn('text-sm mb-4', designSystem.colors.secondary)}>
-                  You don't currently have patient portal access. To view your personal health
-                  records, test results, and appointments, please contact your healthcare
+                  You don't currently have patient portal access. Contact your healthcare
                   provider to activate your patient portal.
                 </p>
                 <button
@@ -586,7 +523,6 @@ export const PortalSelector: React.FC = () => {
         transition={{ delay: 0.3, duration: 0.5 }}
         className="mb-12"
       >
-        {/* Section Header */}
         <div className="flex items-center gap-3 mb-6">
           <div
             className={cn(
@@ -601,7 +537,6 @@ export const PortalSelector: React.FC = () => {
           </h2>
         </div>
 
-        {/* Patient Portal Card */}
         <motion.div
           whileHover={{ scale: 1.01 }}
           transition={{ duration: 0.2 }}
@@ -634,11 +569,10 @@ export const PortalSelector: React.FC = () => {
               </div>
 
               <p className={cn('text-sm mb-4', designSystem.colors.secondary)}>
-                Access your personal test results, upcoming appointments, medical history, and
-                billing information in one secure location.
+                Access your test results, appointments, medical history, and billing
+                information.
               </p>
 
-              {/* Patient ID */}
               {capabilities.patient && (
                 <div className="flex items-center gap-2 mb-4">
                   <span className={cn('text-xs font-medium', designSystem.colors.tertiary)}>
@@ -650,7 +584,6 @@ export const PortalSelector: React.FC = () => {
                 </div>
               )}
 
-              {/* Quick Features */}
               <div className="flex flex-wrap gap-3">
                 {[
                   { icon: FileText, label: 'Test Results' },
@@ -673,7 +606,6 @@ export const PortalSelector: React.FC = () => {
               </div>
             </div>
 
-            {/* CTA Button */}
             <button
               className={cn(
                 'px-6 py-3 rounded-lg font-medium text-sm',
@@ -693,9 +625,6 @@ export const PortalSelector: React.FC = () => {
     );
   };
 
-  /* ==========================================================================
-     RENDER: FOOTER ACTIONS
-     ========================================================================== */
   const renderFooterActions = () => (
     <motion.div
       initial={{ opacity: 0 }}
@@ -731,16 +660,12 @@ export const PortalSelector: React.FC = () => {
         Contact Support
       </button>
 
-      {/* Copyright */}
       <div className="ml-auto text-xs text-gray-500 dark:text-gray-600">
         © 2024 CustoCare AI. All rights reserved.
       </div>
     </motion.div>
   );
 
-  /* ==========================================================================
-     MAIN RENDER
-     ========================================================================== */
   return (
     <div className={cn('min-h-screen', designSystem.colors.background)}>
       {renderHeader()}

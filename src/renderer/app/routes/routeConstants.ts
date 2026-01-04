@@ -48,6 +48,7 @@ export const ROUTES = {
   CLINICAL_WORKSPACE: '/clinical-workspace',
   LABORATORY: '/laboratory',
   PHARMACY: '/pharmacy',
+  PATIENT_DASHBOARD: '/dahboard/patient',
   BILLING: '/billing',
   CLINICAL_SERVICES: '/clinical-services',
   ADMINISTRATION: '/administration',
