@@ -338,7 +338,7 @@ export const Sidebar: React.FC<SidebarProps & {
       stats: 'Active',
       shortcut: '⌘2',
       glowColor: 'from-emerald-500 to-teal-400',
-      requiredModules: ['clinical','admin'],
+      requiredModules: ['clinical','admin','pharmacy'],
     },
     {
       id: 'encounters',

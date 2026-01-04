@@ -8,6 +8,8 @@
  * ✅ Clear paths to register facility or activate patient portal
  * ✅ No admin contact required - self-service approach
  * ✅ Support for all user types (patient, staff with/without facility)
+ * ✅ Register as Medical Staff option for patient-only users
+ * ✅ Register New Facility option available for all users
  */
 
 import React, { useState, useMemo } from 'react';
@@ -34,6 +36,7 @@ import {
   CheckCircle,
   Inbox,
   Settings,
+  Stethoscope,
 } from 'lucide-react';
 import { cn } from '../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
@@ -148,6 +151,11 @@ export const PortalSelector: React.FC = () => {
 
   const handleActivatePatientPortal = () => {
     navigate(ROUTES.PATIENT_ONBOARDING);
+  };
+
+  const handleRegisterAsMedicalStaff = () => {
+    // Navigate to medical staff registration page
+    navigate(ROUTES.STAFF_ONBOARDING);
   };
 
   const handleLogout = () => {
@@ -629,18 +637,38 @@ export const PortalSelector: React.FC = () => {
                   Access your personal health records, appointments, test results, and billing information
                   by activating your patient portal.
                 </p>
-                <button
-                  onClick={handleActivatePatientPortal}
-                  className={cn(
-                    'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
-                    'bg-gradient-to-r from-purple-600 to-pink-600 text-white',
-                    'hover:from-purple-700 hover:to-pink-700',
-                    'transition-all duration-200'
+                
+                {/* Buttons Container */}
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={handleActivatePatientPortal}
+                    className={cn(
+                      'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
+                      'bg-gradient-to-r from-purple-600 to-pink-600 text-white',
+                      'hover:from-purple-700 hover:to-pink-700',
+                      'transition-all duration-200 flex-shrink-0'
+                    )}
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Activate Patient Portal
+                  </button>
+                  
+                  {/* Register as Medical Staff Button - Only for non-staff users */}
+                  {!isStaff && (
+                    <button
+                      onClick={handleRegisterAsMedicalStaff}
+                      className={cn(
+                        'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
+                        'bg-gradient-to-r from-blue-600 to-cyan-600 text-white',
+                        'hover:from-blue-700 hover:to-cyan-700',
+                        'transition-all duration-200 flex-shrink-0'
+                      )}
+                    >
+                      <Stethoscope className="w-4 h-4" />
+                      Register as Medical Staff
+                    </button>
                   )}
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  Activate Patient Portal
-                </button>
+                </div>
               </div>
             </div>
           </div>
@@ -763,6 +791,7 @@ export const PortalSelector: React.FC = () => {
       transition={{ delay: 0.5, duration: 0.5 }}
       className="flex flex-wrap items-center gap-4 pb-8"
     >
+      {/* ALWAYS SHOW Register New Facility button for all users */}
       <button
         onClick={handleRegisterFacility}
         className={cn(
@@ -777,6 +806,7 @@ export const PortalSelector: React.FC = () => {
         Register New Facility
       </button>
 
+      {/* Show Activate Patient Portal button for non-patient users */}
       {!isPatient && (
         <button
           onClick={handleActivatePatientPortal}
@@ -790,6 +820,23 @@ export const PortalSelector: React.FC = () => {
         >
           <Heart className="w-4 h-4" />
           Activate Patient Portal
+        </button>
+      )}
+
+      {/* Show Register as Medical Staff button for non-staff users */}
+      {!isStaff && (
+        <button
+          onClick={handleRegisterAsMedicalStaff}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
+            'transition-all duration-200',
+            theme === 'dark'
+              ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          )}
+        >
+          <Stethoscope className="w-4 h-4" />
+          Register as Medical Staff
         </button>
       )}
 
