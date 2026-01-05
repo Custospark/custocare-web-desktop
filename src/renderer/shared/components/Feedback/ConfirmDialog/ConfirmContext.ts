@@ -9,6 +9,7 @@ export interface ConfirmOptions {
   confirmText?: string;
   cancelText?: string;
   variant?: ConfirmVariant;
+  theme?:string
 }
 
 export interface ConfirmContextType {

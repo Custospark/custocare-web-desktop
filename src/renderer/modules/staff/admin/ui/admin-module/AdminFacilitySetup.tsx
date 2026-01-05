@@ -254,6 +254,7 @@ export const AdminFacilitySetup: React.FC<AdminFacilitySetupProps> = ({ theme })
         confirmText: 'Delete',
         cancelText: 'Cancel',
         variant: 'danger',
+        theme,
       });
 
       if (!confirmed) return;
