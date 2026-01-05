@@ -5,6 +5,7 @@ import AuthMiddlewareRoute from './AuthMiddlwareRoute';
 import Layout from '../../shared/components/Navigation/Layout';
 import LoadingSkeleton from '../../shared/components/Loading/LoadingSkeletons';
 import { ROUTES } from './routeConstants';
+import AdminModule from '../../shared/features/admin/AdminModule';
 
 // Lazy load protected components
 const Dashboard = React.lazy(() => import('../../shared/pages/Dashboard'));
@@ -186,10 +187,7 @@ export const ProtectedRoutes = () => [
         path={ROUTES.ADMINISTRATION}
         element={
           <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
-              <div className="p-8">
-                <h1 className="text-3xl font-bold text-white">Administration</h1>
-                <p className="text-gray-400 mt-2">User management, roles & system governance.</p>
-              </div>
+             <AdminModule/>
           </Suspense>
         }
         key="administration"
