@@ -1,5 +1,5 @@
 // store/slices/activeContextSlice.ts
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 /**
  * Role codes from backend facility_staff_roles table

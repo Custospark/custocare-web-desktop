@@ -1,7 +1,7 @@
 import { axiosInstance } from '../../../../../app/api/axiosConfig';
 import { AUTH_ENDPOINTS } from '../../api-endpoints';
 import { AxiosError } from 'axios';
-import { UserContext } from '../../../../../app/store/slices/activeContextSlice';
+import { type UserContext } from '../../../../../app/store/slices/activeContextSlice';
 
 export interface RegisterRequest {
   email: string;
