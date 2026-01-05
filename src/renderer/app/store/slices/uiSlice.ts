@@ -1,3 +1,4 @@
+//uiSlice.ts
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 /* =========================

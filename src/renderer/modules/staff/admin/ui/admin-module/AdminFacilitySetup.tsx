@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
+import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { 
   Building2, 
   Plus, 
@@ -244,11 +245,22 @@ export const AdminFacilitySetup: React.FC<AdminFacilitySetupProps> = ({ theme })
     }
   };
   
-  const handleDelete = (department: Department) => {
-    if (window.confirm(`Are you sure you want to delete ${department.department_name}? This action can be undone.`)) {
+    const { confirm } = useConfirm();
+
+    const handleDelete = async (department: Department) => {
+      const confirmed = await confirm({
+        title: 'Delete Department',
+        message: `Are you sure you want to delete "${department.department_name}"? This action can be undone.`,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        variant: 'danger',
+      });
+
+      if (!confirmed) return;
+
       deleteMutation.mutate({ uuid: department.department_uuid });
-    }
-  };
+    };
+
   
   const handleRestore = (department: Department) => {
     restoreMutation.mutate({ uuid: department.department_uuid });
