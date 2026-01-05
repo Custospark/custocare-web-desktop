@@ -494,7 +494,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
             className={cn(
               'w-[320px] border-l transition-all duration-300 ease-out',
               'flex flex-col overflow-hidden',
-              'flex-shrink-0',
+              'flex-shrink-0','ml-4', 'md:ml-8',
               theme === 'dark'
                 ? 'bg-gray-900/95 backdrop-blur-xl border-gray-800/40'
                 : 'bg-white/95 backdrop-blur-xl border-gray-200/50',
