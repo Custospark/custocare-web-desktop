@@ -5,7 +5,7 @@ import AuthMiddlewareRoute from './AuthMiddlwareRoute';
 import Layout from '../../shared/components/Navigation/Layout';
 import LoadingSkeleton from '../../shared/components/Loading/LoadingSkeletons';
 import { ROUTES } from './routeConstants';
-import AdminModule from '../../shared/features/admin/AdminModule';
+import AdminModule from '../../modules/staff/admin/ui/AdminModule';
 
 // Lazy load protected components
 const Dashboard = React.lazy(() => import('../../shared/pages/Dashboard'));

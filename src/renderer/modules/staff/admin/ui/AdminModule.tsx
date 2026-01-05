@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
-import type { RootState } from '../../../app/store/rootReducer';
-import { ContentLayout, type Operation } from '../../components/content/ContentLayout';
+import type { RootState } from '../../../../app/store/rootReducer';
+import { ContentLayout, type Operation } from '../../../../shared/components/content/ContentLayout';
 import {
   LayoutDashboard,
   Users,
