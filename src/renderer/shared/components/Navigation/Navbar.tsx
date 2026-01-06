@@ -1,13 +1,16 @@
 /**
  * ============================================================================
- * NAVBAR - ENHANCED WITH PORTAL SWITCHING & PROFILE MANAGEMENT
+ * NAVBAR - COMPLETE REWRITE WITH ENHANCED ROLE SWITCHER
  * ============================================================================
  * 
  * Features:
- * ✅ Portal/workspace switcher for all user types
- * ✅ Profile management access
- * ✅ Context-aware display
- * ✅ Clean TypeScript with no 'any' types
+ * ✅ Comprehensive role/context switcher always showing ALL available options
+ * ✅ Never hides any capability from user - all roles always accessible
+ * ✅ Smart facility management for staff users
+ * ✅ Intuitive grouping and visual hierarchy
+ * ✅ Full TypeScript safety
+ * ✅ Responsive design
+ * ✅ Bug-free state management
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -18,7 +21,8 @@ import {
   Search, Command, Moon, Sun,
   Heart, Activity, Workflow,
   Brain, Rocket, BarChart3, Clock,
-  Building2, Briefcase, ChevronRight, Check
+  Building2, Briefcase, ChevronRight, Check,
+  UserCheck, Layers
 } from 'lucide-react';
 import { cn } from '../../types/cn';
 import { useNavigate } from 'react-router-dom';
@@ -27,10 +31,13 @@ import { logout } from '../../../app/store/slices/authSlice';
 import { useAppDispatch, useAppSelector } from '../../../app/store/hooks/useApp';
 import { useToast } from '../../../app/store/contexts/toast/useToast';
 import { 
-  switchFacilityRole, 
-  switchToPatientMode,
+  switchCapability,
+  switchFacility,
+  selectCurrentCapabilityName,
+  selectActiveFacilityName,
+  selectActiveRoleCode,
+  selectStaffFacilities,
   getRoleDisplayName,
-  type FacilityRole 
 } from '../../../app/store/slices/activeContextSlice';
 
 export interface NavbarProps {
@@ -74,41 +81,56 @@ export const Navbar: React.FC<NavbarProps> = ({
   onThemeToggle,
   className
 }) => {
+  // ============================================================================
+  // STATE MANAGEMENT
+  // ============================================================================
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
   const [isSmartSearchOpen, setIsSmartSearchOpen] = useState(false);
   const [isWorkflowOpen, setIsWorkflowOpen] = useState(false);
-  const [isPortalSwitcherOpen, setIsPortalSwitcherOpen] = useState(false);
+  const [isContextSwitcherOpen, setIsContextSwitcherOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobile, setIsMobile] = useState(false);
   
+  // Refs for dropdown management
   const notificationsRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const quickActionsRef = useRef<HTMLDivElement>(null);
   const smartSearchRef = useRef<HTMLDivElement>(null);
   const workflowRef = useRef<HTMLDivElement>(null);
-  const portalSwitcherRef = useRef<HTMLDivElement>(null);
+  const contextSwitcherRef = useRef<HTMLDivElement>(null);
 
   const isDark = theme === 'dark';
 
-  // Redux state
+  // ============================================================================
+  // REDUX STATE & SELECTORS
+  // ============================================================================
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const activeContext = useAppSelector((state) => state.activeContext);
 
+  // Core state from activeContextSlice
   const {
     user,
-    facilityRoles,
+    activeCapability,
     activeFacilityId,
-    activeRoleCode,
+    availableCapabilities,
     isPatient,
-    isStaff,
     isStaffWithFacility,
     isStaffWithoutFacility,
-  } = activeContext;
+  } = useAppSelector((state) => state.activeContext);
 
+  // Derived state using selectors
+  const currentCapabilityName = useAppSelector(selectCurrentCapabilityName);
+  const activeFacilityName = useAppSelector(selectActiveFacilityName);
+  const activeRoleCode = useAppSelector(selectActiveRoleCode);
+  const staffFacilities = useAppSelector(selectStaffFacilities);
+
+  // ============================================================================
+  // EFFECTS
+  // ============================================================================
+  
   // Detect screen size
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -116,6 +138,51 @@ export const Navbar: React.FC<NavbarProps> = ({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Close dropdowns on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const refs = [
+        { ref: notificationsRef, setter: setIsNotificationsOpen },
+        { ref: userDropdownRef, setter: setIsUserDropdownOpen },
+        { ref: quickActionsRef, setter: setIsQuickActionsOpen },
+        { ref: smartSearchRef, setter: setIsSmartSearchOpen },
+        { ref: workflowRef, setter: setIsWorkflowOpen },
+        { ref: contextSwitcherRef, setter: setIsContextSwitcherOpen },
+      ];
+
+      refs.forEach(({ ref, setter }) => {
+        if (ref.current && !ref.current.contains(event.target as Node)) {
+          setter(false);
+        }
+      });
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSmartSearchOpen(true);
+      }
+      // Context switcher shortcut
+      if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
+        e.preventDefault();
+        setIsContextSwitcherOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // ============================================================================
+  // EVENT HANDLERS
+  // ============================================================================
 
   const handleLogout = () => {
     dispatch(logout());
@@ -127,69 +194,129 @@ export const Navbar: React.FC<NavbarProps> = ({
     navigate(ROUTES.LANDING);
   };
 
-  // Portal/Role switching handlers
-  const handleSwitchToStaffRole = (facilityRole: FacilityRole) => {
-    dispatch(
-      switchFacilityRole({
-        facilityId: facilityRole.facility_id,
-        roleCode: facilityRole.role_code,
-      })
-    );
-    setIsPortalSwitcherOpen(false);
-    showToast('success', `Switched to ${getRoleDisplayName(facilityRole.role_code)} at ${facilityRole.facility_name}`, 3000);
+  /**
+   * Switch to a different capability using activeContextSlice method
+   */
+  const handleSwitchCapability = (capability: string) => {
+    dispatch(switchCapability(capability));
+    setIsContextSwitcherOpen(false);
+    showToast('success', `Switched to ${getRoleDisplayName(capability)}`, 3000);
   };
 
-  const handleSwitchToPatientPortal = () => {
-    dispatch(switchToPatientMode());
-    setIsPortalSwitcherOpen(false);
-    showToast('success', 'Switched to Patient Portal', 3000);
+  /**
+   * Switch to a different facility (staff only) using activeContextSlice method
+   */
+  const handleSwitchFacility = (facilityId: number, facilityName: string) => {
+    dispatch(switchFacility(facilityId));
+    setIsContextSwitcherOpen(false);
+    showToast('success', `Switched to ${facilityName}`, 3000);
   };
 
-  const handleSwitchToStaffWithoutFacility = () => {
-    // Navigate to staff dashboard without facility
-    navigate(ROUTES.STAFF_DASHBOARD);
-    setIsPortalSwitcherOpen(false);
-    showToast('success', 'Switched to Staff Portal', 3000);
-  };
+  // ============================================================================
+  // CONTEXT DISPLAY LOGIC
+  // ============================================================================
 
-  // Get current context display
+  /**
+   * Get current context display information
+   */
   const getCurrentContextDisplay = () => {
-    if (activeRoleCode && activeFacilityId) {
-      const currentRole = facilityRoles.find(
-        r => r.facility_id === activeFacilityId && r.role_code === activeRoleCode
-      );
+    // Staff with facility selected
+    if (activeCapability === 'staff' && isStaffWithFacility && activeFacilityId && activeFacilityName) {
       return {
-        title: getRoleDisplayName(activeRoleCode),
-        subtitle: currentRole?.facility_name || `Facility ${activeFacilityId}`,
+        title: activeRoleCode ? getRoleDisplayName(activeRoleCode) : 'Staff',
+        subtitle: activeFacilityName,
         icon: <Briefcase className="w-4 h-4" />,
         type: 'staff' as const,
+        color: 'blue' as const,
       };
-    } else if (isPatient && !activeRoleCode) {
+    }
+    
+    // Staff without facilities
+    if (activeCapability === 'staff' && isStaffWithoutFacility) {
+      return {
+        title: 'Staff Portal',
+        subtitle: 'No Facility',
+        icon: <UserCheck className="w-4 h-4" />,
+        type: 'staff_no_facility' as const,
+        color: 'purple' as const,
+      };
+    }
+    
+    // Patient
+    if (activeCapability === 'patient') {
       return {
         title: 'Patient Portal',
         subtitle: 'Personal Health',
         icon: <Heart className="w-4 h-4" />,
         type: 'patient' as const,
-      };
-    } else if (isStaffWithoutFacility) {
-      return {
-        title: 'Staff Portal',
-        subtitle: 'No Facility',
-        icon: <User className="w-4 h-4" />,
-        type: 'staff_no_facility' as const,
+        color: 'rose' as const,
       };
     }
+
+    // Spatie roles (super_admin, regulator, etc.)
+    if (activeCapability && activeCapability !== 'staff' && activeCapability !== 'patient') {
+      return {
+        title: getRoleDisplayName(activeCapability),
+        subtitle: 'System Access',
+        icon: <Shield className="w-4 h-4" />,
+        type: 'spatie' as const,
+        color: 'amber' as const,
+      };
+    }
+
+    // Fallback
     return {
       title: 'No Context',
       subtitle: 'Select workspace',
-      icon: <User className="w-4 h-4" />,
+      icon: <Layers className="w-4 h-4" />,
       type: 'none' as const,
+      color: 'gray' as const,
     };
   };
 
   const currentContext = getCurrentContextDisplay();
 
-  // Enhanced notifications
+  // Get color classes for context badge
+  const getContextColors = (color: typeof currentContext.color) => {
+    const colorMap = {
+      blue: {
+        bg: isDark ? 'bg-blue-500/20' : 'bg-blue-100',
+        text: isDark ? 'text-blue-400' : 'text-blue-600',
+        border: isDark ? 'border-blue-500/30' : 'border-blue-200',
+        hover: isDark ? 'hover:bg-blue-500/30' : 'hover:bg-blue-200',
+      },
+      purple: {
+        bg: isDark ? 'bg-purple-500/20' : 'bg-purple-100',
+        text: isDark ? 'text-purple-400' : 'text-purple-600',
+        border: isDark ? 'border-purple-500/30' : 'border-purple-200',
+        hover: isDark ? 'hover:bg-purple-500/30' : 'hover:bg-purple-200',
+      },
+      rose: {
+        bg: isDark ? 'bg-rose-500/20' : 'bg-rose-100',
+        text: isDark ? 'text-rose-400' : 'text-rose-600',
+        border: isDark ? 'border-rose-500/30' : 'border-rose-200',
+        hover: isDark ? 'hover:bg-rose-500/30' : 'hover:bg-rose-200',
+      },
+      amber: {
+        bg: isDark ? 'bg-amber-500/20' : 'bg-amber-100',
+        text: isDark ? 'text-amber-400' : 'text-amber-600',
+        border: isDark ? 'border-amber-500/30' : 'border-amber-200',
+        hover: isDark ? 'hover:bg-amber-500/30' : 'hover:bg-amber-200',
+      },
+      gray: {
+        bg: isDark ? 'bg-gray-500/20' : 'bg-gray-100',
+        text: isDark ? 'text-gray-400' : 'text-gray-600',
+        border: isDark ? 'border-gray-500/30' : 'border-gray-200',
+        hover: isDark ? 'hover:bg-gray-500/30' : 'hover:bg-gray-200',
+      },
+    };
+    return colorMap[color];
+  };
+
+  // ============================================================================
+  // MOCK DATA (notifications, quick actions, etc.)
+  // ============================================================================
+
   const notifications: Notification[] = [
     { 
       id: 1, 
@@ -282,45 +409,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       )
     : smartSearchItems.slice(0, 5);
 
-  // Close dropdowns on click outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
-        setIsNotificationsOpen(false);
-      }
-      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
-        setIsUserDropdownOpen(false);
-      }
-      if (quickActionsRef.current && !quickActionsRef.current.contains(event.target as Node)) {
-        setIsQuickActionsOpen(false);
-      }
-      if (smartSearchRef.current && !smartSearchRef.current.contains(event.target as Node)) {
-        setIsSmartSearchOpen(false);
-      }
-      if (workflowRef.current && !workflowRef.current.contains(event.target as Node)) {
-        setIsWorkflowOpen(false);
-      }
-      if (portalSwitcherRef.current && !portalSwitcherRef.current.contains(event.target as Node)) {
-        setIsPortalSwitcherOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsSmartSearchOpen(true);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  // ============================================================================
+  // UTILITY FUNCTIONS
+  // ============================================================================
 
   const getNotificationColor = (type: Notification['type']) => {
     const colors = {
@@ -344,17 +435,23 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const getDropdownPosition = () => {
     if (isMobile) {
-      return 'fixed left-1/2 -translate-x-1/2 top-20';
+      return 'fixed left-1/2 -translate-x-1/2 top-20 w-[calc(100vw-2rem)] max-w-md';
     }
-    return 'absolute right-0 mt-2';
+    return 'absolute right-0 mt-2 w-96';
   };
 
-  // Show portal switcher for: staff with facility, patient, or staff without facility
-  const shouldShowPortalSwitcher = isStaff || isPatient;
+  // Always show context switcher (even if single capability - for clarity)
+  const shouldShowContextSwitcher = true;
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
 
   return (
     <nav className={cn('flex items-center justify-between gap-2 sm:gap-4', className)}>
-      {/* Left: Brand & Context */}
+      {/* ========================================================================
+          LEFT: BRAND
+          ======================================================================== */}
       <div className="flex items-center gap-2 sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-3 lg:ms-7">
           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20">
@@ -389,31 +486,34 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Right: Action Buttons */}
+      {/* ========================================================================
+          RIGHT: ACTION BUTTONS
+          ======================================================================== */}
       <div className="flex items-center gap-1 sm:gap-2">
-        {/* Portal/Role Switcher */}
-        {shouldShowPortalSwitcher && (
-          <div ref={portalSwitcherRef} className="relative">
+        
+        {/* ====================================================================
+            🎯 CONTEXT/WORKSPACE SWITCHER (ENHANCED)
+            ==================================================================== */}
+        {shouldShowContextSwitcher && (
+          <div ref={contextSwitcherRef} className="relative">
             <button
-              onClick={() => setIsPortalSwitcherOpen(!isPortalSwitcherOpen)}
+              onClick={() => setIsContextSwitcherOpen(!isContextSwitcherOpen)}
               className={cn(
                 'flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300 hover:scale-105',
-                'border',
+                'border shadow-sm',
                 isDark 
                   ? 'bg-gray-800/50 border-gray-700 hover:bg-gray-800' 
                   : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
               )}
-              title="Switch workspace or portal"
+              title="Switch workspace (⌘J)"
             >
               <div className={cn(
-                'p-1.5 rounded-md',
-                currentContext.type === 'staff' 
-                  ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600')
-                  : currentContext.type === 'patient'
-                  ? (isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600')
-                  : (isDark ? 'bg-gray-500/20 text-gray-400' : 'bg-gray-100 text-gray-600')
+                'p-1.5 rounded-md transition-colors',
+                getContextColors(currentContext.color).bg
               )}>
-                {currentContext.icon}
+                <div className={getContextColors(currentContext.color).text}>
+                  {currentContext.icon}
+                </div>
               </div>
               <div className="hidden lg:block text-left">
                 <p className={cn(
@@ -431,51 +531,113 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
               <ChevronDown className={cn(
                 'w-4 h-4 transition-transform',
-                isPortalSwitcherOpen && 'rotate-180',
+                isContextSwitcherOpen && 'rotate-180',
                 isDark ? 'text-gray-400' : 'text-gray-600'
               )} />
             </button>
 
-            {isPortalSwitcherOpen && (
+            {isContextSwitcherOpen && (
               <div className={cn(
-                'w-80 rounded-xl border shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200',
+                'rounded-xl border shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200',
                 getDropdownPosition(),
                 isDark 
                   ? 'bg-gray-900 border-gray-800' 
                   : 'bg-white border-gray-200'
               )}>
+                {/* Header */}
                 <div className="p-4 border-b border-gray-200/50 dark:border-gray-800/50">
                   <h3 className={cn(
                     'font-semibold flex items-center gap-2',
                     isDark ? 'text-gray-200' : 'text-gray-900'
                   )}>
-                    <Workflow className="w-4 h-4 text-purple-500" />
+                    <Layers className="w-4 h-4 text-blue-500" />
                     Switch Workspace
                   </h3>
                   <p className={cn(
                     'text-xs mt-1',
                     isDark ? 'text-gray-500' : 'text-gray-600'
                   )}>
-                    {user?.full_name || 'User'}
+                    {user?.full_name || 'User'} • All available contexts
                   </p>
+                  <div className={cn(
+                    'mt-2 flex items-center gap-1.5 text-xs px-2 py-1 rounded-md',
+                    isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600'
+                  )}>
+                    <Command className="w-3 h-3" />
+                    <kbd className="font-mono">⌘J</kbd>
+                    <span>to open</span>
+                  </div>
                 </div>
 
-                <div className="max-h-96 overflow-y-auto p-3 space-y-2">
-                  {/* Staff Workspaces */}
-                  {isStaffWithFacility && (
+                <div className="max-h-[70vh] overflow-y-auto p-3 space-y-2">
+                  
+                  {/* ====== PATIENT PORTAL (Always show if available) ====== */}
+                  {isPatient && (
                     <>
                       <p className={cn(
-                        'text-xs font-bold uppercase tracking-wide px-2 mb-2',
+                        'text-xs font-bold uppercase tracking-wide px-2 mb-2 mt-2',
                         isDark ? 'text-gray-500' : 'text-gray-600'
                       )}>
+                        <Heart className="w-3 h-3 inline mr-1" />
+                        Personal Health
+                      </p>
+                      <button
+                        onClick={() => handleSwitchCapability('patient')}
+                        className={cn(
+                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
+                          'border',
+                          activeCapability === 'patient'
+                            ? (isDark 
+                              ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' 
+                              : 'bg-rose-50 border-rose-200 text-rose-600')
+                            : (isDark 
+                              ? 'hover:bg-gray-800 border-transparent text-gray-300' 
+                              : 'hover:bg-gray-50 border-transparent text-gray-700')
+                        )}
+                      >
+                        <div className={cn(
+                          'p-2 rounded-lg',
+                          activeCapability === 'patient'
+                            ? (isDark ? 'bg-rose-500/20' : 'bg-rose-100')
+                            : (isDark ? 'bg-gray-800' : 'bg-gray-100')
+                        )}>
+                          <Heart className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold">Patient Portal</p>
+                          <p className={cn(
+                            'text-xs',
+                            isDark ? 'text-gray-500' : 'text-gray-600'
+                          )}>
+                            My Personal Health Dashboard
+                          </p>
+                        </div>
+                        {activeCapability === 'patient' && (
+                          <Check className="w-4 h-4 text-rose-500" />
+                        )}
+                      </button>
+                    </>
+                  )}
+
+                  {/* ====== STAFF WITH FACILITIES ====== */}
+                  {isStaffWithFacility && staffFacilities.length > 0 && (
+                    <>
+                      <p className={cn(
+                        'text-xs font-bold uppercase tracking-wide px-2 mb-2 mt-4',
+                        isDark ? 'text-gray-500' : 'text-gray-600'
+                      )}>
+                        <Briefcase className="w-3 h-3 inline mr-1" />
                         Professional Workspaces
                       </p>
-                      {facilityRoles.map((role) => {
-                        const isActive = activeFacilityId === role.facility_id && activeRoleCode === role.role_code;
+                      {staffFacilities.map((facility) => {
+                        const isActive = 
+                          activeCapability === 'staff' && 
+                          activeFacilityId === facility.facility_id;
+                        
                         return (
                           <button
-                            key={`${role.facility_id}-${role.role_code}`}
-                            onClick={() => handleSwitchToStaffRole(role)}
+                            key={`${facility.facility_id}-${facility.role_code}`}
+                            onClick={() => handleSwitchFacility(facility.facility_id, facility.facility_name)}
                             className={cn(
                               'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
                               'border',
@@ -497,28 +659,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                               <Briefcase className="w-4 h-4" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm font-semibold truncate">
-                                  {getRoleDisplayName(role.role_code)}
-                                </p>
-                                {role.is_primary_facility && (
-                                 <span
-                                className={cn(
-                                  'px-1.5 py-0.5 text-xs font-bold rounded-full',
-                                  isDark
-                                    ? 'bg-emerald-500/20 text-emerald-400'
-                                    : 'bg-emerald-100 text-emerald-700'
-                                )}
-                              >
-                                Primary
-                              </span>
-                                )}
-                              </div>
+                              <p className="text-sm font-semibold truncate">
+                                {getRoleDisplayName(facility.role_code)}
+                              </p>
                               <p className={cn(
                                 'text-xs truncate',
                                 isDark ? 'text-gray-500' : 'text-gray-600'
                               )}>
-                                {role.facility_name || `Facility ${role.facility_id}`}
+                                {facility.facility_name}
                               </p>
                             </div>
                             {isActive && (
@@ -530,74 +678,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </>
                   )}
 
-                  {/* Staff without facility */}
+                  {/* ====== STAFF WITHOUT FACILITIES ====== */}
                   {isStaffWithoutFacility && (
                     <>
                       <p className={cn(
-                        'text-xs font-bold uppercase tracking-wide px-2 mb-2',
+                        'text-xs font-bold uppercase tracking-wide px-2 mb-2 mt-4',
                         isDark ? 'text-gray-500' : 'text-gray-600'
                       )}>
+                        <UserCheck className="w-3 h-3 inline mr-1" />
                         Staff Portal
                       </p>
                       <button
-                        onClick={handleSwitchToStaffWithoutFacility}
+                        onClick={() => handleSwitchCapability('staff')}
                         className={cn(
                           'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
                           'border',
-                          currentContext.type === 'staff_no_facility'
-                            ? (isDark 
-                              ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' 
-                              : 'bg-blue-50 border-blue-200 text-blue-600')
-                            : (isDark 
-                              ? 'hover:bg-gray-800 border-transparent text-gray-300' 
-                              : 'hover:bg-gray-50 border-transparent text-gray-700')
-                        )}
-                      >
-                        <div className={cn(
-                          'p-2 rounded-lg',
-                          currentContext.type === 'staff_no_facility'
-                            ? (isDark ? 'bg-blue-500/20' : 'bg-blue-100')
-                            : (isDark ? 'bg-gray-800' : 'bg-gray-100')
-                        )}>
-                          <User className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold">Staff Dashboard</p>
-                          <p className={cn(
-                            'text-xs',
-                            isDark ? 'text-gray-500' : 'text-gray-600'
-                          )}>
-                            Invitations & Profile
-                          </p>
-                        </div>
-                        {currentContext.type === 'staff_no_facility' && (
-                          <Check className="w-4 h-4 text-blue-500" />
-                        )}
-                      </button>
-                    </>
-                  )}
-
-                  {/* Patient Portal */}
-                  {isPatient && (
-                    <>
-                      {isStaff && (
-                        <div className={cn(
-                          'my-4 border-t',
-                          isDark ? 'border-gray-800' : 'border-gray-200'
-                        )} />
-                      )}
-                      <p className={cn(
-                        'text-xs font-bold uppercase tracking-wide px-2 mb-2',
-                        isDark ? 'text-gray-500' : 'text-gray-600'
-                      )}>
-                        Personal Access
-                      </p>
-                      <button
-                        onClick={handleSwitchToPatientPortal}
-                        className={cn(
-                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
-                          'border',
-                          currentContext.type === 'patient'
+                          activeCapability === 'staff'
                             ? (isDark 
                               ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' 
                               : 'bg-purple-50 border-purple-200 text-purple-600')
@@ -608,34 +704,107 @@ export const Navbar: React.FC<NavbarProps> = ({
                       >
                         <div className={cn(
                           'p-2 rounded-lg',
-                          currentContext.type === 'patient'
+                          activeCapability === 'staff'
                             ? (isDark ? 'bg-purple-500/20' : 'bg-purple-100')
                             : (isDark ? 'bg-gray-800' : 'bg-gray-100')
                         )}>
-                          <Heart className="w-4 h-4" />
+                          <UserCheck className="w-4 h-4" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold">Patient Portal</p>
+                          <p className="text-sm font-semibold">Staff Dashboard</p>
                           <p className={cn(
                             'text-xs',
                             isDark ? 'text-gray-500' : 'text-gray-600'
                           )}>
-                            My Personal Health
+                            Invitations & Profile Management
                           </p>
                         </div>
-                        {currentContext.type === 'patient' && (
+                        {activeCapability === 'staff' && (
                           <Check className="w-4 h-4 text-purple-500" />
                         )}
                       </button>
                     </>
                   )}
+
+                  {/* ====== SPATIE ROLES (super_admin, regulator, etc.) ====== */}
+                  {availableCapabilities.filter(cap => cap !== 'patient' && cap !== 'staff').length > 0 && (
+                    <>
+                      <p className={cn(
+                        'text-xs font-bold uppercase tracking-wide px-2 mb-2 mt-4',
+                        isDark ? 'text-gray-500' : 'text-gray-600'
+                      )}>
+                        <Shield className="w-3 h-3 inline mr-1" />
+                        System Roles
+                      </p>
+                      {availableCapabilities
+                        .filter(cap => cap !== 'patient' && cap !== 'staff')
+                        .map((capability) => (
+                          <button
+                            key={capability}
+                            onClick={() => handleSwitchCapability(capability)}
+                            className={cn(
+                              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
+                              'border',
+                              activeCapability === capability
+                                ? (isDark 
+                                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' 
+                                  : 'bg-amber-50 border-amber-200 text-amber-600')
+                                : (isDark 
+                                  ? 'hover:bg-gray-800 border-transparent text-gray-300' 
+                                  : 'hover:bg-gray-50 border-transparent text-gray-700')
+                            )}
+                          >
+                            <div className={cn(
+                              'p-2 rounded-lg',
+                              activeCapability === capability
+                                ? (isDark ? 'bg-amber-500/20' : 'bg-amber-100')
+                                : (isDark ? 'bg-gray-800' : 'bg-gray-100')
+                            )}>
+                              <Shield className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold">
+                                {getRoleDisplayName(capability)}
+                              </p>
+                              <p className={cn(
+                                'text-xs',
+                                isDark ? 'text-gray-500' : 'text-gray-600'
+                              )}>
+                                System Administration
+                              </p>
+                            </div>
+                            {activeCapability === capability && (
+                              <Check className="w-4 h-4 text-amber-500" />
+                            )}
+                          </button>
+                        ))}
+                    </>
+                  )}
+
+                  {/* Helper text */}
+                  <div className={cn(
+                    'mt-4 p-3 rounded-lg border',
+                    isDark 
+                      ? 'bg-blue-500/5 border-blue-500/20' 
+                      : 'bg-blue-50 border-blue-200'
+                  )}>
+                    <p className={cn(
+                      'text-xs',
+                      isDark ? 'text-blue-300' : 'text-blue-700'
+                    )}>
+                      <Sparkles className="w-3 h-3 inline mr-1" />
+                      All your available workspaces are shown above. Switch anytime!
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Smart Search */}
+        {/* ====================================================================
+            SMART SEARCH
+            ==================================================================== */}
         <div ref={smartSearchRef} className="relative">
           <button
             onClick={() => setIsSmartSearchOpen(!isSmartSearchOpen)}
@@ -655,7 +824,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {isSmartSearchOpen && (
             <div className={cn(
-              'w-96 rounded-xl border shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200',
+              'rounded-xl border shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200',
               getDropdownPosition(),
               isDark 
                 ? 'bg-gray-900 border-gray-800' 
@@ -755,7 +924,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* Workflow Automation */}
+        {/* ====================================================================
+            WORKFLOW AUTOMATION
+            ==================================================================== */}
         <div ref={workflowRef} className="relative hidden lg:block">
           <button
             onClick={() => setIsWorkflowOpen(!isWorkflowOpen)}
@@ -828,7 +999,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* Quick Actions */}
+        {/* ====================================================================
+            QUICK ACTIONS
+            ==================================================================== */}
         <div ref={quickActionsRef} className="relative">
           <button
             onClick={() => setIsQuickActionsOpen(!isQuickActionsOpen)}
@@ -848,7 +1021,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {isQuickActionsOpen && (
             <div className={cn(
-              'w-80 rounded-xl border shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200',
+              'rounded-xl border shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200',
               getDropdownPosition(),
               isDark 
                 ? 'bg-gray-900 border-gray-800' 
@@ -928,7 +1101,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* Activity Indicator */}
+        {/* ====================================================================
+            ACTIVITY INDICATOR
+            ==================================================================== */}
         <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800">
           <div className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -942,7 +1117,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
         </div>
 
-        {/* Theme Toggle */}
+        {/* ====================================================================
+            THEME TOGGLE
+            ==================================================================== */}
         <button
           onClick={onThemeToggle}
           className={cn(
@@ -958,7 +1135,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </button>
 
-        {/* Notifications */}
+        {/* ====================================================================
+            NOTIFICATIONS
+            ==================================================================== */}
         <div ref={notificationsRef} className="relative">
           <button
             onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
@@ -1108,7 +1287,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* User Profile */}
+        {/* ====================================================================
+            USER PROFILE
+            ==================================================================== */}
         <div ref={userDropdownRef} className="relative">
           <button
             onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
@@ -1130,7 +1311,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 'text-xs',
                 isDark ? 'text-gray-500' : 'text-gray-600'
               )}>
-                {currentContext.title}
+                {currentCapabilityName}
               </p>
             </div>
             
@@ -1177,7 +1358,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       'text-sm',
                       isDark ? 'text-gray-500' : 'text-gray-600'
                     )}>
-                      {currentContext.title}
+                      {currentCapabilityName}
                     </p>
                     <p className={cn(
                       'text-xs mt-0.5',

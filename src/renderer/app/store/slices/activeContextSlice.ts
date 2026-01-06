@@ -2,31 +2,62 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 /**
- * Role codes from backend facility_staff_roles table
+ * Module from backend
  */
-export type RoleCode =
-  | 'physician'
-  | 'surgeon'
-  | 'anesthesiologist'
-  | 'nurse'
-  | 'nurse_manager'
-  | 'pharmacist'
-  | 'pharmacy_technician'
-  | 'radiologist'
-  | 'radiology_technician'
-  | 'laboratory_scientist'
-  | 'respiratory_therapist'
-  | 'physical_therapist'
-  | 'occupational_therapist'
-  | 'social_worker'
-  | 'case_manager'
-  | 'medical_assistant'
-  | 'receptionist'
-  | 'facility_administrator'
-  | 'department_manager'
-  | 'quality_coordinator'
-  | 'infection_control'
-  | 'it_support';
+export interface BackendModule {
+  id: number;
+  code: string;
+  name: string;
+  description: string;
+  is_active: boolean;
+}
+
+/**
+ * Patient capability from backend
+ */
+export interface PatientCapability {
+  patient_id: number;
+  primary_facility_id: number | null;
+  medical_record_number?: string;
+  modules: BackendModule[];
+}
+
+/**
+ * Facility assignment for staff
+ */
+export interface StaffFacilityAssignment {
+  facility_id: number;
+  facility_name: string;
+  role_code: string;
+  modules: BackendModule[];
+}
+
+/**
+ * Staff capability from backend
+ */
+export interface StaffCapability {
+  staff_id: number;
+  employee_id: string | null;
+  professional_title?: string;
+  facilities: StaffFacilityAssignment[];
+  modules?: BackendModule[]; // Only for staff without facilities
+}
+
+/**
+ * Spatie role capability from backend
+ */
+export interface SpatieRoleCapability {
+  modules: BackendModule[];
+}
+
+/**
+ * User capabilities from backend
+ */
+export interface UserCapabilities {
+  patient?: PatientCapability;
+  staff?: StaffCapability;
+  [spatieRole: string]: SpatieRoleCapability | PatientCapability | StaffCapability | undefined;
+}
 
 /**
  * Minimal user info from backend
@@ -43,37 +74,13 @@ export interface MinimalUser {
 }
 
 /**
- * Patient capability
- */
-export interface PatientCapability {
-  patient_id: number;
-  primary_facility_id: number | null;
-}
-
-/**
- * Staff capability (without facility assignment)
- */
-export interface StaffCapability {
-  staff_id: number;
-  employee_id: string | null;
-}
-
-/**
- * User capabilities (patient/staff)
- */
-export interface UserCapabilities {
-  patient?: PatientCapability;
-  staff?: StaffCapability;
-}
-
-/**
- * Facility role assignment (only for staff with facility)
+ * Facility role for legacy support
  */
 export interface FacilityRole {
   facility_id: number;
   facility_name: string | null;
   staff_id: number;
-  role_code: RoleCode;
+  role_code: string;
   is_primary_facility: boolean;
 }
 
@@ -95,11 +102,12 @@ interface ActiveContextState {
   capabilities: UserCapabilities;
   facilityRoles: FacilityRole[];
   
-  // Active selections (null if patient-only or staff without facility)
-  activeFacilityId: number | null;
-  activeRoleCode: RoleCode | null;
+  // Active selections
+  activeCapability: string | null; // 'patient', 'staff', 'super_admin', 'regulator', etc.
+  activeFacilityId: number | null; // Only for staff with facilities
   
   // Derived state
+  availableCapabilities: string[]; // All capabilities user can switch to
   isPatient: boolean;
   isStaff: boolean;
   isStaffWithFacility: boolean;
@@ -120,8 +128,9 @@ const loadInitialState = (): ActiveContextState => {
     user: null,
     capabilities: {},
     facilityRoles: [],
+    activeCapability: null,
     activeFacilityId: null,
-    activeRoleCode: null,
+    availableCapabilities: [],
     isPatient: false,
     isStaff: false,
     isStaffWithFacility: false,
@@ -135,36 +144,56 @@ const loadInitialState = (): ActiveContextState => {
   try {
     // Load persisted user context
     const persistedUserContext = localStorage.getItem('userContext');
-    if (persistedUserContext) {
-      const userContext: UserContext = JSON.parse(persistedUserContext);
-      
-      baseState.user = userContext.user;
-      baseState.capabilities = userContext.capabilities;
-      baseState.facilityRoles = userContext.facility_roles;
-      
-      // Set derived flags
-      baseState.isPatient = !!userContext.capabilities.patient;
-      baseState.isStaff = !!userContext.capabilities.staff;
-      baseState.isStaffWithFacility = !!userContext.capabilities.staff && userContext.facility_roles.length > 0;
-      baseState.isStaffWithoutFacility = !!userContext.capabilities.staff && userContext.facility_roles.length === 0;
-      baseState.isPatientOnly = !!userContext.capabilities.patient && !userContext.capabilities.staff;
-      baseState.hasMultipleFacilities = userContext.facility_roles.length > 1;
+    if (!persistedUserContext) {
+      return baseState;
     }
 
-    // Load active facility and role
-    const storedFacilityId = localStorage.getItem('activeFacilityId');
-    const storedRoleCode = localStorage.getItem('activeRoleCode');
+    const userContext: UserContext = JSON.parse(persistedUserContext);
     
-    if (storedFacilityId) {
-      baseState.activeFacilityId = parseInt(storedFacilityId, 10);
+    baseState.user = userContext.user;
+    baseState.capabilities = userContext.capabilities;
+    baseState.facilityRoles = userContext.facility_roles;
+    
+    // Extract available capabilities
+    baseState.availableCapabilities = Object.keys(userContext.capabilities);
+    
+    // Set derived flags
+    baseState.isPatient = Boolean(userContext.capabilities.patient);
+    baseState.isStaff = Boolean(userContext.capabilities.staff);
+    
+    if (userContext.capabilities.staff) {
+      const staffCapability = userContext.capabilities.staff;
+      baseState.isStaffWithFacility = staffCapability.facilities.length > 0;
+      baseState.isStaffWithoutFacility = staffCapability.facilities.length === 0;
+      baseState.hasMultipleFacilities = staffCapability.facilities.length > 1;
     }
     
-    if (storedRoleCode && isValidRoleCode(storedRoleCode)) {
-      baseState.activeRoleCode = storedRoleCode as RoleCode;
+    baseState.isPatientOnly = Boolean(userContext.capabilities.patient && !userContext.capabilities.staff);
+    
+    // Load active selections
+    const storedCapability = localStorage.getItem('activeCapability');
+    const storedFacilityId = localStorage.getItem('activeFacilityId');
+    
+    // Auto-select first available capability
+    if (baseState.availableCapabilities.length > 0) {
+      baseState.activeCapability = storedCapability && baseState.availableCapabilities.includes(storedCapability)
+        ? storedCapability
+        : baseState.availableCapabilities[0];
+    }
+    
+    // Auto-select first facility for staff
+    if (baseState.isStaffWithFacility && baseState.activeCapability === 'staff') {
+      const staffCapability = userContext.capabilities.staff;
+      if (staffCapability && staffCapability.facilities.length > 0) {
+        const primaryFacility = staffCapability.facilities.find(f => f.role_code.includes('primary')) || 
+                               staffCapability.facilities[0];
+        baseState.activeFacilityId = storedFacilityId 
+          ? parseInt(storedFacilityId, 10)
+          : primaryFacility.facility_id;
+      }
     }
   } catch (error) {
     console.error('Error loading state from localStorage:', error);
-    // Return base state if there's an error
   }
 
   return baseState;
@@ -186,122 +215,107 @@ const activeContextSlice = createSlice({
       state.capabilities = capabilities;
       state.facilityRoles = facility_roles;
       
+      // Extract available capabilities
+      state.availableCapabilities = Object.keys(capabilities);
+      
       // Set derived flags
-      state.isPatient = !!capabilities.patient;
-      state.isStaff = !!capabilities.staff;
-      state.isStaffWithFacility = !!capabilities.staff && facility_roles.length > 0;
-      state.isStaffWithoutFacility = !!capabilities.staff && facility_roles.length === 0;
-      state.isPatientOnly = !!capabilities.patient && !capabilities.staff;
-      state.hasMultipleFacilities = facility_roles.length > 1;
+      state.isPatient = Boolean(capabilities.patient);
+      state.isStaff = Boolean(capabilities.staff);
       
-      // Persist user context to localStorage
-      localStorage.setItem('userContext', JSON.stringify(action.payload));
+      if (capabilities.staff) {
+        const staffCapability = capabilities.staff;
+        state.isStaffWithFacility = staffCapability.facilities.length > 0;
+        state.isStaffWithoutFacility = staffCapability.facilities.length === 0;
+        state.hasMultipleFacilities = staffCapability.facilities.length > 1;
+      }
       
-      // Auto-select active context based on user type
-      if (facility_roles.length > 0) {
-        // Staff with facility: select primary or first facility role
-        const primaryRole = facility_roles.find(role => role.is_primary_facility);
-        const defaultRole = primaryRole || facility_roles[0];
-        
-        state.activeFacilityId = defaultRole.facility_id;
-        state.activeRoleCode = defaultRole.role_code;
-        
-        // Persist to localStorage
-        localStorage.setItem('activeFacilityId', defaultRole.facility_id.toString());
-        localStorage.setItem('activeRoleCode', defaultRole.role_code);
-      } else if (capabilities.patient && !capabilities.staff) {
-        // Patient-only: set facility but no role code
-        state.activeFacilityId = capabilities.patient.primary_facility_id;
-        state.activeRoleCode = null;
-        
-        if (capabilities.patient.primary_facility_id) {
-          localStorage.setItem('activeFacilityId', capabilities.patient.primary_facility_id.toString());
+      state.isPatientOnly = Boolean(capabilities.patient && !capabilities.staff);
+      
+      // Auto-select first capability
+      if (state.availableCapabilities.length > 0 && !state.activeCapability) {
+        state.activeCapability = state.availableCapabilities[0];
+      }
+      
+      // Auto-select first facility for staff
+      if (state.isStaffWithFacility && state.activeCapability === 'staff') {
+        const staffCapability = capabilities.staff;
+        if (staffCapability && staffCapability.facilities.length > 0) {
+          const primaryFacility = staffCapability.facilities.find(f => f.role_code.includes('primary')) || 
+                                 staffCapability.facilities[0];
+          state.activeFacilityId = primaryFacility.facility_id;
         }
-        localStorage.removeItem('activeRoleCode');
-      } else if (capabilities.staff && facility_roles.length === 0) {
-        // Staff without facility: no active context
-        state.activeFacilityId = null;
-        state.activeRoleCode = null;
-        
-        localStorage.removeItem('activeFacilityId');
-        localStorage.removeItem('activeRoleCode');
       }
-      
-      state.error = null;
-    },
-
-    /**
-     * Switch to a different facility role (staff only)
-     */
-    switchFacilityRole: (state, action: PayloadAction<{ facilityId: number; roleCode: RoleCode }>) => {
-      const { facilityId, roleCode } = action.payload;
-      
-      if (!state.isStaffWithFacility) {
-        state.error = 'User is not staff with facility assignment';
-        return;
-      }
-      
-      const role = state.facilityRoles.find(
-        r => r.facility_id === facilityId && r.role_code === roleCode
-      );
-      
-      if (role) {
-        state.activeFacilityId = facilityId;
-        state.activeRoleCode = roleCode;
-        state.error = null;
-        
-        // Persist to localStorage
-        localStorage.setItem('activeFacilityId', facilityId.toString());
-        localStorage.setItem('activeRoleCode', roleCode);
-      } else {
-        state.error = 'Role not found for this facility';
-      }
-    },
-
-    /**
-     * Switch to patient mode (if user has patient capability)
-     */
-    switchToPatientMode: (state) => {
-      if (!state.capabilities.patient) {
-        state.error = 'User does not have patient capability';
-        return;
-      }
-      
-      state.activeFacilityId = state.capabilities.patient.primary_facility_id;
-      state.activeRoleCode = null;
       
       // Persist to localStorage
-      if (state.capabilities.patient.primary_facility_id) {
-        localStorage.setItem('activeFacilityId', state.capabilities.patient.primary_facility_id.toString());
-      } else {
-        localStorage.removeItem('activeFacilityId');
+      localStorage.setItem('userContext', JSON.stringify(action.payload));
+      if (state.activeCapability) {
+        localStorage.setItem('activeCapability', state.activeCapability);
       }
-      localStorage.removeItem('activeRoleCode');
+      if (state.activeFacilityId) {
+        localStorage.setItem('activeFacilityId', state.activeFacilityId.toString());
+      }
       
       state.error = null;
     },
 
     /**
-     * Initialize context from localStorage (legacy support - now handled in loadInitialState)
+     * Switch to a different capability
      */
-    initializeActiveContext: (state) => {
-      const storedFacilityId = localStorage.getItem('activeFacilityId');
-      const storedRoleCode = localStorage.getItem('activeRoleCode');
+    switchCapability: (state, action: PayloadAction<string>) => {
+      const capability = action.payload;
       
-      if (storedFacilityId && storedRoleCode && state.facilityRoles.length > 0) {
-        const facilityId = parseInt(storedFacilityId, 10);
-        const role = state.facilityRoles.find(
-          r => r.facility_id === facilityId && r.role_code === storedRoleCode
-        );
-        
-        if (role) {
-          state.activeFacilityId = facilityId;
-          state.activeRoleCode = storedRoleCode as RoleCode;
-        }
-      } else if (storedFacilityId && !storedRoleCode && state.isPatient) {
-        state.activeFacilityId = parseInt(storedFacilityId, 10);
-        state.activeRoleCode = null;
+      if (!state.availableCapabilities.includes(capability)) {
+        state.error = `Capability "${capability}" not available`;
+        return;
       }
+      
+      state.activeCapability = capability;
+      
+      // Reset facility if switching away from staff
+      if (capability !== 'staff') {
+        state.activeFacilityId = null;
+        localStorage.removeItem('activeFacilityId');
+      }
+      
+      // Auto-select first facility if switching to staff with facilities
+      if (capability === 'staff' && state.isStaffWithFacility) {
+        const staffCapability = state.capabilities.staff;
+        if (staffCapability && staffCapability.facilities.length > 0) {
+          const primaryFacility = staffCapability.facilities.find(f => f.role_code.includes('primary')) || 
+                                 staffCapability.facilities[0];
+          state.activeFacilityId = primaryFacility.facility_id;
+          localStorage.setItem('activeFacilityId', state.activeFacilityId.toString());
+        }
+      }
+      
+      localStorage.setItem('activeCapability', capability);
+      state.error = null;
+    },
+
+    /**
+     * Switch to a different facility (staff only)
+     */
+    switchFacility: (state, action: PayloadAction<number>) => {
+      if (state.activeCapability !== 'staff' || !state.isStaffWithFacility) {
+        state.error = 'Not in staff capability or no facility assignments';
+        return;
+      }
+      
+      const staffCapability = state.capabilities.staff;
+      if (!staffCapability) {
+        state.error = 'Staff capability not found';
+        return;
+      }
+      
+      const facilityExists = staffCapability.facilities.some(f => f.facility_id === action.payload);
+      if (!facilityExists) {
+        state.error = 'Facility not found for current staff';
+        return;
+      }
+      
+      state.activeFacilityId = action.payload;
+      localStorage.setItem('activeFacilityId', action.payload.toString());
+      state.error = null;
     },
 
     /**
@@ -312,8 +326,9 @@ const activeContextSlice = createSlice({
         user: null,
         capabilities: {},
         facilityRoles: [],
+        activeCapability: null,
         activeFacilityId: null,
-        activeRoleCode: null,
+        availableCapabilities: [],
         isPatient: false,
         isStaff: false,
         isStaffWithFacility: false,
@@ -324,8 +339,8 @@ const activeContextSlice = createSlice({
         error: null,
       });
       localStorage.removeItem('userContext');
+      localStorage.removeItem('activeCapability');
       localStorage.removeItem('activeFacilityId');
-      localStorage.removeItem('activeRoleCode');
     },
 
     /**
@@ -353,9 +368,8 @@ const activeContextSlice = createSlice({
 
 export const {
   setUserContext,
-  switchFacilityRole,
-  switchToPatientMode,
-  initializeActiveContext,
+  switchCapability,
+  switchFacility,
   clearActiveContext,
   setLoading,
   setError,
@@ -364,181 +378,221 @@ export const {
 
 export default activeContextSlice.reducer;
 
+// ============================================================================
+// SELECTORS
+// ============================================================================
+
 /**
- * Type guard for checking if roleCode is valid
+ * Type for Redux state with activeContext
  */
-export const isValidRoleCode = (code: string | null): code is RoleCode => {
-  if (!code) return false;
-  const validRoles: RoleCode[] = [
-    'physician', 'surgeon', 'anesthesiologist', 'nurse', 'nurse_manager',
-    'pharmacist', 'pharmacy_technician', 'radiologist', 'radiology_technician',
-    'laboratory_scientist', 'respiratory_therapist', 'physical_therapist',
-    'occupational_therapist', 'social_worker', 'case_manager', 'medical_assistant',
-    'receptionist', 'facility_administrator', 'department_manager',
-    'quality_coordinator', 'infection_control', 'it_support'
-  ];
-  return validRoles.includes(code as RoleCode);
+interface RootState {
+  activeContext: ActiveContextState;
+}
+
+/**
+ * Get accessible modules for current context
+ */
+export const selectAccessibleModules = (state: RootState): BackendModule[] => {
+  const { activeCapability, capabilities, activeFacilityId } = state.activeContext;
+  
+  if (!activeCapability || !capabilities[activeCapability]) {
+    return [];
+  }
+  
+  const capability = capabilities[activeCapability];
+  
+  // Handle staff capability with facilities
+  if (activeCapability === 'staff') {
+    const staffCapability = capability as StaffCapability;
+    
+    if (staffCapability.facilities.length > 0) {
+      // Staff with facilities
+      if (activeFacilityId) {
+        const facility = staffCapability.facilities.find(f => f.facility_id === activeFacilityId);
+        return facility?.modules?.filter(m => m.is_active) || [];
+      }
+      return [];
+    } else {
+      // Staff without facilities
+      return staffCapability.modules?.filter(m => m.is_active) || [];
+    }
+  }
+  
+  // Handle patient or Spatie role
+  const typedCapability = capability as PatientCapability | SpatieRoleCapability;
+  return 'modules' in typedCapability ? typedCapability.modules.filter(m => m.is_active) : [];
 };
 
 /**
- * Role-based module permissions
+ * Get accessible module codes for current context
  */
-const ROLE_PERMISSIONS: Record<RoleCode, string[]> = {
-  // Clinical Roles
-  physician: ['clinical', 'prescriptions', 'lab', 'radiology', 'billing', 'reports', 'encounters'],
-  surgeon: ['clinical', 'prescriptions', 'lab', 'radiology', 'billing', 'operating_room', 'encounters'],
-  anesthesiologist: ['clinical', 'prescriptions', 'operating_room', 'reports', 'encounters'],
-  nurse: ['clinical', 'prescriptions', 'lab', 'vitals', 'medication_administration', 'encounters'],
-  nurse_manager: ['clinical', 'prescriptions', 'lab', 'staff_management', 'scheduling', 'reports', 'encounters'],
-  
-  // Pharmacy
-  pharmacist: ['pharmacy', 'prescriptions'],
-  pharmacy_technician: ['pharmacy', 'medication_dispensing', 'inventory'],
-  
-  // Radiology
-  radiologist: ['radiology', 'imaging', 'reports', 'clinical'],
-  radiology_technician: ['radiology', 'imaging', 'scheduling'],
-  
-  // Laboratory
-  laboratory_scientist: ['lab', 'lab_results', 'reports', 'quality_control'],
-  
-  // Therapy & Rehabilitation
-  respiratory_therapist: ['clinical', 'respiratory_therapy', 'reports', 'encounters'],
-  physical_therapist: ['physical_therapy', 'rehabilitation', 'reports', 'encounters'],
-  occupational_therapist: ['occupational_therapy', 'rehabilitation', 'reports', 'encounters'],
-  
-  // Support Services
-  social_worker: ['social_services', 'patient_support', 'discharge_planning', 'reports', 'encounters'],
-  case_manager: ['case_management', 'care_coordination', 'discharge_planning', 'reports', 'encounters'],
-  medical_assistant: ['clinical', 'vitals', 'scheduling', 'patient_intake', 'encounters'],
-  
-  // Administrative
-  receptionist: ['scheduling', 'appointments', 'registration', 'billing', 'front_desk'],
-  facility_administrator: ['admin', 'staff_management', 'facility_settings', 'reports', 'billing', 'compliance', 'all_modules'],
-  department_manager: ['department_management', 'staff_management', 'scheduling', 'reports', 'inventory'],
-  
-  // Quality & Safety
-  quality_coordinator: ['quality_assurance', 'compliance', 'reports', 'audits'],
-  infection_control: ['infection_control', 'compliance', 'reports', 'outbreak_management'],
-  
-  // IT
-  it_support: ['system_admin', 'user_management', 'technical_support', 'reports'],
+export const selectAccessibleModuleCodes = (state: RootState): string[] => {
+  const accessibleModules = selectAccessibleModules(state);
+  return accessibleModules.map(module => module.code);
 };
 
 /**
- * Patient-accessible modules
+ * Check if current context can access a specific module
  */
-const PATIENT_MODULES = ['appointments', 'medical_records', 'prescriptions', 'billing', 'patient_portal', 'messages'];
+export const selectCanAccessModule = (moduleCode: string) => (state: RootState): boolean => {
+  const accessibleCodes = selectAccessibleModuleCodes(state);
+  return accessibleCodes.includes(moduleCode);
+};
 
 /**
- * Selectors
+ * Check if current context can access any of the required modules
  */
-export const selectActiveRole = (state: { activeContext: ActiveContextState }): FacilityRole | null => {
-  if (!state.activeContext.activeFacilityId || !state.activeContext.activeRoleCode) {
+export const selectCanAccessAnyModule = (requiredModules?: string[]) => (state: RootState): boolean => {
+  if (!requiredModules || requiredModules.length === 0) return true;
+  const accessibleCodes = selectAccessibleModuleCodes(state);
+  return requiredModules.some(module => accessibleCodes.includes(module));
+};
+
+/**
+ * Get current capability display name
+ */
+export const selectCurrentCapabilityName = (state: RootState): string => {
+  const { activeCapability } = state.activeContext;
+  if (!activeCapability) return 'User';
+  
+  return getRoleDisplayName(activeCapability);
+};
+
+/**
+ * Get active facility name (for staff with facilities)
+ */
+export const selectActiveFacilityName = (state: RootState): string | null => {
+  const { activeCapability, capabilities, activeFacilityId } = state.activeContext;
+  
+  if (activeCapability !== 'staff' || !activeFacilityId) {
     return null;
   }
   
-  return state.activeContext.facilityRoles.find(
-    role => role.facility_id === state.activeContext.activeFacilityId &&
-            role.role_code === state.activeContext.activeRoleCode
-  ) || null;
+  const staffCapability = capabilities.staff as StaffCapability | undefined;
+  if (!staffCapability) return null;
+  
+  const facility = staffCapability.facilities.find(f => f.facility_id === activeFacilityId);
+  return facility?.facility_name || null;
 };
 
 /**
- * Check if user can access specific module based on role
- * FIXED: Properly handles null roleCode
+ * Get active role code (for staff with facilities)
  */
-export const selectCanAccessModule = (module: string) => (state: { activeContext: ActiveContextState }): boolean => {
-  const { activeRoleCode, isPatient, isStaffWithoutFacility } = state.activeContext;
+export const selectActiveRoleCode = (state: RootState): string | null => {
+  const { activeCapability, capabilities, activeFacilityId } = state.activeContext;
   
-  // Patient-only users (no role_code)
-  if (!activeRoleCode && isPatient) {
-    return PATIENT_MODULES.includes(module);
+  if (activeCapability !== 'staff' || !activeFacilityId) {
+    return null;
   }
   
-  // Staff without facility (no role_code)
-  if (!activeRoleCode && isStaffWithoutFacility) {
-    return false;
-  }
+  const staffCapability = capabilities.staff as StaffCapability | undefined;
+  if (!staffCapability) return null;
   
-  // Staff with facility and valid role code
-  if (activeRoleCode && isValidRoleCode(activeRoleCode)) {
-    const permissions = ROLE_PERMISSIONS[activeRoleCode];
-    return permissions?.includes(module) || permissions?.includes('all_modules') || false;
-  }
-  
-  return false;
-};
-
-/**
- * Get user type for UI routing/display
- */
-export const selectUserType = (state: { activeContext: ActiveContextState }): 'patient' | 'staff' | 'staff_no_facility' | 'unknown' => {
-  if (state.activeContext.isStaffWithFacility) return 'staff';
-  if (state.activeContext.isStaffWithoutFacility) return 'staff_no_facility';
-  if (state.activeContext.isPatientOnly) return 'patient';
-  return 'unknown';
+  const facility = staffCapability.facilities.find(f => f.facility_id === activeFacilityId);
+  return facility?.role_code || null;
 };
 
 /**
  * Check if user is in patient mode
  */
-export const selectIsPatientMode = (state: { activeContext: ActiveContextState }): boolean => {
-  return state.activeContext.isPatient && !state.activeContext.activeRoleCode;
+export const selectIsPatientMode = (state: RootState): boolean => {
+  return state.activeContext.activeCapability === 'patient';
 };
 
 /**
- * Get human-readable role name
- * FIXED: Properly handles null roleCode
+ * Get all facilities for current staff
  */
-export const getRoleDisplayName = (roleCode: RoleCode | null): string => {
-  if (!roleCode) return 'Patient';
+export const selectStaffFacilities = (state: RootState): StaffFacilityAssignment[] => {
+  const { capabilities, activeCapability } = state.activeContext;
   
-  const roleNames: Record<RoleCode, string> = {
-    physician: 'Physician',
-    surgeon: 'Surgeon',
-    anesthesiologist: 'Anesthesiologist',
+  if (activeCapability !== 'staff') return [];
+  
+  const staffCapability = capabilities.staff as StaffCapability | undefined;
+  return staffCapability?.facilities || [];
+};
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Convert role/capability code to human-readable display name
+ * This is the missing function that was causing the error
+ */
+export const getRoleDisplayName = (roleCode: string): string => {
+  const displayNames: Record<string, string> = {
+    patient: 'Patient',
+    staff: 'Staff',
+    super_admin: 'Super Administrator',
+    admin: 'Administrator',
+    regulator: 'Regulator',
+    auditor: 'Auditor',
+    doctor: 'Doctor',
     nurse: 'Nurse',
-    nurse_manager: 'Nurse Manager',
     pharmacist: 'Pharmacist',
-    pharmacy_technician: 'Pharmacy Technician',
-    radiologist: 'Radiologist',
-    radiology_technician: 'Radiology Technician',
-    laboratory_scientist: 'Laboratory Scientist',
-    respiratory_therapist: 'Respiratory Therapist',
-    physical_therapist: 'Physical Therapist',
-    occupational_therapist: 'Occupational Therapist',
-    social_worker: 'Social Worker',
-    case_manager: 'Case Manager',
-    medical_assistant: 'Medical Assistant',
+    lab_technician: 'Lab Technician',
     receptionist: 'Receptionist',
-    facility_administrator: 'Facility Administrator',
-    department_manager: 'Department Manager',
-    quality_coordinator: 'Quality Coordinator',
-    infection_control: 'Infection Control',
-    it_support: 'IT Support',
+    billing_clerk: 'Billing Clerk',
+    system_admin: 'System Administrator',
+    facility_admin: 'Facility Administrator',
   };
   
-  return roleNames[roleCode] || roleCode;
+  // Return mapped name or format the code nicely
+  return displayNames[roleCode] || roleCode
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 };
 
 /**
- * Get accessible modules for current role
+ * Get capability display name (alias for getRoleDisplayName)
  */
-export const selectAccessibleModules = (state: { activeContext: ActiveContextState }): string[] => {
-  const { activeRoleCode, isPatient, isStaffWithoutFacility } = state.activeContext;
-  
-  if (!activeRoleCode && isPatient) {
-    return PATIENT_MODULES;
-  }
-  
-  if (!activeRoleCode && isStaffWithoutFacility) {
-    return [];
-  }
-  
-  if (activeRoleCode && isValidRoleCode(activeRoleCode)) {
-    return ROLE_PERMISSIONS[activeRoleCode] || [];
-  }
-  
-  return [];
+export const getCapabilityDisplayName = getRoleDisplayName;
+
+/**
+ * Format facility role code for display
+ */
+export const formatRoleCode = (roleCode: string): string => {
+  return getRoleDisplayName(roleCode);
+};
+
+/**
+ * Get facility role from facility ID and role code
+ */
+export const getFacilityRole = (facilityId: number, roleCode: string) => 
+  (state: RootState): FacilityRole | undefined => {
+    return state.activeContext.facilityRoles.find(
+      role => role.facility_id === facilityId && role.role_code === roleCode
+    );
+  };
+
+/**
+ * Check if user is in staff mode
+ */
+export const selectIsStaffMode = (state: RootState): boolean => {
+  return state.activeContext.activeCapability === 'staff';
+};
+
+/**
+ * Check if user is in admin mode
+ */
+export const selectIsAdminMode = (state: RootState): boolean => {
+  const { activeCapability } = state.activeContext;
+  return ['super_admin', 'admin', 'system_admin', 'facility_administrator'].includes(activeCapability || '');
+};
+
+/**
+ * Get staff profile data
+ */
+export const selectStaffProfile = (state: RootState): StaffCapability | null => {
+  const { capabilities } = state.activeContext;
+  return capabilities.staff || null;
+};
+
+/**
+ * Get patient profile data
+ */
+export const selectPatientProfile = (state: RootState): PatientCapability | null => {
+  const { capabilities } = state.activeContext;
+  return capabilities.patient || null;
 };

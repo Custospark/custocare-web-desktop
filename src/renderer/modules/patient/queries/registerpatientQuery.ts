@@ -21,7 +21,7 @@ import { useToast } from '../../../app/store/contexts/toast/useToast';
 import { useAppDispatch } from '../../../app/store/hooks/useApp';
 import { 
   setUserContext,
-  switchToPatientMode,
+  switchCapability,
   setLoading as setContextLoading,
   setError as setContextError,
   type UserContext,
@@ -56,6 +56,48 @@ const fetchUpdatedUserContext = async (): Promise<UserContext> => {
 };
 
 /**
+ * Check if user context has patient capability
+ */
+const hasPatientCapability = (context: UserContext): boolean => {
+  return Boolean(context.capabilities.patient);
+};
+
+/**
+ * Check if user context has staff capability
+ */
+const hasStaffCapability = (context: UserContext): boolean => {
+  return Boolean(context.capabilities.staff);
+};
+
+/**
+ * Get available capabilities from context
+ */
+const getAvailableCapabilities = (context: UserContext): string[] => {
+  return Object.keys(context.capabilities);
+};
+
+/**
+ * Check if patient capability should be activated automatically
+ */
+const shouldActivatePatientCapability = (
+  context: UserContext,
+  autoSwitchToPatientMode: boolean
+): boolean => {
+  if (!autoSwitchToPatientMode) {
+    return false;
+  }
+  
+  // Check if patient capability exists
+  if (!hasPatientCapability(context)) {
+    return false;
+  }
+  
+  // Check if patient is available as an option
+  const capabilities = getAvailableCapabilities(context);
+  return capabilities.includes('patient');
+};
+
+/**
  * Options for useRegisterPatient hook
  */
 interface UseRegisterPatientOptions {
@@ -71,6 +113,16 @@ interface UseRegisterPatientOptions {
    * @default true
    */
   autoNavigateToDashboard?: boolean;
+  /**
+   * Whether to show success toast messages
+   * @default true
+   */
+  showSuccessToast?: boolean;
+  /**
+   * Whether to show error toast messages
+   * @default true
+   */
+  showErrorToast?: boolean;
 }
 
 /**
@@ -120,6 +172,8 @@ export const useRegisterPatient = (
 
   const autoSwitchToPatientMode = options?.autoSwitchToPatientMode ?? true;
   const autoNavigateToDashboard = options?.autoNavigateToDashboard ?? true;
+  const showSuccessToast = options?.showSuccessToast ?? true;
+  const showErrorToast = options?.showErrorToast ?? true;
 
   return useMutation({
     mutationFn: registerPatient,
@@ -137,66 +191,84 @@ export const useRegisterPatient = (
      */
     onSuccess: async (data) => {
       try {
-        // Show success toast with patient ID
-        const patientName = 'Patient';
-        showToast(
-          'success',
-          `${patientName} registered successfully! Patient ID: ${data.data?.patient_uuid || 'N/A'}`,
-          6000
-        );
+        // Show success toast if enabled
+        if (showSuccessToast) {
+          const patientName = 'Patient';
+          
+          showToast(
+            'success',
+            `${patientName} registered successfully!}`,
+            6000
+          );
+        }
 
         // Fetch updated user context to include patient capability
-        dispatch(setContextLoading(true));
-        
         const updatedContext = await fetchUpdatedUserContext();
         
         // Update activeContext with patient capability
         dispatch(setUserContext(updatedContext));
+        
+        // Check if we should activate patient capability
+        const shouldActivatePatient = shouldActivatePatientCapability(
+          updatedContext,
+          autoSwitchToPatientMode
+        );
+        
+        if (shouldActivatePatient) {
+          // Switch to patient mode using switchCapability action
+          dispatch(switchCapability('patient'));
+          
+          if (showSuccessToast) {
+            showToast(
+              'info',
+              'Switched to Patient Portal. You can now access your personal health dashboard.',
+              5000
+            );
+          }
+        }
 
         // Call custom success handler if provided
         options?.onSuccess?.(data);
 
-        // Handle mode switching and navigation based on configuration
-        if (autoSwitchToPatientMode && updatedContext.capabilities.patient) {
-          // Switch to patient mode
-          dispatch(switchToPatientMode());
-          
-          // Navigate to patient dashboard if configured
-          if (autoNavigateToDashboard) {
-            setTimeout(() => {
+        // Handle navigation based on configuration
+        if (autoNavigateToDashboard) {
+          setTimeout(() => {
+            // Determine appropriate dashboard based on current capability
+            if (shouldActivatePatient) {
               navigate(ROUTES.PATIENT_DASHBOARD);
-            }, 1500);
-          }
-        } else if (autoNavigateToDashboard) {
-          // Don't switch mode but navigate to appropriate dashboard
-          if (updatedContext.capabilities.staff?.staff_id) {
-            navigate(ROUTES.STAFF_DASHBOARD);
-            showToast(
-              'info',
-              'Patient registered successfully. You have been redirected to staff dashboard.',
-              4000
-            );
-          } else {
-            navigate(ROUTES.PATIENT_DASHBOARD);
-          }
+            } else if (hasStaffCapability(updatedContext)) {
+              navigate(ROUTES.STAFF_DASHBOARD);
+              if (showSuccessToast) {
+                showToast(
+                  'info',
+                  'Patient registered successfully. You have been redirected to staff dashboard.',
+                  4000
+                );
+              }
+            } else {
+              navigate(ROUTES.PORTAL_SELECTOR);
+            }
+          }, 1500);
         }
 
       } catch (contextError) {
         // Patient registered but context update failed
         console.error('Failed to update user context:', contextError);
         
-        dispatch(setContextError(
-          contextError instanceof Error 
-            ? contextError.message 
-            : 'Failed to update patient portal access'
-        ));
+        const errorMessage = contextError instanceof Error 
+          ? contextError.message 
+          : 'Failed to update patient portal access';
+        
+        dispatch(setContextError(errorMessage));
         
         // Still show success for patient registration
-        showToast(
-          'success',
-          'Patient registration completed! Please refresh the page to access patient portal.',
-          7000
-        );
+        if (showSuccessToast) {
+          showToast(
+            'success',
+            'Patient registration completed! Please refresh the page to access patient portal.',
+            7000
+          );
+        }
         
         // Navigate based on configuration
         if (autoNavigateToDashboard) {
@@ -223,8 +295,10 @@ export const useRegisterPatient = (
         displayMessage = `${message} ${validationMessage}`;
       }
 
-      // Show error toast
-      showToast(variant, displayMessage, 7000);
+      // Show error toast if enabled
+      if (showErrorToast) {
+        showToast(variant, displayMessage, 7000);
+      }
 
       // Set error in context slice
       dispatch(setContextError(displayMessage));
@@ -232,22 +306,33 @@ export const useRegisterPatient = (
       // Handle specific error cases
       switch (error.code) {
         case 'USER_NOT_FOUND':
-          // Session expired - redirect to login
+          // Session expired or unauthorized - redirect to login
+          if (showErrorToast) {
+            showToast('warning', 'Session expired. Please login again.', 4000);
+          }
           setTimeout(() => {
             navigate(ROUTES.LOGIN);
           }, 2000);
           break;
 
         case 'PATIENT_ALREADY_EXISTS':
-          // Patient already registered - refresh context and navigate
+          // Patient already registered - refresh context
+          if (showErrorToast) {
+            showToast('info', 'Patient profile already exists. Updating your access...', 4000);
+          }
+          
           dispatch(setContextLoading(true));
           fetchUpdatedUserContext()
             .then(updatedContext => {
               dispatch(setUserContext(updatedContext));
-              if (autoSwitchToPatientMode) {
-                dispatch(switchToPatientMode());
-                navigate(ROUTES.PATIENT_DASHBOARD);
-              } else {
+              
+              // Check if patient capability exists and switch if configured
+              if (autoSwitchToPatientMode && hasPatientCapability(updatedContext)) {
+                dispatch(switchCapability('patient'));
+                if (autoNavigateToDashboard) {
+                  navigate(ROUTES.PATIENT_DASHBOARD);
+                }
+              } else if (autoNavigateToDashboard) {
                 navigate(ROUTES.PORTAL_SELECTOR);
               }
             })
@@ -262,9 +347,11 @@ export const useRegisterPatient = (
 
         default:
           // For other errors, navigate to portal selector
-          setTimeout(() => {
-            navigate(ROUTES.PORTAL_SELECTOR);
-          }, 2000);
+          if (autoNavigateToDashboard) {
+            setTimeout(() => {
+              navigate(ROUTES.PORTAL_SELECTOR);
+            }, 2000);
+          }
           break;
       }
 
@@ -316,16 +403,22 @@ export const extractMutationState = (
  * Keeps the user in staff mode after registration
  */
 export const useRegisterPatientAsStaff = (
-  options?: Omit<UseRegisterPatientOptions, 'autoSwitchToPatientMode' | 'autoNavigateToDashboard'>
+  options?: Omit<UseRegisterPatientOptions, 
+    'autoSwitchToPatientMode' | 
+    'autoNavigateToDashboard' | 
+    'showSuccessToast' | 
+    'showErrorToast'>
 ): UseMutationResult<
   RegisterPatientResponse,
   RegisterPatientErrorResponse,
   RegisterPatientRequest
 > => {
   return useRegisterPatient({
-    ...options,
     autoSwitchToPatientMode: false,
     autoNavigateToDashboard: false,
+    showSuccessToast: true,
+    showErrorToast: true,
+    ...options,
   });
 };
 
@@ -334,15 +427,78 @@ export const useRegisterPatientAsStaff = (
  * Automatically switches to patient mode after registration
  */
 export const useRegisterAsPatient = (
-  options?: Omit<UseRegisterPatientOptions, 'autoSwitchToPatientMode' | 'autoNavigateToDashboard'>
+  options?: Omit<UseRegisterPatientOptions, 
+    'autoSwitchToPatientMode' | 
+    'autoNavigateToDashboard' | 
+    'showSuccessToast' | 
+    'showErrorToast'>
 ): UseMutationResult<
   RegisterPatientResponse,
   RegisterPatientErrorResponse,
   RegisterPatientRequest
 > => {
   return useRegisterPatient({
-    ...options,
     autoSwitchToPatientMode: true,
     autoNavigateToDashboard: true,
+    showSuccessToast: true,
+    showErrorToast: true,
+    ...options,
   });
+};
+
+/**
+ * Helper function for silent patient registration (no UI feedback)
+ * Useful for background registrations
+ */
+export const useRegisterPatientSilently = (
+  options?: Omit<UseRegisterPatientOptions, 'showSuccessToast' | 'showErrorToast'>
+): UseMutationResult<
+  RegisterPatientResponse,
+  RegisterPatientErrorResponse,
+  RegisterPatientRequest
+> => {
+  return useRegisterPatient({
+    showSuccessToast: false,
+    showErrorToast: false,
+    autoSwitchToPatientMode: true,
+    autoNavigateToDashboard: true,
+    ...options,
+  });
+};
+
+/**
+ * Helper function for batch patient registration
+ * Stays in current mode and doesn't navigate
+ */
+export const useRegisterPatientInBatch = (
+  options?: Omit<UseRegisterPatientOptions, 
+    'autoSwitchToPatientMode' | 
+    'autoNavigateToDashboard'>
+): UseMutationResult<
+  RegisterPatientResponse,
+  RegisterPatientErrorResponse,
+  RegisterPatientRequest
+> => {
+  return useRegisterPatient({
+    autoSwitchToPatientMode: false,
+    autoNavigateToDashboard: false,
+    ...options,
+  });
+};
+
+/**
+ * Helper to check if patient registration should be allowed
+ * based on current context
+ */
+export const canRegisterPatient = (
+  currentCapability: string | null,
+  isStaff: boolean
+): boolean => {
+  // Staff can always register patients
+  if (isStaff) {
+    return true;
+  }
+  
+  // Non-staff users can only register if they're not already patients
+  return currentCapability !== 'patient';
 };

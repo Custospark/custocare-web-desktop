@@ -1,15 +1,14 @@
 /**
  * ============================================================================
- * PORTAL SELECTOR - ENHANCED VERSION
+ * PORTAL SELECTOR - COMPLETE REWRITE
  * ============================================================================
  * 
- * Features:
- * ✅ Staff without facility can access dashboard for invitations & profile
- * ✅ Clear paths to register facility or activate patient portal
- * ✅ No admin contact required - self-service approach
- * ✅ Support for all user types (patient, staff with/without facility)
- * ✅ Register as Medical Staff option for patient-only users
- * ✅ Register New Facility option available for all users
+ * Fully integrated with activeContextSlice
+ * ✅ Type-safe without 'any'
+ * ✅ Proper Redux action dispatches
+ * ✅ Staff without facility dashboard access
+ * ✅ Clear self-service activation paths
+ * ✅ Support for all user types
  */
 
 import React, { useState, useMemo } from 'react';
@@ -44,16 +43,44 @@ import { toggleTheme } from '../../../../app/store/slices/uiSlice';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import { logout } from '../../../../app/store/slices/authSlice';
 import { 
-  switchFacilityRole, 
-  switchToPatientMode,
+  switchCapability,
+  switchFacility,
   getRoleDisplayName,
-  type FacilityRole 
+  type FacilityRole,
 } from '../../../../app/store/slices/activeContextSlice';
 import { containerVariants, cardVariants } from '../../../../shared/components/animations/motionVariants';
 
 /* Default images */
 const DEFAULT_WORKSPACE_IMAGE = 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=400&h=300&fit=crop&q=80';
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&q=80';
+
+/* Design system type */
+interface DesignSystem {
+  colors: {
+    primary: string;
+    secondary: string;
+    tertiary: string;
+    accent: string;
+    background: string;
+    card: string;
+    cardHover: string;
+    badge: string;
+    warning: string;
+    info: string;
+  };
+}
+
+/* Greeting type */
+interface Greeting {
+  text: string;
+  emoji: string;
+}
+
+/* Feature type for card items */
+interface Feature {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+}
 
 export const PortalSelector: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -76,7 +103,7 @@ export const PortalSelector: React.FC = () => {
 
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
-  const designSystem = useMemo(
+  const designSystem: DesignSystem = useMemo(
     () => ({
       colors: {
         primary: theme === 'dark' ? 'text-white' : 'text-gray-900',
@@ -106,14 +133,17 @@ export const PortalSelector: React.FC = () => {
     [theme]
   );
 
-  const handleWorkspaceSelect = (facilityRole: FacilityRole) => {
-    dispatch(
-      switchFacilityRole({
-        facilityId: facilityRole.facility_id,
-        roleCode: facilityRole.role_code,
-      })
-    );
+  /**
+   * Handle workspace selection for staff with facility
+   */
+  const handleWorkspaceSelect = (facilityRole: FacilityRole): void => {
+    // First switch to staff capability
+    dispatch(switchCapability('staff'));
+    
+    // Then switch to specific facility
+    dispatch(switchFacility(facilityRole.facility_id));
 
+    // Navigate to staff dashboard
     navigate(ROUTES.STAFF_DASHBOARD, {
       state: {
         user,
@@ -121,10 +151,22 @@ export const PortalSelector: React.FC = () => {
         timestamp: new Date().toISOString(),
       },
     });
+
+    showToast(
+      'success',
+      `Switched to ${facilityRole.facility_name || 'facility'} - ${getRoleDisplayName(facilityRole.role_code)}`,
+      3000
+    );
   };
 
-  const handleStaffWithoutFacilityDashboard = () => {
-    // Navigate to staff dashboard even without facility assignment
+  /**
+   * Handle staff without facility dashboard access
+   */
+  const handleStaffWithoutFacilityDashboard = (): void => {
+    // Switch to staff capability
+    dispatch(switchCapability('staff'));
+
+    // Navigate to staff dashboard
     navigate(ROUTES.STAFF_DASHBOARD, {
       state: {
         user,
@@ -132,33 +174,53 @@ export const PortalSelector: React.FC = () => {
         timestamp: new Date().toISOString(),
       },
     });
+
+    showToast('info', 'Access your invitations and profile in the staff dashboard', 3000);
   };
 
-  const handlePatientPortal = () => {
-    dispatch(switchToPatientMode());
+  /**
+   * Handle patient portal access
+   */
+  const handlePatientPortal = (): void => {
+    // Switch to patient capability
+    dispatch(switchCapability('patient'));
 
+    // Navigate to patient dashboard
     navigate(ROUTES.PATIENT_DASHBOARD, {
       state: {
         user,
         timestamp: new Date().toISOString(),
       },
     });
+
+    showToast('success', 'Welcome to your patient portal', 3000);
   };
 
-  const handleRegisterFacility = () => {
+  /**
+   * Handle facility registration
+   */
+  const handleRegisterFacility = (): void => {
     navigate(ROUTES.HEALTHCARE_ONBOARDING);
   };
 
-  const handleActivatePatientPortal = () => {
+  /**
+   * Handle patient portal activation
+   */
+  const handleActivatePatientPortal = (): void => {
     navigate(ROUTES.PATIENT_ONBOARDING);
   };
 
-  const handleRegisterAsMedicalStaff = () => {
-    // Navigate to medical staff registration page
+  /**
+   * Handle medical staff registration
+   */
+  const handleRegisterAsMedicalStaff = (): void => {
     navigate(ROUTES.STAFF_ONBOARDING);
   };
 
-  const handleLogout = () => {
+  /**
+   * Handle logout
+   */
+  const handleLogout = (): void => {
     dispatch(logout());
     showToast(
       'info',
@@ -168,6 +230,43 @@ export const PortalSelector: React.FC = () => {
     navigate(ROUTES.LANDING);
   };
 
+  /**
+   * Get time-based greeting
+   */
+  const getTimeGreeting = (): Greeting => {
+    const hour = new Date().getHours();
+
+    if (hour < 12) {
+      return {
+        text: 'Good morning',
+        emoji: '👋',
+      };
+    }
+
+    if (hour < 18) {
+      return {
+        text: 'Good afternoon',
+        emoji: '🤝',
+      };
+    }
+
+    return {
+      text: 'Good evening',
+      emoji: '🙌',
+    };
+  };
+
+  /**
+   * Capitalize name
+   */
+  const capitalizeName = (name?: string): string => {
+    if (!name) return 'User';
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+  };
+
+  /**
+   * Render header
+   */
   const renderHeader = () => (
     <header
       className={cn(
@@ -226,34 +325,9 @@ export const PortalSelector: React.FC = () => {
     </header>
   );
 
-  const getTimeGreeting = () => {
-    const hour = new Date().getHours();
-
-    if (hour < 12) {
-      return {
-        text: 'Good morning',
-        emoji: '👋',
-      };
-    }
-
-    if (hour < 18) {
-      return {
-        text: 'Good afternoon',
-        emoji: '🤝',
-      };
-    }
-
-    return {
-      text: 'Good evening',
-      emoji: '🙌',
-    };
-  };
-
-  const capitalizeName = (name?: string) => {
-    if (!name) return 'User';
-    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-  };
-
+  /**
+   * Render welcome header
+   */
   const renderWelcomeHeader = () => {
     const { text, emoji } = getTimeGreeting();
     const userName = user?.first_name || user?.full_name || 'User';
@@ -267,7 +341,6 @@ export const PortalSelector: React.FC = () => {
       >
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
           <span className={designSystem.colors.primary}>{text}</span>
-
           <span className="text-emerald-500">{capitalizeName(userName)}</span>
           <span className="text-2xl leading-none">{emoji}</span>
         </h1>
@@ -287,10 +360,19 @@ export const PortalSelector: React.FC = () => {
     );
   };
 
+  /**
+   * Render professional workspaces
+   */
   const renderProfessionalWorkspaces = () => {
     if (!isStaff) return null;
 
     if (isStaffWithoutFacility) {
+      const staffDashboardFeatures: Feature[] = [
+        { icon: Inbox, label: 'Invitations' },
+        { icon: Settings, label: 'Profile' },
+        { icon: FileText, label: 'Credentials' },
+      ];
+
       return (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -312,7 +394,7 @@ export const PortalSelector: React.FC = () => {
             </h2>
           </div>
 
-          {/* Staff Dashboard Access - NEW */}
+          {/* Staff Dashboard Access Card */}
           <motion.div
             whileHover={{ scale: 1.01 }}
             transition={{ duration: 0.2 }}
@@ -361,11 +443,7 @@ export const PortalSelector: React.FC = () => {
                 )}
 
                 <div className="flex flex-wrap gap-3">
-                  {[
-                    { icon: Inbox, label: 'Invitations' },
-                    { icon: Settings, label: 'Profile' },
-                    { icon: FileText, label: 'Credentials' },
-                  ].map((feature, index) => (
+                  {staffDashboardFeatures.map((feature, index) => (
                     <div
                       key={index}
                       className={cn(
@@ -443,6 +521,7 @@ export const PortalSelector: React.FC = () => {
       );
     }
 
+    // Staff with facilities - render workspace cards
     return (
       <motion.div
         initial="hidden"
@@ -465,132 +544,142 @@ export const PortalSelector: React.FC = () => {
         </div>
 
         <div className="space-y-4">
-          {facilityRoles.map((facilityRole) => (
-            <motion.div
-              key={`${facilityRole.facility_id}-${facilityRole.role_code}`}
-              variants={cardVariants}
-              onHoverStart={() =>
-                setHoveredCard(`${facilityRole.facility_id}-${facilityRole.role_code}`)
-              }
-              onHoverEnd={() => setHoveredCard(null)}
-              onClick={() => handleWorkspaceSelect(facilityRole)}
-              className={cn(
-                'group relative rounded-xl border overflow-hidden cursor-pointer',
-                'transition-all duration-300',
-                designSystem.colors.card,
-                designSystem.colors.cardHover,
-                'shadow-sm hover:shadow-md'
-              )}
-            >
-              <div className="flex flex-col sm:flex-row">
-                <div className="relative w-full sm:w-64 h-48 sm:h-auto overflow-hidden flex-shrink-0">
-                  <img
-                    src={DEFAULT_WORKSPACE_IMAGE}
-                    alt={facilityRole.facility_name || `Facility ${facilityRole.facility_id}`}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <div
-                    className={cn(
-                      'absolute inset-0',
-                      theme === 'dark'
-                        ? 'bg-gradient-to-r from-transparent to-gray-900/40'
-                        : 'bg-gradient-to-r from-transparent to-white/40'
-                    )}
-                  />
-                </div>
+          {facilityRoles.map((facilityRole) => {
+            const cardKey = `${facilityRole.facility_id}-${facilityRole.role_code}`;
+            
+            return (
+              <motion.div
+                key={cardKey}
+                variants={cardVariants}
+                onHoverStart={() => setHoveredCard(cardKey)}
+                onHoverEnd={() => setHoveredCard(null)}
+                onClick={() => handleWorkspaceSelect(facilityRole)}
+                className={cn(
+                  'group relative rounded-xl border overflow-hidden cursor-pointer',
+                  'transition-all duration-300',
+                  designSystem.colors.card,
+                  designSystem.colors.cardHover,
+                  'shadow-sm hover:shadow-md'
+                )}
+              >
+                <div className="flex flex-col sm:flex-row">
+                  <div className="relative w-full sm:w-64 h-48 sm:h-auto overflow-hidden flex-shrink-0">
+                    <img
+                      src={DEFAULT_WORKSPACE_IMAGE}
+                      alt={facilityRole.facility_name || `Facility ${facilityRole.facility_id}`}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div
+                      className={cn(
+                        'absolute inset-0',
+                        theme === 'dark'
+                          ? 'bg-gradient-to-r from-transparent to-gray-900/40'
+                          : 'bg-gradient-to-r from-transparent to-white/40'
+                      )}
+                    />
+                  </div>
 
-                <div className="flex-1 p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className={cn('text-lg font-bold', designSystem.colors.primary)}>
-                          {facilityRole.facility_name || `Facility ${facilityRole.facility_id}`}
-                        </h3>
-                        <div
-                          className={cn(
-                            'px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1',
-                            designSystem.colors.badge,
-                            'border'
-                          )}
-                        >
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          Active
-                        </div>
-                        {facilityRole.is_primary_facility && (
+                  <div className="flex-1 p-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className={cn('text-lg font-bold', designSystem.colors.primary)}>
+                            {facilityRole.facility_name || `Facility ${facilityRole.facility_id}`}
+                          </h3>
                           <div
                             className={cn(
-                              'px-2 py-0.5 rounded-full text-xs font-medium',
-                              'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                              'px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1',
+                              designSystem.colors.badge,
+                              'border'
                             )}
                           >
-                            Primary
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Active
                           </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2 mb-3">
-                        <span
-                          className={cn(
-                            'text-xs font-semibold uppercase tracking-wide',
-                            'text-purple-600 dark:text-purple-400'
+                          {facilityRole.is_primary_facility && (
+                            <div
+                              className={cn(
+                                'px-2 py-0.5 rounded-full text-xs font-medium',
+                                'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                              )}
+                            >
+                              Primary
+                            </div>
                           )}
-                        >
-                          {getRoleDisplayName(facilityRole.role_code)}
-                        </span>
-                      </div>
+                        </div>
 
-                      <p className={cn('text-sm mb-4', designSystem.colors.secondary)}>
-                        Access your {getRoleDisplayName(facilityRole.role_code).toLowerCase()}{' '}
-                        dashboard to manage patients, review clinical data, and coordinate care.
-                      </p>
-
-                      <div className="flex items-center gap-4 text-xs">
-                        <div className="flex items-center gap-1.5">
-                          <Building2
-                            className={cn('w-3.5 h-3.5', designSystem.colors.tertiary)}
-                          />
-                          <span className={designSystem.colors.secondary}>
-                            Facility ID: {facilityRole.facility_id}
+                        <div className="flex items-center gap-2 mb-3">
+                          <span
+                            className={cn(
+                              'text-xs font-semibold uppercase tracking-wide',
+                              'text-purple-600 dark:text-purple-400'
+                            )}
+                          >
+                            {getRoleDisplayName(facilityRole.role_code)}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <Users className={cn('w-3.5 h-3.5', designSystem.colors.tertiary)} />
-                          <span className={designSystem.colors.secondary}>
-                            Staff ID: {facilityRole.staff_id}
-                          </span>
+
+                        <p className={cn('text-sm mb-4', designSystem.colors.secondary)}>
+                          Access your {getRoleDisplayName(facilityRole.role_code).toLowerCase()}{' '}
+                          dashboard to manage patients, review clinical data, and coordinate care.
+                        </p>
+
+                        <div className="flex items-center gap-4 text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <Building2
+                              className={cn('w-3.5 h-3.5', designSystem.colors.tertiary)}
+                            />
+                            <span className={designSystem.colors.secondary}>
+                              Facility ID: {facilityRole.facility_id}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Users className={cn('w-3.5 h-3.5', designSystem.colors.tertiary)} />
+                            <span className={designSystem.colors.secondary}>
+                              Staff ID: {facilityRole.staff_id}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <button
-                      className={cn(
-                        'ml-4 px-5 py-2.5 rounded-lg font-medium text-sm',
-                        'flex items-center gap-2 flex-shrink-0',
-                        'transition-all duration-300',
-                        'bg-blue-600 text-white hover:bg-blue-700',
-                        'transform hover:scale-105 shadow-sm hover:shadow-md'
-                      )}
-                    >
-                      Enter Dashboard
-                      <ArrowRight
+                      <button
                         className={cn(
-                          'w-4 h-4 transition-transform duration-300',
-                          hoveredCard === `${facilityRole.facility_id}-${facilityRole.role_code}` &&
-                            'translate-x-1'
+                          'ml-4 px-5 py-2.5 rounded-lg font-medium text-sm',
+                          'flex items-center gap-2 flex-shrink-0',
+                          'transition-all duration-300',
+                          'bg-blue-600 text-white hover:bg-blue-700',
+                          'transform hover:scale-105 shadow-sm hover:shadow-md'
                         )}
-                      />
-                    </button>
+                      >
+                        Enter Dashboard
+                        <ArrowRight
+                          className={cn(
+                            'w-4 h-4 transition-transform duration-300',
+                            hoveredCard === cardKey && 'translate-x-1'
+                          )}
+                        />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
       </motion.div>
     );
   };
 
+  /**
+   * Render personal access section
+   */
   const renderPersonalAccess = () => {
+    const patientFeatures: Feature[] = [
+      { icon: FileText, label: 'Test Results' },
+      { icon: Calendar, label: 'Appointments' },
+      { icon: Activity, label: 'Health Records' },
+    ];
+
     if (!isPatient) {
       return (
         <motion.div
@@ -638,7 +727,6 @@ export const PortalSelector: React.FC = () => {
                   by activating your patient portal.
                 </p>
                 
-                {/* Buttons Container */}
                 <div className="flex flex-wrap gap-3">
                   <button
                     onClick={handleActivatePatientPortal}
@@ -653,7 +741,6 @@ export const PortalSelector: React.FC = () => {
                     Activate Patient Portal
                   </button>
                   
-                  {/* Register as Medical Staff Button - Only for non-staff users */}
                   {!isStaff && (
                     <button
                       onClick={handleRegisterAsMedicalStaff}
@@ -744,11 +831,7 @@ export const PortalSelector: React.FC = () => {
               )}
 
               <div className="flex flex-wrap gap-3">
-                {[
-                  { icon: FileText, label: 'Test Results' },
-                  { icon: Calendar, label: 'Appointments' },
-                  { icon: Activity, label: 'Health Records' },
-                ].map((feature, index) => (
+                {patientFeatures.map((feature, index) => (
                   <div
                     key={index}
                     className={cn(
@@ -784,14 +867,16 @@ export const PortalSelector: React.FC = () => {
     );
   };
 
-  const renderFooterActions = () => (
+  /**
+   * Render footer actions
+   */
+  const renderFooterActions = ()=> (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: 0.5, duration: 0.5 }}
       className="flex flex-wrap items-center gap-4 pb-8"
     >
-      {/* ALWAYS SHOW Register New Facility button for all users */}
       <button
         onClick={handleRegisterFacility}
         className={cn(
@@ -806,7 +891,6 @@ export const PortalSelector: React.FC = () => {
         Register New Facility
       </button>
 
-      {/* Show Activate Patient Portal button for non-patient users */}
       {!isPatient && (
         <button
           onClick={handleActivatePatientPortal}
@@ -823,7 +907,6 @@ export const PortalSelector: React.FC = () => {
         </button>
       )}
 
-      {/* Show Register as Medical Staff button for non-staff users */}
       {!isStaff && (
         <button
           onClick={handleRegisterAsMedicalStaff}

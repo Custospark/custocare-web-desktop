@@ -23,11 +23,11 @@ import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import { useAppDispatch } from '../../../../app/store/hooks/useApp';
 import { 
   setUserContext,
-  switchFacilityRole,
+  switchCapability,
+  switchFacility,
   setLoading as setContextLoading,
   setError as setContextError,
   type UserContext,
-  type FacilityRole,
 } from '../../../../app/store/slices/activeContextSlice';
 import type { RegisterStaffRequest, RegisterStaffResponse } from './registerStaffTypes';
 import type { AxiosError } from 'axios';
@@ -81,7 +81,7 @@ const fetchUpdatedUserContext = async (): Promise<UserContext> => {
  * Extract the first available facility role from user context
  * Used for automatically selecting a workspace after staff registration
  */
-const getDefaultFacilityRole = (context: UserContext): FacilityRole | null => {
+const getDefaultFacilityRole = (context: UserContext): { facilityId: number; roleCode: string } | null => {
   if (context.facility_roles.length === 0) {
     return null;
   }
@@ -89,11 +89,49 @@ const getDefaultFacilityRole = (context: UserContext): FacilityRole | null => {
   // Try to find primary facility first
   const primaryRole = context.facility_roles.find(role => role.is_primary_facility);
   if (primaryRole) {
-    return primaryRole;
+    return {
+      facilityId: primaryRole.facility_id,
+      roleCode: primaryRole.role_code
+    };
   }
   
   // Otherwise return the first role
-  return context.facility_roles[0];
+  const firstRole = context.facility_roles[0];
+  return {
+    facilityId: firstRole.facility_id,
+    roleCode: firstRole.role_code
+  };
+};
+
+/**
+ * Check if user has staff capability in the context
+ */
+const hasStaffCapability = (context: UserContext): boolean => {
+  return Boolean(context.capabilities.staff);
+};
+
+  /**
+   * Check if staff has facility assignments
+   */
+  /**
+   * Check if user has facility assignments in the given context
+   * @param context UserContext to check
+   * @returns boolean indicating if user has facility assignments
+   */
+  const hasFacilityAssignments = (context: UserContext): boolean => {
+    if (!context.capabilities.staff) {
+      return false;
+    }
+    
+    const staffCapability = context.capabilities.staff;
+    return staffCapability.facilities?.length > 0 || false;
+  };
+
+/**
+ * Get available capabilities from context
+ */
+const getAvailableCapabilities = (context: UserContext): string[] => {
+  return Object.keys(context.capabilities);
 };
 
 export const useRegisterStaff = (options: UseRegisterStaffOptions = {}) => {
@@ -125,7 +163,7 @@ export const useRegisterStaff = (options: UseRegisterStaffOptions = {}) => {
     onSuccess: async (data) => {
       try {
         // Show success toast with staff details
-        const staffName =  'Staff member';
+        const staffName = 'Staff member';
         showToast(
           'success', 
           data.message || `${staffName} registered as staff successfully!`, 
@@ -133,47 +171,64 @@ export const useRegisterStaff = (options: UseRegisterStaffOptions = {}) => {
         );
         
         // Fetch updated user context to include staff capabilities
-        dispatch(setContextLoading(true));
-        
         const updatedContext = await fetchUpdatedUserContext();
         
         // Update activeContext with staff capability
         dispatch(setUserContext(updatedContext));
         
-        // Determine if user has facility access
-        const hasFacilityAccess = updatedContext.facility_roles.length > 0;
+        // Determine if user has staff capability now
+        const hasStaffAccess = hasStaffCapability(updatedContext);
         
-        // Show appropriate success message
-        if (hasFacilityAccess) {
-          showToast(
-            'success',
-            `Staff access granted! You have access to ${updatedContext.facility_roles.length} facility(s).`,
-            5000
-          );
-          
-          // Automatically select first facility role if configured
-          if (autoSelectFacilityRole && updatedContext.facility_roles.length > 0) {
-            const defaultRole = getDefaultFacilityRole(updatedContext);
-            if (defaultRole) {
-              dispatch(
-                switchFacilityRole({
-                  facilityId: defaultRole.facility_id,
-                  roleCode: defaultRole.role_code,
-                })
+        if (hasStaffAccess) {
+          // Switch to staff capability if not already in staff mode
+          const capabilities = getAvailableCapabilities(updatedContext);
+          if (capabilities.includes('staff')) {
+            dispatch(switchCapability('staff'));
+            
+            // Check for facility access
+            const hasFacilities = hasFacilityAssignments(updatedContext);
+            
+            if (hasFacilities) {
+              // User has facility assignments
+              const facilityCount = updatedContext.capabilities.staff?.facilities?.length || 0;
+              showToast(
+                'success',
+                `Staff access granted! You have access to ${facilityCount} facility(s).`,
+                5000
               );
               
+              // Automatically select first facility role if configured
+              if (autoSelectFacilityRole) {
+                const defaultRole = getDefaultFacilityRole(updatedContext);
+                if (defaultRole) {
+                  dispatch(switchFacility(defaultRole.facilityId));
+                  
+                  const facilityName = updatedContext.capabilities.staff?.facilities?.find(
+                    f => f.facility_id === defaultRole.facilityId
+                  )?.facility_name || 'facility';
+                  
+                  showToast(
+                    'info',
+                    `Automatically selected ${facilityName} as your workspace.`,
+                    4000
+                  );
+                }
+              }
+            } else {
+              // Staff registered but no facilities yet
               showToast(
                 'info',
-                `Automatically selected ${defaultRole.facility_name || 'facility'} as your workspace.`,
-                4000
+                'Staff registration complete! You will need facility assignment to access professional tools.',
+                6000
               );
             }
           }
         } else {
+          // Staff registration succeeded but staff capability not in context
           showToast(
-            'info',
-            'Staff registration complete! You will need facility assignment to access professional tools.',
-            6000
+            'warning',
+            'Staff registration completed, but staff access is not yet available. Please contact support.',
+            7000
           );
         }
         
@@ -183,22 +238,27 @@ export const useRegisterStaff = (options: UseRegisterStaffOptions = {}) => {
         // Handle navigation
         if (autoNavigate) {
           setTimeout(() => {
-            if (hasFacilityAccess) {
-              // Has facility access - navigate to portal selector or staff dashboard
-              navigate(redirectTo);
-              showToast(
-                'info',
-                'You can now access the staff portal with your assigned facilities.',
-                4000
-              );
+            if (hasStaffAccess) {
+              // Has staff access - navigate to appropriate destination
+              if (hasFacilityAssignments(updatedContext)) {
+                navigate(redirectTo);
+                showToast(
+                  'info',
+                  'You can now access the staff portal with your assigned facilities.',
+                  4000
+                );
+              } else {
+                // No facility access yet
+                navigate(ROUTES.PORTAL_SELECTOR);
+                showToast(
+                  'warning',
+                  'Please contact your facility administrator for workspace assignment.',
+                  6000
+                );
+              }
             } else {
-              // No facility access yet - navigate to portal selector
+              // No staff access - navigate to portal selector
               navigate(ROUTES.PORTAL_SELECTOR);
-              showToast(
-                'warning',
-                'Please contact your facility administrator for workspace assignment.',
-                6000
-              );
             }
           }, 1500);
         }
@@ -207,11 +267,11 @@ export const useRegisterStaff = (options: UseRegisterStaffOptions = {}) => {
         // Staff registered but context update failed
         console.error('Failed to update user context:', contextError);
         
-        dispatch(setContextError(
-          contextError instanceof Error 
-            ? contextError.message 
-            : 'Failed to update staff portal access'
-        ));
+        const errorMessage = contextError instanceof Error 
+          ? contextError.message 
+          : 'Failed to update staff portal access';
+        
+        dispatch(setContextError(errorMessage));
         
         // Still show success for staff registration
         showToast(
@@ -298,15 +358,16 @@ export const useRegisterStaff = (options: UseRegisterStaffOptions = {}) => {
  * Helper hook for users becoming staff (gaining staff capabilities)
  * Useful for patients who are registering as healthcare providers
  */
-export const useBecomeStaff = () => {
+export const useBecomeStaff = (options?: Omit<UseRegisterStaffOptions, 'autoNavigate' | 'autoSelectFacilityRole' | 'redirectTo'>) => {
   return useRegisterStaff({
     autoNavigate: true,
     autoSelectFacilityRole: true,
     redirectTo: ROUTES.PORTAL_SELECTOR,
     onSuccess: (data) => {
-      // Additional success handling for role transition
       console.log('Successfully transitioned to staff role:', data);
+      options?.onSuccess?.(data);
     },
+    onError: options?.onError,
   });
 };
 
@@ -314,14 +375,15 @@ export const useBecomeStaff = () => {
  * Helper hook for administrators registering new staff members
  * Stays in admin mode without automatic navigation
  */
-export const useRegisterStaffAsAdmin = () => {
+export const useRegisterStaffAsAdmin = (options?: Omit<UseRegisterStaffOptions, 'autoNavigate' | 'autoSelectFacilityRole'>) => {
   return useRegisterStaff({
     autoNavigate: false,
     autoSelectFacilityRole: false,
     onSuccess: (data) => {
-      // Show success but stay in current context
       console.log('Staff member registered by admin:', data);
+      options?.onSuccess?.(data);
     },
+    onError: options?.onError,
   });
 };
 
@@ -329,26 +391,82 @@ export const useRegisterStaffAsAdmin = () => {
  * Helper hook for facility-specific staff registration
  * Automatically assigns the registered staff to a specific facility
  */
-export const useRegisterStaffForFacility = (facilityId: number) => {
-  const enhancedMutation = useRegisterStaff({
+export const useRegisterStaffForFacility = (facilityId: number, options?: Omit<UseRegisterStaffOptions, 'autoNavigate' | 'autoSelectFacilityRole' | 'redirectTo'>) => {
+  const mutation = useRegisterStaff({
     autoNavigate: true,
     autoSelectFacilityRole: true,
     redirectTo: ROUTES.STAFF_DASHBOARD,
+    onSuccess: options?.onSuccess,
+    onError: options?.onError,
   });
 
   // Wrap the mutation to include facility ID in the request
   return {
-    ...enhancedMutation,
+    ...mutation,
     mutate: (data: Omit<RegisterStaffRequest, 'facility_id'>) => {
-      return enhancedMutation.mutate({
+      return mutation.mutate({
         ...data,
         facility_id: facilityId,
       } as RegisterStaffRequest);
     },
     mutateAsync: (data: Omit<RegisterStaffRequest, 'facility_id'>) => {
-      return enhancedMutation.mutateAsync({
+      return mutation.mutateAsync({
         ...data,
         facility_id: facilityId,
+      } as RegisterStaffRequest);
+    },
+  };
+};
+
+/**
+ * Helper hook for registering staff with specific role
+ */
+export const useRegisterStaffWithRole = (roleCode: string, options?: UseRegisterStaffOptions) => {
+  const mutation = useRegisterStaff(options);
+
+  return {
+    ...mutation,
+    mutate: (data: Omit<RegisterStaffRequest, 'role_code'>) => {
+      return mutation.mutate({
+        ...data,
+        role_code: roleCode,
+      } as RegisterStaffRequest);
+    },
+    mutateAsync: (data: Omit<RegisterStaffRequest, 'role_code'>) => {
+      return mutation.mutateAsync({
+        ...data,
+        role_code: roleCode,
+      } as RegisterStaffRequest);
+    },
+  };
+};
+
+/**
+ * Combined registration for staff with both facility and role
+ */
+export const useRegisterStaffForFacilityWithRole = (facilityId: number, roleCode: string, options?: Omit<UseRegisterStaffOptions, 'autoNavigate' | 'autoSelectFacilityRole' | 'redirectTo'>) => {
+  const mutation = useRegisterStaff({
+    autoNavigate: true,
+    autoSelectFacilityRole: true,
+    redirectTo: ROUTES.STAFF_DASHBOARD,
+    onSuccess: options?.onSuccess,
+    onError: options?.onError,
+  });
+
+  return {
+    ...mutation,
+    mutate: (data: Omit<RegisterStaffRequest, 'facility_id' | 'role_code'>) => {
+      return mutation.mutate({
+        ...data,
+        facility_id: facilityId,
+        role_code: roleCode,
+      } as RegisterStaffRequest);
+    },
+    mutateAsync: (data: Omit<RegisterStaffRequest, 'facility_id' | 'role_code'>) => {
+      return mutation.mutateAsync({
+        ...data,
+        facility_id: facilityId,
+        role_code: roleCode,
       } as RegisterStaffRequest);
     },
   };

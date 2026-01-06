@@ -1,16 +1,3 @@
-/**
- * ============================================================================
- * SIDEBAR - CONTEXT-AWARE VERSION WITH STAFF-WITHOUT-FACILITY SUPPORT
- * ============================================================================
- * 
- * Features:
- * ✅ Staff without facility get dashboard access (invitations, profile)
- * ✅ Staff with facility get full module access + profile/invitations
- * ✅ Patient mode shows patient-specific items
- * ✅ Dynamic modules based on role permissions
- * ✅ Clean TypeScript with no 'any' types
- */
-
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -20,49 +7,66 @@ import {
   HelpCircle,
   X,
   Shield,
-  Activity,
-  Lock,
   Bell,
-  MessageSquare,
   Stethoscope,
   FlaskConical,
   CreditCard,
   Settings2,
-  Hospital,
-  HeartIcon,
   ClipboardCheck,
   HeartPulse,
   UserPlus,
-  Ambulance,
   PillIcon,
   Calendar,
   FileText,
   Pill,
   FileSearch,
-  CreditCard as BillIcon,
   Inbox,
   UserCog,
-  Mail,
+  Building2,
+  Briefcase,
+  UserCheck,
+  ShieldCheck,
+  FileBarChart,
+  AlertCircle,
 } from 'lucide-react';
-import { type SidebarProps, type MenuItem } from '../../types/index';
+import { type SidebarProps } from '../../types/index';
 import { cn } from '../../types/cn';
 import { ROUTES } from '../../../app/routes/routeConstants';
-import { useAppSelector } from '../../../app/store/hooks/useApp';
-import { selectIsPatientMode, selectAccessibleModules } from '../../../app/store/slices/activeContextSlice';
+import { useAppSelector, useAppDispatch } from '../../../app/store/hooks/useApp';
+import { 
+  selectAccessibleModuleCodes,
+  selectCurrentCapabilityName,
+  selectActiveFacilityName,
+  selectActiveRoleCode,
+  selectStaffFacilities,
+  switchCapability,
+  switchFacility,
+  getRoleDisplayName,
+  type StaffFacilityAssignment,
+} from '../../../app/store/slices/activeContextSlice';
 
-interface EnhancedMenuItem extends MenuItem {
-  premiumIcon?: React.ReactNode;
-  glowColor?: string;
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  href: string;
+  route: string;
+  description: string;
   stats?: string;
   shortcut?: string;
-  route?: string;
-  requiredModules?: string[];
+  glowColor?: string;
+  badge?: string | number;
+  badgeVariant?: 'urgent' | 'pro' | 'default';
+  moduleCode: string; // Backend module code - this is REQUIRED
+  category?: 'clinical' | 'admin' | 'patient' | 'system';
 }
 
-export const Sidebar: React.FC<SidebarProps & {
+interface SidebarExtendedProps extends SidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
-}> = ({ 
+}
+
+export const Sidebar: React.FC<SidebarExtendedProps> = ({ 
   isOpen, 
   onClose, 
   collapsed,
@@ -71,23 +75,403 @@ export const Sidebar: React.FC<SidebarProps & {
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useAppDispatch();
   const [activeHover, setActiveHover] = useState<string | null>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Get active context from Redux
   const activeContext = useAppSelector((state) => state.activeContext);
-  const isPatientMode = useAppSelector(selectIsPatientMode);
-  const accessibleModules = useAppSelector(selectAccessibleModules);
-  const { user, isStaffWithoutFacility, isStaffWithFacility } = activeContext;
+  const accessibleModuleCodes = useAppSelector(selectAccessibleModuleCodes);
+  const currentCapabilityName = useAppSelector(selectCurrentCapabilityName);
+  const activeFacilityName = useAppSelector(selectActiveFacilityName);
+  const activeRoleCode = useAppSelector(selectActiveRoleCode);
+  const staffFacilities = useAppSelector(selectStaffFacilities);
+  
+  const { 
+    user, 
+    availableCapabilities, 
+    activeCapability,
+    activeFacilityId,
+    isStaffWithFacility,
+  } = activeContext;
 
   const isDark = theme === 'dark';
 
-  // Check if user can access specific module
-  const canAccess = useCallback((requiredModules?: string[]) => {
-    if (!requiredModules || requiredModules.length === 0) return true;
-    return requiredModules.some(module => accessibleModules.includes(module));
-  }, [accessibleModules]);
+  // Master menu configuration - maps backend module codes to sidebar items
+  const menuConfig: MenuItem[] = useMemo(() => [
+    // Dashboard Items
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: <LayoutDashboard className="w-5 h-5" />,
+      href: ROUTES.DASHBOARD,
+      route: ROUTES.DASHBOARD,
+      description: 'Facility overview',
+      stats: 'Overview',
+      shortcut: '⌘1',
+      glowColor: 'from-blue-500 to-cyan-400',
+      moduleCode: 'dashboard',
+      category: 'admin'
+    },
+    {
+      id: 'patient-dashboard',
+      label: 'My Health',
+      icon: <HeartPulse className="w-5 h-5" />,
+      href: ROUTES.PATIENT_DASHBOARD,
+      route: ROUTES.PATIENT_DASHBOARD,
+      description: 'Personal health overview',
+      stats: 'Health',
+      shortcut: '⌘1',
+      glowColor: 'from-emerald-500 to-teal-400',
+      moduleCode: 'patient_dashboard',
+      category: 'patient'
+    },
+    {
+      id: 'staff-dashboard',
+      label: 'Staff Portal',
+      icon: <Briefcase className="w-5 h-5" />,
+      href: ROUTES.STAFF_DASHBOARD,
+      route: ROUTES.STAFF_DASHBOARD,
+      description: 'Staff workspace',
+      stats: 'Portal',
+      shortcut: '⌘1',
+      glowColor: 'from-purple-500 to-pink-400',
+      moduleCode: 'staff_dashboard',
+      category: 'admin'
+    },
+
+    // Clinical Workspace
+    {
+      id: 'clinical',
+      label: 'Clinical Workspace',
+      icon: <Stethoscope className="w-5 h-5" />,
+      href: ROUTES.CLINICAL_WORKSPACE,
+      route: ROUTES.CLINICAL_WORKSPACE,
+      description: 'Consultation & diagnosis',
+      stats: 'Clinical',
+      glowColor: 'from-indigo-500 to-purple-400',
+      moduleCode: 'clinical',
+      category: 'clinical'
+    },
+    {
+      id: 'patients',
+      label: 'Patients',
+      icon: <Users className="w-5 h-5" />,
+      href: ROUTES.PATIENTS,
+      route: ROUTES.PATIENTS,
+      description: 'Patient records management',
+      stats: 'Patients',
+      shortcut: '⌘2',
+      glowColor: 'from-emerald-500 to-teal-400',
+      moduleCode: 'patients',
+      category: 'clinical'
+    },
+    {
+      id: 'encounters',
+      label: 'Encounters',
+      icon: <ClipboardCheck className="w-5 h-5" />,
+      href: ROUTES.ENCOUNTERS,
+      route: ROUTES.ENCOUNTERS,
+      description: 'Patient visits & consultations',
+      stats: 'Active',
+      badge: 3,
+      badgeVariant: 'urgent',
+      shortcut: '⌘3',
+      glowColor: 'from-amber-500 to-orange-400',
+      moduleCode: 'encounters',
+      category: 'clinical'
+    },
+    {
+      id: 'appointments',
+      label: 'Appointments',
+      icon: <Calendar className="w-5 h-5" />,
+      href: '/appointments',
+      route: '/appointments',
+      description: 'Schedule & manage appointments',
+      stats: 'Scheduling',
+      glowColor: 'from-sky-500 to-blue-400',
+      moduleCode: 'appointments',
+      category: 'clinical'
+    },
+    {
+      id: 'medical-records',
+      label: 'Medical Records',
+      icon: <FileText className="w-5 h-5" />,
+      href: '/medical-records',
+      route: '/medical-records',
+      description: 'View health records',
+      stats: 'Records',
+      glowColor: 'from-purple-500 to-pink-400',
+      moduleCode: 'medical_records',
+      category: 'clinical'
+    },
+    {
+      id: 'prescriptions',
+      label: 'Prescriptions',
+      icon: <Pill className="w-5 h-5" />,
+      href: '/prescriptions',
+      route: '/prescriptions',
+      description: 'Manage medications',
+      stats: 'Pharmacy',
+      glowColor: 'from-orange-500 to-amber-400',
+      moduleCode: 'prescriptions',
+      category: 'clinical'
+    },
+    {
+      id: 'lab-orders',
+      label: 'Lab Orders',
+      icon: <FlaskConical className="w-5 h-5" />,
+      href: '/lab-orders',
+      route: '/lab-orders',
+      description: 'Order & view lab tests',
+      stats: 'Lab',
+      glowColor: 'from-rose-500 to-pink-400',
+      moduleCode: 'lab_orders',
+      category: 'clinical'
+    },
+    {
+      id: 'test-results',
+      label: 'Test Results',
+      icon: <FileSearch className="w-5 h-5" />,
+      href: '/test-results',
+      route: '/test-results',
+      description: 'View lab results',
+      stats: 'Results',
+      glowColor: 'from-red-500 to-rose-400',
+      moduleCode: 'test_results',
+      category: 'clinical'
+    },
+
+    // Front Desk & Registration
+    {
+      id: 'registration',
+      label: 'Registration',
+      icon: <UserPlus className="w-5 h-5" />,
+      href: ROUTES.FRONT_DESK,
+      route: ROUTES.FRONT_DESK,
+      description: 'Patient registration',
+      stats: 'Front Desk',
+      glowColor: 'from-sky-500 to-blue-400',
+      moduleCode: 'registration',
+      category: 'admin'
+    },
+    {
+      id: 'nursing-care',
+      label: 'Nursing Care',
+      icon: <HeartPulse className="w-5 h-5" />,
+      href: ROUTES.NURSING,
+      route: ROUTES.NURSING,
+      description: 'Vitals & ward care',
+      stats: 'Nursing',
+      glowColor: 'from-green-500 to-emerald-400',
+      moduleCode: 'nursing_care',
+      category: 'clinical'
+    },
+
+    // Pharmacy
+    {
+      id: 'pharmacy',
+      label: 'Pharmacy',
+      icon: <PillIcon className="w-5 h-5" />,
+      href: ROUTES.PHARMACY,
+      route: ROUTES.PHARMACY,
+      description: 'Medication dispensing',
+      stats: 'Pharmacy',
+      glowColor: 'from-orange-500 to-amber-400',
+      moduleCode: 'pharmacy',
+      category: 'clinical'
+    },
+
+    // Billing & Finance
+    {
+      id: 'billing',
+      label: 'Billing',
+      icon: <CreditCard className="w-5 h-5" />,
+      href: ROUTES.BILLING,
+      route: ROUTES.BILLING,
+      description: 'Invoices & payments',
+      stats: 'Finance',
+      glowColor: 'from-yellow-500 to-orange-400',
+      moduleCode: 'billing',
+      category: 'admin'
+    },
+
+    // Administration
+    {
+      id: 'administration',
+      label: 'Administration',
+      icon: <Settings2 className="w-5 h-5" />,
+      href: ROUTES.ADMINISTRATION,
+      route: ROUTES.ADMINISTRATION,
+      description: 'Users & configuration',
+      stats: 'Admin',
+      glowColor: 'from-gray-600 to-gray-500',
+      moduleCode: 'administration',
+      category: 'admin'
+    },
+    {
+      id: 'staff-management',
+      label: 'Staff Management',
+      icon: <UserCheck className="w-5 h-5" />,
+      href: '/staff-management',
+      route: '/staff-management',
+      description: 'Manage healthcare staff',
+      stats: 'Staff',
+      glowColor: 'from-blue-500 to-cyan-400',
+      moduleCode: 'staff_management',
+      category: 'admin'
+    },
+    {
+      id: 'facility-management',
+      label: 'Facility Management',
+      icon: <Building2 className="w-5 h-5" />,
+      href: '/facility-management',
+      route: '/facility-management',
+      description: 'Facility configuration',
+      stats: 'Facilities',
+      glowColor: 'from-indigo-500 to-purple-400',
+      moduleCode: 'facility_management',
+      category: 'admin'
+    },
+
+    // System & Reports
+    {
+      id: 'reports',
+      label: 'Reports',
+      icon: <FileBarChart className="w-5 h-5" />,
+      href: '/reports',
+      route: '/reports',
+      description: 'Analytics & insights',
+      stats: 'Analytics',
+      glowColor: 'from-teal-500 to-emerald-400',
+      moduleCode: 'reports',
+      category: 'admin'
+    },
+    {
+      id: 'audit-logs',
+      label: 'Audit Logs',
+      icon: <ShieldCheck className="w-5 h-5" />,
+      href: '/audit-logs',
+      route: '/audit-logs',
+      description: 'System activity tracking',
+      stats: 'Audit',
+      glowColor: 'from-green-600 to-emerald-500',
+      moduleCode: 'audit_logs',
+      category: 'system'
+    },
+    {
+      id: 'alerts',
+      label: 'Alerts',
+      icon: <AlertCircle className="w-5 h-5" />,
+      href: '/alerts',
+      route: '/alerts',
+      description: 'System notifications',
+      stats: 'Alerts',
+      badge: '5',
+      glowColor: 'from-red-500 to-rose-400',
+      moduleCode: 'alerts',
+      category: 'system'
+    },
+
+    // Staff Personal
+    {
+      id: 'my-invitations',
+      label: 'My Invitations',
+      icon: <Inbox className="w-5 h-5" />,
+      href: '/staff/invitations',
+      route: '/staff/invitations',
+      description: 'Facility invitations',
+      stats: 'Invitations',
+      glowColor: 'from-purple-500 to-pink-400',
+      moduleCode: 'staff_invitations',
+      category: 'admin'
+    },
+    {
+      id: 'my-profile',
+      label: 'My Profile',
+      icon: <UserCog className="w-5 h-5" />,
+      href: '/staff/profile',
+      route: '/staff/profile',
+      description: 'Professional profile',
+      stats: 'Profile',
+      glowColor: 'from-emerald-500 to-teal-400',
+      moduleCode: 'staff_profile',
+      category: 'admin'
+    },
+
+    // System Common
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: <Settings className="w-5 h-5" />,
+      href: ROUTES.SETTINGS,
+      route: ROUTES.SETTINGS,
+      description: 'Master configuration',
+      shortcut: '⌘,',
+      glowColor: 'from-gray-600 to-gray-500',
+      moduleCode: 'system_settings',
+      category: 'system'
+    },
+    {
+      id: 'security',
+      label: 'Security',
+      icon: <Shield className="w-5 h-5" />,
+      href: '/security',
+      route: '/security',
+      description: 'Advanced protection',
+      badge: 'PRO',
+      badgeVariant: 'pro',
+      shortcut: '⌘;',
+      glowColor: 'from-green-600 to-emerald-500',
+      moduleCode: 'system_security',
+      category: 'system'
+    },
+    {
+      id: 'help',
+      label: 'Help Center',
+      icon: <HelpCircle className="w-5 h-5" />,
+      href: '/help',
+      route: '/help',
+      description: 'Documentation & support',
+      shortcut: '⌘?',
+      glowColor: 'from-violet-600 to-purple-500',
+      moduleCode: 'help_center',
+      category: 'system'
+    },
+  ], []);
+
+  // Filter menu items based on accessible module codes
+  const currentMenuItems = useMemo(() => {
+    return menuConfig.filter(item => {
+      // Check if user has access to this module code
+      return accessibleModuleCodes.includes(item.moduleCode);
+    });
+  }, [accessibleModuleCodes, menuConfig]);
+
+  // Group menu items by category for better organization
+  const groupedMenuItems = useMemo(() => {
+    const groups: Record<string, MenuItem[]> = {};
+    
+    currentMenuItems.forEach(item => {
+      const category = item.category || 'other';
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(item);
+    });
+    
+    return groups;
+  }, [currentMenuItems]);
+
+  // Category display names
+  const categoryNames: Record<string, string> = {
+    clinical: 'Clinical',
+    admin: 'Administration',
+    patient: 'Patient',
+    system: 'System',
+    other: 'Other'
+  };
 
   // Check if route is active
   const isRouteActive = useCallback((route: string) => {
@@ -96,363 +480,6 @@ export const Sidebar: React.FC<SidebarProps & {
     }
     return location.pathname.startsWith(route);
   }, [location.pathname]);
-
-  // Staff without facility menu items - NEW
-  const staffWithoutFacilityItems: EnhancedMenuItem[] = useMemo(() => [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: <LayoutDashboard className="w-5 h-5" />,
-      href: ROUTES.STAFF_DASHBOARD,
-      route: ROUTES.STAFF_DASHBOARD,
-      active: isRouteActive(ROUTES.STAFF_DASHBOARD),
-      description: 'Overview & invitations',
-      stats: 'Home',
-      shortcut: '⌘1',
-      glowColor: 'from-blue-500 to-cyan-400',
-    },
-    {
-      id: 'invitations',
-      label: 'Invitations',
-      icon: <Mail className="w-5 h-5" />,
-      href: '/staff/invitations',
-      route: '/staff/invitations',
-      active: isRouteActive('/staff/invitations'),
-      description: 'Facility invitations',
-      stats: 'Pending',
-      shortcut: '⌘2',
-      glowColor: 'from-purple-500 to-pink-400',
-    },
-    {
-      id: 'profile',
-      label: 'My Profile',
-      icon: <UserCog className="w-5 h-5" />,
-      href: '/staff/profile',
-      route: '/staff/profile',
-      active: isRouteActive('/staff/profile'),
-      description: 'Professional profile',
-      stats: 'Settings',
-      shortcut: '⌘3',
-      glowColor: 'from-emerald-500 to-teal-400',
-    },
-  ], [isRouteActive]);
-
-  // Patient-specific menu items
-  const patientMenuItems: EnhancedMenuItem[] = useMemo(() => [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: <LayoutDashboard className="w-5 h-5" />,
-      href: ROUTES.PATIENT_DASHBOARD,
-      route: ROUTES.PATIENT_DASHBOARD,
-      active: isRouteActive(ROUTES.PATIENT_DASHBOARD),
-      description: 'Personal health overview',
-      stats: 'Health',
-      shortcut: '⌘1',
-      glowColor: 'from-blue-500 to-cyan-400',
-    },
-    {
-      id: 'appointments',
-      label: 'Appointments',
-      icon: <Calendar className="w-5 h-5" />,
-      href: '/patient/appointments',
-      route: '/patient/appointments',
-      active: isRouteActive('/patient/appointments'),
-      description: 'Schedule and view appointments',
-      stats: 'Scheduling',
-      shortcut: '⌘2',
-      glowColor: 'from-emerald-500 to-teal-400',
-    },
-    {
-      id: 'medical-records',
-      label: 'Medical Records',
-      icon: <FileText className="w-5 h-5" />,
-      href: '/patient/records',
-      route: '/patient/records',
-      active: isRouteActive('/patient/records'),
-      description: 'View your health records',
-      stats: 'Records',
-      shortcut: '⌘3',
-      glowColor: 'from-purple-500 to-pink-400',
-    },
-    {
-      id: 'medications',
-      label: 'Medications',
-      icon: <Pill className="w-5 h-5" />,
-      href: '/patient/medications',
-      route: '/patient/medications',
-      active: isRouteActive('/patient/medications'),
-      description: 'Manage your prescriptions',
-      stats: 'Pharmacy',
-      shortcut: '⌘4',
-      glowColor: 'from-orange-500 to-amber-400',
-    },
-    {
-      id: 'test-results',
-      label: 'Test Results',
-      icon: <FileSearch className="w-5 h-5" />,
-      href: '/patient/results',
-      route: '/patient/results',
-      active: isRouteActive('/patient/results'),
-      description: 'View lab and test results',
-      stats: 'Lab',
-      shortcut: '⌘5',
-      glowColor: 'from-rose-500 to-red-400',
-    },
-    {
-      id: 'billing',
-      label: 'Billing',
-      icon: <BillIcon className="w-5 h-5" />,
-      href: '/patient/billing',
-      route: '/patient/billing',
-      active: isRouteActive('/patient/billing'),
-      description: 'View bills and make payments',
-      stats: 'Finance',
-      shortcut: '⌘6',
-      glowColor: 'from-yellow-500 to-orange-400',
-    },
-  ], [isRouteActive]);
-
-  // Staff with facility menu items
-  const staffWithFacilityItems: EnhancedMenuItem[] = useMemo(() => [
-    {
-      id: 'dashboard',
-      label: 'Overview',
-      icon: <LayoutDashboard className="w-5 h-5" />,
-      premiumIcon: <Hospital className="w-5 h-5" />,
-      href: ROUTES.DASHBOARD,
-      route: ROUTES.DASHBOARD,
-      active: isRouteActive(ROUTES.DASHBOARD),
-      description: 'Facility-wide overview',
-      stats: 'Live',
-      shortcut: '⌘1',
-      glowColor: 'from-blue-500 to-cyan-400',
-      requiredModules: ['clinical', 'admin'],
-    },
-    {
-      id: 'registration',
-      label: 'Registration',
-      icon: <UserPlus className="w-5 h-5" />,
-      href: ROUTES.FRONT_DESK,
-      route: ROUTES.FRONT_DESK,
-      active: isRouteActive(ROUTES.FRONT_DESK),
-      description: 'Patient registration & records',
-      stats: 'Reception',
-      glowColor: 'from-sky-500 to-blue-400',
-      requiredModules: ['front_desk', 'registration'],
-    },
-    {
-      id: 'nursing-care',
-      label: 'Nursing Care',
-      icon: <HeartPulse className="w-5 h-5" />,
-      href: ROUTES.NURSING,
-      route: ROUTES.NURSING,
-      active: isRouteActive(ROUTES.NURSING),
-      description: 'Vitals, triage & ward care',
-      stats: 'Nursing',
-      glowColor: 'from-green-500 to-emerald-400',
-      requiredModules: ['clinical', 'vitals'],
-    },
-    {
-      id: 'physician-workspace',
-      label: 'Physician Workspace',
-      icon: <Stethoscope className="w-5 h-5" />,
-      href: ROUTES.CLINICAL_WORKSPACE,
-      route: ROUTES.CLINICAL_WORKSPACE,
-      active: isRouteActive(ROUTES.CLINICAL_WORKSPACE),
-      description: 'Consultation, diagnosis & orders',
-      stats: 'Doctors',
-      glowColor: 'from-indigo-500 to-purple-400',
-      requiredModules: ['clinical', 'prescriptions'],
-    },
-    {
-      id: 'laboratory-services',
-      label: 'Laboratory Services',
-      icon: <FlaskConical className="w-5 h-5" />,
-      href: ROUTES.LABORATORY,
-      route: ROUTES.LABORATORY,
-      active: isRouteActive(ROUTES.LABORATORY),
-      description: 'Diagnostics & test results',
-      stats: 'Lab',
-      glowColor: 'from-rose-500 to-pink-400',
-      requiredModules: ['lab'],
-    },
-    {
-      id: 'pharmacy-services',
-      label: 'Pharmacy Services',
-      icon: <PillIcon className="w-5 h-5" />,
-      href: ROUTES.PHARMACY,
-      route: ROUTES.PHARMACY,
-      active: isRouteActive(ROUTES.PHARMACY),
-      description: 'Medication dispensing',
-      stats: 'Pharmacy',
-      glowColor: 'from-orange-500 to-amber-400',
-      requiredModules: ['pharmacy'],
-    },
-    {
-      id: 'billing-finance',
-      label: 'Billing & Payments',
-      icon: <CreditCard className="w-5 h-5" />,
-      href: ROUTES.BILLING,
-      route: ROUTES.BILLING,
-      active: isRouteActive(ROUTES.BILLING),
-      description: 'Invoices, payments & claims',
-      stats: 'Finance',
-      glowColor: 'from-yellow-500 to-orange-400',
-      requiredModules: ['billing'],
-    },
-    {
-      id: 'care-coordination',
-      label: 'Care Coordination',
-      icon: <Ambulance className="w-5 h-5" />,
-      href: ROUTES.CLINICAL_SERVICES,
-      route: ROUTES.CLINICAL_SERVICES,
-      active: isRouteActive(ROUTES.CLINICAL_SERVICES),
-      description: 'Referrals, transfers & emergency transport',
-      stats: 'Referrals',
-      glowColor: 'from-cyan-500 to-teal-400',
-      requiredModules: ['case_management'],
-    },
-    {
-      id: 'administration',
-      label: 'Administration',
-      icon: <Settings2 className="w-5 h-5" />,
-      href: ROUTES.ADMINISTRATION,
-      route: ROUTES.ADMINISTRATION,
-      active: isRouteActive(ROUTES.ADMINISTRATION),
-      description: 'Users, roles & configuration',
-      stats: 'Admin',
-      glowColor: 'from-gray-600 to-gray-500',
-      requiredModules: ['staff_management'],
-    },
-    {
-      id: 'patients',
-      label: 'Patients',
-      icon: <Users className="w-5 h-5" />,
-      premiumIcon: <HeartIcon className="w-5 h-5" />,
-      href: ROUTES.PATIENTS,
-      route: ROUTES.PATIENTS,
-      active: isRouteActive(ROUTES.PATIENTS),
-      badge: 12,
-      description: 'Patient records & care history',
-      stats: 'Active',
-      shortcut: '⌘2',
-      glowColor: 'from-emerald-500 to-teal-400',
-      requiredModules: ['clinical','admin','pharmacy'],
-    },
-    {
-      id: 'encounters',
-      label: 'Encounters',
-      icon: <ClipboardCheck className="w-5 h-5" />,
-      premiumIcon: <Activity className="w-5 h-5" />,
-      href: ROUTES.ENCOUNTERS,
-      route: ROUTES.ENCOUNTERS,
-      active: isRouteActive(ROUTES.ENCOUNTERS),
-      badge: 3,
-      badgeVariant: 'urgent' as const,
-      description: 'Ongoing visits & consultations',
-      stats: 'In progress',
-      shortcut: '⌘4',
-      glowColor: 'from-amber-500 to-orange-400',
-      requiredModules: ['clinical', 'encounters'],
-    },
-    // Staff profile & invitations (also available to staff WITH facility)
-    {
-      id: 'my-invitations',
-      label: 'My Invitations',
-      icon: <Inbox className="w-5 h-5" />,
-      href: '/staff/invitations',
-      route: '/staff/invitations',
-      active: isRouteActive('/staff/invitations'),
-      description: 'Facility invitations',
-      stats: 'Inbox',
-      glowColor: 'from-purple-500 to-pink-400',
-    },
-    {
-      id: 'my-profile',
-      label: 'My Profile',
-      icon: <UserCog className="w-5 h-5" />,
-      href: '/staff/profile',
-      route: '/staff/profile',
-      active: isRouteActive('/staff/profile'),
-      description: 'Professional profile',
-      stats: 'Settings',
-      glowColor: 'from-emerald-500 to-teal-400',
-    },
-  ], [isRouteActive]);
-
-  // System menu items (common for all)
-  const systemMenuItems: EnhancedMenuItem[] = useMemo(() => [
-    {
-      id: 'settings',
-      label: 'Settings',
-      icon: <Settings className="w-5 h-5" />,
-      premiumIcon: <Settings className="w-5 h-5" />,
-      href: ROUTES.SETTINGS,
-      route: ROUTES.SETTINGS,
-      active: isRouteActive(ROUTES.SETTINGS),
-      description: 'Master configuration',
-      shortcut: '⌘,',
-      glowColor: 'from-gray-600 to-gray-500'
-    },
-    {
-      id: 'security',
-      label: 'Security',
-      icon: <Shield className="w-5 h-5" />,
-      premiumIcon: <Lock className="w-5 h-5" />,
-      href: '/security',
-      route: '/security',
-      active: isRouteActive('/security'),
-      description: 'Advanced protection',
-      badge: 'PRO',
-      badgeVariant: 'pro' as const,
-      shortcut: '⌘;',
-      glowColor: 'from-green-600 to-emerald-500'
-    },
-    {
-      id: 'help',
-      label: 'Academy',
-      icon: <HelpCircle className="w-5 h-5" />,
-      premiumIcon: <MessageSquare className="w-5 h-5" />,
-      href: '/help',
-      route: '/help',
-      active: isRouteActive('/help'),
-      description: 'Expert training',
-      shortcut: '⌘?',
-      glowColor: 'from-violet-600 to-purple-500'
-    },
-  ], [isRouteActive]);
-
-  // Get current menu items based on context
-  const currentMenuItems = useMemo(() => {
-    if (isPatientMode) {
-      return patientMenuItems;
-    }
-    if (isStaffWithoutFacility) {
-      return staffWithoutFacilityItems;
-    }
-    if (isStaffWithFacility) {
-      // Filter staff items based on accessible modules
-      return staffWithFacilityItems.filter(item => canAccess(item.requiredModules));
-    }
-    return [];
-  }, [isPatientMode, isStaffWithoutFacility, isStaffWithFacility, patientMenuItems, staffWithoutFacilityItems, staffWithFacilityItems, canAccess]);
-
-  // Touch gesture handling
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    setTouchStart(e.touches[0].clientX);
-  }, []);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!touchStart || !isOpen) return;
-    
-    const touchEnd = e.touches[0].clientX;
-    const diff = touchStart - touchEnd;
-    
-    if (diff > 50) {
-      onClose?.();
-    }
-  }, [touchStart, isOpen, onClose]);
 
   // Navigation handler
   const handleNavigation = useCallback((e: React.MouseEvent, route: string) => {
@@ -463,6 +490,32 @@ export const Sidebar: React.FC<SidebarProps & {
     }
   }, [navigate, onClose]);
 
+  // Capability switcher handler
+  const handleCapabilitySwitch = useCallback((capability: string) => {
+    dispatch(switchCapability(capability));
+  }, [dispatch]);
+
+  // Facility switcher handler (for staff)
+  const handleFacilitySwitch = useCallback((facilityId: number) => {
+    dispatch(switchFacility(facilityId));
+  }, [dispatch]);
+
+  // Touch gesture handling
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    setTouchStart(e.touches[0].clientX);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (touchStart === null || !isOpen) return;
+    
+    const touchEnd = e.touches[0].clientX;
+    const diff = touchStart - touchEnd;
+    
+    if (diff > 50) {
+      onClose?.();
+    }
+  }, [touchStart, isOpen, onClose]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -470,17 +523,18 @@ export const Sidebar: React.FC<SidebarProps & {
         onClose?.();
       }
 
+      // Module-specific shortcuts
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
-        const shortcuts: Record<string, string> = {
-          '1': isPatientMode ? ROUTES.PATIENT_DASHBOARD : (isStaffWithoutFacility ? ROUTES.STAFF_DASHBOARD : ROUTES.DASHBOARD),
-          '2': isPatientMode ? '/patient/appointments' : (isStaffWithoutFacility ? '/staff/invitations' : ROUTES.PATIENTS),
-          '3': isPatientMode ? '/patient/records' : (isStaffWithoutFacility ? '/staff/profile' : ROUTES.ENCOUNTERS),
-          '4': isPatientMode ? '/patient/medications' : '/reports',
-          '5': isPatientMode ? '/patient/results' : '/analytics',
-          '6': isPatientMode ? '/patient/billing' : '/system',
-        };
+        const shortcutMap: Record<string, string> = {};
+        
+        // Build shortcut map from accessible modules
+        currentMenuItems.forEach((item, index) => {
+          if (index < 9) { // Only map 1-9
+            shortcutMap[(index + 1).toString()] = item.route;
+          }
+        });
 
-        const route = shortcuts[e.key];
+        const route = shortcutMap[e.key];
         if (route) {
           e.preventDefault();
           navigate(route);
@@ -495,20 +549,18 @@ export const Sidebar: React.FC<SidebarProps & {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, navigate, isPatientMode, isStaffWithoutFacility]);
+  }, [isOpen, onClose, navigate, currentMenuItems]);
 
-  const renderMenuItem = (item: EnhancedMenuItem) => {
-    const isActive = item.active;
+  // Render a single menu item
+  const renderMenuItem = useCallback((item: MenuItem) => {
+    const isActive = isRouteActive(item.route);
     const isHovered = activeHover === item.id;
-    const hasAccess = canAccess(item.requiredModules);
-
-    if (!hasAccess) return null;
 
     return (
       <a
         key={item.id}
         href={item.href}
-        onClick={(e) => item.route && handleNavigation(e, item.route)}
+        onClick={(e) => handleNavigation(e, item.route)}
         className={cn(
           'group relative flex items-center',
           'rounded-xl transition-all duration-300 ease-out',
@@ -551,7 +603,7 @@ export const Sidebar: React.FC<SidebarProps & {
                 ? (isDark ? 'text-cyan-400' : 'text-blue-600')
                 : (isDark ? 'text-gray-400' : 'text-gray-600')
             )}>
-              {item.premiumIcon || item.icon}
+              {item.icon}
             </div>
           </div>
 
@@ -627,22 +679,79 @@ export const Sidebar: React.FC<SidebarProps & {
         )}
       </a>
     );
-  };
+  }, [collapsed, activeHover, isDark, isRouteActive, handleNavigation]);
 
-  const getSectionTitle = () => {
-    if (isPatientMode) return 'My Health';
-    if (isStaffWithoutFacility) return 'Staff Portal';
-    return 'Navigation';
-  };
+  // Render capability switcher dropdown
+  const renderCapabilitySwitcher = useCallback(() => {
+    if (availableCapabilities.length <= 1) return null;
 
-  const getContextSubtitle = () => {
-    if (isPatientMode) return 'Patient Portal';
-    if (isStaffWithoutFacility) return 'Staff - No Facility';
-    if (isStaffWithFacility) {
-      return `${activeContext.facilityRoles} - Professional`;
+    return (
+      <div className="mb-4">
+        <label className={cn(
+          'block text-xs font-medium mb-2',
+          isDark ? 'text-gray-400' : 'text-gray-600'
+        )}>
+          Switch Role
+        </label>
+        <select
+          value={activeCapability || ''}
+          onChange={(e) => handleCapabilitySwitch(e.target.value)}
+          className={cn(
+            'w-full px-3 py-2 rounded-lg border text-sm',
+            isDark 
+              ? 'bg-gray-800 border-gray-700 text-white' 
+              : 'bg-gray-50 border-gray-300 text-gray-900'
+          )}
+        >
+          {availableCapabilities.map(capability => (
+            <option key={capability} value={capability}>
+              {getRoleDisplayName(capability)}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }, [availableCapabilities, activeCapability, isDark, handleCapabilitySwitch]);
+
+  // Render facility switcher (for staff with facilities)
+  const renderFacilitySwitcher = useCallback(() => {
+    if (!isStaffWithFacility || staffFacilities.length <= 1) return null;
+
+    return (
+      <div className="mb-4">
+        <label className={cn(
+          'block text-xs font-medium mb-2',
+          isDark ? 'text-gray-400' : 'text-gray-600'
+        )}>
+          Switch Facility
+        </label>
+        <select
+          value={activeFacilityId || ''}
+          onChange={(e) => handleFacilitySwitch(parseInt(e.target.value, 10))}
+          className={cn(
+            'w-full px-3 py-2 rounded-lg border text-sm',
+            isDark 
+              ? 'bg-gray-800 border-gray-700 text-white' 
+              : 'bg-gray-50 border-gray-300 text-gray-900'
+          )}
+        >
+          {staffFacilities.map((facility: StaffFacilityAssignment) => (
+            <option key={facility.facility_id} value={facility.facility_id}>
+              {facility.facility_name} ({getRoleDisplayName(facility.role_code)})
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }, [isStaffWithFacility, staffFacilities, activeFacilityId, isDark, handleFacilitySwitch]);
+
+  // Get context subtitle for header
+  const getContextSubtitle = useCallback(() => {
+    if (activeFacilityName && activeRoleCode) {
+      return `${activeFacilityName} • ${getRoleDisplayName(activeRoleCode)}`;
     }
-    return 'CustoCare AI';
-  };
+    return currentCapabilityName;
+  }, [activeFacilityName, activeRoleCode, currentCapabilityName]);
 
   return (
     <aside
@@ -692,42 +801,40 @@ export const Sidebar: React.FC<SidebarProps & {
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Capability & Facility Switchers */}
+        {!collapsed && (
+          <>
+            {renderCapabilitySwitcher()}
+            {renderFacilitySwitcher()}
+          </>
+        )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-2 overscroll-contain">
-        {!collapsed && (
-          <div className="mb-3">
-            <p className={cn(
-              'text-xs font-bold uppercase tracking-wider px-2',
-              isDark ? 'text-gray-500' : 'text-gray-400'
-            )}>
-              {getSectionTitle()}
-            </p>
+      <nav className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain">
+        {!collapsed ? (
+          // Expanded view with categories
+          Object.entries(groupedMenuItems).map(([category, items]) => (
+            items.length > 0 && (
+              <div key={category} className="space-y-2">
+                <p className={cn(
+                  'text-xs font-bold uppercase tracking-wider px-2',
+                  isDark ? 'text-gray-500' : 'text-gray-400'
+                )}>
+                  {categoryNames[category]}
+                </p>
+                <div className="space-y-1.5">
+                  {items.map(item => renderMenuItem(item))}
+                </div>
+              </div>
+            )
+          ))
+        ) : (
+          // Collapsed view (icons only)
+          <div className="space-y-1.5">
+            {currentMenuItems.map(item => renderMenuItem(item))}
           </div>
-        )}
-
-        <div className="space-y-1.5">
-          {currentMenuItems.map((item) => renderMenuItem(item))}
-        </div>
-
-        {!collapsed && (
-          <>
-            <div className={cn("my-6 border-t", isDark ? 'border-gray-800/50' : 'border-gray-200/50')} />
-            
-            <div className="mb-3">
-              <p className={cn(
-                'text-xs font-bold uppercase tracking-wider px-2',
-                isDark ? 'text-gray-500' : 'text-gray-400'
-              )}>
-                System
-              </p>
-            </div>
-
-            <div className="space-y-1.5">
-              {systemMenuItems.map((item) => renderMenuItem(item))}
-            </div>
-          </>
         )}
       </nav>
 
@@ -767,7 +874,7 @@ export const Sidebar: React.FC<SidebarProps & {
                   {user?.first_name || user?.full_name || 'User'}
                 </p>
                 <p className={cn('text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                  {isPatientMode ? 'Patient' : (isStaffWithoutFacility ? 'Staff' : activeContext.activeRoleCode || 'Staff')}
+                  {currentCapabilityName}
                 </p>
               </div>
             </div>
