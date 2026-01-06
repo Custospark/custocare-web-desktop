@@ -27,7 +27,7 @@ import {
   UserCheck,
   ShieldCheck,
   FileBarChart,
-  AlertCircle,
+  AlertCircle,PanelsTopLeft 
 } from 'lucide-react';
 import { type SidebarProps } from '../../types/index';
 import { cn } from '../../types/cn';
@@ -87,6 +87,8 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
   const activeFacilityName = useAppSelector(selectActiveFacilityName);
   const activeRoleCode = useAppSelector(selectActiveRoleCode);
   const staffFacilities = useAppSelector(selectStaffFacilities);
+  const [isRoleSwitcherVisible, setIsRoleSwitcherVisible] = useState(false);
+
   
   const { 
     user, 
@@ -293,7 +295,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
       description: 'Invoices & payments',
       stats: 'Finance',
       glowColor: 'from-yellow-500 to-orange-400',
-      moduleCode: 'billing',
+      moduleCode: 'billing-finance',
       category: 'admin'
     },
 
@@ -691,7 +693,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
           'block text-xs font-medium mb-2',
           isDark ? 'text-gray-400' : 'text-gray-600'
         )}>
-          Switch Role
+          Select Portal.
         </label>
         <select
           value={activeCapability || ''}
@@ -770,46 +772,84 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     >
       {/* Header */}
       <div className={cn('shrink-0 p-4 border-b', isDark ? 'border-gray-800/50' : 'border-gray-200/50')}>
-        <div className="flex items-center justify-between gap-3">
-          {!collapsed && (
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-11 h-11 bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shrink-0">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <div className="min-w-0">
-                <h2 className={cn('font-bold text-base truncate', isDark ? 'text-white' : 'text-gray-900')}>
-                  CustoCare AI
-                </h2>
-                <p className={cn('text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                  {getContextSubtitle()}
-                </p>
+  <div className="flex items-center justify-between gap-3">
+    {!collapsed && (
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="w-11 h-11 bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shrink-0">
+          <Shield className="w-6 h-6 text-white" />
+        </div>
+        <div className="min-w-0">
+          <h2 className={cn('font-bold text-base truncate', isDark ? 'text-white' : 'text-gray-900')}>
+            CustoCare AI
+          </h2>
+          <p className={cn('text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-600')}>
+            {getContextSubtitle()}
+          </p>
+        </div>
+      </div>
+    )}
+    
+    <button
+      onClick={() => onClose?.()}
+      className={cn(
+        'lg:hidden p-2.5 rounded-xl transition-all duration-300',
+        'hover:scale-105 active:scale-95 shrink-0',
+        isDark 
+          ? 'hover:bg-red-500/10 text-gray-400 hover:text-red-400' 
+          : 'hover:bg-red-50 text-gray-600 hover:text-red-600'
+      )}
+      aria-label="Close sidebar"
+    >
+      <X className="w-5 h-5" />
+    </button>
+  </div>
+
+  {/* Capability & Facility Switchers */}
+  {!collapsed && (
+    <>
+      {/* Role switcher toggle indicator - shown by default */}
+      <div className="mt-4">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsRoleSwitcherVisible(!isRoleSwitcherVisible)}
+            className={cn(
+              'flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300 w-full',
+              'hover:scale-[1.02] active:scale-95',
+              isDark
+                ? 'hover:bg-gray-800/50 text-gray-300'
+                : 'hover:bg-gray-100 text-gray-700'
+            )}
+            aria-label="Toggle role switcher"
+          >
+            <div className="flex items-center gap-2 flex-1">
+              <span className="text-sm font-medium">Switch Workspace.</span>
+              <div className={cn(
+                'px-2 py-0.5 text-xs rounded-full',
+                isDark 
+                  ? 'bg-blue-500/20 text-blue-300' 
+                  : 'bg-blue-100 text-blue-600'
+              )}>
+                Available
               </div>
             </div>
-          )}
-          
-          <button
-            onClick={() => onClose?.()}
-            className={cn(
-              'lg:hidden p-2.5 rounded-xl transition-all duration-300',
-              'hover:scale-105 active:scale-95 shrink-0',
-              isDark 
-                ? 'hover:bg-red-500/10 text-gray-400 hover:text-red-400' 
-                : 'hover:bg-red-50 text-gray-600 hover:text-red-600'
-            )}
-            aria-label="Close sidebar"
-          >
-            <X className="w-5 h-5" />
+            <PanelsTopLeft  className={cn(
+              'w-4 h-4 transition-transform duration-300',
+              isRoleSwitcherVisible && 'rotate-90'
+            )} />
           </button>
         </div>
-
-        {/* Capability & Facility Switchers */}
-        {!collapsed && (
-          <>
-            {renderCapabilitySwitcher()}
-            {renderFacilitySwitcher()}
-          </>
-        )}
       </div>
+
+      {/* Role switcher content - hidden by default */}
+      {isRoleSwitcherVisible && (
+        <div className="mt-2">
+          {renderCapabilitySwitcher()}
+          {renderFacilitySwitcher()}
+        </div>
+      )}
+    </>
+  )}
+</div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain">
