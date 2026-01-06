@@ -196,7 +196,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
     // 4. SPATIE ROLES (super_admin, regulator, etc.)
     const spatieRoles = availableCapabilities.filter(cap => cap !== 'patient' && cap !== 'staff');
-    spatieRoles.forEach((roleCapability) => {
+    spatieRoles.forEach((roleCapability: string) => {
       options.push({
         id: `spatie-${roleCapability}`,
         type: 'spatie_role',
