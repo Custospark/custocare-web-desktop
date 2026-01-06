@@ -13,7 +13,7 @@
  * ✅ Bug-free state management
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Bell, User, ChevronDown, Shield, Settings, LogOut,
   Sparkles, Users, FileText, Calendar, TrendingUp,
@@ -34,8 +34,6 @@ import {
   switchCapability,
   switchFacility,
   selectCurrentCapabilityName,
-  selectActiveFacilityName,
-  selectActiveRoleCode,
   selectStaffFacilities,
   getRoleDisplayName,
 } from '../../../app/store/slices/activeContextSlice';
@@ -74,6 +72,21 @@ interface SmartSearch {
   title: string;
   path: string;
   icon: React.ReactNode;
+}
+
+/**
+ * Context option for role switcher
+ */
+interface ContextOption {
+  id: string;
+  type: 'patient' | 'staff_facility' | 'staff_no_facility' | 'spatie_role';
+  capability: string;
+  facilityId?: number;
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  color: 'blue' | 'purple' | 'rose' | 'amber' | 'emerald';
+  isActive: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ 
@@ -123,9 +136,128 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   // Derived state using selectors
   const currentCapabilityName = useAppSelector(selectCurrentCapabilityName);
-  const activeFacilityName = useAppSelector(selectActiveFacilityName);
-  const activeRoleCode = useAppSelector(selectActiveRoleCode);
   const staffFacilities = useAppSelector(selectStaffFacilities);
+
+  // ============================================================================
+  // CONTEXT OPTIONS BUILDER (NEVER HIDES ANY OPTIONS)
+  // ============================================================================
+  
+  /**
+   * Build ALL available context options - NEVER filter or hide any option
+   * This ensures users can always see and switch to any capability they have
+   */
+  const allContextOptions = useMemo((): ContextOption[] => {
+    const options: ContextOption[] = [];
+
+    // 1. PATIENT PORTAL (if available)
+    if (isPatient) {
+      options.push({
+        id: 'patient',
+        type: 'patient',
+        capability: 'patient',
+        title: 'Patient Portal',
+        subtitle: 'My Personal Health Dashboard',
+        icon: <Heart className="w-4 h-4" />,
+        color: 'rose',
+        isActive: activeCapability === 'patient',
+      });
+    }
+
+    // 2. STAFF WITH FACILITIES (each facility is a separate option)
+    if (isStaffWithFacility && staffFacilities.length > 0) {
+      staffFacilities.forEach((facility) => {
+        options.push({
+          id: `staff-facility-${facility.facility_id}`,
+          type: 'staff_facility',
+          capability: 'staff',
+          facilityId: facility.facility_id,
+          title: getRoleDisplayName(facility.role_code),
+          subtitle: facility.facility_name,
+          icon: <Briefcase className="w-4 h-4" />,
+          color: 'blue',
+          isActive: activeCapability === 'staff' && activeFacilityId === facility.facility_id,
+        });
+      });
+    }
+
+    // 3. STAFF WITHOUT FACILITIES
+    if (isStaffWithoutFacility) {
+      options.push({
+        id: 'staff-no-facility',
+        type: 'staff_no_facility',
+        capability: 'staff',
+        title: 'Staff Dashboard',
+        subtitle: 'Invitations & Profile Management',
+        icon: <UserCheck className="w-4 h-4" />,
+        color: 'purple',
+        isActive: activeCapability === 'staff',
+      });
+    }
+
+    // 4. SPATIE ROLES (super_admin, regulator, etc.)
+    const spatieRoles = availableCapabilities.filter(cap => cap !== 'patient' && cap !== 'staff');
+    spatieRoles.forEach((roleCapability) => {
+      options.push({
+        id: `spatie-${roleCapability}`,
+        type: 'spatie_role',
+        capability: roleCapability,
+        title: getRoleDisplayName(roleCapability),
+        subtitle: 'System Administration',
+        icon: <Shield className="w-4 h-4" />,
+        color: 'amber',
+        isActive: activeCapability === roleCapability,
+      });
+    });
+
+    return options;
+  }, [
+    isPatient,
+    isStaffWithFacility,
+    isStaffWithoutFacility,
+    staffFacilities,
+    availableCapabilities,
+    activeCapability,
+    activeFacilityId,
+  ]);
+
+  /**
+   * Group context options by category for better UI organization
+   */
+  const groupedContextOptions = useMemo(() => {
+    const groups: {
+      personal: ContextOption[];
+      professional: ContextOption[];
+      administrative: ContextOption[];
+    } = {
+      personal: [],
+      professional: [],
+      administrative: [],
+    };
+
+    allContextOptions.forEach((option) => {
+      switch (option.type) {
+        case 'patient':
+          groups.personal.push(option);
+          break;
+        case 'staff_facility':
+        case 'staff_no_facility':
+          groups.professional.push(option);
+          break;
+        case 'spatie_role':
+          groups.administrative.push(option);
+          break;
+      }
+    });
+
+    return groups;
+  }, [allContextOptions]);
+
+  /**
+   * Get currently active context option
+   */
+  const activeContextOption = useMemo(() => {
+    return allContextOptions.find(opt => opt.isActive);
+  }, [allContextOptions]);
 
   // ============================================================================
   // EFFECTS
@@ -165,14 +297,24 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Smart search: Cmd/Ctrl + K
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setIsSmartSearchOpen(true);
       }
-      // Context switcher shortcut
+      // Context switcher: Cmd/Ctrl + J
       if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
         e.preventDefault();
         setIsContextSwitcherOpen(true);
+      }
+      // Close dropdowns: Escape
+      if (e.key === 'Escape') {
+        setIsContextSwitcherOpen(false);
+        setIsSmartSearchOpen(false);
+        setIsNotificationsOpen(false);
+        setIsUserDropdownOpen(false);
+        setIsQuickActionsOpen(false);
+        setIsWorkflowOpen(false);
       }
     };
 
@@ -195,122 +337,130 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   /**
-   * Switch to a different capability using activeContextSlice method
+   * Handle context switch with comprehensive error handling
    */
-  const handleSwitchCapability = (capability: string) => {
-    dispatch(switchCapability(capability));
-    setIsContextSwitcherOpen(false);
-    showToast('success', `Switched to ${getRoleDisplayName(capability)}`, 3000);
-  };
+  const handleContextSwitch = (option: ContextOption) => {
+    try {
+      // Close dropdown immediately for better UX
+      setIsContextSwitcherOpen(false);
 
-  /**
-   * Switch to a different facility (staff only) using activeContextSlice method
-   */
-  const handleSwitchFacility = (facilityId: number, facilityName: string) => {
-    dispatch(switchFacility(facilityId));
-    setIsContextSwitcherOpen(false);
-    showToast('success', `Switched to ${facilityName}`, 3000);
+      // Don't switch if already active
+      if (option.isActive) {
+        showToast('info', `Already in ${option.title}`, 2000);
+        return;
+      }
+
+      // Handle different option types
+      switch (option.type) {
+        case 'patient':
+          dispatch(switchCapability('patient'));
+          showToast('success', `Switched to ${option.title}`, 3000);
+          break;
+
+        case 'staff_facility':
+          if (option.facilityId) {
+            // First ensure we're in staff capability
+            if (activeCapability !== 'staff') {
+              dispatch(switchCapability('staff'));
+            }
+            // Then switch facility
+            dispatch(switchFacility(option.facilityId));
+            showToast('success', `Switched to ${option.subtitle}`, 3000);
+          }
+          break;
+
+        case 'staff_no_facility':
+          dispatch(switchCapability('staff'));
+          showToast('success', `Switched to ${option.title}`, 3000);
+          break;
+
+        case 'spatie_role':
+          dispatch(switchCapability(option.capability));
+          showToast('success', `Switched to ${option.title}`, 3000);
+          break;
+
+        default:
+          console.warn('Unknown context option type:', option);
+      }
+    } catch (error) {
+      console.error('Error switching context:', error);
+      showToast('error', 'Failed to switch workspace. Please try again.', 4000);
+    }
   };
 
   // ============================================================================
-  // CONTEXT DISPLAY LOGIC
+  // UTILITY FUNCTIONS
   // ============================================================================
 
   /**
-   * Get current context display information
+   * Get color classes for context badges
    */
-  const getCurrentContextDisplay = () => {
-    // Staff with facility selected
-    if (activeCapability === 'staff' && isStaffWithFacility && activeFacilityId && activeFacilityName) {
-      return {
-        title: activeRoleCode ? getRoleDisplayName(activeRoleCode) : 'Staff',
-        subtitle: activeFacilityName,
-        icon: <Briefcase className="w-4 h-4" />,
-        type: 'staff' as const,
-        color: 'blue' as const,
-      };
-    }
-    
-    // Staff without facilities
-    if (activeCapability === 'staff' && isStaffWithoutFacility) {
-      return {
-        title: 'Staff Portal',
-        subtitle: 'No Facility',
-        icon: <UserCheck className="w-4 h-4" />,
-        type: 'staff_no_facility' as const,
-        color: 'purple' as const,
-      };
-    }
-    
-    // Patient
-    if (activeCapability === 'patient') {
-      return {
-        title: 'Patient Portal',
-        subtitle: 'Personal Health',
-        icon: <Heart className="w-4 h-4" />,
-        type: 'patient' as const,
-        color: 'rose' as const,
-      };
-    }
-
-    // Spatie roles (super_admin, regulator, etc.)
-    if (activeCapability && activeCapability !== 'staff' && activeCapability !== 'patient') {
-      return {
-        title: getRoleDisplayName(activeCapability),
-        subtitle: 'System Access',
-        icon: <Shield className="w-4 h-4" />,
-        type: 'spatie' as const,
-        color: 'amber' as const,
-      };
-    }
-
-    // Fallback
-    return {
-      title: 'No Context',
-      subtitle: 'Select workspace',
-      icon: <Layers className="w-4 h-4" />,
-      type: 'none' as const,
-      color: 'gray' as const,
-    };
-  };
-
-  const currentContext = getCurrentContextDisplay();
-
-  // Get color classes for context badge
-  const getContextColors = (color: typeof currentContext.color) => {
+  const getContextColors = (color: ContextOption['color']) => {
     const colorMap = {
       blue: {
         bg: isDark ? 'bg-blue-500/20' : 'bg-blue-100',
         text: isDark ? 'text-blue-400' : 'text-blue-600',
         border: isDark ? 'border-blue-500/30' : 'border-blue-200',
         hover: isDark ? 'hover:bg-blue-500/30' : 'hover:bg-blue-200',
+        active: isDark ? 'bg-blue-500/30 border-blue-500' : 'bg-blue-200 border-blue-500',
       },
       purple: {
         bg: isDark ? 'bg-purple-500/20' : 'bg-purple-100',
         text: isDark ? 'text-purple-400' : 'text-purple-600',
         border: isDark ? 'border-purple-500/30' : 'border-purple-200',
         hover: isDark ? 'hover:bg-purple-500/30' : 'hover:bg-purple-200',
+        active: isDark ? 'bg-purple-500/30 border-purple-500' : 'bg-purple-200 border-purple-500',
       },
       rose: {
         bg: isDark ? 'bg-rose-500/20' : 'bg-rose-100',
         text: isDark ? 'text-rose-400' : 'text-rose-600',
         border: isDark ? 'border-rose-500/30' : 'border-rose-200',
         hover: isDark ? 'hover:bg-rose-500/30' : 'hover:bg-rose-200',
+        active: isDark ? 'bg-rose-500/30 border-rose-500' : 'bg-rose-200 border-rose-500',
       },
       amber: {
         bg: isDark ? 'bg-amber-500/20' : 'bg-amber-100',
         text: isDark ? 'text-amber-400' : 'text-amber-600',
         border: isDark ? 'border-amber-500/30' : 'border-amber-200',
         hover: isDark ? 'hover:bg-amber-500/30' : 'hover:bg-amber-200',
+        active: isDark ? 'bg-amber-500/30 border-amber-500' : 'bg-amber-200 border-amber-500',
       },
-      gray: {
-        bg: isDark ? 'bg-gray-500/20' : 'bg-gray-100',
-        text: isDark ? 'text-gray-400' : 'text-gray-600',
-        border: isDark ? 'border-gray-500/30' : 'border-gray-200',
-        hover: isDark ? 'hover:bg-gray-500/30' : 'hover:bg-gray-200',
+      emerald: {
+        bg: isDark ? 'bg-emerald-500/20' : 'bg-emerald-100',
+        text: isDark ? 'text-emerald-400' : 'text-emerald-600',
+        border: isDark ? 'border-emerald-500/30' : 'border-emerald-200',
+        hover: isDark ? 'hover:bg-emerald-500/30' : 'hover:bg-emerald-200',
+        active: isDark ? 'bg-emerald-500/30 border-emerald-500' : 'bg-emerald-200 border-emerald-500',
       },
     };
     return colorMap[color];
+  };
+
+  const getNotificationColor = (type: Notification['type']) => {
+    const colors = {
+      success: isDark ? 'text-emerald-400' : 'text-emerald-600',
+      warning: isDark ? 'text-amber-400' : 'text-amber-600',
+      error: isDark ? 'text-red-400' : 'text-red-600',
+      info: isDark ? 'text-blue-400' : 'text-blue-600',
+    };
+    return colors[type];
+  };
+
+  const getNotificationBg = (type: Notification['type']) => {
+    const colors = {
+      success: isDark ? 'bg-emerald-500/10' : 'bg-emerald-50',
+      warning: isDark ? 'bg-amber-500/10' : 'bg-amber-50',
+      error: isDark ? 'bg-red-500/10' : 'bg-red-50',
+      info: isDark ? 'bg-blue-500/10' : 'bg-blue-50',
+    };
+    return colors[type];
+  };
+
+  const getDropdownPosition = () => {
+    if (isMobile) {
+      return 'fixed left-1/2 -translate-x-1/2 top-20 w-[calc(100vw-2rem)] max-w-md';
+    }
+    return 'absolute right-0 mt-2 w-96';
   };
 
   // ============================================================================
@@ -409,39 +559,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       )
     : smartSearchItems.slice(0, 5);
 
-  // ============================================================================
-  // UTILITY FUNCTIONS
-  // ============================================================================
-
-  const getNotificationColor = (type: Notification['type']) => {
-    const colors = {
-      success: isDark ? 'text-emerald-400' : 'text-emerald-600',
-      warning: isDark ? 'text-amber-400' : 'text-amber-600',
-      error: isDark ? 'text-red-400' : 'text-red-600',
-      info: isDark ? 'text-blue-400' : 'text-blue-600',
-    };
-    return colors[type];
-  };
-
-  const getNotificationBg = (type: Notification['type']) => {
-    const colors = {
-      success: isDark ? 'bg-emerald-500/10' : 'bg-emerald-50',
-      warning: isDark ? 'bg-amber-500/10' : 'bg-amber-50',
-      error: isDark ? 'bg-red-500/10' : 'bg-red-50',
-      info: isDark ? 'bg-blue-500/10' : 'bg-blue-50',
-    };
-    return colors[type];
-  };
-
-  const getDropdownPosition = () => {
-    if (isMobile) {
-      return 'fixed left-1/2 -translate-x-1/2 top-20 w-[calc(100vw-2rem)] max-w-md';
-    }
-    return 'absolute right-0 mt-2 w-96';
-  };
-
-  // Always show context switcher (even if single capability - for clarity)
-  const shouldShowContextSwitcher = true;
+  // Always show context switcher (even with single capability)
+  const shouldShowContextSwitcher = allContextOptions.length > 0;
 
   // ============================================================================
   // RENDER
@@ -492,9 +611,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="flex items-center gap-1 sm:gap-2">
         
         {/* ====================================================================
-            🎯 CONTEXT/WORKSPACE SWITCHER (ENHANCED)
+            🎯 ENHANCED CONTEXT/WORKSPACE SWITCHER
             ==================================================================== */}
-        {shouldShowContextSwitcher && (
+        {shouldShowContextSwitcher && activeContextOption && (
           <div ref={contextSwitcherRef} className="relative">
             <button
               onClick={() => setIsContextSwitcherOpen(!isContextSwitcherOpen)}
@@ -506,13 +625,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                   : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
               )}
               title="Switch workspace (⌘J)"
+              aria-label="Switch workspace"
+              aria-expanded={isContextSwitcherOpen}
             >
               <div className={cn(
                 'p-1.5 rounded-md transition-colors',
-                getContextColors(currentContext.color).bg
+                getContextColors(activeContextOption.color).bg
               )}>
-                <div className={getContextColors(currentContext.color).text}>
-                  {currentContext.icon}
+                <div className={getContextColors(activeContextOption.color).text}>
+                  {activeContextOption.icon}
                 </div>
               </div>
               <div className="hidden lg:block text-left">
@@ -520,13 +641,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   'text-xs font-semibold leading-tight',
                   isDark ? 'text-gray-200' : 'text-gray-900'
                 )}>
-                  {currentContext.title}
+                  {activeContextOption.title}
                 </p>
                 <p className={cn(
                   'text-xs leading-tight',
                   isDark ? 'text-gray-500' : 'text-gray-600'
                 )}>
-                  {currentContext.subtitle}
+                  {activeContextOption.subtitle}
                 </p>
               </div>
               <ChevronDown className={cn(
@@ -557,7 +678,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     'text-xs mt-1',
                     isDark ? 'text-gray-500' : 'text-gray-600'
                   )}>
-                    {user?.full_name || 'User'} • All available contexts
+                    {user?.full_name || 'User'} • All workspaces
                   </p>
                   <div className={cn(
                     'mt-2 flex items-center gap-1.5 text-xs px-2 py-1 rounded-md',
@@ -571,8 +692,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 <div className="max-h-[70vh] overflow-y-auto p-3 space-y-2">
                   
-                  {/* ====== PATIENT PORTAL (Always show if available) ====== */}
-                  {isPatient && (
+                  {/* ====== PERSONAL HEALTH (Patient) ====== */}
+                  {groupedContextOptions.personal.length > 0 && (
                     <>
                       <p className={cn(
                         'text-xs font-bold uppercase tracking-wide px-2 mb-2 mt-2',
@@ -581,46 +702,56 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <Heart className="w-3 h-3 inline mr-1" />
                         Personal Health
                       </p>
-                      <button
-                        onClick={() => handleSwitchCapability('patient')}
-                        className={cn(
-                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
-                          'border',
-                          activeCapability === 'patient'
-                            ? (isDark 
-                              ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' 
-                              : 'bg-rose-50 border-rose-200 text-rose-600')
-                            : (isDark 
-                              ? 'hover:bg-gray-800 border-transparent text-gray-300' 
-                              : 'hover:bg-gray-50 border-transparent text-gray-700')
-                        )}
-                      >
-                        <div className={cn(
-                          'p-2 rounded-lg',
-                          activeCapability === 'patient'
-                            ? (isDark ? 'bg-rose-500/20' : 'bg-rose-100')
-                            : (isDark ? 'bg-gray-800' : 'bg-gray-100')
-                        )}>
-                          <Heart className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold">Patient Portal</p>
-                          <p className={cn(
-                            'text-xs',
-                            isDark ? 'text-gray-500' : 'text-gray-600'
+                      {groupedContextOptions.personal.map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => handleContextSwitch(option)}
+                          disabled={option.isActive}
+                          className={cn(
+                            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
+                            'border',
+                            option.isActive
+                              ? getContextColors(option.color).active
+                              : cn(
+                                  getContextColors(option.color).hover,
+                                  'border-transparent',
+                                  isDark ? 'text-gray-300' : 'text-gray-700'
+                                ),
+                            !option.isActive && 'hover:scale-[1.02] cursor-pointer',
+                            option.isActive && 'cursor-default'
+                          )}
+                          aria-label={`Switch to ${option.title}`}
+                          aria-current={option.isActive ? 'true' : 'false'}
+                        >
+                          <div className={cn(
+                            'p-2 rounded-lg',
+                            option.isActive
+                              ? getContextColors(option.color).bg
+                              : (isDark ? 'bg-gray-800' : 'bg-gray-100')
                           )}>
-                            My Personal Health Dashboard
-                          </p>
-                        </div>
-                        {activeCapability === 'patient' && (
-                          <Check className="w-4 h-4 text-rose-500" />
-                        )}
-                      </button>
+                            <div className={option.isActive ? getContextColors(option.color).text : ''}>
+                              {option.icon}
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">{option.title}</p>
+                            <p className={cn(
+                              'text-xs',
+                              isDark ? 'text-gray-500' : 'text-gray-600'
+                            )}>
+                              {option.subtitle}
+                            </p>
+                          </div>
+                          {option.isActive && (
+                            <Check className={cn('w-4 h-4', getContextColors(option.color).text)} />
+                          )}
+                        </button>
+                      ))}
                     </>
                   )}
 
-                  {/* ====== STAFF WITH FACILITIES ====== */}
-                  {isStaffWithFacility && staffFacilities.length > 0 && (
+                  {/* ====== PROFESSIONAL WORKSPACES (Staff) ====== */}
+                  {groupedContextOptions.professional.length > 0 && (
                     <>
                       <p className={cn(
                         'text-xs font-bold uppercase tracking-wide px-2 mb-2 mt-4',
@@ -629,155 +760,113 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <Briefcase className="w-3 h-3 inline mr-1" />
                         Professional Workspaces
                       </p>
-                      {staffFacilities.map((facility) => {
-                        const isActive = 
-                          activeCapability === 'staff' && 
-                          activeFacilityId === facility.facility_id;
-                        
-                        return (
-                          <button
-                            key={`${facility.facility_id}-${facility.role_code}`}
-                            onClick={() => handleSwitchFacility(facility.facility_id, facility.facility_name)}
-                            className={cn(
-                              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
-                              'border',
-                              isActive
-                                ? (isDark 
-                                  ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' 
-                                  : 'bg-blue-50 border-blue-200 text-blue-600')
-                                : (isDark 
-                                  ? 'hover:bg-gray-800 border-transparent text-gray-300' 
-                                  : 'hover:bg-gray-50 border-transparent text-gray-700')
-                            )}
-                          >
-                            <div className={cn(
-                              'p-2 rounded-lg',
-                              isActive
-                                ? (isDark ? 'bg-blue-500/20' : 'bg-blue-100')
-                                : (isDark ? 'bg-gray-800' : 'bg-gray-100')
-                            )}>
-                              <Briefcase className="w-4 h-4" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold truncate">
-                                {getRoleDisplayName(facility.role_code)}
-                              </p>
-                              <p className={cn(
-                                'text-xs truncate',
-                                isDark ? 'text-gray-500' : 'text-gray-600'
-                              )}>
-                                {facility.facility_name}
-                              </p>
-                            </div>
-                            {isActive && (
-                              <Check className="w-4 h-4 text-blue-500" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </>
-                  )}
-
-                  {/* ====== STAFF WITHOUT FACILITIES ====== */}
-                  {isStaffWithoutFacility && (
-                    <>
-                      <p className={cn(
-                        'text-xs font-bold uppercase tracking-wide px-2 mb-2 mt-4',
-                        isDark ? 'text-gray-500' : 'text-gray-600'
-                      )}>
-                        <UserCheck className="w-3 h-3 inline mr-1" />
-                        Staff Portal
-                      </p>
-                      <button
-                        onClick={() => handleSwitchCapability('staff')}
-                        className={cn(
-                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
-                          'border',
-                          activeCapability === 'staff'
-                            ? (isDark 
-                              ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' 
-                              : 'bg-purple-50 border-purple-200 text-purple-600')
-                            : (isDark 
-                              ? 'hover:bg-gray-800 border-transparent text-gray-300' 
-                              : 'hover:bg-gray-50 border-transparent text-gray-700')
-                        )}
-                      >
-                        <div className={cn(
-                          'p-2 rounded-lg',
-                          activeCapability === 'staff'
-                            ? (isDark ? 'bg-purple-500/20' : 'bg-purple-100')
-                            : (isDark ? 'bg-gray-800' : 'bg-gray-100')
-                        )}>
-                          <UserCheck className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold">Staff Dashboard</p>
-                          <p className={cn(
-                            'text-xs',
-                            isDark ? 'text-gray-500' : 'text-gray-600'
+                      {groupedContextOptions.professional.map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => handleContextSwitch(option)}
+                          disabled={option.isActive}
+                          className={cn(
+                            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
+                            'border',
+                            option.isActive
+                              ? getContextColors(option.color).active
+                              : cn(
+                                  getContextColors(option.color).hover,
+                                  'border-transparent',
+                                  isDark ? 'text-gray-300' : 'text-gray-700'
+                                ),
+                            !option.isActive && 'hover:scale-[1.02] cursor-pointer',
+                            option.isActive && 'cursor-default'
+                          )}
+                          aria-label={`Switch to ${option.title}`}
+                          aria-current={option.isActive ? 'true' : 'false'}
+                        >
+                          <div className={cn(
+                            'p-2 rounded-lg',
+                            option.isActive
+                              ? getContextColors(option.color).bg
+                              : (isDark ? 'bg-gray-800' : 'bg-gray-100')
                           )}>
-                            Invitations & Profile Management
-                          </p>
-                        </div>
-                        {activeCapability === 'staff' && (
-                          <Check className="w-4 h-4 text-purple-500" />
-                        )}
-                      </button>
+                            <div className={option.isActive ? getContextColors(option.color).text : ''}>
+                              {option.icon}
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold truncate">
+                              {option.title}
+                            </p>
+                            <p className={cn(
+                              'text-xs truncate',
+                              isDark ? 'text-gray-500' : 'text-gray-600'
+                            )}>
+                              {option.subtitle}
+                            </p>
+                          </div>
+                          {option.isActive && (
+                            <Check className={cn('w-4 h-4', getContextColors(option.color).text)} />
+                          )}
+                        </button>
+                      ))}
                     </>
                   )}
 
-                  {/* ====== SPATIE ROLES (super_admin, regulator, etc.) ====== */}
-                  {availableCapabilities.filter(cap => cap !== 'patient' && cap !== 'staff').length > 0 && (
+                  {/* ====== SYSTEM ADMINISTRATION (Spatie Roles) ====== */}
+                  {groupedContextOptions.administrative.length > 0 && (
                     <>
                       <p className={cn(
                         'text-xs font-bold uppercase tracking-wide px-2 mb-2 mt-4',
                         isDark ? 'text-gray-500' : 'text-gray-600'
                       )}>
                         <Shield className="w-3 h-3 inline mr-1" />
-                        System Roles
+                        System Administration
                       </p>
-                      {availableCapabilities
-                        .filter(cap => cap !== 'patient' && cap !== 'staff')
-                        .map((capability) => (
-                          <button
-                            key={capability}
-                            onClick={() => handleSwitchCapability(capability)}
-                            className={cn(
-                              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
-                              'border',
-                              activeCapability === capability
-                                ? (isDark 
-                                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' 
-                                  : 'bg-amber-50 border-amber-200 text-amber-600')
-                                : (isDark 
-                                  ? 'hover:bg-gray-800 border-transparent text-gray-300' 
-                                  : 'hover:bg-gray-50 border-transparent text-gray-700')
-                            )}
-                          >
-                            <div className={cn(
-                              'p-2 rounded-lg',
-                              activeCapability === capability
-                                ? (isDark ? 'bg-amber-500/20' : 'bg-amber-100')
-                                : (isDark ? 'bg-gray-800' : 'bg-gray-100')
+                      {groupedContextOptions.administrative.map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => handleContextSwitch(option)}
+                          disabled={option.isActive}
+                          className={cn(
+                            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
+                            'border',
+                            option.isActive
+                              ? getContextColors(option.color).active
+                              : cn(
+                                  getContextColors(option.color).hover,
+                                  'border-transparent',
+                                  isDark ? 'text-gray-300' : 'text-gray-700'
+                                ),
+                            !option.isActive && 'hover:scale-[1.02] cursor-pointer',
+                            option.isActive && 'cursor-default'
+                          )}
+                          aria-label={`Switch to ${option.title}`}
+                          aria-current={option.isActive ? 'true' : 'false'}
+                        >
+                          <div className={cn(
+                            'p-2 rounded-lg',
+                            option.isActive
+                              ? getContextColors(option.color).bg
+                              : (isDark ? 'bg-gray-800' : 'bg-gray-100')
+                          )}>
+                            <div className={option.isActive ? getContextColors(option.color).text : ''}>
+                              {option.icon}
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">
+                              {option.title}
+                            </p>
+                            <p className={cn(
+                              'text-xs',
+                              isDark ? 'text-gray-500' : 'text-gray-600'
                             )}>
-                              <Shield className="w-4 h-4" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-sm font-semibold">
-                                {getRoleDisplayName(capability)}
-                              </p>
-                              <p className={cn(
-                                'text-xs',
-                                isDark ? 'text-gray-500' : 'text-gray-600'
-                              )}>
-                                System Administration
-                              </p>
-                            </div>
-                            {activeCapability === capability && (
-                              <Check className="w-4 h-4 text-amber-500" />
-                            )}
-                          </button>
-                        ))}
+                              {option.subtitle}
+                            </p>
+                          </div>
+                          {option.isActive && (
+                            <Check className={cn('w-4 h-4', getContextColors(option.color).text)} />
+                          )}
+                        </button>
+                      ))}
                     </>
                   )}
 
@@ -789,11 +878,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                       : 'bg-blue-50 border-blue-200'
                   )}>
                     <p className={cn(
-                      'text-xs',
+                      'text-xs flex items-center gap-1',
                       isDark ? 'text-blue-300' : 'text-blue-700'
                     )}>
-                      <Sparkles className="w-3 h-3 inline mr-1" />
-                      All your available workspaces are shown above. Switch anytime!
+                      <Sparkles className="w-3 h-3 flex-shrink-0" />
+                      <span>
+                        All {allContextOptions.length} workspace{allContextOptions.length !== 1 ? 's' : ''} available. 
+                        Switch anytime!
+                      </span>
                     </p>
                   </div>
                 </div>
