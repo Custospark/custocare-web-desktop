@@ -17,7 +17,7 @@ interface AppInitializerProps {
 const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
-  const { activeRoleCode, user } = useAppSelector((state) => state.activeContext);
+  const { user } = useAppSelector((state) => state.activeContext);
   const { refetch } = useUserContext();
 
   // 1️⃣ Restore auth once
@@ -27,10 +27,10 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
 
   // 2️⃣ Fetch backend context if needed
   useEffect(() => {
-    if (isAuthenticated && !user && !activeRoleCode) {
+    if (isAuthenticated && !user ) {
       refetch();
     }
-  }, [isAuthenticated, user, activeRoleCode, refetch]);
+  }, [isAuthenticated, user, refetch]);
 
   return <>{children}</>;
 };

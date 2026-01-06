@@ -9,7 +9,6 @@ import { QueryClient } from '@tanstack/react-query';
 
 import { store } from '../store/store';
 import { API_BASE_URL, API_TIMEOUT } from './apiConfig';
-import type { RoleCode } from '../store/slices/activeContextSlice';
 
 /* -------------------------------------------------------------------------- */
 /*                                AXIOS INSTANCE                               */
@@ -41,7 +40,6 @@ axiosInstance.interceptors.request.use(
     /* ---------------------------- Active Context ---------------------------- */
     const {
       activeFacilityId,
-      activeRoleCode,
       isPatient,
       isStaffWithFacility,
       capabilities,
@@ -51,9 +49,8 @@ axiosInstance.interceptors.request.use(
      * STAFF MODE
      * Facility + Role headers are mandatory for staff-with-facility requests
      */
-    if (isStaffWithFacility && activeFacilityId && activeRoleCode) {
+    if (isStaffWithFacility && activeFacilityId) {
       config.headers['X-Active-Facility-Id'] = String(activeFacilityId);
-      config.headers['X-Active-Role-Code'] = activeRoleCode as RoleCode;
     }
 
     /**
