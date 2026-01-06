@@ -1,24 +1,24 @@
 /**
  * ============================================================================
- * NAVBAR - COMPLETE REWRITE WITH ENHANCED ROLE SWITCHER
+ * NAVBAR - COMPLETE REWRITE WITH ENHANCED CAPABILITY SWITCHER
  * ============================================================================
  * 
  * Features:
- * ✅ Comprehensive role/context switcher always showing ALL available options
- * ✅ Never hides any capability from user - all roles always accessible
- * ✅ Smart facility management for staff users
- * ✅ Intuitive grouping and visual hierarchy
- * ✅ Full TypeScript safety
- * ✅ Responsive design
- * ✅ Bug-free state management
+ * ✅ All capabilities ALWAYS visible and never hidden
+ * ✅ Patient Portal & Staff Portal under Personal Space
+ * ✅ Professional Workspace shows facilities and Spatie roles
+ * ✅ Fully responsive design for all screen sizes
+ * ✅ Maintains all original design elements and functionality
+ * ✅ Proper keyboard shortcuts and animations
+ * ✅ Clean, organized dropdown with no red colors
  */
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Bell, User, ChevronDown, Shield, Settings, LogOut,
   Sparkles, Users, FileText, Calendar, TrendingUp,
-  Zap, CheckCircle2,
-  Search, Command, Moon, Sun,
+  Zap, CheckCircle2, Command,
+  Search, Moon, Sun,
   Heart, Activity, Workflow,
   Brain, Rocket, BarChart3, Clock,
   Building2, Briefcase, ChevronRight, Check,
@@ -74,23 +74,23 @@ interface SmartSearch {
   icon: React.ReactNode;
 }
 
-/**
- * Context option for role switcher
- */
 interface ContextOption {
   id: string;
-  type: 'patient' | 'staff_facility' | 'staff_no_facility' | 'spatie_role';
+  type: 'personal' | 'professional' | 'administrative';
   capability: string;
   facilityId?: number;
+  facilityName?: string;
+  roleCode?: string;
   title: string;
   subtitle: string;
   icon: React.ReactNode;
-  color: 'blue' | 'purple' | 'rose' | 'amber' | 'emerald';
+  color: 'blue' | 'purple' | 'rose' | 'amber' | 'emerald' | 'cyan' | 'indigo' | 'teal';
   isActive: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ 
   theme = 'dark',
+  onMenuClick,
   onThemeToggle,
   className
 }) => {
@@ -129,9 +129,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     activeCapability,
     activeFacilityId,
     availableCapabilities,
-    isPatient,
-    isStaffWithFacility,
-    isStaffWithoutFacility,
   } = useAppSelector((state) => state.activeContext);
 
   // Derived state using selectors
@@ -139,21 +136,29 @@ export const Navbar: React.FC<NavbarProps> = ({
   const staffFacilities = useAppSelector(selectStaffFacilities);
 
   // ============================================================================
-  // CONTEXT OPTIONS BUILDER (NEVER HIDES ANY OPTIONS)
+  // CONTEXT OPTIONS BUILDER - ALL CAPABILITIES ALWAYS VISIBLE
   // ============================================================================
   
   /**
    * Build ALL available context options - NEVER filter or hide any option
-   * This ensures users can always see and switch to any capability they have
+   * Organized into Personal Space and Professional Workspace
    */
   const allContextOptions = useMemo((): ContextOption[] => {
     const options: ContextOption[] = [];
 
-    // 1. PATIENT PORTAL (if available)
-    if (isPatient) {
+    // Get ALL capabilities the user has (from Redux state)
+    const hasPatient = availableCapabilities.includes('patient');
+    const hasStaff = availableCapabilities.includes('staff');
+    const spatieRoles = availableCapabilities.filter(cap => 
+      cap !== 'patient' && cap !== 'staff'
+    );
+
+    // ========== PERSONAL SPACE ==========
+    // 1. Patient Portal
+    if (hasPatient) {
       options.push({
         id: 'patient',
-        type: 'patient',
+        type: 'personal',
         capability: 'patient',
         title: 'Patient Portal',
         subtitle: 'My Personal Health Dashboard',
@@ -163,14 +168,31 @@ export const Navbar: React.FC<NavbarProps> = ({
       });
     }
 
-    // 2. STAFF WITH FACILITIES (each facility is a separate option)
-    if (isStaffWithFacility && staffFacilities.length > 0) {
+    // 2. Staff Portal (without facility assignment)
+    if (hasStaff && staffFacilities.length === 0) {
+      options.push({
+        id: 'staff-portal',
+        type: 'personal',
+        capability: 'staff',
+        title: 'Staff Portal',
+        subtitle: 'Invitations & Profile Management',
+        icon: <UserCheck className="w-4 h-4" />,
+        color: 'cyan',
+        isActive: activeCapability === 'staff',
+      });
+    }
+
+    // ========== PROFESSIONAL WORKSPACE ==========
+    // Staff with facilities (each facility is a separate option)
+    if (hasStaff && staffFacilities.length > 0) {
       staffFacilities.forEach((facility) => {
         options.push({
           id: `staff-facility-${facility.facility_id}`,
-          type: 'staff_facility',
+          type: 'professional',
           capability: 'staff',
           facilityId: facility.facility_id,
+          facilityName: facility.facility_name,
+          roleCode: facility.role_code,
           title: getRoleDisplayName(facility.role_code),
           subtitle: facility.facility_name,
           icon: <Briefcase className="w-4 h-4" />,
@@ -180,26 +202,12 @@ export const Navbar: React.FC<NavbarProps> = ({
       });
     }
 
-    // 3. STAFF WITHOUT FACILITIES
-    if (isStaffWithoutFacility) {
-      options.push({
-        id: 'staff-no-facility',
-        type: 'staff_no_facility',
-        capability: 'staff',
-        title: 'Staff Dashboard',
-        subtitle: 'Invitations & Profile Management',
-        icon: <UserCheck className="w-4 h-4" />,
-        color: 'purple',
-        isActive: activeCapability === 'staff',
-      });
-    }
-
-    // 4. SPATIE ROLES (super_admin, regulator, etc.)
-    const spatieRoles = availableCapabilities.filter(cap => cap !== 'patient' && cap !== 'staff');
+    // ========== SYSTEM ADMINISTRATION ==========
+    // Spatie Roles (super_admin, regulator, etc.)
     spatieRoles.forEach((roleCapability: string) => {
       options.push({
-        id: `spatie-${roleCapability}`,
-        type: 'spatie_role',
+        id: `admin-${roleCapability}`,
+        type: 'administrative',
         capability: roleCapability,
         title: getRoleDisplayName(roleCapability),
         subtitle: 'System Administration',
@@ -211,42 +219,24 @@ export const Navbar: React.FC<NavbarProps> = ({
 
     return options;
   }, [
-    isPatient,
-    isStaffWithFacility,
-    isStaffWithoutFacility,
-    staffFacilities,
     availableCapabilities,
+    staffFacilities,
     activeCapability,
     activeFacilityId,
   ]);
 
   /**
-   * Group context options by category for better UI organization
+   * Group context options by workspace type for better UI organization
    */
   const groupedContextOptions = useMemo(() => {
-    const groups: {
-      personal: ContextOption[];
-      professional: ContextOption[];
-      administrative: ContextOption[];
-    } = {
-      personal: [],
-      professional: [],
-      administrative: [],
+    const groups = {
+      personal: [] as ContextOption[],
+      professional: [] as ContextOption[],
+      administrative: [] as ContextOption[],
     };
 
     allContextOptions.forEach((option) => {
-      switch (option.type) {
-        case 'patient':
-          groups.personal.push(option);
-          break;
-        case 'staff_facility':
-        case 'staff_no_facility':
-          groups.professional.push(option);
-          break;
-        case 'spatie_role':
-          groups.administrative.push(option);
-          break;
-      }
+      groups[option.type].push(option);
     });
 
     return groups;
@@ -256,7 +246,7 @@ export const Navbar: React.FC<NavbarProps> = ({
    * Get currently active context option
    */
   const activeContextOption = useMemo(() => {
-    return allContextOptions.find(opt => opt.isActive);
+    return allContextOptions.find(opt => opt.isActive) || allContextOptions[0];
   }, [allContextOptions]);
 
   // ============================================================================
@@ -352,29 +342,29 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       // Handle different option types
       switch (option.type) {
-        case 'patient':
-          dispatch(switchCapability('patient'));
+        case 'personal':
+          // Switch to personal capability (patient or staff portal)
+          dispatch(switchCapability(option.capability));
           showToast('success', `Switched to ${option.title}`, 3000);
           break;
 
-        case 'staff_facility':
+        case 'professional':
           if (option.facilityId) {
-            // First ensure we're in staff capability
+            // Staff with facility - switch capability first if needed, then facility
             if (activeCapability !== 'staff') {
               dispatch(switchCapability('staff'));
             }
-            // Then switch facility
             dispatch(switchFacility(option.facilityId));
-            showToast('success', `Switched to ${option.subtitle}`, 3000);
+            showToast(
+              'success', 
+              `Switched to ${option.title} at ${option.facilityName}`, 
+              3000
+            );
           }
           break;
 
-        case 'staff_no_facility':
-          dispatch(switchCapability('staff'));
-          showToast('success', `Switched to ${option.title}`, 3000);
-          break;
-
-        case 'spatie_role':
+        case 'administrative':
+          // Switch to Spatie role capability
           dispatch(switchCapability(option.capability));
           showToast('success', `Switched to ${option.title}`, 3000);
           break;
@@ -432,6 +422,27 @@ export const Navbar: React.FC<NavbarProps> = ({
         hover: isDark ? 'hover:bg-emerald-500/30' : 'hover:bg-emerald-200',
         active: isDark ? 'bg-emerald-500/30 border-emerald-500' : 'bg-emerald-200 border-emerald-500',
       },
+      cyan: {
+        bg: isDark ? 'bg-cyan-500/20' : 'bg-cyan-100',
+        text: isDark ? 'text-cyan-400' : 'text-cyan-600',
+        border: isDark ? 'border-cyan-500/30' : 'border-cyan-200',
+        hover: isDark ? 'hover:bg-cyan-500/30' : 'hover:bg-cyan-200',
+        active: isDark ? 'bg-cyan-500/30 border-cyan-500' : 'bg-cyan-200 border-cyan-500',
+      },
+      indigo: {
+        bg: isDark ? 'bg-indigo-500/20' : 'bg-indigo-100',
+        text: isDark ? 'text-indigo-400' : 'text-indigo-600',
+        border: isDark ? 'border-indigo-500/30' : 'border-indigo-200',
+        hover: isDark ? 'hover:bg-indigo-500/30' : 'hover:bg-indigo-200',
+        active: isDark ? 'bg-indigo-500/30 border-indigo-500' : 'bg-indigo-200 border-indigo-500',
+      },
+      teal: {
+        bg: isDark ? 'bg-teal-500/20' : 'bg-teal-100',
+        text: isDark ? 'text-teal-400' : 'text-teal-600',
+        border: isDark ? 'border-teal-500/30' : 'border-teal-200',
+        hover: isDark ? 'hover:bg-teal-500/30' : 'hover:bg-teal-200',
+        active: isDark ? 'bg-teal-500/30 border-teal-500' : 'bg-teal-200 border-teal-500',
+      },
     };
     return colorMap[color];
   };
@@ -440,7 +451,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     const colors = {
       success: isDark ? 'text-emerald-400' : 'text-emerald-600',
       warning: isDark ? 'text-amber-400' : 'text-amber-600',
-      error: isDark ? 'text-red-400' : 'text-red-600',
+      error: isDark ? 'text-orange-400' : 'text-orange-600',
       info: isDark ? 'text-blue-400' : 'text-blue-600',
     };
     return colors[type];
@@ -450,7 +461,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     const colors = {
       success: isDark ? 'bg-emerald-500/10' : 'bg-emerald-50',
       warning: isDark ? 'bg-amber-500/10' : 'bg-amber-50',
-      error: isDark ? 'bg-red-500/10' : 'bg-red-50',
+      error: isDark ? 'bg-orange-500/10' : 'bg-orange-50',
       info: isDark ? 'bg-blue-500/10' : 'bg-blue-50',
     };
     return colors[type];
@@ -464,7 +475,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   // ============================================================================
-  // MOCK DATA (notifications, quick actions, etc.)
+  // MOCK DATA
   // ============================================================================
 
   const notifications: Notification[] = [
@@ -524,7 +535,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       label: 'Appointments', 
       icon: <Calendar className="w-4 h-4" />, 
       badge: 8, 
-      color: 'green',
+      color: 'emerald',
       description: 'Schedule management',
       shortcut: '⌘A'
     },
@@ -532,7 +543,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       id: 'analytics', 
       label: 'Analytics', 
       icon: <TrendingUp className="w-4 h-4" />, 
-      color: 'orange',
+      color: 'amber',
       description: 'View insights & trends',
       shortcut: '⌘L'
     },
@@ -546,7 +557,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const workflows = [
     { id: 'admit', label: 'Admit Patient', icon: <Users className="w-4 h-4" />, color: 'blue' },
-    { id: 'discharge', label: 'Discharge Patient', icon: <CheckCircle2 className="w-4 h-4" />, color: 'green' },
+    { id: 'discharge', label: 'Discharge Patient', icon: <CheckCircle2 className="w-4 h-4" />, color: 'emerald' },
     { id: 'labs', label: 'Order Lab Tests', icon: <FileText className="w-4 h-4" />, color: 'purple' },
   ];
 
@@ -567,17 +578,31 @@ export const Navbar: React.FC<NavbarProps> = ({
   // ============================================================================
 
   return (
-    <nav className={cn('flex items-center justify-between gap-2 sm:gap-4', className)}>
+    <nav className={cn('flex items-center justify-between gap-2 sm:gap-4 px-4 py-3', className)}>
       {/* ========================================================================
-          LEFT: BRAND
+          LEFT: BRAND & MENU (MOBILE)
           ======================================================================== */}
       <div className="flex items-center gap-2 sm:gap-4">
-        <div className="flex items-center gap-2 sm:gap-3 lg:ms-7">
+        {/* Mobile Menu Button */}
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden p-2 rounded-lg transition-all hover:scale-105"
+          aria-label="Open menu"
+        >
+          <div className="flex flex-col gap-1 w-5">
+            <span className={cn('h-0.5 w-full rounded-full', isDark ? 'bg-gray-400' : 'bg-gray-600')}></span>
+            <span className={cn('h-0.5 w-full rounded-full', isDark ? 'bg-gray-400' : 'bg-gray-600')}></span>
+            <span className={cn('h-0.5 w-full rounded-full', isDark ? 'bg-gray-400' : 'bg-gray-600')}></span>
+          </div>
+        </button>
+
+        {/* Brand */}
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20">
             <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
           
-          <div className="hidden xl:block">
+          <div className="hidden md:block">
             <div className="flex items-center gap-2">
               <span className={cn(
                 'text-base sm:text-lg font-bold bg-gradient-to-r bg-clip-text text-transparent',
@@ -692,7 +717,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 <div className="max-h-[70vh] overflow-y-auto p-3 space-y-2">
                   
-                  {/* ====== PERSONAL HEALTH (Patient) ====== */}
+                  {/* ====== PERSONAL SPACE ====== */}
                   {groupedContextOptions.personal.length > 0 && (
                     <>
                       <p className={cn(
@@ -700,7 +725,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         isDark ? 'text-gray-500' : 'text-gray-600'
                       )}>
                         <Heart className="w-3 h-3 inline mr-1" />
-                        Personal Health
+                        Personal Space
                       </p>
                       {groupedContextOptions.personal.map((option) => (
                         <button
@@ -750,7 +775,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </>
                   )}
 
-                  {/* ====== PROFESSIONAL WORKSPACES (Staff) ====== */}
+                  {/* ====== PROFESSIONAL WORKSPACE ====== */}
                   {groupedContextOptions.professional.length > 0 && (
                     <>
                       <p className={cn(
@@ -758,7 +783,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         isDark ? 'text-gray-500' : 'text-gray-600'
                       )}>
                         <Briefcase className="w-3 h-3 inline mr-1" />
-                        Professional Workspaces
+                        Professional Workspace
                       </p>
                       {groupedContextOptions.professional.map((option) => (
                         <button
@@ -810,7 +835,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </>
                   )}
 
-                  {/* ====== SYSTEM ADMINISTRATION (Spatie Roles) ====== */}
+                  {/* ====== SYSTEM ADMINISTRATION ====== */}
                   {groupedContextOptions.administrative.length > 0 && (
                     <>
                       <p className={cn(
@@ -1094,7 +1119,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* ====================================================================
             QUICK ACTIONS
             ==================================================================== */}
-        <div ref={quickActionsRef} className="relative">
+        <div ref={quickActionsRef} className="relative hidden lg:block">
           <button
             onClick={() => setIsQuickActionsOpen(!isQuickActionsOpen)}
             className={cn(
@@ -1248,8 +1273,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-5 w-5 bg-gradient-to-br from-red-500 to-red-600 text-white text-xs font-bold items-center justify-center shadow-lg">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-5 w-5 bg-gradient-to-br from-orange-500 to-amber-500 text-white text-xs font-bold items-center justify-center shadow-lg">
                   {unreadCount}
                 </span>
               </span>
@@ -1508,8 +1533,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className={cn(
                     'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
                     isDark 
-                      ? 'text-gray-400 hover:bg-red-500/10 hover:text-red-400' 
-                      : 'text-gray-700 hover:bg-red-50 hover:text-red-600'
+                      ? 'text-gray-400 hover:bg-orange-500/10 hover:text-orange-400' 
+                      : 'text-gray-700 hover:bg-orange-50 hover:text-orange-600'
                   )}
                 >
                   <LogOut className="w-4 h-4" />
