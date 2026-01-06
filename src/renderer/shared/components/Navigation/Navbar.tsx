@@ -90,7 +90,6 @@ interface ContextOption {
 
 export const Navbar: React.FC<NavbarProps> = ({ 
   theme = 'dark',
-  onMenuClick,
   onThemeToggle,
   className
 }) => {
@@ -582,20 +581,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* ========================================================================
           LEFT: BRAND & MENU (MOBILE)
           ======================================================================== */}
-      <div className="flex items-center gap-2 sm:gap-4">
-        {/* Mobile Menu Button */}
-        <button
-          onClick={onMenuClick}
-          className="lg:hidden p-2 rounded-lg transition-all hover:scale-105"
-          aria-label="Open menu"
-        >
-          <div className="flex flex-col gap-1 w-5">
-            <span className={cn('h-0.5 w-full rounded-full', isDark ? 'bg-gray-400' : 'bg-gray-600')}></span>
-            <span className={cn('h-0.5 w-full rounded-full', isDark ? 'bg-gray-400' : 'bg-gray-600')}></span>
-            <span className={cn('h-0.5 w-full rounded-full', isDark ? 'bg-gray-400' : 'bg-gray-600')}></span>
-          </div>
-        </button>
-
         {/* Brand */}
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20">
@@ -628,12 +613,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             </p>
           </div>
         </div>
-      </div>
 
       {/* ========================================================================
           RIGHT: ACTION BUTTONS
           ======================================================================== */}
-      <div className="flex items-center gap-1 sm:gap-2">
+      <div className="flex items-center gap-3 sm:gap-">
         
         {/* ====================================================================
             🎯 ENHANCED CONTEXT/WORKSPACE SWITCHER
