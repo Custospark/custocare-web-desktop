@@ -28,16 +28,16 @@ import {
   useDeleteDepartment,
   useRestoreDepartment,
   departmentKeys
-} from '../../api/useDepartmentQueries';
+} from '../../api/department/useDepartmentQueries';
 import type { 
   Department,
   CreateDepartmentRequest,
   UpdateDepartmentRequest,
-} from  '../../api/departmentTypes';
+} from  '../../api/department/departmentTypes';
 import  { 
   DepartmentType,
   DepartmentStatus,
-} from  '../../api/departmentTypes';
+} from  '../../api/department/departmentTypes';
 
 interface AdminFacilitySetupProps {
   theme: 'light' | 'dark';

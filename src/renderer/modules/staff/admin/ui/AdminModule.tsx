@@ -9,7 +9,7 @@ import {
   Layers,
 } from 'lucide-react';
 import AdminOverview from './admin-module/AdminOverview';
-import AdminTeam from './admin-module/AdminTeam';
+import AdminTeam from './admin-module/team/AdminTeam';
 import AdminFacilitySetup from './admin-module/AdminFacilitySetup';
 import AdminServiceCatalog from './admin-module/AdminServiceCatalog';
 

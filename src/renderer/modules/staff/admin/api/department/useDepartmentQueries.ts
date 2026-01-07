@@ -17,8 +17,8 @@
 
 import { useMutation, useQuery, type UseQueryOptions } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
-import { axiosInstance } from '../../../../app/api/axiosConfig';
-import { useToast } from '../../../../app/store/contexts/toast/useToast';
+import { axiosInstance } from '../../../../../app/api/axiosConfig';
+import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import type {
   ApiErrorResponse,
   CreateDepartmentRequest,
