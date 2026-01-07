@@ -539,7 +539,7 @@ export const getRoleDisplayName = (roleCode: string): string => {
   
   // Return mapped name or format the code nicely
   return displayNames[roleCode] || roleCode
-    .split('_')
+    .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 };

@@ -255,7 +255,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
       description: 'Patient registration',
       stats: 'Front Desk',
       glowColor: 'from-sky-500 to-blue-400',
-      moduleCode: 'registration',
+      moduleCode: 'reception',
       category: 'admin'
     },
     {
@@ -267,7 +267,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
       description: 'Vitals & ward care',
       stats: 'Nursing',
       glowColor: 'from-green-500 to-emerald-400',
-      moduleCode: 'nursing_care',
+      moduleCode: 'nursing',
       category: 'clinical'
     },
 
@@ -295,7 +295,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
       description: 'Invoices & payments',
       stats: 'Finance',
       glowColor: 'from-yellow-500 to-orange-400',
-      moduleCode: 'billing-finance',
+      moduleCode: 'billing',
       category: 'admin'
     },
 
