@@ -43,7 +43,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
   
   const [statusFilter, setStatusFilter] = useState<InvitationStatus | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [setShowCreateModal] = useState(false);
+  const [,setShowCreateModal] = useState(false);
   
   // Fetch invitations
   const { data: invitationsResponse, isLoading, refetch } = useGetStaffInvitations(

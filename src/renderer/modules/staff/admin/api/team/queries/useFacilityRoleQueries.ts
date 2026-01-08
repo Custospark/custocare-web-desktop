@@ -81,7 +81,7 @@ export const useGetFacilityRoles = (
   return useQuery<GetFacilityRolesResponse, AxiosError<ApiErrorResponse>>({
     queryKey: facilityRoleKeys.list(filters),
     queryFn: async () => {
-      const response = await axiosInstance.get<GetFacilityRolesResponse>('/roles', {
+      const response = await axiosInstance.get<GetFacilityRolesResponse>('/facility-roles', {
         params: filters,
       });
       return response.data;

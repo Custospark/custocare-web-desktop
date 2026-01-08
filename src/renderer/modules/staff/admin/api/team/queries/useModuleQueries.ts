@@ -86,6 +86,7 @@ export const useGetModules = (
       const response = await axiosInstance.get<GetModulesResponse>('/modules', {
         params: filters,
       });
+      console.log(response.data?.data)
       return response.data;
     },
     ...options,
