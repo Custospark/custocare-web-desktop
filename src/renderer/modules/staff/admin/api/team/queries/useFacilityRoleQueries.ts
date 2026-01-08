@@ -197,7 +197,7 @@ export const useCreateFacilityRole = (
 
   return useMutation<FacilityRoleResponse, AxiosError<ApiErrorResponse>, CreateFacilityRoleRequest>({
     mutationFn: async (data: CreateFacilityRoleRequest) => {
-      const response = await axiosInstance.post<FacilityRoleResponse>('/roles', data);
+      const response = await axiosInstance.post<FacilityRoleResponse>('/facility-roles', data);
       return response.data;
     },
     onSuccess: (data) => {
