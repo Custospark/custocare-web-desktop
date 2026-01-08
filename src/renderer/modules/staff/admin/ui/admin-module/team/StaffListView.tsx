@@ -19,7 +19,7 @@ import {
   MoreVertical,
 } from 'lucide-react';
 import { useGetStaff } from '../../../api/team/queries/useStaffQueries';
-import type { EmploymentStatus } from '../../../../registration/queries/registerStaffTypes';
+import type { EmploymentStatus } from '../../../api/team/types/staffTypes';
 
 interface StaffListViewProps {
   theme: 'light' | 'dark';

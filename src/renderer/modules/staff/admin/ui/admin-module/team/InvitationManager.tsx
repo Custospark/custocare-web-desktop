@@ -49,6 +49,10 @@ import { EmploymentStatus } from '../../../api/team/types/staffTypes';
 interface InvitationManagerProps {
   theme: 'light' | 'dark';
   refreshKey?: number;
+  facilityId: number;
+  onInvitationSent: () => void;
+
+
 }
 
 interface CreateInvitationFormData {

@@ -20,6 +20,7 @@ import { useGetDepartmentsByFacility } from '../../../api/department/useDepartme
 import { useGetFacilityRoles } from '../../../api/team/queries/useFacilityRoleQueries';
 import { useGetModules } from '../../../api/team/queries/useModuleQueries';
 import type { GlobalRoleLevel, EmploymentType } from '../../../api/team/types/staffTypes';
+import { DepartmentStatus } from '../../../api/department/departmentTypes';
 
 interface StaffCreationFormProps {
   theme: 'light' | 'dark';
@@ -82,7 +83,7 @@ export const StaffCreationForm: React.FC<StaffCreationFormProps> = ({
   // Fetch data for dropdowns
   const { data: departmentsResponse } = useGetDepartmentsByFacility(
     facilityId,
-    { status: 'active' },
+    { status: DepartmentStatus.ACTIVE },
     { enabled: !!facilityId }
   );
   

@@ -35,6 +35,7 @@ import type { RootState } from '../../../../../../app/store/rootReducer';
 interface RoleAccessManagerProps {
   theme: 'light' | 'dark';
   refreshKey?: number;
+  facilityId?:number;
 }
 
 interface CreateRoleFormData {
