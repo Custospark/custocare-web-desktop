@@ -32,7 +32,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
-import { RootState } from '../../../../../../app/store/rootReducer';
+import {type  RootState } from '../../../../../../app/store/rootReducer';
 import {
   useGetStaffInvitations,
   useCreateStaffInvitation,

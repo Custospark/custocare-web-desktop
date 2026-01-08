@@ -1,6 +1,6 @@
 // src/components/UpdateNotification.tsx
 import { useEffect, useState } from 'react';
-import { IpcRendererEvent } from 'electron';
+import { type IpcRendererEvent } from 'electron';
 import { useToast } from '../../../app/store/contexts/toast/useToast';
 
 interface UpdateInfo {
