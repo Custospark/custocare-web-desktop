@@ -1,61 +1,56 @@
 // electron/main.ts
-import { app, BrowserWindow, Menu } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { initAutoUpdater, checkForUpdates } from './autoUpdater';
 
 /**
  * ESM compatibility: Convert import.meta.url to __dirname equivalent
- * Required for proper path resolution in ES modules
  */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Environment detection: Determine if running in development mode
- * Checks NODE_ENV or falls back to app.isPackaged status
+ * Environment detection
  */
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 /**
+ * Store reference to main window
+ */
+let mainWindow: BrowserWindow | null = null;
+
+/**
  * Creates and configures the main application window
- * 
- * Window configuration includes:
- * - Standard frame with custom menu bar control
- * - Minimum size constraints for optimal layout
- * - Secure web preferences with development tools in dev mode
- * 
- * @returns {BrowserWindow} The configured main window instance
  */
 function createWindow(): BrowserWindow {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 1200,
     minHeight: 700,
     frame: true,
-    autoHideMenuBar: true, // Hide menu bar (can be toggled with Alt key)
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      webSecurity: !isDev, // Disable only in development for local resources
+      webSecurity: !isDev,
       devTools: isDev,
     },
     icon: path.join(__dirname, 'assets/icon.png'),
-    show: false, // Prevent flash of unstyled content
-    backgroundColor: '#ffffff', // Fallback background color
+    show: false,
+    backgroundColor: '#ffffff',
+    // Enable fullscreen on user action
+    fullscreenable: true,
   });
 
   /**
-   * Remove the default application menu entirely
-   * This removes File, Edit, View, Window, Help menus
-   * Set to null to completely disable the menu bar
+   * Remove the default application menu
    */
   Menu.setApplicationMenu(null);
 
   /**
-   * Load application content based on environment
-   * Development: Connects to Vite dev server for HMR
-   * Production: Loads from compiled static files
+   * Load application content
    */
   if (isDev) {
     const devServerUrl = 'http://localhost:5173';
@@ -67,8 +62,7 @@ function createWindow(): BrowserWindow {
     mainWindow.loadFile(indexPath).catch(err => {
       console.error('Failed to load index.html:', err);
       
-      // Fallback: Display user-friendly error page
-      mainWindow.loadURL(`data:text/html;charset=utf-8,
+      mainWindow?.loadURL(`data:text/html;charset=utf-8,
         <html>
           <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial; padding: 40px; text-align: center; background: #f5f5f5;">
             <h1 style="color: #333;">Application Error</h1>
@@ -80,38 +74,56 @@ function createWindow(): BrowserWindow {
     });
   }
 
-
   /**
-   * Optimize window display: Show only when content is fully loaded
-   * Prevents visual artifacts and improves perceived performance
+   * Show window when ready
    */
   mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-    mainWindow.focus();
+    mainWindow?.show();
+    mainWindow?.focus();
   });
 
   /**
-   * Clean up window resources on close
-   * Ensures proper memory management
+   * Clean up on close
    */
   mainWindow.on('closed', () => {
-    mainWindow.destroy();
+    mainWindow = null;
   });
+
+  // Initialize auto-updater after window is created
+  if (!isDev) {
+    initAutoUpdater(mainWindow);
+  }
 
   return mainWindow;
 }
 
 /**
+ * IPC Handlers for renderer process communication
+ */
+
+// Manual update check trigger
+ipcMain.on('check-for-updates', () => {
+  checkForUpdates();
+});
+
+// Toggle fullscreen
+ipcMain.on('toggle-fullscreen', () => {
+  if (mainWindow) {
+    mainWindow.setFullScreen(!mainWindow.isFullScreen());
+  }
+});
+
+// Get fullscreen status
+ipcMain.handle('is-fullscreen', () => {
+  return mainWindow?.isFullScreen() || false;
+});
+
+/**
  * Application initialization
- * Waits for Electron to be fully ready before creating windows
  */
 app.whenReady().then(() => {
   createWindow();
 
-  /**
-   * macOS-specific behavior: Recreate window when dock icon is clicked
-   * Standard pattern for macOS applications
-   */
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -121,8 +133,6 @@ app.whenReady().then(() => {
 
 /**
  * Application termination handler
- * Quits app when all windows are closed, except on macOS
- * where apps typically stay active until explicitly quit
  */
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -131,20 +141,17 @@ app.on('window-all-closed', () => {
 });
 
 /**
- * Pre-quit cleanup handler
- * Placeholder for any cleanup operations before app termination
+ * Pre-quit cleanup
  */
 app.on('before-quit', () => {
-  // Perform cleanup operations if needed
+  // Cleanup operations
 });
 
 /**
- * Global error handler for uncaught exceptions
- * Logs errors to help with debugging and crash reporting
+ * Global error handler
  */
 process.on('uncaughtException', (error: Error) => {
   console.error('Uncaught Exception:', error);
-  // In production, consider sending to error tracking service
 });
 
 export { createWindow };
