@@ -2,7 +2,7 @@
 import { app, BrowserWindow, Menu, ipcMain, session } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { initAutoUpdater, checkForUpdates } from './autoUpdater.js';
+import { initAutoUpdater } from './autoUpdater.js';
 
 /**
  * ESM compatibility: Convert import.meta.url to __dirname equivalent
@@ -144,9 +144,9 @@ function createWindow(): BrowserWindow {
  */
 
 // Manual update check trigger
-ipcMain.on('check-for-updates', () => {
-  checkForUpdates();
-});
+// ipcMain.on('check-for-updates', () => {
+//   checkForUpdates();
+// });
 
 // Toggle fullscreen
 ipcMain.on('toggle-fullscreen', () => {

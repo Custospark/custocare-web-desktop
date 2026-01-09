@@ -143,7 +143,7 @@ export const RoleSelection: React.FC = () => {
               </div>
               <div>
                 <div className="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-                  CustoCare AI
+                  Custocare AI
                 </div>
                 <div className={cn(
                   "text-[11px] font-semibold tracking-wide uppercase",

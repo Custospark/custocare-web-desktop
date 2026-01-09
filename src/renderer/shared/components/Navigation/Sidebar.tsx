@@ -725,7 +725,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
           'block text-xs font-medium mb-2',
           isDark ? 'text-gray-400' : 'text-gray-600'
         )}>
-          Switch Facility
+          Switch Facility(Auto)
         </label>
         <select
           value={activeFacilityId || ''}
@@ -780,7 +780,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         </div>
         <div className="min-w-0">
           <h2 className={cn('font-bold text-base truncate', isDark ? 'text-white' : 'text-gray-900')}>
-            CustoCare AI
+            Custocare AI
           </h2>
           <p className={cn('text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-600')}>
             {getContextSubtitle()}

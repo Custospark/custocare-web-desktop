@@ -31,7 +31,7 @@ function Header() {
           <Menu className="w-6 h-6 text-gray-600 dark:text-gray-400" />
         </button>
         <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
-          CustoCare AI
+          Custocare AI
         </h1>
       </div>
 

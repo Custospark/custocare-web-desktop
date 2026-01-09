@@ -224,7 +224,7 @@ export const PortalSelector: React.FC = () => {
     dispatch(logout());
     showToast(
       'info',
-      "You've been logged out successfully. Thank you for using CustoCare AI — see you again soon!",
+      "You've been logged out successfully. Thank you for using Custocare AI — see you again soon!",
       5000
     );
     navigate(ROUTES.LANDING);
@@ -286,7 +286,7 @@ export const PortalSelector: React.FC = () => {
               <Shield className="w-5 h-5 text-white" />
             </div>
             <span className={cn('text-lg font-bold', designSystem.colors.primary)}>
-              CustoCare AI
+              Custocare AI
             </span>
           </div>
 
@@ -924,7 +924,7 @@ export const PortalSelector: React.FC = () => {
       )}
 
       <div className="ml-auto text-xs text-gray-500 dark:text-gray-600">
-        © {new Date().getFullYear()} CustoCare AI. All rights reserved.
+        © {new Date().getFullYear()} Custocare AI. All rights reserved.
       </div>
     </motion.div>
   );

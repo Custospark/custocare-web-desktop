@@ -804,7 +804,7 @@ export const MedicalProfessionalOnboarding: React.FC = () => {
               </div>
               <div>
                 <div className="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-                  CustoCare AI
+                  Custocare AI
                 </div>
                 <div className={cn(
                   "text-[11px] font-semibold tracking-wide uppercase",
@@ -876,7 +876,7 @@ export const MedicalProfessionalOnboarding: React.FC = () => {
             "text-xs",
             theme === 'dark' ? "text-slate-500" : "text-slate-500"
           )}>
-            © {new Date().getFullYear()} CustoCare AI. All professional information is encrypted and protected.
+            © {new Date().getFullYear()} Custocare AI. All professional information is encrypted and protected.
           </p>
         </div>
       </footer>

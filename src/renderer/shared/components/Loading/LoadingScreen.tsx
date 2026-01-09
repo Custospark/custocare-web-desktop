@@ -228,7 +228,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ message }) => {
               ? "from-white via-cyan-200 to-blue-200"
               : "from-slate-900 via-blue-700 to-cyan-700"
           )}>
-            CustoCare AI
+            Custocare AI
           </h1>
           <p className={cn(
             "text-sm font-medium tracking-wide",

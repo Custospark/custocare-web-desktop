@@ -319,7 +319,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     dispatch(logout());
     showToast(
       'info',
-      "You've been logged out successfully. Thank you for using CustoCare AI — see you again soon!",
+      "You've been logged out successfully. Thank you for using Custocare AI — see you again soon!",
       5000
     );
     navigate(ROUTES.LANDING);
@@ -593,7 +593,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 'text-base sm:text-lg font-bold bg-gradient-to-r bg-clip-text text-transparent',
                 isDark ? 'from-white to-gray-300' : 'from-gray-900 to-gray-700'
               )}>
-                CustoCare AI
+                Custocare AI
               </span>
               <span className={cn(
                 'px-2 py-0.5 text-xs font-bold rounded-full border',

@@ -1244,7 +1244,7 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
             theme === 'dark' ? "text-slate-400" : "text-slate-600"
           )}
         >
-          Your healthcare facility is now registered on CustoCare AI.
+          Your healthcare facility is now registered on Custocare AI.
         </motion.p>
       </div>
 
@@ -1385,7 +1385,7 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
               </motion.div>
               <div>
                 <div className="text-base font-black tracking-tight bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-                  CustoCare AI
+                  Custocare AI
                 </div>
                 <div className={cn(
                   "text-[9px] font-bold tracking-wider uppercase",
@@ -1540,7 +1540,7 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
             "text-[10px]",
             theme === 'dark' ? "text-slate-500" : "text-slate-500"
           )}>
-            © {new Date().getFullYear()} CustoCare AI. All data encrypted and protected.
+            © {new Date().getFullYear()} Custocare AI. All data encrypted and protected.
           </p>
         </div>
       </footer>

@@ -155,7 +155,7 @@ export const Landing: React.FC = () => {
               </motion.div>
               <div className="hidden sm:block">
                 <div className="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-600 via-blue-500 to-emerald-600 bg-clip-text text-transparent">
-                  CustoCare AI
+                  Custocare AI
                 </div>
                 <div className={cn(
                   "text-[11px] font-semibold tracking-wide uppercase",
@@ -185,7 +185,7 @@ export const Landing: React.FC = () => {
                       : "bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100 hover:border-blue-400 hover:shadow-blue-200/50"
                   )}
                   aria-label="Download Windows version"
-                  title="Download CustoCare AI for Windows"
+                  title="Download Custocare AI for Windows"
                 >
                   <Monitor className="w-4 h-4" aria-hidden="true" />
                   <span className="hidden sm:inline">Windows</span>
@@ -304,8 +304,8 @@ export const Landing: React.FC = () => {
                 >
                   Transforming healthcare through AI-powered intelligence 
                   and compassionate care delivery.
-                  {/* CustoCare AI is an African-owned, secure healthcare operating system designed for national data sovereignty, local workflows, and long-term public health resilience. */}
-                {/* CustoCare AI is an African-owned, secure healthcare operating system, designed for national data sovereignty, local workflows, and long-term public health resilience—transforming healthcare through AI-powered intelligence and compassionate care delivery. */}
+                  {/* Custocare AI is an African-owned, secure healthcare operating system designed for national data sovereignty, local workflows, and long-term public health resilience. */}
+                {/* Custocare AI is an African-owned, secure healthcare operating system, designed for national data sovereignty, local workflows, and long-term public health resilience—transforming healthcare through AI-powered intelligence and compassionate care delivery. */}
                   </motion.p>
 
 
@@ -594,7 +594,7 @@ export const Landing: React.FC = () => {
                   "text-lg font-bold tracking-tight",
                   theme === 'dark' ? "text-white" : "text-slate-900"
                 )}>
-                  CustoCare AI
+                  Custocare AI
                 </span>
               </div>
               <p className={cn(
@@ -632,7 +632,7 @@ export const Landing: React.FC = () => {
               : "border-slate-200 text-slate-500"
           )}>
             <p>
-              © {new Date().getFullYear()} CustoCare AI Health Platform. HIPAA-compliant healthcare data protection. 
+              © {new Date().getFullYear()} Custocare AI Health Platform. HIPAA-compliant healthcare data protection. 
               For authorized healthcare use only.
             </p>
           </div>
@@ -793,7 +793,7 @@ const AccessPanel: React.FC<AccessPanelProps> = ({
             "text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-3 tracking-tight",
             theme === 'dark' ? "text-white" : "text-slate-900"
           )}>
-            Welcome to CustoCare AI
+            Welcome to Custocare AI
           </h2>
           <p className={cn(
             "text-sm sm:text-base font-medium",

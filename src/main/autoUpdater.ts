@@ -190,7 +190,7 @@ export function initAutoUpdater(mainWindow: BrowserWindow): void {
     autoUpdater.checkForUpdates().catch((err) => {
       log.error('[Auto-Updater] Initial update check failed:', err);
     });
-  }, 10000); // 10 second delay
+  }, 300000); // 5 minutes delay
 
   /**
    * Periodic update checks

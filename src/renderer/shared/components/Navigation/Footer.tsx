@@ -96,7 +96,7 @@ export const Footer: React.FC<FooterProps> = ({
                 <span className={cn(
                   isDark ? 'text-gray-400' : 'text-gray-600'
                 )}>
-                  {currentYear} CustoCare AI
+                  {currentYear} Custocare AI
                 </span>
               </div>
             )}
@@ -143,7 +143,7 @@ export const Footer: React.FC<FooterProps> = ({
                   'text-xl font-bold',
                   isDark ? 'text-white' : 'text-gray-900'
                 )}>
-                  CustoCare AI
+                  Custocare AI
                 </h3>
                 <div className="flex items-center gap-2 mt-1">
                   <span className={cn(
@@ -401,7 +401,7 @@ export const Footer: React.FC<FooterProps> = ({
                 <span className={cn(
                   isDark ? 'text-gray-400' : 'text-gray-600'
                 )}>
-                  {currentYear} CustoCare AI. All rights reserved.
+                  {currentYear} Custocare AI. All rights reserved.
                 </span>
               </div>
             )}

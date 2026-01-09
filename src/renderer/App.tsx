@@ -16,8 +16,8 @@ import { ToastProvider } from './app/store/contexts/toast/ToastContext';
 
 // System / Shell components
 import { UpdateNotification } from './shared/components/Feedback/UpdateNotification';
-import { CheckUpdateButton } from './shared/components/Feedback/CheckUpdateButton';
-import { FullscreenToggle } from './shared/components/Feedback/FullscreenToggle';
+// import { CheckUpdateButton } from './shared/components/Feedback/CheckUpdateButton';
+// import { FullscreenToggle } from './shared/components/Feedback/FullscreenToggle';
 
 import './App.css';
 
@@ -54,10 +54,10 @@ function App() {
                   <UpdateNotification />
 
                   {/* Optional shell controls (settings / menu / footer) */}
-                  <div className="fixed bottom-4 right-4 flex items-center gap-3 z-50">
+                  {/* <div className="fixed bottom-4 right-4 flex items-center gap-3 z-50">
                     <CheckUpdateButton />
                     <FullscreenToggle />
-                  </div>
+                  </div> */}
                 </AppProvider>
               </Router>
 

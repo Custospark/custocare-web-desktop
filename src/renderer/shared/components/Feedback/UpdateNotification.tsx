@@ -102,7 +102,7 @@ export const UpdateNotification = () => {
           // Only log to console for debugging
              showToast(
             'success',
-            `You are runing the lastest version of CustoCare AI.`,
+            `You are runing the lastest version of Custocare AI.`,
             5000
           );
           console.log('[UpdateNotification] App is up to date');

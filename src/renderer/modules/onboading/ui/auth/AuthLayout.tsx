@@ -183,7 +183,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
             transition={{ duration: 0.6, delay: 1 }}
             className="text-xs text-cyan-100/60 font-medium"
           >
-            © {new Date().getFullYear()} CustoCare AI. All rights reserved.
+            © {new Date().getFullYear()} Custocare AI. All rights reserved.
           </motion.p>
         </div>
       </div>
@@ -220,7 +220,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
               'text-lg font-bold tracking-tight',
               theme === 'dark' ? 'text-white' : 'text-gray-900'
             )}>
-              CustoCare AI
+              Custocare AI
             </span>
           </Link>
 
