@@ -1,8 +1,12 @@
 // src/components/UpdateNotification.tsx
 import { useEffect, useState } from 'react';
 import { type IpcRendererEvent } from 'electron';
+import { X, Download } from 'lucide-react';
 import { useToast } from '../../../app/store/contexts/toast/useToast';
 
+/**
+ * Update information structure received from main process
+ */
 interface UpdateInfo {
   event: string;
   data: {
@@ -10,13 +14,54 @@ interface UpdateInfo {
     version?: string;
     percent?: number;
     error?: string;
+    speedMBps?: number;
+    downloadedMB?: number;
+    totalMB?: number;
   };
 }
 
+/**
+ * UpdateNotification Component
+ * 
+ * Displays non-intrusive, dismissible toast notifications and progress indicators
+ * for silent background updates.
+ * 
+ * Features:
+ * - Dismissible download progress indicator with smooth animations
+ * - User can hide progress card while download continues in background
+ * - Toast notifications for update availability and completion
+ * - No user interruption during download/installation
+ * - Professional UI with accessibility support
+ * - Auto-dismisses on completion
+ */
 export const UpdateNotification = () => {
   const { showToast } = useToast();
+  
+  // Download progress state
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadSpeed, setDownloadSpeed] = useState<number>(0);
+  const [downloadedMB, setDownloadedMB] = useState<number>(0);
+  const [totalMB, setTotalMB] = useState<number>(0);
+  
+  // UI visibility state
+  const [isVisible, setIsVisible] = useState(true);
+  const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+
+  /**
+   * Handle dismiss button click
+   * Smoothly animates the card out before hiding
+   * Download continues in background
+   */
+  const handleDismiss = () => {
+    setIsAnimatingOut(true);
+    
+    // Wait for animation to complete before hiding
+    setTimeout(() => {
+      setIsVisible(false);
+      setIsAnimatingOut(false);
+    }, 300); // Match animation duration
+  };
 
   useEffect(() => {
     // Check if we're in Electron environment
@@ -26,81 +71,228 @@ export const UpdateNotification = () => {
 
     const { ipcRenderer } = window.require('electron');
 
-    // Listen for updater messages
+    /**
+     * Handle updater messages from main process
+     * Displays appropriate notifications based on update lifecycle
+     */
     const handleUpdaterMessage = (_event: IpcRendererEvent, info: UpdateInfo) => {
-      console.log('Updater message:', info);
+      console.log('[UpdateNotification] Received updater message:', info);
 
       switch (info.event) {
         case 'checking-for-update':
-          showToast('info', 'Checking for updates...', 3000);
+          // Silent check - no toast notification
+          // Uncomment below to show checking notification
+          showToast('info', 'Checking for updates...', 2000);
           break;
 
         case 'update-available':
+          // Notify user that update is downloading in background
           showToast(
-            'success',
-            `New version ${info.data.version} is available!`,
+            'info',
+            `Downloading update ${info.data.version} in background...`,
             5000
           );
+          setIsDownloading(true);
+          setIsVisible(true); // Show progress card
+          setIsAnimatingOut(false);
           break;
 
         case 'update-not-available':
-          // Optionally show this only on manual check
-          showToast('info', 'You are running the latest version.', 3000);
+          // Silent - no notification needed for up-to-date status
+          // Only log to console for debugging
+             showToast(
+            'success',
+            `You are runing the lastest version of CustoCare AI.`,
+            5000
+          );
+          console.log('[UpdateNotification] App is up to date');
           break;
 
         case 'download-progress':
+          // Update progress indicator state
           setIsDownloading(true);
           setDownloadProgress(Math.round(info.data.percent || 0));
+          setDownloadSpeed(info.data.speedMBps || 0);
+          setDownloadedMB(info.data.downloadedMB || 0);
+          setTotalMB(info.data.totalMB || 0);
           break;
 
         case 'update-downloaded':
+          // Update installed successfully - notify user
           setIsDownloading(false);
           setDownloadProgress(0);
+          
+          // Auto-hide progress card
+          handleDismiss();
+          
           showToast(
             'success',
-            `Update ${info.data.version} ready to install!`,
-            5000
+            `✅ Update ${info.data.version} installed! Changes will apply on next restart.`,
+            8000 // Longer duration for important message
           );
           break;
 
         case 'update-error':
+          // Update failed - show error but don't interrupt workflow
           setIsDownloading(false);
           setDownloadProgress(0);
-            console.error('Updater encountered an error:', info.data.error, info.data);
-
-          showToast('error', `Update error: ${info.data.error}`, 5000);
+          
+          // Auto-hide progress card
+          handleDismiss();
+          
+          console.error('[UpdateNotification] Update error:', info.data.error);
+          
+          showToast(
+            'error',
+            'Update download failed. Will retry automatically.',
+            5000
+          );
           break;
+
+        default:
+          console.warn('[UpdateNotification] Unknown updater event:', info.event);
       }
     };
 
+    // Register IPC listener
     ipcRenderer.on('updater-message', handleUpdaterMessage);
 
-    // Cleanup listener
+    // Cleanup listener on component unmount
     return () => {
       ipcRenderer.removeListener('updater-message', handleUpdaterMessage);
     };
   }, [showToast]);
 
-  // Download progress indicator
-  if (isDownloading) {
+
+  /**
+   * Render download progress indicator
+   * Only shown during active download and when visible
+   * Positioned at bottom-right corner (non-intrusive)
+   */
+  if (isDownloading && downloadProgress > 0 && isVisible) {
     return (
-      <div className="fixed bottom-4 right-4 bg-blue-500 text-white px-6 py-4 rounded-lg shadow-lg z-50">
-        <div className="flex items-center gap-3">
-          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-          <div>
-            <p className="font-semibold">Downloading Update</p>
-            <p className="text-sm">{downloadProgress}% complete</p>
+      <div 
+        className={`
+          fixed bottom-4 right-4 
+          bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 
+          text-white px-5 py-4 rounded-2xl 
+          shadow-2xl z-50 min-w-[340px] max-w-[380px]
+          backdrop-blur-sm
+          transition-all duration-300 ease-out
+          ${isAnimatingOut ? 'opacity-0 translate-x-8 scale-95' : 'opacity-100 translate-x-0 scale-100'}
+        `}
+        role="status"
+        aria-live="polite"
+        aria-label={`Downloading update: ${downloadProgress}% complete`}
+      >
+        {/* Close button */}
+        <button
+          onClick={handleDismiss}
+          className="
+            absolute top-3 right-3
+            p-1 rounded-lg
+            hover:bg-white/20 active:bg-white/30
+            transition-all duration-200
+            focus:outline-none focus:ring-2 focus:ring-white/50
+            group
+          "
+          aria-label="Hide update progress"
+          title="Hide (download continues in background)"
+        >
+          <X 
+            className="w-4 h-4 text-white/80 group-hover:text-white transition-colors" 
+            strokeWidth={2.5}
+          />
+        </button>
+
+        {/* Header with icon and title */}
+        <div className="flex items-start gap-3 mb-3 pr-6">
+          <div className="mt-0.5 flex-shrink-0">
+            <Download 
+              className="w-5 h-5 text-white animate-bounce" 
+              strokeWidth={2.5}
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-base leading-tight">
+              Running Background Update
+            </p>
+            <p className="text-xs text-blue-100 mt-1.5 leading-relaxed">
+              {downloadedMB.toFixed(1)} MB / {totalMB.toFixed(1)} MB
+              {downloadSpeed > 0 && (
+                <span className="inline-flex items-center ml-1.5">
+                  <span className="inline-block w-1 h-1 rounded-full bg-blue-200 mx-1.5"></span>
+                  {downloadSpeed.toFixed(1)} MB/s
+                </span>
+              )}
+            </p>
           </div>
         </div>
-        <div className="mt-2 w-full bg-blue-300 rounded-full h-2">
+
+        {/* Progress bar */}
+        <div className="w-full bg-blue-400/30 rounded-full h-2 overflow-hidden shadow-inner">
           <div
-            className="bg-white h-2 rounded-full transition-all duration-300"
+            className="
+              bg-gradient-to-r from-white via-blue-50 to-white
+              h-2 rounded-full 
+              transition-all duration-500 ease-out 
+              shadow-lg
+              relative
+              overflow-hidden
+            "
             style={{ width: `${downloadProgress}%` }}
-          ></div>
+            role="progressbar"
+            aria-valuenow={downloadProgress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            {/* Animated shimmer effect */}
+            <div className="
+              absolute inset-0 
+              bg-gradient-to-r from-transparent via-white/40 to-transparent
+              animate-shimmer
+            "></div>
+          </div>
         </div>
+
+        {/* Progress percentage and status */}
+        <div className="mt-3 flex items-center justify-between">
+          <span className="text-xs text-blue-100 font-medium">
+            Installing silently...
+          </span>
+          <span className="text-sm font-semibold tabular-nums">
+            {downloadProgress}%
+          </span>
+        </div>
+
+        {/* Dismissal hint */}
+        <p className="text-[10px] text-blue-200/70 mt-2 text-center leading-relaxed">
+          You can close this card. Update continues in background.
+        </p>
       </div>
     );
   }
 
+  // No UI when not downloading or dismissed
   return null;
 };
+
+// Add this to your global CSS or Tailwind config for the shimmer animation
+// If using Tailwind, add to tailwind.config.js:
+/*
+module.exports = {
+  theme: {
+    extend: {
+      keyframes: {
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
+      },
+      animation: {
+        shimmer: 'shimmer 2s infinite',
+      },
+    },
+  },
+}
+*/

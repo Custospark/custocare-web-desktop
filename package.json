@@ -8,20 +8,17 @@
   "main": "dist/desktop/main/main.js",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "types": [
-      "vite/client",
-      "node"
-    ]
+    "types": ["vite/client", "node"]
   },
   "scripts": {
+    "clean": "rimraf dist",
     "dev": "npm-run-all --parallel dev:react dev:electron",
     "dev:react": "vite",
-    "clean": "rimraf dist",
     "dev:electron": "npm run transpile:electron && cross-env NODE_ENV=development electron .",
-    "react:build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "transpile:electron": "npm run clean && tsc --project src/tsconfig.json",
+    "react:build": "tsc -b && vite build",
     "build:mac": "npm run transpile:electron && npm run react:build && npx electron-builder --mac --arm64",
     "build:win": "npm run transpile:electron && npm run react:build && npx electron-builder --win --x64",
     "build:linux": "npm run transpile:electron && npm run react:build && npx electron-builder --linux --x64",
@@ -79,11 +76,7 @@
       "output": "dist/releases/",
       "buildResources": "assets"
     },
-    "files": [
-      "dist/desktop/**/*",
-      "dist/web/**/*",
-      "package.json"
-    ],
+    "files": ["dist/desktop/**/*", "dist/web/**/*", "package.json"],
     "extraFiles": [
       {
         "from": "dist/desktop/preload/preload.js",
@@ -93,26 +86,41 @@
     "asar": true,
     "win": {
       "target": [
-        "nsis",
-        "zip"
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
       ],
-      "icon": "public/assets/icon.png"
+      "icon": "public/assets/icon.png",
+      "requestedExecutionLevel": "requireAdministrator",
+      "certificateSubjectName": "Custospark Company Ltd"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": true,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "public/assets/icon.png",
+      "uninstallerIcon": "public/assets/icon.png",
+      "installerHeaderIcon": "public/assets/icon.png",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "mac": {
       "target": "dmg",
-      "icon": "public/assets/icon.nng"
+      "icon": "public/assets/icon.png",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "icon": "public/assets/icon.png"
+      "target": ["AppImage", "deb"],
+      "icon": "public/assets/icon.png",
+      "category": "Office"
     },
     "extraMetadata": {
       "main": "dist/desktop/main/main.js"
@@ -121,7 +129,8 @@
       {
         "provider": "github",
         "owner": "Custospark",
-        "repo": "custocare-web-desktop"
+        "repo": "custocare-web-desktop",
+        "releaseType": "release"
       }
     ]
   }
