@@ -82,7 +82,7 @@ export const UpdateNotification = () => {
         case 'checking-for-update':
           // Silent check - no toast notification
           // Uncomment below to show checking notification
-          showToast('info', 'Checking for updates...', 2000);
+          showToast('info', 'Checking for updates...', 6000);
           break;
 
         case 'update-available':
@@ -90,7 +90,7 @@ export const UpdateNotification = () => {
           showToast(
             'info',
             `Syncing updates for v${info.data.version} in background...`,
-            5000
+            6000
           );
           setIsDownloading(true);
           setIsVisible(true); // Show progress card
@@ -103,7 +103,7 @@ export const UpdateNotification = () => {
              showToast(
             'success',
             `You are runing the lastest version of Custocare AI.`,
-            5000
+            6000
           );
           console.log('[UpdateNotification] App is up to date');
           break;

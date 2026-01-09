@@ -5,7 +5,7 @@
 
 // App Metadata
 export const APP_CONFIG = {
-  name: 'CustoCare AI',
+  name: 'Custocare AI',
   version: '1.0.0',
   description: 'Healthcare Intelligence Platform',
   baseUrl: process.env.REACT_APP_BASE_URL || 'http://localhost:3000',

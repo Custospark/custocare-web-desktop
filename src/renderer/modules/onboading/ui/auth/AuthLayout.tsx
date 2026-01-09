@@ -127,7 +127,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
                 <Activity className="w-7 h-7 text-white" strokeWidth={2.5} />
               </motion.div>
               <div>
-                <h1 className="text-xl font-bold tracking-tight">CustoCare AI</h1>
+                <h1 className="text-xl font-bold tracking-tight">Custocare AI</h1>
                 <p className="text-xs text-cyan-100/90 font-medium">Medical Decision Support</p>
               </div>
             </Link>
