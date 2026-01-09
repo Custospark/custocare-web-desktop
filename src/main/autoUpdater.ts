@@ -1,7 +1,8 @@
 // src/desktop/main/autoUpdater.ts
-import { autoUpdater } from 'electron-updater';
+import autoUpdaterPkg from "electron-updater";
 import { BrowserWindow, dialog, app } from 'electron';
 import log from 'electron-log';
+const { autoUpdater } = autoUpdaterPkg;
 
 /**
  * Configure electron-log for auto-updater

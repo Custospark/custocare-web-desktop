@@ -16,11 +16,12 @@
   "scripts": {
     "dev": "npm-run-all --parallel dev:react dev:electron",
     "dev:react": "vite",
+    "clean": "rimraf dist",
     "dev:electron": "npm run transpile:electron && cross-env NODE_ENV=development electron .",
     "react:build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "transpile:electron": "tsc --project src/tsconfig.json",
+    "transpile:electron": "npm run clean && tsc --project src/tsconfig.json",
     "build:mac": "npm run transpile:electron && npm run react:build && npx electron-builder --mac --arm64",
     "build:win": "npm run transpile:electron && npm run react:build && npx electron-builder --win --x64",
     "build:linux": "npm run transpile:electron && npm run react:build && npx electron-builder --linux --x64",
@@ -66,6 +67,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "rimraf": "^6.1.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"
@@ -115,6 +117,13 @@
     "extraMetadata": {
       "main": "dist/desktop/main/main.js"
     },
-    "publish": null
+   "publish": [
+  {
+    "provider": "github",
+    "owner": "Custospark",
+    "repo": "custocare-web-desktop"
+  }
+]
+
   }
 }

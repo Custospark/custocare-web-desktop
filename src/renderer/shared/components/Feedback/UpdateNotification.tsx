@@ -45,7 +45,7 @@ export const UpdateNotification = () => {
 
         case 'update-not-available':
           // Optionally show this only on manual check
-          // showToast('info', 'You are running the latest version.', 3000);
+          showToast('info', 'You are running the latest version.', 3000);
           break;
 
         case 'download-progress':
@@ -66,6 +66,8 @@ export const UpdateNotification = () => {
         case 'update-error':
           setIsDownloading(false);
           setDownloadProgress(0);
+            console.error('Updater encountered an error:', info.data.error, info.data);
+
           showToast('error', `Update error: ${info.data.error}`, 5000);
           break;
       }

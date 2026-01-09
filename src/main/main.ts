@@ -1,8 +1,8 @@
 // electron/main.ts
-import { app, BrowserWindow, Menu, ipcMain } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, session } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { initAutoUpdater, checkForUpdates } from './autoUpdater';
+import { initAutoUpdater, checkForUpdates } from './autoUpdater.js';
 
 /**
  * ESM compatibility: Convert import.meta.url to __dirname equivalent
@@ -14,6 +14,12 @@ const __dirname = path.dirname(__filename);
  * Environment detection
  */
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+
+/**
+ * DevTools configuration options
+ */
+const ENABLE_DEVTOOLS_IN_PRODUCTION = true; // Set to true to enable DevTools in production
+const OPEN_DEVTOOLS_ON_START = false; // Set to true to auto-open DevTools on app start
 
 /**
  * Store reference to main window
@@ -35,7 +41,7 @@ function createWindow(): BrowserWindow {
       nodeIntegration: true,
       contextIsolation: false,
       webSecurity: !isDev,
-      devTools: isDev,
+      devTools: isDev || ENABLE_DEVTOOLS_IN_PRODUCTION, // Enable DevTools based on config
     },
     icon: path.join(__dirname, 'assets/icon.png'),
     show: false,
@@ -80,6 +86,42 @@ function createWindow(): BrowserWindow {
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
     mainWindow?.focus();
+    
+    // Open DevTools on start if configured
+    if (OPEN_DEVTOOLS_ON_START && (isDev || ENABLE_DEVTOOLS_IN_PRODUCTION)) {
+      mainWindow?.webContents.openDevTools();
+    }
+  });
+
+  /**
+   * Setup keyboard shortcuts for DevTools in production
+   */
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (ENABLE_DEVTOOLS_IN_PRODUCTION && !isDev) {
+      // F12 to toggle DevTools
+      if (input.key === 'F12') {
+        event.preventDefault();
+        if (mainWindow) {
+          if (mainWindow.webContents.isDevToolsOpened()) {
+            mainWindow.webContents.closeDevTools();
+          } else {
+            mainWindow.webContents.openDevTools();
+          }
+        }
+      }
+      
+      // Ctrl+Shift+I alternative shortcut
+      if (input.key === 'I' && input.control && input.shift) {
+        event.preventDefault();
+        if (mainWindow) {
+          if (mainWindow.webContents.isDevToolsOpened()) {
+            mainWindow.webContents.closeDevTools();
+          } else {
+            mainWindow.webContents.openDevTools();
+          }
+        }
+      }
+    }
   });
 
   /**
@@ -118,10 +160,47 @@ ipcMain.handle('is-fullscreen', () => {
   return mainWindow?.isFullScreen() || false;
 });
 
+// Toggle DevTools (can be called from renderer)
+ipcMain.on('toggle-devtools', () => {
+  if (mainWindow && (isDev || ENABLE_DEVTOOLS_IN_PRODUCTION)) {
+    if (mainWindow.webContents.isDevToolsOpened()) {
+      mainWindow.webContents.closeDevTools();
+    } else {
+      mainWindow.webContents.openDevTools();
+    }
+  }
+});
+
+// Open DevTools
+ipcMain.on('open-devtools', () => {
+  if (mainWindow && (isDev || ENABLE_DEVTOOLS_IN_PRODUCTION)) {
+    mainWindow.webContents.openDevTools();
+  }
+});
+
+// Close DevTools
+ipcMain.on('close-devtools', () => {
+  if (mainWindow) {
+    mainWindow.webContents.closeDevTools();
+  }
+});
+
+// Check if DevTools are open
+ipcMain.handle('is-devtools-open', () => {
+  return mainWindow?.webContents.isDevToolsOpened() || false;
+});
+
 /**
  * Application initialization
  */
 app.whenReady().then(() => {
+  // Enable extensions in production if DevTools are enabled
+  if (ENABLE_DEVTOOLS_IN_PRODUCTION && !isDev) {
+    session.defaultSession.loadExtension(
+      path.join(__dirname, 'devtools-extension') // Optional: Add your extensions path
+    ).catch(err => console.log('Extension loading skipped:', err.message));
+  }
+  
   createWindow();
 
   app.on('activate', () => {
