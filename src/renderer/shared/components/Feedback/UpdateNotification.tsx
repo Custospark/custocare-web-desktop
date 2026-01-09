@@ -89,7 +89,7 @@ export const UpdateNotification = () => {
           // Notify user that update is downloading in background
           showToast(
             'info',
-            `Downloading update ${info.data.version} in background...`,
+            `Syncing updates for v${info.data.version} in background...`,
             5000
           );
           setIsDownloading(true);
