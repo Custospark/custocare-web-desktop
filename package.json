@@ -1,7 +1,7 @@
 {
   "name": "custocare-ai",
   "private": false,
-  "version": "2.1.5",
+  "version": "2.1.6",
   "description": "Custocare AI Desktop and Web App",
   "author": "Custospark Company Ltd info@custospark.com",
   "type": "module",
@@ -98,7 +98,7 @@
       "icon": "public/assets/icon.png",
       "requestedExecutionLevel": "asInvoker"
     },
-  "nsis": {
+    "nsis": {
       "oneClick": true,
       "perMachine": false,
       "allowElevation": false,
@@ -106,7 +106,6 @@
       "createStartMenuShortcut": true,
       "runAfterFinish": true,
       "allowToChangeInstallationDirectory": false
-
     },
     "mac": {
       "target": "dmg",
