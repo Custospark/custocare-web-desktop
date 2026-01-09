@@ -886,7 +886,7 @@ export const Dashboard: React.FC = () => {
         Wraps dashboard content with filtering and view controls
       */}
       <ContentSection
-        title="Healthcare Dashboard(Update Reflected)"
+        title="Healthcare Dashboard-Overview"
         subtitle="Live Overview"
         description="Real-time analytics and insights for your healthcare practice. Monitor patient flow, satisfaction scores, and AI-powered diagnostics."
         theme={theme}
