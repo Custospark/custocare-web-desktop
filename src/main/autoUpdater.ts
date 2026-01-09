@@ -63,7 +63,7 @@ export function initAutoUpdater(mainWindow: BrowserWindow): void {
   autoUpdater.on('checking-for-update', () => {
     log.info('[Auto-Updater] Checking for updates in background...');
     sendStatusToWindow(mainWindow, 'checking-for-update', { 
-      message: 'Checking for updates...' 
+    message: 'Looking for the latest version...'
     });
   });
 
@@ -79,7 +79,7 @@ export function initAutoUpdater(mainWindow: BrowserWindow): void {
 
     // Send notification to renderer for optional toast display
     sendStatusToWindow(mainWindow, 'update-available', {
-      message: `Downloading latest version ${info.version} in background...`,
+      message: `A new version of Custocare AI (${info.version}) is available.`,
       version: info.version,
       releaseNotes: info.releaseNotes,
       releaseDate: info.releaseDate,
@@ -98,7 +98,7 @@ export function initAutoUpdater(mainWindow: BrowserWindow): void {
     
     // Only send to renderer, don't show notification
     sendStatusToWindow(mainWindow, 'update-not-available', {
-      message: 'You are running the latest version.',
+      message: 'You’re on the latest version of Custocare AI. ✅',
       version: info.version,
     });
   });
@@ -146,7 +146,7 @@ export function initAutoUpdater(mainWindow: BrowserWindow): void {
 
     // Send notification to renderer for toast display
     sendStatusToWindow(mainWindow, 'update-downloaded', {
-      message: `Version ${info.version} has been installed and will be applied on next restart.`,
+      message: `Version ${info.version} is ready and will take effect on next restart.`,
       version: info.version,
       releaseNotes: info.releaseNotes,
     });
@@ -154,7 +154,7 @@ export function initAutoUpdater(mainWindow: BrowserWindow): void {
     // Show native system notification (non-intrusive)
     showNativeNotification(
       'Update Ready',
-      `CustoCare AI v${info.version} has been installed. The update will be applied when you restart the app.`
+      `Version ${info.version} is ready and will take effect on next restart.`
     );
 
     // Update will be applied automatically on next app quit/restart
@@ -173,7 +173,7 @@ export function initAutoUpdater(mainWindow: BrowserWindow): void {
 
     // Send error to renderer
     sendStatusToWindow(mainWindow, 'update-error', {
-      message: 'Failed to download update. Will retry later.',
+      message: 'Update could not be applied. We’ll try again shortly.',
       error: error.message,
     });
 

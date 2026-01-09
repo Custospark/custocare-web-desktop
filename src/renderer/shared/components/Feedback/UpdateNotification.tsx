@@ -1,7 +1,7 @@
 // src/components/UpdateNotification.tsx
 import { useEffect, useState } from 'react';
 import { type IpcRendererEvent } from 'electron';
-import { X, Download } from 'lucide-react';
+import { X, RefreshCw  } from 'lucide-react';
 import { useToast } from '../../../app/store/contexts/toast/useToast';
 
 /**
@@ -40,9 +40,9 @@ export const UpdateNotification = () => {
   // Download progress state
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadSpeed, setDownloadSpeed] = useState<number>(0);
-  const [downloadedMB, setDownloadedMB] = useState<number>(0);
-  const [totalMB, setTotalMB] = useState<number>(0);
+  // const [downloadSpeed, setDownloadSpeed] = useState<number>(0);
+  // const [downloadedMB, setDownloadedMB] = useState<number>(0);
+  // const [totalMB, setTotalMB] = useState<number>(0);
   
   // UI visibility state
   const [isVisible, setIsVisible] = useState(true);
@@ -112,9 +112,9 @@ export const UpdateNotification = () => {
           // Update progress indicator state
           setIsDownloading(true);
           setDownloadProgress(Math.round(info.data.percent || 0));
-          setDownloadSpeed(info.data.speedMBps || 0);
-          setDownloadedMB(info.data.downloadedMB || 0);
-          setTotalMB(info.data.totalMB || 0);
+          // setDownloadSpeed(info.data.speedMBps || 0);
+          // setDownloadedMB(info.data.downloadedMB || 0);
+          // setTotalMB(info.data.totalMB || 0);
           break;
 
         case 'update-downloaded':
@@ -169,112 +169,87 @@ export const UpdateNotification = () => {
    * Only shown during active download and when visible
    * Positioned at bottom-right corner (non-intrusive)
    */
-  if (isDownloading && downloadProgress > 0 && isVisible) {
-    return (
-      <div 
-        className={`
-          fixed bottom-4 right-4 
-          bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 
-          text-white px-5 py-4 rounded-2xl 
-          shadow-2xl z-50 min-w-[340px] max-w-[380px]
-          backdrop-blur-sm
-          transition-all duration-300 ease-out
-          ${isAnimatingOut ? 'opacity-0 translate-x-8 scale-95' : 'opacity-100 translate-x-0 scale-100'}
-        `}
-        role="status"
-        aria-live="polite"
-        aria-label={`Downloading update: ${downloadProgress}% complete`}
+if (!isDownloading || downloadProgress <= 0 || !isVisible) return null;
+
+return (
+  <div
+    className={`
+      fixed bottom-4 right-4 z-50
+      min-w-[340px] max-w-[380px]
+      px-5 py-4 rounded-2xl
+      text-white
+      bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700
+      shadow-2xl backdrop-blur-sm
+      transition-all duration-300 ease-out
+      ${
+        isAnimatingOut
+          ? 'opacity-0 translate-x-8 scale-95'
+          : 'opacity-100 translate-x-0 scale-100'
+      }
+    `}
+    role="status"
+    aria-live="polite"
+    aria-label={`Keeping Custocare AI up to date: ${downloadProgress}% complete`}
+  >
+    {/* Close */}
+    <button
+      onClick={handleDismiss}
+      aria-label="Hide update progress"
+      title="Hide (update continues in background)"
+      className="
+        absolute top-3 right-3
+        p-1 rounded-lg
+        transition-all duration-200
+        hover:bg-white/20 active:bg-white/30
+        focus:outline-none focus:ring-2 focus:ring-white/50
+        group
+      "
+    >
+      <X
+        className="w-4 h-4 text-white/80 group-hover:text-white transition-colors"
+        strokeWidth={2.5}
+      />
+    </button>
+
+    {/* Header */}
+    <div className="flex items-start gap-3 mb-3 pr-6">
+      <RefreshCw
+        className="mt-0.5 w-5 h-5 text-white animate-refresh-pulse shrink-0"
+        strokeWidth={2}
+      />
+
+      <p className="font-semibold text-base leading-tight">
+        Keeping Custocare AI up to date…
+      </p>
+    </div>
+
+    {/* Progress bar */}
+    <div className="w-full h-2 rounded-full bg-blue-400/30 overflow-hidden shadow-inner">
+      <div
+        className="
+          relative h-full rounded-full
+          bg-gradient-to-r from-white via-blue-50 to-white
+          transition-all duration-500 ease-out
+          shadow-lg overflow-hidden
+        "
+        style={{ width: `${downloadProgress}%` }}
+        role="progressbar"
+        aria-valuenow={downloadProgress}
+        aria-valuemin={0}
+        aria-valuemax={100}
       >
-        {/* Close button */}
-        <button
-          onClick={handleDismiss}
+        <div
           className="
-            absolute top-3 right-3
-            p-1 rounded-lg
-            hover:bg-white/20 active:bg-white/30
-            transition-all duration-200
-            focus:outline-none focus:ring-2 focus:ring-white/50
-            group
+            absolute inset-0
+            bg-gradient-to-r from-transparent via-white/40 to-transparent
+            animate-shimmer
           "
-          aria-label="Hide update progress"
-          title="Hide (download continues in background)"
-        >
-          <X 
-            className="w-4 h-4 text-white/80 group-hover:text-white transition-colors" 
-            strokeWidth={2.5}
-          />
-        </button>
-
-        {/* Header with icon and title */}
-        <div className="flex items-start gap-3 mb-3 pr-6">
-          <div className="mt-0.5 flex-shrink-0">
-            <Download 
-              className="w-5 h-5 text-white animate-bounce" 
-              strokeWidth={2.5}
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-base leading-tight">
-              Running Background Update
-            </p>
-            <p className="text-xs text-blue-100 mt-1.5 leading-relaxed">
-              {downloadedMB.toFixed(1)} MB / {totalMB.toFixed(1)} MB
-              {downloadSpeed > 0 && (
-                <span className="inline-flex items-center ml-1.5">
-                  <span className="inline-block w-1 h-1 rounded-full bg-blue-200 mx-1.5"></span>
-                  {downloadSpeed.toFixed(1)} MB/s
-                </span>
-              )}
-            </p>
-          </div>
-        </div>
-
-        {/* Progress bar */}
-        <div className="w-full bg-blue-400/30 rounded-full h-2 overflow-hidden shadow-inner">
-          <div
-            className="
-              bg-gradient-to-r from-white via-blue-50 to-white
-              h-2 rounded-full 
-              transition-all duration-500 ease-out 
-              shadow-lg
-              relative
-              overflow-hidden
-            "
-            style={{ width: `${downloadProgress}%` }}
-            role="progressbar"
-            aria-valuenow={downloadProgress}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            {/* Animated shimmer effect */}
-            <div className="
-              absolute inset-0 
-              bg-gradient-to-r from-transparent via-white/40 to-transparent
-              animate-shimmer
-            "></div>
-          </div>
-        </div>
-
-        {/* Progress percentage and status */}
-        <div className="mt-3 flex items-center justify-between">
-          <span className="text-xs text-blue-100 font-medium">
-            Installing silently...
-          </span>
-          <span className="text-sm font-semibold tabular-nums">
-            {downloadProgress}%
-          </span>
-        </div>
-
-        {/* Dismissal hint */}
-        <p className="text-[10px] text-blue-200/70 mt-2 text-center leading-relaxed">
-          You can close this card. Update continues in background.
-        </p>
+        />
       </div>
-    );
-  }
+    </div>
+  </div>
+);
 
-  // No UI when not downloading or dismissed
-  return null;
 };
 
 // Add this to your global CSS or Tailwind config for the shimmer animation

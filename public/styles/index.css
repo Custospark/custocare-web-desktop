@@ -312,3 +312,16 @@
 .animate-shimmer {
   animation: shimmer 2s infinite;
 }
+
+@keyframes refresh-pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-refresh-pulse {
+  animation: refresh-pulse 2.2s ease-in-out infinite;
+}
