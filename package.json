@@ -1,7 +1,7 @@
 {
   "name": "custocare-ai",
   "private": true,
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Custocare AI Desktop and Web App",
   "author": "Custospark Company Ltd info@custospark.com",
   "type": "module",
@@ -117,13 +117,12 @@
     "extraMetadata": {
       "main": "dist/desktop/main/main.js"
     },
-   "publish": [
-  {
-    "provider": "github",
-    "owner": "Custospark",
-    "repo": "custocare-web-desktop"
-  }
-]
-
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Custospark",
+        "repo": "custocare-web-desktop"
+      }
+    ]
   }
 }
