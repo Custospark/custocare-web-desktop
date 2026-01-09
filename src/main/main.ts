@@ -2,26 +2,16 @@
 import { app, BrowserWindow, Menu, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { initAutoUpdater } from './autoUpdater.js';
+import { initAutoUpdater, installUpdateOnQuitIfReady } from './autoUpdater.js';
 
-/**
- * ESM __dirname compatibility
- */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/**
- * Environment detection
- */
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
-/**
- * Keep a global reference to prevent GC
- */
 let mainWindow: BrowserWindow | null = null;
 
 function getProdIndexPath(): string {
-  // app.getAppPath() points to the app root inside asar/unpacked context
   return path.join(app.getAppPath(), 'dist', 'web', 'index.html');
 }
 
@@ -38,14 +28,9 @@ function createWindow(): BrowserWindow {
     fullscreenable: true,
     icon: path.join(__dirname, 'assets/icon.png'),
     webPreferences: {
-      // Keep as your project expects (renderer likely uses Node APIs).
       nodeIntegration: true,
       contextIsolation: false,
-
-      // Security: keep enabled in production
       webSecurity: !isDev,
-
-      // DevTools ONLY in dev
       devTools: isDev
     }
   });
@@ -62,7 +47,6 @@ function createWindow(): BrowserWindow {
       const message = err instanceof Error ? err.message : String(err);
       console.error('Failed to load production index.html:', message);
 
-      // Fail-safe UI (no devtools in prod, but we can show the error)
       void mainWindow?.loadURL(`data:text/html;charset=utf-8,
         <html>
           <head><meta charset="utf-8" /></head>
@@ -85,7 +69,7 @@ function createWindow(): BrowserWindow {
     mainWindow = null;
   });
 
-  // Auto-updater only in production
+  // IMPORTANT: init updater only in production
   if (!isDev) {
     initAutoUpdater(mainWindow);
   }
@@ -101,22 +85,15 @@ ipcMain.on('toggle-fullscreen', () => {
   mainWindow.setFullScreen(!mainWindow.isFullScreen());
 });
 
-ipcMain.handle('is-fullscreen', () => {
-  return mainWindow?.isFullScreen() ?? false;
-});
+ipcMain.handle('is-fullscreen', () => mainWindow?.isFullScreen() ?? false);
 
 /**
  * IPC: DevTools controls (DEV ONLY)
- * In production these are strict no-ops / false.
  */
 ipcMain.on('toggle-devtools', () => {
   if (!isDev || !mainWindow) return;
-
-  if (mainWindow.webContents.isDevToolsOpened()) {
-    mainWindow.webContents.closeDevTools();
-  } else {
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
-  }
+  if (mainWindow.webContents.isDevToolsOpened()) mainWindow.webContents.closeDevTools();
+  else mainWindow.webContents.openDevTools({ mode: 'detach' });
 });
 
 ipcMain.on('open-devtools', () => {
@@ -143,6 +120,22 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+});
+
+/**
+ * The critical part:
+ * When the user quits the app, if an update was downloaded,
+ * run the installer silently so the next launch is updated.
+ */
+app.on('before-quit', (event) => {
+  if (isDev) return;
+
+  // If updater has a ready update, this will call quitAndInstall and return true.
+  // If it returns true, we prevent the default quit once and let quitAndInstall handle it.
+  const willInstall = installUpdateOnQuitIfReady();
+  if (willInstall) {
+    event.preventDefault();
+  }
 });
 
 app.on('window-all-closed', () => {

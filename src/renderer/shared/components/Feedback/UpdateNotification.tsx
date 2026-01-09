@@ -1,14 +1,32 @@
 // src/components/UpdateNotification.tsx
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { type IpcRendererEvent } from 'electron';
-import { X, RefreshCw  } from 'lucide-react';
+import { X, RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useToast } from '../../../app/store/contexts/toast/useToast';
 
-/**
- * Update information structure received from main process
- */
+interface IpcRenderer {
+  on: (channel: string, listener: (event: IpcRendererEvent, info: UpdateInfo) => void) => void;
+  removeListener: (channel: string, listener: (event: IpcRendererEvent, info: UpdateInfo) => void) => void;
+}
+
+interface ElectronModule {
+  ipcRenderer: IpcRenderer;
+}
+
+interface ElectronWindow extends Window {
+  require: (module: string) => ElectronModule;
+}
+
+type UpdaterEvent =
+  | 'checking-for-update'
+  | 'update-available'
+  | 'update-not-available'
+  | 'download-progress'
+  | 'update-downloaded'
+  | 'update-error';
+
 interface UpdateInfo {
-  event: string;
+  event: UpdaterEvent | string;
   data: {
     message?: string;
     version?: string;
@@ -20,254 +38,255 @@ interface UpdateInfo {
   };
 }
 
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function formatMb(n?: number) {
+  if (typeof n !== 'number' || Number.isNaN(n)) return '';
+  return `${n.toFixed(1)} MB`;
+}
+
+function formatSpeed(n?: number) {
+  if (typeof n !== 'number' || Number.isNaN(n)) return '';
+  return `${n.toFixed(1)} MB/s`;
+}
+
 /**
- * UpdateNotification Component
- * 
- * Displays non-intrusive, dismissible toast notifications and progress indicators
- * for silent background updates.
- * 
- * Features:
- * - Dismissible download progress indicator with smooth animations
- * - User can hide progress card while download continues in background
- * - Toast notifications for update availability and completion
- * - No user interruption during download/installation
- * - Professional UI with accessibility support
- * - Auto-dismisses on completion
+ * UpdateNotification
+ *
+ * Industry-style UX goals:
+ * - Quiet by default (no “you’re up to date” spam)
+ * - Clear, honest messaging: downloaded ≠ installed; it will be applied on exit/restart
+ * - Minimal distraction: small progress card only while downloading
+ * - Dismiss hides UI but does not stop downloads
+ * - Accessibility: aria-live + progressbar semantics
  */
 export const UpdateNotification = () => {
   const { showToast } = useToast();
-  
-  // Download progress state
-  const [downloadProgress, setDownloadProgress] = useState<number>(0);
-  const [isDownloading, setIsDownloading] = useState(false);
-  // const [downloadSpeed, setDownloadSpeed] = useState<number>(0);
-  // const [downloadedMB, setDownloadedMB] = useState<number>(0);
-  // const [totalMB, setTotalMB] = useState<number>(0);
-  
-  // UI visibility state
-  const [isVisible, setIsVisible] = useState(true);
-  const [isAnimatingOut, setIsAnimatingOut] = useState(false);
 
-  /**
-   * Handle dismiss button click
-   * Smoothly animates the card out before hiding
-   * Download continues in background
-   */
-  const handleDismiss = () => {
-    setIsAnimatingOut(true);
-    
-    // Wait for animation to complete before hiding
-    setTimeout(() => {
-      setIsVisible(false);
-      setIsAnimatingOut(false);
-    }, 300); // Match animation duration
+  const [visible, setVisible] = useState(true);
+  const [animOut, setAnimOut] = useState(false);
+
+  const [stage, setStage] = useState<
+    'idle' | 'checking' | 'downloading' | 'ready' | 'error'
+  >('idle');
+
+  const [version, setVersion] = useState<string | undefined>(undefined);
+  const [progress, setProgress] = useState<number>(0);
+  const [speed, setSpeed] = useState<number | undefined>(undefined);
+  const [downloadedMB, setDownloadedMB] = useState<number | undefined>(undefined);
+  const [totalMB, setTotalMB] = useState<number | undefined>(undefined);
+
+  // Avoid repeating toasts for the same lifecycle step
+  const lastToastKeyRef = useRef<string>('');
+
+  const dismiss = () => {
+    setAnimOut(true);
+    window.setTimeout(() => {
+      setVisible(false);
+      setAnimOut(false);
+    }, 220);
   };
 
-  useEffect(() => {
-    // Check if we're in Electron environment
-    if (typeof window === 'undefined' || !window.require) {
-      return;
-    }
-
-    const { ipcRenderer } = window.require('electron');
-
-    /**
-     * Handle updater messages from main process
-     * Displays appropriate notifications based on update lifecycle
-     */
-    const handleUpdaterMessage = (_event: IpcRendererEvent, info: UpdateInfo) => {
-      console.log('[UpdateNotification] Received updater message:', info);
-
-      switch (info.event) {
-        case 'checking-for-update':
-          // Silent check - no toast notification
-          // Uncomment below to show checking notification
-          showToast('info', 'Checking for updates...', 6000);
-          break;
-
-        case 'update-available':
-          // Notify user that update is downloading in background
-          showToast(
-            'info',
-            `Syncing updates for v${info.data.version} in background...`,
-            6000
-          );
-          setIsDownloading(true);
-          setIsVisible(true); // Show progress card
-          setIsAnimatingOut(false);
-          break;
-
-        case 'update-not-available':
-          // Silent - no notification needed for up-to-date status
-          // Only log to console for debugging
-             showToast(
-            'success',
-            `You are runing the lastest version of Custocare AI.`,
-            6000
-          );
-          console.log('[UpdateNotification] App is up to date');
-          break;
-
-        case 'download-progress':
-          // Update progress indicator state
-          setIsDownloading(true);
-          setDownloadProgress(Math.round(info.data.percent || 0));
-          // setDownloadSpeed(info.data.speedMBps || 0);
-          // setDownloadedMB(info.data.downloadedMB || 0);
-          // setTotalMB(info.data.totalMB || 0);
-          break;
-
-        case 'update-downloaded':
-          // Update installed successfully - notify user
-          setIsDownloading(false);
-          setDownloadProgress(0);
-          
-          // Auto-hide progress card
-          handleDismiss();
-          
-          showToast(
-            'success',
-            `✅ Update ${info.data.version} installed! Changes will apply on next restart.`,
-            8000 // Longer duration for important message
-          );
-          break;
-
-        case 'update-error':
-          // Update failed - show error but don't interrupt workflow
-          setIsDownloading(false);
-          setDownloadProgress(0);
-          
-          // Auto-hide progress card
-          handleDismiss();
-          
-          console.error('[UpdateNotification] Update error:', info.data.error);
-          
-          showToast(
-            'error',
-            'Update download failed. Will retry automatically.',
-            5000
-          );
-          break;
-
-        default:
-          console.warn('[UpdateNotification] Unknown updater event:', info.event);
-      }
-    };
-
-    // Register IPC listener
-    ipcRenderer.on('updater-message', handleUpdaterMessage);
-
-    // Cleanup listener on component unmount
-    return () => {
-      ipcRenderer.removeListener('updater-message', handleUpdaterMessage);
-    };
+  const showOnceToast = useCallback((key: string, type: 'info' | 'success' | 'error', msg: string, ms = 6000) => {
+    if (lastToastKeyRef.current === key) return;
+    lastToastKeyRef.current = key;
+    showToast(type, msg, ms);
   }, [showToast]);
 
+  const isElectron = useMemo(() => {
+    return typeof window !== 'undefined' && typeof (window as ElectronWindow).require === 'function';
+  }, []);
 
-  /**
-   * Render download progress indicator
-   * Only shown during active download and when visible
-   * Positioned at bottom-right corner (non-intrusive)
-   */
-if (!isDownloading || downloadProgress <= 0 || !isVisible) return null;
+  useEffect(() => {
+    if (!isElectron) return;
 
-return (
-  <div
-    className={`
-      fixed bottom-4 right-4 z-50
-      min-w-[340px] max-w-[380px]
-      px-5 py-4 rounded-2xl
-      text-white
-      bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700
-      shadow-2xl backdrop-blur-sm
-      transition-all duration-300 ease-out
-      ${
-        isAnimatingOut
-          ? 'opacity-0 translate-x-8 scale-95'
-          : 'opacity-100 translate-x-0 scale-100'
+    const { ipcRenderer } = (window as ElectronWindow).require('electron') as ElectronModule;
+
+    const onUpdaterMessage = (_event: IpcRendererEvent, info: UpdateInfo) => {
+      const evt = info?.event;
+      const data = info?.data ?? {};
+
+      switch (evt) {
+        case 'checking-for-update': {
+          // Quiet, no toast. (Professional apps usually don’t announce this.)
+          setStage('checking');
+          return;
+        }
+
+        case 'update-available': {
+          setStage('downloading');
+          setVisible(true);
+          setAnimOut(false);
+          setVersion(data.version);
+
+          // One friendly toast only
+          showOnceToast(
+            `available:${data.version ?? ''}`,
+            'info',
+            data.version
+              ? `An update (v${data.version}) is downloading in the background.`
+              : 'An update is downloading in the background.',
+            6500
+          );
+          return;
+        }
+
+        case 'download-progress': {
+          // Keep the progress card visible while downloading
+          setStage('downloading');
+          setVisible(true);
+
+          const p = clamp(Math.round(data.percent ?? 0), 0, 100);
+          setProgress(p);
+
+          setSpeed(typeof data.speedMBps === 'number' ? data.speedMBps : undefined);
+          setDownloadedMB(typeof data.downloadedMB === 'number' ? data.downloadedMB : undefined);
+          setTotalMB(typeof data.totalMB === 'number' ? data.totalMB : undefined);
+
+          return;
+        }
+
+        case 'update-downloaded': {
+          // IMPORTANT: downloaded != installed. It will be applied on exit/restart.
+          setStage('ready');
+          setProgress(100);
+          setVersion(data.version);
+
+          // Hide the progress card shortly after completion for a polished feel
+          window.setTimeout(() => dismiss(), 900);
+
+          showOnceToast(
+            `ready:${data.version ?? ''}`,
+            'success',
+            data.version
+              ? `Update v${data.version} is ready. It will be installed when you exit the app.`
+              : 'Update is ready. It will be installed when you exit the app.',
+            9000
+          );
+          return;
+        }
+
+        case 'update-error': {
+          setStage('error');
+          setProgress(0);
+
+          // Hide progress UI (download is not continuing)
+          dismiss();
+
+          showOnceToast(
+            `error:${data.error ?? ''}`,
+            'error',
+            'Update failed. We’ll retry automatically in the background.',
+            7000
+          );
+          return;
+        }
+
+        case 'update-not-available': {
+          // Quiet: professional apps usually don’t toast “up to date”
+          setStage('idle');
+          return;
+        }
+
+        default: {
+          // Unknown events are ignored (prevents noisy UX)
+          return;
+        }
       }
-    `}
-    role="status"
-    aria-live="polite"
-    aria-label={`Keeping Custocare AI up to date: ${downloadProgress}% complete`}
-  >
-    {/* Close */}
-    <button
-      onClick={handleDismiss}
-      aria-label="Hide update progress"
-      title="Hide (update continues in background)"
-      className="
-        absolute top-3 right-3
-        p-1 rounded-lg
-        transition-all duration-200
-        hover:bg-white/20 active:bg-white/30
-        focus:outline-none focus:ring-2 focus:ring-white/50
-        group
-      "
+    };
+
+    ipcRenderer.on('updater-message', onUpdaterMessage);
+    return () => {
+      ipcRenderer.removeListener('updater-message', onUpdaterMessage);
+    };
+  }, [isElectron, showOnceToast]);
+
+  // Only show the card while downloading, ready, or error, and user hasn't dismissed it
+  const shouldShowCard = visible && (stage === 'downloading' || stage === 'ready' || stage === 'error');
+  if (!shouldShowCard) return null;
+
+  const subtitle = (() => {
+    const parts: string[] = [];
+    if (typeof downloadedMB === 'number' && typeof totalMB === 'number') {
+      parts.push(`${formatMb(downloadedMB)} of ${formatMb(totalMB)}`);
+    }
+    if (typeof speed === 'number') {
+      parts.push(formatSpeed(speed));
+    }
+    return parts.length ? parts.join(' • ') : 'Downloading update…';
+  })();
+
+  const ariaLabel = version
+    ? `Downloading update version ${version}: ${progress}%`
+    : `Downloading update: ${progress}%`;
+
+  return (
+    <div
+      className={[
+        'fixed bottom-4 right-4 z-50',
+        'min-w-[340px] max-w-[400px]',
+        'px-5 py-4 rounded-2xl',
+        'text-white',
+        'bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800',
+        'border border-white/10',
+        'shadow-2xl backdrop-blur-sm',
+        'transition-all duration-200 ease-out',
+        animOut ? 'opacity-0 translate-y-2 scale-[0.98]' : 'opacity-100 translate-y-0 scale-100'
+      ].join(' ')}
+      role="status"
+      aria-live="polite"
+      aria-label={ariaLabel}
     >
-      <X
-        className="w-4 h-4 text-white/80 group-hover:text-white transition-colors"
-        strokeWidth={2.5}
-      />
-    </button>
-
-    {/* Header */}
-    <div className="flex items-start gap-3 mb-3 pr-6">
-      <RefreshCw
-        className="mt-0.5 w-5 h-5 text-white animate-refresh-pulse shrink-0"
-        strokeWidth={2}
-      />
-
-      <p className="font-semibold text-base leading-tight">
-        Keeping Custocare AI up to date…
-      </p>
-    </div>
-
-    {/* Progress bar */}
-    <div className="w-full h-2 rounded-full bg-blue-400/30 overflow-hidden shadow-inner">
-      <div
-        className="
-          relative h-full rounded-full
-          bg-gradient-to-r from-white via-blue-50 to-white
-          transition-all duration-500 ease-out
-          shadow-lg overflow-hidden
-        "
-        style={{ width: `${downloadProgress}%` }}
-        role="progressbar"
-        aria-valuenow={downloadProgress}
-        aria-valuemin={0}
-        aria-valuemax={100}
+      <button
+        onClick={dismiss}
+        aria-label="Hide update progress"
+        title="Hide (download continues in background)"
+        className={[
+          'absolute top-3 right-3',
+          'p-1 rounded-lg',
+          'transition-colors duration-150',
+          'hover:bg-white/10 active:bg-white/15',
+          'focus:outline-none focus:ring-2 focus:ring-white/30'
+        ].join(' ')}
       >
+        <X className="w-4 h-4 text-white/80" strokeWidth={2.5} />
+      </button>
+
+      <div className="flex items-start gap-3 pr-6">
+        <div className="mt-0.5 shrink-0">
+          {stage === 'error' ? (
+            <AlertTriangle className="w-5 h-5 text-amber-300" strokeWidth={2.2} />
+          ) : stage === 'ready' ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-300" strokeWidth={2.2} />
+          ) : (
+            <RefreshCw className="w-5 h-5 text-sky-300 animate-refresh-pulse" strokeWidth={2.2} />
+          )}
+        </div>
+
+        <div className="flex-1">
+          <p className="font-semibold text-[15px] leading-tight">
+            {version ? `Updating to v${version}…` : 'Updating…'}
+          </p>
+          <p className="mt-1 text-[13px] text-white/70 leading-snug">{subtitle}</p>
+        </div>
+
+        <div className="shrink-0 text-[13px] font-semibold tabular-nums text-white/90">
+          {progress}%
+        </div>
+      </div>
+
+      <div className="mt-3 w-full h-2 rounded-full bg-white/10 overflow-hidden">
         <div
-          className="
-            absolute inset-0
-            bg-gradient-to-r from-transparent via-white/40 to-transparent
-            animate-shimmer
-          "
+          className="h-full rounded-full bg-gradient-to-r from-sky-400 via-blue-400 to-indigo-400 transition-all duration-300 ease-out"
+          style={{ width: `${progress}%` }}
+          role="progressbar"
+          aria-valuenow={progress}
+          aria-valuemin={0}
+          aria-valuemax={100}
         />
       </div>
     </div>
-  </div>
-);
-
+  );
 };
-
-// Add this to your global CSS or Tailwind config for the shimmer animation
-// If using Tailwind, add to tailwind.config.js:
-/*
-module.exports = {
-  theme: {
-    extend: {
-      keyframes: {
-        shimmer: {
-          '0%': { transform: 'translateX(-100%)' },
-          '100%': { transform: 'translateX(100%)' },
-        },
-      },
-      animation: {
-        shimmer: 'shimmer 2s infinite',
-      },
-    },
-  },
-}
-*/
