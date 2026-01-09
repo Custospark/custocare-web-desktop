@@ -21,7 +21,7 @@
     "react:build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "transpile:electron": "npm run clean && tsc --project src/tsconfig.json",
+    "transpile:electron": "tsc --project src/tsconfig.json",
     "build:mac": "npm run transpile:electron && npm run react:build && npx electron-builder --mac --arm64",
     "build:win": "npm run transpile:electron && npm run react:build && npx electron-builder --win --x64",
     "build:linux": "npm run transpile:electron && npm run react:build && npx electron-builder --linux --x64",
