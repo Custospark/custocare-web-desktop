@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { ContentLayout, type Operation } from '../../shared/components/content/ContentLayout';
+import { ContentLayout} from '../../shared/components/content/ContentLayout';
 import {
   User,
   Shield,
@@ -78,6 +78,13 @@ const ACCOUNT_OPERATIONS: Operation[] = [
 /* ============================================================================
    TYPES
 ============================================================================ */
+
+interface Operation {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+}
 
 export type AccountOperationId =
   | 'profile'
@@ -158,6 +165,7 @@ export const AccountModule: React.FC = () => {
       activeOperation={activeOperation}
       onOperationChange={handleOperationChange}
       defaultOperation="profile"
+      contextTitle="ACCOUNT"
     >
       {renderWorkspaceContent()}
     </ContentLayout>

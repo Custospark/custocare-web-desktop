@@ -168,6 +168,8 @@ export const AdminModule: React.FC = () => {
       activeOperation={activeOperation}
       onOperationChange={handleOperationChange}
       defaultOperation="overview"
+      contextTitle="Administration"
+
     >
       {renderWorkspaceContent()}
     </ContentLayout>
