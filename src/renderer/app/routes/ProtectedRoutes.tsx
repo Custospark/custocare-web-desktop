@@ -3,10 +3,7 @@ import React, { Suspense } from 'react';
 import { Route } from 'react-router-dom';
 import AuthMiddlewareRoute from './AuthMiddlwareRoute';
 import Layout from '../../shared/components/Navigation/Layout';
-import LoadingSkeleton from '../../shared/components/Loading/LoadingSkeletons';
 import { ROUTES } from './routeConstants';
-import AdminModule from '../../modules/staff/admin/ui/AdminModule';
-
 // Lazy load protected components
 const Dashboard = React.lazy(() => import('../../shared/pages/Dashboard'));
 const FacilityOnboardingModule = React.lazy(() => import('../../shared/features/facilities/FacilityOnboardingModule'));
@@ -15,6 +12,9 @@ const PatientDetail = React.lazy(() => import('../../shared/features/patients/Pa
 const ClinicalEncounterModule = React.lazy(() => import('../../shared/features/clinical/ClinicalEncounterModule'));
 const ReceptionistDashboard = React.lazy(() => import('../../shared/features/receptionist/ReceptionistDashboard'));
 const HospitalBillReceipt = React.lazy(() => import('../../shared/features/billing/HospitalBillReceipt'));
+const AccountModule= React.lazy(() => import('../../modules/account/AccountModule'));
+const AdminModule= React.lazy(() => import('../../modules/staff/admin/ui/AdminModule'));
+const LoadingSkeleton= React.lazy(() => import('../../shared/components/Loading/LoadingSkeletons'));
 
 
 /**
@@ -88,6 +88,16 @@ export const ProtectedRoutes = () => [
         element={
           <Suspense fallback={<LoadingSkeleton variant="table" />}>
               <ClinicalEncounterModule />
+          </Suspense>
+        } 
+        key="encounters"
+      />
+      {/* Account Modules - For all system users. */}
+      <Route 
+        path={ROUTES.ACCOUNT} 
+        element={
+          <Suspense fallback={<LoadingSkeleton variant="table" />}>
+              <AccountModule />
           </Suspense>
         } 
         key="encounters"

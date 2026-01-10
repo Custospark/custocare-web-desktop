@@ -53,6 +53,7 @@ export const ROUTES = {
   BILLING: '/billing',
   CLINICAL_SERVICES: '/clinical-services',
   ADMINISTRATION: '/administration',
+  ACCOUNT:'/acount',
 
 } as const;
 

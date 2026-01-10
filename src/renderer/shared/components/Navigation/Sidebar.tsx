@@ -390,18 +390,17 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
       category: 'admin'
     },
     {
-      id: 'my-profile',
-      label: 'My Profile',
-      icon: <UserCog className="w-5 h-5" />,
-      href: '/staff/profile',
-      route: '/staff/profile',
-      description: 'Professional profile',
-      stats: 'Profile',
-      glowColor: 'from-emerald-500 to-teal-400',
-      moduleCode: 'staff_profile',
-      category: 'admin'
-    },
-
+    id: 'account',
+    label: 'Account',
+    icon: <UserCog className="w-5 h-5" />,
+    href: ROUTES.ACCOUNT,
+    route: ROUTES.ACCOUNT,
+    description: 'Manage your profile, security, and preferences',
+    stats: 'User Settings',
+    glowColor: 'from-emerald-500 to-teal-400',
+    moduleCode: 'account',
+    category: 'system',
+  },
     // System Common
     {
       id: 'settings',
