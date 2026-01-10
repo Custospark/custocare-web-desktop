@@ -10,7 +10,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold">
-        Admin Overview(Under Development)
+        Admin Overview
       </h1>
 
       <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
