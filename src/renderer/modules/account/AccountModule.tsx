@@ -165,7 +165,7 @@ export const AccountModule: React.FC = () => {
       activeOperation={activeOperation}
       onOperationChange={handleOperationChange}
       defaultOperation="profile"
-      contextTitle="ACCOUNT"
+      contextTitle="Account"
     >
       {renderWorkspaceContent()}
     </ContentLayout>

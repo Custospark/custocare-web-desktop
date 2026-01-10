@@ -117,8 +117,8 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
         {!collapsedSide && (
           <div className="min-w-0">
             <h3 className={cn('text-sm font-semibold truncate', theme === 'dark' ? 'text-gray-200' : 'text-gray-800')}>
-              Quick Actions
-            </h3>
+            Workspace Actions
+</h3>
             {contextTitle && (
               <p
                 className={cn('text-xs mt-0.5 truncate', theme === 'dark' ? 'text-gray-500' : 'text-gray-500')}
@@ -445,7 +445,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                   'text-xs',
                   theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
                 )}>
-Frequently used tools               
+                Common actions.
  </span>
               )}
             </div>
