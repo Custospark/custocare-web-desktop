@@ -212,37 +212,39 @@ export const Layout: React.FC = () => {
   /**
    * Get position toggle icon
    */
-      const getPositionToggleIcon = useMemo(() => {
-        const isLeft = localState.sidebarPosition === 'left';
 
-        return (
-          <div
+    const getPositionToggleIcon = useMemo(() => {
+      const isLeft = localState.sidebarPosition === 'left';
+
+      return (
+        <div
+          className={cn(
+            'flex items-center justify-center',
+            'w-7 h-7 rounded-lg transition-all duration-300',
+            theme === 'dark'
+              ? 'bg-gray-800/60'
+              : 'bg-gray-100/70'
+          )}
+        >
+          <PanelRight
             className={cn(
-              'flex items-center justify-center',
-              'w-7 h-7 rounded-lg transition-all duration-300',
+              'w-4 h-4 transition-all duration-300',
+              // Flip icon to represent docking side
+              isLeft && 'rotate-180',
+              // State color
               theme === 'dark'
-                ? 'bg-gray-800/60'
-                : 'bg-gray-100/70'
+                ? isLeft
+                  ? 'text-cyan-400'
+                  : 'text-gray-400'
+                : isLeft
+                  ? 'text-blue-600'
+                  : 'text-gray-600'
             )}
-          >
-            <PanelRight
-              className={cn(
-                'w-4 h-4 transition-all duration-300',
-                // Flip icon to represent docking side
-                isLeft && 'rotate-180',
-                // State color
-                theme === 'dark'
-                  ? isLeft
-                    ? 'text-cyan-400'
-                    : 'text-gray-400'
-                  : isLeft
-                    ? 'text-blue-600'
-                    : 'text-gray-600'
-              )}
-            />
-          </div>
-        );
-      }, [localState.sidebarPosition, theme]);
+          />
+        </div>
+      );
+    }, [localState.sidebarPosition, theme]);
+
 
 
   /**
