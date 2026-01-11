@@ -45,6 +45,7 @@ import { useGetModules } from '../../../api/team/queries/useModuleQueries';
 import { useGetDepartments } from '../../../api/department/useDepartmentQueries';
 import type { InvitationStatus } from '../../../api/team/types/staffInvitationTypes';
 import { EmploymentStatus } from '../../../api/team/types/staffTypes';
+import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 
 interface InvitationManagerProps {
   theme: 'light' | 'dark';
@@ -689,14 +690,15 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
             {/* Modal Body */}
             <div className="p-6 space-y-6 max-h-[calc(100vh-16rem)] overflow-y-auto">
               {isFormLoading ? (
-                <div className="py-12 text-center">
-                  <div className={`inline-flex items-center gap-3 ${
-                    isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                    Loading form data...
-                  </div>
-                </div>
+                // <div className="py-12 text-center">
+                //   <div className={`inline-flex items-center gap-3 ${
+                //     isDark ? 'text-gray-400' : 'text-gray-600'
+                //   }`}>
+                //     <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                //     Loading form data...
+                //   </div>
+                // </div>
+                <LoadingSkeleton variant='table'/>
               ) : (
                 <>
                   {/* Staff Selection */}
