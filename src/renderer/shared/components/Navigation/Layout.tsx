@@ -746,7 +746,7 @@ export const Layout: React.FC = () => {
         )}>
           <main className="flex-1">
             <div className={cn(
-              'px-4 sm:px-6 lg:px-8 py-1',
+              'px-4 sm:px-2 lg:px-1 py-1',
               'min-h-[calc(100vh-11rem)]',
               themeClasses.contentArea
             )}>

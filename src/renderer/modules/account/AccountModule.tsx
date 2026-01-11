@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { ContentLayout} from '../../shared/components/content/ContentLayout';
+import { ContentLayout, type Operation } from '../../shared/components/content/ContentLayout';
 import {
   User,
   Shield,
@@ -7,6 +7,12 @@ import {
   Palette,
   MessageSquare,
 } from 'lucide-react';
+
+import Profile from './profile/Profile';
+import Security from './security/Security';
+import MyInvitations from './invitations/MyInvitations';
+import Message from './message/Message';
+import Appearance from './apearance/Appearance';
 
 /**
  * ============================================================================
@@ -20,22 +26,14 @@ import {
  * - Security & authentication
  * - Invitations
  * - Messages & notifications
- * - Theme & preferences
+ * - Appearance & preferences
  *
  * Architecture Highlights:
  * -----------------------
- * - Mirrors AdminModule & PatientModule patterns
- * - Stateless UI placeholders (div-based)
+ * - Mirrors AdminModule integration pattern
+ * - Stateless workspace container
  * - RBAC-friendly operation IDs
- * - Scalable and replaceable with real components later
- *
- * Module Structure:
- * ----------------
- * 1. Profile
- * 2. Security
- * 3. Invitations
- * 4. Messages
- * 5. Appearance
+ * - Easily extendable with backend data
  */
 
 /* ============================================================================
@@ -59,13 +57,13 @@ const ACCOUNT_OPERATIONS: Operation[] = [
     id: 'invitations',
     label: 'Invitations',
     icon: <Mail className="w-4 h-4" />,
-    description: 'Pending and sent invitations',
+    description: 'Manage staff and workspace invitations',
   },
   {
     id: 'messages',
     label: 'Messages',
     icon: <MessageSquare className="w-4 h-4" />,
-    description: 'System messages and notifications',
+    description: 'System notifications and messages',
   },
   {
     id: 'appearance',
@@ -79,13 +77,6 @@ const ACCOUNT_OPERATIONS: Operation[] = [
    TYPES
 ============================================================================ */
 
-interface Operation {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  description: string;
-}
-
 export type AccountOperationId =
   | 'profile'
   | 'security'
@@ -98,14 +89,6 @@ export type AccountOperationId =
 ============================================================================ */
 
 export const AccountModule: React.FC = () => {
-  /**
-   * =========================================================================
-   * REDUX STATE
-   * =========================================================================
-   */
-
-//   const theme = useSelector((state: RootState) => state.ui.theme);
-
   /**
    * =========================================================================
    * LOCAL STATE
@@ -134,22 +117,22 @@ export const AccountModule: React.FC = () => {
   const renderWorkspaceContent = () => {
     switch (activeOperation) {
       case 'profile':
-        return <div>Profile settings (placeholder)</div>;
+        return <Profile />;
 
       case 'security':
-        return <div>Security & authentication (placeholder)</div>;
+        return <Security />;
 
       case 'invitations':
-        return <div>Invitations management (placeholder)</div>;
+        return <MyInvitations />;
 
       case 'messages':
-        return <div>Messages & notifications (placeholder)</div>;
+        return <Message />;
 
       case 'appearance':
-        return <div>Theme & appearance preferences (placeholder)</div>;
+        return <Appearance />;
 
       default:
-        return <div>Account workspace</div>;
+        return null;
     }
   };
 
@@ -172,7 +155,5 @@ export const AccountModule: React.FC = () => {
   );
 };
 
-// Display name for React DevTools
 AccountModule.displayName = 'AccountModule';
-
 export default AccountModule;

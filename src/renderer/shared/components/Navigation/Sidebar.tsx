@@ -27,7 +27,7 @@ import {
   UserCheck,
   ShieldCheck,
   FileBarChart,
-  AlertCircle,PanelsTopLeft 
+  AlertCircle
 } from 'lucide-react';
 import { type SidebarProps } from '../../types/index';
 import { cn } from '../../types/cn';
@@ -831,7 +831,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
                 Available
               </div>
             </div>
-            <PanelsTopLeft  className={cn(
+            <LayoutDashboard   className={cn(
               'w-4 h-4 transition-transform duration-300',
               isRoleSwitcherVisible && 'rotate-90'
             )} />

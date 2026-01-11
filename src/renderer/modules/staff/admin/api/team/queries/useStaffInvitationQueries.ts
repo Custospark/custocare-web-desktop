@@ -226,6 +226,7 @@ export const useGetMyPendingInvitations = (
     queryKey: staffInvitationKeys.myPending(),
     queryFn: async () => {
       const response = await axiosInstance.get<GetMyPendingInvitationsResponse>('/staff-invitations/my/pending-invitations');
+      console.log(response);
       return response.data;
     },
     ...options,

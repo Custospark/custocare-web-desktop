@@ -1,0 +1,497 @@
+/**
+ * ============================================================================
+ * Context Selectors Usage Examples
+ * ============================================================================
+ * 
+ * This file demonstrates how to use the context selectors utility functions
+ * in various scenarios throughout your application.
+ * 
+ * @module contextSelectorsUsageExamples
+ */
+
+import { useSelector } from 'react-redux';
+import type { RootState } from '../store/store';
+import {
+  // User Identity
+  getUserId,
+  getUserUuid,
+  getUserFullName,
+  getUserFirstName,
+  getUserLastName,
+  getUserEmail,
+  getUserPhone,
+  getUserIdentity,
+  
+  // Staff Context
+  getStaffId,
+  getEmployeeId,
+  getProfessionalTitle,
+  getActiveFacilityId,
+  getActiveFacilityName,
+  getActiveRoleCode,
+  getStaffFacilities,
+  getStaffContext,
+  
+  // Patient Context
+  getPatientId,
+  getPatientPrimaryFacilityId,
+  getPatientMedicalRecordNumber,
+  getPatientContext,
+  
+  // Active Context
+  getActiveCapability,
+  getAvailableCapabilities,
+  isInPatientMode,
+  isInStaffMode,
+  isInAdminMode,
+  hasPatientCapability,
+  hasStaffCapability,
+  getActiveContextSummary,
+  
+  // Authentication
+  getAuthToken,
+  isAuthenticated,
+  isAuthInitialized,
+  
+  // Modules
+  getAccessibleModules,
+  getAccessibleModuleCodes,
+  canAccessModule,
+  
+  // Combined
+  getEssentialIds,
+  getUserDisplayInfo,
+  hasCompleteStaffContext,
+} from '../store/utils/contextSelectors';
+
+// ============================================================================
+// EXAMPLE 1: User Profile Component
+// ============================================================================
+
+/**
+ * Example: Display user profile information
+ */
+export const UserProfileComponent = () => {
+  // Get complete user identity
+  const userIdentity = useSelector(getUserIdentity);
+  
+  // Or get individual fields
+  const fullName = useSelector(getUserFullName);
+  const email = useSelector(getUserEmail);
+  const phone = useSelector(getUserPhone);
+  
+  if (!userIdentity) {
+    return <div>Please log in</div>;
+  }
+  
+  return (
+    <div className="user-profile">
+      <h2>{userIdentity.fullName}</h2>
+      <p>Email: {userIdentity.email || 'Not provided'}</p>
+      <p>Phone: {userIdentity.phone || 'Not provided'}</p>
+      <p>User ID: {userIdentity.userId}</p>
+      <p>UUID: {userIdentity.uuid}</p>
+    </div>
+  );
+};
+
+// ============================================================================
+// EXAMPLE 2: Header Component with Context Display
+// ============================================================================
+
+/**
+ * Example: Show current context in application header
+ */
+export const AppHeader = () => {
+  const displayInfo = useSelector(getUserDisplayInfo);
+  const facilityName = useSelector(getActiveFacilityName);
+  const isStaff = useSelector(isInStaffMode);
+  
+  return (
+    <header>
+      <div className="user-info">
+        {displayInfo.professionalTitle && (
+          <span>{displayInfo.professionalTitle} </span>
+        )}
+        <span>{displayInfo.fullName}</span>
+      </div>
+      
+      {isStaff && facilityName && (
+        <div className="location">
+          <span>📍 {facilityName}</span>
+        </div>
+      )}
+      
+      <div className="mode">
+        <span>Mode: {displayInfo.capability}</span>
+      </div>
+    </header>
+  );
+};
+
+// ============================================================================
+// EXAMPLE 3: API Request with Essential IDs
+// ============================================================================
+
+/**
+ * Example: Making API calls with user context
+ */
+export const useCreateAppointment = () => {
+  const essentialIds = useSelector(getEssentialIds);
+  const authToken = useSelector(getAuthToken);
+  
+  const createAppointment = async (appointmentData: any) => {
+    // All essential IDs in one object
+    const response = await fetch('/api/appointments', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...appointmentData,
+        user_id: essentialIds.userId,
+        staff_id: essentialIds.staffId,
+        facility_id: essentialIds.facilityId,
+      }),
+    });
+    
+    return response.json();
+  };
+  
+  return { createAppointment };
+};
+
+// ============================================================================
+// EXAMPLE 4: Conditional Rendering Based on Role
+// ============================================================================
+
+/**
+ * Example: Show different UI based on user role
+ */
+export const DashboardComponent = () => {
+  const isStaff = useSelector(isInStaffMode);
+  const isPatient = useSelector(isInPatientMode);
+  const isAdmin = useSelector(isInAdminMode);
+  const hasCompleteContext = useSelector(hasCompleteStaffContext);
+  
+  if (isAdmin) {
+    return <AdminDashboard />;
+  }
+  
+  if (isStaff) {
+    if (!hasCompleteContext) {
+      return <div>Please select a facility</div>;
+    }
+    return <StaffDashboard />;
+  }
+  
+  if (isPatient) {
+    return <PatientDashboard />;
+  }
+  
+  return <div>Unknown user type</div>;
+};
+
+// ============================================================================
+// EXAMPLE 5: Staff Context Usage
+// ============================================================================
+
+/**
+ * Example: Display staff information
+ */
+export const StaffProfileComponent = () => {
+  const staffContext = useSelector(getStaffContext);
+  const staffId = useSelector(getStaffId);
+  const employeeId = useSelector(getEmployeeId);
+  const facilities = useSelector(getStaffFacilities);
+  
+  if (!staffContext) {
+    return <div>Not a staff member</div>;
+  }
+  
+  return (
+    <div className="staff-profile">
+      <h3>Staff Information</h3>
+      <p>Staff ID: {staffContext.staffId}</p>
+      <p>Employee ID: {staffContext.employeeId || 'N/A'}</p>
+      <p>Title: {staffContext.professionalTitle || 'N/A'}</p>
+      
+      <h4>Assigned Facilities</h4>
+      <ul>
+        {facilities.map(facility => (
+          <li key={facility.facility_id}>
+            {facility.facility_name} - {facility.role_code}
+          </li>
+        ))}
+      </ul>
+      
+      {staffContext.activeFacilityName && (
+        <p>Current Facility: {staffContext.activeFacilityName}</p>
+      )}
+    </div>
+  );
+};
+
+// ============================================================================
+// EXAMPLE 6: Patient Context Usage
+// ============================================================================
+
+/**
+ * Example: Display patient information
+ */
+export const PatientInfoComponent = () => {
+  const patientContext = useSelector(getPatientContext);
+  const patientId = useSelector(getPatientId);
+  const mrn = useSelector(getPatientMedicalRecordNumber);
+  
+  if (!patientContext) {
+    return <div>Not a patient</div>;
+  }
+  
+  return (
+    <div className="patient-info">
+      <h3>Patient Information</h3>
+      <p>Patient ID: {patientContext.patientId}</p>
+      <p>Medical Record Number: {patientContext.medicalRecordNumber || 'N/A'}</p>
+      <p>Primary Facility ID: {patientContext.primaryFacilityId || 'N/A'}</p>
+    </div>
+  );
+};
+
+// ============================================================================
+// EXAMPLE 7: Module Access Control
+// ============================================================================
+
+/**
+ * Example: Conditionally show features based on module access
+ */
+export const AppNavigation = () => {
+  const moduleCodes = useSelector(getAccessibleModuleCodes);
+  const canAccessBilling = useSelector((state: RootState) => 
+    canAccessModule(state, 'billing')
+  );
+  const canAccessAppointments = useSelector((state: RootState) => 
+    canAccessModule(state, 'appointments')
+  );
+  
+  return (
+    <nav>
+      <ul>
+        <li><a href="/dashboard">Dashboard</a></li>
+        
+        {canAccessAppointments && (
+          <li><a href="/appointments">Appointments</a></li>
+        )}
+        
+        {canAccessBilling && (
+          <li><a href="/billing">Billing</a></li>
+        )}
+        
+        {moduleCodes.includes('clinical-notes') && (
+          <li><a href="/clinical-notes">Clinical Notes</a></li>
+        )}
+      </ul>
+    </nav>
+  );
+};
+
+// ============================================================================
+// EXAMPLE 8: Capability Switcher
+// ============================================================================
+
+/**
+ * Example: Allow user to switch between capabilities
+ */
+export const CapabilitySwitcher = () => {
+  const availableCapabilities = useSelector(getAvailableCapabilities);
+  const activeCapability = useSelector(getActiveCapability);
+  const dispatch = useDispatch();
+  
+  if (availableCapabilities.length <= 1) {
+    return null; // No need to show switcher
+  }
+  
+  return (
+    <div className="capability-switcher">
+      <label>Switch Mode:</label>
+      <select 
+        value={activeCapability || ''} 
+        onChange={(e) => dispatch(switchCapability(e.target.value))}
+      >
+        {availableCapabilities.map(cap => (
+          <option key={cap} value={cap}>
+            {cap.charAt(0).toUpperCase() + cap.slice(1)}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
+
+// ============================================================================
+// EXAMPLE 9: Authentication Guard
+// ============================================================================
+
+/**
+ * Example: Protect routes based on authentication
+ */
+export const useAuthGuard = () => {
+  const isAuth = useSelector(isAuthenticated);
+  const isInitialized = useSelector(isAuthInitialized);
+  const userId = useSelector(getUserId);
+  
+  return {
+    isAuthenticated: isAuth,
+    isInitialized,
+    isReady: isInitialized && isAuth,
+    userId,
+  };
+};
+
+/**
+ * Example: Protected Route Component
+ */
+export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isInitialized } = useAuthGuard();
+  
+  if (!isInitialized) {
+    return <div>Loading...</div>;
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  return <>{children}</>;
+};
+
+// ============================================================================
+// EXAMPLE 10: Comprehensive User Context Hook
+// ============================================================================
+
+/**
+ * Example: Custom hook that combines multiple selectors
+ */
+export const useUserContext = () => {
+  const userIdentity = useSelector(getUserIdentity);
+  const staffContext = useSelector(getStaffContext);
+  const patientContext = useSelector(getPatientContext);
+  const contextSummary = useSelector(getActiveContextSummary);
+  const isAuth = useSelector(isAuthenticated);
+  
+  return {
+    // User Identity
+    user: userIdentity,
+    userId: userIdentity?.userId || null,
+    fullName: userIdentity?.fullName || 'Guest',
+    email: userIdentity?.email || null,
+    
+    // Role Context
+    staff: staffContext,
+    patient: patientContext,
+    
+    // Active Context
+    activeCapability: contextSummary.activeCapability,
+    activeFacilityId: contextSummary.activeFacilityId,
+    activeFacilityName: contextSummary.activeFacilityName,
+    
+    // Flags
+    isAuthenticated: isAuth,
+    isStaff: contextSummary.isStaff,
+    isPatient: contextSummary.isPatient,
+    isAdmin: contextSummary.isAdmin,
+  };
+};
+
+/**
+ * Example: Using the comprehensive hook
+ */
+export const UserDashboard = () => {
+  const context = useUserContext();
+  
+  return (
+    <div>
+      <h1>Welcome, {context.fullName}!</h1>
+      
+      {context.isStaff && context.staff && (
+        <div>
+          <p>Staff ID: {context.staff.staffId}</p>
+          <p>Current Facility: {context.activeFacilityName}</p>
+        </div>
+      )}
+      
+      {context.isPatient && context.patient && (
+        <div>
+          <p>Patient ID: {context.patient.patientId}</p>
+          <p>MRN: {context.patient.medicalRecordNumber}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================================
+// EXAMPLE 11: Facility Selector for Staff
+// ============================================================================
+
+/**
+ * Example: Component to switch between facilities
+ */
+export const FacilitySwitcher = () => {
+  const facilities = useSelector(getStaffFacilities);
+  const activeFacilityId = useSelector(getActiveFacilityId);
+  const dispatch = useDispatch();
+  
+  if (facilities.length <= 1) {
+    return null;
+  }
+  
+  return (
+    <select
+      value={activeFacilityId || ''}
+      onChange={(e) => dispatch(switchFacility(Number(e.target.value)))}
+    >
+      {facilities.map(facility => (
+        <option key={facility.facility_id} value={facility.facility_id}>
+          {facility.facility_name}
+        </option>
+      ))}
+    </select>
+  );
+};
+
+// ============================================================================
+// QUICK REFERENCE
+// ============================================================================
+
+/**
+ * QUICK REFERENCE GUIDE
+ * 
+ * Import what you need:
+ * ```typescript
+ * import { getUserId, getStaffId, getActiveFacilityId } from '@/store/utils/contextSelectors';
+ * ```
+ * 
+ * In components:
+ * ```typescript
+ * const userId = useSelector(getUserId);
+ * const staffId = useSelector(getStaffId);
+ * const facilityId = useSelector(getActiveFacilityId);
+ * ```
+ * 
+ * In non-component files (utilities, services):
+ * ```typescript
+ * import { store } from '@/store/store';
+ * const userId = getUserId(store.getState());
+ * ```
+ * 
+ * Common Patterns:
+ * 
+ * 1. Get user info: getUserId(), getUserFullName(), getUserEmail()
+ * 2. Get staff info: getStaffId(), getActiveFacilityId(), getActiveRoleCode()
+ * 3. Get patient info: getPatientId(), getPatientMedicalRecordNumber()
+ * 4. Check mode: isInStaffMode(), isInPatientMode(), isInAdminMode()
+ * 5. Access control: canAccessModule(state, 'moduleCode')
+ * 6. API calls: getEssentialIds(), getAuthToken()
+ */
