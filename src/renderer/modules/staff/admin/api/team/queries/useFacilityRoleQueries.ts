@@ -131,9 +131,10 @@ export const useGetSystemFacilityRoles = (
   return useQuery<GetFacilityRolesResponse, AxiosError<ApiErrorResponse>>({
     queryKey: facilityRoleKeys.systemRoles(),
     queryFn: async () => {
-      const response = await axiosInstance.get<GetFacilityRolesResponse>('/roles', {
+      const response = await axiosInstance.get<GetFacilityRolesResponse>('/facility-roles/system/roles', {
         params: { is_system_role: true },
       });
+      console.log(response.data);
       return response.data;
     },
     ...options,
@@ -151,22 +152,26 @@ export const useGetSystemFacilityRoles = (
  * @example
  * const { data } = useGetFacilitySpecificRoles(5);
  */
-export const useGetFacilitySpecificRoles = (
-  facilityId: number,
-  options?: Omit<UseQueryOptions<GetFacilityRolesResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
-) => {
-  return useQuery<GetFacilityRolesResponse, AxiosError<ApiErrorResponse>>({
-    queryKey: facilityRoleKeys.facilitySpecific(facilityId),
-    queryFn: async () => {
-      const response = await axiosInstance.get<GetFacilityRolesResponse>('/roles', {
-        params: { facility_id: facilityId, is_system_role: false },
+    export const useGetFacilitySpecificRoles = (
+      facilityId: number,
+      options?: Omit<UseQueryOptions<GetFacilityRolesResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
+    ) => {
+      return useQuery<GetFacilityRolesResponse, AxiosError<ApiErrorResponse>>({
+        queryKey: facilityRoleKeys.facilitySpecific(facilityId),
+        queryFn: async () => {
+          const response = await axiosInstance.get<GetFacilityRolesResponse>(
+            `/facility-roles/facility/${facilityId}`, // <-- path param
+            {
+              params: { is_system_role: false }, // optional query params
+            }
+          );
+          return response.data;
+        },
+        enabled: !!facilityId, // Only run query if facilityId is provided
+        ...options,
       });
-      return response.data;
-    },
-    enabled: !!facilityId, // Only run query if facilityId is provided
-    ...options,
-  });
-};
+    };
+
 
 /* -------------------------------------------------------------------------- */
 /*                             MUTATION HOOKS                                 */

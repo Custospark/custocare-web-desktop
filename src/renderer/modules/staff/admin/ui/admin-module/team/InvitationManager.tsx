@@ -42,9 +42,9 @@ import {
 import { useGetStaff } from '../../../api/team/queries/useStaffQueries';
 import { useGetFacilityRoles } from '../../../api/team/queries/useFacilityRoleQueries';
 import { useGetModules } from '../../../api/team/queries/useModuleQueries';
-import { useGetDepartments } from '../../../api/department/useDepartmentQueries';
+import { useGetDepartmentsByFacility, } from '../../../api/department/useDepartmentQueries';
+import { useGetFacilitySpecificRoles } from '../../../api/team/queries/useFacilityRoleQueries';
 import type { InvitationStatus } from '../../../api/team/types/staffInvitationTypes';
-import { EmploymentStatus } from '../../../api/team/types/staffTypes';
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 
 interface InvitationManagerProps {
@@ -107,7 +107,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
   
   // Fetch staff (for invitation targets)
   const { data: staffResponse, isLoading: staffLoading } = useGetStaff(
-    { employment_status: EmploymentStatus.EMPLOYED},
+    { },
     { enabled: showCreateModal }
   );
   
@@ -123,15 +123,25 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     { enabled: showCreateModal }
   );
   
-  // Fetch departments
-  const { data: departmentsResponse, isLoading: departmentsLoading } = useGetDepartments(
-    { facility_id: activeFacilityId || undefined },
-    { enabled: showCreateModal && !!activeFacilityId }
+// Fetch departments
+const { data: departmentsResponse, isLoading: departmentsLoading } = useGetDepartmentsByFacility(
+  activeFacilityId || 0,
+  {}, // filters (empty object if none)
+  { enabled: showCreateModal && !!activeFacilityId } // options
+);
+
+ const { data: facilityRolesResponse} = useGetFacilitySpecificRoles(
+    activeFacilityId!,
+    { enabled: !!activeFacilityId }
   );
-  
+  const facilityRoles = facilityRolesResponse?.data || [];
   const invitations = invitationsResponse?.data || [];
+
+  const roles = useMemo(() => {
+    return [...facilityRoles, ...(rolesResponse?.data || [])];
+  }, [facilityRoles, rolesResponse?.data]);
+
   const staff = staffResponse?.data || [];
-  const roles = rolesResponse?.data || [];
   const modules = modulesResponse?.data || [];
   const departments = departmentsResponse?.data || [];
   
@@ -553,7 +563,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                           {invitation.staff?.employee_id && (
                             <div className="flex items-center gap-2">
                               <Users className="w-4 h-4 flex-shrink-0" />
-                              <span>ID: {invitation.staff.employee_id}</span>
+                              <span>Professioanl Number: {invitation.staff.staff_uuid}</span>
                             </div>
                           )}
                           
@@ -690,15 +700,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
             {/* Modal Body */}
             <div className="p-6 space-y-6 max-h-[calc(100vh-16rem)] overflow-y-auto">
               {isFormLoading ? (
-                // <div className="py-12 text-center">
-                //   <div className={`inline-flex items-center gap-3 ${
-                //     isDark ? 'text-gray-400' : 'text-gray-600'
-                //   }`}>
-                //     <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                //     Loading form data...
-                //   </div>
-                // </div>
-                <LoadingSkeleton variant='table'/>
+                <LoadingSkeleton variant='form' theme={theme} message='Loading form data...'/>
               ) : (
                 <>
                   {/* Staff Selection */}
@@ -729,7 +731,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                         <option value="">Select a staff member...</option>
                         {staff.map((member) => (
                           <option key={member.id} value={member.id}>
-                            {member.employee_id} - {member.professional_title || 'Staff Member'}
+                           Professional Number: {member.staff_uuid} - {member.professional_title || 'Medical Professional'}
                           </option>
                         ))}
                       </select>

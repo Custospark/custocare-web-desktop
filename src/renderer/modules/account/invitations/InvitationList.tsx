@@ -86,16 +86,18 @@ export const InvitationList: React.FC<InvitationListProps> = ({
     let filtered = [...invitations];
 
     // Search filter
-    if (filters.searchTerm) {
-      const searchLower = filters.searchTerm.toLowerCase();
-      filtered = filtered.filter(inv => 
-        inv.facility?.facility_name.toLowerCase().includes(searchLower) ||
-        inv.facility?.facility_code.toLowerCase().includes(searchLower) ||
-        inv.role?.role_name.toLowerCase().includes(searchLower) ||
-        inv.role_code.toLowerCase().includes(searchLower) ||
-        inv.department?.department_name.toLowerCase().includes(searchLower)
-      );
-    }
+ if (filters.searchTerm) {
+  const searchLower = filters.searchTerm.toLowerCase();
+
+  filtered = filtered.filter(inv =>
+    inv.facility?.facility_name?.toLowerCase().includes(searchLower) ||
+    inv.facility?.facility_code?.toLowerCase().includes(searchLower) ||
+    inv.role?.name?.toLowerCase().includes(searchLower) ||
+    inv.role_code?.toLowerCase().includes(searchLower) ||
+    inv.department?.department_name?.toLowerCase().includes(searchLower)
+  );
+}
+
 
     // Status filter
     if (filters.filterBy === 'expiring_soon') {
@@ -390,7 +392,7 @@ export const InvitationList: React.FC<InvitationListProps> = ({
                   invitation={invitation}
                   theme={theme}
                   onViewDetails={onInvitationSelect}
-                  layout="horizontal"
+                  layout="vertical"
                 />
               }
             />

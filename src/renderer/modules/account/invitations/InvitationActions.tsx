@@ -73,7 +73,7 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
   const handleAccept = async (): Promise<void> => {
     const confirmed = await confirm({
       title: 'Accept Invitation',
-      message: `Are you sure you want to accept the invitation from ${invitation.facility?.facility_name || 'this facility'}? You will be granted access to their system with the role of ${invitation.role?.role_name || invitation.role_code}.`,
+      message: `Are you sure you want to accept the invitation from ${invitation.facility?.facility_name || 'this facility'}? You will be granted access to their system with the role of ${invitation.role?.name || invitation.role_code}.`,
       confirmText: 'Accept Invitation',
       cancelText: 'Cancel',
       variant: 'info',

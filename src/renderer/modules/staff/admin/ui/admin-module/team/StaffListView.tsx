@@ -12,14 +12,13 @@ import React, { useState, useMemo } from 'react';
 import {
   Users,
   Search,
-  CheckCircle,
-  XCircle,
   AlertTriangle,
   Eye,
   MoreVertical,
 } from 'lucide-react';
 import { useGetStaff } from '../../../api/team/queries/useStaffQueries';
 import type { EmploymentStatus } from '../../../api/team/types/staffTypes';
+import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 
 interface StaffListViewProps {
   theme: 'light' | 'dark';
@@ -155,14 +154,7 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
         isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
       }`}>
         {isLoading ? (
-          <div className="p-12 text-center">
-            <div className={`inline-flex items-center gap-3 ${
-              isDark ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-              <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              Loading staff...
-            </div>
-          </div>
+          <LoadingSkeleton variant='table' theme={theme}/>
         ) : filteredAndSortedStaff.length === 0 ? (
           <div className="p-12 text-center">
             <Users className={`w-12 h-12 mx-auto mb-4 ${
@@ -181,29 +173,27 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full border-collapse">
               <thead className={isDark ? 'bg-gray-800/50' : 'bg-gray-50'}>
                 <tr>
                   <th className={`px-4 py-3 text-left text-sm font-medium ${
                     isDark ? 'text-gray-300' : 'text-gray-700'
                   }`}>
-                    Staff Member
+                    Professional Number
                   </th>
+
                   <th className={`px-4 py-3 text-left text-sm font-medium ${
                     isDark ? 'text-gray-300' : 'text-gray-700'
                   }`}>
-                    Employee ID
+                    Title
                   </th>
-                  <th className={`px-4 py-3 text-left text-sm font-medium ${
-                    isDark ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
-                    Role
-                  </th>
+
                   <th className={`px-4 py-3 text-left text-sm font-medium ${
                     isDark ? 'text-gray-300' : 'text-gray-700'
                   }`}>
                     Status
                   </th>
+
                   <th className={`px-4 py-3 text-left text-sm font-medium ${
                     isDark ? 'text-gray-300' : 'text-gray-700'
                   }`}>
@@ -211,82 +201,82 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
                   </th>
                 </tr>
               </thead>
-              <tbody className={`divide-y ${isDark ? 'divide-gray-800' : 'divide-gray-200'}`}>
-                {filteredAndSortedStaff.map((staffMember) => (
-                  <tr
-                    key={staffMember.id}
-                    className={`transition-colors ${
-                      isDark ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <td className="px-4 py-3">
-                      <div>
-                        <div className="font-medium">
-                          {staffMember.professional_title && `${staffMember.professional_title} `}
-                          {staffMember.user?.full_name}
-                        </div>
-                        <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                          {staffMember.user?.email}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <code className={`px-2 py-1 rounded text-sm ${
-                        isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {staffMember.employee_id}
-                      </code>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="capitalize text-sm">
-                        {staffMember.global_role_level.replace(/_/g, ' ')}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-1">
-                        <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-xs font-medium ${
-                          staffMember.is_active
-                            ? (isDark ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-800')
-                            : (isDark ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-800')
+                <tbody className={`divide-y ${isDark ? 'divide-gray-800' : 'divide-gray-200'}`}>
+                  {filteredAndSortedStaff.map((staffMember) => (
+                    <tr
+                      key={staffMember.id}
+                      className={`transition-colors ${
+                        isDark ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      {/* Professional Number */}
+                      <td className="px-4 py-3">
+                        <code className={`px-2 py-1 rounded text-sm ${
+                          isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
                         }`}>
-                          {staffMember.is_active ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                          {staffMember.is_active ? 'Active' : 'Inactive'}
+                          {staffMember.staff_uuid}
+                        </code>
+                      </td>
+
+                      {/* Title */}
+                      <td className="px-4 py-3">
+                        <span className="text-sm capitalize">
+                          {staffMember.global_role_level.replace(/_/g, ' ')}
                         </span>
-                        {staffMember.has_expired_license && (
-                          <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-xs font-medium ${
-                            isDark ? 'bg-yellow-900/30 text-yellow-300' : 'bg-yellow-100 text-yellow-800'
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-3">
+                        {staffMember.has_expired_license ? (
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                            isDark
+                              ? 'bg-yellow-900/30 text-yellow-300'
+                              : 'bg-yellow-100 text-yellow-800'
                           }`}>
                             <AlertTriangle className="w-3 h-3" />
                             License Expired
                           </span>
+                        ) : (
+                          <span className={`text-xs ${
+                            isDark ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            —
+                          </span>
                         )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => onStaffSelect(staffMember.id)}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-600'
-                          }`}
-                          title="View details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-600'
-                          }`}
-                          title="More options"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => onStaffSelect(staffMember.id)}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              isDark
+                                ? 'hover:bg-gray-700 text-gray-400'
+                                : 'hover:bg-gray-200 text-gray-600'
+                            }`}
+                            title="View details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              isDark
+                                ? 'hover:bg-gray-700 text-gray-400'
+                                : 'hover:bg-gray-200 text-gray-600'
+                            }`}
+                            title="More options"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
           </div>
         )}
       </div>

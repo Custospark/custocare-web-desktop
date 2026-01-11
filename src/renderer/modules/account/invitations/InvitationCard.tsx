@@ -129,12 +129,15 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
     };
   };
 
-  const getRoleDisplayName = (roleCode: string): string => {
-    return roleCode
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  };
+const getRoleDisplayName = (roleCode?: string | null): string => {
+  if (!roleCode) return '—';
+
+  return roleCode
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 
   const expiryStatus = getExpiryStatus();
 
@@ -184,7 +187,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                 isDark ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-100 text-purple-800'
               }`}>
-                {invitation.role?.role_name || getRoleDisplayName(invitation.role_code)}
+                {invitation.role?.name || getRoleDisplayName(invitation.role_code)}
               </span>
             </div>
 
@@ -332,10 +335,10 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
                   </div>
                   <div>
                     <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                      Employee ID
+                      Professional Number
                     </dt>
                     <dd className={`text-sm font-mono ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {invitation.invited_by.employee_id}
+                      {invitation.invited_by.staff_uuid}
                     </dd>
                   </div>
                   {invitation.invited_by.global_role_level && (
@@ -365,7 +368,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
                       Role Name
                     </dt>
                     <dd className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {invitation.role.role_name}
+                      {invitation.role.name}
                     </dd>
                   </div>
                   <div>
@@ -373,7 +376,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
                       Role Code
                     </dt>
                     <dd className={`text-sm font-mono ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {invitation.role.role_code}
+                      {invitation.role.code}
                     </dd>
                   </div>
                   {invitation.role.description && (
@@ -402,7 +405,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
                     Facility Type
                   </dt>
                   <dd className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    {invitation.facility?.facility_type || 'Healthcare Facility'}
+                    {invitation.facility?.facility_name || 'Healthcare Facility'}
                   </dd>
                 </div>
                 <div>

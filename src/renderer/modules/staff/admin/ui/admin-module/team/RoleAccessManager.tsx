@@ -31,6 +31,7 @@ import {
 import { useGetModules, useAssignRoleModuleDefault } from '../../../api/team/queries/useModuleQueries';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../../../../app/store/rootReducer';
+import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 
 interface RoleAccessManagerProps {
   theme: 'light' | 'dark';
@@ -87,7 +88,7 @@ export const RoleAccessManager: React.FC<RoleAccessManagerProps> = ({
   
   // Combine system and facility roles
   const allRoles = useMemo(() => {
-    return [...systemRoles, ...facilityRoles];
+    return [...facilityRoles,...systemRoles];
   }, [systemRoles, facilityRoles]);
   
   const createRoleMutation = useCreateFacilityRole();
@@ -102,7 +103,7 @@ export const RoleAccessManager: React.FC<RoleAccessManagerProps> = ({
     setEditingRoleId(roleId);
     // TODO: Load current module permissions for this role
     // For now, using empty array as placeholder
-    setTempPermissions([]);
+    setTempPermissions(['kk','yy']);
   };
   
   const handleEditCancel = () => {
@@ -184,7 +185,6 @@ export const RoleAccessManager: React.FC<RoleAccessManagerProps> = ({
                 isDark ? 'bg-blue-900/20 text-blue-300' : 'bg-blue-50 text-blue-700'
               }`}>
                 <Building2 className="w-3 h-3" />
-                Active Facility ID: {activeFacilityId}
               </div>
             )}
           </div>
@@ -305,16 +305,17 @@ export const RoleAccessManager: React.FC<RoleAccessManagerProps> = ({
       )}
       
       {isLoading ? (
-        <div className={`rounded-xl p-12 text-center border ${
-          isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-        }`}>
-          <div className={`inline-flex items-center gap-3 ${
-            isDark ? 'text-gray-400' : 'text-gray-600'
-          }`}>
-            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            Loading roles and permissions...
-          </div>
-        </div>
+        // <div className={`rounded-xl p-12 text-center border ${
+        //   isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+        // }`}>
+        //   <div className={`inline-flex items-center gap-3 ${
+        //     isDark ? 'text-gray-400' : 'text-gray-600'
+        //   }`}>
+        //     <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        //     Loading roles and permissions...
+        //   </div>
+        // </div>
+        <LoadingSkeleton variant='detail' theme={theme} message='Loading roles and permissions...'/>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Roles List */}

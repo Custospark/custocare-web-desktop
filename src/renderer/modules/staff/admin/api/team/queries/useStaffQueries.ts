@@ -84,6 +84,8 @@ export const staffKeys = {
  *   per_page: 20
  * });
  */
+/* */
+//Get staff members for a given facility.
 export const useGetStaff = (
   filters: StaffFilters = {},
   options?: Omit<UseQueryOptions<GetStaffResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
@@ -91,7 +93,7 @@ export const useGetStaff = (
   return useQuery<GetStaffResponse, AxiosError<ApiErrorResponse>>({
     queryKey: staffKeys.list(filters),
     queryFn: async () => {
-      const response = await axiosInstance.get<GetStaffResponse>('/staff', {
+      const response = await axiosInstance.get<GetStaffResponse>('/staff/specific-facility', {
         params: filters,
       });
       return response.data;

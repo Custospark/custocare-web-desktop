@@ -27,6 +27,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useGetStaffById } from '../../../api/team/queries/useStaffQueries';
+import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 
 interface StaffDetailViewProps {
   theme: 'light' | 'dark';
@@ -52,16 +53,17 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
   
   if (isLoading) {
     return (
-      <div className={`rounded-xl p-12 text-center border ${
-        isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-      }`}>
-        <div className={`inline-flex items-center gap-3 ${
-          isDark ? 'text-gray-400' : 'text-gray-600'
-        }`}>
-          <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          Loading staff details...
-        </div>
-      </div>
+      // <div className={`rounded-xl p-12 text-center border ${
+      //   isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+      // }`}>
+      //   <div className={`inline-flex items-center gap-3 ${
+      //     isDark ? 'text-gray-400' : 'text-gray-600'
+      //   }`}>
+      //     <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      //     Loading staff details...
+      //   </div>
+      // </div>
+      <LoadingSkeleton variant='table' theme={theme} message='Loading staff details..'></LoadingSkeleton>
     );
   }
   
@@ -213,11 +215,11 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
             <div className="flex items-start gap-3">
               <Badge className={`w-5 h-5 mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
               <div>
-                <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Employee ID</div>
+                <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Professional Number</div>
                 <code className={`px-2 py-1 rounded text-sm ${
                   isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
                 }`}>
-                  {staff.employee_id}
+                  {staff.staff_uuid}
                 </code>
               </div>
             </div>
