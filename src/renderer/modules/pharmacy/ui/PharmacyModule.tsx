@@ -10,6 +10,10 @@ import {
   Receipt,
 } from 'lucide-react';
  import PharmacyOverview from './overview/PharmacyOverview';
+import Inventory from './inventory/Inventory';
+import Dispensing from './dispensing/Dispensing';
+import Billing from './billing/Billing';
+import Prescriptions from './precriptions/Prescriptions';
 /**
  * ============================================================================
  * PHARMACY MODULE - MAIN INTEGRATION COMPONENT
@@ -95,47 +99,6 @@ export type PharmacyOperationId =
   | 'inventory'
   | 'dispensing'
   | 'billing';
-
-/* ============================================================================
-   PLACEHOLDER WORKSPACE SECTIONS
-============================================================================ */
-
-const PharmacyPrescriptions = () => (
-  <div className="p-6">
-    <h2 className="text-lg font-semibold">Prescription Queue</h2>
-    <p className="text-sm opacity-70">
-      Placeholder for incoming, in-progress, and ready prescriptions.
-    </p>
-  </div>
-);
-
-const PharmacyInventory = () => (
-  <div className="p-6">
-    <h2 className="text-lg font-semibold">Inventory Management</h2>
-    <p className="text-sm opacity-70">
-      Placeholder for stock levels, ledger view, and adjustments.
-    </p>
-  </div>
-);
-
-const PharmacyDispensing = () => (
-  <div className="p-6">
-    <h2 className="text-lg font-semibold">Dispensing</h2>
-    <p className="text-sm opacity-70">
-      Placeholder for dispense workflow, safety checks, and verification.
-    </p>
-  </div>
-);
-
-const PharmacyBilling = () => (
-  <div className="p-6">
-    <h2 className="text-lg font-semibold">Billing & Checkout</h2>
-    <p className="text-sm opacity-70">
-      Placeholder for invoice preview, payment, and receipt generation.
-    </p>
-  </div>
-);
-
 /* ============================================================================
    MAIN COMPONENT
 ============================================================================ */
@@ -183,16 +146,16 @@ export const PharmacyModule: React.FC = () => {
         return <PharmacyOverview theme={theme}/>;
 
       case 'prescriptions':
-        return <PharmacyPrescriptions />;
+        return <Prescriptions theme={theme} />;
 
       case 'inventory':
-        return <PharmacyInventory />;
+        return <Inventory theme={theme} />;
 
       case 'dispensing':
-        return <PharmacyDispensing />;
+        return <Dispensing theme={theme} />;
 
       case 'billing':
-        return <PharmacyBilling />;
+        return <Billing theme={theme} />;
 
       default:
         return <PharmacyOverview theme={theme}/>;
