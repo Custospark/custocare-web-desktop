@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-// import { useSelector } from 'react-redux';
-// import type { RootState } from '../../../app/store/rootReducer';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../app/store/rootReducer';
 import { ContentLayout, type Operation } from  '../../../shared/components/content/ContentLayout';
 import {
   LayoutDashboard,
@@ -9,7 +9,7 @@ import {
   Pill,
   Receipt,
 } from 'lucide-react';
-
+ import PharmacyOverview from './PharmacyOverview';
 /**
  * ============================================================================
  * PHARMACY MODULE - MAIN INTEGRATION COMPONENT
@@ -100,15 +100,6 @@ export type PharmacyOperationId =
    PLACEHOLDER WORKSPACE SECTIONS
 ============================================================================ */
 
-const PharmacyOverview = () => (
-  <div className="p-6">
-    <h2 className="text-lg font-semibold">Pharmacy Overview</h2>
-    <p className="text-sm opacity-70">
-      Placeholder for alerts, pending prescriptions, low stock, and KPIs.
-    </p>
-  </div>
-);
-
 const PharmacyPrescriptions = () => (
   <div className="p-6">
     <h2 className="text-lg font-semibold">Prescription Queue</h2>
@@ -156,7 +147,7 @@ export const PharmacyModule: React.FC = () => {
    * =========================================================================
    */
 
-//   const theme = useSelector((state: RootState) => state.ui.theme);
+  const theme = useSelector((state: RootState) => state.ui.theme);
 
   /**
    * =========================================================================
@@ -189,7 +180,7 @@ export const PharmacyModule: React.FC = () => {
   const renderWorkspaceContent = () => {
     switch (activeOperation) {
       case 'overview':
-        return <PharmacyOverview />;
+        return <PharmacyOverview theme={theme}/>;
 
       case 'prescriptions':
         return <PharmacyPrescriptions />;
@@ -204,7 +195,7 @@ export const PharmacyModule: React.FC = () => {
         return <PharmacyBilling />;
 
       default:
-        return <PharmacyOverview />;
+        return <PharmacyOverview theme={theme}/>;
     }
   };
 
