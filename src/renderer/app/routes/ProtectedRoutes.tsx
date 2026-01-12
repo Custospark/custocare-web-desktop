@@ -15,13 +15,16 @@ const HospitalBillReceipt = React.lazy(() => import('../../shared/features/billi
 const AccountModule= React.lazy(() => import('../../modules/account/AccountModule'));
 const AdminModule= React.lazy(() => import('../../modules/staff/admin/ui/AdminModule'));
 const LoadingSkeleton= React.lazy(() => import('../../shared/components/Loading/LoadingSkeletons'));
-
+// const PharmacyModule= React.lazy(() => import('../../modules/pharmacy/ui/PharmacyModule'));
+import PharmacyModule from '../../modules/pharmacy/ui/PharmacyModule';
 
 /**
  * Protected Routes Configuration
  * All routes require authentication
  */
 export const ProtectedRoutes = () => [
+    
+
   <Route 
     element={
       <AuthMiddlewareRoute />
@@ -33,7 +36,7 @@ export const ProtectedRoutes = () => [
       <Route 
         path={ROUTES.DASHBOARD} 
         element={
-          <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+          <Suspense fallback={<LoadingSkeleton variant="dashboard" theme='light'/>}>
             <Dashboard />
           </Suspense>
         } 
@@ -98,6 +101,16 @@ export const ProtectedRoutes = () => [
         element={
           <Suspense fallback={<LoadingSkeleton variant="table" />}>
               <AccountModule />
+          </Suspense>
+        } 
+        key="encounters"
+      />
+      {/**Pharmacy Module */}
+      <Route 
+        path={ROUTES.PHARMACY} 
+        element={
+          <Suspense fallback={<LoadingSkeleton variant="table" />}>
+              <PharmacyModule />
           </Suspense>
         } 
         key="encounters"

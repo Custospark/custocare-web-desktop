@@ -4,14 +4,13 @@
  * ============================================================================
  * 
  * Displays a single invitation with complete details including facility info,
- * role assignment, modules, and metadata. Supports expanded/collapsed states
- * for detailed information display.
+ * role assignment, modules, and metadata. Supports expanded/collapsed states.
  * 
  * @component InvitationCard
  * @description Enterprise-grade invitation card with theme support
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { 
   Building2, 
   Calendar, 
@@ -37,8 +36,14 @@ import type { StaffInvitation } from '../../staff/admin/api/team/types/staffInvi
 interface InvitationCardProps {
   invitation: StaffInvitation;
   theme: 'light' | 'dark';
-  onActionComplete?: () => void;
-  actionSlot?: React.ReactNode; // Slot for action buttons
+  actionSlot?: React.ReactNode;
+}
+
+interface ExpiryStatus {
+  text: string;
+  color: string;
+  bgColor: string;
+  urgent: boolean;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -55,34 +60,39 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
 
   /* --------------------------- Helper Functions --------------------------- */
 
-  const formatDate = (dateString: string | null): string => {
+  const formatDate = useCallback((dateString: string | null | undefined): string => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch {
+      return 'N/A';
+    }
+  }, []);
 
-  const formatDateTime = (dateString: string | null): string => {
+  const formatDateTime = useCallback((dateString: string | null | undefined): string => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return 'N/A';
+    }
+  }, []);
 
-  const getExpiryStatus = (): { 
-    text: string; 
-    color: string; 
-    bgColor: string;
-    urgent: boolean;
-  } => {
+  const getExpiryStatus = useCallback((): ExpiryStatus => {
     if (!invitation.expires_at) {
       return { 
         text: 'No Expiry', 
@@ -94,7 +104,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
 
     const daysUntilExpiry = invitation.days_until_expiry;
 
-    if (daysUntilExpiry === null) {
+    if (daysUntilExpiry === null || daysUntilExpiry === undefined || daysUntilExpiry < 0) {
       return { 
         text: 'Expired', 
         color: isDark ? 'text-red-400' : 'text-red-600',
@@ -127,19 +137,22 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
       bgColor: isDark ? 'bg-green-900/30' : 'bg-green-50',
       urgent: false
     };
-  };
+  }, [invitation.expires_at, invitation.days_until_expiry, isDark]);
 
-const getRoleDisplayName = (roleCode?: string | null): string => {
-  if (!roleCode) return '—';
+  const getRoleDisplayName = useCallback((roleCode?: string | null): string => {
+    if (!roleCode) return '—';
 
-  return roleCode
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
+    return roleCode
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }, []);
 
+  const toggleExpanded = useCallback((): void => {
+    setIsExpanded(prev => !prev);
+  }, []);
 
-  const expiryStatus = getExpiryStatus();
+  const expiryStatus = useMemo(() => getExpiryStatus(), [getExpiryStatus]);
 
   /* ------------------------------- Render --------------------------------- */
 
@@ -214,8 +227,7 @@ const getRoleDisplayName = (roleCode?: string | null): string => {
           {/* Expiry Status Badge */}
           <div className="flex flex-col items-end gap-2">
             <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${expiryStatus.bgColor} ${expiryStatus.color}`}>
-              {expiryStatus.urgent && <AlertCircle className="w-3.5 h-3.5" />}
-              {!expiryStatus.urgent && <CheckCircle2 className="w-3.5 h-3.5" />}
+              {expiryStatus.urgent ? <AlertCircle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
               {expiryStatus.text}
             </span>
           </div>
@@ -251,12 +263,14 @@ const getRoleDisplayName = (roleCode?: string | null): string => {
 
         {/* Expand/Collapse Button */}
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={toggleExpanded}
           className={`mt-4 w-full flex items-center justify-center gap-2 py-2 rounded-lg transition-colors ${
             isDark 
               ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' 
               : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
           }`}
+          aria-expanded={isExpanded}
+          aria-label={isExpanded ? 'Show less details' : 'View more details'}
         >
           <span className="text-sm font-medium">
             {isExpanded ? 'Show Less' : 'View Details'}
@@ -393,19 +407,19 @@ const getRoleDisplayName = (roleCode?: string | null): string => {
               </div>
             )}
 
-            {/* Contact Information */}
+            {/* Facility Information */}
             <div>
               <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                 <Phone className="w-4 h-4" />
-                Facility Contact
+                Facility Information
               </h4>
               <dl className="space-y-2">
                 <div>
                   <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                    Facility Type
+                    Facility Name
                   </dt>
                   <dd className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    {invitation.facility?.facility_name || 'Healthcare Facility'}
+                    {invitation.facility?.facility_name || 'Unknown Facility'}
                   </dd>
                 </div>
                 <div>
@@ -416,6 +430,16 @@ const getRoleDisplayName = (roleCode?: string | null): string => {
                     {invitation.facility?.facility_code || 'N/A'}
                   </dd>
                 </div>
+                {invitation.department && (
+                  <div>
+                    <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                      Department
+                    </dt>
+                    <dd className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      {invitation.department.department_name}
+                    </dd>
+                  </div>
+                )}
               </dl>
             </div>
           </div>

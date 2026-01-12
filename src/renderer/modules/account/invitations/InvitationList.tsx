@@ -10,7 +10,7 @@
  * @description Enterprise-grade invitation management interface
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Mail, 
   Search, 
@@ -26,6 +26,7 @@ import { useGetMyPendingInvitations } from '../../staff/admin/api/team/queries/u
 import { InvitationCard } from './InvitationCard';
 import { InvitationActions } from './InvitationActions';
 import type { StaffInvitation } from '../../staff/admin/api/team/types/staffInvitationTypes';
+
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
 /* -------------------------------------------------------------------------- */
@@ -86,39 +87,55 @@ export const InvitationList: React.FC<InvitationListProps> = ({
     let filtered = [...invitations];
 
     // Search filter
- if (filters.searchTerm) {
-  const searchLower = filters.searchTerm.toLowerCase();
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase();
 
-  filtered = filtered.filter(inv =>
-    inv.facility?.facility_name?.toLowerCase().includes(searchLower) ||
-    inv.facility?.facility_code?.toLowerCase().includes(searchLower) ||
-    inv.role?.name?.toLowerCase().includes(searchLower) ||
-    inv.role_code?.toLowerCase().includes(searchLower) ||
-    inv.department?.department_name?.toLowerCase().includes(searchLower)
-  );
-}
+      filtered = filtered.filter(inv => {
+        const facilityName = inv.facility?.facility_name?.toLowerCase() || '';
+        const facilityCode = inv.facility?.facility_code?.toLowerCase() || '';
+        const roleName = inv.role?.name?.toLowerCase() || '';
+        const roleCode = inv.role_code?.toLowerCase() || '';
+        const deptName = inv.department?.department_name?.toLowerCase() || '';
 
+        return (
+          facilityName.includes(searchLower) ||
+          facilityCode.includes(searchLower) ||
+          roleName.includes(searchLower) ||
+          roleCode.includes(searchLower) ||
+          deptName.includes(searchLower)
+        );
+      });
+    }
 
     // Status filter
     if (filters.filterBy === 'expiring_soon') {
       filtered = filtered.filter(inv => 
-        inv.days_until_expiry !== null && inv.days_until_expiry <= 7
+        inv.days_until_expiry !== null && inv.days_until_expiry !== undefined && inv.days_until_expiry <= 7
       );
     } else if (filters.filterBy === 'urgent') {
       filtered = filtered.filter(inv => 
-        inv.days_until_expiry !== null && inv.days_until_expiry <= 3
+        inv.days_until_expiry !== null && inv.days_until_expiry !== undefined && inv.days_until_expiry <= 3
       );
     }
 
     // Sort
     filtered.sort((a, b) => {
       switch (filters.sortBy) {
-        case 'date_asc':
-          return new Date(a.sent_at || 0).getTime() - new Date(b.sent_at || 0).getTime();
-        case 'date_desc':
-          return new Date(b.sent_at || 0).getTime() - new Date(a.sent_at || 0).getTime();
-        case 'facility_asc':
-          return (a.facility?.facility_name || '').localeCompare(b.facility?.facility_name || '');
+        case 'date_asc': {
+          const dateA = a.sent_at ? new Date(a.sent_at).getTime() : 0;
+          const dateB = b.sent_at ? new Date(b.sent_at).getTime() : 0;
+          return dateA - dateB;
+        }
+        case 'date_desc': {
+          const dateA = a.sent_at ? new Date(a.sent_at).getTime() : 0;
+          const dateB = b.sent_at ? new Date(b.sent_at).getTime() : 0;
+          return dateB - dateA;
+        }
+        case 'facility_asc': {
+          const nameA = a.facility?.facility_name || '';
+          const nameB = b.facility?.facility_name || '';
+          return nameA.localeCompare(nameB);
+        }
         case 'expiry_asc': {
           const aExpiry = a.days_until_expiry ?? Infinity;
           const bExpiry = b.days_until_expiry ?? Infinity;
@@ -136,11 +153,11 @@ export const InvitationList: React.FC<InvitationListProps> = ({
 
   const stats = useMemo(() => {
     const urgentCount = invitations.filter(inv => 
-      inv.days_until_expiry !== null && inv.days_until_expiry <= 3
+      inv.days_until_expiry !== null && inv.days_until_expiry !== undefined && inv.days_until_expiry <= 3
     ).length;
     
     const expiringSoonCount = invitations.filter(inv => 
-      inv.days_until_expiry !== null && inv.days_until_expiry <= 7
+      inv.days_until_expiry !== null && inv.days_until_expiry !== undefined && inv.days_until_expiry <= 7
     ).length;
 
     return {
@@ -152,17 +169,33 @@ export const InvitationList: React.FC<InvitationListProps> = ({
 
   /* ----------------------------- Event Handlers --------------------------- */
 
-  const handleRefresh = (): void => {
+  const handleRefresh = useCallback((): void => {
     refetch();
-  };
+  }, [refetch]);
 
-  const handleClearFilters = (): void => {
+  const handleClearFilters = useCallback((): void => {
     setFilters({
       searchTerm: '',
       sortBy: 'date_desc',
       filterBy: 'all',
     });
-  };
+  }, []);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
+    setFilters(prev => ({ ...prev, searchTerm: e.target.value }));
+  }, []);
+
+  const handleSortChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>): void => {
+    setFilters(prev => ({ ...prev, sortBy: e.target.value as SortOption }));
+  }, []);
+
+  const handleFilterChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>): void => {
+    setFilters(prev => ({ ...prev, filterBy: e.target.value as FilterOption }));
+  }, []);
+
+  const toggleFilters = useCallback((): void => {
+    setShowFilters(prev => !prev);
+  }, []);
 
   const hasActiveFilters = 
     filters.searchTerm !== '' || 
@@ -242,7 +275,7 @@ export const InvitationList: React.FC<InvitationListProps> = ({
                 type="text"
                 placeholder="Search by facility, role, or department..."
                 value={filters.searchTerm}
-                onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+                onChange={handleSearchChange}
                 className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
                   isDark 
                     ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' 
@@ -251,7 +284,7 @@ export const InvitationList: React.FC<InvitationListProps> = ({
               />
             </div>
             <button
-              onClick={() => setShowFilters(!showFilters)}
+              onClick={toggleFilters}
               className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                 showFilters || hasActiveFilters
                   ? (isDark ? 'bg-blue-900/30 text-blue-300 border-blue-700' : 'bg-blue-100 text-blue-700 border-blue-300')
@@ -290,7 +323,7 @@ export const InvitationList: React.FC<InvitationListProps> = ({
                 </label>
                 <select
                   value={filters.sortBy}
-                  onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value as SortOption }))}
+                  onChange={handleSortChange}
                   className={`w-full px-3 py-2 rounded-lg border text-sm ${
                     isDark 
                       ? 'bg-gray-800 border-gray-700 text-white' 
@@ -310,7 +343,7 @@ export const InvitationList: React.FC<InvitationListProps> = ({
                 </label>
                 <select
                   value={filters.filterBy}
-                  onChange={(e) => setFilters(prev => ({ ...prev, filterBy: e.target.value as FilterOption }))}
+                  onChange={handleFilterChange}
                   className={`w-full px-3 py-2 rounded-lg border text-sm ${
                     isDark 
                       ? 'bg-gray-800 border-gray-700 text-white' 
@@ -343,7 +376,7 @@ export const InvitationList: React.FC<InvitationListProps> = ({
           <AlertCircle className={`w-12 h-12 mx-auto ${isDark ? 'text-red-400' : 'text-red-600'}`} />
           <h3 className="mt-4 text-lg font-semibold">Error Loading Invitations</h3>
           <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            {error.message || 'Something went wrong. Please try again.'}
+            {error instanceof Error ? error.message : 'Something went wrong. Please try again.'}
           </p>
           <button
             onClick={handleRefresh}
@@ -392,7 +425,7 @@ export const InvitationList: React.FC<InvitationListProps> = ({
                   invitation={invitation}
                   theme={theme}
                   onViewDetails={onInvitationSelect}
-                  layout="vertical"
+                  layout="horizontal"
                 />
               }
             />

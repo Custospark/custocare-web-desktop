@@ -10,7 +10,7 @@
  * @description Type-safe action buttons with enterprise UX patterns
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Check, X, Eye, Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useConfirm } from '../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
@@ -19,7 +19,7 @@ import {
   useDeclineInvitation,
   staffInvitationKeys
 } from '../../staff/admin/api/team/queries/useStaffInvitationQueries';
-import { StaffInvitation } from '../../staff/admin/api/team/types/staffInvitationTypes';
+import type { StaffInvitation } from '../../staff/admin/api/team/types/staffInvitationTypes';
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
@@ -52,17 +52,29 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
 
   const acceptMutation = useAcceptInvitation({
     onSuccess: () => {
+      // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: staffInvitationKeys.all });
       queryClient.invalidateQueries({ queryKey: staffInvitationKeys.myPending() });
+      
+      // Call callback if provided
       onActionComplete?.();
+    },
+    onError: (error) => {
+      console.error('Accept invitation error:', error);
     },
   });
 
   const declineMutation = useDeclineInvitation({
     onSuccess: () => {
+      // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: staffInvitationKeys.all });
       queryClient.invalidateQueries({ queryKey: staffInvitationKeys.myPending() });
+      
+      // Call callback if provided
       onActionComplete?.();
+    },
+    onError: (error) => {
+      console.error('Decline invitation error:', error);
     },
   });
 
@@ -70,44 +82,56 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
 
   /* ----------------------------- Event Handlers --------------------------- */
 
-  const handleAccept = async (): Promise<void> => {
-    const confirmed = await confirm({
-      title: 'Accept Invitation',
-      message: `Are you sure you want to accept the invitation from ${invitation.facility?.facility_name || 'this facility'}? You will be granted access to their system with the role of ${invitation.role?.name || invitation.role_code}.`,
-      confirmText: 'Accept Invitation',
-      cancelText: 'Cancel',
-      variant: 'info',
-      theme,
-    });
+  const handleAccept = useCallback(async (): Promise<void> => {
+    try {
+      const confirmed = await confirm({
+        title: 'Accept Invitation',
+        message: `Are you sure you want to accept the invitation from ${invitation.facility?.facility_name || 'this facility'}? You will be granted access to their system with the role of ${invitation.role?.code || invitation.role}.`,
+        confirmText: 'Accept Invitation',
+        cancelText: 'Cancel',
+        variant: 'info',
+        theme,
+      });
 
-    if (!confirmed) return;
+      if (!confirmed) return;
 
-    acceptMutation.mutate({ id: invitation.id });
-  };
+      acceptMutation.mutate({ id: invitation.id });
+    } catch (error) {
+      console.error('Error in handleAccept:', error);
+    }
+  }, [confirm, invitation, theme, acceptMutation]);
 
-  const handleDecline = async (): Promise<void> => {
-    const confirmed = await confirm({
-      title: 'Decline Invitation',
-      message: `Are you sure you want to decline the invitation from ${invitation.facility?.facility_name || 'this facility'}? This action cannot be undone.`,
-      confirmText: 'Decline Invitation',
-      cancelText: 'Cancel',
-      variant: 'danger',
-      theme,
-    });
+  const handleDecline = useCallback(async (): Promise<void> => {
+    try {
+      const confirmed = await confirm({
+        title: 'Decline Invitation',
+        message: `Are you sure you want to decline the invitation from ${invitation.facility?.facility_name || 'this facility'}? This action cannot be undone.`,
+        confirmText: 'Decline Invitation',
+        cancelText: 'Cancel',
+        variant: 'danger',
+        theme,
+      });
 
-    if (!confirmed) return;
+      if (!confirmed) return;
 
-    declineMutation.mutate({ id: invitation.id });
-  };
+      declineMutation.mutate({ id: invitation.id });
+    } catch (error) {
+      console.error('Error in handleDecline:', error);
+    }
+  }, [confirm, invitation, theme, declineMutation]);
 
-  const handleViewDetails = (): void => {
-    onViewDetails?.(invitation);
-  };
+  const handleViewDetails = useCallback((): void => {
+    if (onViewDetails) {
+      onViewDetails(invitation);
+    }
+  }, [onViewDetails, invitation]);
 
   /* --------------------------- Conditional Rendering ---------------------- */
 
   // Don't show actions if invitation cannot be accepted or declined
-  if (!invitation.can_be_accepted && !invitation.can_be_declined) {
+  const hasActions = invitation.can_be_accepted || invitation.can_be_declined || onViewDetails;
+  
+  if (!hasActions) {
     return null;
   }
 
@@ -128,11 +152,8 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
             isProcessing
               ? 'opacity-50 cursor-not-allowed'
               : 'hover:scale-[1.02] active:scale-[0.98]'
-          } ${
-            isDark
-              ? 'bg-green-600 hover:bg-green-700 text-white'
-              : 'bg-green-600 hover:bg-green-700 text-white'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          } bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
+          aria-label="Accept invitation"
         >
           {acceptMutation.isPending ? (
             <>
@@ -149,7 +170,9 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
       )}
 
       {/* Decline Button */}
-      {invitation.can_be_declined && (
+      {
+      // invitation.can_be_declined && 
+      (
         <button
           onClick={handleDecline}
           disabled={isProcessing}
@@ -157,11 +180,8 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
             isProcessing
               ? 'opacity-50 cursor-not-allowed'
               : 'hover:scale-[1.02] active:scale-[0.98]'
-          } ${
-            isDark
-              ? 'bg-red-600 hover:bg-red-700 text-white'
-              : 'bg-red-600 hover:bg-red-700 text-white'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          } bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
+          aria-label="Decline invitation"
         >
           {declineMutation.isPending ? (
             <>
@@ -178,7 +198,9 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
       )}
 
       {/* View Details Button (Optional) */}
-      {onViewDetails && (
+      {
+      // onViewDetails &&
+       (
         <button
           onClick={handleViewDetails}
           disabled={isProcessing}
@@ -190,7 +212,8 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
             isDark
               ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
               : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          } shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
+          aria-label="View invitation details"
         >
           <Eye className="w-4 h-4" />
           <span className="sr-only md:not-sr-only">Details</span>

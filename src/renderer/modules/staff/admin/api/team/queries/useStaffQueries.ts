@@ -93,7 +93,7 @@ export const useGetStaff = (
   return useQuery<GetStaffResponse, AxiosError<ApiErrorResponse>>({
     queryKey: staffKeys.list(filters),
     queryFn: async () => {
-      const response = await axiosInstance.get<GetStaffResponse>('/staff/specific-facility', {
+      const response = await axiosInstance.get<GetStaffResponse>('/staff', {
         params: filters,
       });
       return response.data;
