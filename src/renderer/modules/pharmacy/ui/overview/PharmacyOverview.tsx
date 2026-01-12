@@ -1,11 +1,11 @@
 // PharmacyOverview.tsx
 import React, { useState } from 'react';
-import { OverviewStats } from './components/OverviewStats';
-import { InventoryTrendsChart } from './components/InventoryTrendsChart';
-import { PrescriptionActivityChart } from './components/PrescriptionActivityChart';
-import { QuickActionsPanel } from './components/QuickActionsPanel';
-import { RecentActivityFeed } from './components/RecentActivityFeed';
-import { PerformanceMetrics } from './components/PerformanceMetrics';
+import { OverviewStats } from './OverviewStats';
+import { InventoryTrendsChart } from './InventoryTrendsChart';
+import { PrescriptionActivityChart } from './PrescriptionActivityChart';
+import { QuickActionsPanel } from './QuickActionsPanel';
+import { RecentActivityFeed } from './RecentActivityFeed';
+import { PerformanceMetrics } from './PerformanceMetrics';
 import { RefreshCw } from 'lucide-react';
 interface PharmacyOverviewProps {
   theme: 'light' | 'dark';

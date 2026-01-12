@@ -9,7 +9,7 @@ import {
   Pill,
   Receipt,
 } from 'lucide-react';
- import PharmacyOverview from './PharmacyOverview';
+ import PharmacyOverview from './overview/PharmacyOverview';
 /**
  * ============================================================================
  * PHARMACY MODULE - MAIN INTEGRATION COMPONENT
