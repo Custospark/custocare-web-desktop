@@ -57,6 +57,7 @@ const Billing: React.FC<BillingProps> = ({ theme }) => {
       icon={<CreditCard className="w-6 h-6" />}
       theme={theme}
       actions={actions}
+      moduleId="billing"
       defaultAction="billing_queue"
       renderAction={renderAction}
     />

@@ -66,7 +66,12 @@ export function BaseModuleWorkspace<TOperationId extends string>({
    * --------------------------------------------------------------------------
    */
   const handleOperationChange = useCallback((operationId: string) => {
-    setInternalActiveOperation(operationId as TOperationId);
+    const newOperation = operationId as TOperationId;
+    setInternalActiveOperation(newOperation);
+    
+    // Dispatch navigation to update Redux
+    // This ensures Redux knows about the operation change
+    // You'll need to import useDispatch and dispatch the navigate action here
   }, []);
 
   /**

@@ -1,7 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { FileText, ArrowLeft, Plus, Trash2, Check } from 'lucide-react';
-import { useWorkspaceNavigation } from '../../../../app/store/hooks/useWorkspaceNavigation';
+import { useSelector, useDispatch } from 'react-redux';
 import { cn } from '../../../../shared/utils/classNameUtils';
+import type { RootState } from '../../../../app/store/store';
+import { AppDispatch } from '../../../../app/store/store';
 
 interface StockItem {
   id: number;
@@ -23,8 +25,13 @@ interface InvoiceItem extends StockItem {
 }
 
 const CreateInvoice: React.FC<CreateInvoiceProps> = ({ theme }) => {
-  const navigation = useWorkspaceNavigation();
+  const dispatch = useDispatch<AppDispatch>();
   const isDark = theme === 'dark';
+
+  // Get current navigation state from Redux
+  const navigationState = useSelector((state: RootState) => 
+    state.moduleNavigation.current
+  );
 
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [customerName, setCustomerName] = useState<string>('');
@@ -32,64 +39,71 @@ const CreateInvoice: React.FC<CreateInvoiceProps> = ({ theme }) => {
   const [notes, setNotes] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
-  // Use a ref to track if we've already processed the initial stock data
-  const hasProcessedInitialData = React.useRef(false);
-
-  // Process stock data from navigation context - using useEffect with cleanup
+  // Process stock data from Redux navigation payload
   useEffect(() => {
-    // Skip if we've already processed initial data
-    if (hasProcessedInitialData.current) {
-      return;
-    }
-
-    const stockData = navigation.getContextData<StockItem | StockItem[]>();
+    console.log('CreateInvoice: Current navigation state:', navigationState);
     
-    if (!stockData) {
-      hasProcessedInitialData.current = true;
-      return;
-    }
-
-    // Process stock data asynchronously in the next render cycle
-    const processStockData = () => {
-      try {
-        const items: StockItem[] = Array.isArray(stockData) ? stockData : [stockData];
+    if (navigationState.payload) {
+      console.log('CreateInvoice: Navigation payload found:', navigationState.payload);
+      
+      // Extract stockData from payload
+      const payload = navigationState.payload as { stockData?: StockItem | StockItem[] };
+      
+      if (payload.stockData) {
+        console.log('CreateInvoice: Processing stockData:', payload.stockData);
         
-        const newInvoiceItems = items.map(item => ({
-          ...item,
-          total: (item.price || item.unitCost || 0) * item.quantity
-        }));
+        try {
+          const items: StockItem[] = Array.isArray(payload.stockData) 
+            ? payload.stockData 
+            : [payload.stockData];
+          
+          const newInvoiceItems = items.map(item => ({
+            ...item,
+            total: (item.price || item.unitCost || 0) * item.quantity
+          }));
 
-        setInvoiceItems(newInvoiceItems);
-        hasProcessedInitialData.current = true;
-        
-        // Clear context data after processing
-        setTimeout(() => {
-          navigation.clearContextData();
-        }, 0);
-      } catch (error) {
-        console.error('Error processing stock data:', error);
+          console.log('CreateInvoice: Setting invoice items:', newInvoiceItems);
+          setInvoiceItems(newInvoiceItems);
+          
+          // Clear payload after processing to avoid reprocessing
+          dispatch({
+            type: 'moduleNavigation/clearPayload'
+          });
+          
+        } catch (error) {
+          console.error('Error processing stock data:', error);
+        }
       }
-    };
-
-    // Use requestAnimationFrame to avoid synchronous state updates in effect
-    requestAnimationFrame(processStockData);
-
-    // Cleanup function
-    return () => {
-      hasProcessedInitialData.current = true;
-    };
-  }, [navigation]);
+    }
+  }, [navigationState.payload, dispatch]);
 
   const handleBackToAddStock = useCallback(() => {
-    navigation.navigateTo('inventory', 'add_stock');
-  }, [navigation]);
+    // Navigate using Redux dispatch
+    dispatch({
+      type: 'moduleNavigation/navigate',
+      payload: {
+        operation: 'inventory',
+        action: 'add_stock',
+        timestamp: Date.now(),
+      }
+    });
+  }, [dispatch]);
 
   const handleAddMoreItems = useCallback(() => {
-    navigation.navigateTo('inventory', 'add_stock', {
-      returnToInvoice: true,
-      existingItems: invoiceItems,
+    // Navigate back to add stock with existing items
+    dispatch({
+      type: 'moduleNavigation/navigate',
+      payload: {
+        operation: 'inventory',
+        action: 'add_stock',
+        payload: {
+          returnToInvoice: true,
+          existingItems: invoiceItems,
+        },
+        timestamp: Date.now(),
+      }
     });
-  }, [navigation, invoiceItems]);
+  }, [dispatch, invoiceItems]);
 
   const handleRemoveItem = useCallback((itemId: number) => {
     setInvoiceItems(prev => prev.filter(item => item.id !== itemId));
@@ -157,8 +171,16 @@ const CreateInvoice: React.FC<CreateInvoiceProps> = ({ theme }) => {
         date: new Date().toISOString(),
       };
 
-      // Navigate to invoice preview or confirmation
-      navigation.navigateTo('billing', 'invoice_preview', { invoiceData });
+      // Navigate to invoice preview
+      dispatch({
+        type: 'moduleNavigation/navigate',
+        payload: {
+          operation: 'billing',
+          action: 'invoice_preview',
+          payload: { invoiceData },
+          timestamp: Date.now(),
+        }
+      });
       
     } catch (error) {
       console.error('Error processing invoice:', error);
@@ -166,7 +188,7 @@ const CreateInvoice: React.FC<CreateInvoiceProps> = ({ theme }) => {
     } finally {
       setIsProcessing(false);
     }
-  }, [invoiceItems, customerName, customerEmail, notes, calculateSubtotal, calculateTax, calculateTotal, navigation]);
+  }, [invoiceItems, customerName, customerEmail, notes, calculateSubtotal, calculateTax, calculateTotal, dispatch]);
 
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-US', {
@@ -178,6 +200,9 @@ const CreateInvoice: React.FC<CreateInvoiceProps> = ({ theme }) => {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Debug info - Remove in production */}
+      
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

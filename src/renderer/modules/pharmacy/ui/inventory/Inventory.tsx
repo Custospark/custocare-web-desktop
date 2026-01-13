@@ -16,7 +16,7 @@ import { BaseActionWorkspace } from '../../../../shared/components/workspace/Bas
 import AddStock from './AddStock';
 
 type InventoryAction =
-  | 'stock_overview'
+  | 'overview'
   | 'add_stock'
   | 'search_item'
   | 'adjust_stock'
@@ -32,9 +32,11 @@ const Inventory: React.FC<InventoryProps> = ({ theme }) => {
       title="Pharmacy Inventory"
       icon={<Boxes className="w-6 h-6" />}
       theme={theme}
-      defaultAction="stock_overview"
+      defaultAction="overview"
+      moduleId="inventory"
+
       actions={[
-        { key: 'stock_overview', label: 'Stock Overview', icon: <Boxes className="w-4 h-4" /> },
+        { key: 'overview', label: 'Stock Overview', icon: <Boxes className="w-4 h-4" /> },
         { key: 'add_stock', label: 'Add Stock', icon: <PackagePlus className="w-4 h-4" /> },
         { key: 'search_item', label: 'Search Item', icon: <Search className="w-4 h-4" /> },
         { key: 'adjust_stock', label: 'Adjust Stock', icon: <RefreshCcw className="w-4 h-4" /> },
@@ -50,7 +52,7 @@ const Inventory: React.FC<InventoryProps> = ({ theme }) => {
             return <PlaceholderPanel title="Adjust Existing Stock" />;
           case 'expired_items':
             return <PlaceholderPanel title="Expired / Near-Expiry Items" />;
-          case 'stock_overview':
+          case 'overview':
           default:
             return <PlaceholderPanel title="Inventory Stock Overview" />;
         }
