@@ -1,91 +1,230 @@
-Objective
-Create all the files in one pass and clearly name them for easy imports. You are a React/Typescript Developer and UX/UX Designer with 8 decades of experince. Design and implement six modular seaperate  React components that imported seamlessly into AdminTeam.tsx. These components must collectively enable an administrator to manage all medical staff operations within the health facility they oversee.I already implemented everything concerning department,just like you can see in the sample i provided to guide you create the AdminTeam.tsx,so dont recreate department,we jsut need to make necessary queries to departments that exist in the database to help us achieve our goal.
-Core Requirements
+import React, { useState } from 'react';
+import { PackagePlus, X } from 'lucide-react';
+import { useDispatch } from 'react-redux';
+import { AppDispatch } from '../../../../app/store/store';
+import { navigate } from '../../../../app/store/slices/moduleNavigationSlice'; // Import the action
 
-All components must render within AdminTeam.tsx only (no navigation, routing, or page transitions).
+interface StockItem {
+  id: number;
+  name: string;
+  quantity: number;
+  price: number;
+}
 
-UI updates must be real-time (state-driven; no full reloads).
+interface AddStockProps {
+  theme: 'light' | 'dark';
+}
 
-The implementation must strictly use the provided file types:
+const AddStock: React.FC<AddStockProps> = ({ theme }) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const isDark = theme === 'dark';
 
-API query hooks
+  const [stockName, setStockName] = useState('');
+  const [quantity, setQuantity] = useState(0);
+  const [price, setPrice] = useState(0);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
-Redux slice files
+  const handleSendToInvoice = () => {
+    if (!stockName || quantity <= 0 || price <= 0) {
+      alert('Please fill all fields with valid values');
+      return;
+    }
 
-Type definition files
-These must be leveraged precisely—no duplicate logic or assumptions.
+    const stockData: StockItem = {
+      id: Date.now(),
+      name: stockName,
+      quantity,
+      price,
+    };
 
-The AdminTeam.tsx component receives theme props from its parent; all child components must respect and inherit this theme.
+    console.log('Dispatching navigation to billing/create_invoice with payload:', stockData);
 
-Follow the existing color theme exactly (a reference file will be provided).
+    // Method 1: Direct dispatch with action import (preferred)
+    dispatch(navigate({
+      operation: 'billing',
+      action: 'create_invoice',
+      payload: { stockData },
+      timestamp: Date.now(),
+    }));
 
-Use icons exclusively from lucide-react.
+    // Method 2: Or use the action type directly
+    // dispatch({
+    //   type: 'moduleNavigation/navigate',
+    //   payload: {
+    //     operation: 'billing',
+    //     action: 'create_invoice',
+    //     payload: { stockData },
+    //     timestamp: Date.now(),
+    //   }
+    // });
 
-The code must be fully type-safe:
+    console.log('Navigation dispatched');
+  };
 
-No any
+  const handleCancel = () => {
+    if (stockName || quantity > 0 || price > 0) {
+      setShowCancelConfirm(true);
+    } else {
+      goBackToInventory();
+    }
+  };
 
-No implicit types
+  const handleConfirmCancel = () => {
+    setStockName('');
+    setQuantity(0);
+    setPrice(0);
+    setShowCancelConfirm(false);
+    goBackToInventory();
+  };
 
-No type assertions used to bypass correctness
+  const handleDismissCancel = () => {
+    setShowCancelConfirm(false);
+  };
 
-Code must be production-ready and bug-free.
+  const goBackToInventory = () => {
+    dispatch(navigate({
+      operation: 'inventory',
+      action: 'overview',
+      timestamp: Date.now(),
+    }));
+  };
 
-Administrator Capabilities to Support
+  const hasUnsavedChanges = stockName || quantity > 0 || price > 0;
 
-The administrator must be able to:
+  return (
+    <div className={`space-y-4 p-4 rounded-lg border ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+      {/* Cancel Confirmation Modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`rounded-xl p-6 max-w-md w-full shadow-2xl ${
+            isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
+          }`}>
+            <h3 className="text-lg font-semibold mb-2">
+              Discard Changes?
+            </h3>
+            <p className={`mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              You have unsaved changes. Are you sure you want to cancel? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleDismissCancel}
+                className={`px-4 py-2 rounded-lg font-medium ${
+                  isDark
+                    ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Continue Editing
+              </button>
+              <button
+                onClick={handleConfirmCancel}
+                className={`px-4 py-2 rounded-lg font-medium ${
+                  isDark
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-red-600 text-white hover:bg-red-700'
+                }`}
+              >
+                Discard Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-Search staff
+      {/* Header with Cancel Button */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <PackagePlus className="w-6 h-6" />
+          Add Stock
+        </h3>
+        <button
+          onClick={handleCancel}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${
+            isDark
+              ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+          type="button"
+        >
+          <X className="w-4 h-4" />
+          Cancel
+        </button>
+      </div>
 
-Use useGetStaff with filter support
+      {/* Form */}
+      <div className="flex flex-col gap-3">
+        <input
+          type="text"
+          placeholder="Stock Name *"
+          value={stockName}
+          onChange={(e) => setStockName(e.target.value)}
+          className={`p-2 rounded border ${isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300'}`}
+          required
+        />
 
-Create staff (if not found)
+        <input
+          type="number"
+          placeholder="Quantity *"
+          min="1"
+          value={quantity || ''}
+          onChange={(e) => setQuantity(Number(e.target.value) || 0)}
+          className={`p-2 rounded border ${isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300'}`}
+          required
+        />
 
-Form-based creation using useCreateStaff
+        <input
+          type="number"
+          placeholder="Price *"
+          min="0.01"
+          step="0.01"
+          value={price || ''}
+          onChange={(e) => setPrice(Number(e.target.value) || 0)}
+          className={`p-2 rounded border ${isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300'}`}
+          required
+        />
 
-Select facility and department
+        <div className="flex gap-3 mt-2">
+          <button
+            onClick={handleCancel}
+            className={`flex-1 px-4 py-2 rounded-lg font-medium ${
+              isDark
+                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSendToInvoice}
+            disabled={!stockName || quantity <= 0 || price <= 0}
+            className={`flex-1 px-4 py-2 rounded-lg font-medium ${
+              (!stockName || quantity <= 0 || price <= 0)
+                ? 'bg-gray-400 cursor-not-allowed'
+                : isDark 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            Send to Invoice
+          </button>
+        </div>
 
-Use existing facility and department query hooks
+        {/* Debug info */}
+        <div className="mt-4 p-2 bg-gray-800 text-white text-xs rounded">
+          <div>Clicking "Send to Invoice" should navigate to billing/create_invoice</div>
+          <div>Payload should include: stockData</div>
+        </div>
 
-Assign role and module access
+        {/* Unsaved changes indicator */}
+        {hasUnsavedChanges && (
+          <div className={`text-xs p-2 rounded ${isDark ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-50 text-yellow-700'}`}>
+            ⚠️ You have unsaved changes
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
-Roles: useGetFacilityRoles
-
-Modules: useGetModules
-
-Create staff invitations
-
-Use useCreateStaffInvitation
-
-Manage invitations
-
-Resend invitations
-
-Cancel invitations
-
-Perform batch operations where applicable
-
-Design Expectations
-
-The UI must be intuitive, fast, and enterprise-grade.
-
-Components should be modular, composable, and reusable.
-
-Administrator workflows should require minimal clicks and be self-explanatory.
-Enure we maintain responsiveness across all screens.
-
-Anticipate additional admin needs typical of enterprise systems (within the limits of the provided APIs and slices).
-The components should be separate files that are imported as as functional components in the AdminTeam.tsx.
-For creating Invitaion,the roles, module for access,departments should be fetched from the database so the admin can select them when creating staff invite.Also when creating new staff also capture this { email: ,phone, first_name,,last_name,} and we send to the backend along with the staff creation data.
-
-Deliverable
-
-Six well-structured React components integrated into AdminTeam.tsx
-
-Clean separation of concerns
-
-Strict adherence to existing architecture, data flow, and styling
-
-Continue building from the following base implementation:
-Note:Make sure everything just works pefectly fine. We want to great an enterprise grade level system and user experince.
-import React from 'react';
+export default AddStock;
