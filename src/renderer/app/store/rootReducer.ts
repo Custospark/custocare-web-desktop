@@ -1,10 +1,16 @@
 // store/rootReducer.ts
 import { combineReducers } from '@reduxjs/toolkit';
 
-// Import all slices
+// ==============================
+// CORE SLICES
+// ==============================
 import authReducer from './slices/authSlice';
-import activeContextReducer from './slices/activeContextSlice'; // NEW
+import activeContextReducer from './slices/activeContextSlice';
 import uiReducer from './slices/uiSlice';
+
+// ==============================
+// DOMAIN SLICES
+// ==============================
 import patientReducer from './slices/patientSlice';
 import notificationReducer from './slices/notificationSlice';
 import facilityReducer from './slices/facilitySlice';
@@ -15,11 +21,25 @@ import billingReducer from './slices/billingSlice';
 import roleReducer from './slices/roleSlice';
 import auditReducer from './slices/auditSlice';
 
-// Combine all reducers
+// ==============================
+// MODULE NAVIGATION (NEW)
+// ==============================
+import moduleNavigationReducer from './slices/moduleNavigationSlice';
+
+// ==============================
+// ROOT REDUCER
+// ==============================
 export const rootReducer = combineReducers({
   auth: authReducer,
-  activeContext: activeContextReducer, // NEW - Critical for role/facility management
+  activeContext: activeContextReducer, // Role / Facility context
   ui: uiReducer,
+
+  /**
+   * Module-level navigation state
+   * (operation, action, payload, history)
+   */
+  moduleNavigation: moduleNavigationReducer,
+
   patient: patientReducer,
   notification: notificationReducer,
   facility: facilityReducer,
