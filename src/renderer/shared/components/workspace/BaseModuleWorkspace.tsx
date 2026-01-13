@@ -36,14 +36,29 @@ export function BaseModuleWorkspace<TOperationId extends string>({
    * --------------------------------------------------------------------------
    */
   const theme = useSelector((state: RootState) => state.ui.theme);
+  
+  // Get current navigation state from Redux
+  const navigationState = useSelector((state: RootState) => 
+    state.moduleNavigation.current
+  );
 
   /**
    * --------------------------------------------------------------------------
    * LOCAL STATE
    * --------------------------------------------------------------------------
    */
-  const [activeOperation, setActiveOperation] =
+  const [internalActiveOperation, setInternalActiveOperation] =
     useState<TOperationId>(defaultOperation);
+
+  /**
+   * --------------------------------------------------------------------------
+   * COMPUTED STATE
+   * --------------------------------------------------------------------------
+   */
+  // Use operation from Redux if available, otherwise use internal state
+  const activeOperation = navigationState.operation 
+    ? (navigationState.operation as TOperationId)
+    : internalActiveOperation;
 
   /**
    * --------------------------------------------------------------------------
@@ -51,7 +66,7 @@ export function BaseModuleWorkspace<TOperationId extends string>({
    * --------------------------------------------------------------------------
    */
   const handleOperationChange = useCallback((operationId: string) => {
-    setActiveOperation(operationId as TOperationId);
+    setInternalActiveOperation(operationId as TOperationId);
   }, []);
 
   /**

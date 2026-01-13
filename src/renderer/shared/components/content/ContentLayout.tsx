@@ -1,36 +1,28 @@
-import React, { useCallback,type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-
-import { useSelector } from 'react-redux';
+import React, { useCallback, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../../app/store/store';
 import { MoreVertical, X, Sparkles } from 'lucide-react';
 import { cn } from '../../utils/classNameUtils';
-
 import { LayoutMainContent } from './LayoutMainContent';
 import { QuickActionsSidebar, type DockSide} from './QuickActionsSidebar';
+import { AppDispatch } from '../../../app/store/store';
 
 export interface ContentLayoutProps {
   operations: Operation[];
   activeOperation: string;
   onOperationChange: (operationId: string) => void;
   children: React.ReactNode;
-
   className?: string;
   hideSidebar?: boolean;
-
   initialCollapsedSide?: boolean;
   initialCollapsedUp?: boolean;
-
   sidebarHeader?: React.ReactNode;
   sidebarFooter?: React.ReactNode;
-
   headerTitle?: string;
-  defaultOperation?:string;
-
-  /**
-   * Requirement #5:
-   * show table/context name under "Quick Actions"
-   */
+  defaultOperation?: string;
   contextTitle?: string;
+  isLoading?: boolean;
+  renderExtraContent?: () => React.ReactNode;
 }
 
 export interface Operation {
@@ -84,10 +76,18 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
   sidebarHeader,
   sidebarFooter,
   headerTitle,
-  contextTitle
+  contextTitle,
+  isLoading = false,
+  renderExtraContent,
 }) => {
   const theme = useSelector((state: RootState) => state.ui.theme);
+  const dispatch = useDispatch<AppDispatch>();
   const isMobile = useIsMobile(MOBILE_BREAKPOINT);
+
+  // Get current navigation state from Redux
+  const navigationState = useSelector((state: RootState) => 
+    state.moduleNavigation.current
+  );
 
   // Docking only on desktop
   const [dockSide, setDockSide] = useState<DockSide>(() => safeGetDockSide());
@@ -158,9 +158,22 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
       if (id === activeOperation) return;
       onOperationChange(id);
       scrollMainToTop();
+      
+      // Dispatch navigation action when operation changes
+      if (navigationState.operation !== id) {
+        dispatch({
+          type: 'moduleNavigation/navigate',
+          payload: {
+            operation: id,
+            action: undefined, // Clear sub-actions when changing main operation
+            timestamp: Date.now(),
+          }
+        });
+      }
+      
       if (isMobile) setMobileOpen(false);
     },
-    [activeOperation, isMobile, onOperationChange, scrollMainToTop]
+    [activeOperation, isMobile, onOperationChange, scrollMainToTop, navigationState.operation, dispatch]
   );
 
   const onDockChange = useCallback((side: DockSide) => {
@@ -188,7 +201,21 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
   if (hideSidebar) {
     return (
       <div className={cn('w-full h-full flex flex-col', className)}>
-        <LayoutMainContent scrollRef={mainScrollRef}>{children}</LayoutMainContent>
+        <LayoutMainContent scrollRef={mainScrollRef}>
+          {isLoading ? (
+            <div className="flex items-center justify-center min-h-[400px]">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-4 text-gray-500">Loading content...</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {children}
+              {renderExtraContent && renderExtraContent()}
+            </>
+          )}
+        </LayoutMainContent>
       </div>
     );
   }
@@ -210,6 +237,11 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
                 )}
               >
                 {headerTitle}
+                {isLoading && (
+                  <span className="ml-2 text-sm text-gray-500 animate-pulse">
+                    (Loading...)
+                  </span>
+                )}
               </h1>
             )}
           </div>
@@ -227,6 +259,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
             aria-label="Open quick actions"
             aria-expanded={mobileOpen}
             title="Quick actions"
+            disabled={isLoading}
           >
             <MoreVertical className="w-4 h-4" />
             <span className="text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
@@ -259,7 +292,26 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
               />
             )}
 
-            <LayoutMainContent scrollRef={mainScrollRef}>{children}</LayoutMainContent>
+            <LayoutMainContent scrollRef={mainScrollRef}>
+              {isLoading ? (
+                <div className="flex items-center justify-center min-h-[400px]">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-500">Loading content...</p>
+                    {navigationState.operation && (
+                      <p className="text-sm text-gray-400 mt-2">
+                        Current operation: {navigationState.operation}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {children}
+                  {renderExtraContent && renderExtraContent()}
+                </>
+              )}
+            </LayoutMainContent>
 
             {/* Desktop: dock right */}
             {!isMobile && desktopDockSide === 'right' && (
@@ -360,6 +412,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
                 )}
                 aria-label="Close quick actions"
                 title="Close"
+                disabled={isLoading}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -369,7 +422,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
             <div className="flex-1 overflow-auto px-2 py-2">
               {operations.map((op) => {
                 const isActive = op.id === activeOperation;
-                const disabled = !!op.disabled;
+                const disabled = !!op.disabled || isLoading;
 
                 return (
                   <button
@@ -398,6 +451,9 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
                   >
                     {op.icon && <span className="w-5 h-5 flex items-center justify-center">{op.icon}</span>}
                     <span className="flex-1 truncate text-left">{op.label}</span>
+                    {isLoading && isActive && (
+                      <span className="animate-pulse text-xs text-gray-500">(loading...)</span>
+                    )}
                   </button>
                 );
               })}

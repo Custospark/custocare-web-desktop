@@ -5,13 +5,15 @@
  *
  * Handles:
  * - Action tabs (sub-views)
- * - Active action state
+ * - Active action state from Redux
  * - Shared header + panel layout
  *
  * Designed for Inventory, Billing, Dispensing, etc.
  */
 
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../app/store/rootReducer';
 
 export interface ActionConfig<TActionId extends string> {
   key: TActionId;
@@ -37,7 +39,18 @@ export function BaseActionWorkspace<TActionId extends string>({
   renderAction,
 }: BaseActionWorkspaceProps<TActionId>) {
   const isDark = theme === 'dark';
-  const [activeAction, setActiveAction] = useState<TActionId>(defaultAction);
+  
+  // Get current navigation state from Redux
+  const navigationState = useSelector((state: RootState) => 
+    state.moduleNavigation.current
+  );
+  
+  const [internalActiveAction, setInternalActiveAction] = useState<TActionId>(defaultAction);
+
+  // Use action from Redux if available, otherwise use internal state
+  const activeAction = navigationState.action 
+    ? (navigationState.action as TActionId)
+    : internalActiveAction;
 
   return (
     <div className="space-y-4">
@@ -60,7 +73,7 @@ export function BaseActionWorkspace<TActionId extends string>({
             return (
               <button
                 key={action.key}
-                onClick={() => setActiveAction(action.key)}
+                onClick={() => setInternalActiveAction(action.key)}
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
                   ${
                     isActive
