@@ -14,6 +14,7 @@ import {
 
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
 import AddStock from './AddStock';
+import SearchStock from './views/SearchStock';
 
 type InventoryAction =
   | 'overview'
@@ -47,7 +48,7 @@ const Inventory: React.FC<InventoryProps> = ({ theme }) => {
           case 'add_stock':
             return <AddStock theme={theme} />
           case 'search_item':
-            return <PlaceholderPanel title="Search Inventory Items" />;
+            return <SearchStock theme={theme} />;
           case 'adjust_stock':
             return <PlaceholderPanel title="Adjust Existing Stock" />;
           case 'expired_items':

@@ -48,7 +48,7 @@ const AddStock: React.FC<AddStockProps> = ({ theme }) => {
     reorder_point: 500,
     storage_location_type: StorageLocationType.PHARMACY_SHELF,
     is_billable: true,
-    currency_code: 'USD',
+    currency_code: 'UGX',
     status: InventoryItemStatus.ACTIVE,
   });
 
@@ -57,7 +57,6 @@ const AddStock: React.FC<AddStockProps> = ({ theme }) => {
 
   const { mutate: createStock, isPending } = useCreateInventoryItem({
     onSuccess: () => {
-      showToast('success', 'Stock item created successfully!');
       goBackToInventory();
     },
     onError: (error) => {

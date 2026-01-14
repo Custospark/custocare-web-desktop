@@ -5,7 +5,7 @@ import { MoreVertical, X, Sparkles } from 'lucide-react';
 import { cn } from '../../utils/classNameUtils';
 import { LayoutMainContent } from './LayoutMainContent';
 import { QuickActionsSidebar, type DockSide} from './QuickActionsSidebar';
-import { AppDispatch } from '../../../app/store/store';
+import { type AppDispatch } from '../../../app/store/store';
 
 export interface ContentLayoutProps {
   operations: Operation[];

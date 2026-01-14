@@ -14,7 +14,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
-import { ContentLayout, Operation } from '../content/ContentLayout';
+import { ContentLayout, type Operation } from '../content/ContentLayout';
 import type { RootState } from '../../../app/store/rootReducer';
 
 export interface ModuleWorkspaceProps<TOperationId extends string> {

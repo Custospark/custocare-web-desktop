@@ -12,7 +12,7 @@ import {
   Receipt,
   AlertOctagon,
 } from 'lucide-react';
-import { BaseActionWorkspace, ActionConfig } from  '../../../../shared/components/workspace/BaseActionWorkspace';
+import { BaseActionWorkspace, type ActionConfig } from  '../../../../shared/components/workspace/BaseActionWorkspace';
 import CreateInvoice from './CreateInvoice';
 
 type BillingView =

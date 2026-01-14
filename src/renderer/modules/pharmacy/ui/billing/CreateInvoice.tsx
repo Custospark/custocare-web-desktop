@@ -3,7 +3,7 @@ import { FileText, ArrowLeft, Plus, Trash2, Check } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { cn } from '../../../../shared/utils/classNameUtils';
 import type { RootState } from '../../../../app/store/store';
-import { AppDispatch } from '../../../../app/store/store';
+import { type AppDispatch } from '../../../../app/store/store';
 
 interface StockItem {
   id: number;

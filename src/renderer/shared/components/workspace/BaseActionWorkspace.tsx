@@ -14,7 +14,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../../app/store/rootReducer';
-import { AppDispatch } from '../../../app/store/store';
+import { type AppDispatch } from '../../../app/store/store';
 
 export interface ActionConfig<TActionId extends string> {
   key: TActionId;
