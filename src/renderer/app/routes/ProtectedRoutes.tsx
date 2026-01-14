@@ -8,7 +8,7 @@ import { ROUTES } from './routeConstants';
 const Dashboard = React.lazy(() => import('../../shared/pages/Dashboard'));
 const FacilityOnboardingModule = React.lazy(() => import('../../shared/features/facilities/FacilityOnboardingModule'));
 const PatientModule = React.lazy(() => import('../../shared/features/patients/PatientModule'));
-const PatientDetail = React.lazy(() => import('../../shared/features/patients/PatientDetail'));
+const MedicalRecordsModule = React.lazy(() => import('../../modules/medical-records/ui/MedicalRecordsModule'));
 const ClinicalEncounterModule = React.lazy(() => import('../../shared/features/clinical/ClinicalEncounterModule'));
 const ReceptionistDashboard = React.lazy(() => import('../../shared/features/receptionist/ReceptionistDashboard'));
 const HospitalBillReceipt = React.lazy(() => import('../../shared/features/billing/HospitalBillReceipt'));
@@ -76,10 +76,10 @@ export const ProtectedRoutes = () => [
       />
       
       <Route 
-        path={ROUTES.PATIENT_DETAIL} 
+        path={ROUTES.MEDICAL_RECORDS} 
         element={
           <Suspense fallback={<LoadingSkeleton variant="detail" />}>
-              <PatientDetail />
+              <MedicalRecordsModule />
           </Suspense>
         } 
         key="patient-detail"
@@ -103,7 +103,7 @@ export const ProtectedRoutes = () => [
               <AccountModule />
           </Suspense>
         } 
-        key="encounters"
+        key="account"
       />
       {/**Pharmacy Module */}
       <Route 

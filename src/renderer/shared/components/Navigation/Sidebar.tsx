@@ -120,15 +120,15 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     //Modules.
     //1.Reception & medical records.
     {
-      id: 'medical-records',
-      label: 'Patient Registration & Medical Records',
+      id: 'Front Desk',
+      label: 'Front Desk',
       icon: <FileText className="w-5 h-5" />,
       href: ROUTES.MEDICAL_RECORDS,
       route: ROUTES.MEDICAL_RECORDS,
-      description: 'View health records',
+      description: 'Medical Records.',
       stats: 'Records',
       glowColor: 'from-purple-500 to-pink-400',
-      moduleCode: 'medical-records',
+      moduleCode: 'medical_records',
       category: 'clinical'
     },
     //2.Ward & Nursing Care Module.
