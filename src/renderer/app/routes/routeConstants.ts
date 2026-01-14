@@ -42,16 +42,16 @@ export const ROUTES = {
 
   // Support & Help
   HELP: '/help',
-
+  //Dashboards
+  PATIENT_DASHBOARD: '/dahboard/patient',
   // Role-Based Clinical Modules
   FRONT_DESK: '/front-desk',
+  MEDICAL_RECORDS:'/medical-records',
   NURSING: '/nursing',
   CLINICAL_WORKSPACE: '/clinical-workspace',
   LABORATORY: '/laboratory',
   PHARMACY: '/pharmacy',
-  PATIENT_DASHBOARD: '/dahboard/patient',
   BILLING: '/billing',
-  CLINICAL_SERVICES: '/clinical-services',
   ADMINISTRATION: '/administration',
   ACCOUNT:'/acount',
 

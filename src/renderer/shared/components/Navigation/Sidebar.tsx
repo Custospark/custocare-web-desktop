@@ -3,8 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
-  Settings,
-  HelpCircle,
   X,
   Shield,
   Bell,
@@ -12,22 +10,11 @@ import {
   FlaskConical,
   CreditCard,
   Settings2,
-  ClipboardCheck,
   HeartPulse,
-  UserPlus,
   PillIcon,
-  Calendar,
   FileText,
-  Pill,
-  FileSearch,
-  Inbox,
   UserCog,
-  Building2,
   Briefcase,
-  UserCheck,
-  ShieldCheck,
-  FileBarChart,
-  AlertCircle
 } from 'lucide-react';
 import { type SidebarProps } from '../../types/index';
 import { cn } from '../../types/cn';
@@ -58,7 +45,7 @@ interface MenuItem {
   badge?: string | number;
   badgeVariant?: 'urgent' | 'pro' | 'default';
   moduleCode: string; // Backend module code - this is REQUIRED
-  category?: 'clinical' | 'admin' | 'patient' | 'system';
+  category?: 'clinical' | 'admin' | 'patient' | 'system'|'finance';
 }
 
 interface SidebarExtendedProps extends SidebarProps {
@@ -102,26 +89,13 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
 
   // Master menu configuration - maps backend module codes to sidebar items
   const menuConfig: MenuItem[] = useMemo(() => [
-    // Dashboard Items
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: <LayoutDashboard className="w-5 h-5" />,
-      href: ROUTES.DASHBOARD,
-      route: ROUTES.DASHBOARD,
-      description: 'Facility overview',
-      stats: 'Overview',
-      shortcut: '⌘1',
-      glowColor: 'from-blue-500 to-cyan-400',
-      moduleCode: 'dashboard',
-      category: 'admin'
-    },
+    // Dashboard Modules.
     {
       id: 'patient-dashboard',
       label: 'My Health',
       icon: <HeartPulse className="w-5 h-5" />,
-      href: ROUTES.PATIENT_DASHBOARD,
-      route: ROUTES.PATIENT_DASHBOARD,
+      href: ROUTES.DASHBOARD,//TODO: Change to patient databoard.
+      route: ROUTES.DASHBOARD,
       description: 'Personal health overview',
       stats: 'Health',
       shortcut: '⌘1',
@@ -143,121 +117,21 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
       category: 'admin'
     },
 
-    // Clinical Workspace
-    {
-      id: 'clinical',
-      label: 'Clinical Workspace',
-      icon: <Stethoscope className="w-5 h-5" />,
-      href: ROUTES.CLINICAL_WORKSPACE,
-      route: ROUTES.CLINICAL_WORKSPACE,
-      description: 'Consultation & diagnosis',
-      stats: 'Clinical',
-      glowColor: 'from-indigo-500 to-purple-400',
-      moduleCode: 'clinical',
-      category: 'clinical'
-    },
-    {
-      id: 'patients',
-      label: 'Patients',
-      icon: <Users className="w-5 h-5" />,
-      href: ROUTES.PATIENTS,
-      route: ROUTES.PATIENTS,
-      description: 'Patient records management',
-      stats: 'Patients',
-      shortcut: '⌘2',
-      glowColor: 'from-emerald-500 to-teal-400',
-      moduleCode: 'patients',
-      category: 'clinical'
-    },
-    {
-      id: 'encounters',
-      label: 'Encounters',
-      icon: <ClipboardCheck className="w-5 h-5" />,
-      href: ROUTES.ENCOUNTERS,
-      route: ROUTES.ENCOUNTERS,
-      description: 'Patient visits & consultations',
-      stats: 'Active',
-      badge: 3,
-      badgeVariant: 'urgent',
-      shortcut: '⌘3',
-      glowColor: 'from-amber-500 to-orange-400',
-      moduleCode: 'encounters',
-      category: 'clinical'
-    },
-    {
-      id: 'appointments',
-      label: 'Appointments',
-      icon: <Calendar className="w-5 h-5" />,
-      href: '/appointments',
-      route: '/appointments',
-      description: 'Schedule & manage appointments',
-      stats: 'Scheduling',
-      glowColor: 'from-sky-500 to-blue-400',
-      moduleCode: 'appointments',
-      category: 'clinical'
-    },
+    //Modules.
+    //1.Reception & medical records.
     {
       id: 'medical-records',
-      label: 'Medical Records',
+      label: 'Patient Registration & Medical Records',
       icon: <FileText className="w-5 h-5" />,
-      href: '/medical-records',
-      route: '/medical-records',
+      href: ROUTES.MEDICAL_RECORDS,
+      route: ROUTES.MEDICAL_RECORDS,
       description: 'View health records',
       stats: 'Records',
       glowColor: 'from-purple-500 to-pink-400',
-      moduleCode: 'medical_records',
+      moduleCode: 'medical-records',
       category: 'clinical'
     },
-    {
-      id: 'prescriptions',
-      label: 'Prescriptions',
-      icon: <Pill className="w-5 h-5" />,
-      href: '/prescriptions',
-      route: '/prescriptions',
-      description: 'Manage medications',
-      stats: 'Pharmacy',
-      glowColor: 'from-orange-500 to-amber-400',
-      moduleCode: 'prescriptions',
-      category: 'clinical'
-    },
-    {
-      id: 'lab-orders',
-      label: 'Lab Orders',
-      icon: <FlaskConical className="w-5 h-5" />,
-      href: '/lab-orders',
-      route: '/lab-orders',
-      description: 'Order & view lab tests',
-      stats: 'Lab',
-      glowColor: 'from-rose-500 to-pink-400',
-      moduleCode: 'lab_orders',
-      category: 'clinical'
-    },
-    {
-      id: 'test-results',
-      label: 'Test Results',
-      icon: <FileSearch className="w-5 h-5" />,
-      href: '/test-results',
-      route: '/test-results',
-      description: 'View lab results',
-      stats: 'Results',
-      glowColor: 'from-red-500 to-rose-400',
-      moduleCode: 'test_results',
-      category: 'clinical'
-    },
-
-    // Front Desk & Registration
-    {
-      id: 'registration',
-      label: 'Registration',
-      icon: <UserPlus className="w-5 h-5" />,
-      href: ROUTES.FRONT_DESK,
-      route: ROUTES.FRONT_DESK,
-      description: 'Patient registration',
-      stats: 'Front Desk',
-      glowColor: 'from-sky-500 to-blue-400',
-      moduleCode: 'reception',
-      category: 'admin'
-    },
+    //2.Ward & Nursing Care Module.
     {
       id: 'nursing-care',
       label: 'Nursing Care',
@@ -270,8 +144,34 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
       moduleCode: 'nursing',
       category: 'clinical'
     },
+    //3.Clinical Module.
+    {
+      id: 'clinical',
+      label: 'Clinical Workspace',
+      icon: <Stethoscope className="w-5 h-5" />,
+      href: ROUTES.CLINICAL_WORKSPACE,
+      route: ROUTES.CLINICAL_WORKSPACE,
+      description: 'Doctor Consultation & diagnosis',
+      stats: 'Clinical',
+      glowColor: 'from-indigo-500 to-purple-400',
+      moduleCode: 'clinical',
+      category: 'clinical'
+    }, 
+    //4.Labooratory Module.
+    {
+      id: 'laboatory',
+      label: 'Laboaratory',
+      icon: <FlaskConical className="w-5 h-5" />,
+      href: ROUTES.LABORATORY,
+      route: ROUTES.LABORATORY,
+      description: 'Lab tests, results & specimens.',
+      stats: 'Lab',
+      glowColor: 'from-rose-500 to-pink-400',
+      moduleCode: 'laboratory',
+      category: 'clinical'
+    },
 
-    // Pharmacy
+    //5.Pharmacy Module.
     {
       id: 'pharmacy',
       label: 'Pharmacy',
@@ -285,10 +185,10 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
       category: 'clinical'
     },
 
-    // Billing & Finance
+    //6. Billing & Finance Finance Module.
     {
       id: 'billing',
-      label: 'Billing',
+      label: 'Billing & Finance',
       icon: <CreditCard className="w-5 h-5" />,
       href: ROUTES.BILLING,
       route: ROUTES.BILLING,
@@ -296,10 +196,10 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
       stats: 'Finance',
       glowColor: 'from-yellow-500 to-orange-400',
       moduleCode: 'billing',
-      category: 'admin'
+      category: 'finance'
     },
 
-    // Administration
+    // 7. Administration Module.
     {
       id: 'administration',
       label: 'Administration',
@@ -312,83 +212,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
       moduleCode: 'administration',
       category: 'admin'
     },
-    {
-      id: 'staff-management',
-      label: 'Staff Management',
-      icon: <UserCheck className="w-5 h-5" />,
-      href: '/staff-management',
-      route: '/staff-management',
-      description: 'Manage healthcare staff',
-      stats: 'Staff',
-      glowColor: 'from-blue-500 to-cyan-400',
-      moduleCode: 'staff_management',
-      category: 'admin'
-    },
-    {
-      id: 'facility-management',
-      label: 'Facility Management',
-      icon: <Building2 className="w-5 h-5" />,
-      href: '/facility-management',
-      route: '/facility-management',
-      description: 'Facility configuration',
-      stats: 'Facilities',
-      glowColor: 'from-indigo-500 to-purple-400',
-      moduleCode: 'facility_management',
-      category: 'admin'
-    },
-
-    // System & Reports
-    {
-      id: 'reports',
-      label: 'Reports',
-      icon: <FileBarChart className="w-5 h-5" />,
-      href: '/reports',
-      route: '/reports',
-      description: 'Analytics & insights',
-      stats: 'Analytics',
-      glowColor: 'from-teal-500 to-emerald-400',
-      moduleCode: 'reports',
-      category: 'admin'
-    },
-    {
-      id: 'audit-logs',
-      label: 'Audit Logs',
-      icon: <ShieldCheck className="w-5 h-5" />,
-      href: '/audit-logs',
-      route: '/audit-logs',
-      description: 'System activity tracking',
-      stats: 'Audit',
-      glowColor: 'from-green-600 to-emerald-500',
-      moduleCode: 'audit_logs',
-      category: 'system'
-    },
-    {
-      id: 'alerts',
-      label: 'Alerts',
-      icon: <AlertCircle className="w-5 h-5" />,
-      href: '/alerts',
-      route: '/alerts',
-      description: 'System notifications',
-      stats: 'Alerts',
-      badge: '5',
-      glowColor: 'from-red-500 to-rose-400',
-      moduleCode: 'alerts',
-      category: 'system'
-    },
-
-    // Staff Personal
-    {
-      id: 'my-invitations',
-      label: 'My Invitations',
-      icon: <Inbox className="w-5 h-5" />,
-      href: '/staff/invitations',
-      route: '/staff/invitations',
-      description: 'Facility invitations',
-      stats: 'Invitations',
-      glowColor: 'from-purple-500 to-pink-400',
-      moduleCode: 'staff_invitations',
-      category: 'admin'
-    },
+    //8. Account Module.
     {
     id: 'account',
     label: 'Account',
@@ -401,45 +225,6 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     moduleCode: 'account',
     category: 'system',
   },
-    // System Common
-    {
-      id: 'settings',
-      label: 'Settings',
-      icon: <Settings className="w-5 h-5" />,
-      href: ROUTES.SETTINGS,
-      route: ROUTES.SETTINGS,
-      description: 'Master configuration',
-      shortcut: '⌘,',
-      glowColor: 'from-gray-600 to-gray-500',
-      moduleCode: 'system_settings',
-      category: 'system'
-    },
-    {
-      id: 'security',
-      label: 'Security',
-      icon: <Shield className="w-5 h-5" />,
-      href: '/security',
-      route: '/security',
-      description: 'Advanced protection',
-      badge: 'PRO',
-      badgeVariant: 'pro',
-      shortcut: '⌘;',
-      glowColor: 'from-green-600 to-emerald-500',
-      moduleCode: 'system_security',
-      category: 'system'
-    },
-    {
-      id: 'help',
-      label: 'Help Center',
-      icon: <HelpCircle className="w-5 h-5" />,
-      href: '/help',
-      route: '/help',
-      description: 'Documentation & support',
-      shortcut: '⌘?',
-      glowColor: 'from-violet-600 to-purple-500',
-      moduleCode: 'help_center',
-      category: 'system'
-    },
   ], []);
 
   // Filter menu items based on accessible module codes
@@ -471,6 +256,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     admin: 'Administration',
     patient: 'Patient',
     system: 'System',
+    finance: 'Finance',
     other: 'Other'
   };
 

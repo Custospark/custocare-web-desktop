@@ -12,7 +12,7 @@
 import React from 'react';
 import { useAppSelector } from '../../../app/store/hooks/useApp';
 import { InvitationList } from './InvitationList';
-import type { StaffInvitation } from '../../staff/admin/api/team/types/staffInvitationTypes';
+import type { StaffInvitation } from '../../administration/admin-module/api/team-management/types/staffInvitationTypes';
 export const MyInvitations: React.FC = () => {
   // Get theme from Redux store
   const theme = useAppSelector(state => state.ui.theme);

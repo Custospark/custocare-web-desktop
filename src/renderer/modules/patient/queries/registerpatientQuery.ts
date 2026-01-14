@@ -32,7 +32,7 @@ import type {
   RegisterPatientErrorResponse,
 } from './registerPatientTypes';
 import { registerPatient } from './registerPatientTypes';
-import { ROUTES } from '../../onboading/routes/onboardingRouteConstants';
+import { ROUTES } from '../../administration/onboarding/routes/onboardingRouteConstants';
 import { mapRegisterPatientError, extractErrorMessage } from './registerPatientErrorMapper';
 import { axiosInstance } from '../../../app/api/axiosConfig';
 

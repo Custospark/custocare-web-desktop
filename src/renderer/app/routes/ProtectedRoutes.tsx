@@ -13,7 +13,7 @@ const ClinicalEncounterModule = React.lazy(() => import('../../shared/features/c
 const ReceptionistDashboard = React.lazy(() => import('../../shared/features/receptionist/ReceptionistDashboard'));
 const HospitalBillReceipt = React.lazy(() => import('../../shared/features/billing/HospitalBillReceipt'));
 const AccountModule= React.lazy(() => import('../../modules/account/AccountModule'));
-const AdminModule= React.lazy(() => import('../../modules/staff/admin/ui/AdminModule'));
+const AdminModule= React.lazy(() => import('../../modules/administration/admin-module/ui/AdminModule'));
 const LoadingSkeleton= React.lazy(() => import('../../shared/components/Loading/LoadingSkeletons'));
 // const PharmacyModule= React.lazy(() => import('../../modules/pharmacy/ui/PharmacyModule'));
 import PharmacyModule from '../../modules/pharmacy/ui/PharmacyModule';

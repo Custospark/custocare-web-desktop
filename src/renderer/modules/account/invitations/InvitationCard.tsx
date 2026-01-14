@@ -27,7 +27,7 @@ import {
   Phone,
 } from 'lucide-react';
 
-import type { StaffInvitation } from '../../staff/admin/api/team/types/staffInvitationTypes';
+import type { StaffInvitation } from '../../administration/admin-module/api/team-management/types/staffInvitationTypes';
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */

@@ -18,8 +18,8 @@ import {
   useAcceptInvitation, 
   useDeclineInvitation,
   staffInvitationKeys
-} from '../../staff/admin/api/team/queries/useStaffInvitationQueries';
-import type { StaffInvitation } from '../../staff/admin/api/team/types/staffInvitationTypes';
+} from '../../administration/admin-module/api/team-management/queries/useStaffInvitationQueries';
+import type { StaffInvitation } from '../../administration/admin-module/api/team-management/types/staffInvitationTypes';
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */

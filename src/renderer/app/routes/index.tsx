@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ROUTES } from './routeConstants';
-import { OnboardingRoutes } from '../../modules/onboading/routes/OnboardingRoutes';
+import { OnboardingRoutes } from '../../modules/administration/onboarding/routes/OnboardingRoutes';
 import { ProtectedRoutes } from './ProtectedRoutes';
 import { ErrorRoutes } from './ErrorRoutes';
 
