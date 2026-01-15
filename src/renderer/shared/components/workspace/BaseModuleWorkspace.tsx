@@ -17,7 +17,7 @@ import { useSelector } from 'react-redux';
 import { ContentLayout, type Operation } from '../content/ContentLayout';
 import type { RootState } from '../../../app/store/rootReducer';
 import { useDispatch } from 'react-redux';
-import { AppDispatch } from 'recharts/types/state/store';
+import { type AppDispatch } from 'recharts/types/state/store';
 import { navigate } from '../../../app/store/slices/moduleNavigationSlice';
 
 export interface ModuleWorkspaceProps<TOperationId extends string> {
