@@ -13,6 +13,7 @@ import Security from './security/Security';
 import MyInvitations from './invitations/MyInvitations';
 import Message from './message/Message';
 import Appearance from './apearance/Appearance';
+import { useAppSelector } from '../../app/store/hooks/useApp';
 
 /**
  * ============================================================================
@@ -73,6 +74,8 @@ const ACCOUNT_OPERATIONS: Operation[] = [
   },
 ];
 
+
+
 /* ============================================================================
    TYPES
 ============================================================================ */
@@ -89,6 +92,10 @@ export type AccountOperationId =
 ============================================================================ */
 
 export const AccountModule: React.FC = () => {
+
+   const theme = useAppSelector(state => state.ui.theme);
+ 
+
   /**
    * =========================================================================
    * LOCAL STATE
@@ -126,13 +133,13 @@ export const AccountModule: React.FC = () => {
         return <MyInvitations />;
 
       case 'messages':
-        return <Message />;
+        return <Message theme={theme}/>;
 
       case 'appearance':
         return <Appearance />;
 
       default:
-        return null;
+        return <Profile />;
     }
   };
 

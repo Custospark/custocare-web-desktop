@@ -29,7 +29,7 @@ const MEDICAL_RECORDS_OPERATIONS = [
 const MedicalRecordsModule = () => {
   return (
     <BaseModuleWorkspace<MedicalRecordsOperationId>
-      contextTitle="Pharmacy"
+      contextTitle="Medical Records."
       operations={MEDICAL_RECORDS_OPERATIONS}
       defaultOperation="overview"
       renderOperation={(operation, theme) => {
@@ -41,7 +41,7 @@ const MedicalRecordsModule = () => {
           case 'appointments':
             return <Appointment theme={theme} />;
           default:
-            return <MedicalRecordsOverView />;
+            return 'overview.....';
         }
       }}
     />

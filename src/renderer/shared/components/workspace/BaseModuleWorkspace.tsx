@@ -12,10 +12,13 @@
  * This component is intentionally generic and domain-agnostic.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { ContentLayout, type Operation } from '../content/ContentLayout';
 import type { RootState } from '../../../app/store/rootReducer';
+import { useDispatch } from 'react-redux';
+import { AppDispatch } from 'recharts/types/state/store';
+import { navigate } from '../../../app/store/slices/moduleNavigationSlice';
 
 export interface ModuleWorkspaceProps<TOperationId extends string> {
   contextTitle: string;
@@ -47,8 +50,7 @@ export function BaseModuleWorkspace<TOperationId extends string>({
    * LOCAL STATE
    * --------------------------------------------------------------------------
    */
-  const [internalActiveOperation, setInternalActiveOperation] =
-    useState<TOperationId>(defaultOperation);
+  const [internalActiveOperation,] =useState<TOperationId>(defaultOperation);
 
   /**
    * --------------------------------------------------------------------------
@@ -65,14 +67,41 @@ export function BaseModuleWorkspace<TOperationId extends string>({
    * HANDLERS
    * --------------------------------------------------------------------------
    */
-  const handleOperationChange = useCallback((operationId: string) => {
-    const newOperation = operationId as TOperationId;
-    setInternalActiveOperation(newOperation);
+
+    const dispatch = useDispatch<AppDispatch>();
+
+  // const handleOperationChange = useCallback((operationId: string) => {
+  //   const newOperation = operationId as TOperationId;
+  //   setInternalActiveOperation(newOperation);
+
+  //   dispatch
     
-    // Dispatch navigation to update Redux
-    // This ensures Redux knows about the operation change
-    // You'll need to import useDispatch and dispatch the navigate action here
-  }, []);
+  //   // Dispatch navigation to update Redux
+  //   // This ensures Redux knows about the operation change
+  //   // You'll need to import useDispatch and dispatch the navigate action here
+  // }, []);
+
+    const handleOperationChange = () => {
+    // Method 1: Direct dispatch with action import (preferred)
+    dispatch(navigate({
+      operation: activeOperation,
+      timestamp: Date.now(),
+    }));
+
+    // Method 2: Or use the action type directly
+    // dispatch({
+    //   type: 'moduleNavigation/navigate',
+    //   payload: {
+    //     operation: 'billing',
+    //     action: 'create_invoice',
+    //     payload: { stockData },
+    //     timestamp: Date.now(),
+    //   }
+    // });
+
+    console.log('Navigation dispatched');
+  };
+
 
   /**
    * --------------------------------------------------------------------------

@@ -54,7 +54,7 @@ const PharmacyModule = () => {
           case 'billing':
             return <Billing theme={theme} />;
           default:
-            return null;
+            return <PharmacyOverview theme={theme}/>;
         }
       }}
     />
