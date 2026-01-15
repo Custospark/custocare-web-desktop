@@ -155,33 +155,7 @@ export const ProtectedRoutes = () => [
         }
         key="administration"
       />
-      
-      {/* Common routes for all authenticated users */}
-      <Route 
-        path={ROUTES.SETTINGS} 
-        element={
-          <Suspense fallback={<LoadingSkeleton variant="detail" />}>
-            <div className="p-8">
-              <h1 className="text-3xl font-bold text-white">Settings</h1>
-              <p className="text-gray-400 mt-2">User settings and preferences coming soon...</p>
-            </div>
-          </Suspense>
-        } 
-        key="settings"
-      />
-      
-      <Route 
-        path={ROUTES.HELP} 
-        element={
-          <Suspense fallback={<LoadingSkeleton variant="detail" />}>
-            <div className="p-8">
-              <h1 className="text-3xl font-bold text-white">Help & Support</h1>
-              <p className="text-gray-400 mt-2">Documentation and support resources coming soon...</p>
-            </div>
-          </Suspense>
-        } 
-        key="help"
-      />
+    
     </Route>
   </Route>
 ];

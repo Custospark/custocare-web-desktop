@@ -15,10 +15,10 @@ const RoleSelectionScreen = React.lazy(() => import('../ui/role-based-ui/RoelSel
 const PatientOnboarding = React.lazy(() => import('../ui/role-based-ui/PatientOnboarding'));
 const MedicalProfessionalOnboarding = React.lazy(() => import('../ui/role-based-ui/MedicalProfessionalOnboarding'));
 const HealthcareFacilityOnboarding = React.lazy(() => import('../ui/role-based-ui/HealthcareFacilityOnboarding'));
-const Landing = React.lazy(() => import('../ui/role-based-ui/Landing'));
 const PortalSelector = React.lazy(() => import('../ui/role-based-ui/PortalSelector'));
 const Dashboard = React.lazy(() => import('../../../../shared/pages/Dashboard'));
 import Layout from '../../../../shared/components/Navigation/Layout';
+import Landing from '../ui/role-based-ui/Landing';
 /**
  * Authentication Routes Configuration
  * Returns an array of Route components
