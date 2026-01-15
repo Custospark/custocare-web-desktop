@@ -3,7 +3,6 @@ import React from 'react';
 import {
   Package,
   AlertTriangle,
-  FileText,
   CheckCircle,
   ShoppingCart,
   TrendingUp,
@@ -47,15 +46,15 @@ export const OverviewStats: React.FC<OverviewStatsProps> = ({ theme, refreshKey 
       iconColor: isDark ? 'text-red-400' : 'text-red-600',
       iconBg: isDark ? 'bg-red-900/30' : 'bg-red-50',
     },
-    {
-      label: 'Prescriptions Today',
-      value: 143,
-      change: 8,
-      changeLabel: 'vs avg daily',
-      icon: FileText,
-      iconColor: isDark ? 'text-purple-400' : 'text-purple-600',
-      iconBg: isDark ? 'bg-purple-900/30' : 'bg-purple-50',
-    },
+    // {
+    //   label: 'Prescriptions Today',
+    //   value: 143,
+    //   change: 8,
+    //   changeLabel: 'vs avg daily',
+    //   icon: FileText,
+    //   iconColor: isDark ? 'text-purple-400' : 'text-purple-600',
+    //   iconBg: isDark ? 'bg-purple-900/30' : 'bg-purple-50',
+    // },
     {
       label: 'Dispensed Today',
       value: 127,

@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { OverviewStats } from './OverviewStats';
 import { InventoryTrendsChart } from './InventoryTrendsChart';
 import { PrescriptionActivityChart } from './PrescriptionActivityChart';
-import { QuickActionsPanel } from './QuickActionsPanel';
 import { RecentActivityFeed } from './RecentActivityFeed';
 import { PerformanceMetrics } from './PerformanceMetrics';
 import { RefreshCw } from 'lucide-react';
@@ -21,13 +20,9 @@ export const PharmacyOverview: React.FC<PharmacyOverviewProps> = ({ theme }) => 
     setLastRefreshed(new Date());
   };
 
-  const handleQuickAction = (actionType: string): void => {
-    // Placeholder for action handlers
-    console.log(`Quick action triggered: ${actionType}`);
-  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -63,8 +58,7 @@ export const PharmacyOverview: React.FC<PharmacyOverviewProps> = ({ theme }) => 
         <PrescriptionActivityChart theme={theme} refreshKey={refreshKey} />
         <InventoryTrendsChart theme={theme} refreshKey={refreshKey} />
       </div>
-       {/* Quick Actions Panel */}
-      <QuickActionsPanel theme={theme} onAction={handleQuickAction} />
+     
 
       {/* Performance & Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
