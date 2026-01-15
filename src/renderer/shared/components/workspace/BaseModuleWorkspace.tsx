@@ -12,14 +12,13 @@
  * This component is intentionally generic and domain-agnostic.
  */
 
-import React, { useState } from 'react';
+import React, { useState} from 'react';
 import { useSelector } from 'react-redux';
 import { ContentLayout, type Operation } from '../content/ContentLayout';
 import type { RootState } from '../../../app/store/rootReducer';
 import { useDispatch } from 'react-redux';
-import { type AppDispatch } from 'recharts/types/state/store';
 import { navigate } from '../../../app/store/slices/moduleNavigationSlice';
-
+import { AppDispatch } from '../../../app/store/store';
 export interface ModuleWorkspaceProps<TOperationId extends string> {
   contextTitle: string;
   operations: Operation[];
@@ -50,7 +49,7 @@ export function BaseModuleWorkspace<TOperationId extends string>({
    * LOCAL STATE
    * --------------------------------------------------------------------------
    */
-  const [internalActiveOperation,] =useState<TOperationId>(defaultOperation);
+  const [internalActiveOperation,setInternalActiveOperation] =useState<TOperationId>(defaultOperation);
 
   /**
    * --------------------------------------------------------------------------
@@ -70,35 +69,19 @@ export function BaseModuleWorkspace<TOperationId extends string>({
 
     const dispatch = useDispatch<AppDispatch>();
 
-  // const handleOperationChange = useCallback((operationId: string) => {
-  //   const newOperation = operationId as TOperationId;
-  //   setInternalActiveOperation(newOperation);
+ const handleInternalOperationChange = (operationId: string) => {
+    const newOperation = operationId as TOperationId;
+    setInternalActiveOperation(newOperation);
 
-  //   dispatch
-    
-  //   // Dispatch navigation to update Redux
-  //   // This ensures Redux knows about the operation change
-  //   // You'll need to import useDispatch and dispatch the navigate action here
-  // }, []);
+  };
 
     const handleOperationChange = () => {
-    // Method 1: Direct dispatch with action import (preferred)
+    handleInternalOperationChange(activeOperation);
+    // Update redux state.
     dispatch(navigate({
       operation: activeOperation,
       timestamp: Date.now(),
     }));
-
-    // Method 2: Or use the action type directly
-    // dispatch({
-    //   type: 'moduleNavigation/navigate',
-    //   payload: {
-    //     operation: 'billing',
-    //     action: 'create_invoice',
-    //     payload: { stockData },
-    //     timestamp: Date.now(),
-    //   }
-    // });
-
     console.log('Navigation dispatched');
   };
 
