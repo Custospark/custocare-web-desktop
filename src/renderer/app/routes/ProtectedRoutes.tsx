@@ -9,7 +9,6 @@ const Dashboard = React.lazy(() => import('../../shared/pages/Dashboard'));
 const FacilityOnboardingModule = React.lazy(() => import('../../shared/features/facilities/FacilityOnboardingModule'));
 const PatientModule = React.lazy(() => import('../../shared/features/patients/PatientModule'));
 const MedicalRecordsModule = React.lazy(() => import('../../modules/medical-records/ui/MedicalRecordsModule'));
-const HospitalBillReceipt = React.lazy(() => import('../../shared/features/billing/HospitalBillReceipt'));
 const AccountModule= React.lazy(() => import('../../modules/account/AccountModule'));
 const AdminModule= React.lazy(() => import('../../modules/administration/admin-module/ui/AdminModule'));
 const LoadingSkeleton= React.lazy(() => import('../../shared/components/Loading/LoadingSkeletons'));
@@ -18,6 +17,7 @@ import PharmacyModule from '../../modules/pharmacy/ui/PharmacyModule';
 import NursingModule from '../../modules/nursing/ui/NursingModule';
 import ClinicalModule from '../../modules/clinical/ui/ClinicalModule';
 import LaboratoryModule from '../../modules/laboratory/ui/LaboratoryModule';
+import BillingModule from '../../modules/billling/ui/BillingModule';
 
 /**
  * Protected Routes Configuration
@@ -139,7 +139,7 @@ export const ProtectedRoutes = () => [
         path={ROUTES.BILLING}
         element={
           <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
-              <HospitalBillReceipt />
+              <BillingModule />
           </Suspense>
         }
         key="billing"

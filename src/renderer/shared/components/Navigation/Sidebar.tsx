@@ -7,7 +7,6 @@ import {
   Shield,
   Bell,
   Stethoscope,
-  CreditCard,
   Settings2,
   HeartPulse,
   PillIcon,
@@ -31,6 +30,7 @@ import {
   getRoleDisplayName,
   type StaffFacilityAssignment,
 } from '../../../app/store/slices/activeContextSlice';
+import {FaRegCreditCard } from 'react-icons/fa';
 
 interface MenuItem {
   id: string;
@@ -189,7 +189,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     {
       id: 'billing',
       label: 'Billing & Finance',
-      icon: <CreditCard className="w-5 h-5" />,
+      icon: <FaRegCreditCard className="w-5 h-5" />,
       href: ROUTES.BILLING,
       route: ROUTES.BILLING,
       description: 'Invoices & payments',
