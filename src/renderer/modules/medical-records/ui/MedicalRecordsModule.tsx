@@ -6,8 +6,8 @@
 
 import {
   LayoutDashboard,
-  ClipboardList,
   CalendarCheckIcon,
+  Users,
 } from 'lucide-react';
 
 import { BaseModuleWorkspace } from '../../../shared/components/workspace/BaseModuleWorkspace';
@@ -23,7 +23,7 @@ export type MedicalRecordsOperationId =
 
 const MEDICAL_RECORDS_OPERATIONS = [
   { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
-  { id: 'patients', label: 'Patients', icon: <ClipboardList className="w-4 h-4" /> },
+  { id: 'patients', label: 'Patients', icon: <Users className="w-4 h-4" /> },
   { id: 'appointments', label: 'Appointments', icon: <CalendarCheckIcon className="w-4 h-4" /> },
 ];
 

@@ -9,6 +9,7 @@ import {
   UserPlus,
   SearchCheckIcon,
   FileBox,
+  Forward,
 } from 'lucide-react';
 
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
@@ -16,7 +17,8 @@ import { BaseActionWorkspace } from '../../../../shared/components/workspace/Bas
 type PatientAction =
   | 'search_patient'
   | 'create_patient'
-  | 'discharge_patient';
+  | 'discharge_patient'
+  | 'forward_patient';
 
 interface PatientProps {
   theme: 'light' | 'dark';
@@ -47,6 +49,11 @@ const Patient: React.FC<PatientProps> = ({ theme }) => {
             label: 'Discharge Patient',
             icon: <UserMinus className="w-4 h-4" />,
           },
+          {
+            key: 'forward_patient',
+            label: 'Forward Patient',
+            icon: <Forward className="w-4 h-4" />,
+          },
       ]}
       renderAction={(action) => {
         switch (action) {
@@ -58,6 +65,9 @@ const Patient: React.FC<PatientProps> = ({ theme }) => {
 
         case 'discharge_patient':
             return <PlaceholderPanel title="Discharge Patient." />;
+
+        case 'forward_patient':
+            return <PlaceholderPanel title="Forward Patient." />;
         default:
             return <PlaceholderPanel title="Search Patient" />;
         }

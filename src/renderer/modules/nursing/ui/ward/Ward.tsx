@@ -7,11 +7,12 @@
 import {
   Boxes,
   AmbulanceIcon,
+  UserPlus,
 } from 'lucide-react';
 
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
 import { FaBed } from 'react-icons/fa';
-import { IoBed, IoExit } from 'react-icons/io5';
+import { IoExit } from 'react-icons/io5';
 
 type WardAction =
  | 'admit'
@@ -29,19 +30,19 @@ const Ward: React.FC<WardProps> = ({ theme }) => {
       title="Manage Patients in the ward."
       icon={<Boxes className="w-6 h-6" />}
       theme={theme}
-      defaultAction="admitted"
+      defaultAction="admit"
       moduleId="wards"
 
       actions={[
        {
       key: 'admit',
       label: 'Admit',
-      icon: <FaBed className="w-4 h-4" />,
+      icon: <UserPlus className="w-4 h-4" />,
     },
     {
       key: 'admitted',
       label: 'Admitted',
-      icon: <IoBed className="w-4 h-4" />,
+      icon: <FaBed className="w-4 h-4" />,
     },
     {
       key: 'discharged',

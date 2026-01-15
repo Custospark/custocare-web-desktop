@@ -364,7 +364,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
                 'border-transparent',
                 isDark ? 'hover:bg-gray-800/50 hover:border-gray-700/50' : 'hover:bg-gray-100/50 hover:border-gray-200/50'
               ),
-          collapsed ? 'p-3 justify-center' : 'p-3 gap-3'
+          collapsed ? 'p-2 justify-center' : 'p-2 gap-2'
         )}
         onMouseEnter={() => setActiveHover(item.id)}
         onMouseLeave={() => setActiveHover(null)}
