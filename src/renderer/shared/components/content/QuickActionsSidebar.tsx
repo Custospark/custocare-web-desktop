@@ -420,7 +420,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                 aria-label={collapsedSide ? 'Expand sidebar' : 'Collapse sidebar'}
                 title={collapsedSide ? 'Expand sidebar' : 'Collapse sidebar'}
                 className={cn(
-                  'flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-200',
+                  'flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all duration-200 cursor-pointer',
                   'text-xs font-medium focus:outline-none focus:ring-2 focus:ring-offset-0',
                   theme === 'dark'
                     ? 'bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 focus:ring-cyan-500/40 ring-1 ring-cyan-500/30'

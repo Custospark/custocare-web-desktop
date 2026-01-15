@@ -627,7 +627,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => setIsContextSwitcherOpen(!isContextSwitcherOpen)}
               className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300 hover:scale-105',
+                'flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer duration-300 hover:scale-105',
                 'border shadow-sm',
                 isDark 
                   ? 'bg-gray-800/50 border-gray-700 hover:bg-gray-800' 
@@ -717,7 +717,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           onClick={() => handleContextSwitch(option)}
                           disabled={option.isActive}
                           className={cn(
-                            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
+                            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all cursor-pointer',
                             'border',
                             option.isActive
                               ? getContextColors(option.color).active
@@ -775,7 +775,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           onClick={() => handleContextSwitch(option)}
                           disabled={option.isActive}
                           className={cn(
-                            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
+                            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all cursor-pointer',
                             'border',
                             option.isActive
                               ? getContextColors(option.color).active
@@ -835,7 +835,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           onClick={() => handleContextSwitch(option)}
                           disabled={option.isActive}
                           className={cn(
-                            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
+                            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all cursor-pointer',
                             'border',
                             option.isActive
                               ? getContextColors(option.color).active
@@ -1224,7 +1224,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <button
           onClick={onThemeToggle}
           className={cn(
-            'p-2 rounded-lg transition-all duration-300 hover:scale-105 hidden sm:block',
+            'p-2 rounded-lg transition-all duration-300 hover:scale-105 hidden sm:block cursor-pointer',
             isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
           )}
           title="Toggle theme"
@@ -1243,7 +1243,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
             className={cn(
-              'p-2 rounded-lg transition-all duration-300 hover:scale-105 relative',
+              'p-2 rounded-lg transition-all duration-300 hover:scale-105 relative cursor-pointer',
               isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
             )}
             title="Notifications"
@@ -1395,13 +1395,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
             className={cn(
-              'flex items-center gap-1 sm:gap-2 pl-1 sm:pl-2 pr-1 sm:pr-1.5 py-1 sm:py-1.5 rounded-xl transition-all duration-300 hover:scale-105',
+              'flex items-center gap-1 sm:gap-2 pl-1 sm:pl-2 pr-1 sm:pr-1.5 py-1 sm:py-1.5 rounded-xl transition-all duration-300 hover:scale-105 cursor-pointer',
               isDark 
                 ? 'hover:bg-gray-800' 
                 : 'hover:bg-gray-100'
             )}
           >
-            <div className="text-right hidden lg:block">
+            <div className="text-right hidden lg:block cursor-pointer">
               <p className={cn(
                 'text-sm font-semibold',
                 isDark ? 'text-gray-200' : 'text-gray-900'
@@ -1486,7 +1486,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setIsUserDropdownOpen(false);
                     }}
                     className={cn(
-                      'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group',
+                      'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group cursor-pointer',
                       isDark 
                         ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-200' 
                         : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
@@ -1515,7 +1515,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button 
                   onClick={handleLogout}
                   className={cn(
-                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer',
                     isDark 
                       ? 'text-gray-400 hover:bg-orange-500/10 hover:text-orange-400' 
                       : 'text-gray-700 hover:bg-orange-50 hover:text-orange-600'

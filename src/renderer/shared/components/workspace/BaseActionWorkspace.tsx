@@ -210,7 +210,7 @@ export function BaseActionWorkspace<TActionId extends string>({
         </h2>
 
         {/* Action Tabs */}
-        <div className="flex flex-wrap gap-2 mt-4">
+        <div className="flex flex-wrap gap-2 mt-4 cursor-pointer">
           {actions.map(action => {
             const isActive = isModuleActive && activeAction === action.key;
 
@@ -223,7 +223,7 @@ export function BaseActionWorkspace<TActionId extends string>({
                   }
                 }}
                 disabled={!isModuleActive}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:cursor-not-allowed
+                className={`inline-flex cursor-pointer items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:cursor-not-allowed
                   ${
                     isActive
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
