@@ -679,7 +679,7 @@ export const Layout: React.FC = () => {
               title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
               disabled={localState.isTransitioning}
               className={cn(
-                'hidden lg:flex items-center justify-center relative',
+                'hidden lg:flex items-center justify-center relative cursor-pointer',
                 'h-9 w-9 p-2 rounded-xl',
                 'transition-all duration-300 ease-out',
                 'focus:outline-none focus:ring-2 focus:ring-offset-2',

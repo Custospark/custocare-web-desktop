@@ -11,80 +11,71 @@
 
 import React, { useState } from 'react';
 import {
-  Inbox,
-  SendIcon,
-  Notebook,
-  Trash,
-  MessageCircleMore,
+    AmbulanceIcon,
+  HouseHeart,
 } from 'lucide-react';
-import { FaViruses } from 'react-icons/fa';
+import { FaBed } from 'react-icons/fa';
+import { IoBed, IoExit } from 'react-icons/io5';
 
-type MessageView =
-  | 'inbox'
-  | 'sent'
-  | 'draft'
-  | 'trash'
-  | 'spam';
+type WardView =
+  | 'admit'
+  | 'admitted'
+  | 'discharged'
+  | 'referred'
 
-interface MessageProps {
+interface WardProps {
   theme: 'light' | 'dark';
 }
 
-const Message: React.FC<MessageProps> = ({ theme }) => {
+const Message: React.FC<WardProps> = ({ theme }) => {
   const isDark = theme === 'dark';
 
   const [activeView, setActiveView] =
-    useState<MessageView>('inbox');
+    useState<WardView>('admitted');
 
   const actionButtons: {
-    key: MessageView;
+    key: WardView;
     label: string;
     icon: React.ReactNode;
   }[] = [
     {
-      key: 'inbox',
-      label: 'Inbox',
-      icon: <Inbox className="w-4 h-4" />,
+      key: 'admit',
+      label: 'Admit',
+      icon: <FaBed className="w-4 h-4" />,
     },
     {
-      key: 'sent',
-      label: 'Sent',
-      icon: <SendIcon className="w-4 h-4" />,
+      key: 'admitted',
+      label: 'Admitted',
+      icon: <IoBed className="w-4 h-4" />,
     },
     {
-      key: 'draft',
-      label: 'Draft',
-      icon: <Notebook className="w-4 h-4" />,
+      key: 'discharged',
+      label: 'Discharged',
+      icon: <IoExit className="w-4 h-4" />,
     },
     {
-      key: 'trash',
-      label: 'Trash',
-      icon: <Trash className="w-4 h-4" />,
+      key: 'referred',
+      label: 'Referred',
+      icon: <AmbulanceIcon className="w-4 h-4" />,
     },
-    {
-      key: 'spam',
-      label: 'Spam',
-      icon: <FaViruses className="w-4 h-4" />,
-    },
+   
   ];
 
   const renderActivePanel = () => {
     switch (activeView) {
-      case 'inbox':
-        return <PlaceholderPanel title="New Messages" />;
+      case 'admit':
+        return <PlaceholderPanel title="Admitted A Patient." />;
 
-      case 'sent':
-        return <PlaceholderPanel title="Sent Messages" />;
+      case 'admitted':
+        return <PlaceholderPanel title="Admiited Patients." />;
 
-      case 'draft':
-        return <PlaceholderPanel title="Messages in draft" />;
+      case 'discharged':
+        return <PlaceholderPanel title="Discharged Patients." />;
 
-      case 'trash':
-        return <PlaceholderPanel title="Messages in trash" />;
-
-      case 'spam':
+      case 'referred':
+        return <PlaceholderPanel title="Patients Referred to other Facilities." />;
       default:
-        return <PlaceholderPanel title="Spam Messages." />;
+        return <PlaceholderPanel title="Admitted A Patient." />;
     }
   };
 
@@ -97,8 +88,8 @@ const Message: React.FC<MessageProps> = ({ theme }) => {
         }`}
       >
         <h2 className="text-xl font-semibold flex items-center gap-2">
-          <MessageCircleMore className="w-6 h-6" />
-          My Messages
+          <HouseHeart className="w-6 h-6" />
+        Manage Patients in the ward.
         </h2>
 
         {/* Action Tabs */}

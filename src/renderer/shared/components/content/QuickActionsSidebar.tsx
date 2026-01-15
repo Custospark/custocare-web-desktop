@@ -236,7 +236,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
             title={operation.label}
             aria-label={operation.label}
             className={cn(
-              'relative w-11 h-11 rounded-lg flex items-center justify-center transition-all duration-200',
+              'relative w-11 h-11 rounded-lg flex items-center justify-center transition-all duration-200 cursor-pointer',
               'focus:outline-none focus:ring-2 focus:ring-offset-0',
               theme === 'dark' ? 'focus:ring-cyan-500/50' : 'focus:ring-blue-500/50',
               isActive && (theme === 'dark' 
@@ -332,7 +332,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                   aria-label="Dock left"
                   title="Dock left"
                   className={cn(
-                    'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0',
+                    'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 cursor-pointer',
                     theme === 'dark'
                       ? 'hover:bg-gray-800/60 text-gray-400 hover:text-cyan-300 focus:ring-cyan-500/40'
                       : 'hover:bg-gray-100/70 text-gray-600 hover:text-blue-700 focus:ring-blue-500/40',
@@ -349,7 +349,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                   aria-label="Dock right"
                   title="Dock right"
                   className={cn(
-                    'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0',
+                    'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 cursor-pointer',
                     theme === 'dark'
                       ? 'hover:bg-gray-800/60 text-gray-400 hover:text-cyan-300 focus:ring-cyan-500/40'
                       : 'hover:bg-gray-100/70 text-gray-600 hover:text-blue-700 focus:ring-blue-500/40',
@@ -463,7 +463,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                     aria-label="Expand sidebar"
                     title="Expand sidebar"
                     className={cn(
-                      'w-11 h-9 rounded-lg flex items-center justify-center transition-all duration-200',
+                      'w-11 h-9 rounded-lg flex items-center justify-center transition-all duration-200 cursor-pointer',
                       'focus:outline-none focus:ring-2 focus:ring-offset-0',
                       theme === 'dark'
                         ? 'bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 focus:ring-cyan-500/40 ring-1 ring-cyan-500/30'
@@ -515,7 +515,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                             aria-current={isActive ? 'page' : undefined}
                             title={operation.description || operation.label}
                             className={cn(
-                              'w-full flex items-center gap-3 px-3.5 py-2.5 relative z-10',
+                              'w-full flex items-center gap-3 px-3.5 py-2.5 relative z-10 cursor-pointer',
                               'text-sm font-medium transition-all duration-200',
                               'focus:outline-none focus:ring-2 focus:ring-offset-0 group',
                               theme === 'dark' ? 'focus:ring-cyan-500/50' : 'focus:ring-blue-500/50',
