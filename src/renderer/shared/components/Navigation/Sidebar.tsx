@@ -7,13 +7,14 @@ import {
   Shield,
   Bell,
   Stethoscope,
-  Settings2,
   HeartPulse,
   PillIcon,
   FileText,
   UserCog,
   Briefcase,
   MicroscopeIcon,
+  MonitorCheckIcon,
+  HeadphonesIcon,
 } from 'lucide-react';
 import { type SidebarProps } from '../../types/index';
 import { cn } from '../../types/cn';
@@ -203,7 +204,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     {
       id: 'administration',
       label: 'Administration',
-      icon: <Settings2 className="w-5 h-5" />,
+      icon: <MonitorCheckIcon className="w-5 h-5" />,
       href: ROUTES.ADMINISTRATION,
       route: ROUTES.ADMINISTRATION,
       description: 'Users & configuration',
@@ -675,7 +676,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
             )}>
               <div className="flex items-center gap-3">
                 <div className={cn('p-2 rounded-lg shrink-0', isDark ? 'bg-cyan-500/20' : 'bg-cyan-100')}>
-                  <Bell className={cn('w-4 h-4', isDark ? 'text-cyan-400' : 'text-cyan-600')} />
+                  <HeadphonesIcon className={cn('w-4 h-4', isDark ? 'text-cyan-400' : 'text-cyan-600')} />
                 </div>
                 <div className="min-w-0">
                   <p className={cn('text-sm font-semibold truncate', isDark ? 'text-white' : 'text-gray-900')}>

@@ -5,14 +5,7 @@
  */
 
 import {
-Inbox,
-  SendIcon,
-  Notebook,
-  Trash,
-  MessageCircleMore,
-  Receipt,
   ReceiptIcon,
-  NotebookIcon,
   InspectIcon,
   FileText,
 } from 'lucide-react';

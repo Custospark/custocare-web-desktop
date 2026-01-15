@@ -28,7 +28,7 @@ const LABORATORY_OPERATIONS = [
 const LaboratoryModule = () => {
   return (
     <BaseModuleWorkspace<LaboratoryOperationId>
-      contextTitle="Cinical Workspace"
+      contextTitle="Laboratory"
       operations={LABORATORY_OPERATIONS}
       defaultOperation="overview"
       renderOperation={(operation, theme) => {
