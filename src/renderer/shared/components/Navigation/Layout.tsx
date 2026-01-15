@@ -544,7 +544,7 @@ export const Layout: React.FC = () => {
               title={`Move sidebar to ${localState.sidebarPosition === 'left' ? 'right' : 'left'}`}
               disabled={localState.isTransitioning}
               className={cn(
-                'hidden lg:flex items-center justify-center px-2 py-1.5 rounded-lg',
+                'hidden lg:flex items-center justify-center px-2 py-1.5 rounded-lg cursor-pointer',
                 'transition-all duration-300 ease-in-out',
                 'hover:scale-105 active:scale-95',
                 'focus:outline-none focus:ring-2 focus:ring-offset-1',

@@ -45,10 +45,9 @@ export const ROUTES = {
   //Dashboards
   PATIENT_DASHBOARD: '/dahboard/patient',
   // Role-Based Clinical Modules
-  FRONT_DESK: '/front-desk',
   MEDICAL_RECORDS:'/medical-records',
   NURSING: '/nursing',
-  CLINICAL_WORKSPACE: '/clinical-workspace',
+  CLINICAL:'/clinical',
   LABORATORY: '/laboratory',
   PHARMACY: '/pharmacy',
   BILLING: '/billing',

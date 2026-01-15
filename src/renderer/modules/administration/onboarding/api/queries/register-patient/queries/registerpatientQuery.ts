@@ -17,24 +17,24 @@
 
 import { useMutation, type UseMutationResult } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '../../../app/store/contexts/toast/useToast';
-import { useAppDispatch } from '../../../app/store/hooks/useApp';
+import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
+import { useAppDispatch } from '../../../../../../../app/store/hooks/useApp';
 import { 
   setUserContext,
   switchCapability,
   setLoading as setContextLoading,
   setError as setContextError,
   type UserContext,
-} from '../../../app/store/slices/activeContextSlice';
+} from '../../../../../../../app/store/slices/activeContextSlice';
 import type {
   RegisterPatientRequest,
   RegisterPatientResponse,
   RegisterPatientErrorResponse,
 } from './registerPatientTypes';
 import { registerPatient } from './registerPatientTypes';
-import { ROUTES } from '../../administration/onboarding/routes/onboardingRouteConstants';
+import { ROUTES } from '../../../../routes/onboardingRouteConstants';
 import { mapRegisterPatientError, extractErrorMessage } from './registerPatientErrorMapper';
-import { axiosInstance } from '../../../app/api/axiosConfig';
+import { axiosInstance } from '../../../../../../../app/api/axiosConfig';
 
 /**
  * Fetch updated user context after patient registration

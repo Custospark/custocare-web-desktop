@@ -9,7 +9,6 @@ const Dashboard = React.lazy(() => import('../../shared/pages/Dashboard'));
 const FacilityOnboardingModule = React.lazy(() => import('../../shared/features/facilities/FacilityOnboardingModule'));
 const PatientModule = React.lazy(() => import('../../shared/features/patients/PatientModule'));
 const MedicalRecordsModule = React.lazy(() => import('../../modules/medical-records/ui/MedicalRecordsModule'));
-const ClinicalEncounterModule = React.lazy(() => import('../../shared/features/clinical/ClinicalEncounterModule'));
 const HospitalBillReceipt = React.lazy(() => import('../../shared/features/billing/HospitalBillReceipt'));
 const AccountModule= React.lazy(() => import('../../modules/account/AccountModule'));
 const AdminModule= React.lazy(() => import('../../modules/administration/admin-module/ui/AdminModule'));
@@ -17,6 +16,7 @@ const LoadingSkeleton= React.lazy(() => import('../../shared/components/Loading/
 // const PharmacyModule= React.lazy(() => import('../../modules/pharmacy/ui/PharmacyModule'));
 import PharmacyModule from '../../modules/pharmacy/ui/PharmacyModule';
 import NursingModule from '../../modules/nursing/ui/NursingModule';
+import ClinicalModule from '../../modules/clinical/ui/ClinicalModule';
 
 /**
  * Protected Routes Configuration
@@ -96,13 +96,13 @@ export const ProtectedRoutes = () => [
       
       {/* Clinical Modules - Doctor/Nurse roles */}
       <Route 
-        path={ROUTES.ENCOUNTERS} 
+        path={ROUTES.CLINICAL} 
         element={
-          <Suspense fallback={<LoadingSkeleton variant="table" />}>
-              <ClinicalEncounterModule />
+          <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+              <ClinicalModule />
           </Suspense>
         } 
-        key="encounters"
+        key="clinical"
       />
       {/* Account Modules - For all system users. */}
       <Route 
@@ -123,19 +123,6 @@ export const ProtectedRoutes = () => [
           </Suspense>
         } 
         key="encounters"
-      />
-
-      <Route
-        path={ROUTES.CLINICAL_WORKSPACE}
-        element={
-          <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
-              <div className="p-8">
-                <h1 className="text-3xl font-bold text-white">Clinical Workspace</h1>
-                <p className="text-gray-400 mt-2">Doctor consultations & AI-assisted diagnosis coming soon.</p>
-              </div>
-          </Suspense>
-        }
-        key="clinical-workspace"
       />
 
       {/* Billing - Billing/Admin roles */}

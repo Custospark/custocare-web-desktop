@@ -40,8 +40,8 @@ import { cn } from '../../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../../app/store/slices/uiSlice';
 import { ROUTES } from '../../routes/onboardingRouteConstants';
-import { useRegisterPatient } from '../../../../patient/queries/registerpatientQuery';
-import type { RegisterPatientRequest } from '../../../../patient/queries/registerPatientTypes';
+import { useRegisterPatient } from '../../api/queries/register-patient/queries/registerpatientQuery';
+import type { RegisterPatientRequest } from '../../api/queries/register-patient/queries/registerPatientTypes';
 
 /* ==========================================================================
    TYPE DEFINITIONS

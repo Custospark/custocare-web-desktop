@@ -1,5 +1,5 @@
-import { axiosInstance } from '../../../app/api//axiosConfig';
-import { PATIENT_ENDPOINTS } from '../api/api-enpoints/endpoints';
+import { axiosInstance } from '../../../../../../../app/api/axiosConfig';
+import { PATIENT_ENDPOINTS } from '../../../endpoints/patient/endpoints';
 import { AxiosError } from 'axios';
 
 /**
