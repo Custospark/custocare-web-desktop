@@ -606,10 +606,10 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
             )}
             aria-label="Toggle role switcher"
           >
-            <div className="flex items-center gap-2 flex-1">
+            <div className="flex items-center gap-2 flex-1 cursor-pointer">
               <span className="text-sm font-medium">Switch Workspace.</span>
               <div className={cn(
-                'px-2 py-0.5 text-xs rounded-full cursor-pointer',
+                'px-2 py-0.5 text-xs rounded-full',
                 isDark 
                   ? 'bg-blue-500/20 text-blue-300' 
                   : 'bg-blue-100 text-blue-600'

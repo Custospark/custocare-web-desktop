@@ -32,7 +32,7 @@ const Message: React.FC<MessageProps> = ({ theme }) => {
       icon={<MessageCircleMore className="w-6 h-6" />}
       theme={theme}
       defaultAction="inbox"
-      moduleId="messages"
+      moduleId="patients"
 
       actions={[
      {
