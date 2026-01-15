@@ -16,12 +16,12 @@ import Appointment from './Appointments/Appointment';
 
 
 export type MedicalRecordsOperationId =
-  | 'overview_medical_records'
+  | 'overview'
   | 'patients'
   | 'appointments';
 
 const MEDICAL_RECORDS_OPERATIONS = [
-  { id: 'overview_medical_records', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
+  { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
   { id: 'patients', label: 'Patients', icon: <ClipboardList className="w-4 h-4" /> },
   { id: 'appointments', label: 'Appointments', icon: <ClipboardList className="w-4 h-4" /> },
 ];
@@ -31,17 +31,17 @@ const MedicalRecordsModule = () => {
     <BaseModuleWorkspace<MedicalRecordsOperationId>
       contextTitle="Medical Records."
       operations={MEDICAL_RECORDS_OPERATIONS}
-      defaultOperation="overview_medical_records"
+      defaultOperation="overview"
       renderOperation={(operation, theme) => {
         switch (operation) {
-          case 'overview_medical_records':
+          case 'overview':
             return <MedicalRecordsOverView />;
           case 'patients':
             return <Patient theme={theme} />;
           case 'appointments':
             return <Appointment theme={theme} />;
           default:
-            return null;
+            return <MedicalRecordsOverView />;
         }
       }}
     />
