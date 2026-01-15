@@ -692,9 +692,9 @@ export const Layout: React.FC = () => {
                   ? [
                       'bg-gradient-to-br from-gray-900/60 via-gray-900/70 to-gray-900/60',
                       'hover:from-gray-900/70 hover:via-cyan-800/50 hover:to-gray-900/70',
-                      'text-gray-400 hover:text-cyan-400',
+                      'text-gray-400 hover:text-blue-400',
                       'focus:ring-cyan-500/50 focus:ring-offset-gray-950',
-                      'ring-1 ring-gray-700/40 hover:ring-cyan-500/50',
+                      'ring-1 ring-gray-700/40 hover:ring-blue-500/50',
                     ].join(' ')
                   : [
                       'bg-gradient-to-br from-white/70 via-white/80 to-white/70',
