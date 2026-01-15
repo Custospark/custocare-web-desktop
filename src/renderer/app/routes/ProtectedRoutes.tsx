@@ -17,6 +17,7 @@ const LoadingSkeleton= React.lazy(() => import('../../shared/components/Loading/
 import PharmacyModule from '../../modules/pharmacy/ui/PharmacyModule';
 import NursingModule from '../../modules/nursing/ui/NursingModule';
 import ClinicalModule from '../../modules/clinical/ui/ClinicalModule';
+import LaboratoryModule from '../../modules/laboratory/ui/LaboratoryModule';
 
 /**
  * Protected Routes Configuration
@@ -104,7 +105,15 @@ export const ProtectedRoutes = () => [
         } 
         key="clinical"
       />
-      {/* Account Modules - For all system users. */}
+      <Route 
+        path={ROUTES.LABORATORY} 
+        element={
+          <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+              <LaboratoryModule />
+          </Suspense>
+        } 
+        key="laboratory"
+      />
       <Route 
         path={ROUTES.ACCOUNT} 
         element={

@@ -7,7 +7,6 @@ import {
   Shield,
   Bell,
   Stethoscope,
-  FlaskConical,
   CreditCard,
   Settings2,
   HeartPulse,
@@ -15,6 +14,7 @@ import {
   FileText,
   UserCog,
   Briefcase,
+  MicroscopeIcon,
 } from 'lucide-react';
 import { type SidebarProps } from '../../types/index';
 import { cn } from '../../types/cn';
@@ -161,7 +161,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     {
       id: 'laboatory',
       label: 'Laboaratory',
-      icon: <FlaskConical className="w-5 h-5" />,
+      icon: <MicroscopeIcon className="w-5 h-5" />,
       href: ROUTES.LABORATORY,
       route: ROUTES.LABORATORY,
       description: 'Lab tests, results & specimens.',
