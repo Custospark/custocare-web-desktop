@@ -18,6 +18,7 @@ import NursingModule from '../../modules/nursing/ui/NursingModule';
 import ClinicalModule from '../../modules/clinical/ui/ClinicalModule';
 import LaboratoryModule from '../../modules/laboratory/ui/LaboratoryModule';
 import BillingModule from '../../modules/billling/ui/BillingModule';
+import PatientPortalModule from '../../modules/patient-portal/ui/PatientPortalModule';
 
 /**
  * Protected Routes Configuration
@@ -42,6 +43,15 @@ export const ProtectedRoutes = () => [
           </Suspense>
         } 
         key="dashboard"
+      />
+      <Route 
+        path={ROUTES.PATIENT_DASHBOARD} 
+        element={
+          <Suspense fallback={<LoadingSkeleton variant="dashboard" theme='light'/>}>
+            <PatientPortalModule />
+          </Suspense>
+        } 
+        key="patient-portal-dashbaord"
       />
       
       {/* Facility Management - Admin/Supervisor roles only */}
@@ -83,7 +93,7 @@ export const ProtectedRoutes = () => [
               <MedicalRecordsModule />
           </Suspense>
         } 
-        key="patient-detail"
+        key="medical_records"
       />
       <Route 
         path={ROUTES.NURSING} 
@@ -131,7 +141,7 @@ export const ProtectedRoutes = () => [
               <PharmacyModule />
           </Suspense>
         } 
-        key="encounters"
+        key="pharmacy"
       />
 
       {/* Billing - Billing/Admin roles */}

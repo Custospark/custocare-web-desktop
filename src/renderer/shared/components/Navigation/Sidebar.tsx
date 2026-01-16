@@ -32,6 +32,8 @@ import {
   type StaffFacilityAssignment,
 } from '../../../app/store/slices/activeContextSlice';
 import {FaRegCreditCard } from 'react-icons/fa';
+import { isInPatientMode } from '../../../app/store/utils/contextSelectors';
+import { useSelector } from 'react-redux';
 
 interface MenuItem {
   id: string;
@@ -95,8 +97,8 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
       id: 'patient-dashboard',
       label: 'My Health',
       icon: <HeartPulse className="w-5 h-5" />,
-      href: ROUTES.DASHBOARD,//TODO: Change to patient databoard.
-      route: ROUTES.DASHBOARD,
+      href: ROUTES.PATIENT_DASHBOARD,
+      route: ROUTES.PATIENT_DASHBOARD,
       description: 'Personal health overview',
       stats: 'Health',
       shortcut: '⌘1',
@@ -227,15 +229,35 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     category: 'system',
   },
   ], []);
+//Check if user is in patient mode.
 
+  
+const inPatientMode=useSelector(isInPatientMode);
+const acessiblePatientModuleCodes=useMemo(
+  ()=>{
+    return ['patient_dashboard','account']
+  },[]
+);
   // Filter menu items based on accessible module codes
   const currentMenuItems = useMemo(() => {
-    return menuConfig.filter(item => {
-      // Check if user has access to this module code
-      return accessibleModuleCodes.includes(item.moduleCode);
-    });
-  }, [accessibleModuleCodes, menuConfig]);
+   
+         if(inPatientMode){
+  return menuConfig.filter(item => {
+     
+        // Check if user has access to this module code
+        return acessiblePatientModuleCodes.includes(item.moduleCode);
+      });    } else{
+      return menuConfig.filter(item => {
+     
+        // Check if user has access to this module code
+        return accessibleModuleCodes.includes(item.moduleCode);
+      });
 
+    }
+  
+  }, [accessibleModuleCodes, menuConfig,inPatientMode,acessiblePatientModuleCodes]);
+
+  
   // Group menu items by category for better organization
   const groupedMenuItems = useMemo(() => {
     const groups: Record<string, MenuItem[]> = {};
@@ -251,11 +273,13 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     return groups;
   }, [currentMenuItems]);
 
+  
+
   // Category display names
   const categoryNames: Record<string, string> = {
     clinical: 'Clinical',
     admin: 'Administration',
-    patient: 'Patient',
+    patient: 'Patient Portal',
     system: 'System',
     finance: 'Finance',
     other: 'Other'
