@@ -39,7 +39,9 @@ import {
 } from '../../../app/store/slices/activeContextSlice';
 import { isInPatientMode } from '../../../app/store/utils/contextSelectors';
 import { useSelector } from 'react-redux';
-
+import {navigate as navigateContent} from '../../../app/store/slices/moduleNavigationSlice';
+import { useDispatch } from "react-redux";
+import { AppDispatch } from '../../../app/store/store';
 export interface NavbarProps {
   theme?: 'light' | 'dark';
   onMenuClick?: () => void;
@@ -106,6 +108,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isContextSwitcherOpen, setIsContextSwitcherOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobile, setIsMobile] = useState(false);
+  const dispatchInternalNavigation = useDispatch<AppDispatch>();
+  
   
   // Refs for dropdown management
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -226,6 +230,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     activeCapability,
     activeFacilityId,
   ]);
+  //Handle Notification.
+    const handleNotification=()=>{
+      dispatchInternalNavigation(navigateContent({operation:'messages',action:'inbox'}));
+      navigate(ROUTES.ACCOUNT);
+    }
 
   /**
    * Group context options by workspace type for better UI organization
@@ -450,26 +459,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       },
     };
     return colorMap[color];
-  };
-
-  const getNotificationColor = (type: Notification['type']) => {
-    const colors = {
-      success: isDark ? 'text-emerald-400' : 'text-emerald-600',
-      warning: isDark ? 'text-amber-400' : 'text-amber-600',
-      error: isDark ? 'text-orange-400' : 'text-orange-600',
-      info: isDark ? 'text-blue-400' : 'text-blue-600',
-    };
-    return colors[type];
-  };
-
-  const getNotificationBg = (type: Notification['type']) => {
-    const colors = {
-      success: isDark ? 'bg-emerald-500/10' : 'bg-emerald-50',
-      warning: isDark ? 'bg-amber-500/10' : 'bg-amber-50',
-      error: isDark ? 'bg-orange-500/10' : 'bg-orange-50',
-      info: isDark ? 'bg-blue-500/10' : 'bg-blue-50',
-    };
-    return colors[type];
   };
 
   const getDropdownPosition = () => {
@@ -1247,7 +1236,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             ==================================================================== */}
         <div ref={notificationsRef} className="relative">
           <button
-            onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+            onClick={() => handleNotification()}
             className={cn(
               'p-2 rounded-lg transition-all duration-300 hover:scale-105 relative cursor-pointer',
               isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
@@ -1270,128 +1259,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             )}
           </button>
-
-          {isNotificationsOpen && (
-            <div className={cn(
-              'rounded-xl border shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200',
-              isMobile 
-                ? 'fixed left-1/2 -translate-x-1/2 top-20 w-[calc(100vw-2rem)] max-w-sm' 
-                : 'absolute right-0 mt-2 w-96',
-              isDark 
-                ? 'bg-gray-900 border-gray-800' 
-                : 'bg-white border-gray-200'
-            )}>
-              <div className="p-4 border-b border-gray-200/50 dark:border-gray-800/50">
-                <div className="flex items-center justify-between">
-                  <h3 className={cn(
-                    'font-semibold flex items-center gap-2',
-                    isDark ? 'text-gray-200' : 'text-gray-900'
-                  )}>
-                    <Bell className="w-4 h-4" />
-                    Notifications
-                  </h3>
-                  {unreadCount > 0 && (
-                    <div className="flex items-center gap-2">
-                      <span className={cn(
-                        'px-2.5 py-1 text-xs font-bold rounded-full',
-                        isDark 
-                          ? 'bg-cyan-500/20 text-cyan-300' 
-                          : 'bg-blue-100 text-blue-700'
-                      )}>
-                        {unreadCount} new
-                      </span>
-                      <button className={cn(
-                        'text-xs font-medium transition-colors',
-                        isDark ? 'text-cyan-400 hover:text-cyan-300' : 'text-blue-600 hover:text-blue-700'
-                      )}>
-                        Mark all read
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="max-h-[60vh] sm:max-h-96 overflow-y-auto">
-                {notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={cn(
-                      'p-4 border-b last:border-0 transition-all duration-200 cursor-pointer',
-                      isDark 
-                        ? 'hover:bg-gray-800 border-gray-800' 
-                        : 'hover:bg-gray-50 border-gray-100',
-                      !notification.read && (isDark ? 'bg-cyan-500/5 border-l-2 border-l-cyan-500' : 'bg-blue-50/50 border-l-2 border-l-blue-500')
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={cn(
-                        'p-2 rounded-lg flex-shrink-0',
-                        getNotificationBg(notification.type)
-                      )}>
-                        <div className={getNotificationColor(notification.type)}>
-                          {notification.icon}
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <p className={cn(
-                            'font-medium text-sm',
-                            isDark ? 'text-gray-200' : 'text-gray-900'
-                          )}>
-                            {notification.title}
-                          </p>
-                          {!notification.read && (
-                            <div className={cn(
-                              'w-2 h-2 rounded-full flex-shrink-0 mt-1',
-                              isDark ? 'bg-cyan-500' : 'bg-blue-500'
-                            )} />
-                          )}
-                        </div>
-                        <p className={cn(
-                          'text-xs mb-2 line-clamp-2',
-                          isDark ? 'text-gray-400' : 'text-gray-600'
-                        )}>
-                          {notification.message}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-3 h-3 text-gray-500" />
-                            <span className={cn(
-                              'text-xs',
-                              isDark ? 'text-gray-500' : 'text-gray-600'
-                            )}>
-                              {notification.time}
-                            </span>
-                          </div>
-                          {notification.actionLabel && (
-                            <button className={cn(
-                              'text-xs font-medium px-2.5 py-1 rounded-md transition-colors',
-                              isDark 
-                                ? 'text-cyan-400 hover:bg-cyan-500/10' 
-                                : 'text-blue-600 hover:bg-blue-50'
-                            )}>
-                              {notification.actionLabel}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="p-3 border-t border-gray-200/50 dark:border-gray-800/50">
-                <button className={cn(
-                  'w-full py-2 text-sm font-medium rounded-lg transition-colors',
-                  isDark 
-                    ? 'text-cyan-400 hover:bg-gray-800' 
-                    : 'text-blue-600 hover:bg-gray-50'
-                )}>
-                  View all notifications
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ====================================================================
