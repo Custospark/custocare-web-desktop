@@ -18,7 +18,7 @@ import { ContentLayout, type Operation } from '../content/ContentLayout';
 import type { RootState } from '../../../app/store/rootReducer';
 import { useDispatch } from 'react-redux';
 import { navigate } from '../../../app/store/slices/moduleNavigationSlice';
-import { AppDispatch } from '../../../app/store/store';
+import { type AppDispatch } from '../../../app/store/store';
 export interface ModuleWorkspaceProps<TOperationId extends string> {
   contextTitle: string;
   operations: Operation[];

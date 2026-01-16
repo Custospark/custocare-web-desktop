@@ -325,7 +325,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       "You've been logged out successfully. Thank you for using Custocare AI — see you again soon!",
       5000
     );
-    navigate(ROUTES.LANDING);
+    navigate(ROUTES.HOME);
   };
 
   /**
@@ -346,10 +346,10 @@ export const Navbar: React.FC<NavbarProps> = ({
       switch (option.type) {
         case 'personal':
           // Switch to personal capability (patient or staff portal)
+          dispatch(switchCapability(option.capability));
           if(inPatientMode){
             navigate(ROUTES.PATIENT_DASHBOARD);
           }
-          dispatch(switchCapability(option.capability));
           showToast('success', `Switched to ${option.title}`, 3000);
           break;
 
