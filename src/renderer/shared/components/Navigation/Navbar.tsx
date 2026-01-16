@@ -37,6 +37,8 @@ import {
   selectStaffFacilities,
   getRoleDisplayName,
 } from '../../../app/store/slices/activeContextSlice';
+import { isInPatientMode } from '../../../app/store/utils/contextSelectors';
+import { useSelector } from 'react-redux';
 
 export interface NavbarProps {
   theme?: 'light' | 'dark';
@@ -112,6 +114,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const smartSearchRef = useRef<HTMLDivElement>(null);
   const workflowRef = useRef<HTMLDivElement>(null);
   const contextSwitcherRef = useRef<HTMLDivElement>(null);
+  const inPatientMode=useSelector(isInPatientMode);
 
   const isDark = theme === 'dark';
 
@@ -343,6 +346,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       switch (option.type) {
         case 'personal':
           // Switch to personal capability (patient or staff portal)
+          if(inPatientMode){
+            navigate(ROUTES.PATIENT_DASHBOARD);
+          }
           dispatch(switchCapability(option.capability));
           showToast('success', `Switched to ${option.title}`, 3000);
           break;

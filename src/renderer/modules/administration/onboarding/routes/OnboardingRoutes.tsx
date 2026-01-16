@@ -19,6 +19,7 @@ const PortalSelector = React.lazy(() => import('../ui/role-based-ui/PortalSelect
 const Dashboard = React.lazy(() => import('../../../../shared/pages/Dashboard'));
 import Layout from '../../../../shared/components/Navigation/Layout';
 import Landing from '../ui/role-based-ui/Landing';
+import PatientPortalModule from '../../../patient-portal/ui/PatientPortalModule';
 /**
  * Authentication Routes Configuration
  * Returns an array of Route components
@@ -137,7 +138,7 @@ export const OnboardingRoutes = () => [
       path={ROUTES.PATIENT_DASHBOARD}
       element={
         <Suspense fallback={<LoadingSkeleton />}>
-          <Dashboard />
+          <PatientPortalModule />
         </Suspense>
       }
     />

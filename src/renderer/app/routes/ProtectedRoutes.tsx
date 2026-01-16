@@ -7,7 +7,6 @@ import { ROUTES } from './routeConstants';
 // Lazy load protected components
 const Dashboard = React.lazy(() => import('../../shared/pages/Dashboard'));
 const FacilityOnboardingModule = React.lazy(() => import('../../shared/features/facilities/FacilityOnboardingModule'));
-const PatientModule = React.lazy(() => import('../../shared/features/patients/PatientModule'));
 const MedicalRecordsModule = React.lazy(() => import('../../modules/medical-records/ui/MedicalRecordsModule'));
 const AccountModule= React.lazy(() => import('../../modules/account/AccountModule'));
 const AdminModule= React.lazy(() => import('../../modules/administration/admin-module/ui/AdminModule'));
@@ -74,17 +73,7 @@ export const ProtectedRoutes = () => [
         } 
         key="facility-onboarding"
       />
-      
-      {/* Patient Management - Clinical/Admin roles */}
-      <Route 
-        path={ROUTES.PATIENTS} 
-        element={
-          <Suspense fallback={<LoadingSkeleton variant="table" />}>
-              <PatientModule />
-          </Suspense>
-        } 
-        key="patients"
-      />
+
       
       <Route 
         path={ROUTES.MEDICAL_RECORDS} 
