@@ -32,8 +32,8 @@ import {
   type StaffFacilityAssignment,
 } from '../../../app/store/slices/activeContextSlice';
 import {FaRegCreditCard } from 'react-icons/fa';
-import { isInPatientMode } from '../../../app/store/utils/contextSelectors';
 import { useSelector } from 'react-redux';
+import { getPatientUuid,getStaffUuid,isInPatientMode,isInStaffMode } from '../../../app/store/utils/contextSelectors';
 
 interface MenuItem {
   id: string;
@@ -78,6 +78,14 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
   const activeRoleCode = useAppSelector(selectActiveRoleCode);
   const staffFacilities = useAppSelector(selectStaffFacilities);
   const [isRoleSwitcherVisible, setIsRoleSwitcherVisible] = useState(false);
+
+  //Get Patient Numbers and Staff Numbers
+  const staffNumber=useSelector(getStaffUuid);
+  const patientNumber=useSelector(getPatientUuid);
+
+  //Get staff and Patient Modes.
+  const inPatientMode=useSelector(isInPatientMode);
+  const inStaffMode=useSelector(isInStaffMode);
 
   
   const { 
@@ -230,9 +238,6 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
   },
   ], []);
 //Check if user is in patient mode.
-
-  
-const inPatientMode=useSelector(isInPatientMode);
 const acessiblePatientModuleCodes=useMemo(
   ()=>{
     return ['patient_dashboard','account']
@@ -713,19 +718,23 @@ const acessiblePatientModuleCodes=useMemo(
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 overflow-hidden shrink-0">
-                <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-white/80" />
-                </div>
-              </div>
+            <div className="display-flex flex-column items-center gap-3">
+            
               <div className="flex-1 min-w-0">
                 <p className={cn('text-sm font-semibold truncate', isDark ? 'text-white' : 'text-gray-900')}>
-                  {user?.first_name || user?.full_name || 'User'}
+                  {user?.full_name || user?.first_name || 'User'}
                 </p>
-                <p className={cn('text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                  {currentCapabilityName}
+              </div>
+              <div className="flex-1 min-w-0">
+                { inStaffMode && staffNumber && <p className={cn('truncate font-bold', isDark ? 'text-gray-400' : 'text-gray-600')}>
+                Staff Number:  <span className={cn('truncate', isDark ? 'text-blue-300' : 'text-blue-500')}>{staffNumber}</span>
                 </p>
+                }
+              </div>
+              <div className="flex-1 min-w-0">
+                { inPatientMode && patientNumber && <p className={cn('truncate font-bold', isDark ? 'text-gray-400' : 'text-gray-600')}>
+                Patient Number:  <span className={cn('truncate', isDark ? 'text-blue-300' : 'text-blue-500')}>{patientNumber}</span>
+                </p>}
               </div>
             </div>
           </div>

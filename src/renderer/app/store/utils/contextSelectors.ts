@@ -47,6 +47,7 @@ export interface UserIdentity {
  */
 export interface StaffContext {
   staffId: number;
+  staff_uuid: string;
   employeeId: string | null;
   professionalTitle: string | null;
   activeFacilityId: number | null;
@@ -61,6 +62,7 @@ export interface StaffContext {
  */
 export interface PatientContext {
   patientId: number;
+  patientUuid: string;
   primaryFacilityId: number | null;
   medicalRecordNumber: string | null;
 }
@@ -224,6 +226,14 @@ export const getUserIdentity = (state: RootState): UserIdentity | null => {
 export const getStaffId = (state: RootState): number | null => {
   return state.activeContext.capabilities.staff?.staff_id ?? null;
 };
+/**
+ * 
+ * @param state Get staff UUID(Which represents staff professional Number.)
+ * @returns 
+ */
+export const getStaffUuid = (state: RootState): string | null => {
+  return state.activeContext.capabilities.staff?.staff_uuid ?? null;
+};
 
 /**
  * Get the employee ID for the current staff member
@@ -354,6 +364,7 @@ export const getStaffContext = (state: RootState): StaffContext | null => {
 
   return {
     staffId: staffCapability.staff_id,
+    staff_uuid: staffCapability.staff_uuid,
     employeeId: staffCapability.employee_id,
     professionalTitle: staffCapability.professional_title ?? null,
     activeFacilityId: state.activeContext.activeFacilityId,
@@ -383,6 +394,13 @@ export const getStaffContext = (state: RootState): StaffContext | null => {
 export const getPatientId = (state: RootState): number | null => {
   return state.activeContext.capabilities.patient?.patient_id ?? null;
 };
+
+/**
+ * Get Patient UUID.
+ */
+export const getPatientUuid=(state:RootState):string | null =>{
+  return state.activeContext.capabilities.patient?.patient_uuid ?? null;
+}
 
 /**
  * Get the patient's primary facility ID
@@ -427,6 +445,7 @@ export const getPatientContext = (state: RootState): PatientContext | null => {
 
   return {
     patientId: patientCapability.patient_id,
+    patientUuid: patientCapability.patient_uuid,
     primaryFacilityId: patientCapability.primary_facility_id,
     medicalRecordNumber: patientCapability.medical_record_number ?? null,
   };

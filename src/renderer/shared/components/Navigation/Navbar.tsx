@@ -37,11 +37,11 @@ import {
   selectStaffFacilities,
   getRoleDisplayName,
 } from '../../../app/store/slices/activeContextSlice';
-import { isInPatientMode } from '../../../app/store/utils/contextSelectors';
 import { useSelector } from 'react-redux';
 import {navigate as navigateContent} from '../../../app/store/slices/moduleNavigationSlice';
 import { useDispatch } from "react-redux";
 import { AppDispatch } from '../../../app/store/store';
+import { getStaffUuid,isInPatientMode,isInStaffMode,getPatientUuid } from '../../../app/store/utils/contextSelectors';
 export interface NavbarProps {
   theme?: 'light' | 'dark';
   onMenuClick?: () => void;
@@ -109,6 +109,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobile, setIsMobile] = useState(false);
   const dispatchInternalNavigation = useDispatch<AppDispatch>();
+
+  //Get user information based on active context.
+  const inPatientMode=useSelector(isInPatientMode);
+  const inStaffMode=useSelector(isInStaffMode);
+  const staffNumber=useSelector(getStaffUuid);
+  const patientNumber=useSelector(getPatientUuid);
   
   
   // Refs for dropdown management
@@ -118,7 +124,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   const smartSearchRef = useRef<HTMLDivElement>(null);
   const workflowRef = useRef<HTMLDivElement>(null);
   const contextSwitcherRef = useRef<HTMLDivElement>(null);
-  const inPatientMode=useSelector(isInPatientMode);
 
   const isDark = theme === 'dark';
 
@@ -1274,20 +1279,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 : 'hover:bg-gray-100'
             )}
           >
-            <div className="text-right hidden lg:block cursor-pointer">
+           {user?.first_name && <div className="text-left hidden lg:block">
               <p className={cn(
-                'text-sm font-semibold',
+                'text-sm font-semibold truncate',
                 isDark ? 'text-gray-200' : 'text-gray-900'
               )}>
-                {user?.full_name || 'User'}
+             {user?.first_name}
               </p>
-              <p className={cn(
-                'text-xs',
-                isDark ? 'text-gray-500' : 'text-gray-600'
-              )}>
-                {currentCapabilityName}
-              </p>
-            </div>
+          
+            </div>}
             
             <div className="relative">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center ring-2 ring-blue-500/20">
@@ -1322,12 +1322,31 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full"></div>
                   </div>
                   <div className="flex-1">
-                    <p className={cn(
+                    {inStaffMode && staffNumber && <p className={cn(
                       'font-bold',
                       isDark ? 'text-gray-200' : 'text-gray-900'
                     )}>
-                      {user?.full_name || 'User'}
-                    </p>
+                      {'Staff Number'}
+                    </p>}
+                    {inPatientMode && patientNumber && <p className={cn(
+                      'font-bold',
+                      isDark ? 'text-gray-200' : 'text-gray-900'
+                    )}>
+                      {'Patient Number'}
+                    </p>}
+                   {inStaffMode && staffNumber && <p className={cn(
+                      'font-bold',
+                      isDark ? 'text-blue-200' : 'text-blue-500'
+                    )}>
+                     {staffNumber}
+                    </p>}
+                   {inPatientMode && patientNumber && <p className={cn(
+                      'font-bold',
+                      isDark ? 'text-blue-200' : 'text-blue-500'
+                    )}>
+                     {patientNumber}
+                    </p>}
+
                     <p className={cn(
                       'text-sm',
                       isDark ? 'text-gray-500' : 'text-gray-600'

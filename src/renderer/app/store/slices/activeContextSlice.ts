@@ -17,6 +17,7 @@ export interface BackendModule {
  */
 export interface PatientCapability {
   patient_id: number;
+  patient_uuid: string;
   primary_facility_id: number | null;
   medical_record_number?: string;
   modules: BackendModule[];
@@ -37,6 +38,7 @@ export interface StaffFacilityAssignment {
  */
 export interface StaffCapability {
   staff_id: number;
+  staff_uuid: string;
   employee_id: string | null;
   professional_title?: string;
   facilities: StaffFacilityAssignment[];
