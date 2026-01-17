@@ -15,9 +15,7 @@ import {
   Users, 
   UserPlus, 
   Mail, 
-  Settings, 
-  Shield, 
-  Activity,
+  Settings,
   Search,
   Download,
   RefreshCw
@@ -51,14 +49,6 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
   const [activeView, setActiveView] = useState<ViewMode>('list');
   const [selectedStaffId, setSelectedStaffId] = useState<number>(0);
   const [refreshKey, setRefreshKey] = useState(0);
-  
-  // Statistics (would be fetched from API in production)
-  const stats = {
-    totalStaff: 0,
-    activeInvitations: 0,
-    pendingReviews: 0,
-    onlineNow: 0,
-  };
   
   // Handle view navigation
   const handleViewChange = (view: ViewMode) => {
@@ -150,65 +140,6 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
             <Download className="w-4 h-4" />
             Export
           </button>
-        </div>
-      </div>
-      
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className={`rounded-xl p-4 border ${
-          isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-        }`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Total Staff
-              </p>
-              <p className="text-2xl font-semibold mt-1">{stats.totalStaff}</p>
-            </div>
-            <Users className={`w-8 h-8 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
-          </div>
-        </div>
-        
-        <div className={`rounded-xl p-4 border ${
-          isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-        }`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Active Invitations
-              </p>
-              <p className="text-2xl font-semibold mt-1">{stats.activeInvitations}</p>
-            </div>
-            <Mail className={`w-8 h-8 ${isDark ? 'text-green-400' : 'text-green-600'}`} />
-          </div>
-        </div>
-        
-        <div className={`rounded-xl p-4 border ${
-          isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-        }`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Pending Reviews
-              </p>
-              <p className="text-2xl font-semibold mt-1">{stats.pendingReviews}</p>
-            </div>
-            <Shield className={`w-8 h-8 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`} />
-          </div>
-        </div>
-        
-        <div className={`rounded-xl p-4 border ${
-          isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-        }`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Online Now
-              </p>
-              <p className="text-2xl font-semibold mt-1">{stats.onlineNow}</p>
-            </div>
-            <Activity className={`w-8 h-8 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
-          </div>
         </div>
       </div>
       

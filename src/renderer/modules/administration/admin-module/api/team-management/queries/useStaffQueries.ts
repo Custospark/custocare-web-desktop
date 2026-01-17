@@ -101,6 +101,21 @@ export const useGetStaff = (
     ...options,
   });
 };
+export const useGetStaffForGivenFacility = (
+  filters: StaffFilters = {},
+  options?: Omit<UseQueryOptions<GetStaffResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<GetStaffResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: staffKeys.list(filters),
+    queryFn: async () => {
+      const response = await axiosInstance.get<GetStaffResponse>('/staff/specific-facility', {
+        params: filters,
+      });
+      return response.data;
+    },
+    ...options,
+  });
+};
 
 /**
  * Fetches a single staff member by ID with full details.

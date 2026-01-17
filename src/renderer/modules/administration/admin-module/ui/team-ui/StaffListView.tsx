@@ -16,7 +16,7 @@ import {
   Eye,
   MoreVertical,
 } from 'lucide-react';
-import { useGetStaff } from '../../api/team-management/queries/useStaffQueries';
+import { useGetStaffForGivenFacility } from '../../api/team-management/queries/useStaffQueries';
 import type { EmploymentStatus } from '../../api/team-management/types/staffTypes';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 
@@ -41,7 +41,7 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<EmploymentStatus | 'all'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'employee_id' | 'role'>('name');
   
-  const { data: staffResponse, isLoading } = useGetStaff(
+  const { data: staffResponse, isLoading } = useGetStaffForGivenFacility(
     {
       facility_id: facilityId,
       employment_status: statusFilter === 'all' ? undefined : statusFilter,
