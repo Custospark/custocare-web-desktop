@@ -24,6 +24,7 @@ interface StaffListViewProps {
   theme: 'light' | 'dark';
   facilityId: number;
   refreshKey: number;
+  staffId:number;
   onStaffSelect: (staffId: number) => void;
   onCreateNew: () => void;
 }

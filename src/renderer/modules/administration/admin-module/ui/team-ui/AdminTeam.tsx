@@ -32,6 +32,7 @@ import { RoleAccessManager } from './RoleAccessManager';
 import StaffDetailView from './StaffDetailView';
 // Import hooks and types
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
+import StaffListView from './StaffListView';
 
 interface AdminTeamProps {
   theme: 'light' | 'dark';
@@ -48,7 +49,7 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
   
   // View state management
   const [activeView, setActiveView] = useState<ViewMode>('list');
-  const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
+  const [selectedStaffId, setSelectedStaffId] = useState<number>(0);
   const [refreshKey, setRefreshKey] = useState(0);
   
   // Statistics (would be fetched from API in production)
@@ -63,7 +64,7 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
   const handleViewChange = (view: ViewMode) => {
     setActiveView(view);
     if (view !== 'detail') {
-      setSelectedStaffId(null);
+      setSelectedStaffId(0);
     }
   };
   
@@ -281,15 +282,14 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
       {/* Dynamic Content Area */}
       <div className="min-h-[600px]">
         {activeView === 'list' && (
-          // <StaffListView
-          //   theme={theme}
-          //   facilityId={activeFacilityId}
-          //   refreshKey={refreshKey}
-          //   staffId={selectedStaffId}
-          //   // onStaffSelect={handleStaffSelect}
-          //   // onCreateNew={() => handleViewChange('create')}
-          // />
-          <p>Staff List view</p>
+          <StaffListView
+            theme={theme}
+            facilityId={activeFacilityId}
+            refreshKey={refreshKey}
+            staffId={selectedStaffId}
+            onStaffSelect={handleStaffSelect}
+            onCreateNew={() => handleViewChange('create')}
+          />
         )}
         
         {activeView === 'search' && (

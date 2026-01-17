@@ -27,7 +27,7 @@ interface PatientProps {
 const Patient: React.FC<PatientProps> = ({ theme }) => {
   return (
     <BaseActionWorkspace<PatientAction>
-      title="Patients Records"
+      title="Patient Records"
       icon={<FileBox className="w-6 h-6" />}
       theme={theme}
       defaultAction="create_patient"
