@@ -37,6 +37,7 @@ import type {
   ValidateStaffActionParams,
   ExpiringCredentialsResponse,
   ValidateActionResponse,
+  CreateStaffByAdminRequest
 } from '../types/staffTypes';
 
 /* -------------------------------------------------------------------------- */
@@ -259,6 +260,44 @@ export const useCreateStaff = (
   return useMutation<StaffResponse, AxiosError<ApiErrorResponse>, CreateStaffRequest>({
     mutationFn: async (data: CreateStaffRequest) => {
       const response = await axiosInstance.post<StaffResponse>('/staff', data);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const successMessage = data.message || 'Staff account created successfully!';
+      showToast('success', successMessage, 8000);
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to create staff account.';
+
+      // Extract validation errors if present
+      let errorDetails = '';
+      if (error.response?.data?.errors) {
+        errorDetails = Object.entries(error.response.data.errors)
+          .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
+          .join(' | ');
+      }
+
+      const displayMessage = errorDetails ? `${apiMessage} (${errorDetails})` : apiMessage;
+      showToast('error', displayMessage, 8000);
+
+      callbacks.onError?.(error);
+    },
+  });
+};
+
+/**
+ * Create staff by admin.
+ */
+
+export const useCreateStaffByAdmin = (
+  callbacks: MutationCallbacks<StaffResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const { showToast } = useToast();
+
+  return useMutation<StaffResponse, AxiosError<ApiErrorResponse>, CreateStaffByAdminRequest>({
+    mutationFn: async (data: CreateStaffByAdminRequest) => {
+      const response = await axiosInstance.post<StaffResponse>('/staff/admin-create', data);
       return response.data;
     },
     onSuccess: (data) => {

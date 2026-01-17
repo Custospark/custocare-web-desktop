@@ -205,6 +205,19 @@ export interface Staff {
 /*                          REQUEST/RESPONSE TYPES                            */
 /* -------------------------------------------------------------------------- */
 
+export interface CreateStaffByAdminRequest{
+  email:string;
+  first_name:string;
+  last_name:string;
+  phone:string;
+  employee_id:string;
+  global_role_level:string;
+  facility_role_code:string;
+  module_codes:string[];
+  hire_date:string;
+  employment_type:string;
+  professional_title?:string; 
+}
 /**
  * Request payload for creating a new staff member.
  */

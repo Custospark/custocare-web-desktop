@@ -15,7 +15,7 @@ import {
   Loader,
   Building2,
 } from 'lucide-react';
-import { useCreateStaff } from '../../api/team-management/queries/useStaffQueries';
+import { useCreateStaffByAdmin } from '../../api/team-management/queries/useStaffQueries';
 import { useGetDepartmentsByFacility } from '../../api/department-managment/useDepartmentQueries';
 import { useGetFacilityRoles } from '../../api/team-management/queries/useFacilityRoleQueries';
 import { useGetModules } from '../../api/team-management/queries/useModuleQueries';
@@ -102,7 +102,7 @@ export const StaffCreationForm: React.FC<StaffCreationFormProps> = ({
   const modules = modulesResponse?.data || [];
   
   // Create mutation
-  const createMutation = useCreateStaff({
+  const createMutation = useCreateStaffByAdmin({
     onSuccess: (response) => {
       onSuccess(response.data.id);
     },
@@ -194,19 +194,20 @@ export const StaffCreationForm: React.FC<StaffCreationFormProps> = ({
   // Handle form submission
   const handleSubmit = async () => {
     if (!validateStep(currentStep)) return;
-    
-    // First, we need to create a user account (this would be done via user creation endpoint)
-    // For now, we'll assume user creation happens within staff creation
-    
+    //In here,the user creation and staff record is handled at the backend.
     createMutation.mutate({
       // User ID would come from user creation
-      user_id: 0, // This should be replaced with actual user creation flow
+      first_name:formData.first_name,
+      last_name:formData.last_name,
+      email:formData.email,
+      facility_role_code:formData.facility_role_code,
+      module_codes:formData.module_codes,
       employee_id: formData.employee_id,
-      professional_title: formData.professional_title || undefined,
+      professional_title: formData.professional_title,
       global_role_level: formData.global_role_level as GlobalRoleLevel,
       employment_type: formData.employment_type as EmploymentType,
-      hire_date: formData.hire_date || undefined,
-      accepts_new_patients: formData.accepts_new_patients,
+      phone:formData.phone,
+      hire_date: formData.hire_date,
       // Additional fields can be added here
     });
   };
