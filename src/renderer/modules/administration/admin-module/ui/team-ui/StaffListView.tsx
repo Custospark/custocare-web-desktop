@@ -93,12 +93,12 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
             Staff Members ({filteredAndSortedStaff.length})
           </h2>
           
-          <button
+          {/* <button
             onClick={onCreateNew}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
           >
             Add Staff Member
-          </button>
+          </button> */}
         </div>
         
         <div className="flex flex-col sm:flex-row gap-3">

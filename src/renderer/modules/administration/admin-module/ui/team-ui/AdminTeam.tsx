@@ -13,7 +13,6 @@
 import React, { useState } from 'react';
 import { 
   Users, 
-  UserPlus, 
   Mail, 
   Settings,
   Search,
@@ -23,7 +22,7 @@ import {
 
 // Import modular components
 import { StaffSearchPanel } from './StaffSearchPanel';
-import { StaffCreationForm } from './StaffCreationForm';
+// import { StaffCreationForm } from './StaffCreationForm';
 import { InvitationManager } from './InvitationManager';
 // import StaffListView from './StaffDetailView';
 import { RoleAccessManager } from './RoleAccessManager';
@@ -36,7 +35,7 @@ interface AdminTeamProps {
   theme: 'light' | 'dark';
 }
 
-type ViewMode = 'list' | 'search' | 'create' | 'invitations' | 'roles' | 'detail';
+type ViewMode = 'list' | 'search' |'create'| 'invitations' | 'roles' | 'detail';
 
 export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
   const isDark = theme === 'dark';
@@ -65,11 +64,11 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
   };
   
   // Handle successful staff creation
-  const handleStaffCreated = (staffId: number) => {
-    setRefreshKey(prev => prev + 1);
-    setSelectedStaffId(staffId);
-    setActiveView('detail');
-  };
+  // const handleStaffCreated = (staffId: number) => {
+  //   setRefreshKey(prev => prev + 1);
+  //   setSelectedStaffId(staffId);
+  //   setActiveView('detail');
+  // };
   
   // Handle successful invitation
   const handleInvitationSent = () => {
@@ -172,7 +171,7 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
             Search Staff
           </button>
           
-          <button
+          {/* <button
             onClick={() => handleViewChange('create')}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               activeView === 'create'
@@ -182,7 +181,7 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
           >
             <UserPlus className="w-4 h-4" />
             Create Staff
-          </button>
+          </button> */}
           
           <button
             onClick={() => handleViewChange('invitations')}
@@ -193,7 +192,7 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
             }`}
           >
             <Mail className="w-4 h-4" />
-            Invitations
+            Staff Invitations
           </button>
           
           <button
@@ -232,14 +231,14 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
           />
         )}
         
-        {activeView === 'create' && (
+        {/* {activeView === 'create' && (
           <StaffCreationForm
             theme={theme}
             facilityId={activeFacilityId}
             onSuccess={handleStaffCreated}
             onCancel={() => handleViewChange('list')}
           />
-        )}
+        )} */}
         
         {activeView === 'invitations' && (
           <InvitationManager

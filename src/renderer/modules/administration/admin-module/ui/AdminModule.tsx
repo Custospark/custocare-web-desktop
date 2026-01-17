@@ -62,16 +62,16 @@ const ADMIN_OPERATIONS: Operation[] = [
     description: 'Administrative overview and setup status',
   },
   {
-    id: 'team',
-    label: 'Team',
-    icon: <Users className="w-4 h-4" />,
-    description: 'Manage staff, invitations, and roles',
-  },
-  {
     id: 'facility-setup',
     label: 'Facility Setup',
     icon: <Building2 className="w-4 h-4" />,
     description: 'Configure departments and facility structure',
+  },
+  {
+    id: 'team',
+    label: 'Staff Managment',
+    icon: <Users className="w-4 h-4" />,
+    description: 'Manage staff, invitations, and roles',
   },
   {
     id: 'service-catalog',
