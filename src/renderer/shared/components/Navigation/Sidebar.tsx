@@ -247,11 +247,12 @@ const acessiblePatientModuleCodes=useMemo(
   const currentMenuItems = useMemo(() => {
    
          if(inPatientMode){
-  return menuConfig.filter(item => {
+        return menuConfig.filter(item => {
      
         // Check if user has access to this module code
-        return acessiblePatientModuleCodes.includes(item.moduleCode);
-      });    } else{
+        return [acessiblePatientModuleCodes.includes(item.moduleCode)];
+      });   
+     } else{
       return menuConfig.filter(item => {
      
         // Check if user has access to this module code

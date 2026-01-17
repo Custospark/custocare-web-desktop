@@ -3,7 +3,7 @@
  * INVITATION MANAGER COMPONENT
  * ============================================================================
  * 
- * Professional staff invitation management system with full CRUD operations,
+ * Staff staff invitation management system with full CRUD operations,
  * batch actions, filtering, and real-time status tracking.
  * 
  * @component InvitationManager
@@ -713,7 +713,7 @@ const { data: departmentsResponse, isLoading: departmentsLoading } = useGetDepar
                     <div className="relative">
                       <Users className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
                         isDark ? 'text-gray-500' : 'text-gray-400'
-                      }`} />
+                      }`} />              
                       <select
                         value={formData.staff_id || ''}
                         onChange={(e) => {
@@ -731,7 +731,7 @@ const { data: departmentsResponse, isLoading: departmentsLoading } = useGetDepar
                         <option value="">Select a staff member...</option>
                         {staff.map((member) => (
                           <option key={member.id} value={member.id}>
-                           Professional Number: {member.staff_uuid} - {member.professional_title || 'Medical Professional'}
+                           Staff Number: {member.staff_uuid} - {member.professional_title || 'Medical Staff'}
                           </option>
                         ))}
                       </select>
