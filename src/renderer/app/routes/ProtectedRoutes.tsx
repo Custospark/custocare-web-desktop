@@ -369,8 +369,8 @@ const coreRoutes = [
     path={ROUTES.LABORATORY}
     element={
       <SuspenseWrapper variant="dashboard">
-        <LaboratoryModule />
-      </SuspenseWrapper>
+      <WithThemeProp Component={LaboratoryModule} />
+     </SuspenseWrapper>
     }
   />,
 ];

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '../../types/cn';
 import { Navbar } from './Navbar';
-import StatusBar, { SidebarPosition, SystemStatus, ThemeMode } from './StatusBar';
+import StatusBar, { type SidebarPosition,type  SystemStatus, type ThemeMode } from './StatusBar';
 
 export interface LayoutTopBarsThemeClasses {
   backdrop: string;

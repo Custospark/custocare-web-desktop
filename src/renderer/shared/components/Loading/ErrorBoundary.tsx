@@ -8,7 +8,7 @@
  * Works for both web and desktop applications.
  */
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import  { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface Props {
