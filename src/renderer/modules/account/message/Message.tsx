@@ -1,25 +1,15 @@
+// Message.tsx
 /**
  * ============================================================================
- * INVENTORY MODULE (REWRITTEN)
+ * MESSAGE MODULE (ROUTER-DRIVEN)
  * ============================================================================
  */
 
-import {
-Inbox,
-  SendIcon,
-  Notebook,
-  Trash,
-  MessageCircleMore,
-} from 'lucide-react';
-import { BaseActionWorkspace } from '../../../shared/components/workspace/BaseActionWorkspace';
+import React from 'react';
+import { Inbox, SendIcon, Notebook, Trash, MessageCircleMore } from 'lucide-react';
 import { FaVirus } from 'react-icons/fa';
-
-type MessageAction =
-   | 'inbox'
-  | 'sent'
-  | 'draft'
-  | 'trash'
-  | 'spam';
+import { BaseActionWorkspace } from '../../../shared/components/workspace/BaseActionWorkspace';
+import { ACCOUNT_ROUTES } from '../../../app/routes/routeConstants';
 
 interface MessageProps {
   theme: 'light' | 'dark';
@@ -27,70 +17,45 @@ interface MessageProps {
 
 const Message: React.FC<MessageProps> = ({ theme }) => {
   return (
-    <BaseActionWorkspace<MessageAction>
+    <BaseActionWorkspace
       title="Messages"
       icon={<MessageCircleMore className="w-6 h-6" />}
       theme={theme}
-      defaultAction="inbox"
-      moduleId="messages"
-
+      defaultActionTo={ACCOUNT_ROUTES.MESSAGES_INBOX}
       actions={[
-     {
-          key: 'inbox',
-          label: 'Inbox',
-          icon: <Inbox className="w-4 h-4" />,
+        { 
+          key: 'inbox', 
+          label: 'Inbox', 
+          icon: <Inbox className="w-4 h-4" />, 
+          to: ACCOUNT_ROUTES.MESSAGES_INBOX 
         },
-        {
-          key: 'sent',
-          label: 'Sent',
-          icon: <SendIcon className="w-4 h-4" />,
+        { 
+          key: 'sent', 
+          label: 'Sent', 
+          icon: <SendIcon className="w-4 h-4" />, 
+          to: ACCOUNT_ROUTES.MESSAGES_SENT 
         },
-        {
-          key: 'draft',
-          label: 'Draft',
-          icon: <Notebook className="w-4 h-4" />,
+        { 
+          key: 'draft', 
+          label: 'Draft', 
+          icon: <Notebook className="w-4 h-4" />, 
+          to: ACCOUNT_ROUTES.MESSAGES_DRAFT 
         },
-        {
-          key: 'trash',
-          label: 'Trash',
-          icon: <Trash className="w-4 h-4" />,
+        { 
+          key: 'trash', 
+          label: 'Trash', 
+          icon: <Trash className="w-4 h-4" />, 
+          to: ACCOUNT_ROUTES.MESSAGES_TRASH 
         },
-        {
-          key: 'spam',
-          label: 'Spam',
-          icon: <FaVirus className="w-4 h-4" />,
+        { 
+          key: 'spam', 
+          label: 'Spam', 
+          icon: <FaVirus className="w-4 h-4" />, 
+          to: ACCOUNT_ROUTES.MESSAGES_SPAM 
         },
       ]}
-      renderAction={(action:MessageAction) => {
-        switch (action) {
-        case 'inbox':
-        return <PlaceholderPanel title="New Messages" />;
-
-        case 'sent':
-            return <PlaceholderPanel title="Sent Messages" />;
-
-        case 'draft':
-            return <PlaceholderPanel title="Messages in draft" />;
-
-        case 'trash':
-            return <PlaceholderPanel title="Messages in trash" />;
-
-        case 'spam':
-        default:
-            return <PlaceholderPanel title="Spam Messages." />;
-        }
-      }}
     />
   );
 };
 
 export default Message;
-
-const PlaceholderPanel: React.FC<{ title: string }> = ({ title }) => (
-  <div className="h-full flex flex-col items-center justify-center text-center">
-    <h3 className="text-lg font-semibold mb-2">{title}</h3>
-    <p className="text-sm text-gray-500">
-      Temporary placeholder. Replace with real implementation.
-    </p>
-  </div>
-);

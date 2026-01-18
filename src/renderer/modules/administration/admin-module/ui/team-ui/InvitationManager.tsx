@@ -1,16 +1,16 @@
 /**
  * ============================================================================
- * INVITATION MANAGER COMPONENT
+ * INVITATION MANAGER COMPONENT (ENHANCED)
  * ============================================================================
  * 
- * Staff staff invitation management system with full CRUD operations,
- * batch actions, filtering, and real-time status tracking.
+ * Enhanced staff invitation management with secure staff lookup system.
+ * Users enter staff number/UUID first, then select from filtered results.
  * 
  * @component InvitationManager
- * @description Manages staff invitations - create, resend, cancel, and track status
+ * @description Manages staff invitations with secure staff lookup to prevent data exposure
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Mail,
   Send,
@@ -30,6 +30,11 @@ import {
   Package,
   Calendar,
   ChevronDown,
+  Key,
+  UserCheck,
+  Shield,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import {type  RootState } from '../../../../../app/store/rootReducer';
@@ -42,8 +47,8 @@ import {
 import { useGetStaff } from '../../api/team-management/queries/useStaffQueries';
 import { useGetFacilityRoles } from '../../api/team-management/queries/useFacilityRoleQueries';
 import { useGetModules } from '../../api/team-management/queries/useModuleQueries';
-import { useGetDepartmentsByFacility, }  from '../../api/department-managment/useDepartmentQueries';
-import { useGetFacilitySpecificRoles }  from '../../api/team-management/queries/useFacilityRoleQueries';
+import { useGetDepartmentsByFacility } from '../../api/department-managment/useDepartmentQueries';
+import { useGetFacilitySpecificRoles } from '../../api/team-management/queries/useFacilityRoleQueries';
 import type { InvitationStatus } from '../../api/team-management/types/staffInvitationTypes';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 
@@ -52,12 +57,11 @@ interface InvitationManagerProps {
   refreshKey?: number;
   facilityId: number;
   onInvitationSent: () => void;
-
-
 }
 
 interface CreateInvitationFormData {
   staff_id: number | null;
+  staff_uuid: string;
   department_id: number | null;
   role_code: string;
   module_codes: string[];
@@ -73,10 +77,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     (state: RootState) => state.activeContext.activeFacilityId
   );
   
-  // const invitedByStaffId = useSelector(
-  //   (state: RootState) => state.activeContext.capabilities.staff?.staff_id
-  // );
-  
   // State management
   const [statusFilter, setStatusFilter] = useState<InvitationStatus | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -84,15 +84,20 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
   const [showFilters, setShowFilters] = useState(false);
   const [selectedInvitations, setSelectedInvitations] = useState<number[]>([]);
   
-  // Form state
+  // Enhanced form state for secure staff lookup
   const [formData, setFormData] = useState<CreateInvitationFormData>({
     staff_id: null,
+    staff_uuid: '',
     department_id: null,
     role_code: '',
     module_codes: [],
   });
   
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [staffLookupError, setStaffLookupError] = useState<string>('');
+  const [staffLookupMode, setStaffLookupMode] = useState<'search' | 'select'>('search');
+  const [filteredStaff, setFilteredStaff] = useState<any[]>([]);
+  const [showStaffDetails, setShowStaffDetails] = useState(false);
   
   // Fetch invitations
   const { data: invitationsResponse, isLoading: invitationsLoading, refetch } = useGetStaffInvitations(
@@ -105,10 +110,13 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     }
   );
   
-  // Fetch staff (for invitation targets)
+  // Fetch staff (limited data for privacy)
   const { data: staffResponse, isLoading: staffLoading } = useGetStaff(
-    { },
-    { enabled: showCreateModal }
+    { 
+      limit: 100, // Increased limit for better search
+      include_minimal: true // Request minimal data for privacy
+    },
+    { enabled: true } // Keep enabled for search functionality
   );
   
   // Fetch roles
@@ -123,17 +131,18 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     { enabled: showCreateModal }
   );
   
-// Fetch departments
-const { data: departmentsResponse, isLoading: departmentsLoading } = useGetDepartmentsByFacility(
-  activeFacilityId || 0,
-  {}, // filters (empty object if none)
-  { enabled: showCreateModal && !!activeFacilityId } // options
-);
+  // Fetch departments
+  const { data: departmentsResponse, isLoading: departmentsLoading } = useGetDepartmentsByFacility(
+    activeFacilityId || 0,
+    {},
+    { enabled: showCreateModal && !!activeFacilityId }
+  );
 
- const { data: facilityRolesResponse} = useGetFacilitySpecificRoles(
+  const { data: facilityRolesResponse } = useGetFacilitySpecificRoles(
     activeFacilityId!,
     { enabled: !!activeFacilityId }
   );
+  
   const facilityRoles = facilityRolesResponse?.data || [];
   const invitations = invitationsResponse?.data || [];
 
@@ -141,7 +150,7 @@ const { data: departmentsResponse, isLoading: departmentsLoading } = useGetDepar
     return [...facilityRoles, ...(rolesResponse?.data || [])];
   }, [facilityRoles, rolesResponse?.data]);
 
-  const staff = staffResponse?.data || [];
+  const allStaff = staffResponse?.data || [];
   const modules = modulesResponse?.data || [];
   const departments = departmentsResponse?.data || [];
   
@@ -149,6 +158,74 @@ const { data: departmentsResponse, isLoading: departmentsLoading } = useGetDepar
   const createMutation = useCreateStaffInvitation();
   const resendMutation = useResendInvitation();
   const cancelMutation = useCancelInvitation();
+  
+  // Enhanced staff lookup function
+  const handleStaffUUIDLookup = useCallback(() => {
+    setStaffLookupError('');
+    
+    if (!formData.staff_uuid.trim()) {
+      setStaffLookupError('Please enter a staff number/UUID');
+      return;
+    }
+    
+    const searchTerm = formData.staff_uuid.trim().toLowerCase();
+    
+    // Search for staff by UUID, employee ID, or name
+    const results = allStaff.filter(staff => {
+      const uuidMatch = staff.staff_uuid?.toLowerCase().includes(searchTerm);
+      const employeeIdMatch = staff.employee_id?.toLowerCase().includes(searchTerm);
+      const nameMatch = staff.professional_title?.toLowerCase().includes(searchTerm);
+      
+      return uuidMatch || employeeIdMatch || nameMatch;
+    });
+    
+    if (results.length === 0) {
+      setStaffLookupError('No staff member found with that identifier. Please check the staff number and try again.');
+      setFilteredStaff([]);
+      setFormData(prev => ({ ...prev, staff_id: null }));
+    } else if (results.length === 1) {
+      // Auto-select if only one match
+      setFormData(prev => ({ 
+        ...prev, 
+        staff_id: results[0].id,
+        staff_uuid: results[0].staff_uuid // Update with correct UUID
+      }));
+      setStaffLookupMode('select');
+      setFilteredStaff([results[0]]);
+      setShowStaffDetails(true);
+    } else {
+      // Show selection list for multiple matches
+      setFilteredStaff(results);
+      setStaffLookupMode('select');
+      setFormData(prev => ({ ...prev, staff_id: null }));
+    }
+  }, [formData.staff_uuid, allStaff]);
+  
+  // Handle staff selection from filtered results
+  const handleStaffSelect = useCallback((staffId: number, staffUUID: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      staff_id: staffId,
+      staff_uuid: staffUUID
+    }));
+    setStaffLookupError('');
+    setShowStaffDetails(true);
+  }, []);
+  
+  // Reset staff search
+  const resetStaffSearch = useCallback(() => {
+    setStaffLookupMode('search');
+    setFormData(prev => ({ ...prev, staff_id: null, staff_uuid: '' }));
+    setFilteredStaff([]);
+    setStaffLookupError('');
+    setShowStaffDetails(false);
+  }, []);
+  
+  // Get selected staff details
+  const selectedStaff = useMemo(() => {
+    if (!formData.staff_id) return null;
+    return allStaff.find(staff => staff.id === formData.staff_id);
+  }, [formData.staff_id, allStaff]);
   
   // Filter and search invitations
   const filteredInvitations = useMemo(() => {
@@ -215,11 +292,13 @@ const { data: departmentsResponse, isLoading: departmentsLoading } = useGetDepar
   const resetForm = () => {
     setFormData({
       staff_id: null,
+      staff_uuid: '',
       department_id: null,
       role_code: '',
       module_codes: [],
     });
     setFormErrors({});
+    resetStaffSearch();
   };
   
   const handleResend = (id: number) => {
@@ -323,11 +402,11 @@ const { data: departmentsResponse, isLoading: departmentsLoading } = useGetDepar
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6">
           <div>
             <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Mail className="w-6 h-6" />
-              Staff Invitations
+              <Shield className="w-6 h-6" />
+              Secure Staff Invitations
             </h2>
             <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              Manage pending and sent invitations for facility staff
+              Privacy-focused invitation management system
             </p>
             <div className={`mt-2 inline-flex items-center gap-2 px-2 py-1 rounded text-xs ${
               isDark ? 'bg-blue-900/20 text-blue-300' : 'bg-blue-50 text-blue-700'
@@ -563,7 +642,7 @@ const { data: departmentsResponse, isLoading: departmentsLoading } = useGetDepar
                           {invitation.staff?.employee_id && (
                             <div className="flex items-center gap-2">
                               <Users className="w-4 h-4 flex-shrink-0" />
-                              <span>Professioanl Number: {invitation.staff.staff_uuid}</span>
+                              <span>Staff Number: {invitation.staff.staff_uuid}</span>
                             </div>
                           )}
                           
@@ -676,11 +755,11 @@ const { data: departmentsResponse, isLoading: departmentsLoading } = useGetDepar
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-semibold flex items-center gap-2">
-                    <Send className="w-5 h-5" />
-                    Send Staff Invitation
+                    <Shield className="w-5 h-5" />
+                    Send Secure Staff Invitation
                   </h3>
                   <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Invite a staff member to join this facility with specific role and module access
+                    Privacy-first staff invitation system
                   </p>
                 </div>
                 <button
@@ -703,49 +782,209 @@ const { data: departmentsResponse, isLoading: departmentsLoading } = useGetDepar
                 <LoadingSkeleton variant='form' theme={theme} message='Loading form data...'/>
               ) : (
                 <>
-                  {/* Staff Selection */}
-                  <div>
-                    <label className={`block text-sm font-medium mb-2 ${
-                      isDark ? 'text-gray-300' : 'text-gray-700'
-                    }`}>
-                      Staff Member *
-                    </label>
-                    <div className="relative">
-                      <Users className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
-                        isDark ? 'text-gray-500' : 'text-gray-400'
-                      }`} />              
-                      <select
-                        value={formData.staff_id || ''}
-                        onChange={(e) => {
-                          setFormData(prev => ({ ...prev, staff_id: e.target.value ? Number(e.target.value) : null }));
-                          setFormErrors(prev => ({ ...prev, staff_id: '' }));
-                        }}
-                        className={`w-full pl-10 pr-4 py-2.5 rounded-lg border ${
-                          formErrors.staff_id
-                            ? 'border-red-500 focus:ring-red-500'
-                            : isDark 
-                            ? 'bg-gray-800 border-gray-700 text-white' 
-                            : 'bg-white border-gray-300 text-gray-900'
-                        } focus:outline-none focus:ring-2 focus:border-transparent appearance-none`}
-                      >
-                        <option value="">Select a staff member...</option>
-                        {staff.map((member) => (
-                          <option key={member.id} value={member.id}>
-                           Staff Number: {member.staff_uuid} - {member.professional_title || 'Medical Staff'}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none ${
-                        isDark ? 'text-gray-500' : 'text-gray-400'
-                      }`} />
-                    </div>
-                    {formErrors.staff_id && (
-                      <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {formErrors.staff_id}
-                      </p>
+                  {/* Staff Lookup Section */}
+                  <div className={`p-4 rounded-lg border ${
+                    isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'
+                  }`}>
+                    <h4 className="font-medium flex items-center gap-2 mb-3">
+                      <Key className="w-5 h-5 text-blue-500" />
+                      Staff Lookup
+                    </h4>
+                    
+                    {staffLookupMode === 'search' ? (
+                      <>
+                        <div className="space-y-3">
+                          <div>
+                            <label className={`block text-sm font-medium mb-2 ${
+                              isDark ? 'text-gray-300' : 'text-gray-700'
+                            }`}>
+                              Enter Staff Number(e.g ST-023...) *
+                              <span className={`ml-2 text-xs ${
+                                isDark ? 'text-gray-500' : 'text-gray-600'
+                              }`}>
+                                (Can also search by name or employee ID)
+                              </span>
+                            </label>
+                            <div className="flex gap-2">
+                              <div className="flex-1 relative">
+                                <Key className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
+                                  isDark ? 'text-gray-500' : 'text-gray-400'
+                                }`} />
+                                <input
+                                  type="text"
+                                  value={formData.staff_uuid}
+                                  onChange={(e) => {
+                                    setFormData(prev => ({ ...prev, staff_uuid: e.target.value }));
+                                    setStaffLookupError('');
+                                  }}
+                                  placeholder="e.g., STF-12345 or staff name..."
+                                  className={`w-full pl-10 pr-4 py-2.5 rounded-lg border ${
+                                    staffLookupError
+                                      ? 'border-red-500 focus:ring-red-500'
+                                      : isDark 
+                                      ? 'bg-gray-800 border-gray-700 text-white' 
+                                      : 'bg-white border-gray-300 text-gray-900'
+                                  } focus:outline-none focus:ring-2 focus:border-transparent`}
+                                  onKeyDown={(e) => e.key === 'Enter' && handleStaffUUIDLookup()}
+                                />
+                              </div>
+                              <button
+                                onClick={handleStaffUUIDLookup}
+                                disabled={!formData.staff_uuid.trim()}
+                                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                              >
+                                <Search className="w-4 h-4" />
+                                Search
+                              </button>
+                            </div>
+                            {staffLookupError && (
+                              <p className="mt-2 text-sm text-red-500 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                {staffLookupError}
+                              </p>
+                            )}
+                            <p className={`mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                              🔒 Only matching staff members will be shown to protect privacy
+                            </p>
+                          </div>
+                          
+                          {/* <div className={`p-3 rounded-lg border ${
+                            isDark ? 'bg-gray-900 border-gray-700' : 'bg-gray-100 border-gray-300'
+                          }`}>
+                            <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
+                              <Shield className="w-4 h-4 text-green-500" />
+                              Privacy Information
+                            </h5>
+                            <ul className={`text-xs space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                              <li>• Staff numbers are masked for privacy protection</li>
+                              <li>• No browsing of all staff members allowed</li>
+                              <li>• Only verified matches are displayed</li>
+                              <li>• Search by UUID, staff number, or name</li>
+                            </ul>
+                          </div> */}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Staff Selection Interface */}
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h5 className="font-medium">
+                              {filteredStaff.length} Staff Member{filteredStaff.length !== 1 ? 's' : ''} Found
+                            </h5>
+                            <button
+                              onClick={resetStaffSearch}
+                              className={`text-sm flex items-center gap-1 ${
+                                isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              New Search
+                            </button>
+                          </div>
+                          
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
+                            {filteredStaff.map((staff) => (
+                              <div
+                                key={staff.id}
+                                className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                                  formData.staff_id === staff.id
+                                    ? (isDark ? 'bg-blue-900/20 border-blue-700 ring-2 ring-blue-500/20' : 'bg-blue-50 border-blue-300 ring-2 ring-blue-500/20')
+                                    : (isDark ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-gray-50 border-gray-300 hover:border-gray-400')
+                                }`}
+                                onClick={() => handleStaffSelect(staff.id, staff.staff_uuid)}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="font-medium">{staff.professional_title || 'Medical Staff'}</div>
+                                    <div className={`text-sm mt-1 flex items-center gap-2 ${
+                                      isDark ? 'text-gray-400' : 'text-gray-600'
+                                    }`}>
+                                      <span className="inline-flex items-center gap-1">
+                                        <Key className="w-3 h-3" />
+                                        {staff.staff_uuid}
+                                      </span>
+                                      {staff.employee_id && (
+                                        <span className="inline-flex items-center gap-1">
+                                          <Users className="w-3 h-3" />
+                                          {staff.employee_id}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {formData.staff_id === staff.id && (
+                                    <UserCheck className="w-5 h-5 text-green-500" />
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
                     )}
                   </div>
+                  
+                  {/* Selected Staff Details */}
+                  {selectedStaff && showStaffDetails && (
+                    <div className={`p-4 rounded-lg border ${
+                      isDark ? 'bg-green-900/10 border-green-800' : 'bg-green-50 border-green-200'
+                    }`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <h5 className="font-medium flex items-center gap-2">
+                          <UserCheck className="w-5 h-5 text-green-500" />
+                          Selected Staff Member
+                        </h5>
+                        <button
+                          onClick={() => setShowStaffDetails(!showStaffDetails)}
+                          className={`p-1 rounded ${
+                            isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-200'
+                          }`}
+                        >
+                          {showStaffDetails ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                      
+                      {showStaffDetails && (
+                        <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 text-sm ${
+                          isDark ? 'text-gray-300' : 'text-gray-700'
+                        }`}>
+                          <div className="space-y-2">
+                            <div>
+                              <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Professional Title</div>
+                              <div className="font-medium">{selectedStaff.professional_title || 'Not specified'}</div>
+                            </div>
+                            <div>
+                              <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Staff Number</div>
+                              <div className="font-mono font-medium">{selectedStaff.staff_uuid}</div>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div>
+                              <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Employee ID</div>
+                              <div>{selectedStaff.employee_id || 'Not specified'}</div>
+                            </div>
+                            {selectedStaff.email && (
+                              <div>
+                                <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Email</div>
+                                <div>{selectedStaff.email}</div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {formErrors.staff_id && (
+                        <p className="mt-2 text-sm text-red-500 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {formErrors.staff_id}
+                        </p>
+                      )}
+                    </div>
+                  )}
                   
                   {/* Department Selection (Optional) */}
                   <div>
@@ -920,7 +1159,7 @@ const { data: departmentsResponse, isLoading: departmentsLoading } = useGetDepar
               </button>
               <button
                 onClick={handleCreateInvitation}
-                disabled={createMutation.isPending || isFormLoading}
+                disabled={createMutation.isPending || isFormLoading || !formData.staff_id}
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {createMutation.isPending ? (

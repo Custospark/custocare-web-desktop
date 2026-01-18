@@ -5,7 +5,7 @@ import { useSelector } from 'react-redux';
 
 import AuthMiddlewareRoute from './AuthMiddlwareRoute';
 import Layout from '../../shared/components/Navigation/Layout';
-import { ROUTES, PHARMACY_ROUTES } from './routeConstants';
+import { ROUTES, PHARMACY_ROUTES, ACCOUNT_ROUTES } from './routeConstants';
 import type { RootState } from '../store/store';
 
 // Lazy load protected components
@@ -38,9 +38,16 @@ import Inventory from '../../modules/pharmacy/ui/inventory/Inventory';
 import Dispensing from '../../modules/pharmacy/ui/dispensing/Dispensing';
 import PharmacyBilling from '../../modules/pharmacy/ui/billing/Billing';
 
-// Inventory action screens
+// Pharmacy Inventory action screens
 import AddStock from '../../modules/pharmacy/ui/inventory/AddStock';
 import SearchStock from '../../modules/pharmacy/ui/inventory/views/SearchStock';
+
+// Account operation screens
+import Profile from '../../modules/account/profile/Profile';
+import Security from '../../modules/account/security/Security';
+import MyInvitations from '../../modules/account/invitations/MyInvitations';
+import Message from '../../modules/account/message/Message';
+import Appearance from '../../modules/account/apearance/Appearance';
 
 /**
  * ============================================================================
@@ -71,7 +78,7 @@ const ProtectedThemeOutlet: React.FC = () => {
  * Use this to render legacy screens that still require `theme` prop,
  * while keeping theme sourced from Outlet context.
  *
- * This avoids creating  different wrapper components.
+ * This avoids creating different wrapper components.
  */
 type ThemeProp = { theme: ThemeMode };
 
@@ -186,6 +193,9 @@ export const ProtectedRoutes = () => [
           key="laboratory"
         />
 
+        {/* =========================
+            Account (nested routes)
+           ========================= */}
         <Route
           path={ROUTES.ACCOUNT}
           element={
@@ -194,7 +204,61 @@ export const ProtectedRoutes = () => [
             </Suspense>
           }
           key="account"
-        />
+        >
+          <Route index element={<Navigate to={ACCOUNT_ROUTES.PROFILE} replace />} />
+
+          <Route
+            path="profile"
+            element={
+              <Suspense fallback={<LoadingSkeleton variant="table" />}>
+                <Profile />
+              </Suspense>
+            }
+          />
+
+          <Route
+            path="security"
+            element={
+              <Suspense fallback={<LoadingSkeleton variant="table" />}>
+                <Security />
+              </Suspense>
+            }
+          />
+
+          <Route
+            path="invitations"
+            element={
+              <Suspense fallback={<LoadingSkeleton variant="table" />}>
+                <MyInvitations />
+              </Suspense>
+            }
+          />
+
+          <Route
+            path="messages"
+            element={
+              <Suspense fallback={<LoadingSkeleton variant="table" />}>
+                <WithThemeProp Component={Message} />
+              </Suspense>
+            }
+          >
+            <Route index element={<Navigate to={ACCOUNT_ROUTES.MESSAGES_INBOX} replace />} />
+            <Route path="inbox" element={<PlaceholderPanel title="Inbox Messages" />} />
+            <Route path="sent" element={<PlaceholderPanel title="Sent Messages" />} />
+            <Route path="draft" element={<PlaceholderPanel title="Draft Messages" />} />
+            <Route path="trash" element={<PlaceholderPanel title="Trash Messages" />} />
+            <Route path="spam" element={<PlaceholderPanel title="Spam Messages" />} />
+          </Route>
+
+          <Route
+            path="appearance"
+            element={
+              <Suspense fallback={<LoadingSkeleton variant="table" />}>
+                <Appearance />
+              </Suspense>
+            }
+          />
+        </Route>
 
         {/* =========================
             Pharmacy (nested routes)

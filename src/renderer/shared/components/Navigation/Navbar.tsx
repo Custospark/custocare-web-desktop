@@ -38,9 +38,7 @@ import {
   getRoleDisplayName,
 } from '../../../app/store/slices/activeContextSlice';
 import { useSelector } from 'react-redux';
-import {navigate as navigateContent} from '../../../app/store/slices/moduleNavigationSlice';
-import { useDispatch } from "react-redux";
-import { AppDispatch } from '../../../app/store/store';
+import { ACCOUNT_ROUTES } from '../../../app/routes/routeConstants';
 import { getStaffUuid,isInPatientMode,isInStaffMode,getPatientUuid } from '../../../app/store/utils/contextSelectors';
 export interface NavbarProps {
   theme?: 'light' | 'dark';
@@ -108,7 +106,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isContextSwitcherOpen, setIsContextSwitcherOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobile, setIsMobile] = useState(false);
-  const dispatchInternalNavigation = useDispatch<AppDispatch>();
 
   //Get user information based on active context.
   const inPatientMode=useSelector(isInPatientMode);
@@ -237,8 +234,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   ]);
   //Handle Notification.
     const handleNotification=()=>{
-      dispatchInternalNavigation(navigateContent({operation:'messages',action:'inbox'}));
-      navigate(ROUTES.ACCOUNT);
+      navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
     }
 
   /**
