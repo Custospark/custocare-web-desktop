@@ -407,7 +407,7 @@ export const Layout: React.FC = () => {
         {/* Content */}
         <div className={cn('min-h-screen flex flex-col', 'transition-all duration-300 ease-in-out', positionClasses.contentMargin)}>
           <main className="flex-1">
-            <div className={cn('px-4 sm:px-2 lg:px-1 py-1', 'min-h-[calc(100vh-11rem)]', themeClasses.contentArea)}>
+            <div className={cn('px-4 sm:px-2 lg:px-1 py-1 mt-4', 'min-h-[calc(100vh-11rem)]', themeClasses.contentArea)}>
               <Outlet />
             </div>
           </main>

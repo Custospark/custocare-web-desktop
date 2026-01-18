@@ -224,7 +224,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
   const desktopDockSide: DockSide = isMobile ? 'right' : dockSide;
 
   return (
-    <div className={cn('w-full h-full flex flex-col', className)}>
+    <div className={cn('w-full h-full flex flex-col mt-1', className)}>
       {/* Mobile header */}
       {isMobile && (
         <div ref={headerRef} className={headerBaseClass}>
@@ -299,7 +299,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
                     <p className="mt-4 text-gray-500">Loading content...</p>
                     {navigationState.operation && (
-                      <p className="text-sm text-gray-400 mt-2">
+                      <p className="text-sm text-gray-400 mt-3">
                         Current operation: {navigationState.operation}
                       </p>
                     )}

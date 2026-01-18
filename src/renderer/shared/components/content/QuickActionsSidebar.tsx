@@ -301,7 +301,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
   return (
     <aside
       className={cn(
-        'h-full min-h-0 flex flex-col relative',
+        'h-full min-h-0 flex flex-col relative mt-3',
         'rounded-2xl overflow-hidden',
         'border shadow-xl backdrop-blur-xl',
         borderClass,
