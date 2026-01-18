@@ -1,22 +1,7 @@
-/**
- * ============================================================================
- * INVENTORY MODULE (REWRITTEN)
- * ============================================================================
- */
-
-import {
-  ReceiptIcon,
-  InspectIcon,
-  FileText,
-} from 'lucide-react';
+import React from 'react';
+import { Receipt, FileText, CreditCard, Shield } from 'lucide-react';
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
-import { FaFileInvoiceDollar } from 'react-icons/fa';
-
-type BillingAction =
-   | 'generate_bill'
-  | 'receipts'
-  | 'invoices'
-  | 'inurance_claims';
+import { BILLING_ROUTES } from '../../../../app/routes/routeConstants';
 
 interface BillingProps {
   theme: 'light' | 'dark';
@@ -24,64 +9,81 @@ interface BillingProps {
 
 const Billing: React.FC<BillingProps> = ({ theme }) => {
   return (
-    <BaseActionWorkspace<BillingAction>
-      title="Payments & Insurance Claims."
-      icon={<ReceiptIcon className="w-6 h-6" />}
+    <BaseActionWorkspace
+      title="Billing & Insurance"
+      icon={<Receipt className="w-6 h-6" />}
       theme={theme}
-      defaultAction="generate_bill"
-      moduleId="bills"
-
+      defaultActionTo={BILLING_ROUTES.INVOICES_SEARCH}
       actions={[
-     {
-          key: 'generate_bill',
-          label: 'Generate Bill.',
-          icon: <ReceiptIcon className="w-4 h-4" />,
+        { 
+          key: 'search_invoices', 
+          label: 'Search Invoices', 
+          icon: <FileText className="w-4 h-4" />, 
+          to: BILLING_ROUTES.INVOICES_SEARCH 
         },
-        {
-          key: 'receipts',
-          label: 'Receipts',
-          icon: <FileText className="w-4 h-4" />,
+        { 
+          key: 'create_invoice', 
+          label: 'Create Invoice', 
+          icon: <FileText className="w-4 h-4" />, 
+          to: BILLING_ROUTES.INVOICES_CREATE 
         },
-        {
-          key: 'invoices',
-          label: 'Invoices',
-          icon: <FaFileInvoiceDollar className="w-4 h-4" />,
+        { 
+          key: 'draft_invoices', 
+          label: 'Draft Invoices', 
+          icon: <FileText className="w-4 h-4" />, 
+          to: BILLING_ROUTES.INVOICES_DRAFT 
         },
-        {
-          key: 'inurance_claims',
-          label: 'Insurance Claims',
-          icon: <InspectIcon className="w-4 h-4" />,
+        { 
+          key: 'pending_invoices', 
+          label: 'Pending Invoices', 
+          icon: <FileText className="w-4 h-4" />, 
+          to: BILLING_ROUTES.INVOICES_PENDING 
         },
-
+        { 
+          key: 'receive_payment', 
+          label: 'Receive Payment', 
+          icon: <CreditCard className="w-4 h-4" />, 
+          to: BILLING_ROUTES.PAYMENTS_RECEIVE 
+        },
+        { 
+          key: 'payment_history', 
+          label: 'Payment History', 
+          icon: <CreditCard className="w-4 h-4" />, 
+          to: BILLING_ROUTES.PAYMENTS_HISTORY 
+        },
+        { 
+          key: 'reconcile_payments', 
+          label: 'Reconcile Payments', 
+          icon: <CreditCard className="w-4 h-4" />, 
+          to: BILLING_ROUTES.PAYMENTS_RECONCILE 
+        },
+        { 
+          key: 'submit_claim', 
+          label: 'Submit Claim', 
+          icon: <Shield className="w-4 h-4" />, 
+          to: BILLING_ROUTES.CLAIMS_SUBMIT 
+        },
+        { 
+          key: 'track_claims', 
+          label: 'Track Claims', 
+          icon: <Shield className="w-4 h-4" />, 
+          to: BILLING_ROUTES.CLAIMS_TRACK 
+        },
+        { 
+          key: 'approved_claims', 
+          label: 'Approved Claims', 
+          icon: <Shield className="w-4 h-4" />, 
+          to: BILLING_ROUTES.CLAIMS_APPROVED 
+        },
+        { 
+          key: 'denied_claims', 
+          label: 'Denied Claims', 
+          icon: <Shield className="w-4 h-4" />, 
+          to: BILLING_ROUTES.CLAIMS_DENIED 
+        },
       ]}
-      renderAction={(action:BillingAction) => {
-        switch (action) {
-        case 'generate_bill':
-        return <PlaceholderPanel title="Generate Bill." />;
-
-        case 'receipts':
-            return <PlaceholderPanel title="Receipts." />;
-
-        case 'invoices':
-            return <PlaceholderPanel title="Generate Invoices." />;
-
-        case 'inurance_claims':
-            return <PlaceholderPanel title="process Insurance Claims." />;
-        default:
-            return <PlaceholderPanel title="Generate Bill" />;
-        }
-      }}
     />
   );
 };
 
 export default Billing;
-
-const PlaceholderPanel: React.FC<{ title: string }> = ({ title }) => (
-  <div className="h-full flex flex-col items-center justify-center text-center">
-    <h3 className="text-lg font-semibold mb-2">{title}</h3>
-    <p className="text-sm text-gray-500">
-      Temporary placeholder. Replace with real implementation.
-    </p>
-  </div>
-);

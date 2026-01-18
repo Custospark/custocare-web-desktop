@@ -1,49 +1,23 @@
-/**
- * ============================================================================
- * PHARMACY MODULE (REWRITTEN)
- * ============================================================================
- */
-
-import {
-  LayoutDashboard,
-  Calendar1Icon,
-  FileTextIcon,
-} from 'lucide-react';
-
+import { LayoutDashboard, FileText, Calendar, Heart, Pill, Stethoscope } from 'lucide-react';
 import { BaseModuleWorkspace } from '../../../shared/components/workspace/BaseModuleWorkspace';
-import MyHealth from './myhealth/MyHealth';
-import TestResults from './test-results/TestResults';
-import MyAppointments from './my-appointments/MyAppointments';
-
-export type PatientPortalOperationId =
-  | 'my_health'
-  | 'test_results'
-  | 'appointments';
+import { ROUTES, PATIENT_PORTAL_ROUTES } from '../../../app/routes/routeConstants';
 
 const PATIENT_PORTAL_OPERATIONS = [
-  { id: 'my_health', label: 'My Health', icon: <LayoutDashboard className="w-4 h-4" /> },
-  { id: 'test_results', label: 'Test Results', icon: <FileTextIcon className="w-4 h-4" /> },
-  { id: 'appointments', label: 'Appointments', icon: <Calendar1Icon className="w-4 h-4" /> },
+  { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
+  { id: 'health', label: 'My Health', icon: <Heart className="w-4 h-4" /> },
+  { id: 'records', label: 'Medical Records', icon: <FileText className="w-4 h-4" /> },
+  { id: 'test_results', label: 'Test Results', icon: <Stethoscope className="w-4 h-4" /> },
+  { id: 'appointments', label: 'Appointments', icon: <Calendar className="w-4 h-4" /> },
+  { id: 'medications', label: 'Medications', icon: <Pill className="w-4 h-4" /> },
 ];
 
 const PatientPortalModule = () => {
   return (
-    <BaseModuleWorkspace<PatientPortalOperationId>
+    <BaseModuleWorkspace
       contextTitle="Patient Portal"
       operations={PATIENT_PORTAL_OPERATIONS}
-      defaultOperation="my_health"
-      renderOperation={(operation) => {
-        switch (operation) {
-          case 'my_health':
-            return <MyHealth />;
-          case 'test_results':
-            return <TestResults />;
-          case 'appointments':
-            return <MyAppointments />;
-          default:
-            return <MyHealth />;
-        }
-      }}
+      basePath={ROUTES.PATIENT_DASHBOARD}
+      defaultOperationPath={PATIENT_PORTAL_ROUTES.OVERVIEW}
     />
   );
 };

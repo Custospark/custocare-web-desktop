@@ -1,24 +1,7 @@
-/**
- * ============================================================================
- * INVENTORY MODULE (REWRITTEN)
- * ============================================================================
- */
-
-import {
-  UserMinus,
-  UserPlus,
-  SearchCheckIcon,
-  FileBox,
-  Forward,
-} from 'lucide-react';
-
+import React from 'react';
+import { Users, UserPlus, UserSearch, UserMinus, UserCog, FileText } from 'lucide-react';
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
-
-type PatientAction =
-  | 'search_patient'
-  | 'create_patient'
-  | 'discharge_patient'
-  | 'forward_patient';
+import { MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
 
 interface PatientProps {
   theme: 'light' | 'dark';
@@ -26,63 +9,51 @@ interface PatientProps {
 
 const Patient: React.FC<PatientProps> = ({ theme }) => {
   return (
-    <BaseActionWorkspace<PatientAction>
-      title="Patient Records"
-      icon={<FileBox className="w-6 h-6" />}
+    <BaseActionWorkspace
+      title="Patient Management"
+      icon={<Users className="w-6 h-6" />}
       theme={theme}
-      defaultAction="create_patient"
-      moduleId="patients"
-
+      defaultActionTo={MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH}
       actions={[
-      {
-            key: 'search_patient',
-            label: 'Search Patients',
-            icon: <SearchCheckIcon className="w-4 h-4" />,
-          },
-          {
-            key: 'create_patient',
-            label: 'New Patient Record',
-            icon: <UserPlus className="w-4 h-4" />,
-          },
-          {
-            key: 'discharge_patient',
-            label: 'Discharge Patient',
-            icon: <UserMinus className="w-4 h-4" />,
-          },
-          {
-            key: 'forward_patient',
-            label: 'Forward Patient',
-            icon: <Forward className="w-4 h-4" />,
-          },
+        { 
+          key: 'search', 
+          label: 'Search Patients', 
+          icon: <UserSearch className="w-4 h-4" />, 
+          to: MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH 
+        },
+        { 
+          key: 'register', 
+          label: 'Register Patient', 
+          icon: <UserPlus className="w-4 h-4" />, 
+          to: MEDICAL_RECORDS_ROUTES.PATIENTS_REGISTER 
+        },
+        { 
+          key: 'profiles', 
+          label: 'Patient Profiles', 
+          icon: <Users className="w-4 h-4" />, 
+          to: MEDICAL_RECORDS_ROUTES.PATIENTS_PROFILES 
+        },
+        { 
+          key: 'update', 
+          label: 'Update Patient', 
+          icon: <UserCog className="w-4 h-4" />, 
+          to: `${MEDICAL_RECORDS_ROUTES.PATIENTS}/update` 
+        },
+        { 
+          key: 'discharge', 
+          label: 'Discharge Patient', 
+          icon: <UserMinus className="w-4 h-4" />, 
+          to: `${MEDICAL_RECORDS_ROUTES.PATIENTS}/discharge` 
+        },
+        { 
+          key: 'records', 
+          label: 'Patient Records', 
+          icon: <FileText className="w-4 h-4" />, 
+          to: `${MEDICAL_RECORDS_ROUTES.PATIENTS}/records` 
+        },
       ]}
-      renderAction={(action) => {
-        switch (action) {
-        case 'search_patient':
-        return <PlaceholderPanel title="Search Patient" />;
-
-        case 'create_patient':
-            return <PlaceholderPanel title="Create New Patient Record." />;
-
-        case 'discharge_patient':
-            return <PlaceholderPanel title="Discharge Patient." />;
-
-        case 'forward_patient':
-            return <PlaceholderPanel title="Forward Patient." />;
-        default:
-            return <PlaceholderPanel title="Search Patient" />;
-        }
-      }}
     />
   );
 };
 
 export default Patient;
-
-const PlaceholderPanel: React.FC<{ title: string }> = ({ title }) => (
-  <div className="h-full flex flex-col items-center justify-center text-center">
-    <h3 className="text-lg font-semibold mb-2">{title}</h3>
-    <p className="text-sm text-gray-500">
-      Temporary placeholder. Replace with real implementation.
-    </p>
-  </div>
-);

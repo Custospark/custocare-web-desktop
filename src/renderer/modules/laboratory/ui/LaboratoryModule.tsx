@@ -1,50 +1,47 @@
-/**
- * ============================================================================
- * PHARMACY MODULE (REWRITTEN)
- * ============================================================================
- */
+import React from 'react';
+import { Microscope } from 'lucide-react';
+import { BaseActionWorkspace } from '../../../shared/components/workspace/BaseActionWorkspace';
+import { LABORATORY_ROUTES } from '../../../app/routes/routeConstants';
 
-import {
-  LayoutDashboard,
-  CalendarCheckIcon,
-  Microscope,
-} from 'lucide-react';
+interface TestsProps {
+  theme: 'light' | 'dark';
+}
 
-import { BaseModuleWorkspace } from '../../../shared/components/workspace/BaseModuleWorkspace';
-import Appointment from '../../medical-records/ui/Appointments/Appointment';
-import LaboratoryOverview from './overview/LaboratoryOverview';
-import LaboratoryTest from './lab-test/LaboratoryTest';
-export type LaboratoryOperationId =
-  | 'overview'
-  | 'lab_test'
-  | 'appointments';
-
-const LABORATORY_OPERATIONS = [
-  { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
-  { id: 'lab_test', label: 'Laboratory Tests.', icon: <Microscope className="w-4 h-4" /> },
-  { id: 'appointments', label: 'Lab Appointments', icon: <CalendarCheckIcon className="w-4 h-4" /> },
-];
-
-const LaboratoryModule = () => {
+const Tests: React.FC<TestsProps> = ({ theme }) => {
   return (
-    <BaseModuleWorkspace<LaboratoryOperationId>
-      contextTitle="Laboratory"
-      operations={LABORATORY_OPERATIONS}
-      defaultOperation="overview"
-      renderOperation={(operation, theme) => {
-        switch (operation) {
-          case 'overview':
-            return <LaboratoryOverview />;
-          case 'lab_test':
-            return <LaboratoryTest theme={theme}/>;
-          case 'appointments':
-            return <Appointment theme={theme} />;
-          default:
-            return <LaboratoryOverview />;
-        }
-      }}
+    <BaseActionWorkspace
+      title="Laboratory Tests"
+      icon={<Microscope className="w-6 h-6" />}
+      theme={theme}
+      defaultActionTo={LABORATORY_ROUTES.TESTS_ORDER}
+      actions={[
+        { 
+          key: 'order', 
+          label: 'Order Tests', 
+          icon: <Microscope className="w-4 h-4" />, 
+          to: LABORATORY_ROUTES.TESTS_ORDER 
+        },
+        { 
+          key: 'record', 
+          label: 'Record Results', 
+          icon: <Microscope className="w-4 h-4" />, 
+          to: LABORATORY_ROUTES.TESTS_RECORD 
+        },
+        { 
+          key: 'pending', 
+          label: 'Pending Tests', 
+          icon: <Microscope className="w-4 h-4" />, 
+          to: LABORATORY_ROUTES.TESTS_PENDING 
+        },
+        { 
+          key: 'search', 
+          label: 'Search Results', 
+          icon: <Microscope className="w-4 h-4" />, 
+          to: LABORATORY_ROUTES.TESTS_SEARCH 
+        },
+      ]}
     />
   );
 };
 
-export default LaboratoryModule;
+export default Tests;

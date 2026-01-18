@@ -295,6 +295,8 @@ const pharmacyDispensingRoutes = [
     />,
 ];
 
+
+
 /**
  * Core Application Routes Configuration
  */
@@ -372,6 +374,8 @@ const coreRoutes = [
     }
   />,
 ];
+
+
 
 /**
  * Specialized Module Routes

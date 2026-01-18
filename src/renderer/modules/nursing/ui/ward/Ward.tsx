@@ -1,24 +1,7 @@
-/**
- * ============================================================================
- * INVENTORY MODULE (REWRITTEN)
- * ============================================================================
- */
-
-import {
-  Boxes,
-  AmbulanceIcon,
-  UserPlus,
-} from 'lucide-react';
-
+import React from 'react';
+import { BedDouble, UserPlus, Bed, DoorClosed, Ambulance, Settings } from 'lucide-react';
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
-import { FaBed } from 'react-icons/fa';
-import { IoExit } from 'react-icons/io5';
-
-type WardAction =
- | 'admit'
-  | 'admitted'
-  | 'discharged'
-  | 'referred';
+import { NURSING_ROUTES } from '../../../../app/routes/routeConstants';
 
 interface WardProps {
   theme: 'light' | 'dark';
@@ -26,60 +9,63 @@ interface WardProps {
 
 const Ward: React.FC<WardProps> = ({ theme }) => {
   return (
-    <BaseActionWorkspace<WardAction>
-      title="Manage Patients in the ward."
-      icon={<Boxes className="w-6 h-6" />}
+    <BaseActionWorkspace
+      title="Ward Management"
+      icon={<BedDouble className="w-6 h-6" />}
       theme={theme}
-      defaultAction="admit"
-      moduleId="wards"
-
+      defaultActionTo={NURSING_ROUTES.WARDS_OVERVIEW}
       actions={[
-       {
-      key: 'admit',
-      label: 'Admit',
-      icon: <UserPlus className="w-4 h-4" />,
-    },
-    {
-      key: 'admitted',
-      label: 'Admitted',
-      icon: <FaBed className="w-4 h-4" />,
-    },
-    {
-      key: 'discharged',
-      label: 'Discharged',
-      icon: <IoExit className="w-4 h-4" />,
-    },
-    {
-      key: 'referred',
-      label: 'Referred',
-      icon: <AmbulanceIcon className="w-4 h-4" />,
-    },
+        { 
+          key: 'overview', 
+          label: 'Wards Overview', 
+          icon: <BedDouble className="w-4 h-4" />, 
+          to: NURSING_ROUTES.WARDS_OVERVIEW 
+        },
+        { 
+          key: 'assign', 
+          label: 'Assign Patient', 
+          icon: <UserPlus className="w-4 h-4" />, 
+          to: NURSING_ROUTES.WARDS_ASSIGN 
+        },
+        { 
+          key: 'transfer', 
+          label: 'Transfer Patient', 
+          icon: <Ambulance className="w-4 h-4" />, 
+          to: NURSING_ROUTES.WARDS_TRANSFER 
+        },
+        { 
+          key: 'capacity', 
+          label: 'Ward Capacity', 
+          icon: <Bed className="w-4 h-4" />, 
+          to: NURSING_ROUTES.WARDS_CAPACITY 
+        },
+        { 
+          key: 'admitted', 
+          label: 'Admitted Patients', 
+          icon: <Bed className="w-4 h-4" />, 
+          to: `${NURSING_ROUTES.WARDS}/admitted` 
+        },
+        { 
+          key: 'discharged', 
+          label: 'Discharged Patients', 
+          icon: <DoorClosed className="w-4 h-4" />, 
+          to: `${NURSING_ROUTES.WARDS}/discharged` 
+        },
+        { 
+          key: 'referred', 
+          label: 'Referred Patients', 
+          icon: <Ambulance className="w-4 h-4" />, 
+          to: `${NURSING_ROUTES.WARDS}/referred` 
+        },
+        { 
+          key: 'settings', 
+          label: 'Ward Settings', 
+          icon: <Settings className="w-4 h-4" />, 
+          to: `${NURSING_ROUTES.WARDS}/settings` 
+        },
       ]}
-      renderAction={(action) => {
-        switch (action) {
-          case 'admit':
-        return <PlaceholderPanel title="Admitted A Patient." />;
-          case 'admitted':
-        return <PlaceholderPanel title="Admiited Patients." />;
-          case 'discharged':
-        return <PlaceholderPanel title="Discharged Patients." />;
-          case 'referred':
-        return <PlaceholderPanel title="Patients Referred to other Facilities." />;
-          default:
-        return <PlaceholderPanel title="Admit A Patient." />;
-        }
-      }}
     />
   );
 };
 
 export default Ward;
-
-const PlaceholderPanel: React.FC<{ title: string }> = ({ title }) => (
-  <div className="h-full flex flex-col items-center justify-center text-center">
-    <h3 className="text-lg font-semibold mb-2">{title}</h3>
-    <p className="text-sm text-gray-500">
-      Temporary placeholder. Replace with real implementation.
-    </p>
-  </div>
-);

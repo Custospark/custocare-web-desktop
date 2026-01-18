@@ -1,21 +1,7 @@
-/**
- * ============================================================================
- * INVENTORY MODULE (REWRITTEN)
- * ============================================================================
- */
-
-import {
-  Forward,
-  Microscope,
-  FlaskConical,
-  FileText,
-} from 'lucide-react';
-
+import React from 'react';
+import { Microscope, FlaskConical, FileText, Search, ListChecks, Upload, Download } from 'lucide-react';
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
-type LaboratoryTestAction =
-   | 'start_test'
-  | 'record_test_results'
-  | 'forward_patient';
+import { LABORATORY_ROUTES } from '../../../../app/routes/routeConstants';
 
 interface LaboratoryTestProps {
   theme: 'light' | 'dark';
@@ -23,55 +9,51 @@ interface LaboratoryTestProps {
 
 const LaboratoryTest: React.FC<LaboratoryTestProps> = ({ theme }) => {
   return (
-    <BaseActionWorkspace<LaboratoryTestAction>
-      title="Laboratory Test"
+    <BaseActionWorkspace
+      title="Laboratory Tests"
       icon={<Microscope className="w-6 h-6" />}
       theme={theme}
-      defaultAction="start_test"
-      moduleId="lab_test"
-
+      defaultActionTo={LABORATORY_ROUTES.TESTS_ORDER}
       actions={[
-      {
-            key: 'start_test',
-            label: 'Start Test',
-            icon: <FlaskConical className="w-4 h-4" />,
-          },
-          {
-            key: 'record_test_results',
-            label: 'Record Test Results.',
-            icon: <FileText className="w-4 h-4" />,
-          },
-          {
-            key: 'forward_patient',
-            label: 'Forward Patient.',
-            icon: <Forward className="w-4 h-4" />,
-          },
+        { 
+          key: 'order_test', 
+          label: 'Order Test', 
+          icon: <FlaskConical className="w-4 h-4" />, 
+          to: LABORATORY_ROUTES.TESTS_ORDER 
+        },
+        { 
+          key: 'record_results', 
+          label: 'Record Results', 
+          icon: <FileText className="w-4 h-4" />, 
+          to: LABORATORY_ROUTES.TESTS_RECORD 
+        },
+        { 
+          key: 'pending_tests', 
+          label: 'Pending Tests', 
+          icon: <ListChecks className="w-4 h-4" />, 
+          to: LABORATORY_ROUTES.TESTS_PENDING 
+        },
+        { 
+          key: 'search_results', 
+          label: 'Search Results', 
+          icon: <Search className="w-4 h-4" />, 
+          to: LABORATORY_ROUTES.TESTS_SEARCH 
+        },
+        { 
+          key: 'upload_results', 
+          label: 'Upload Results', 
+          icon: <Upload className="w-4 h-4" />, 
+          to: LABORATORY_ROUTES.TESTS_UPLOAD 
+        },
+        { 
+          key: 'export_results', 
+          label: 'Export Results', 
+          icon: <Download className="w-4 h-4" />, 
+          to: LABORATORY_ROUTES.TESTS_EXPORT 
+        },
       ]}
-      renderAction={(action) => {
-        switch (action) {
-        case 'start_test':
-        return <PlaceholderPanel title="Start Medical Laboratory test" />;
-
-        case 'record_test_results':
-            return <PlaceholderPanel title="Record test results." />;
-
-        case 'forward_patient':
-            return <PlaceholderPanel title="Forward Patient." />;
-        default:
-        return <PlaceholderPanel title="Start Medical Laboratory test." />;
-        }
-      }}
     />
   );
 };
 
 export default LaboratoryTest;
-
-const PlaceholderPanel: React.FC<{ title: string }> = ({ title }) => (
-  <div className="h-full flex flex-col items-center justify-center text-center">
-    <h3 className="text-lg font-semibold mb-2">{title}</h3>
-    <p className="text-sm text-gray-500">
-      Temporary placeholder. Replace with real implementation.
-    </p>
-  </div>
-);

@@ -338,6 +338,8 @@ export interface StaffFilters {
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
   per_page?: number;
+  limit?:number;
+  include_minimal?:boolean;
 }
 
 /**

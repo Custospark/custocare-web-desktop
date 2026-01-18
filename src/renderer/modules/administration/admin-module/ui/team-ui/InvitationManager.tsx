@@ -967,12 +967,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                               <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Employee ID</div>
                               <div>{selectedStaff.employee_id || 'Not specified'}</div>
                             </div>
-                            {selectedStaff.email && (
-                              <div>
-                                <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Email</div>
-                                <div>{selectedStaff.email}</div>
-                              </div>
-                            )}
+                         
                           </div>
                         </div>
                       )}
