@@ -32,7 +32,7 @@ export interface StatusBarProps {
   onSearchFocus: () => void;
   onSearchBlur: () => void;
   onClearSearch: () => void;
-  searchInputRef: React.RefObject<HTMLInputElement>;
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
 
   sidebarPosition: SidebarPosition;
   isTransitioning: boolean;

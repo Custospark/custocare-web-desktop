@@ -11,7 +11,7 @@ import {
 import { Outlet } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 
-import type { RootState, AppDispatch } from '../../../app/store/store/store';
+import type { RootState, AppDispatch } from '../../../app/store/store';
 import { toggleSidebar, setSidebarOpen, toggleTheme } from '../../../app/store/slices/uiSlice';
 
 import { Sidebar } from './Sidebar';

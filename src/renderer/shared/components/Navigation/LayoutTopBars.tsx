@@ -10,6 +10,8 @@ export interface LayoutTopBarsThemeClasses {
   accent: string;
 }
 
+
+
 export interface LayoutTopBarsProps {
   theme: ThemeMode;
   themeClasses: LayoutTopBarsThemeClasses;
@@ -25,7 +27,7 @@ export interface LayoutTopBarsProps {
   onSearchFocus: () => void;
   onSearchBlur: () => void;
   onClearSearch: () => void;
-  searchInputRef: React.RefObject<HTMLInputElement>;
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
 
   sidebarPosition: SidebarPosition;
   sidebarOpen: boolean;
