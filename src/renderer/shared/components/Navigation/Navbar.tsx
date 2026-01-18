@@ -579,7 +579,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           ======================================================================== */}
         {/* Brand */}
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20">
+          <div className="w-8 sm:ms-4 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20">
             <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
           

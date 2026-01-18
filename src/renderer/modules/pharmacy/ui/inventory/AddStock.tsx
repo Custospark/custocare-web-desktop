@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { PackagePlus, X, Save, AlertCircle } from 'lucide-react';
-import { useDispatch } from 'react-redux';
-import type { AppDispatch } from '../../../../app/store/store';
-import { navigate } from '../../../../app/store/slices/moduleNavigationSlice';
 import { useCreateInventoryItem } from './api/useInventoryItemQueries';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import { useSelector } from 'react-redux';
 import { getActiveFacilityId } from '../../../../app/store/utils/contextSelectors';
 import  { InventoryItemCategory, StorageLocationType, InventoryItemStatus } from './api/InventoryItemTypes';
+import { useNavigate } from 'react-router-dom';
+import { PHARMACY_ROUTES } from '../../../../app/routes/routeConstants';
 
 interface AddStockProps {
   theme: 'light' | 'dark';
@@ -31,10 +30,10 @@ interface StockFormData {
 }
 
 const AddStock: React.FC<AddStockProps> = ({ theme }) => {
-  const dispatch = useDispatch<AppDispatch>();
   const { showToast } = useToast();
   const activeFacilityId = useSelector(getActiveFacilityId);
   const isDark = theme === 'dark';
+  const navigate=useNavigate();
 
   const [formData, setFormData] = useState<StockFormData>({
     item_code: '',
@@ -57,7 +56,7 @@ const AddStock: React.FC<AddStockProps> = ({ theme }) => {
 
   const { mutate: createStock, isPending } = useCreateInventoryItem({
     onSuccess: () => {
-      goBackToInventory();
+     navigate(PHARMACY_ROUTES.DISPENSING_DISPENSE_MEDICATION);
     },
     onError: (error) => {
       const errorMessage = error.response?.data?.message || 'Failed to create stock item';
@@ -149,7 +148,7 @@ const AddStock: React.FC<AddStockProps> = ({ theme }) => {
     if (hasUnsavedChanges) {
       setShowCancelConfirm(true);
     } else {
-      goBackToInventory();
+     navigate(PHARMACY_ROUTES.DISPENSING_DISPENSE_MEDICATION);
     }
   };
 
@@ -170,20 +169,14 @@ const AddStock: React.FC<AddStockProps> = ({ theme }) => {
       status: InventoryItemStatus.ACTIVE,
     });
     setShowCancelConfirm(false);
-    goBackToInventory();
+     navigate(PHARMACY_ROUTES.DISPENSING_DISPENSE_MEDICATION);
   };
 
   const handleDismissCancel = () => {
     setShowCancelConfirm(false);
   };
 
-  const goBackToInventory = () => {
-    dispatch(navigate({
-      operation: 'inventory',
-      action: 'overview',
-      timestamp: Date.now(),
-    }));
-  };
+ 
 
   const hasUnsavedChanges = Object.values(formData).some(value => 
     typeof value === 'string' ? value.trim() !== '' : 
