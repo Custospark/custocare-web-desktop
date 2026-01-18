@@ -41,7 +41,7 @@ import { useSelector } from 'react-redux';
 import { ACCOUNT_ROUTES } from '../../../app/routes/routeConstants';
 import { getStaffUuid,isInPatientMode,isInStaffMode,getPatientUuid } from '../../../app/store/utils/contextSelectors';
 export interface NavbarProps {
-  theme?: 'light' | 'dark';
+  theme: 'light' | 'dark';
   onMenuClick?: () => void;
   onThemeToggle?: () => void;
   className?: string;
