@@ -1,7 +1,8 @@
+// routeConstants.ts
 
 /**
  * Application Route Constants
- * 
+ *
  * Centralized route management for maintainability
  * All routes use HashRouter format (prefixed with # in browser)
  */
@@ -42,18 +43,40 @@ export const ROUTES = {
 
   // Support & Help
   HELP: '/help',
-  //Dashboards
+
+  // Dashboards
   PATIENT_DASHBOARD: '/dahboard/patient',
+
   // Role-Based Clinical Modules
-  MEDICAL_RECORDS:'/medical-records',
+  MEDICAL_RECORDS: '/medical-records',
   NURSING: '/nursing',
-  CLINICAL:'/clinical',
+  CLINICAL: '/clinical',
   LABORATORY: '/laboratory',
+
+  // Top-level Modules
   PHARMACY: '/pharmacy',
   BILLING: '/billing',
   ADMINISTRATION: '/administration',
-  ACCOUNT:'/acount',
+  ACCOUNT: '/acount',
+} as const;
 
+/**
+ * Pharmacy nested routes (best practice: explicit, centralized)
+ */
+export const PHARMACY_ROUTES = {
+  ROOT: ROUTES.PHARMACY,
+  OVERVIEW: `${ROUTES.PHARMACY}/overview`,
+  PRESCRIPTIONS: `${ROUTES.PHARMACY}/prescriptions`,
+  INVENTORY: `${ROUTES.PHARMACY}/inventory`,
+  DISPENSING: `${ROUTES.PHARMACY}/dispensing`,
+  BILLING: `${ROUTES.PHARMACY}/billing`,
+
+  // Inventory nested actions
+  INVENTORY_OVERVIEW: `${ROUTES.PHARMACY}/inventory/overview`,
+  INVENTORY_ADD_STOCK: `${ROUTES.PHARMACY}/inventory/add-stock`,
+  INVENTORY_SEARCH_ITEM: `${ROUTES.PHARMACY}/inventory/search-item`,
+  INVENTORY_ADJUST_STOCK: `${ROUTES.PHARMACY}/inventory/adjust-stock`,
+  INVENTORY_EXPIRED_ITEMS: `${ROUTES.PHARMACY}/inventory/expired-items`,
 } as const;
 
 /**
@@ -65,6 +88,9 @@ export const generateRoute = {
   encounterDetail: (id: string) => `/encounters/${id}`,
   resetPassword: (token: string, email?: string) =>
     `/reset-password?token=${token}${email ? `&email=${encodeURIComponent(email)}` : ''}`,
+
+  pharmacyOperation: (operation: string) => `${ROUTES.PHARMACY}/${operation}`,
+  pharmacyInventoryAction: (action: string) => `${ROUTES.PHARMACY}/inventory/${action}`,
 } as const;
 
 /**
@@ -78,7 +104,7 @@ export const isPublicRoute = (pathname: string): boolean => {
     ROUTES.RESET_PASSWORD,
     ROUTES.TWO_FACTOR_AUTH,
   ];
-  
+
   return publicRoutes.some(route => pathname.startsWith(route));
 };
 

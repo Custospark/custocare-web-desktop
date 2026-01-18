@@ -1,31 +1,13 @@
+// PharmacyModule.tsx
 /**
  * ============================================================================
- * PHARMACY MODULE (REWRITTEN)
+ * PHARMACY MODULE (ROUTER-DRIVEN)
  * ============================================================================
  */
 
-import {
-  LayoutDashboard,
-  ClipboardList,
-  Package,
-  Pill,
-  Receipt,
-} from 'lucide-react';
-
+import { LayoutDashboard, ClipboardList, Package, Pill, Receipt } from 'lucide-react';
 import { BaseModuleWorkspace } from '../../../shared/components/workspace/BaseModuleWorkspace';
-
-import PharmacyOverview from './overview/PharmacyOverview';
-import Inventory from './inventory/Inventory';
-import Dispensing from './dispensing/Dispensing';
-import Billing from './billing/Billing';
-import Prescriptions from './precriptions/Prescriptions';
-
-export type PharmacyOperationId =
-  | 'overview'
-  | 'prescriptions'
-  | 'inventory'
-  | 'dispensing'
-  | 'billing';
+import { ROUTES, PHARMACY_ROUTES } from '../../../app/routes/routeConstants'; // adjust import path as per your structure
 
 const PHARMACY_OPERATIONS = [
   { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -37,26 +19,11 @@ const PHARMACY_OPERATIONS = [
 
 const PharmacyModule = () => {
   return (
-    <BaseModuleWorkspace<PharmacyOperationId>
+    <BaseModuleWorkspace
       contextTitle="Pharmacy"
       operations={PHARMACY_OPERATIONS}
-      defaultOperation="overview"
-      renderOperation={(operation, theme) => {
-        switch (operation) {
-          case 'overview':
-            return <PharmacyOverview theme={theme} />;
-          case 'prescriptions':
-            return <Prescriptions theme={theme} />;
-          case 'inventory':
-            return <Inventory theme={theme} />;
-          case 'dispensing':
-            return <Dispensing theme={theme} />;
-          case 'billing':
-            return <Billing theme={theme} />;
-          default:
-            return <PharmacyOverview theme={theme} />;
-        }
-      }}
+      basePath={ROUTES.PHARMACY}
+      defaultOperationPath={PHARMACY_ROUTES.OVERVIEW}
     />
   );
 };

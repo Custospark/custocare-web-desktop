@@ -1,105 +1,95 @@
+// BaseModuleWorkspace.tsx
 /**
  * ============================================================================
- * BASE MODULE WORKSPACE
+ * BASE MODULE WORKSPACE (ROUTER-DRIVEN)
  * ============================================================================
  *
- * A reusable, operation-driven module container.
- * Handles:
- * - Active operation state
- * - Operation switching
- * - Shared layout rendering
+ * Now uses React Router for scalable navigation:
+ * - Operation switching updates the URL
+ * - Nested routes render via <Outlet />
  *
- * This component is intentionally generic and domain-agnostic.
+ * Design is preserved by keeping ContentLayout unchanged.
  */
 
-import React, { useState} from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
+import { useLocation, useNavigate } from 'react-router-dom';
+
 import { ContentLayout, type Operation } from '../content/ContentLayout';
 import type { RootState } from '../../../app/store/rootReducer';
-import { useDispatch } from 'react-redux';
-import { navigate } from '../../../app/store/slices/moduleNavigationSlice';
-import { type AppDispatch } from '../../../app/store/store';
-export interface ModuleWorkspaceProps<TOperationId extends string> {
+
+export interface ModuleWorkspaceProps {
   contextTitle: string;
   operations: Operation[];
-  defaultOperation: TOperationId;
-  renderOperation: (operationId: TOperationId, theme: 'light' | 'dark') => React.ReactNode;
+  /**
+   * basePath: e.g. "/pharmacy"
+   * Operation routes become: `${basePath}/${operationId}`
+   */
+  basePath: string;
+  defaultOperationPath: string; // e.g. "/pharmacy/overview"
 }
 
-export function BaseModuleWorkspace<TOperationId extends string>({
+export function BaseModuleWorkspace({
   contextTitle,
   operations,
-  defaultOperation,
-  renderOperation,
-}: ModuleWorkspaceProps<TOperationId>) {
-  /**
-   * --------------------------------------------------------------------------
-   * GLOBAL STATE
-   * --------------------------------------------------------------------------
-   */
+  basePath,
+}: ModuleWorkspaceProps) {
   const theme = useSelector((state: RootState) => state.ui.theme);
-  
-  // Get current navigation state from Redux
-  const navigationState = useSelector((state: RootState) => 
-    state.moduleNavigation.current
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const activeOperation = useMemo(() => {
+    // Expecting paths like: /pharmacy/<operation>...
+    const path = location.pathname;
+    if (!path.startsWith(basePath)) return undefined;
+
+    const remainder = path.slice(basePath.length); // e.g. "/inventory/overview"
+    const segments = remainder.split('/').filter(Boolean);
+    const op = segments[0]; // "inventory"
+    return op;
+  }, [location.pathname, basePath]);
+
+  const onOperationChange = useCallback(
+    (/* operationId from ContentLayout */ operationId: string) => {
+      // Navigate to the operation root: /pharmacy/<operationId>
+      navigate(`${basePath}/${operationId}`);
+    },
+    [navigate, basePath]
   );
 
-  /**
-   * --------------------------------------------------------------------------
-   * LOCAL STATE
-   * --------------------------------------------------------------------------
-   */
-  const [internalActiveOperation,setInternalActiveOperation] =useState<TOperationId>(defaultOperation);
+  // If route doesn't include an operation (e.g. user hit "/pharmacy"), the parent route
+  // should redirect using <Navigate/> in routes. This component assumes nested routing.
+  const fallbackOperation = operations[0]?.id ?? 'overview';
 
-  /**
-   * --------------------------------------------------------------------------
-   * COMPUTED STATE
-   * --------------------------------------------------------------------------
-   */
-  // Use operation from Redux if available, otherwise use internal state
-  const activeOperation = navigationState.operation 
-    ? (navigationState.operation as TOperationId)
-    : internalActiveOperation;
-
-  /**
-   * --------------------------------------------------------------------------
-   * HANDLERS
-   * --------------------------------------------------------------------------
-   */
-
-    const dispatch = useDispatch<AppDispatch>();
-
- const handleInternalOperationChange = (operationId: string) => {
-    const newOperation = operationId as TOperationId;
-    setInternalActiveOperation(newOperation);
-
-  };
-
-    const handleOperationChange = () => {
-    handleInternalOperationChange(activeOperation);
-    // Update redux state.
-    dispatch(navigate({
-      operation: activeOperation,
-      timestamp: Date.now(),
-    }));
-    console.log('Navigation dispatched');
-  };
-
-
-  /**
-   * --------------------------------------------------------------------------
-   * RENDER
-   * --------------------------------------------------------------------------
-   */
   return (
     <ContentLayout
       operations={operations}
-      activeOperation={activeOperation}
-      onOperationChange={handleOperationChange}
-      defaultOperation={defaultOperation}
+      activeOperation={(activeOperation ?? fallbackOperation) as string}
+      onOperationChange={onOperationChange}
+      defaultOperation={fallbackOperation as string}
       contextTitle={contextTitle}
     >
-      {renderOperation(activeOperation, theme)}
+      {/* Router renders the selected operation panel */}
+      {/* theme is still available globally, operation screens can read theme via props or selector */}
+      {/* We keep theme usage inside children modules as before. */}
+      <React.Fragment>
+        {/* If you need theme passed down, do it inside screens (they already accept theme props). */}
+        {/* Operation content is now routed */}
+        {/* IMPORTANT: Ensure parent route provides <Outlet/> */}
+      </React.Fragment>
+      {/* Actual content comes from nested routes */}
+      {/* We place Outlet at the end so layout remains consistent */}
+      <OutletWrapper theme={theme} />
     </ContentLayout>
   );
+}
+
+/**
+ * Local wrapper so we can pass theme via Outlet context (best practice).
+ * Any nested route can access it with: const { theme } = useOutletContext<{theme: 'light'|'dark'}>()
+ */
+import { Outlet } from 'react-router-dom';
+
+function OutletWrapper({ theme }: { theme: 'light' | 'dark' }) {
+  return <Outlet context={{ theme }} />;
 }
