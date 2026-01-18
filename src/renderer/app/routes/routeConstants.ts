@@ -77,6 +77,18 @@ export const PHARMACY_ROUTES = {
   INVENTORY_SEARCH_ITEM: `${ROUTES.PHARMACY}/inventory/search-item`,
   INVENTORY_ADJUST_STOCK: `${ROUTES.PHARMACY}/inventory/adjust-stock`,
   INVENTORY_EXPIRED_ITEMS: `${ROUTES.PHARMACY}/inventory/expired-items`,
+
+  // Dispensing nested actions.
+  DISPENSING_DISPENSE_MEDICATION: `${ROUTES.PHARMACY}/dispensing/dispense-medication`,
+  DISPENSING_VALIDATE_PRESCRIPTION: `${ROUTES.PHARMACY}/dispensing/validate-prescription`,
+  DISPENSING_SEARCH_PRESCRIPTION: `${ROUTES.PHARMACY}/dispensing/search-prescription`,
+  DISPENSING_HISTORY: `${ROUTES.PHARMACY}/dispensing/history`,
+  DISPENSING_ISSUES_QUEUE: `${ROUTES.PHARMACY}/dispensing/issues-queue`,
+
+  DISPENSING_WALK_IN: `${ROUTES.PHARMACY}/dispensing/dispense-medication/walk-in`,
+  DISPENSING_PATIENT_SEARCH: `${ROUTES.PHARMACY}/dispensing/dispense-medication/patient-search`,
+  DISPENSING_QUICK_CREATE: `${ROUTES.PHARMACY}/dispensing/dispense-medication/quick-create`,
+  DISPENSING_QUEUE: `${ROUTES.PHARMACY}/dispensing/dispense-medication/queue`,
 } as const;
 
   /**

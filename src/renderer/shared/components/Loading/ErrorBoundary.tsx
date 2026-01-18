@@ -1,59 +1,120 @@
-import React from 'react';
-import { Shield } from 'lucide-react';
+// ErrorBoundary.tsx
+/**
+ * ============================================================================
+ * ERROR BOUNDARY COMPONENT
+ * ============================================================================
+ * 
+ * Catches React errors and displays user-friendly error page.
+ * Works for both web and desktop applications.
+ */
 
-interface ErrorBoundaryProps {
-  children: React.ReactNode;
+import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+
+interface Props {
+  children: ReactNode;
+  fallback?: ReactNode;
 }
 
-interface ErrorBoundaryState {
+interface State {
   hasError: boolean;
   error?: Error;
+  errorInfo?: ErrorInfo;
 }
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false };
-  }
+class ErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false,
+  };
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('App error:', error, errorInfo);
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Uncaught error:', error, errorInfo);
+    this.setState({ error, errorInfo });
   }
 
-  handleReload = () => {
+  private handleReset = () => {
+    this.setState({ hasError: false, error: undefined, errorInfo: undefined });
+    window.location.href = '/#/dashboard'; // Force reload to dashboard
+  };
+
+  private handleReload = () => {
     window.location.reload();
   };
 
-  render() {
+  public render() {
     if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-950 to-gray-900 p-4">
-          <div className="max-w-md text-center">
-            <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-red-500/30">
-              <Shield className="w-10 h-10 text-white" />
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 p-4">
+          <div className="text-center max-w-2xl w-full">
+            {/* Icon */}
+            <div className="mb-8">
+              <AlertTriangle className="w-24 h-24 text-red-500 dark:text-red-400 mx-auto animate-pulse" />
             </div>
-            <h2 className="text-3xl font-bold text-white mb-3">System Error</h2>
-            <p className="text-gray-400 mb-8 leading-relaxed">
-              We encountered an unexpected error. Our team has been notified and is
-              working on a fix.
+
+            {/* Title */}
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              Something Went Wrong
+            </h1>
+
+            {/* Message */}
+            <p className="text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
+              We encountered an unexpected error. This has been logged and our team 
+              will investigate. Please try refreshing the page or returning to the dashboard.
             </p>
-            {process.env.NODE_ENV === 'development' && (
-              <div className="mb-6 p-4 bg-gray-800 rounded-lg text-left text-xs text-gray-300 overflow-auto max-h-32">
-                <p className="font-mono text-red-400">
-                  {this.state.error?.message}
+
+            {/* Error Details (Development Only) */}
+            {process.env.NODE_ENV === 'development' && this.state.error && (
+              <div className="mb-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-left overflow-auto max-h-60">
+                <p className="text-sm font-mono text-red-600 dark:text-red-400 mb-2">
+                  {this.state.error.toString()}
                 </p>
+                {this.state.errorInfo && (
+                  <pre className="text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                    {this.state.errorInfo.componentStack}
+                  </pre>
+                )}
               </div>
             )}
-            <button
-              onClick={this.handleReload}
-              className="px-8 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-xl font-semibold hover:from-blue-500 hover:to-cyan-400 transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:scale-105"
-            >
-              Reload Application
-            </button>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <button
+                onClick={this.handleReload}
+                className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-xl font-semibold hover:from-blue-500 hover:to-cyan-400 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+              >
+                <RefreshCw className="w-5 h-5" />
+                Reload Page
+              </button>
+
+              <button
+                onClick={this.handleReset}
+                className="w-full sm:w-auto px-8 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+              >
+                <Home className="w-5 h-5" />
+                Go to Dashboard
+              </button>
+            </div>
+
+            {/* Help Text */}
+            <div className="mt-12 pt-8 border-t border-gray-300 dark:border-gray-700">
+              <p className="text-sm text-gray-500 dark:text-gray-500 mb-2">
+                Problem persists?
+              </p>
+              <a
+                href="mailto:support@example.com"
+                className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+              >
+                Contact our support team
+              </a>
+            </div>
           </div>
         </div>
       );

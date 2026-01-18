@@ -97,134 +97,137 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
   } = activeContext;
 
   const isDark = theme === 'dark';
+// Master menu configuration - maps backend module codes to sidebar items
+const menuConfig: MenuItem[] = useMemo(() => [
+  // Dashboard Modules
+  {
+    id: 'patient-dashboard',
+    label: 'My Health',
+    icon: <HeartPulse className="w-5 h-5" />,
+    href: ROUTES.PATIENT_DASHBOARD,
+    route: ROUTES.PATIENT_DASHBOARD,
+    description: 'Personal health overview',
+    stats: 'Health',
+    shortcut: '⌘1',
+    glowColor: 'from-emerald-500 to-teal-400',
+    moduleCode: 'patient_dashboard',
+    category: 'patient',
+    alwaysAccessible: false // Not always accessible
+  },
+  {
+    id: 'staff-dashboard',
+    label: 'Staff Portal',
+    icon: <Briefcase className="w-5 h-5" />,
+    href: ROUTES.STAFF_DASHBOARD,
+    route: ROUTES.STAFF_DASHBOARD,
+    description: 'Staff workspace',
+    stats: 'Portal',
+    shortcut: '⌘1',
+    glowColor: 'from-purple-500 to-pink-400',
+    moduleCode: 'staff_dashboard',
+    category: 'admin',
+    alwaysAccessible: false
+  },
 
-  // Master menu configuration - maps backend module codes to sidebar items
-  const menuConfig: MenuItem[] = useMemo(() => [
-    // Dashboard Modules.
-    {
-      id: 'patient-dashboard',
-      label: 'My Health',
-      icon: <HeartPulse className="w-5 h-5" />,
-      href: ROUTES.PATIENT_DASHBOARD,
-      route: ROUTES.PATIENT_DASHBOARD,
-      description: 'Personal health overview',
-      stats: 'Health',
-      shortcut: '⌘1',
-      glowColor: 'from-emerald-500 to-teal-400',
-      moduleCode: 'patient_dashboard',
-      category: 'patient'
-    },
-    {
-      id: 'staff-dashboard',
-      label: 'Staff Portal',
-      icon: <Briefcase className="w-5 h-5" />,
-      href: ROUTES.STAFF_DASHBOARD,
-      route: ROUTES.STAFF_DASHBOARD,
-      description: 'Staff workspace',
-      stats: 'Portal',
-      shortcut: '⌘1',
-      glowColor: 'from-purple-500 to-pink-400',
-      moduleCode: 'staff_dashboard',
-      category: 'admin'
-    },
+  // Clinical Modules
+  {
+    id: 'Front Desk',
+    label: 'Front Desk',
+    icon: <FileText className="w-5 h-5" />,
+    href: ROUTES.MEDICAL_RECORDS,
+    route: ROUTES.MEDICAL_RECORDS,
+    description: 'Medical Records.',
+    stats: 'Records',
+    glowColor: 'from-purple-500 to-pink-400',
+    moduleCode: 'medical_records',
+    category: 'clinical',
+    alwaysAccessible: false
+  },
+  {
+    id: 'nursing-care',
+    label: 'Nursing Care',
+    icon: <HeartPulse className="w-5 h-5" />,
+    href: ROUTES.NURSING,
+    route: ROUTES.NURSING,
+    description: 'Vitals & ward care',
+    stats: 'Nursing',
+    glowColor: 'from-green-500 to-emerald-400',
+    moduleCode: 'nursing',
+    category: 'clinical',
+    alwaysAccessible: false
+  },
+  {
+    id: 'clinical',
+    label: 'Clinical Workspace',
+    icon: <Stethoscope className="w-5 h-5" />,
+    href: ROUTES.CLINICAL,
+    route: ROUTES.CLINICAL,
+    description: 'Doctor Consultation & diagnosis',
+    stats: 'Clinical',
+    glowColor: 'from-indigo-500 to-purple-400',
+    moduleCode: 'clinical',
+    category: 'clinical',
+    alwaysAccessible: false
+  }, 
+  {
+    id: 'laboatory',
+    label: 'Laboaratory',
+    icon: <MicroscopeIcon className="w-5 h-5" />,
+    href: ROUTES.LABORATORY,
+    route: ROUTES.LABORATORY,
+    description: 'Lab tests, results & specimens.',
+    stats: 'Lab',
+    glowColor: 'from-rose-500 to-pink-400',
+    moduleCode: 'laboratory',
+    category: 'clinical',
+    alwaysAccessible: false
+  },
+  {
+    id: 'pharmacy',
+    label: 'Pharmacy',
+    icon: <PillIcon className="w-5 h-5" />,
+    href: ROUTES.PHARMACY,
+    route: ROUTES.PHARMACY,
+    description: 'Medication dispensing',
+    stats: 'Pharmacy',
+    glowColor: 'from-orange-500 to-amber-400',
+    moduleCode: 'pharmacy',
+    category: 'clinical',
+    alwaysAccessible: false
+  },
 
-    //Modules.
-    //1.Reception & medical records.
-    {
-      id: 'Front Desk',
-      label: 'Front Desk',
-      icon: <FileText className="w-5 h-5" />,
-      href: ROUTES.MEDICAL_RECORDS,
-      route: ROUTES.MEDICAL_RECORDS,
-      description: 'Medical Records.',
-      stats: 'Records',
-      glowColor: 'from-purple-500 to-pink-400',
-      moduleCode: 'medical_records',
-      category: 'clinical'
-    },
-    //2.Ward & Nursing Care Module.
-    {
-      id: 'nursing-care',
-      label: 'Nursing Care',
-      icon: <HeartPulse className="w-5 h-5" />,
-      href: ROUTES.NURSING,
-      route: ROUTES.NURSING,
-      description: 'Vitals & ward care',
-      stats: 'Nursing',
-      glowColor: 'from-green-500 to-emerald-400',
-      moduleCode: 'nursing',
-      category: 'clinical'
-    },
-    //3.Clinical Module.
-    {
-      id: 'clinical',
-      label: 'Clinical Workspace',
-      icon: <Stethoscope className="w-5 h-5" />,
-      href: ROUTES.CLINICAL,
-      route: ROUTES.CLINICAL,
-      description: 'Doctor Consultation & diagnosis',
-      stats: 'Clinical',
-      glowColor: 'from-indigo-500 to-purple-400',
-      moduleCode: 'clinical',
-      category: 'clinical'
-    }, 
-    //4.Labooratory Module.
-    {
-      id: 'laboatory',
-      label: 'Laboaratory',
-      icon: <MicroscopeIcon className="w-5 h-5" />,
-      href: ROUTES.LABORATORY,
-      route: ROUTES.LABORATORY,
-      description: 'Lab tests, results & specimens.',
-      stats: 'Lab',
-      glowColor: 'from-rose-500 to-pink-400',
-      moduleCode: 'laboratory',
-      category: 'clinical'
-    },
+  // Finance Module
+  {
+    id: 'billing',
+    label: 'Billing & Finance',
+    icon: <FaRegCreditCard className="w-5 h-5" />,
+    href: ROUTES.BILLING,
+    route: ROUTES.BILLING,
+    description: 'Invoices & payments',
+    stats: 'Finance',
+    glowColor: 'from-yellow-500 to-orange-400',
+    moduleCode: 'billing',
+    category: 'finance',
+    alwaysAccessible: false
+  },
 
-    //5.Pharmacy Module.
-    {
-      id: 'pharmacy',
-      label: 'Pharmacy',
-      icon: <PillIcon className="w-5 h-5" />,
-      href: ROUTES.PHARMACY,
-      route: ROUTES.PHARMACY,
-      description: 'Medication dispensing',
-      stats: 'Pharmacy',
-      glowColor: 'from-orange-500 to-amber-400',
-      moduleCode: 'pharmacy',
-      category: 'clinical'
-    },
+  // Administration Module
+  {
+    id: 'administration',
+    label: 'Administration',
+    icon: <MonitorCheckIcon className="w-5 h-5" />,
+    href: ROUTES.ADMINISTRATION,
+    route: ROUTES.ADMINISTRATION,
+    description: 'Users & configuration',
+    stats: 'Admin',
+    glowColor: 'from-gray-600 to-gray-500',
+    moduleCode: 'administration',
+    category: 'admin',
+    alwaysAccessible: false
+  },
 
-    //6. Billing & Finance Finance Module.
-    {
-      id: 'billing',
-      label: 'Billing & Finance',
-      icon: <FaRegCreditCard className="w-5 h-5" />,
-      href: ROUTES.BILLING,
-      route: ROUTES.BILLING,
-      description: 'Invoices & payments',
-      stats: 'Finance',
-      glowColor: 'from-yellow-500 to-orange-400',
-      moduleCode: 'billing',
-      category: 'finance'
-    },
-
-    // 7. Administration Module.
-    {
-      id: 'administration',
-      label: 'Administration',
-      icon: <MonitorCheckIcon className="w-5 h-5" />,
-      href: ROUTES.ADMINISTRATION,
-      route: ROUTES.ADMINISTRATION,
-      description: 'Users & configuration',
-      stats: 'Admin',
-      glowColor: 'from-gray-600 to-gray-500',
-      moduleCode: 'administration',
-      category: 'admin'
-    },
-    //8. Account Module.
-    {
+  // Account Module - ALWAYS ACCESSIBLE
+  {
     id: 'account',
     label: 'Account',
     icon: <UserCog className="w-5 h-5" />,
@@ -235,32 +238,42 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     glowColor: 'from-emerald-500 to-teal-400',
     moduleCode: 'account',
     category: 'system',
+    alwaysAccessible: true // Marked as always accessible
   },
-  ], []);
-//Check if user is in patient mode.
-const acessiblePatientModuleCodes=useMemo(
-  ()=>{
-    return ['patient_dashboard','account']
-  },[]
-);
-  // Filter menu items based on accessible module codes
-  const currentMenuItems = useMemo(() => {
-   
-         if(inPatientMode){
-    return menuConfig.filter(item => {
-     
-        // Check if user has access to this module code
-        return acessiblePatientModuleCodes.includes(item.moduleCode);
-      });    } else{
-      return menuConfig.filter(item => {
-     
-        // Check if user has access to this module code
-        return accessibleModuleCodes.includes(item.moduleCode);
-      });
+], []);
 
-    }
-  
-  }, [accessibleModuleCodes, menuConfig,inPatientMode,acessiblePatientModuleCodes]);
+// Check if user is in patient mode
+const accessiblePatientModuleCodes = useMemo(
+  () => {
+    return ['patient_dashboard', 'account']; // Include account here too
+  },
+  []
+);
+
+// Filter menu items based on accessible module codes - Account is always included
+const currentMenuItems = useMemo(() => {
+  if (inPatientMode) {
+    // In patient mode: account + patient-accessible modules
+    return menuConfig.filter(item => {
+      // Always include account module
+      if (item.moduleCode === 'account') {
+        return true;
+      }
+      // Check if user has access to other patient modules
+      return accessiblePatientModuleCodes.includes(item.moduleCode);
+    });
+  } else {
+    // In staff mode: account + staff-accessible modules
+    return menuConfig.filter(item => {
+      // Always include account module
+      if (item.moduleCode === 'account') {
+        return true;
+      }
+      // Check if user has access to staff modules
+      return accessibleModuleCodes.includes(item.moduleCode);
+    });
+  }
+}, [accessibleModuleCodes, accessiblePatientModuleCodes, inPatientMode, menuConfig]);
 
   
   // Group menu items by category for better organization
