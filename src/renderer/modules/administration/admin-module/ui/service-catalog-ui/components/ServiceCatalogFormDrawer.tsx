@@ -16,7 +16,7 @@ export interface ServiceFormData {
   service_category: ServiceCategory;
   code_system: CodeSystem;
   currency_code: string;
-  price_amount: number;
+  price_amount: number | string;
   effective_from: string;
   effective_to: string;
   default_duration_minutes: number | null;
@@ -224,26 +224,42 @@ export const ServiceCatalogFormDrawer: React.FC<Props> = ({
                 ))}
               </select>
             </div>
-
             <div>
-              <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Price Amount *
-              </label>
-              <div className="relative">
-                <DollarSign className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.price_amount}
-                  onChange={(e) => set({ price_amount: Number(e.target.value) || 0 })}
-                  className={`w-full pl-10 pr-3 py-2 rounded-lg border ${
-                    isDark ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-900'
-                  } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
+                <label
+                    className={`block text-sm font-medium mb-1 ${
+                    isDark ? 'text-gray-300' : 'text-gray-700'
+                    }`}
+                >
+                    Price Amount *
+                </label>
+                <div className="relative">
+                    <DollarSign
+                    className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
+                        isDark ? 'text-gray-500' : 'text-gray-400'
+                    }`}
+                    />
+                    <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.price_amount === 0 ? '' : formData.price_amount}
+                    onChange={(e) =>
+                        set({
+                        price_amount: e.target.value === '' ? '' : e.target.value,
+                        })
+                    }
+                    className={`w-full pl-10 pr-3 py-2 rounded-lg border ${
+                        isDark
+                        ? 'bg-gray-900 border-gray-800 text-white'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                    placeholder="0.00"
+                    />
+                </div>
+                </div>
+
+
+           
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
