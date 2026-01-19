@@ -30,15 +30,15 @@ import {
 } from '../../../../administration/admin-module/api/service-catalog/useServiceCatalogQueries';
 
 import {
-  CreateServiceCatalogRequest,
-  UpdateServiceCatalogRequest,
-  ServiceCatalogFilters,
-  ServiceCatalog,
+  type CreateServiceCatalogRequest,
+  type UpdateServiceCatalogRequest,
+  type ServiceCatalogFilters,
+  type ServiceCatalog,
   ServiceCategory,
   CodeSystem,
   RiskLevel,
   ServiceStatus,
-  ServiceCatalogListResponse,
+  type ServiceCatalogListResponse,
 } from '../../../../administration/admin-module/api/service-catalog/serviceCatalogTypes';
 
 import { ServiceCatalogHeader } from './components/ServiceCatalogHeader';
