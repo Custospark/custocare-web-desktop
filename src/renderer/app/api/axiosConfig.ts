@@ -52,6 +52,9 @@ axiosInstance.interceptors.request.use(
     if (isStaffWithFacility && activeFacilityId) {
       config.headers['X-Active-Facility-Id'] = String(activeFacilityId);
     }
+    if (isStaffWithFacility && activeFacilityId) {
+      config.headers['X-Facility-Id'] = String(activeFacilityId);
+    }
 
     /**
      * PATIENT MODE
