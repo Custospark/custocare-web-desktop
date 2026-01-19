@@ -1,0 +1,195 @@
+// AdminServiceCatalog/components/ServiceCatalogFiltersBar.tsx
+import React from 'react';
+import { Calendar, Eye, EyeOff, Filter, Search } from 'lucide-react';
+import type { CodeSystem, ServiceCategory, ServiceStatus }  from '../../../api/service-catalog/serviceCatalogTypes';
+
+type ViewMode = 'list' | 'grid';
+
+interface Props {
+  theme: 'light' | 'dark';
+
+  searchTerm: string;
+  onSearchTermChange: (value: string) => void;
+
+  categoryFilter: ServiceCategory | 'all';
+  onCategoryFilterChange: (value: ServiceCategory | 'all') => void;
+
+  codeSystemFilter: CodeSystem | 'all';
+  onCodeSystemFilterChange: (value: CodeSystem | 'all') => void;
+
+  statusFilter: ServiceStatus | 'all';
+  onStatusFilterChange: (value: ServiceStatus | 'all') => void;
+
+  effectiveDate: string;
+  onEffectiveDateChange: (value: string) => void;
+
+  showDeleted: boolean;
+  onToggleShowDeleted: () => void;
+
+  viewMode: ViewMode;
+  onToggleViewMode: () => void;
+
+  perPage: number;
+  onPerPageChange: (value: number) => void;
+
+  // options
+  serviceCategoryOptions: { value: ServiceCategory; label: string }[];
+  codeSystemOptions: { value: CodeSystem; label: string }[];
+  statusOptions: { value: ServiceStatus; label: string }[];
+}
+
+export const ServiceCatalogFiltersBar: React.FC<Props> = ({
+  theme,
+  searchTerm,
+  onSearchTermChange,
+  categoryFilter,
+  onCategoryFilterChange,
+  codeSystemFilter,
+  onCodeSystemFilterChange,
+//   statusFilter,
+//   onStatusFilterChange,
+  effectiveDate,
+  onEffectiveDateChange,
+  showDeleted,
+  onToggleShowDeleted,
+  viewMode,
+  onToggleViewMode,
+  perPage,
+  onPerPageChange,
+  serviceCategoryOptions,
+  codeSystemOptions,
+//   statusOptions,
+}) => {
+  const isDark = theme === 'dark';
+
+  const perPagePresets = [5, 10, 20, 50, 100] as const;
+  const isPreset = perPagePresets.includes(perPage as (typeof perPagePresets)[number]);
+  const perPageSelectValue = isPreset ? String(perPage) : 'custom';
+
+  return (
+    <div className={`rounded-xl p-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+      <div className="flex flex-col xl:flex-row gap-4">
+        <div className="flex-1 relative">
+          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+          <input
+            type="text"
+            placeholder="Search by name, code, description..."
+            value={searchTerm}
+            onChange={(e) => onSearchTermChange(e.target.value)}
+            className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
+              isDark ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'
+            } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2 items-center">
+          <select
+            value={categoryFilter}
+            onChange={(e) => onCategoryFilterChange(e.target.value as ServiceCategory | 'all')}
+            className={`px-3 py-2 rounded-lg border text-sm ${
+              isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'
+            } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+          >
+            <option value="all">All Categories</option>
+            {serviceCategoryOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+
+          <select
+            value={codeSystemFilter}
+            onChange={(e) => onCodeSystemFilterChange(e.target.value as CodeSystem | 'all')}
+            className={`px-3 py-2 rounded-lg border text-sm ${
+              isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'
+            } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+          >
+            <option value="all">All Code Systems</option>
+            {codeSystemOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+
+          {/* <select
+            value={statusFilter}
+            onChange={(e) => onStatusFilterChange(e.target.value as ServiceStatus | 'all')}
+            className={`px-3 py-2 rounded-lg border text-sm ${
+              isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'
+            } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+          >
+            <option value="all">All Status</option>
+            {statusOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select> */}
+
+          <div className="relative">
+            <Calendar className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+            <input
+              type="date"
+              value={effectiveDate}
+              onChange={(e) => onEffectiveDateChange(e.target.value)}
+              className={`pl-10 pr-4 py-2 rounded-lg border text-sm ${
+                isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+            />
+          </div>
+
+          {/* Per page */}
+          <div className="flex items-center gap-2">
+            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Rows:</span>
+            <select
+              value={perPageSelectValue}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === 'custom') return;
+                onPerPageChange(Number(v));
+              }}
+              className={`px-3 py-2 rounded-lg border text-sm ${
+                isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+            >
+              {perPagePresets.map(n => <option key={n} value={String(n)}>{n}</option>)}
+              <option value="custom">Custom</option>
+            </select>
+
+            <input
+              type="number"
+              min={1}
+              max={500}
+              value={perPage}
+              onChange={(e) => onPerPageChange(Math.max(1, Math.min(500, Number(e.target.value) || 1)))}
+              className={`w-24 px-3 py-2 rounded-lg border text-sm ${
+                isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+              aria-label="Custom rows per page"
+            />
+          </div>
+
+          <button
+            onClick={onToggleShowDeleted}
+            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              showDeleted
+                ? (isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700')
+                : (isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
+            }`}
+          >
+            {showDeleted ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+          </button>
+
+          <button
+            onClick={onToggleViewMode}
+            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+            }`}
+          >
+            <Filter className="w-4 h-4" />
+            {viewMode === 'list' ? 'Grid View' : 'List View'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+ServiceCatalogFiltersBar.displayName = 'ServiceCatalogFiltersBar';
