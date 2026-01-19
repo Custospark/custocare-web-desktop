@@ -29,7 +29,7 @@ import {
   serviceCatalogKeys,
 } from '../../../../administration/admin-module/api/service-catalog/useServiceCatalogQueries';
 
-import  {
+import {
   CreateServiceCatalogRequest,
   UpdateServiceCatalogRequest,
   ServiceCatalogFilters,
@@ -50,7 +50,7 @@ interface AdminServiceCatalogProps {
   theme: 'light' | 'dark';
 }
 
-const todayISO = () => new Date().toISOString().split('T')[0];
+const todayISO = (): string => new Date().toISOString().split('T')[0];
 
 const emptyForm = (): ServiceFormData => ({
   service_code: '',
@@ -70,6 +70,7 @@ const emptyForm = (): ServiceFormData => ({
 });
 
 type DrawerMode = 'create' | 'edit';
+type ViewMode = 'list' | 'grid';
 
 export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme }) => {
   const isDark = theme === 'dark';
@@ -79,22 +80,24 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
   const activeContext = useAppSelector(state => state.activeContext);
   const activeFacilityId = activeContext.activeFacilityId;
 
+  // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<DrawerMode>('create');
   const [selectedService, setSelectedService] = useState<ServiceCatalog | null>(null);
+  const [formData, setFormData] = useState<ServiceFormData>(() => emptyForm());
 
+  // Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ServiceStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<ServiceCategory | 'all'>('all');
   const [codeSystemFilter, setCodeSystemFilter] = useState<CodeSystem | 'all'>('all');
   const [showDeleted, setShowDeleted] = useState(false);
   const [effectiveDate, setEffectiveDate] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-
-  const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [perPage, setPerPage] = useState<number>(10);
 
-  const [formData, setFormData] = useState<ServiceFormData>(() => emptyForm());
+  // UI state
+  const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
 
   // ---------------------------------------------------------------------------
   // OPTIONS (aligned to enums from serviceCatalogTypes.ts)
@@ -172,12 +175,11 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
   // FILTERS (type-safe: NO "page" because backend doesn't support it)
   // ---------------------------------------------------------------------------
   const filters: ServiceCatalogFilters = useMemo(() => {
-    const status =
-      showDeleted
-        ? undefined
-        : statusFilter !== 'all'
-          ? statusFilter
-          : ServiceStatus.ACTIVE;
+    const status = showDeleted
+      ? undefined
+      : statusFilter !== 'all'
+        ? statusFilter
+        : ServiceStatus.ACTIVE;
 
     return {
       status,
@@ -191,7 +193,12 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
 
   const listQueryKey = useMemo(() => serviceCatalogKeys.list(filters), [filters]);
 
-  const { data: servicesResponse, isLoading, error, refetch } = useGetServiceCatalogs(filters, {
+  const {
+    data: servicesResponse,
+    isLoading,
+    error,
+    refetch,
+  } = useGetServiceCatalogs(filters, {
     enabled: !!activeFacilityId,
     staleTime: 1000 * 30,
   });
@@ -384,7 +391,7 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
         created_by_staff_id: null,
       };
 
-      setListCache((current) => {
+      setListCache(current => {
         if (!current) return current;
         return { ...current, data: [optimistic, ...current.data] };
       });
@@ -402,7 +409,7 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
       const uuid = selectedService.service_uuid;
       const previous = queryClient.getQueryData<ServiceCatalogListResponse>(listQueryKey);
 
-      setListCache((current) => {
+      setListCache(current => {
         if (!current) return current;
         return {
           ...current,
@@ -437,7 +444,7 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
 
     const previous = queryClient.getQueryData<ServiceCatalogListResponse>(listQueryKey);
 
-    setListCache((current) => {
+    setListCache(current => {
       if (!current) return current;
       return {
         ...current,
@@ -460,7 +467,7 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
   const handleRestore = (service: ServiceCatalog) => {
     const previous = queryClient.getQueryData<ServiceCatalogListResponse>(listQueryKey);
 
-    setListCache((current) => {
+    setListCache(current => {
       if (!current) return current;
       return {
         ...current,
@@ -481,12 +488,20 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
   };
 
   // ---------------------------------------------------------------------------
-  // Filter setters (no page reset needed since backend doesn't page)
+  // Filter handlers
   // ---------------------------------------------------------------------------
-  const setPerPageSafe = (n: number) => {
-    setPerPage(n);
+  const handleSearchSubmit = () => {
+    // Trigger refetch with current filters (already in dependency array)
+    refetch();
   };
 
+  const handlePerPageChange = (n: number) => {
+    setPerPage(Math.max(1, Math.min(500, n)));
+  };
+
+  // ---------------------------------------------------------------------------
+  // Validation
+  // ---------------------------------------------------------------------------
   const canSubmit =
     !!formData.service_code.trim() &&
     !!formData.service_name.trim() &&
@@ -530,6 +545,7 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
         theme={theme}
         searchTerm={searchTerm}
         onSearchTermChange={setSearchTerm}
+        onSearchSubmit={handleSearchSubmit}
         categoryFilter={categoryFilter}
         onCategoryFilterChange={setCategoryFilter}
         codeSystemFilter={codeSystemFilter}
@@ -543,7 +559,7 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
         viewMode={viewMode}
         onToggleViewMode={() => setViewMode(v => (v === 'list' ? 'grid' : 'list'))}
         perPage={perPage}
-        onPerPageChange={setPerPageSafe}
+        onPerPageChange={handlePerPageChange}
         serviceCategoryOptions={serviceCategoryOptions.map(({ value, label }) => ({ value, label }))}
         codeSystemOptions={codeSystemOptions}
         statusOptions={statusOptions}
