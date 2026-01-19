@@ -81,7 +81,7 @@ export const ServiceCatalogList: React.FC<Props> = ({
 
   if (error) {
     return (
-      <div className={`rounded-xl p-6 ${isDark ? 'bg-gray-900' : 'bg-white'} border ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+      <div className={`rounded-xl p-4 sm:p-6 ${isDark ? 'bg-gray-900' : 'bg-white'} border ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
         <div className="text-center">
           <p className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>Error loading services</p>
           <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{error.message}</p>
@@ -99,10 +99,10 @@ export const ServiceCatalogList: React.FC<Props> = ({
 
   if (services.length === 0) {
     return (
-      <div className={`rounded-xl p-10 text-center ${isDark ? 'bg-gray-900' : 'bg-white'} border ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
-        <Tag className={`w-12 h-12 mx-auto ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
-        <h3 className="mt-4 text-lg font-medium">No services found</h3>
-        <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      <div className={`rounded-xl p-6 sm:p-10 text-center ${isDark ? 'bg-gray-900' : 'bg-white'} border ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+        <Tag className={`w-10 h-10 sm:w-12 sm:h-12 mx-auto ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
+        <h3 className="mt-3 sm:mt-4 text-base sm:text-lg font-medium">No services found</h3>
+        <p className={`mt-1 text-sm sm:text-base ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
           Try adjusting filters or create your first service.
         </p>
       </div>
@@ -110,18 +110,21 @@ export const ServiceCatalogList: React.FC<Props> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {viewMode === 'list' ? (
         <div className={`rounded-xl ${isDark ? 'bg-gray-900' : 'bg-white'} border ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
-          <div className={`p-4 border-b ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
-            <div className="grid grid-cols-12 gap-4 text-sm font-medium">
+          {/* Table Header */}
+          <div className={`p-3 sm:p-4 border-b ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+            <div className="hidden sm:grid grid-cols-12 gap-3 sm:gap-4 text-sm font-medium">
               <div className="col-span-6">Service</div>
               <div className="col-span-2 hidden md:block">Category</div>
               <div className="col-span-2">Price</div>
-              <div className="col-span-2 text-right">Actions</div>
+              <div className="col-span-2 text-center">Actions</div>
             </div>
+            <div className="sm:hidden text-sm font-medium">Services List</div>
           </div>
 
+          {/* Table Body */}
           <div>
             {services.map((service) => {
               const category = serviceCategoryOptions.find(c => c.value === service.service_category);
@@ -130,11 +133,100 @@ export const ServiceCatalogList: React.FC<Props> = ({
               return (
                 <div
                   key={service.service_uuid}
-                  className={`p-4 border-b last:border-b-0 ${
+                  className={`p-3 sm:p-4 border-b last:border-b-0 ${
                     isDark ? 'border-gray-800 hover:bg-gray-800/50' : 'border-gray-200 hover:bg-gray-50'
                   } transition-colors`}
                 >
-                  <div className="grid grid-cols-12 gap-4 items-center">
+                  {/* Mobile Layout */}
+                  <div className="sm:hidden">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-start gap-2 min-w-0">
+                        <button
+                          onClick={() => onToggleExpand(service.service_uuid)}
+                          className={`p-1 flex-shrink-0 ${isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
+                          aria-label="Toggle details"
+                        >
+                          {expandedServices.has(service.service_uuid) ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </button>
+                        
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className={`p-1.5 rounded ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                              <CategoryIcon className={`w-3.5 h-3.5 ${category?.color ?? ''}`} />
+                            </div>
+                            <div className="font-medium truncate text-sm">{service.service_name}</div>
+                          </div>
+                          <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {service.service_code} • {service.code_system}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="font-medium text-sm">
+                          {formatPrice(service.price_amount, service.currency_code)}
+                        </div>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs ${getStatusBgColor(service.status, isDark)} ${getStatusColor(service.status, isDark)}`}>
+                          {service.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Mobile Actions */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs ${isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+                          {service.service_category.replace(/_/g, ' ')}
+                        </span>
+                        {service.default_duration_minutes && (
+                          <span className={`ml-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {service.default_duration_minutes}m
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => onDuplicate(service)}
+                          className={`p-1.5 rounded ${isDark ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-300' : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900'}`}
+                          title="Duplicate"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => onEdit(service)}
+                          className={`p-1.5 rounded ${isDark ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-300' : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900'}`}
+                          title="Edit"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        {service.deleted_at ? (
+                          <button
+                            onClick={() => onRestore(service)}
+                            className={`p-1.5 rounded ${isDark ? 'hover:bg-gray-700 text-green-400 hover:text-green-300' : 'hover:bg-gray-200 text-green-600 hover:text-green-700'}`}
+                            title="Restore"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onDelete(service)}
+                            className={`p-1.5 rounded ${isDark ? 'hover:bg-gray-700 text-red-400 hover:text-red-300' : 'hover:bg-gray-200 text-red-600 hover:text-red-700'}`}
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Desktop Layout */}
+                  <div className="hidden sm:grid grid-cols-12 gap-3 sm:gap-4 items-center">
                     <div className="col-span-6">
                       <div className="flex items-center gap-3">
                         <button
@@ -222,49 +314,50 @@ export const ServiceCatalogList: React.FC<Props> = ({
                     </div>
                   </div>
 
+                  {/* Expanded Details */}
                   {expandedServices.has(service.service_uuid) ? (
-                    <div className={`mt-4 pt-4 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className={`mt-3 sm:mt-4 pt-3 sm:pt-4 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
                         <div>
-                          <h4 className="text-sm font-medium mb-2">Service Details</h4>
-                          <div className={`text-sm space-y-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          <h4 className="text-sm font-medium mb-1 sm:mb-2">Service Details</h4>
+                          <div className={`text-xs sm:text-sm space-y-1 sm:space-y-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                             <div><span className="font-medium">Department:</span> {service.department_specialty || 'General'}</div>
                             <div className={`inline-flex items-center gap-1 ${getRiskLevelColor(service.risk_level, isDark)}`}>
-                              <Shield className="w-4 h-4" />
+                              <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               <span>Risk Level: {service.risk_level}</span>
                             </div>
                           </div>
                         </div>
 
                         <div>
-                          <h4 className="text-sm font-medium mb-2">Validity Period</h4>
-                          <div className={`text-sm space-y-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4" />
+                          <h4 className="text-sm font-medium mb-1 sm:mb-2">Validity Period</h4>
+                          <div className={`text-xs sm:text-sm space-y-1 sm:space-y-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                            <div className="flex items-center gap-1 sm:gap-2">
+                              <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               <span>From: {service.effective_from}</span>
                             </div>
                             {service.effective_to ? (
-                              <div className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4" />
+                              <div className="flex items-center gap-1 sm:gap-2">
+                                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 <span>To: {service.effective_to}</span>
                               </div>
                             ) : null}
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 sm:gap-2">
                               {service.requires_informed_consent ? (
-                                <CheckCircle className="w-4 h-4 text-green-500" />
+                                <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" />
                               ) : (
-                                <XCircle className="w-4 h-4 text-gray-500" />
+                                <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500" />
                               )}
-                              <span>Consent required: {service.requires_informed_consent ? 'Yes' : 'No'}</span>
+                              <span>Consent: {service.requires_informed_consent ? 'Yes' : 'No'}</span>
                             </div>
                           </div>
                         </div>
 
                         <div>
-                          <h4 className="text-sm font-medium mb-2">Notes</h4>
-                          <div className={`text-sm space-y-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                            <div>{service.service_description || '—'}</div>
+                          <h4 className="text-sm font-medium mb-1 sm:mb-2">Notes</h4>
+                          <div className={`text-xs sm:text-sm space-y-1 sm:space-y-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                            <div className="line-clamp-2">{service.service_description || '—'}</div>
                             <div>Created: {new Date(service.created_at).toLocaleDateString()}</div>
                             {service.updated_at !== service.created_at ? (
                               <div>Updated: {new Date(service.updated_at).toLocaleDateString()}</div>
@@ -280,8 +373,9 @@ export const ServiceCatalogList: React.FC<Props> = ({
           </div>
         </div>
       ) : (
-        <div className={`rounded-xl p-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        /* Grid View */
+        <div className={`rounded-xl p-3 sm:p-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {services.map((service) => {
               const category = serviceCategoryOptions.find(c => c.value === service.service_category);
               const CategoryIcon = category?.icon ?? Tag;
@@ -289,45 +383,45 @@ export const ServiceCatalogList: React.FC<Props> = ({
               return (
                 <div
                   key={service.service_uuid}
-                  className={`rounded-lg border p-4 ${isDark ? 'border-gray-800 hover:border-gray-700' : 'border-gray-200 hover:border-gray-300'} transition-all hover:shadow-md`}
+                  className={`rounded-lg border p-3 sm:p-4 ${isDark ? 'border-gray-800 hover:border-gray-700' : 'border-gray-200 hover:border-gray-300'} transition-all hover:shadow-sm sm:hover:shadow-md`}
                 >
-                  <div className="flex items-start justify-between mb-3 gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`p-2 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                        <CategoryIcon className={`w-5 h-5 ${category?.color ?? ''}`} />
+                  <div className="flex items-start justify-between mb-2 sm:mb-3 gap-2 sm:gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <div className={`p-1.5 sm:p-2 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                        <CategoryIcon className={`w-4 h-4 sm:w-5 sm:h-5 ${category?.color ?? ''}`} />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-medium truncate">{service.service_name}</h4>
-                        <p className={`text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{service.service_code}</p>
+                        <h4 className="font-medium truncate text-sm sm:text-base">{service.service_name}</h4>
+                        <p className={`text-xs sm:text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{service.service_code}</p>
                       </div>
                     </div>
 
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusBgColor(service.status, isDark)} ${getStatusColor(service.status, isDark)}`}>
+                    <span className={`inline-flex items-center px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full text-xs font-medium ${getStatusBgColor(service.status, isDark)} ${getStatusColor(service.status, isDark)}`}>
                       {service.status}
                     </span>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                      <span className={`text-base sm:text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
                         {formatPrice(service.price_amount, service.currency_code)}
                       </span>
                       {service.default_duration_minutes ? (
-                        <span className={`inline-flex items-center gap-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                          <Clock className="w-4 h-4" />
+                        <span className={`inline-flex items-center gap-1 text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           {service.default_duration_minutes}m
                         </span>
                       ) : null}
                     </div>
 
                     {service.service_description ? (
-                      <p className={`text-sm line-clamp-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <p className={`text-xs sm:text-sm line-clamp-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                         {service.service_description}
                       </p>
                     ) : null}
 
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`text-xs px-2 py-1 rounded ${isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+                    <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                      <span className={`text-xs px-1.5 py-1 sm:px-2 sm:py-1 rounded ${isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
                         {service.code_system}
                       </span>
                       <span className={`inline-flex items-center gap-1 text-xs ${getRiskLevelColor(service.risk_level, isDark)}`}>
@@ -341,28 +435,28 @@ export const ServiceCatalogList: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  <div className={`flex items-center justify-between mt-4 pt-4 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
-                    <div className="flex items-center gap-2">
+                  <div className={`flex items-center justify-between mt-3 sm:mt-4 pt-3 sm:pt-4 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+                    <div className="flex items-center gap-1 sm:gap-2">
                       <button
                         onClick={() => onEdit(service)}
-                        className={`p-1.5 rounded ${isDark ? 'hover:bg-gray-800 text-gray-400 hover:text-gray-300' : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900'}`}
+                        className={`p-1 sm:p-1.5 rounded ${isDark ? 'hover:bg-gray-800 text-gray-400 hover:text-gray-300' : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900'}`}
                         title="Edit"
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </button>
                       <button
                         onClick={() => onDuplicate(service)}
-                        className={`p-1.5 rounded ${isDark ? 'hover:bg-gray-800 text-gray-400 hover:text-gray-300' : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900'}`}
+                        className={`p-1 sm:p-1.5 rounded ${isDark ? 'hover:bg-gray-800 text-gray-400 hover:text-gray-300' : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900'}`}
                         title="Duplicate"
                       >
-                        <Copy className="w-4 h-4" />
+                        <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </button>
                     </div>
 
                     {service.deleted_at ? (
                       <button
                         onClick={() => onRestore(service)}
-                        className={`px-3 py-1.5 rounded text-xs font-medium ${
+                        className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded text-xs font-medium ${
                           isDark ? 'bg-green-900/30 text-green-300 hover:bg-green-900/50' : 'bg-green-100 text-green-700 hover:bg-green-200'
                         }`}
                       >
@@ -371,7 +465,7 @@ export const ServiceCatalogList: React.FC<Props> = ({
                     ) : (
                       <button
                         onClick={() => onDelete(service)}
-                        className={`px-3 py-1.5 rounded text-xs font-medium ${
+                        className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded text-xs font-medium ${
                           isDark ? 'bg-red-900/30 text-red-300 hover:bg-red-900/50' : 'bg-red-100 text-red-700 hover:bg-red-200'
                         }`}
                       >
@@ -386,26 +480,27 @@ export const ServiceCatalogList: React.FC<Props> = ({
         </div>
       )}
 
+      {/* Pagination */}
       {pagination && pagination.total > 0 ? (
-        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl ${isDark ? 'bg-gray-900' : 'bg-white'} border ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
-          <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 rounded-xl ${isDark ? 'bg-gray-900' : 'bg-white'} border ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+          <div className={`text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Showing {pagination.from || 0} to {pagination.to || 0} of {pagination.total} services
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap justify-end">
+          <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-end">
             <button
               disabled={pagination.current_page === 1}
               onClick={() => onPageChange(Math.max(1, pagination.current_page - 1))}
-              className={`px-3 py-1.5 rounded text-sm font-medium ${
+              className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded text-xs sm:text-sm font-medium ${
                 pagination.current_page === 1
                   ? (isDark ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-400')
                   : (isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
               }`}
             >
-              Previous
+              Prev
             </button>
 
-            <span className={`px-2 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            <span className={`px-1 text-xs sm:text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               Page
             </span>
 
@@ -418,20 +513,20 @@ export const ServiceCatalogList: React.FC<Props> = ({
                 const next = Number(e.target.value) || 1;
                 onPageChange(Math.max(1, Math.min(pagination.last_page, next)));
               }}
-              className={`w-20 px-2 py-1.5 rounded border text-sm ${
+              className={`w-16 sm:w-20 px-2 py-1 sm:py-1.5 rounded border text-xs sm:text-sm ${
                 isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'
               } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
               aria-label="Page number"
             />
 
-            <span className={`px-1 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            <span className={`px-1 text-xs sm:text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               of {pagination.last_page}
             </span>
 
             <button
               disabled={pagination.current_page === pagination.last_page}
               onClick={() => onPageChange(Math.min(pagination.last_page, pagination.current_page + 1))}
-              className={`px-3 py-1.5 rounded text-sm font-medium ${
+              className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded text-xs sm:text-sm font-medium ${
                 pagination.current_page === pagination.last_page
                   ? (isDark ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-400')
                   : (isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
