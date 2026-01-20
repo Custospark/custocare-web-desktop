@@ -13,7 +13,7 @@ import AdminOverview from './admin-overview-ui/AdminOverview';
 import AdminTeam from './team-ui/AdminTeam';
 import AdminFacilitySetup from './facility-setup-ui/AdminFacilitySetup';
 import AdminServiceCatalog from './service-catalog-ui/AdminServiceCatalog';
-import AdminInventory from './inventory/AdminInventory';
+import AdminInventory from './inventory/AdminInventoryItems';
 
 /**
  * ============================================================================
@@ -158,7 +158,7 @@ export const AdminModule: React.FC = () => {
         return <AdminFacilitySetup theme={theme} />;
 
       case 'inventory':
-        return <AdminInventory />;
+        return <AdminInventory theme={theme} />;
       case 'service-catalog':
         return <AdminServiceCatalog theme={theme} />;
 

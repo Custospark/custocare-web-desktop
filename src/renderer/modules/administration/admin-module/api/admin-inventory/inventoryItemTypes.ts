@@ -103,7 +103,7 @@ export interface InventoryItem {
   facility_id: number;
 
   // Item identification
-  item_code: string;
+  item_code: string | undefined;
   item_name: string;
   item_description: string | null;
   item_category: ItemCategory;
@@ -116,7 +116,7 @@ export interface InventoryItem {
   drug_class: string | null;
   controlled_substance_schedule: ControlledSubstanceSchedule | null;
   active_ingredients: Record<string, unknown>[] | null;
-  dosage_form: DosageForm | string | null;
+  dosage_form?: string | undefined | DosageForm;
   strength: string | null;
   route_of_administration: RouteOfAdministration | string | null;
 
@@ -243,7 +243,7 @@ export interface CreateInventoryItemRequest {
   drug_class?: string | null;
   controlled_substance_schedule?: ControlledSubstanceSchedule | null;
   active_ingredients?: Record<string, unknown>[] | null;
-  dosage_form?: DosageForm | string | null;
+  dosage_form?: DosageForm | string ;
   strength?: string | null;
   route_of_administration?: RouteOfAdministration | string | null;
   manufacturer?: string | null;
