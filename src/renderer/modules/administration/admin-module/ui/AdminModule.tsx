@@ -7,11 +7,13 @@ import {
   Users,
   Building2,
   Layers,
+  Boxes,
 } from 'lucide-react';
 import AdminOverview from './admin-overview-ui/AdminOverview';
 import AdminTeam from './team-ui/AdminTeam';
 import AdminFacilitySetup from './facility-setup-ui/AdminFacilitySetup';
 import AdminServiceCatalog from './service-catalog-ui/AdminServiceCatalog';
+import AdminInventory from './inventory/AdminInventory';
 
 /**
  * ============================================================================
@@ -79,6 +81,12 @@ const ADMIN_OPERATIONS: Operation[] = [
     icon: <Layers className="w-4 h-4" />,
     description: 'Manage services and pricing versions',
   },
+    {
+    id: 'inventory',
+    label: 'Inventory',
+    icon: <Boxes className="w-4 h-4" />,
+    description: 'Manage stock items, locations, and inventory controls',
+  },
 ];
 
 /* ============================================================================
@@ -89,7 +97,8 @@ export type AdminOperationId =
   | 'overview'
   | 'team'
   | 'facility-setup'
-  | 'service-catalog';
+  | 'service-catalog'
+  | 'inventory';
 
 /* ============================================================================
    SUBCOMPONENT IMPORTS
@@ -148,6 +157,8 @@ export const AdminModule: React.FC = () => {
       case 'facility-setup':
         return <AdminFacilitySetup theme={theme} />;
 
+      case 'inventory':
+        return <AdminInventory />;
       case 'service-catalog':
         return <AdminServiceCatalog theme={theme} />;
 
