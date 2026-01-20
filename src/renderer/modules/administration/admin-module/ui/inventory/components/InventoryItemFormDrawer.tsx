@@ -145,6 +145,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
   useEffect(() => {
     if (!open) {
       didAutoFocusRef.current = false;
+      userProvidedCodeRef.current = false;
     }
   }, [open]);
 
@@ -156,12 +157,16 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
   const set = (patch: Partial<InventoryItemFormData>) => onChange({ ...formData, ...patch });
 
   const inputBase =
-    `w-full px-3 py-2 rounded-lg border outline-none transition
+    `w-full px-3 py-2 rounded-lg border outline-none transition cursor-text
      focus:ring-2 focus:ring-blue-500 focus:border-transparent`;
 
   const inputTheme = isDark
     ? 'bg-gray-900 border-gray-800 text-white placeholder:text-gray-500'
     : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400';
+
+  const selectTheme = isDark
+    ? 'bg-gray-900 border-gray-800 text-white cursor-pointer'
+    : 'bg-white border-gray-300 text-gray-900 cursor-pointer';
 
   const labelTheme = isDark ? 'text-gray-300' : 'text-gray-700';
   const hintTheme = isDark ? 'text-gray-500' : 'text-gray-600';
@@ -182,8 +187,8 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
   const handleNameChange = (name: string) => {
     const nextName = name;
 
-    // Auto-generate code ONLY when user has not provided a code AND current code is empty
-    if (!userProvidedCodeRef.current && !formData.item_code.trim()) {
+    // Auto-generate code ONLY when user has not provided a code
+    if (!userProvidedCodeRef.current) {
       set({
         item_name: nextName,
         item_code: generateItemCodeFromName(nextName),
@@ -196,11 +201,15 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
 
   const handleCodeChange = (raw: string) => {
     const next = raw.toUpperCase();
-    userProvidedCodeRef.current = next.trim().length > 0;
+    // Mark as user-provided if they type anything
+    if (next.trim().length > 0) {
+      userProvidedCodeRef.current = true;
+    }
     set({ item_code: next });
   };
 
   const handleCodeBlur = () => {
+    // If code is empty after blur, allow auto-generation again
     if (!formData.item_code.trim()) {
       userProvidedCodeRef.current = false;
     }
@@ -213,17 +222,13 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
     return `${parts[0]}.${parts.slice(1).join('')}`;
   };
 
-    const commitCostToForm = (raw: string, field: 'unit_cost' | 'average_wholesale_price') => {
+  const commitCostToForm = (raw: string, field: 'unit_cost' | 'average_wholesale_price') => {
     const cleaned = normalizeMoney(raw);
     const num = cleaned ? Number(cleaned) : 0;
     const validNum = Number.isFinite(num) ? num : 0;
     
-    // Update the form data
-    set({
-        ...formData,
-        [field]: validNum
-    });
-};
+    set({ [field]: validNum });
+  };
 
   const handleDrawerKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
     if (e.key === 'Escape') onClose();
@@ -231,6 +236,8 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
       if (!isSubmitting && canSubmit) onSubmit();
     }
   };
+
+ 
 
   // Helper to determine if medication-specific fields should be shown
   const isMedication = [
@@ -245,7 +252,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
       <button
         aria-label="Close"
         onClick={onClose}
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/50 cursor-default"
       />
 
       {/* Panel */}
@@ -270,7 +277,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
 
           <button
             onClick={onClose}
-            className={`p-2 rounded-lg border transition ${
+            className={`p-2 rounded-lg border transition cursor-pointer ${
               isDark ? 'border-gray-800 hover:bg-gray-900' : 'border-gray-200 hover:bg-gray-100'
             }`}
             aria-label="Close panel"
@@ -332,7 +339,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                   <select
                     value={formData.item_category}
                     onChange={(e) => set({ item_category: e.target.value as ItemCategory })}
-                    className={`${inputBase} ${inputTheme}`}
+                    className={`${inputBase} ${selectTheme}`}
                   >
                     {itemCategoryOptions.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -442,7 +449,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                     <select
                       value={formData.controlled_substance_schedule}
                       onChange={(e) => set({ controlled_substance_schedule: e.target.value as ControlledSubstanceSchedule | '' })}
-                      className={`${inputBase} ${inputTheme}`}
+                      className={`${inputBase} ${selectTheme}`}
                     >
                       <option value="">Not Controlled</option>
                       {controlledSubstanceOptions.map(opt => (
@@ -451,21 +458,30 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                     </select>
                   </div>
 
-                  <div>
+                 <div>
                     <label className={`block text-sm font-medium mb-1 ${labelTheme}`}>
-                      Dosage Form
+                        Dosage Form
                     </label>
                     <select
-                      value={formData.dosage_form}
-                      onChange={(e) => set({ dosage_form: e.target.value as DosageForm | '' })}
-                      className={`${inputBase} ${inputTheme}`}
+                        value={formData.dosage_form ?? ""}
+                        onChange={(e) => {
+                        const val = e.target.value;
+
+                        set({
+                            dosage_form: val === "" ? "" : (val as DosageForm),
+                        });
+                        }}
+                        className={`${inputBase} ${selectTheme}`}
                     >
-                      <option value="">Select Form</option>
-                      {dosageFormOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
+                        <option value="">Select Form</option>
+                        {dosageFormOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                        </option>
+                        ))}
                     </select>
-                  </div>
+                    </div>
+
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -489,7 +505,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                     <select
                       value={formData.route_of_administration}
                       onChange={(e) => set({ route_of_administration: e.target.value as RouteOfAdministration | '' })}
-                      className={`${inputBase} ${inputTheme}`}
+                      className={`${inputBase} ${selectTheme}`}
                     >
                       <option value="">Select Route</option>
                       {routeOfAdministrationOptions.map(opt => (
@@ -518,7 +534,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                   <select
                     value={formData.unit_of_measure}
                     onChange={(e) => set({ unit_of_measure: e.target.value })}
-                    className={`${inputBase} ${inputTheme}`}
+                    className={`${inputBase} ${selectTheme}`}
                   >
                     {unitOfMeasureOptions.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -530,14 +546,35 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                   <label className={`block text-sm font-medium mb-1 ${labelTheme}`}>
                     Package Quantity <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={formData.package_quantity}
-                    onChange={(e) => set({ package_quantity: Number(e.target.value) || 1 })}
-                    className={`${inputBase} ${inputTheme}`}
-                    placeholder="e.g., 100"
-                  />
+                   <input
+                        type="number"
+                        min={1}
+                        value={formData.package_quantity === undefined ? '' : formData.package_quantity}
+                        onChange={(e) => {
+                            const value = e.target.value;
+
+                            // Allow empty while typing
+                            if (value === '') {
+                            set({ package_quantity: undefined });
+                            return;
+                            }
+
+                            // Allow only valid numbers
+                            const numericValue = Number(value);
+                            if (!isNaN(numericValue)) {
+                            set({ package_quantity: numericValue });
+                            }
+                        }}
+                        onBlur={() => {
+                            // Enforce minimum when user leaves the field
+                            if (!formData.package_quantity || formData.package_quantity < 1) {
+                            set({ package_quantity: 1 });
+                            }
+                        }}
+                        className={`${inputBase} ${inputTheme}`}
+                        placeholder="e.g., 100"
+                        />
+
                 </div>
               </div>
 
@@ -562,7 +599,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                   <select
                     value={formData.currency_code}
                     onChange={(e) => set({ currency_code: e.target.value })}
-                    className={`${inputBase} ${inputTheme}`}
+                    className={`${inputBase} ${selectTheme}`}
                   >
                     {currencyOptions.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -577,7 +614,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                     Unit Cost
                   </label>
                   <div className="relative">
-                    <DollarSign className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+                    <DollarSign className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
                     <input
                       type="text"
                       inputMode="decimal"
@@ -610,7 +647,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                     Average Wholesale Price (AWP)
                   </label>
                   <div className="relative">
-                    <DollarSign className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+                    <DollarSign className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
                     <input
                       type="text"
                       inputMode="decimal"
@@ -687,7 +724,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                   <select
                     value={formData.storage_location_type}
                     onChange={(e) => set({ storage_location_type: e.target.value })}
-                    className={`${inputBase} ${inputTheme}`}
+                    className={`${inputBase} ${selectTheme}`}
                   >
                     <option value="">Select Type</option>
                     {storageTypeOptions.map(opt => (
@@ -712,7 +749,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
 
               <div className="space-y-3">
                 <label
-                  className={`flex items-start gap-3 rounded-lg border p-3 transition ${
+                  className={`flex items-start gap-3 rounded-lg border p-3 transition cursor-pointer ${
                     isDark ? 'border-gray-800 bg-gray-950/30 hover:bg-gray-900/30' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
                   }`}
                 >
@@ -720,7 +757,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                     type="checkbox"
                     checked={formData.requires_refrigeration}
                     onChange={(e) => set({ requires_refrigeration: e.target.checked })}
-                    className={`mt-0.5 rounded ${
+                    className={`mt-0.5 rounded cursor-pointer ${
                       isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'
                     }`}
                   />
@@ -736,7 +773,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                 </label>
 
                 <label
-                  className={`flex items-start gap-3 rounded-lg border p-3 transition ${
+                  className={`flex items-start gap-3 rounded-lg border p-3 transition cursor-pointer ${
                     isDark ? 'border-gray-800 bg-gray-950/30 hover:bg-gray-900/30' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
                   }`}
                 >
@@ -744,7 +781,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                     type="checkbox"
                     checked={formData.requires_prescription}
                     onChange={(e) => set({ requires_prescription: e.target.checked })}
-                    className={`mt-0.5 rounded ${
+                    className={`mt-0.5 rounded cursor-pointer ${
                       isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'
                     }`}
                   />
@@ -760,7 +797,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                 </label>
 
                 <label
-                  className={`flex items-start gap-3 rounded-lg border p-3 transition ${
+                  className={`flex items-start gap-3 rounded-lg border p-3 transition cursor-pointer ${
                     isDark ? 'border-gray-800 bg-gray-950/30 hover:bg-gray-900/30' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
                   }`}
                 >
@@ -768,7 +805,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                     type="checkbox"
                     checked={formData.is_hazardous}
                     onChange={(e) => set({ is_hazardous: e.target.checked })}
-                    className={`mt-0.5 rounded ${
+                    className={`mt-0.5 rounded cursor-pointer ${
                       isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'
                     }`}
                   />
@@ -784,7 +821,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                 </label>
 
                 <label
-                  className={`flex items-start gap-3 rounded-lg border p-3 transition ${
+                  className={`flex items-start gap-3 rounded-lg border p-3 transition cursor-pointer ${
                     isDark ? 'border-gray-800 bg-gray-950/30 hover:bg-gray-900/30' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
                   }`}
                 >
@@ -792,7 +829,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                     type="checkbox"
                     checked={formData.is_billable}
                     onChange={(e) => set({ is_billable: e.target.checked })}
-                    className={`mt-0.5 rounded ${
+                    className={`mt-0.5 rounded cursor-pointer ${
                       isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'
                     }`}
                   />
@@ -826,7 +863,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                   <select
                     value={formData.status}
                     onChange={(e) => set({ status: e.target.value as ItemStatus })}
-                    className={`${inputBase} ${inputTheme}`}
+                    className={`${inputBase} ${selectTheme}`}
                   >
                     {statusOptions.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -891,7 +928,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
             <div className="flex items-center gap-3">
               <button
                 onClick={onClose}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors border ${
+                className={`px-4 py-2 rounded-lg font-medium transition-colors border cursor-pointer ${
                   isDark
                     ? 'bg-gray-950 hover:bg-gray-900 text-gray-300 border-gray-800'
                     : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200'
@@ -904,7 +941,9 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
               <button
                 onClick={onSubmit}
                 disabled={isSubmitting || !canSubmit}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  isSubmitting || !canSubmit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                } ${
                   isDark ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
                 }`}
               >
