@@ -116,21 +116,9 @@ const CustomerWalkIn: React.FC<CustomerWalkInProps> = ({ theme = 'light' }) => {
     [isDark]
   );
 
-  const logPharmacyEvent = (eventName: string, data: Record<string, any>) => {
-    // Replace with your analytics integration
-    console.log(`[Pharmacy Analytics] ${eventName}:`, data);
-  };
 
   const handleSessionCreated = (session: WalkInSession) => {
     setCreatedSession(session);
-
-    logPharmacyEvent('walkin_session_created', {
-      facilityId: session.facility_id,
-      visitId: session.visit.id,
-      patientId: session.walkin.patient_id,
-      department: 'pharmacy',
-      timestamp: new Date().toISOString(),
-    });
   };
 
   const handleProceedToDispense = () => {
