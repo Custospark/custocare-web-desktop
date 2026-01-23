@@ -187,3 +187,4 @@ export const InventoryItemHeader: React.FC<Props> = ({
 };
 
 InventoryItemHeader.displayName = 'InventoryItemHeader';
+
