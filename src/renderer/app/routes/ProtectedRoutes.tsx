@@ -62,7 +62,7 @@ import IssuesQueue from '../../modules/pharmacy/ui/dispensing/IssuesQueue';
 
 // Pharmacy Dispensing Sub-components
 import CustomerWalkIn from '../../modules/pharmacy/ui/dispensing/dispensing-medication/views/CustomerWalkIn';
-import PatientSearch from '../../modules/pharmacy/ui/dispensing/dispensing-medication/views/PatientSearch';
+import PatientSearch from '../../modules/pharmacy/ui/dispensing/dispensing-medication/views/PhamarcyPatientSearch';
 import QuickPatientCreate from '../../modules/pharmacy/ui/dispensing/dispensing-medication/views/QuickPatientCreate';
 import DispensingQueue from '../../modules/pharmacy/ui/dispensing/dispensing-medication/views/DispensingQueue';
 
