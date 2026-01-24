@@ -219,11 +219,13 @@ export const MEDICAL_RECORDS_ROUTES = {
   DOCUMENTS: `${ROUTES.MEDICAL_RECORDS}/documents`,
   RECORDS: `${ROUTES.MEDICAL_RECORDS}/records`,
 
+
   // Patients nested actions
   PATIENTS_SEARCH: `${ROUTES.MEDICAL_RECORDS}/patients/search`,
   PATIENTS_REGISTER: `${ROUTES.MEDICAL_RECORDS}/patients/register`,
-  PATIENTS_PROFILES: `${ROUTES.MEDICAL_RECORDS}/patients/profiles`,
-  PATIENTS_DETAIL: `${ROUTES.MEDICAL_RECORDS}/patients/detail`,
+  PATIENT_QUEUE: `${ROUTES.MEDICAL_RECORDS}/patients/walk-in`,
+  WALKIN_PATIENT: `${ROUTES.MEDICAL_RECORDS}/patients/queue`,
+  
 
   // Appointments nested actions
   APPOINTMENTS_SEARCH: `${ROUTES.MEDICAL_RECORDS}/appointments/search`,

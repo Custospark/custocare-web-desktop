@@ -5,7 +5,7 @@ import { useSelector } from 'react-redux';
 
 import AuthMiddlewareRoute from './AuthMiddlwareRoute';
 import Layout from '../../shared/components/Navigation/Layout';
-import { ROUTES, PHARMACY_ROUTES, ACCOUNT_ROUTES } from './routeConstants';
+import { ROUTES, PHARMACY_ROUTES, ACCOUNT_ROUTES, MEDICAL_RECORDS_ROUTES } from './routeConstants';
 import type { RootState } from '../store/store';
 
 // ============================================================================
@@ -75,6 +75,9 @@ import Security from '../../modules/account/security/Security';
 import MyInvitations from '../../modules/account/invitations/MyInvitations';
 import Message from '../../modules/account/message/Message';
 import Appearance from '../../modules/account/apearance/Appearance';
+import FrontDesk from '../../modules/medical-records/ui/patients/FrontDesk';
+import PatientCreate from '../../modules/pharmacy/ui/dispensing/dispensing-medication/views/PatientCreate';
+import PatientQueue from '../../modules/pharmacy/ui/dispensing/dispensing-medication/views/PatientQueue';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -199,6 +202,57 @@ const accountRoutes = [
     <Route path="draft" element={<PlaceholderPanel title="Draft Messages" />} />
     <Route path="trash" element={<PlaceholderPanel title="Trash Messages" />} />
     <Route path="spam" element={<PlaceholderPanel title="Spam Messages" />} />
+  </Route>,
+  <Route
+    key="account-appearance"
+    path="appearance"
+    element={
+      <SuspenseWrapper variant="table">
+        <Appearance />
+      </SuspenseWrapper>
+    }
+  />,
+];
+const medicalRecordsRoutes = [
+  <Route
+    key="account-profile"
+    path="profile"
+    element={
+      <SuspenseWrapper variant="table">
+        <Profile />
+      </SuspenseWrapper>
+    }
+  />,
+  <Route
+    key="medical-records-frontdesk"
+    path="patients"
+    element={
+      <SuspenseWrapper variant="table">
+        <WithThemeProp Component={FrontDesk} />
+      </SuspenseWrapper>
+    }
+  >
+    <Route index element={<Navigate to={MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH} replace />} />
+    <Route path={MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH} element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={PatientSearch} />
+        </SuspenseWrapper>
+      } />
+    <Route path={MEDICAL_RECORDS_ROUTES.PATIENTS_REGISTER} element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={PatientCreate} />
+        </SuspenseWrapper>
+      } />
+    <Route path={MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE} element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={PatientQueue} />
+        </SuspenseWrapper>
+      } />
+    <Route path={MEDICAL_RECORDS_ROUTES.WALKIN_PATIENT} element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={CustomerWalkIn} />
+        </SuspenseWrapper>
+      } />
   </Route>,
   <Route
     key="account-appearance"
@@ -338,15 +392,6 @@ const coreRoutes = [
     }
   />,
   <Route
-    key="medical-records"
-    path={ROUTES.MEDICAL_RECORDS}
-    element={
-      <SuspenseWrapper variant="detail">
-        <MedicalRecordsModule />
-      </SuspenseWrapper>
-    }
-  />,
-  <Route
     key="nursing"
     path={ROUTES.NURSING}
     element={
@@ -449,6 +494,21 @@ export const ProtectedRoutes = () => [
                 element={<Navigate to={ACCOUNT_ROUTES.PROFILE} replace />} 
               />
               {accountRoutes}
+            </Route>
+            <Route
+              key="medical-records"
+              path={ROUTES.MEDICAL_RECORDS}
+              element={
+                <SuspenseWrapper variant="table">
+                  <MedicalRecordsModule />
+                </SuspenseWrapper>
+              }
+            >
+              <Route 
+                index 
+                element={<Navigate to={ROUTES.MEDICAL_RECORDS} replace />} 
+              />
+              {medicalRecordsRoutes}
             </Route>
 
             {/* =========================
