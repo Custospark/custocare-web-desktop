@@ -1,0 +1,1042 @@
+/**
+ * ============================================================================
+ * VISIT REACT QUERY HOOKS
+ * ============================================================================
+ * 
+ * React Query hooks for visit management operations in the healthcare
+ * facility management system. These hooks provide type-safe access to
+ * visit APIs with proper error handling, caching, and optimistic updates.
+ */
+
+import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
+import type { AxiosError } from 'axios';
+import { axiosInstance } from '../../../../../app/api/axiosConfig';
+import { useToast } from '../../../../../app/store/contexts/toast/useToast';
+import type { RootState } from '../../../../../app/store/store';
+import { useSelector } from 'react-redux';
+import { getActiveFacilityId, getStaffId, getActiveRoleCode } from '../../../../../app/store/utils/contextSelectors';
+import type {
+  ApiErrorResponse,
+  CancelVisitParams,
+  CreateVisitRequest,
+  DeleteVisitParams,
+  DischargeVisitParams,
+  EndClinicalCareParams,
+  QueueFilters,
+  QueueResponse,
+  RegisterVisitParams,
+  RestoreVisitParams,
+  StartClinicalCareParams,
+  UpdateVisitParams,
+  UpdateVisitPhaseParams,
+  UpdateVisitStatusParams,
+  Visit,
+  VisitFilters,
+  VisitListResponse,
+  VisitResponse,
+  VisitStatisticsResponse,
+  VisitUUID,
+  MutationCallbacks,
+  UpdateVisitPhaseMutationContext,
+  CreateVisitMutationContext,
+} from './visitTypes';
+import  {
+  VisitPhase,
+  VisitStatus,
+  PaymentStatus,
+  InsuranceVerificationStatus,DischargeDisposition,ModeOfArrival,VisitType
+} from './visitTypes';
+
+/* -------------------------------------------------------------------------- */
+/*                               QUERY KEYS                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Query key factory for visit-related queries
+ * Ensures proper cache invalidation and data synchronization
+ */
+export const visitKeys = {
+  all: ['visits'] as const,
+  lists: () => [...visitKeys.all, 'list'] as const,
+  list: (filters: VisitFilters) => [...visitKeys.lists(), filters] as const,
+  details: () => [...visitKeys.all, 'detail'] as const,
+  detail: (uuid: VisitUUID) => [...visitKeys.details(), uuid] as const,
+  queue: (filters: QueueFilters) => [...visitKeys.all, 'queue', filters] as const,
+  byFacility: (facilityId: number, filters: Partial<VisitFilters>) => 
+    [...visitKeys.all, 'facility', facilityId, filters] as const,
+  byPatient: (patientId: number, filters: Partial<VisitFilters>) => 
+    [...visitKeys.all, 'patient', patientId, filters] as const,
+  statistics: (facilityId?: number, dateRange?: string) => 
+    [...visitKeys.all, 'statistics', facilityId, dateRange] as const,
+  longWaiting: (minutesThreshold: number, facilityId?: number) => 
+    [...visitKeys.all, 'long-waiting', minutesThreshold, facilityId] as const,
+};
+
+/* -------------------------------------------------------------------------- */
+/*                              QUERY HOOKS                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Fetches paginated visits with optional filters
+ */
+export const useGetVisits = (
+  filters: VisitFilters = {},
+  options?: Omit<UseQueryOptions<VisitListResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<VisitListResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: visitKeys.list(filters),
+    queryFn: async () => {
+      const response = await axiosInstance.get<VisitListResponse>('/visits', {
+        params: filters,
+      });
+      return response.data;
+    },
+    ...options,
+  });
+};
+
+/**
+ * Fetches a single visit by UUID
+ */
+export const useGetVisitByUUID = (
+  uuid: VisitUUID,
+  options?: Omit<UseQueryOptions<VisitResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<VisitResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: visitKeys.detail(uuid),
+    queryFn: async () => {
+      const response = await axiosInstance.get<VisitResponse>(`/visits/${uuid}`);
+      return response.data;
+    },
+    enabled: !!uuid,
+    ...options,
+  });
+};
+
+/**
+ * Fetches staff-specific queue visits
+ */
+export const useGetMyQueue = (
+  filters: QueueFilters = {},
+  options?: Omit<UseQueryOptions<QueueResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
+) => {
+  const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
+  const staffId = useSelector((state: RootState) => getStaffId(state));
+
+  return useQuery<QueueResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: visitKeys.queue(filters),
+    queryFn: async () => {
+      if (!facilityId) {
+        throw new Error('No active facility selected');
+      }
+
+      const response = await axiosInstance.get<QueueResponse>('/visits/my-queue', {
+        params: filters,
+        headers: {
+          'X-Facility-Id': facilityId.toString(),
+        },
+      });
+      return response.data;
+    },
+    enabled: !!facilityId && !!staffId,
+    staleTime: 10000,
+    refetchInterval: 30000,
+    ...options,
+  });
+};
+
+/**
+ * Fetches visits by facility ID
+ */
+export const useGetVisitsByFacility = (
+  facilityId: number,
+  filters: Partial<VisitFilters> = {},
+  options?: Omit<UseQueryOptions<VisitListResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<VisitListResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: visitKeys.byFacility(facilityId, filters),
+    queryFn: async () => {
+      const response = await axiosInstance.get<VisitListResponse>(`/visits/facility/${facilityId}`, {
+        params: filters,
+      });
+      return response.data;
+    },
+    enabled: !!facilityId,
+    ...options,
+  });
+};
+
+/**
+ * Fetches visits by patient ID
+ */
+export const useGetVisitsByPatient = (
+  patientId: number,
+  filters: Partial<VisitFilters> = {},
+  options?: Omit<UseQueryOptions<VisitListResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<VisitListResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: visitKeys.byPatient(patientId, filters),
+    queryFn: async () => {
+      const response = await axiosInstance.get<VisitListResponse>(`/visits/patient/${patientId}`, {
+        params: filters,
+      });
+      return response.data;
+    },
+    enabled: !!patientId,
+    ...options,
+  });
+};
+
+/**
+ * Fetches visit statistics
+ * Note: The backend returns VisitStatisticsResponse, not VisitListResponse
+ */
+export const useGetVisitStatistics = (
+  facilityId?: number,
+  dateRange?: string,
+  options?: Omit<UseQueryOptions<VisitStatisticsResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<VisitStatisticsResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: visitKeys.statistics(facilityId, dateRange),
+    queryFn: async () => {
+      // Note: The endpoint returns VisitStatisticsResponse, not VisitListResponse
+      const response = await axiosInstance.get<{ success: boolean; message: string; data: VisitStatisticsResponse }>(
+        '/visits/reports/statistics',
+        { params: { facility_id: facilityId, date_range: dateRange } }
+      );
+      return response.data.data;
+    },
+    ...options,
+  });
+};
+
+/**
+ * Fetches visits with excessive waiting times
+ * Note: Based on backend spec, this returns a different response structure
+ */
+export const useGetLongWaitingVisits = (
+  minutesThreshold: number,
+  facilityId?: number,
+  options?: Omit<UseQueryOptions<VisitListResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery<VisitListResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: visitKeys.longWaiting(minutesThreshold, facilityId),
+    queryFn: async () => {
+      // Based on backend spec, this endpoint returns VisitListResponse
+      const response = await axiosInstance.get<VisitListResponse>('/visits/reports/long-waiting', {
+        params: { minutes_threshold: minutesThreshold, facility_id: facilityId },
+      });
+      return response.data;
+    },
+    enabled: !!minutesThreshold,
+    ...options,
+  });
+};
+
+/* -------------------------------------------------------------------------- */
+/*                             MUTATION HOOKS                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Creates a new visit
+ */
+export const useCreateVisit = (
+  callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
+
+  return useMutation<
+    VisitResponse, 
+    AxiosError<ApiErrorResponse>, 
+    CreateVisitRequest, 
+    CreateVisitMutationContext
+  >({
+    mutationFn: async (data: CreateVisitRequest) => {
+      const response = await axiosInstance.post<VisitResponse>('/visits', data);
+      return response.data;
+    },
+    onMutate: async (newVisit) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: visitKeys.lists() });
+      await queryClient.cancelQueries({ queryKey: visitKeys.queue({}) });
+
+      // Optimistically update the visit list
+      const previousVisits = queryClient.getQueryData<VisitListResponse>(visitKeys.lists());
+
+      if (previousVisits) {
+        queryClient.setQueryData<VisitListResponse>(visitKeys.lists(), (old) => {
+          if (!old) return old;
+          
+          // Create optimistic visit with correct types
+          const optimisticVisit: Visit = {
+            id: Date.now(), // Temporary ID
+            visit_uuid: `temp-${Date.now()}`,
+            facility_id: newVisit.facility_id,
+            patient_id: newVisit.patient_id,
+            visit_type: newVisit.visit_type,
+            visit_subtype: newVisit.visit_subtype || null,
+            acuity_score: newVisit.acuity_score || 3,
+            chief_complaints: newVisit.chief_complaints,
+            symptoms_on_arrival: newVisit.symptoms_on_arrival || null,
+            patient_reported_history: newVisit.patient_reported_history || null,
+            arrived_at: newVisit.arrived_at,
+            registered_at: newVisit.registered_at || null,
+            waiting_since: null,
+            clinical_care_started_at: null,
+            clinical_care_ended_at: null,
+            scheduled_time: newVisit.scheduled_time || null,
+            expected_duration_minutes: newVisit.expected_duration_minutes || null,
+            actual_duration_minutes: null,
+            mode_of_arrival: newVisit.mode_of_arrival || null,
+            accompanying_person: newVisit.accompanying_person || null,
+            is_walk_in: newVisit.is_walk_in || false,
+            referring_facility_id: newVisit.referring_facility_id || null,
+            referring_provider_staff_id: newVisit.referring_provider_staff_id || null,
+            external_referral_id: newVisit.external_referral_id || null,
+            referral_reason: newVisit.referral_reason || null,
+            current_department_id: newVisit.current_department_id || null,
+            current_phase: newVisit.current_phase || VisitPhase.REGISTRATION,
+            status: newVisit.status || VisitStatus.ACTIVE,
+            assigned_staff_id: null,
+            assigned_at: null,
+            insurance_preauth_id: newVisit.insurance_preauth_id || null,
+            insurance_verification_status: newVisit.insurance_verification_status || InsuranceVerificationStatus.NOT_VERIFIED,
+            insurance_verified_at: null,
+            estimated_total_charges: newVisit.estimated_total_charges || null,
+            patient_estimated_responsibility: newVisit.patient_estimated_responsibility || null,
+            payment_status: newVisit.payment_status || PaymentStatus.NOT_BILLED,
+            vital_signs_summary: null,
+            diagnosis_codes: null,
+            procedure_codes: null,
+            medications_administered: null,
+            discharged_at: null,
+            discharged_by_staff_id: null,
+            discharge_disposition: null,
+            discharge_instructions: null,
+            discharge_medications: null,
+            followup_scheduled_at: null,
+            followup_provider_staff_id: null,
+            sentinel_event_flagged: false,
+            safety_alerts: null,
+            requires_interpreter: newVisit.requires_interpreter || false,
+            interpreter_language: newVisit.interpreter_language || null,
+            isolation_required: newVisit.isolation_required || false,
+            isolation_type: newVisit.isolation_type || null,
+            cancellation_reason: null,
+            cancelled_at: null,
+            scheduled_appointment_id: newVisit.scheduled_appointment_id || null,
+            metadata: newVisit.metadata || null,
+            created_by_staff_id: null,
+            updated_by_staff_id: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            deleted_at: null,
+          };
+
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              data: [optimisticVisit, ...old.data], // Fixed: old.data.data instead of old.data
+            },
+          };
+        });
+      }
+
+      return { previousVisits };
+    },
+    onSuccess: (data) => {
+      const message = data.message || 'Visit created successfully!';
+      showToast('success', message, 5000);
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
+      if (facilityId) {
+        queryClient.invalidateQueries({ queryKey: visitKeys.byFacility(facilityId, {}) });
+      }
+      
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error, variables, context) => {
+      // Rollback optimistic update
+      if (context?.previousVisits) {
+        queryClient.setQueryData(visitKeys.lists(), context.previousVisits);
+      }
+
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to create visit.';
+      let errorDetails = '';
+      
+      if (error.response?.data?.errors) {
+        errorDetails = Object.entries(error.response.data.errors)
+          .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
+          .join(' | ');
+      }
+
+      const displayMessage = errorDetails ? `${apiMessage} (${errorDetails})` : apiMessage;
+      showToast('error', displayMessage, 8000);
+      callbacks.onError?.(error);
+    },
+    onSettled: () => {
+      callbacks.onSettled?.();
+    },
+  });
+};
+
+/**
+ * Updates an existing visit
+ */
+export const useUpdateVisit = (
+  callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation<
+    VisitResponse, 
+    AxiosError<ApiErrorResponse>, 
+    UpdateVisitParams, 
+    UpdateVisitPhaseMutationContext
+  >({
+    mutationFn: async ({ uuid, data }: UpdateVisitParams) => {
+      const response = await axiosInstance.put<VisitResponse>(`/visits/${uuid}`, data);
+      return response.data;
+    },
+    onMutate: async ({ uuid, data }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: visitKeys.detail(uuid) });
+      await queryClient.cancelQueries({ queryKey: visitKeys.lists() });
+
+      // Optimistically update the visit
+      const previousVisit = queryClient.getQueryData<VisitResponse>(visitKeys.detail(uuid));
+
+      if (previousVisit) {
+        queryClient.setQueryData<VisitResponse>(visitKeys.detail(uuid), (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              ...data,
+              updated_at: new Date().toISOString(),
+            },
+          };
+        });
+      }
+
+      return { previousVisit };
+    },
+    onSuccess: (data) => {
+      const message = data.message || 'Visit updated successfully!';
+      showToast('success', message, 5000);
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
+      queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
+      
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error, { uuid }, context) => {
+      // Rollback optimistic update
+      if (context?.previousVisit) {
+        queryClient.setQueryData(visitKeys.detail(uuid), context.previousVisit);
+      }
+
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to update visit.';
+      let errorDetails = '';
+      
+      if (error.response?.data?.errors) {
+        errorDetails = Object.entries(error.response.data.errors)
+          .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
+          .join(' | ');
+      }
+
+      const displayMessage = errorDetails ? `${apiMessage} (${errorDetails})` : apiMessage;
+      showToast('error', displayMessage, 8000);
+      callbacks.onError?.(error);
+    },
+    onSettled: () => {
+      callbacks.onSettled?.();
+    },
+  });
+};
+
+/**
+ * Updates the phase of a visit
+ */
+export const useUpdateVisitPhase = (
+  callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const roleCode = useSelector((state: RootState) => getActiveRoleCode(state));
+
+  return useMutation<
+    VisitResponse, 
+    AxiosError<ApiErrorResponse>, 
+    UpdateVisitPhaseParams, 
+    UpdateVisitPhaseMutationContext
+  >({
+    mutationFn: async ({ uuid, data }: UpdateVisitPhaseParams) => {
+      const response = await axiosInstance.post<VisitResponse>(`/visits/${uuid}/phase`, data);
+      return response.data;
+    },
+    onMutate: async ({ uuid, data }) => {
+      // Validate role permissions if roleCode is available
+      if (roleCode && data.phase) {
+        // You could add role-based validation logic here
+      }
+
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: visitKeys.detail(uuid) });
+      await queryClient.cancelQueries({ queryKey: visitKeys.queue({}) });
+
+      // Optimistically update the visit
+      const previousVisit = queryClient.getQueryData<VisitResponse>(visitKeys.detail(uuid));
+
+      if (previousVisit) {
+        queryClient.setQueryData<VisitResponse>(visitKeys.detail(uuid), (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              current_phase: data.phase,
+              updated_at: new Date().toISOString(),
+            },
+          };
+        });
+      }
+
+      return { previousVisit };
+    },
+    onSuccess: (data) => {
+      const message = `Visit phase updated to ${data.data.current_phase}`;
+      showToast('success', message, 5000);
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
+      queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
+      queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
+      
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error, { uuid }, context) => {
+      // Rollback optimistic update
+      if (context?.previousVisit) {
+        queryClient.setQueryData(visitKeys.detail(uuid), context.previousVisit);
+      }
+
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to update visit phase.';
+      showToast('error', apiMessage, 8000);
+      callbacks.onError?.(error);
+    },
+    onSettled: () => {
+      callbacks.onSettled?.();
+    },
+  });
+};
+
+/**
+ * Updates the status of a visit
+ */
+export const useUpdateVisitStatus = (
+  callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation<VisitResponse, AxiosError<ApiErrorResponse>, UpdateVisitStatusParams>({
+    mutationFn: async ({ uuid, data }: UpdateVisitStatusParams) => {
+      const response = await axiosInstance.post<VisitResponse>(`/visits/${uuid}/status`, data);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const message = `Visit status updated to ${data.data.status}`;
+      showToast('success', message, 5000);
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
+      queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
+      queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
+      
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to update visit status.';
+      showToast('error', apiMessage, 8000);
+      callbacks.onError?.(error);
+    },
+    onSettled: () => {
+      callbacks.onSettled?.();
+    },
+  });
+};
+
+/**
+ * Discharges a visit
+ */
+export const useDischargeVisit = (
+  callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation<VisitResponse, AxiosError<ApiErrorResponse>, DischargeVisitParams>({
+    mutationFn: async ({ uuid, data }: DischargeVisitParams) => {
+      const response = await axiosInstance.post<VisitResponse>(`/visits/${uuid}/discharge`, data);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const message = `Patient discharged with ${data.data.discharge_disposition} disposition`;
+      showToast('success', message, 5000);
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
+      queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
+      queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
+      
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to discharge visit.';
+      showToast('error', apiMessage, 8000);
+      callbacks.onError?.(error);
+    },
+    onSettled: () => {
+      callbacks.onSettled?.();
+    },
+  });
+};
+
+/**
+ * Registers a visit (post-arrival processing)
+ */
+export const useRegisterVisit = (
+  callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation<VisitResponse, AxiosError<ApiErrorResponse>, RegisterVisitParams>({
+    mutationFn: async ({ uuid, data }: RegisterVisitParams) => {
+      const response = await axiosInstance.post<VisitResponse>(`/visits/${uuid}/register`, data);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const message = 'Visit registered successfully!';
+      showToast('success', message, 5000);
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
+      queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
+      
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to register visit.';
+      showToast('error', apiMessage, 8000);
+      callbacks.onError?.(error);
+    },
+    onSettled: () => {
+      callbacks.onSettled?.();
+    },
+  });
+};
+
+/**
+ * Starts clinical care for a visit
+ */
+export const useStartClinicalCare = (
+  callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation<VisitResponse, AxiosError<ApiErrorResponse>, StartClinicalCareParams>({
+    mutationFn: async ({ uuid }: StartClinicalCareParams) => {
+      const response = await axiosInstance.post<VisitResponse>(`/visits/${uuid}/clinical-care/start`);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const message = 'Clinical care started!';
+      showToast('success', message, 5000);
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
+      queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
+      
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to start clinical care.';
+      showToast('error', apiMessage, 8000);
+      callbacks.onError?.(error);
+    },
+    onSettled: () => {
+      callbacks.onSettled?.();
+    },
+  });
+};
+
+/**
+ * Ends clinical care for a visit
+ */
+export const useEndClinicalCare = (
+  callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation<VisitResponse, AxiosError<ApiErrorResponse>, EndClinicalCareParams>({
+    mutationFn: async ({ uuid }: EndClinicalCareParams) => {
+      const response = await axiosInstance.post<VisitResponse>(`/visits/${uuid}/clinical-care/end`);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const message = 'Clinical care ended!';
+      showToast('success', message, 5000);
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
+      queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
+      
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to end clinical care.';
+      showToast('error', apiMessage, 8000);
+      callbacks.onError?.(error);
+    },
+    onSettled: () => {
+      callbacks.onSettled?.();
+    },
+  });
+};
+
+/**
+ * Cancels a visit
+ */
+export const useCancelVisit = (
+  callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation<VisitResponse, AxiosError<ApiErrorResponse>, CancelVisitParams>({
+    mutationFn: async ({ uuid, data }: CancelVisitParams) => {
+      const response = await axiosInstance.post<VisitResponse>(`/visits/${uuid}/cancel`, data);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const message = 'Visit cancelled successfully!';
+      showToast('success', message, 5000);
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
+      queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
+      queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
+      
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to cancel visit.';
+      showToast('error', apiMessage, 8000);
+      callbacks.onError?.(error);
+    },
+    onSettled: () => {
+      callbacks.onSettled?.();
+    },
+  });
+};
+
+/**
+ * Deletes a visit (soft delete)
+ */
+export const useDeleteVisit = (
+  callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation<VisitResponse, AxiosError<ApiErrorResponse>, DeleteVisitParams>({
+    mutationFn: async ({ uuid }: DeleteVisitParams) => {
+      const response = await axiosInstance.delete<VisitResponse>(`/visits/${uuid}`);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const message = 'Visit deleted successfully!';
+      showToast('success', message, 5000);
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
+      
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to delete visit.';
+      showToast('error', apiMessage, 8000);
+      callbacks.onError?.(error);
+    },
+    onSettled: () => {
+      callbacks.onSettled?.();
+    },
+  });
+};
+
+/**
+ * Restores a soft-deleted visit
+ */
+export const useRestoreVisit = (
+  callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation<VisitResponse, AxiosError<ApiErrorResponse>, RestoreVisitParams>({
+    mutationFn: async ({ uuid }: RestoreVisitParams) => {
+      const response = await axiosInstance.post<VisitResponse>(`/visits/${uuid}/restore`);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const message = 'Visit restored successfully!';
+      showToast('success', message, 5000);
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
+      
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to restore visit.';
+      showToast('error', apiMessage, 8000);
+      callbacks.onError?.(error);
+    },
+    onSettled: () => {
+      callbacks.onSettled?.();
+    },
+  });
+};
+
+/* -------------------------------------------------------------------------- */
+/*                              UTILITY FUNCTIONS                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Extracts error message from API error
+ */
+export const extractErrorMessage = (
+  error: AxiosError<ApiErrorResponse>,
+  fallbackMessage = 'An unexpected error occurred.'
+): string => {
+  return error.response?.data?.message || error.message || fallbackMessage;
+};
+
+/**
+ * Formats validation errors for display
+ */
+export const formatValidationErrors = (errors?: Record<string, string[]>): string => {
+  if (!errors || Object.keys(errors).length === 0) {
+    return '';
+  }
+
+  return Object.entries(errors)
+    .map(([field, messages]) => {
+      const fieldName = field.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+      return `${fieldName}: ${messages.join(', ')}`;
+    })
+    .join(' | ');
+};
+
+/**
+ * Calculates wait time in minutes
+ */
+export const calculateWaitTime = (waitingSince: string | null): number | null => {
+  if (!waitingSince) return null;
+  
+  const waitStart = new Date(waitingSince);
+  const now = new Date();
+  
+  if (isNaN(waitStart.getTime())) return null;
+  
+  return Math.floor((now.getTime() - waitStart.getTime()) / (1000 * 60));
+};
+
+/**
+ * Determines if a visit is overdue based on acuity score
+ */
+export const isVisitOverdue = (acuityScore: number, waitingSince: string | null): boolean => {
+  const waitTime = calculateWaitTime(waitingSince);
+  if (waitTime === null) return false;
+  
+  // Max wait times based on acuity score
+  const maxWaitTimes: Record<number, number> = {
+    1: 0,   // Resuscitation - immediate
+    2: 15,  // Emergent - 15 minutes
+    3: 60,  // Urgent - 1 hour
+    4: 120, // Semi-urgent - 2 hours
+    5: 240, // Non-urgent - 4 hours
+  };
+  
+  const maxWait = maxWaitTimes[acuityScore] || 240;
+  return waitTime > maxWait;
+};
+
+/**
+ * Gets phase display name
+ */
+export const getPhaseDisplayName = (phase: VisitPhase): string => {
+  const phaseMap: Record<VisitPhase, string> = {
+    [VisitPhase.REGISTRATION]: 'Registration',
+    [VisitPhase.WAITING_TRIAGE]: 'Waiting for Triage',
+    [VisitPhase.TRIAGE]: 'Triage',
+    [VisitPhase.WAITING_PROVIDER]: 'Waiting for Provider',
+    [VisitPhase.CONSULTATION]: 'Consultation',
+    [VisitPhase.DIAGNOSTIC_TESTS]: 'Diagnostic Tests',
+    [VisitPhase.AWAITING_RESULTS]: 'Awaiting Results',
+    [VisitPhase.TREATMENT]: 'Treatment',
+    [VisitPhase.PROCEDURES]: 'Procedures',
+    [VisitPhase.OBSERVATION]: 'Observation',
+    [VisitPhase.ADMISSION_PENDING]: 'Admission Pending',
+    [VisitPhase.BILLING]: 'Billing',
+    [VisitPhase.DISCHARGE_PENDING]: 'Discharge Pending',
+    [VisitPhase.DISCHARGED]: 'Discharged',
+    [VisitPhase.LEFT_WITHOUT_BEING_SEEN]: 'Left Without Being Seen',
+    [VisitPhase.LEFT_AGAINST_MEDICAL_ADVICE]: 'Left Against Medical Advice',
+    [VisitPhase.TRANSFERRED]: 'Transferred',
+    [VisitPhase.ADMITTED]: 'Admitted',
+    [VisitPhase.EXPIRED]: 'Expired',
+  };
+  
+  return phaseMap[phase] || phase.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+};
+
+/**
+ * Gets status color for UI display
+ */
+export const getStatusColor = (status: VisitStatus): string => {
+  const colorMap: Record<VisitStatus, string> = {
+    [VisitStatus.ACTIVE]: 'bg-blue-100 text-blue-800',
+    [VisitStatus.IN_PROGRESS]: 'bg-yellow-100 text-yellow-800',
+    [VisitStatus.COMPLETED]: 'bg-green-100 text-green-800',
+    [VisitStatus.CANCELLED]: 'bg-red-100 text-red-800',
+    [VisitStatus.NO_SHOW]: 'bg-gray-100 text-gray-800',
+  };
+  
+  return colorMap[status] || 'bg-gray-100 text-gray-800';
+};
+
+/**
+ * Gets type display name
+ */
+export const getTypeDisplayName = (type: VisitType): string => {
+  const typeMap: Record<VisitType, string> = {
+    [VisitType.OUTPATIENT]: 'Outpatient',
+    [VisitType.INPATIENT]: 'Inpatient',
+    [VisitType.EMERGENCY]: 'Emergency',
+    [VisitType.URGENT_CARE]: 'Urgent Care',
+    [VisitType.VIRTUAL_TELEHEALTH]: 'Virtual Telehealth',
+    [VisitType.HOME_HEALTH]: 'Home Health',
+    [VisitType.OBSERVATION]: 'Observation',
+    [VisitType.DAY_SURGERY]: 'Day Surgery',
+    [VisitType.CONSULTATION]: 'Consultation',
+    [VisitType.FOLLOWUP]: 'Follow-up',
+    [VisitType.PREVENTIVE_WELLNESS]: 'Preventive Wellness',
+  };
+  
+  return typeMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+};
+
+/**
+ * Gets mode of arrival display name
+ */
+export const getModeOfArrivalDisplayName = (mode: ModeOfArrival | null): string => {
+  if (!mode) return 'Unknown';
+  
+  const modeMap: Record<ModeOfArrival, string> = {
+    [ModeOfArrival.WALK_IN]: 'Walk-in',
+    [ModeOfArrival.AMBULANCE]: 'Ambulance',
+    [ModeOfArrival.PRIVATE_VEHICLE]: 'Private Vehicle',
+    [ModeOfArrival.POLICE_TRANSPORT]: 'Police Transport',
+    [ModeOfArrival.AIR_AMBULANCE]: 'Air Ambulance',
+    [ModeOfArrival.WHEELCHAIR_TRANSPORT]: 'Wheelchair Transport',
+    [ModeOfArrival.TRANSFER_FROM_FACILITY]: 'Transfer from Facility',
+  };
+  
+  return modeMap[mode] || mode.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+};
+
+/**
+ * Gets discharge disposition display name
+ */
+export const getDischargeDispositionDisplayName = (disposition: DischargeDisposition | null): string => {
+  if (!disposition) return 'Not Discharged';
+  
+  const dispositionMap: Record<DischargeDisposition, string> = {
+    [DischargeDisposition.HOME]: 'Home',
+    [DischargeDisposition.ADMITTED_TO_HOSPITAL]: 'Admitted to Hospital',
+    [DischargeDisposition.TRANSFERRED_TO_FACILITY]: 'Transferred to Facility',
+    [DischargeDisposition.LEFT_AMA]: 'Left Against Medical Advice',
+    [DischargeDisposition.LEFT_WITHOUT_SEEN]: 'Left Without Being Seen',
+    [DischargeDisposition.EXPIRED]: 'Expired',
+    [DischargeDisposition.HOSPICE]: 'Hospice',
+    [DischargeDisposition.SKILLED_NURSING_FACILITY]: 'Skilled Nursing Facility',
+    [DischargeDisposition.REHABILITATION_FACILITY]: 'Rehabilitation Facility',
+    [DischargeDisposition.PSYCHIATRIC_FACILITY]: 'Psychiatric Facility',
+    [DischargeDisposition.LAW_ENFORCEMENT_CUSTODY]: 'Law Enforcement Custody',
+  };
+  
+  return dispositionMap[disposition] || disposition.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+};
+
+/* -------------------------------------------------------------------------- */
+/*                            EXPORT ALL HOOKS                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Main export object containing all visit-related hooks and utilities
+ */
+const visitQueries = {
+  // Query keys
+  visitKeys,
+  
+  // Query hooks
+  useGetVisits,
+  useGetVisitByUUID,
+  useGetMyQueue,
+  useGetVisitsByFacility,
+  useGetVisitsByPatient,
+  useGetVisitStatistics,
+  useGetLongWaitingVisits,
+  
+  // Mutation hooks
+  useCreateVisit,
+  useUpdateVisit,
+  useUpdateVisitPhase,
+  useUpdateVisitStatus,
+  useDischargeVisit,
+  useRegisterVisit,
+  useStartClinicalCare,
+  useEndClinicalCare,
+  useCancelVisit,
+  useDeleteVisit,
+  useRestoreVisit,
+  
+  // Utilities
+  extractErrorMessage,
+  formatValidationErrors,
+  calculateWaitTime,
+  isVisitOverdue,
+  getPhaseDisplayName,
+  getStatusColor,
+  getTypeDisplayName,
+  getModeOfArrivalDisplayName,
+  getDischargeDispositionDisplayName,
+};
+
+export default visitQueries;

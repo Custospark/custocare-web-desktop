@@ -1212,7 +1212,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                   </>
                 ) : (
                   <>
-                    <UserPlus className="w-5 h-5" />
+                    <UserPlus className="w-5 h-5 cursor-pointer" />
                     Create Patient
                   </>
                 )}
