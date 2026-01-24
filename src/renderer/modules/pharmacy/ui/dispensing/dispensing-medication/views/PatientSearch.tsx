@@ -331,7 +331,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
                 </div>
                 <div className={cn('p-3 rounded-lg', isDark ? 'bg-gray-700/30' : 'bg-gray-50')}>
                   <div className={cn('text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>Phone Number</div>
-                  <div className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>Any format with digits</div>
+                  <div className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>format [Country code][other digits] eg +256756666...</div>
                 </div>
               </div>
             </div>
