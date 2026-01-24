@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { UserPlus, AlertCircle, CheckCircle, Copy, Download, X, Info } from 'lucide-react';
+import { UserPlus, AlertCircle, CheckCircle, Copy, Download, X, Info, UserCheck } from 'lucide-react';
 import type { AxiosError } from 'axios';
 
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
@@ -19,6 +19,8 @@ import {
   isPatientCreateConflictResponse,
   isPossibleDuplicateResponse,
   isExistingUserResponse,
+  isPatientCreateSuccessResponse,
+  isNewPatientCreatedResponse,
   DuplicateAction,
   ExistingUserAction,
   formatPatientName,
@@ -87,6 +89,7 @@ interface PatientNumberModalProps {
   patientName: string;
   onProceed: () => void;
   onClose?: () => void;
+  isNewPatient?: boolean;
 }
 
 const PatientNumberModal: React.FC<PatientNumberModalProps> = ({ 
@@ -94,7 +97,8 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
   patientNumber, 
   patientName, 
   onProceed,
-  onClose 
+  onClose,
+  isNewPatient = true
 }) => {
   const isDark = theme === 'dark';
   const { showToast } = useToast();
@@ -208,22 +212,30 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
           <div 
             className={cn(
               'w-20 h-20 rounded-full flex items-center justify-center mb-4',
-              isDark ? 'bg-green-900/30' : 'bg-green-100'
+              isNewPatient 
+                ? (isDark ? 'bg-green-900/30' : 'bg-green-100')
+                : (isDark ? 'bg-blue-900/30' : 'bg-blue-100')
             )}
             role="img"
-            aria-label="Success"
+            aria-label={isNewPatient ? "Success" : "Information"}
           >
-            <CheckCircle className={cn('w-12 h-12', isDark ? 'text-green-400' : 'text-green-600')} />
+            {isNewPatient ? (
+              <CheckCircle className={cn('w-12 h-12', isDark ? 'text-green-400' : 'text-green-600')} />
+            ) : (
+              <UserCheck className={cn('w-12 h-12', isDark ? 'text-blue-400' : 'text-blue-600')} />
+            )}
           </div>
 
           <h2 
             id="patient-success-modal-title"
             className={cn('text-2xl font-bold mb-2 text-center', isDark ? 'text-white' : 'text-gray-900')}
           >
-            Patient Created Successfully
+            {isNewPatient ? 'Patient Created Successfully' : 'Patient Record Found'}
           </h2>
           <p className={cn('text-center mb-6', isDark ? 'text-gray-400' : 'text-gray-600')}>
-            Please provide this patient number to the patient
+            {isNewPatient 
+              ? 'Please provide this patient number to the patient' 
+              : 'This patient already exists in the system'}
           </p>
 
           <div className={cn(
@@ -259,6 +271,15 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
                 {patientNumber}
               </div>
             </div>
+
+            {!isNewPatient && (
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className={cn('text-sm text-center', isDark ? 'text-blue-300' : 'text-blue-600')}>
+                  <Info className="w-4 h-4 inline mr-1" />
+                  Existing patient record linked successfully
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="w-full space-y-3">
@@ -421,6 +442,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
 }) => {
   const isDark = theme === 'dark';
   const { confirm } = useConfirm();
+  const { showToast } = useToast();
   
   const [form, setForm] = useState<Partial<CreatePatientRequest>>({
     first_name: initialValues?.first_name ?? '',
@@ -433,8 +455,9 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
 
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [formError, setFormError] = useState<string | null>(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
   const [createdPatient, setCreatedPatient] = useState<PatientSearchResult | null>(null);
+  const [isNewPatient, setIsNewPatient] = useState<boolean>(true);
   const [conflict, setConflict] = useState<ConflictState | null>(null);
   
   const lastSubmittedDataRef = useRef<CreatePatientRequest | null>(null);
@@ -445,11 +468,25 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
 
   const createMutation = useCreatePatientByStaff({
     onSuccess: async (response, variables) => {
-      if (response.success && response.data) {
-        setCreatedPatient(response.data);
-        setShowSuccessModal(true);
+      if (isPatientCreateSuccessResponse(response)) {
+        // Handle both new patient creation and existing patient cases
+        const isNew = isNewPatientCreatedResponse(response);
+        const patient = response.data;
+        
+        setCreatedPatient(patient);
+        setIsNewPatient(isNew);
+        setShowResultModal(true);
         lastSubmittedDataRef.current = null;
+        
+        // Show appropriate toast based on whether it's new or existing
+        if (isNew) {
+          showToast('success', 'Patient created successfully', 3000);
+        } else {
+          showToast('info', 'Existing patient record found and linked', 3000);
+        }
+        
       } else if (isPatientCreateConflictResponse(response)) {
+        // Handle conflict cases (duplicates or existing user)
         setConflict({
           type: isPossibleDuplicateResponse(response) ? 'duplicate' : 'existing_user',
           data: {
@@ -459,6 +496,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
           originalData: variables,
         });
         
+        // Attempt automatic resolution for conflicts
         const resolved = await handleConflictResolution(response, variables);
         if (!resolved) {
           setFormError(
@@ -601,13 +639,13 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
 
   const handleProceed = useCallback(() => {
     if (createdPatient) {
-      setShowSuccessModal(false);
+      setShowResultModal(false);
       onCreated?.(createdPatient);
     }
   }, [createdPatient, onCreated]);
 
   const handleSuccessModalClose = useCallback(() => {
-    setShowSuccessModal(false);
+    setShowResultModal(false);
     if (onCancel) {
       onCancel();
     }
@@ -801,7 +839,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
 
               <FormInput
                 theme={theme}
-                label="Email(Optional if Phone provided)"
+                label="Email (Optional if phone provided)"
                 value={form.email ?? ''}
                 onChange={(value) => handleFieldChange('email', value)}
                 error={validation.errors.email?.[0]}
@@ -813,7 +851,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
 
               <FormInput
                 theme={theme}
-                label="Phone(Optional if email provided)"
+                label="Phone (Optional if email provided)"
                 value={form.phone ?? ''}
                 onChange={(value) => handleFieldChange('phone', value)}
                 disabled={isSubmitting}
@@ -918,13 +956,14 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
         </div>
       </div>
 
-      {showSuccessModal && createdPatient && (
+      {showResultModal && createdPatient && (
         <PatientNumberModal
           theme={theme}
           patientNumber={createdPatient.patient_number}
           patientName={formatPatientName(createdPatient)}
           onProceed={handleProceed}
           onClose={handleSuccessModalClose}
+          isNewPatient={isNewPatient}
         />
       )}
     </>
