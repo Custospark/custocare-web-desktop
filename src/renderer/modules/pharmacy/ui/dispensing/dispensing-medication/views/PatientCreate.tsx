@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { UserPlus, AlertCircle, CheckCircle, Copy, Download, X } from 'lucide-react';
+import { UserPlus, AlertCircle, CheckCircle, Copy, Download, X, Info } from 'lucide-react';
 import type { AxiosError } from 'axios';
 
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
@@ -41,7 +41,6 @@ export interface PatientCreateProps {
 function errorToMessage(error: unknown): string {
   if (!error) return 'An unexpected error occurred';
   
-  // Handle AxiosError
   if (typeof error === 'object' && 'isAxiosError' in error) {
     const axiosErr = error as AxiosError<ApiErrorResponse>;
     const apiMsg = axiosErr.response?.data?.message;
@@ -50,7 +49,6 @@ function errorToMessage(error: unknown): string {
       return apiMsg;
     }
     
-    // Check for validation errors
     const validationErrors = axiosErr.response?.data?.errors;
     if (validationErrors && typeof validationErrors === 'object') {
       const firstErrorKey = Object.keys(validationErrors)[0];
@@ -63,21 +61,19 @@ function errorToMessage(error: unknown): string {
       }
     }
     
-    // Fallback to status-based messages
     if (axiosErr.response?.status === 409) {
-      return 'A conflicting patient or user record already exists';
+      return 'A patient or user with similar information already exists.';
     }
     
     if (axiosErr.response?.status === 422) {
-      return 'Please check your input and try again';
+      return 'Please check your input and try again.';
     }
     
     if (axiosErr.response?.status === 500) {
-      return 'Server error occurred while creating patient';
+      return 'Server error occurred. Please try again.';
     }
   }
   
-  // Handle standard Error objects
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message;
   }
@@ -105,7 +101,6 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<number | null>(null);
 
-  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (copyTimerRef.current !== null) {
@@ -125,16 +120,13 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
       setCopied(true);
       showToast('success', 'Patient number copied to clipboard', 3000);
       
-      // Clear previous timer
       if (copyTimerRef.current !== null) {
         window.clearTimeout(copyTimerRef.current);
       }
       
-      // Reset copied state after 3 seconds
       copyTimerRef.current = window.setTimeout(() => setCopied(false), 3000);
     } catch (err) {
         console.log(err);
-      // Fallback for older browsers
       try {
         const textArea = document.createElement('textarea');
         textArea.value = patientNumber;
@@ -196,7 +188,6 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
       aria-labelledby="patient-success-modal-title"
     >
       <div className={cn('relative w-full max-w-md rounded-2xl shadow-2xl', isDark ? 'bg-gray-800' : 'bg-white')}>
-        {/* Close button */}
         {onClose && (
           <button
             type="button"
@@ -213,7 +204,6 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
           </button>
         )}
 
-        {/* Success Icon */}
         <div className="flex flex-col items-center p-8">
           <div 
             className={cn(
@@ -236,7 +226,6 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
             Please provide this patient number to the patient
           </p>
 
-          {/* Patient Details */}
           <div className={cn(
             'w-full rounded-xl border p-6 mb-6', 
             isDark ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'
@@ -272,7 +261,6 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="w-full space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -340,7 +328,6 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
 
 PatientNumberModal.displayName = 'PatientNumberModal';
 
-// Type for conflict resolution state
 type ConflictType = 'duplicate' | 'existing_user' | null;
 
 interface ConflictState {
@@ -352,7 +339,6 @@ interface ConflictState {
   originalData: CreatePatientRequest;
 }
 
-// Memoized form input component to prevent unnecessary re-renders
 interface FormInputProps {
   theme: Theme;
   label: string;
@@ -363,6 +349,7 @@ interface FormInputProps {
   type?: string;
   required?: boolean;
   placeholder?: string;
+  touched?: boolean;
 }
 
 const FormInput = React.memo<FormInputProps>(({
@@ -375,9 +362,11 @@ const FormInput = React.memo<FormInputProps>(({
   type = 'text',
   required = false,
   placeholder,
+  touched = false,
 }) => {
   const isDark = theme === 'dark';
   const inputId = React.useId();
+  const hasError = !!error && touched;
 
   return (
     <div>
@@ -400,17 +389,18 @@ const FormInput = React.memo<FormInputProps>(({
           isDark 
             ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500' 
             : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
-          error && (isDark ? 'border-red-500' : 'border-red-300')
+          hasError && (isDark ? 'border-red-500' : 'border-red-300')
         )}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${inputId}-error` : undefined}
+        aria-invalid={hasError}
+        aria-describedby={hasError ? `${inputId}-error` : undefined}
       />
-      {error && (
+      {hasError && (
         <p 
           id={`${inputId}-error`}
-          className={cn('text-xs mt-1', isDark ? 'text-red-300' : 'text-red-600')}
+          className={cn('text-xs mt-1 flex items-center gap-1', isDark ? 'text-red-300' : 'text-red-600')}
           role="alert"
         >
+          <AlertCircle className="w-3 h-3" />
           {error}
         </p>
       )}
@@ -441,36 +431,25 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
     biological_sex: initialValues?.biological_sex ?? BiologicalSex.UNKNOWN,
   });
 
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [formError, setFormError] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdPatient, setCreatedPatient] = useState<PatientSearchResult | null>(null);
   const [conflict, setConflict] = useState<ConflictState | null>(null);
   
-  // Store the last submitted data for conflict resolution
   const lastSubmittedDataRef = useRef<CreatePatientRequest | null>(null);
 
   const validation = useMemo(() => validatePatientFormData(form), [form]);
 
-  // Reset conflict state when form changes
-//   useEffect(() => {
-//     if (conflict) {
-//       setConflict(null);
-//     }
-//   }, [form]);
-
-  // Create a ref for the mutate function to avoid circular dependency
   const mutateRef = useRef<((data: CreatePatientRequest) => void) | null>(null);
 
-  // Define the mutation first with a ref to handle conflict resolution
   const createMutation = useCreatePatientByStaff({
     onSuccess: async (response, variables) => {
       if (response.success && response.data) {
-        // Successful creation
         setCreatedPatient(response.data);
         setShowSuccessModal(true);
         lastSubmittedDataRef.current = null;
       } else if (isPatientCreateConflictResponse(response)) {
-        // Store conflict and attempt resolution
         setConflict({
           type: isPossibleDuplicateResponse(response) ? 'duplicate' : 'existing_user',
           data: {
@@ -480,10 +459,8 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
           originalData: variables,
         });
         
-        // Attempt automatic resolution
         const resolved = await handleConflictResolution(response, variables);
         if (!resolved) {
-          // User cancelled conflict resolution
           setFormError(
             isPossibleDuplicateResponse(response) 
               ? 'Patient creation cancelled due to duplicate detection.' 
@@ -495,20 +472,16 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
     onError: (error) => {
       const errorMessage = errorToMessage(error);
       setFormError(errorMessage);
-      
-      // Clear any existing conflict
       setConflict(null);
     },
   });
 
-  // Update the ref when mutation changes
   useEffect(() => {
     mutateRef.current = createMutation.mutate;
   }, [createMutation.mutate]);
 
   const isSubmitting = createMutation.isPending;
 
-  // Define handleConflictResolution AFTER createMutation is declared
   const handleConflictResolution = useCallback(async (
     response: PatientCreateResponse, 
     originalData: CreatePatientRequest
@@ -572,23 +545,25 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
     [isDark]
   );
 
-  const setField = useCallback(<K extends keyof CreatePatientRequest>(key: K, value: CreatePatientRequest[K]) => {
-    setForm(prev => {
-      const newForm = { ...prev, [key]: value };
-      return newForm;
-    });
+  const handleFieldChange = useCallback(<K extends keyof CreatePatientRequest>(key: K, value: CreatePatientRequest[K]) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+    setTouchedFields(prev => new Set(prev).add(key));
     setFormError(null);
   }, []);
 
+  const markAllFieldsTouched = useCallback(() => {
+    setTouchedFields(new Set(['first_name', 'last_name', 'email', 'phone', 'date_of_birth', 'biological_sex']));
+  }, []);
+
   const submit = useCallback(async () => {
-    // Validate form
+    markAllFieldsTouched();
+    
     const v = validatePatientFormData(form);
     if (!v.isValid) {
       const firstKey = Object.keys(v.errors)[0] as keyof typeof v.errors | undefined;
       const firstMsg = firstKey ? v.errors[firstKey]?.[0] : 'Please correct the form errors.';
       setFormError(firstMsg ?? 'Please correct the form errors.');
       
-      // Scroll to first error
       setTimeout(() => {
         const firstErrorElement = document.querySelector('[aria-invalid="true"]');
         firstErrorElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -597,11 +572,10 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
       return;
     }
 
-    // Confirm before submission
     const ok = await confirm({
-      title: 'Confirm Patient Creation',
-      message: 'You are about to create a new patient record. Continue?',
-      confirmText: 'Create Patient',
+      title: 'Create Patient Record',
+      message: 'Are you sure you want to create this patient record?',
+      confirmText: 'Yes, Create',
       cancelText: 'Cancel',
       variant: 'info',
       theme,
@@ -621,11 +595,9 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
       biological_sex: form.biological_sex ?? BiologicalSex.UNKNOWN,
     };
 
-    // Store for potential conflict resolution
     lastSubmittedDataRef.current = payload;
-    
     createMutation.mutate(payload);
-  }, [confirm, createMutation, form, theme]);
+  }, [confirm, createMutation, form, markAllFieldsTouched, theme]);
 
   const handleProceed = useCallback(() => {
     if (createdPatient) {
@@ -641,7 +613,6 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
     }
   }, [onCancel]);
 
-  // Handle conflict resolution retry
   const handleRetryWithAction = useCallback((action: DuplicateAction | ExistingUserAction) => {
     if (!lastSubmittedDataRef.current) return;
 
@@ -655,7 +626,6 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
     setConflict(null);
   }, [createMutation]);
 
-  // Render conflict UI if needed
   const renderConflictUI = useMemo(() => {
     if (!conflict) return null;
 
@@ -715,7 +685,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
       return (
         <div className={cn('rounded-lg border p-4 mb-6', isDark ? 'bg-blue-900/10 border-blue-800' : 'bg-blue-50 border-blue-200')}>
           <div className="flex gap-3 items-start">
-            <AlertCircle className={cn('w-5 h-5 mt-0.5 flex-shrink-0', isDark ? 'text-blue-400' : 'text-blue-600')} />
+            <Info className={cn('w-5 h-5 mt-0.5 flex-shrink-0', isDark ? 'text-blue-400' : 'text-blue-600')} />
             <div className="flex-1">
               <h4 className={cn('font-semibold mb-2', isDark ? 'text-blue-300' : 'text-blue-800')}>
                 Existing User Found
@@ -760,6 +730,8 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
     return null;
   }, [conflict, isDark, isSubmitting, handleRetryWithAction]);
 
+  const isFormValid = validation.isValid;
+
   return (
     <>
       <div className={cn('p-6', className)}>
@@ -776,7 +748,6 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
               </div>
             )}
 
-            {/* Form Error */}
             {formError && (
               <div className={cn(
                 'rounded-lg border p-4 mb-6 flex gap-3 items-start',
@@ -789,7 +760,6 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
               </div>
             )}
 
-            {/* Mutation Error */}
             {createMutation.isError && !formError && (
               <div className={cn(
                 'rounded-lg border p-4 mb-6 flex gap-3 items-start',
@@ -802,63 +772,66 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
               </div>
             )}
 
-            {/* Conflict UI */}
             {renderConflictUI}
 
-            {/* Form Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <FormInput
                 theme={theme}
-                label="First Name *"
+                label="First Name"
                 value={form.first_name ?? ''}
-                onChange={(value) => setField('first_name', value)}
+                onChange={(value) => handleFieldChange('first_name', value)}
                 error={validation.errors.first_name?.[0]}
                 disabled={isSubmitting}
                 required
                 placeholder="Enter first name"
+                touched={touchedFields.has('first_name')}
               />
 
               <FormInput
                 theme={theme}
-                label="Last Name *"
+                label="Last Name"
                 value={form.last_name ?? ''}
-                onChange={(value) => setField('last_name', value)}
+                onChange={(value) => handleFieldChange('last_name', value)}
                 error={validation.errors.last_name?.[0]}
                 disabled={isSubmitting}
                 required
                 placeholder="Enter last name"
+                touched={touchedFields.has('last_name')}
               />
 
               <FormInput
                 theme={theme}
-                label="Email (optional if phone provided)"
+                label="Email(Optional if Phone provided)"
                 value={form.email ?? ''}
-                onChange={(value) => setField('email', value)}
+                onChange={(value) => handleFieldChange('email', value)}
                 error={validation.errors.email?.[0]}
                 disabled={isSubmitting}
                 type="email"
                 placeholder="patient@example.com"
+                touched={touchedFields.has('email')}
               />
 
               <FormInput
                 theme={theme}
-                label="Phone (optional if email provided)"
+                label="Phone(Optional if email provided)"
                 value={form.phone ?? ''}
-                onChange={(value) => setField('phone', value)}
+                onChange={(value) => handleFieldChange('phone', value)}
                 disabled={isSubmitting}
                 type="tel"
                 placeholder="+1 (555) 123-4567"
+                touched={touchedFields.has('phone')}
               />
 
               <FormInput
                 theme={theme}
-                label="Date of Birth *"
+                label="Date of Birth"
                 value={form.date_of_birth ?? ''}
-                onChange={(value) => setField('date_of_birth', value)}
+                onChange={(value) => handleFieldChange('date_of_birth', value)}
                 error={validation.errors.date_of_birth?.[0]}
                 disabled={isSubmitting}
                 type="date"
                 required
+                touched={touchedFields.has('date_of_birth')}
               />
 
               <div>
@@ -867,38 +840,38 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                 </label>
                 <select
                   value={form.biological_sex ?? BiologicalSex.UNKNOWN}
-                  onChange={(e) => setField('biological_sex', e.target.value as BiologicalSex)}
+                  onChange={(e) => handleFieldChange('biological_sex', e.target.value as BiologicalSex)}
                   disabled={isSubmitting}
                   className={cn(
                     'w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-colors',
                     isDark 
                       ? 'bg-gray-900 border-gray-700 text-white' 
                       : 'bg-white border-gray-300 text-gray-900',
-                    validation.errors.biological_sex?.[0] && (isDark ? 'border-red-500' : 'border-red-300')
+                    validation.errors.biological_sex?.[0] && touchedFields.has('biological_sex') && (isDark ? 'border-red-500' : 'border-red-300')
                   )}
-                  aria-invalid={!!validation.errors.biological_sex?.[0]}
+                  aria-invalid={!!validation.errors.biological_sex?.[0] && touchedFields.has('biological_sex')}
                 >
-                  <option value={BiologicalSex.UNKNOWN}>Unknown</option>
+                  <option value={BiologicalSex.UNKNOWN}>Select biological sex</option>
                   <option value={BiologicalSex.MALE}>Male</option>
                   <option value={BiologicalSex.FEMALE}>Female</option>
                   <option value={BiologicalSex.INTERSEX}>Intersex</option>
                 </select>
-                {validation.errors.biological_sex?.[0] && (
-                  <p className={cn('text-xs mt-1', isDark ? 'text-red-300' : 'text-red-600')}>
+                {validation.errors.biological_sex?.[0] && touchedFields.has('biological_sex') && (
+                  <p className={cn('text-xs mt-1 flex items-center gap-1', isDark ? 'text-red-300' : 'text-red-600')}>
+                    <AlertCircle className="w-3 h-3" />
                     {validation.errors.biological_sex[0]}
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Contact validation error */}
-            {validation.errors.contact?.[0] && (
-              <div className={cn('text-sm mb-4', isDark ? 'text-red-300' : 'text-red-600')}>
+            {validation.errors.contact?.[0] && touchedFields.has('email') && touchedFields.has('phone') && (
+              <div className={cn('text-sm mb-4 flex items-center gap-1', isDark ? 'text-red-300' : 'text-red-600')}>
+                <AlertCircle className="w-3 h-3" />
                 {validation.errors.contact[0]}
               </div>
             )}
 
-            {/* Action Buttons */}
             <div className="flex gap-3">
               {onCancel && (
                 <button
@@ -920,7 +893,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
               <button
                 type="button"
                 onClick={() => void submit()}
-                disabled={!validation.isValid || isSubmitting || !!conflict}
+                disabled={!isFormValid || isSubmitting || !!conflict}
                 className={cn(
                   'flex-1 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
                   'bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
