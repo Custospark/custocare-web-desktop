@@ -105,6 +105,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
   const [searchText, setSearchText] = useState<string>(initialSearchText);
   const [submittedText, setSubmittedText] = useState<string>('');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [hasSearched, setHasSearched] = useState<boolean>(false);
 
   const lastNotFoundRef = useRef<string>('');
 
@@ -150,6 +151,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
     setSearchText('');
     setSubmittedText('');
     setSelectedPatientId(null);
+    setHasSearched(false);
     lastNotFoundRef.current = '';
   }, []);
 
@@ -159,6 +161,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
 
     setSubmittedText(trimmed);
     setSelectedPatientId(null);
+    setHasSearched(true);
     lastNotFoundRef.current = '';
 
     onSearchSubmitted?.(trimmed);
@@ -285,8 +288,8 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
           </button>
         </div>
 
-        {/* Clear results button */}
-        {(submittedText.trim().length > 0 || results.length > 0) && (
+        {/* Clear results button - Only show when search has been performed */}
+        {hasSearched && (
           <div className="flex justify-end mb-6">
             <button
               type="button"
@@ -298,15 +301,52 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
           </div>
         )}
 
-        {/* Loading */}
-        {(isLoading || isFetching) && (
+        {/* Initial State - Blank canvas before search */}
+        {!hasSearched && (
+          <div className={cn('rounded-xl border p-12 text-center mt-6', colors.cardBg, colors.cardBorder)}>
+            <div className={cn('inline-flex items-center justify-center w-20 h-20 rounded-full mb-4', isDark ? 'bg-gray-700' : 'bg-gray-100')}>
+              <Search className={cn('w-10 h-10', isDark ? 'text-gray-400' : 'text-gray-500')} />
+            </div>
+
+            <h3 className={cn('text-xl font-semibold mb-2', colors.textPrimary)}>Search for a Patient</h3>
+            <p className={cn('mb-4 max-w-md mx-auto', colors.textSecondary)}>
+              Enter a patient number, name, date of birth, or phone number to search for a patient record.
+            </p>
+            
+            {/* Quick tips */}
+            <div className={cn('mt-8 pt-6 border-t', isDark ? 'border-gray-700' : 'border-gray-200')}>
+              <h4 className={cn('text-sm font-semibold mb-3', colors.textPrimary)}>Search Tips:</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left max-w-2xl mx-auto">
+                <div className={cn('p-3 rounded-lg', isDark ? 'bg-gray-700/30' : 'bg-gray-50')}>
+                  <div className={cn('text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>Patient Number</div>
+                  <div className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>Use the exact patient number eg PT-12GD4...</div>
+                </div>
+                <div className={cn('p-3 rounded-lg', isDark ? 'bg-gray-700/30' : 'bg-gray-50')}>
+                  <div className={cn('text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>Name</div>
+                  <div className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>Full name or partial name matches</div>
+                </div>
+                <div className={cn('p-3 rounded-lg', isDark ? 'bg-gray-700/30' : 'bg-gray-50')}>
+                  <div className={cn('text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>Date of Birth</div>
+                  <div className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>YYYY-MM-DD format</div>
+                </div>
+                <div className={cn('p-3 rounded-lg', isDark ? 'bg-gray-700/30' : 'bg-gray-50')}>
+                  <div className={cn('text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>Phone Number</div>
+                  <div className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>Any format with digits</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {hasSearched && (isLoading || isFetching) && (
           <div className="mb-6">
             <LoadingSkeleton variant="list" theme={theme} message="Searching patients..." />
           </div>
         )}
 
-        {/* Error */}
-        {error && (
+        {/* Error State */}
+        {hasSearched && error && (
           <div className={cn('rounded-xl border p-6 mb-6', isDark ? 'bg-red-900/10 border-red-800' : 'bg-red-50 border-red-200')}>
             <div className="flex items-center gap-3">
               <AlertCircle className={cn('w-5 h-5', isDark ? 'text-red-400' : 'text-red-600')} />
@@ -318,8 +358,8 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
           </div>
         )}
 
-        {/* Results */}
-        {results.length > 0 && (
+        {/* Results State */}
+        {hasSearched && results.length > 0 && (
           <div className="space-y-3">
             {results.map((patient) => {
               const isSelected = selectedPatientId === patient.patient_number;
@@ -408,8 +448,8 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
           </div>
         )}
 
-        {/* Not found */}
-        {notFound && (
+        {/* Not Found State */}
+        {hasSearched && notFound && (
           <div className={cn('rounded-xl border p-8 text-center mt-6', colors.cardBg, colors.cardBorder)}>
             <div className={cn('inline-flex items-center justify-center w-16 h-16 rounded-full mb-4', isDark ? 'bg-red-900/30' : 'bg-red-100')}>
               <Search className={cn('w-8 h-8', isDark ? 'text-red-400' : 'text-red-600')} />
