@@ -255,7 +255,7 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
 
             <div className="text-center">
               <div className={cn('text-sm font-medium mb-2', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                Patient Number (UUID)
+                Patient Number
               </div>
               <div
                 className={cn(
