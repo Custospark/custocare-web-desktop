@@ -1,345 +1,552 @@
-/**
- * ============================================================================
- * PATIENT SEARCH COMPONENT (REUSABLE)
- * ============================================================================
- * 
- * A reusable patient search component that provides:
- * - Real-time patient search by patient number
- * - Patient details display with contact information
- * - Customizable onSelect callback for parent integration
- * - Theme-aware UI with dark/light mode support
- * - Loading states and error handling
- * 
- * @module PatientSearch
- */
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, Search, UserPlus, X } from 'lucide-react';
+import type { AxiosError } from 'axios';
 
-import React, { useState, useCallback } from 'react';
-import { Search, Phone, Mail, AlertCircle } from 'lucide-react';
-import { usePatientSearch } from '../../../../api/dispensing/patient-search/usePatientQueries';
-import type { PatientSearchResult } from '../../../../api/dispensing/patient-search/usePatientTypes';
-import { formatPatientName, calculateAge, getPatientInitials }  from '../../../../api/dispensing/patient-search/usePatientTypes';
+import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
+import { useConfirm } from '../../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 
-/* -------------------------------------------------------------------------- */
-/*                              COMPONENT PROPS                               */
-/* -------------------------------------------------------------------------- */
+import type {
+  ApiErrorResponse,
+  BiologicalSex,
+  PatientSearchRequest,
+  PatientSearchResult,
+} from '../../../../api/dispensing/patient-search/usePatientTypes';
+import {
+  PatientStatus,
+} from '../../../../api/dispensing/patient-search/usePatientTypes';
+import {
+  calculateAge,
+  formatPatientName,
+  getBiologicalSexDisplayText,
+  getPatientInitials,
+  getStatusDisplayText,
+} from '../../../../api/dispensing/patient-search/usePatientTypes';
+import { usePatientSearch } from '../../../../api/dispensing/patient-search/usePatientQueries';
+
+type Theme = 'light' | 'dark';
+
+type ProcessAction = {
+  label: string;
+  icon?: React.ReactNode;
+  onProcess: (patient: PatientSearchResult) => void | Promise<void>;
+  /**
+   * If true, show action only for the selected patient row.
+   * Default: true (recommended for enterprise UX).
+   */
+  onlyWhenSelected?: boolean;
+};
+
+type CreateAction = {
+  label?: string;
+  onCreate: (prefill?: { searchText?: string }) => void | Promise<void>;
+};
 
 export interface PatientSearchProps {
-  theme: 'light' | 'dark';
-  onPatientSelect?: (patient: PatientSearchResult) => void;
-  searchLabel?: string;
-  searchPlaceholder?: string;
-  showContactInfo?: boolean;
+  theme: Theme;
+
+  title?: string;
+  subtitle?: string;
+
+  /**
+   * General search input. Backend should interpret q as:
+   * patient_uuid, patient_number, name, phone, dob etc (server-side logic).
+   */
+  placeholder?: string;
+
   autoFocus?: boolean;
+
+  /**
+   * Filters (optional). Typically Pharmacy uses ACTIVE only.
+   */
+  filters?: {
+    status?: PatientStatus;
+    biologicalSex?: BiologicalSex;
+  };
+
+  /**
+   * Max results
+   */
+  limit?: number;
+
+  /**
+   * Optional: called when user selects a row
+   */
+  onPatientSelect?: (patient: PatientSearchResult) => void;
+
+  /**
+   * Optional: called when search submitted (analytics, logs)
+   */
+  onSearchSubmitted?: (searchText: string) => void;
+
+  /**
+   * Optional: called when no results found after a search
+   */
+  onNotFound?: (searchText: string) => void;
+
+  /**
+   * Module-specific process action (Dispense, Settle Bill, etc)
+   */
+  processAction?: ProcessAction;
+
+  /**
+   * Offer create patient when not found
+   */
+  createAction?: CreateAction;
+
+  /**
+   * If you want the search box to be controlled externally
+   */
+  initialSearchText?: string;
+
   className?: string;
 }
 
-/* -------------------------------------------------------------------------- */
-/*                           PATIENT SEARCH COMPONENT                         */
-/* -------------------------------------------------------------------------- */
+function getAxiosErrorMessage(error: unknown): string {
+  const axiosErr = error as AxiosError<ApiErrorResponse>;
+  const apiMsg = axiosErr?.response?.data?.message;
+  if (typeof apiMsg === 'string' && apiMsg.trim().length > 0) return apiMsg;
+  if (error instanceof Error && error.message.trim().length > 0) return error.message;
+  return 'Failed to search patients. Please try again.';
+}
 
+function statusBadgeClasses(theme: Theme, status: PatientStatus): string {
+  const isDark = theme === 'dark';
+
+  switch (status) {
+    case PatientStatus.ACTIVE:
+      return isDark ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700';
+    case PatientStatus.INACTIVE:
+      return isDark ? 'bg-yellow-900/30 text-yellow-300' : 'bg-yellow-100 text-yellow-700';
+    case PatientStatus.DECEASED:
+      return isDark ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-700';
+    case PatientStatus.MERGED:
+      return isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700';
+    case PatientStatus.TEST_PATIENT:
+    case PatientStatus.SYSTEM_PATIENT:
+      return isDark ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800';
+    default:
+      return isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700';
+  }
+}
+
+/**
+ * Reusable patient search component:
+ * - manual search (Enter / Search button)
+ * - list results
+ * - clear results
+ * - optional module-specific "Process" action per patient
+ * - not found -> optional create action
+ */
 const PatientSearch: React.FC<PatientSearchProps> = ({
   theme,
+  title = 'Search Patient',
+  subtitle = 'Search by patient number (UUID), name, DOB, phone number, etc.',
+  placeholder = 'Search by patient UUID, name, DOB, or phone',
+  autoFocus = true,
+  filters,
+  limit = 10,
   onPatientSelect,
-  searchLabel = 'Search Patient',
-  searchPlaceholder = 'Enter patient number (e.g., PT-1234GY5X7...)',
-  showContactInfo = true,
-  autoFocus = false,
+  onSearchSubmitted,
+  onNotFound,
+  processAction,
+  createAction,
+  initialSearchText = '',
   className,
 }) => {
   const isDark = theme === 'dark';
-  
-  // Local state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [hasSearched, setHasSearched] = useState(false);
-  
-  // Query state
-  const { data: searchData, isLoading, error } = usePatientSearch(
-    { 
-      q: searchTerm.trim(),
-      limit: 1 
+  const { confirm } = useConfirm();
+
+  const [searchText, setSearchText] = useState<string>(initialSearchText);
+  const [submittedText, setSubmittedText] = useState<string>('');
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+
+  // prevent duplicate notFound calls for the same submission
+  const lastNotFoundRef = useRef<string>('');
+
+  useEffect(() => {
+    setSearchText(initialSearchText);
+  }, [initialSearchText]);
+
+  const searchParams: PatientSearchRequest = useMemo(() => {
+    const trimmed = submittedText.trim();
+    return {
+      q: trimmed.length > 0 ? trimmed : undefined,
+      status: filters?.status,
+      biological_sex: filters?.biologicalSex,
+      limit,
+    };
+  }, [filters?.biologicalSex, filters?.status, limit, submittedText]);
+
+  const queryEnabled = useMemo(() => submittedText.trim().length > 0, [submittedText]);
+
+  const queryOptions = useMemo(() => ({ enabled: queryEnabled }), [queryEnabled]);
+
+  const {
+    data,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = usePatientSearch(searchParams, queryOptions);
+
+  const results = data?.data ?? [];
+
+  const notFound = useMemo(() => {
+    if (!queryEnabled) return false;
+    if (isLoading || isFetching) return false;
+    if (error) return false;
+    return results.length === 0;
+  }, [error, isFetching, isLoading, queryEnabled, results.length]);
+
+  useEffect(() => {
+    if (!notFound) return;
+    const key = submittedText.trim();
+    if (!key) return;
+    if (lastNotFoundRef.current === key) return;
+    lastNotFoundRef.current = key;
+    onNotFound?.(key);
+  }, [notFound, onNotFound, submittedText]);
+
+  const clearResults = useCallback(() => {
+    setSearchText('');
+    setSubmittedText('');
+    setSelectedPatientId(null);
+    lastNotFoundRef.current = '';
+  }, []);
+
+  const submitSearch = useCallback(async () => {
+    const trimmed = searchText.trim();
+    if (!trimmed) return;
+
+    setSubmittedText(trimmed);
+    setSelectedPatientId(null);
+    lastNotFoundRef.current = '';
+
+    onSearchSubmitted?.(trimmed);
+
+    // ensure it runs even if same params
+    await refetch();
+  }, [onSearchSubmitted, refetch, searchText]);
+
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') void submitSearch();
     },
-    { enabled: hasSearched && searchTerm.trim().length > 0 }
+    [submitSearch]
   );
 
-  const searchResult = searchData?.data?.[0] || null;
-  const notFound = hasSearched && !isLoading && !searchResult && searchTerm.trim().length > 0;
-
-  /* -------------------------------------------------------------------------- */
-  /*                              EVENT HANDLERS                                */
-  /* -------------------------------------------------------------------------- */
-
-  const handleSearch = useCallback(() => {
-    if (searchTerm.trim().length === 0) return;
-    setHasSearched(true);
-  }, [searchTerm]);
-
-  const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  }, [handleSearch]);
-
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-    if (hasSearched && e.target.value.trim().length === 0) {
-      setHasSearched(false);
-    }
-  }, [hasSearched]);
-
-  const handlePatientSelect = useCallback(() => {
-    if (searchResult && onPatientSelect) {
-      onPatientSelect(searchResult);
-    }
-  }, [searchResult, onPatientSelect]);
-
-  /* -------------------------------------------------------------------------- */
-  /*                              THEME COLORS                                  */
-  /* -------------------------------------------------------------------------- */
-
-  const colors = {
-    bg: {
-      primary: isDark ? 'bg-gray-900' : 'bg-white',
-      secondary: isDark ? 'bg-gray-800' : 'bg-gray-50',
-      elevated: isDark ? 'bg-gray-800' : 'bg-white',
+  const handleSelect = useCallback(
+    (patient: PatientSearchResult) => {
+      setSelectedPatientId(patient.patient_number);
+      onPatientSelect?.(patient);
     },
-    border: {
-      primary: isDark ? 'border-gray-700' : 'border-gray-300',
-      focus: 'focus:border-blue-500',
+    [onPatientSelect]
+  );
+
+  const handleProcess = useCallback(
+    async (patient: PatientSearchResult) => {
+      if (!processAction) return;
+      await processAction.onProcess(patient);
     },
-    text: {
-      primary: isDark ? 'text-white' : 'text-gray-900',
-      secondary: isDark ? 'text-gray-400' : 'text-gray-600',
-      tertiary: isDark ? 'text-gray-500' : 'text-gray-500',
+    [processAction]
+  );
+
+  const handleCreateFromNotFound = useCallback(async () => {
+    if (!createAction) return;
+
+    const ok = await confirm({
+      title: 'Create New Patient',
+      message: `No patient was found for "${submittedText || searchText}". Do you want to create a new patient record?`,
+      confirmText: 'Yes, Create',
+      cancelText: 'Cancel',
+      variant: 'info',
+      theme,
+    });
+
+    if (!ok) return;
+    await createAction.onCreate({ searchText: submittedText || searchText });
+  }, [confirm, createAction, searchText, submittedText, theme]);
+
+  const colors = useMemo(
+    () => ({
+      textPrimary: isDark ? 'text-white' : 'text-gray-900',
+      textSecondary: isDark ? 'text-gray-400' : 'text-gray-600',
+      cardBg: isDark ? 'bg-gray-800' : 'bg-white',
+      cardBorder: isDark ? 'border-gray-700' : 'border-gray-200',
+      inputBg: isDark ? 'bg-gray-800' : 'bg-white',
+      inputBorder: isDark ? 'border-gray-700' : 'border-gray-300',
+      inputText: isDark ? 'text-white' : 'text-gray-900',
       placeholder: isDark ? 'placeholder-gray-500' : 'placeholder-gray-400',
-    },
-    button: {
-      primary: 'bg-blue-600 hover:bg-blue-700 text-white',
-      disabled: 'disabled:opacity-50 disabled:cursor-not-allowed',
-    },
-    icon: {
-      primary: isDark ? 'text-gray-400' : 'text-gray-500',
-      accent: isDark ? 'text-blue-400' : 'text-blue-600',
-    },
-  };
-
-  /* -------------------------------------------------------------------------- */
-  /*                              RENDER COMPONENT                              */
-  /* -------------------------------------------------------------------------- */
+    }),
+    [isDark]
+  );
 
   return (
-    <div className={cn('space-y-6', className)}>
-      {/* Header */}
-      <div>
-        <h2 className={cn('text-2xl font-bold mb-2', colors.text.primary)}>
-          {searchLabel}
-        </h2>
-      </div>
-
-      {/* Search Bar */}
-      <div className="flex gap-3">
-        <div className="flex-1 relative">
-          <Search
-            className={cn(
-              'absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5',
-              colors.icon.primary
-            )}
-          />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={handleInputChange}
-            onKeyPress={handleKeyPress}
-            placeholder={searchPlaceholder}
-            autoFocus={autoFocus}
-            className={cn(
-              'w-full pl-10 pr-4 py-3 rounded-lg border',
-              isDark ? colors.bg.elevated : 'bg-white',
-              colors.border.primary,
-              colors.text.primary,
-              colors.text.placeholder,
-              'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
-              'transition-all duration-200'
-            )}
-          />
+    <div className={cn('p-6', className)}>
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <h2 className={cn('text-2xl font-bold mb-2', colors.textPrimary)}>{title}</h2>
+          <p className={colors.textSecondary}>{subtitle}</p>
         </div>
-        <button
-          onClick={handleSearch}
-          disabled={!searchTerm.trim() || isLoading}
-          className={cn(
-            'px-6 py-3 rounded-lg font-medium transition-colors',
-            'flex items-center gap-2',
-            colors.button.primary,
-            colors.button.disabled
-          )}
-        >
-          {isLoading ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Searching...
-            </>
-          ) : (
-            <>
-              <Search className="w-5 h-5" />
-              Search
-            </>
-          )}
-        </button>
-      </div>
 
-      {/* Search Result */}
-      {searchResult && (
-        <div
-          className={cn(
-            'rounded-xl border p-6',
-            colors.bg.elevated,
-            colors.border.primary,
-            'transition-all duration-200'
-          )}
-        >
-          {/* Patient Header */}
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-start gap-4">
-              {/* Avatar */}
-              <div
+        {/* Search Controls */}
+        <div className="flex gap-3 mb-4">
+          <div className="flex-1 relative">
+            <Search
+              className={cn(
+                'absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5',
+                isDark ? 'text-gray-400' : 'text-gray-500'
+              )}
+            />
+            <input
+              type="text"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder={placeholder}
+              autoFocus={autoFocus}
+              className={cn(
+                'w-full pl-10 pr-10 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
+                colors.inputBg,
+                colors.inputBorder,
+                colors.inputText,
+                colors.placeholder
+              )}
+            />
+            {searchText.trim().length > 0 && (
+              <button
+                type="button"
+                onClick={clearResults}
                 className={cn(
-                  'w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0',
-                  isDark ? 'bg-blue-900/30' : 'bg-blue-100'
+                  'absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded',
+                  isDark
+                    ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                 )}
+                aria-label="Clear search and results"
               >
-                <span className={cn('text-xl font-semibold', colors.icon.accent)}>
-                  {getPatientInitials(searchResult)}
-                </span>
-              </div>
-
-              {/* Patient Info */}
-              <div className="flex-1 min-w-0">
-                <h3 className={cn('text-xl font-semibold mb-1', colors.text.primary)}>
-                  {formatPatientName(searchResult)}
-                </h3>
-                <div className={cn('text-sm space-y-1', colors.text.secondary)}>
-                  <div>Patient #: {searchResult.patient_number}</div>
-                  {searchResult.date_of_birth && (
-                    <div>
-                      Age: {calculateAge(searchResult.date_of_birth)} years
-                      {' • '}
-                      DOB: {new Date(searchResult.date_of_birth).toLocaleDateString()}
-                    </div>
-                  )}
-                  {searchResult.biological_sex && (
-                    <div>Gender: {searchResult.biological_sex}</div>
-                  )}
-                </div>
-              </div>
-            </div>
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
-          {/* Contact Information */}
-          {showContactInfo && (searchResult.global_user_uuid) && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div
-                className={cn(
-                  'p-3 rounded-lg flex items-center gap-3',
-                  colors.bg.secondary
-                )}
-              >
-                <Mail className={cn('w-5 h-5 flex-shrink-0', colors.icon.primary)} />
-                <div className="flex-1 min-w-0">
-                  <div className={cn('text-xs', colors.text.tertiary)}>Email</div>
-                  <div className={cn('font-medium truncate', colors.text.primary)}>
-                    {searchResult.global_user_uuid ? 'Available' : 'Not provided'}
-                  </div>
-                </div>
-              </div>
+          <button
+            type="button"
+            onClick={() => void submitSearch()}
+            disabled={!searchText.trim() || isLoading}
+            className={cn(
+              'px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2',
+              'bg-blue-600 hover:bg-blue-700 text-white'
+            )}
+          >
+            {isLoading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Searching...
+              </>
+            ) : (
+              <>
+                <Search className="w-5 h-5" />
+                Search
+              </>
+            )}
+          </button>
+        </div>
 
-              <div
-                className={cn(
-                  'p-3 rounded-lg flex items-center gap-3',
-                  colors.bg.secondary
-                )}
-              >
-                <Phone className={cn('w-5 h-5 flex-shrink-0', colors.icon.primary)} />
-                <div className="flex-1 min-w-0">
-                  <div className={cn('text-xs', colors.text.tertiary)}>Phone</div>
-                  <div className={cn('font-medium truncate', colors.text.primary)}>
-                    {searchResult.global_user_uuid ? 'Available' : 'Not provided'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Select Button */}
-          {onPatientSelect && (
+        {/* Clear results button */}
+        {(submittedText.trim().length > 0 || results.length > 0) && (
+          <div className="flex justify-end mb-6">
             <button
-              onClick={handlePatientSelect}
+              type="button"
+              onClick={clearResults}
               className={cn(
-                'w-full py-3 rounded-lg font-medium transition-colors',
-                'flex items-center justify-center gap-2',
-                colors.button.primary
+                'text-sm font-medium',
+                isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'
               )}
             >
-              Select Patient
+              Clear results
             </button>
-          )}
-        </div>
-      )}
+          </div>
+        )}
 
-      {/* Not Found State */}
-      {notFound && (
-        <div
-          className={cn(
-            'rounded-xl border p-8 text-center',
-            colors.bg.elevated,
-            colors.border.primary
-          )}
-        >
+        {/* Loading */}
+        {(isLoading || isFetching) && (
+          <div className="mb-6">
+            <LoadingSkeleton variant="list" theme={theme} message="Searching patients..." />
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
           <div
             className={cn(
-              'inline-flex items-center justify-center w-16 h-16 rounded-full mb-4',
-              isDark ? 'bg-red-900/30' : 'bg-red-100'
+              'rounded-xl border p-6 mb-6',
+              isDark ? 'bg-red-900/10 border-red-800' : 'bg-red-50 border-red-200'
             )}
           >
-            <AlertCircle className={cn('w-8 h-8', isDark ? 'text-red-400' : 'text-red-600')} />
+            <div className="flex items-center gap-3">
+              <AlertCircle className={cn('w-5 h-5', isDark ? 'text-red-400' : 'text-red-600')} />
+              <div>
+                <h3 className={cn('font-semibold mb-1', colors.textPrimary)}>Search Error</h3>
+                <p className={colors.textSecondary}>{getAxiosErrorMessage(error)}</p>
+              </div>
+            </div>
           </div>
-          <h3 className={cn('text-lg font-semibold mb-2', colors.text.primary)}>
-            Patient Not Found
-          </h3>
-          <p className={colors.text.secondary}>
-            No patient found with number: <strong>{searchTerm}</strong>
-          </p>
-        </div>
-      )}
+        )}
 
-      {/* Error State */}
-      {error && (
-        <div
-          className={cn(
-            'rounded-xl border p-8 text-center',
-            colors.bg.elevated,
-            isDark ? 'border-red-800' : 'border-red-200'
-          )}
-        >
+        {/* Results */}
+        {results.length > 0 && (
+          <div className="space-y-3">
+            {results.map((patient) => {
+              const isSelected = selectedPatientId === patient.patient_number;
+              const initials = getPatientInitials(patient);
+              const age = calculateAge(patient.date_of_birth);
+              const sexText = patient.biological_sex ? getBiologicalSexDisplayText(patient.biological_sex) : null;
+
+              return (
+                <div
+                  key={patient.patient_number}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleSelect(patient)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') handleSelect(patient);
+                  }}
+                  className={cn(
+                    'rounded-xl border p-4 transition-all cursor-pointer',
+                    colors.cardBg,
+                    colors.cardBorder,
+                    isSelected
+                      ? isDark
+                        ? 'ring-2 ring-blue-500'
+                        : 'ring-2 ring-blue-500 bg-blue-50'
+                      : isDark
+                        ? 'hover:bg-gray-700'
+                        : 'hover:bg-gray-50'
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div
+                        className={cn(
+                          'w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0',
+                          isDark ? 'bg-blue-900/30' : 'bg-blue-100'
+                        )}
+                      >
+                        <span className={cn('font-semibold', isDark ? 'text-blue-300' : 'text-blue-700')}>
+                          {initials}
+                        </span>
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className={cn('text-lg font-semibold truncate', colors.textPrimary)}>
+                            {formatPatientName(patient)}
+                          </div>
+                          <span
+                            className={cn(
+                              'px-2 py-0.5 rounded-full text-xs font-medium',
+                              statusBadgeClasses(theme, patient.status)
+                            )}
+                          >
+                            {getStatusDisplayText(patient.status)}
+                          </span>
+                        </div>
+
+                        <div className={cn('text-sm space-y-1 mt-1', colors.textSecondary)}>
+                          <div>Patient UUID: {patient.patient_number}</div>
+                          {patient.date_of_birth ? (
+                            <div>
+                              DOB: {new Date(patient.date_of_birth).toLocaleDateString()}
+                              {age !== null ? ` • Age: ${age}` : null}
+                            </div>
+                          ) : null}
+                          {sexText ? <div>Sex: {sexText}</div> : null}
+                          <div>Account: {patient.global_user_uuid ? 'Linked' : 'Unlinked'}</div>
+                        </div>
+                      </div>
+                    </div>
+
+               {processAction && (processAction.onlyWhenSelected ?? true ? isSelected : true) ? (
+                <button
+                    type="button"
+                    onClick={(e) => {
+                    e.stopPropagation();
+                    void handleProcess(patient);
+                    }}
+                    className={cn(
+                    'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 flex-shrink-0',
+                    'bg-blue-600 hover:bg-blue-700 text-white'
+                    )}
+                >
+                    {processAction.icon}
+                    {processAction.label}
+                </button>
+                ) : null}
+
+                  </div>
+
+                  {patient.requires_isolation ? (
+                    <div
+                      className={cn(
+                        'mt-3 text-sm rounded-lg border p-3',
+                        isDark
+                          ? 'bg-yellow-900/20 border-yellow-800/50 text-yellow-200'
+                          : 'bg-yellow-50 border-yellow-100 text-yellow-800'
+                      )}
+                    >
+                      Isolation required
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Not found */}
+        {notFound && (
           <div
             className={cn(
-              'inline-flex items-center justify-center w-16 h-16 rounded-full mb-4',
-              isDark ? 'bg-red-900/30' : 'bg-red-100'
+              'rounded-xl border p-8 text-center mt-6',
+              colors.cardBg,
+              colors.cardBorder
             )}
           >
-            <AlertCircle className={cn('w-8 h-8', isDark ? 'text-red-400' : 'text-red-600')} />
+            <div
+              className={cn(
+                'inline-flex items-center justify-center w-16 h-16 rounded-full mb-4',
+                isDark ? 'bg-red-900/30' : 'bg-red-100'
+              )}
+            >
+              <Search className={cn('w-8 h-8', isDark ? 'text-red-400' : 'text-red-600')} />
+            </div>
+
+            <h3 className={cn('text-lg font-semibold mb-2', colors.textPrimary)}>Patient Not Found</h3>
+            <p className={cn('mb-6', colors.textSecondary)}>
+              No patient found for: <strong>{submittedText}</strong>
+            </p>
+
+            {createAction ? (
+              <button
+                type="button"
+                onClick={() => void handleCreateFromNotFound()}
+                className={cn(
+                  'inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors',
+                  'bg-blue-600 hover:bg-blue-700 text-white'
+                )}
+              >
+                <UserPlus className="w-5 h-5" />
+                {createAction.label ?? 'Create New Patient'}
+              </button>
+            ) : null}
           </div>
-          <h3 className={cn('text-lg font-semibold mb-2', colors.text.primary)}>
-            Search Error
-          </h3>
-          <p className={colors.text.secondary}>
-            Failed to search for patient. Please try again.
-          </p>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
 
 PatientSearch.displayName = 'PatientSearch';
-
 export default PatientSearch;
