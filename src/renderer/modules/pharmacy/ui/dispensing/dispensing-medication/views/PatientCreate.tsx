@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { UserPlus, AlertCircle, CheckCircle, Copy, Download, X, Info, UserCheck } from 'lucide-react';
+import { UserPlus, AlertCircle, CheckCircle, Copy, Download, X, Info, UserCheck, Search, ChevronDown } from 'lucide-react';
 import type { AxiosError } from 'axios';
 
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
@@ -26,6 +26,9 @@ import {
   formatPatientName,
 } from '../../../../api/dispensing/patient-search/usePatientTypes';
 import { useCreatePatientByStaff } from '../../../../api/dispensing/patient-search/usePatientQueries';
+
+// Import country codes
+import { CountryCode, countryCodes } from  '../../../../../administration/onboarding/ui/auth/countryCodes';
 
 type Theme = 'light' | 'dark';
 
@@ -430,6 +433,271 @@ const FormInput = React.memo<FormInputProps>(({
 });
 
 FormInput.displayName = 'FormInput';
+
+// Phone input with country code selector component
+interface PhoneInputProps {
+  theme: Theme;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  disabled?: boolean;
+  touched?: boolean;
+  required?: boolean;
+}
+
+const PhoneInputWithCountryCode: React.FC<PhoneInputProps> = ({
+  theme,
+  label,
+  value,
+  onChange,
+  error,
+  disabled,
+  touched = false,
+  required = false,
+}) => {
+  const isDark = theme === 'dark';
+  const inputId = React.useId();
+  const hasError = !!error && touched;
+  
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState<CountryCode>(() => {
+    // Default to Uganda (+256) for East Africa
+    const defaultCountry = countryCodes.find(country => country.code === 'UG') || countryCodes[0];
+    return defaultCountry;
+  });
+  
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Filter countries based on search
+  const filteredCountries = useMemo(() => {
+    if (!searchQuery.trim()) {
+      // Reorder: East African countries first, then others
+      const eastAfricanCountries = ['UG', 'KE', 'TZ', 'RW', 'BI', 'SS', 'ET', 'ER', 'DJ', 'SO'];
+      const eastAfrica = countryCodes.filter(country => eastAfricanCountries.includes(country.code));
+      const otherCountries = countryCodes.filter(country => !eastAfricanCountries.includes(country.code));
+      return [...eastAfrica, ...otherCountries];
+    }
+    
+    const query = searchQuery.toLowerCase();
+    return countryCodes.filter(country => 
+      country.name.toLowerCase().includes(query) || 
+      country.dial_code.includes(query) ||
+      country.code.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
+
+  // Parse phone number with country code
+  const parsePhoneNumber = useCallback((phoneValue: string): { countryCode: string; number: string } => {
+    if (!phoneValue) return { countryCode: '', number: '' };
+    
+    // Check if phone already starts with a country code
+    for (const country of countryCodes) {
+      if (phoneValue.startsWith(country.dial_code)) {
+        return {
+          countryCode: country.dial_code,
+          number: phoneValue.slice(country.dial_code.length)
+        };
+      }
+    }
+    
+    // Default to selected country
+    return {
+      countryCode: selectedCountry.dial_code,
+      number: phoneValue
+    };
+  }, [selectedCountry]);
+
+  // Format display value
+  const displayValue = useMemo(() => {
+    const parsed = parsePhoneNumber(value);
+    if (!parsed.number) return '';
+    
+    // Show formatted number if it already has a country code
+    if (value.startsWith(parsed.countryCode)) {
+      return parsed.number;
+    }
+    
+    return value;
+  }, [value, parsePhoneNumber]);
+
+  const handlePhoneChange = useCallback((phoneNumber: string) => {
+    // Remove any non-digit characters except leading +
+    const cleaned = phoneNumber.replace(/[^\d+]/g, '');
+    
+    // If it starts with a known country code, use that
+    for (const country of countryCodes) {
+      if (cleaned.startsWith(country.dial_code)) {
+        setSelectedCountry(country);
+        onChange(cleaned);
+        return;
+      }
+    }
+    
+    // Otherwise, prepend selected country code
+    const fullNumber = selectedCountry.dial_code + cleaned;
+    onChange(fullNumber);
+  }, [onChange, selectedCountry]);
+
+  const handleCountrySelect = useCallback((country: CountryCode) => {
+    setSelectedCountry(country);
+    setShowCountryDropdown(false);
+    setSearchQuery('');
+    
+    // Update phone number with new country code
+    const parsed = parsePhoneNumber(value);
+    const newNumber = country.dial_code + parsed.number;
+    onChange(newNumber);
+  }, [value, onChange, parsePhoneNumber]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowCountryDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div>
+      <label 
+        htmlFor={inputId}
+        className={cn('block text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}
+      >
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      
+      <div className="flex gap-2">
+        {/* Country Code Selector */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            type="button"
+            onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+            disabled={disabled}
+            className={cn(
+              'flex items-center gap-2 px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-colors min-w-[120px]',
+              isDark 
+                ? 'bg-gray-900 border-gray-700 text-white hover:bg-gray-800' 
+                : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50',
+              hasError && (isDark ? 'border-red-500' : 'border-red-300')
+            )}
+            aria-label="Select country code"
+          >
+            <span className="text-lg">{selectedCountry.flag}</span>
+            <span className="text-sm font-medium">{selectedCountry.dial_code}</span>
+            <ChevronDown className={cn('w-4 h-4 ml-auto', showCountryDropdown ? 'rotate-180' : '')} />
+          </button>
+          
+          {showCountryDropdown && (
+            <div className={cn(
+              'absolute top-full left-0 mt-1 w-80 max-h-96 overflow-y-auto rounded-lg border shadow-lg z-50',
+              isDark 
+                ? 'bg-gray-800 border-gray-700' 
+                : 'bg-white border-gray-200'
+            )}>
+              {/* Search input */}
+              <div className="p-3 border-b border-gray-700 dark:border-gray-600">
+                <div className="relative">
+                  <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4', isDark ? 'text-gray-400' : 'text-gray-500')} />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search country..."
+                    className={cn(
+                      'w-full pl-9 pr-3 py-2 text-sm rounded border focus:outline-none focus:ring-2 focus:ring-blue-500',
+                      isDark 
+                        ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                        : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500'
+                    )}
+                    autoFocus
+                  />
+                </div>
+              </div>
+              
+              {/* Country list */}
+              <div className="max-h-64 overflow-y-auto py-1">
+                {filteredCountries.map((country) => (
+                  <button
+                    key={country.code}
+                    type="button"
+                    onClick={() => handleCountrySelect(country)}
+                    className={cn(
+                      'flex items-center gap-3 w-full px-3 py-2 text-sm transition-colors',
+                      isDark 
+                        ? 'hover:bg-gray-700 text-gray-200' 
+                        : 'hover:bg-gray-100 text-gray-700',
+                      selectedCountry.code === country.code && (isDark ? 'bg-gray-700' : 'bg-gray-100')
+                    )}
+                  >
+                    <span className="text-lg">{country.flag}</span>
+                    <span className="flex-1 text-left">{country.name}</span>
+                    <span className={cn('font-medium', isDark ? 'text-gray-400' : 'text-gray-600')}>
+                      {country.dial_code}
+                    </span>
+                  </button>
+                ))}
+                
+                {filteredCountries.length === 0 && (
+                  <div className={cn('px-3 py-4 text-center text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                    No countries found
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Phone number input */}
+        <div className="flex-1">
+          <input
+            id={inputId}
+            type="tel"
+            value={displayValue}
+            onChange={(e) => handlePhoneChange(e.target.value)}
+            disabled={disabled}
+            placeholder="eg.78887..."
+            className={cn(
+              'w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-colors',
+              isDark 
+                ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500' 
+                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
+              hasError && (isDark ? 'border-red-500' : 'border-red-300')
+            )}
+            aria-invalid={hasError}
+            aria-describedby={hasError ? `${inputId}-error` : undefined}
+          />
+        </div>
+      </div>
+      
+      {/* Preview of full number */}
+      {value && (
+        <div className={cn('text-xs mt-1', isDark ? 'text-gray-400' : 'text-gray-500')}>
+          Full number: <span className="font-mono">{value}</span>
+        </div>
+      )}
+      
+      {hasError && (
+        <p 
+          id={`${inputId}-error`}
+          className={cn('text-xs mt-1 flex items-center gap-1', isDark ? 'text-red-300' : 'text-red-600')}
+          role="alert"
+        >
+          <AlertCircle className="w-3 h-3" />
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+PhoneInputWithCountryCode.displayName = 'PhoneInputWithCountryCode';
 
 const PatientCreate: React.FC<PatientCreateProps> = ({ 
   theme, 
@@ -849,14 +1117,12 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                 touched={touchedFields.has('email')}
               />
 
-              <FormInput
+              <PhoneInputWithCountryCode
                 theme={theme}
                 label="Phone (Optional if email provided)"
                 value={form.phone ?? ''}
                 onChange={(value) => handleFieldChange('phone', value)}
                 disabled={isSubmitting}
-                type="tel"
-                placeholder="+1 (555) 123-4567"
                 touched={touchedFields.has('phone')}
               />
 

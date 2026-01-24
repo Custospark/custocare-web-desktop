@@ -270,18 +270,18 @@ export const useCreatePatientByStaff = (
     },
     onSuccess: (response, variables, context) => {
       if (isPatientCreateSuccessResponse(response)) {
-        const message = response.message || 'Patient created successfully';
+        // const message = response.message || 'Patient created successfully';
         const meta = response.meta;
         
         // Show appropriate message based on creation status
         if (meta.status === 'already_has_patient') {
-          showToast('info', 'Patient record already exists for this user', 5000);
+          // showToast('info', 'Patient record already exists for this user', 5000);
         } else if (meta.status === 'created') {
-          showToast('success', message, 5000);
+          // showToast('success', message, 5000);
           
           // Show onboarding notice if needed
           if (meta.onboarding_link_required) {
-            showToast('info', 'Onboarding link will be sent to the patient', 8000);
+            // showToast('info', 'Onboarding link will be sent to the patient', 8000);
           }
         }
       }
