@@ -14,8 +14,6 @@ import type {
 } from '../../../../api/dispensing/patient-search/usePatientTypes';
 import {
   PatientStatus,
-} from '../../../../api/dispensing/patient-search/usePatientTypes';
-import {
   calculateAge,
   formatPatientName,
   getBiologicalSexDisplayText,
@@ -30,10 +28,6 @@ type ProcessAction = {
   label: string;
   icon?: React.ReactNode;
   onProcess: (patient: PatientSearchResult) => void | Promise<void>;
-  /**
-   * If true, show action only for the selected patient row.
-   * Default: true (recommended for enterprise UX).
-   */
   onlyWhenSelected?: boolean;
 };
 
@@ -44,61 +38,21 @@ type CreateAction = {
 
 export interface PatientSearchProps {
   theme: Theme;
-
   title?: string;
   subtitle?: string;
-
-  /**
-   * General search input. Backend should interpret q as:
-   * patient_uuid, patient_number, name, phone, dob etc (server-side logic).
-   */
   placeholder?: string;
-
   autoFocus?: boolean;
-
-  /**
-   * Filters (optional). Typically Pharmacy uses ACTIVE only.
-   */
   filters?: {
     status?: PatientStatus;
     biologicalSex?: BiologicalSex;
   };
-
-  /**
-   * Max results
-   */
   limit?: number;
-
-  /**
-   * Optional: called when user selects a row
-   */
   onPatientSelect?: (patient: PatientSearchResult) => void;
-
-  /**
-   * Optional: called when search submitted (analytics, logs)
-   */
   onSearchSubmitted?: (searchText: string) => void;
-
-  /**
-   * Optional: called when no results found after a search
-   */
   onNotFound?: (searchText: string) => void;
-
-  /**
-   * Module-specific process action (Dispense, Settle Bill, etc)
-   */
   processAction?: ProcessAction;
-
-  /**
-   * Offer create patient when not found
-   */
   createAction?: CreateAction;
-
-  /**
-   * If you want the search box to be controlled externally
-   */
   initialSearchText?: string;
-
   className?: string;
 }
 
@@ -112,7 +66,6 @@ function getAxiosErrorMessage(error: unknown): string {
 
 function statusBadgeClasses(theme: Theme, status: PatientStatus): string {
   const isDark = theme === 'dark';
-
   switch (status) {
     case PatientStatus.ACTIVE:
       return isDark ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700';
@@ -130,19 +83,11 @@ function statusBadgeClasses(theme: Theme, status: PatientStatus): string {
   }
 }
 
-/**
- * Reusable patient search component:
- * - manual search (Enter / Search button)
- * - list results
- * - clear results
- * - optional module-specific "Process" action per patient
- * - not found -> optional create action
- */
 const PatientSearch: React.FC<PatientSearchProps> = ({
   theme,
   title = 'Search Patient',
-  subtitle = 'Search by patient number (UUID), name, DOB, phone number, etc.',
-  placeholder = 'Search by patient UUID, name, DOB, or phone',
+  subtitle = 'Search by patient number, name, DOB, phone number, etc.',
+  placeholder = 'Search by patient Number, name, DOB, or phone',
   autoFocus = true,
   filters,
   limit = 10,
@@ -161,7 +106,6 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
   const [submittedText, setSubmittedText] = useState<string>('');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
-  // prevent duplicate notFound calls for the same submission
   const lastNotFoundRef = useRef<string>('');
 
   useEffect(() => {
@@ -182,13 +126,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
 
   const queryOptions = useMemo(() => ({ enabled: queryEnabled }), [queryEnabled]);
 
-  const {
-    data,
-    isLoading,
-    isFetching,
-    error,
-    refetch,
-  } = usePatientSearch(searchParams, queryOptions);
+  const { data, isLoading, isFetching, error, refetch } = usePatientSearch(searchParams, queryOptions);
 
   const results = data?.data ?? [];
 
@@ -224,8 +162,6 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
     lastNotFoundRef.current = '';
 
     onSearchSubmitted?.(trimmed);
-
-    // ensure it runs even if same params
     await refetch();
   }, [onSearchSubmitted, refetch, searchText]);
 
@@ -294,10 +230,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
         <div className="flex gap-3 mb-4">
           <div className="flex-1 relative">
             <Search
-              className={cn(
-                'absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5',
-                isDark ? 'text-gray-400' : 'text-gray-500'
-              )}
+              className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5', isDark ? 'text-gray-400' : 'text-gray-500')}
             />
             <input
               type="text"
@@ -320,9 +253,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
                 onClick={clearResults}
                 className={cn(
                   'absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded',
-                  isDark
-                    ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  isDark ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                 )}
                 aria-label="Clear search and results"
               >
@@ -360,10 +291,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
             <button
               type="button"
               onClick={clearResults}
-              className={cn(
-                'text-sm font-medium',
-                isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'
-              )}
+              className={cn('text-sm font-medium', isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900')}
             >
               Clear results
             </button>
@@ -379,12 +307,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
 
         {/* Error */}
         {error && (
-          <div
-            className={cn(
-              'rounded-xl border p-6 mb-6',
-              isDark ? 'bg-red-900/10 border-red-800' : 'bg-red-50 border-red-200'
-            )}
-          >
+          <div className={cn('rounded-xl border p-6 mb-6', isDark ? 'bg-red-900/10 border-red-800' : 'bg-red-50 border-red-200')}>
             <div className="flex items-center gap-3">
               <AlertCircle className={cn('w-5 h-5', isDark ? 'text-red-400' : 'text-red-600')} />
               <div>
@@ -428,34 +351,20 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
-                      <div
-                        className={cn(
-                          'w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0',
-                          isDark ? 'bg-blue-900/30' : 'bg-blue-100'
-                        )}
-                      >
-                        <span className={cn('font-semibold', isDark ? 'text-blue-300' : 'text-blue-700')}>
-                          {initials}
-                        </span>
+                      <div className={cn('w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0', isDark ? 'bg-blue-900/30' : 'bg-blue-100')}>
+                        <span className={cn('font-semibold', isDark ? 'text-blue-300' : 'text-blue-700')}>{initials}</span>
                       </div>
 
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <div className={cn('text-lg font-semibold truncate', colors.textPrimary)}>
-                            {formatPatientName(patient)}
-                          </div>
-                          <span
-                            className={cn(
-                              'px-2 py-0.5 rounded-full text-xs font-medium',
-                              statusBadgeClasses(theme, patient.status)
-                            )}
-                          >
+                          <div className={cn('text-lg font-semibold truncate', colors.textPrimary)}>{formatPatientName(patient)}</div>
+                          <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', statusBadgeClasses(theme, patient.status))}>
                             {getStatusDisplayText(patient.status)}
                           </span>
                         </div>
 
                         <div className={cn('text-sm space-y-1 mt-1', colors.textSecondary)}>
-                          <div>Patient UUID: {patient.patient_number}</div>
+                          <div>Patient Number: {patient.patient_number}</div>
                           {patient.date_of_birth ? (
                             <div>
                               DOB: {new Date(patient.date_of_birth).toLocaleDateString()}
@@ -468,32 +377,26 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
                       </div>
                     </div>
 
-               {processAction && (processAction.onlyWhenSelected ?? true ? isSelected : true) ? (
-                <button
-                    type="button"
-                    onClick={(e) => {
-                    e.stopPropagation();
-                    void handleProcess(patient);
-                    }}
-                    className={cn(
-                    'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 flex-shrink-0',
-                    'bg-blue-600 hover:bg-blue-700 text-white'
-                    )}
-                >
-                    {processAction.icon}
-                    {processAction.label}
-                </button>
-                ) : null}
-
+                    {processAction && (processAction.onlyWhenSelected ?? true ? isSelected : true) ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleProcess(patient);
+                        }}
+                        className={cn('px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 flex-shrink-0', 'bg-blue-600 hover:bg-blue-700 text-white')}
+                      >
+                        {processAction.icon}
+                        {processAction.label}
+                      </button>
+                    ) : null}
                   </div>
 
                   {patient.requires_isolation ? (
                     <div
                       className={cn(
                         'mt-3 text-sm rounded-lg border p-3',
-                        isDark
-                          ? 'bg-yellow-900/20 border-yellow-800/50 text-yellow-200'
-                          : 'bg-yellow-50 border-yellow-100 text-yellow-800'
+                        isDark ? 'bg-yellow-900/20 border-yellow-800/50 text-yellow-200' : 'bg-yellow-50 border-yellow-100 text-yellow-800'
                       )}
                     >
                       Isolation required
@@ -507,19 +410,8 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
 
         {/* Not found */}
         {notFound && (
-          <div
-            className={cn(
-              'rounded-xl border p-8 text-center mt-6',
-              colors.cardBg,
-              colors.cardBorder
-            )}
-          >
-            <div
-              className={cn(
-                'inline-flex items-center justify-center w-16 h-16 rounded-full mb-4',
-                isDark ? 'bg-red-900/30' : 'bg-red-100'
-              )}
-            >
+          <div className={cn('rounded-xl border p-8 text-center mt-6', colors.cardBg, colors.cardBorder)}>
+            <div className={cn('inline-flex items-center justify-center w-16 h-16 rounded-full mb-4', isDark ? 'bg-red-900/30' : 'bg-red-100')}>
               <Search className={cn('w-8 h-8', isDark ? 'text-red-400' : 'text-red-600')} />
             </div>
 
@@ -532,10 +424,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
               <button
                 type="button"
                 onClick={() => void handleCreateFromNotFound()}
-                className={cn(
-                  'inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors',
-                  'bg-blue-600 hover:bg-blue-700 text-white'
-                )}
+                className={cn('inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors', 'bg-blue-600 hover:bg-blue-700 text-white')}
               >
                 <UserPlus className="w-5 h-5" />
                 {createAction.label ?? 'Create New Patient'}

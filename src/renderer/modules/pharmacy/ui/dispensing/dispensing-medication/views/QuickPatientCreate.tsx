@@ -15,10 +15,12 @@ interface QuickPatientCreateProps {
 const QuickPatientCreate: React.FC<QuickPatientCreateProps> = ({ theme, className }) => {
   const navigate = useNavigate();
 
-  const handleCreated = useCallback((patient: PatientSearchResult) => {
-    // after create: go directly to pharmacy dispensing flow
-    navigate(`${PHARMACY_ROUTES.DISPENSING_SEARCH_PRESCRIPTION}?patientId=${patient.patient_number}`);
-  }, [navigate]);
+  const handleCreated = useCallback(
+    (patient: PatientSearchResult) => {
+      navigate(`${PHARMACY_ROUTES.DISPENSING_SEARCH_PRESCRIPTION}?patientId=${patient.patient_number}`);
+    },
+    [navigate]
+  );
 
   const handleCancel = useCallback(() => {
     navigate(PHARMACY_ROUTES.DISPENSING_PATIENT_SEARCH);
@@ -26,25 +28,11 @@ const QuickPatientCreate: React.FC<QuickPatientCreateProps> = ({ theme, classNam
 
   return (
     <div className={cn(className)}>
-      <PatientCreate
-        theme={theme}
-        title="Register New Patient (Pharmacy)"
-        subtitle="Create a patient record to proceed with dispensing"
-        onCreated={handleCreated}
-        onCancel={handleCancel}
-      />
+      <PatientCreate theme={theme} title="Register New Patient (Pharmacy)" subtitle="Create a patient record to proceed with dispensing" onCreated={handleCreated} onCancel={handleCancel} />
 
-      {/* Optional helper footer */}
       <div className="max-w-3xl mx-auto px-6 pb-8">
-        <div
-          className={cn(
-            'mt-6 rounded-xl border p-4 flex items-center justify-between gap-3',
-            theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-          )}
-        >
-          <div className={cn('text-sm', theme === 'dark' ? 'text-gray-300' : 'text-gray-700')}>
-            After registration, you’ll be redirected to dispensing.
-          </div>
+        <div className={cn('mt-6 rounded-xl border p-4 flex items-center justify-between gap-3', theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200')}>
+          <div className={cn('text-sm', theme === 'dark' ? 'text-gray-300' : 'text-gray-700')}>After registration, you'll be redirected to dispensing.</div>
           <div className="flex items-center gap-2 text-blue-600">
             <Pill className="w-4 h-4" />
             <ArrowRight className="w-4 h-4" />
