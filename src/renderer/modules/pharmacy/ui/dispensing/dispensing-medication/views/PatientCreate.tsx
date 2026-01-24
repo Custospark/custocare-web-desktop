@@ -28,7 +28,7 @@ import {
 import { useCreatePatientByStaff } from '../../../../api/dispensing/patient-search/usePatientQueries';
 
 // Import country codes
-import { CountryCode, countryCodes } from  '../../../../../administration/onboarding/ui/auth/countryCodes';
+import { type CountryCode, countryCodes } from  '../../../../../administration/onboarding/ui/auth/countryCodes';
 
 type Theme = 'light' | 'dark';
 

@@ -13,7 +13,7 @@ import { motion } from 'framer-motion';
 
 import WalkInSessionCreator from './WalkInSessionCreator';
 import { PHARMACY_ROUTES } from '../../../../../../app/routes/routeConstants';
-import { WalkInSession } from '../../../../api/dispensing/customer-walkin/useCustomerWalkInTypes';
+import { type WalkInSession } from '../../../../api/dispensing/customer-walkin/useCustomerWalkInTypes';
 
 interface CustomerWalkInProps {
   theme: 'light' | 'dark';
