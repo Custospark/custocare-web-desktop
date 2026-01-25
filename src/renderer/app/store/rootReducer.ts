@@ -15,12 +15,11 @@ import patientReducer from './slices/patientSlice';
 import notificationReducer from './slices/notificationSlice';
 import facilityReducer from './slices/facilitySlice';
 import clinicalEncounterReducer from './slices/clinicalEncounterSlice';
-import visitReducer from './slices/visitSlice';
 import queueReducer from './slices/queueSlice';
 import billingReducer from './slices/billingSlice';
 import roleReducer from './slices/roleSlice';
 import auditReducer from './slices/auditSlice';
-
+import visitReducer from './slices/visitSlice';
 // ==============================
 // MODULE NAVIGATION (NEW)
 // ==============================
@@ -33,6 +32,7 @@ export const rootReducer = combineReducers({
   auth: authReducer,
   activeContext: activeContextReducer, // Role / Facility context
   ui: uiReducer,
+  visits:visitReducer,
 
   /**
    * Module-level navigation state

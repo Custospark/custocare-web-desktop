@@ -1,6 +1,8 @@
 // store/slices/visitSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { RootState } from '../store';
 import { QueueVisitItem, VisitPhase, VisitStatus } from '../../../modules/pharmacy/api/dispensing/visit-queue/visitTypes';
+
 /* -------------------------------------------------------------------------- */
 /*                       VISIT STATE - SINGLE ITEM STORAGE                    */
 /* -------------------------------------------------------------------------- */
@@ -88,8 +90,6 @@ const visitsSlice = createSlice({
       
       state.ui.hasVisitLoaded = true;
       state.ui.error = null;
-      
-      console.log('✅ Active visit set:', visit.visit_uuid);
     },
     
     /**
@@ -116,8 +116,6 @@ const visitsSlice = createSlice({
         enteredAt: null,
       };
       state.ui.hasVisitLoaded = false;
-      
-      console.log('✅ Active visit cleared');
     },
     
     /**
@@ -152,8 +150,6 @@ const visitsSlice = createSlice({
         const temp = state.activeVisit;
         state.activeVisit = state.previousVisit;
         state.previousVisit = temp;
-        
-        console.log('🔄 Switched to previous visit:', state.activeVisit?.visit_uuid);
       }
     },
     
@@ -211,3 +207,55 @@ export const {
 } = visitsSlice.actions;
 
 export default visitsSlice.reducer;
+
+/* -------------------------------------------------------------------------- */
+/*                           SELECTORS                                        */
+/* -------------------------------------------------------------------------- */
+
+// Primary selectors
+export const selectActiveVisit = (state: RootState) => state.visits.activeVisit;
+export const selectPreviousVisit = (state: RootState) => state.visits.previousVisit;
+export const selectVisitContext = (state: RootState) => state.visits.context;
+
+// UI state selectors
+export const selectIsTakingAction = (state: RootState) => state.visits.ui.isTakingAction;
+export const selectHasVisitLoaded = (state: RootState) => state.visits.ui.hasVisitLoaded;
+export const selectVisitError = (state: RootState) => state.visits.ui.error;
+
+// Derived selectors
+export const selectActiveVisitUuid = (state: RootState) => 
+  state.visits.activeVisit?.visit_uuid || null;
+
+export const selectActivePatient = (state: RootState) => 
+  state.visits.activeVisit?.patient || null;
+
+export const selectActiveVisitPhase = (state: RootState) => 
+  state.visits.activeVisit?.current_phase || null;
+
+export const selectActiveVisitStatus = (state: RootState) => 
+  state.visits.activeVisit?.status || null;
+
+export const selectActiveVisitDepartment = (state: RootState) => 
+  state.visits.activeVisit?.current_department_id || null;
+
+// Check if we have an active visit
+export const selectHasActiveVisit = (state: RootState) => 
+  !!state.visits.activeVisit;
+
+// Get visit info for display - FIXED VERSION
+export const selectActiveVisitInfo = (state: RootState) => {
+  const visit = state.visits.activeVisit;
+  if (!visit) return null;
+  
+  return {
+    uuid: visit.visit_uuid,
+    patientName: visit.patient?.name || 'Unknown Patient',
+    patientNumber: visit.patient?.patient_number || 'N/A',
+    phase: visit.current_phase,
+    type: visit.visit_type,
+    status: visit.status,
+    acuity: visit.acuity_score,
+    waitTime: visit.waiting_since,
+    arrivedAt: visit.arrived_at,
+  };
+};
