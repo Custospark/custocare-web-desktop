@@ -224,8 +224,8 @@ export const MEDICAL_RECORDS_ROUTES = {
   // Patients nested actions
   PATIENTS_SEARCH: `${ROUTES.MEDICAL_RECORDS}/patients/search`,
   PATIENTS_REGISTER: `${ROUTES.MEDICAL_RECORDS}/patients/register`,
-  PATIENT_QUEUE: `${ROUTES.MEDICAL_RECORDS}/patients/walk-in`,
-  WALKIN_PATIENT: `${ROUTES.MEDICAL_RECORDS}/patients/queue`,
+  WALKIN_PATIENT: `${ROUTES.MEDICAL_RECORDS}/patients/walk-in`,
+  PATIENT_QUEUE: `${ROUTES.MEDICAL_RECORDS}/patients/queue`,
   
 
   // Appointments nested actions

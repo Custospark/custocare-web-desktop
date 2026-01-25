@@ -201,7 +201,7 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
       aria-modal="true"
       aria-labelledby="patient-success-modal-title"
     >
-      <div className={cn('relative w-full max-w-md rounded-2xl shadow-2xl', isDark ? 'bg-gray-800' : 'bg-white')}>
+      <div className={cn('relative w-full max-w-md rounded-2xl shadow-2xl', isDark ? 'bg-gray-800' : 'bg-gray-200')}>
         {onClose && (
           <button
             type="button"

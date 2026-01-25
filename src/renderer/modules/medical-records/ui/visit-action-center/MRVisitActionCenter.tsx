@@ -1,8 +1,6 @@
 
-function MRVisitActionCenter() {
+export default function MRVisitActionCenter() {
   return (
     <div>MRVisitActionCenter</div>
   )
 }
-
-export default MRVisitActionCenter

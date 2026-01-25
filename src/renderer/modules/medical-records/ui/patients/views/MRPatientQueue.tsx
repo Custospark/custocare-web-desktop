@@ -1,11 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus } from 'lucide-react';
+import { Stethoscope } from 'lucide-react';
 
-import PatientQueue from './PatientQueue';
-import { cn } from '../../../../../../shared/utils/classNameUtils';
-import { PHARMACY_ROUTES } from '../../../../../../app/routes/routeConstants';
-import type { QueuePatient, QueueVisit } from '../../../../api/dispensing/visit-queue/visitTypes';
+import PatientQueue from '../../../../pharmacy/ui/dispensing/dispensing-medication/views/PatientQueue';
+import { cn } from '../../../../../shared/utils/classNameUtils';
+import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
+import { VisitPhase, type QueuePatient, type QueueVisit } from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 
 /* -------------------------------------------------------------------------- */
 /*                               TYPE DEFINITIONS                             */
@@ -13,7 +13,7 @@ import type { QueuePatient, QueueVisit } from '../../../../api/dispensing/visit-
 
 type Theme = 'light' | 'dark';
 
-export interface DispensingQueueProps {
+export interface MRPatientQueueProps {
   theme: Theme;
   className?: string;
 }
@@ -22,57 +22,60 @@ export interface DispensingQueueProps {
 /*                              MAIN COMPONENT                                */
 /* -------------------------------------------------------------------------- */
 
-const DispensingQueue: React.FC<DispensingQueueProps> = ({ theme, className = '' }) => {
+const MRPatientQueue: React.FC<MRPatientQueueProps> = ({ theme, className = '' }) => {
   const navigate = useNavigate();
 
   const handlePatientSelect = (patient: QueuePatient, queueVisit?: QueueVisit) => {
     // Handle patient selection (optional)
-    console.log('Patient selected:', patient.patient_number, 'Visit:', queueVisit);
+    console.log('Medical Records - Patient selected:', patient.patient_number, 'Visit:', queueVisit);
     // You could store the selected patient in context or state if needed
+    
+    // Optionally navigate to patient chart on selection
+    // navigate(`${MEDICAL_RECORDS_ROUTES.PATIENT_CHART}?patientId=${encodeURIComponent(patient.patient_number)}`);
   };
 
   const handleTakeAction = (patient: QueuePatient, queueVisit?: QueueVisit) => {
     // Navigation handled by this component
     // Use both patient and queue visit data if available
-    console.log('Taking action for patient:', patient.patient_number, 'with visit:', queueVisit);
-    navigate(`${PHARMACY_ROUTES.DISPENSING_SEARCH_PRESCRIPTION}?patientId=${encodeURIComponent(patient.patient_number)}`);
+    console.log('Medical Records - Taking action for patient:', patient.patient_number, 'with visit:', queueVisit);
+    navigate(`${MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}?patientId=${encodeURIComponent(patient.patient_number)}`);
   };
 
   const handleCreateNewPatient = () => {
     // Navigation handled by this component
-    navigate(PHARMACY_ROUTES.DISPENSING_QUICK_CREATE);
+    navigate(MEDICAL_RECORDS_ROUTES.PATIENTS_REGISTER);
   };
 
   return (
     <div className={cn(className)}>
       <PatientQueue
-        title="Dispensing Queue"
-        description="Patients waiting for medication dispensing"
+        title="Medical Records Queue"
+        description="Patients requiring medical documentation and chart updates"
         onPatientSelect={handlePatientSelect}
         onTakeAction={handleTakeAction}
         onNewPatientRegistration={handleCreateNewPatient}
-        actionButtonText="Dispense"
+        actionButtonText="Take Action"
         newPatientButtonText="New Patient"
-        newPatientButtonIcon={<UserPlus className="w-4 h-4" />}
+        newPatientButtonIcon={<Stethoscope className="w-4 h-4" />}
         showStats={true}
         allowPhaseFilter={true}
-        allowDepartmentFilter={false}
+        allowDepartmentFilter={true}
         showUnassignedToggle={true}
         showSearch={true}
         showNewPatientRegistration={true}
         theme={theme}
         className="cursor-default"
         initialFilters={{
-          current_phase: undefined,
+          current_phase: VisitPhase.REGISTRATION, // Focus on documentation phase for medical records
           department_id: undefined,
-          include_unassigned: false,
-          limit: 50,
+          include_unassigned: true,
+          limit: 100,
         }}
       />
     </div>
   );
 };
 
-DispensingQueue.displayName = 'DispensingQueue';
+MRPatientQueue.displayName = 'MRPatientQueue';
 
-export default DispensingQueue;
+export default MRPatientQueue;
