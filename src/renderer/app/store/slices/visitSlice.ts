@@ -1,363 +1,213 @@
-import { createSlice, createEntityAdapter, type PayloadAction } from '@reduxjs/toolkit';
-import type { 
-  Visit, 
-  PriorityLevel,
-  VisitFilterParams,
-  DispositionType
-} from '../../../shared/features/types/visit';
-import { VisitStatus } from '../../../shared/features/types/visit';
-import { PatientStatus } from '../../../shared/features/types/patient';
+// store/slices/visitSlice.ts
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { QueueVisitItem, VisitPhase, VisitStatus } from '../../../modules/pharmacy/api/dispensing/visit-queue/visitTypes';
+/* -------------------------------------------------------------------------- */
+/*                       VISIT STATE - SINGLE ITEM STORAGE                    */
+/* -------------------------------------------------------------------------- */
 
-export interface VisitState {
-  currentVisit: Visit | null;
-  patientVisits: Visit[];
-  filterParams: VisitFilterParams;
-  queueItems: Visit[];
-  isLoading: boolean;
-  error: string | null;
-  transitionsInProgress: Record<string, boolean>;
+export interface VisitsState {
+  // Single active visit being worked on (from queue)
+  activeVisit: QueueVisitItem | null;
+  
+  // Previous visit for quick navigation (optional)
+  previousVisit: QueueVisitItem | null;
+  
+  // Context information
+  context: {
+    facilityId: number | null;
+    departmentId: number | null;
+    staffId: number | null;
+    enteredAt: string | null;
+  };
+  
+  // UI state
+  ui: {
+    isTakingAction: boolean;
+    hasVisitLoaded: boolean;
+    error: string | null;
+  };
 }
 
-// Create entity adapter for normalized visit storage
-const visitsAdapter = createEntityAdapter<Visit>({
-  sortComparer: (a, b) => 
-    new Date(b.registrationTime).getTime() - new Date(a.registrationTime).getTime(),
-});
+/* -------------------------------------------------------------------------- */
+/*                           INITIAL STATE                                    */
+/* -------------------------------------------------------------------------- */
 
-const initialState = visitsAdapter.getInitialState<VisitState>({
-  currentVisit: null,
-  patientVisits: [],
-  filterParams: {
-    page: 1,
-    limit: 50,
+const initialState: VisitsState = {
+  activeVisit: null,
+  previousVisit: null,
+  
+  context: {
+    facilityId: null,
+    departmentId: null,
+    staffId: null,
+    enteredAt: null,
   },
-  queueItems: [],
-  isLoading: false,
-  error: null,
-  transitionsInProgress: {},
-});
+  
+  ui: {
+    isTakingAction: false,
+    hasVisitLoaded: false,
+    error: null,
+  },
+};
 
-const visitSlice = createSlice({
+/* -------------------------------------------------------------------------- */
+/*                           SLICE DEFINITION                                 */
+/* -------------------------------------------------------------------------- */
+
+const visitsSlice = createSlice({
   name: 'visits',
   initialState,
   reducers: {
-    // Visit CRUD operations
-    setVisits: (state, action: PayloadAction<Visit[]>) => {
-      visitsAdapter.setAll(state, action.payload);
-    },
-    
-    addVisit: (state, action: PayloadAction<Visit>) => {
-      visitsAdapter.addOne(state, action.payload);
-      if (state.currentVisit?.id === action.payload.id) {
-        state.currentVisit = action.payload;
-      }
-    },
-    
-    updateVisit: (state, action: PayloadAction<Visit>) => {
-      visitsAdapter.updateOne(state, {
-        id: action.payload.id,
-        changes: action.payload,
-      });
-      if (state.currentVisit?.id === action.payload.id) {
-        state.currentVisit = action.payload;
-      }
-    },
-    
-    removeVisit: (state, action: PayloadAction<string>) => {
-      visitsAdapter.removeOne(state, action.payload);
-      if (state.currentVisit?.id === action.payload) {
-        state.currentVisit = null;
-      }
-    },
-    
-    // Visit selection and current visit management
-    setCurrentVisit: (state, action: PayloadAction<Visit | null>) => {
-      state.currentVisit = action.payload;
-    },
-    
-    clearCurrentVisit: (state) => {
-      state.currentVisit = null;
-    },
-    
-    // Patient-visit relationship
-    setPatientVisits: (state, action: PayloadAction<Visit[]>) => {
-      state.patientVisits = action.payload;
-      visitsAdapter.upsertMany(state, action.payload);
-    },
-    
-    clearPatientVisits: (state) => {
-      state.patientVisits = [];
-    },
-    
-    // State transitions (core workflow)
-    transitionVisitStatus: (
-      state, 
-      action: PayloadAction<{
-        visitId: string;
-        newStatus: VisitStatus;
-        notes?: string;
-        userId: string;
-      }>
-    ) => {
-      const { visitId, newStatus, userId } = action.payload;
-      const visit = state.entities[visitId];
+    /**
+     * SET ACTIVE VISIT - Called when staff clicks "Take Action"
+     * This clears any previous visit and sets the new one
+     */
+    setActiveVisit: (state, action: PayloadAction<{
+      visit: QueueVisitItem;
+      staffId: number;
+      departmentId?: number;
+      facilityId?: number;
+    }>) => {
+      const { visit, staffId, departmentId, facilityId } = action.payload;
       
-      if (visit) {
-        const updatedVisit = {
-          ...visit,
-          status: newStatus,
-          updatedAt: new Date().toISOString(),
-          updatedBy: userId,
-          auditTrail: [
-            ...visit.auditTrail,
-            `Status changed to ${newStatus} by ${userId} at ${new Date().toISOString()}`,
-          ],
-        };
-        
-        visitsAdapter.updateOne(state, {
-          id: visitId,
-          changes: updatedVisit,
-        });
-        
-        if (state.currentVisit?.id === visitId) {
-          state.currentVisit = updatedVisit;
-        }
-        
-        // Set transition in progress flag
-        state.transitionsInProgress[visitId] = false;
+      // Store current as previous if exists
+      if (state.activeVisit) {
+        state.previousVisit = state.activeVisit;
       }
-    },
-    
-    startTransition: (state, action: PayloadAction<string>) => {
-      state.transitionsInProgress[action.payload] = true;
-    },
-    
-    endTransition: (state, action: PayloadAction<string>) => {
-      state.transitionsInProgress[action.payload] = false;
-    },
-    
-    // Queue management
-    setQueueItems: (state, action: PayloadAction<Visit[]>) => {
-      state.queueItems = action.payload;
-      visitsAdapter.upsertMany(state, action.payload);
-    },
-    
-    updateQueueItem: (state, action: PayloadAction<Visit>) => {
-      visitsAdapter.updateOne(state, {
-        id: action.payload.id,
-        changes: action.payload,
-      });
       
-      // Update in queue items array
-      const index = state.queueItems.findIndex(item => item.id === action.payload.id);
-      if (index !== -1) {
-        state.queueItems[index] = action.payload;
-      }
-    },
-    
-    removeFromQueue: (state, action: PayloadAction<string>) => {
-      state.queueItems = state.queueItems.filter(item => item.id !== action.payload);
-    },
-    
-    // Priority updates
-    updateVisitPriority: (
-      state, 
-      action: PayloadAction<{
-        visitId: string;
-        priority: PriorityLevel;
-        userId: string;
-      }>
-    ) => {
-      const { visitId, priority, userId } = action.payload;
-      const visit = state.entities[visitId];
+      // Set new active visit
+      state.activeVisit = visit;
       
-      if (visit) {
-        const updatedVisit = {
-          ...visit,
-          priority,
-          updatedAt: new Date().toISOString(),
-          updatedBy: userId,
-          auditTrail: [
-            ...visit.auditTrail,
-            `Priority changed to ${priority} by ${userId} at ${new Date().toISOString()}`,
-          ],
-        };
-        
-        visitsAdapter.updateOne(state, {
-          id: visitId,
-          changes: updatedVisit,
-        });
-        
-        if (state.currentVisit?.id === visitId) {
-          state.currentVisit = updatedVisit;
-        }
-        
-        // Update in queue
-        const queueIndex = state.queueItems.findIndex(item => item.id === visitId);
-        if (queueIndex !== -1) {
-          state.queueItems[queueIndex] = updatedVisit;
-        }
-      }
-    },
-    
-    // Assignment management
-    assignVisit: (
-      state, 
-      action: PayloadAction<{
-        visitId: string;
-        assignedTo: string;
-        role: 'NURSE' | 'PHYSICIAN';
-        userId: string;
-      }>
-    ) => {
-      const { visitId, assignedTo, role, userId } = action.payload;
-      const visit = state.entities[visitId];
-      
-      if (visit) {
-        const changes: Partial<Visit> = {
-          updatedAt: new Date().toISOString(),
-          updatedBy: userId,
-          auditTrail: [
-            ...visit.auditTrail,
-            `Assigned to ${assignedTo} (${role}) by ${userId} at ${new Date().toISOString()}`,
-          ],
-        };
-        
-        if (role === 'NURSE') {
-          changes.assignedNurseId = assignedTo;
-        } else if (role === 'PHYSICIAN') {
-          changes.assignedPhysicianId = assignedTo;
-        }
-        
-        visitsAdapter.updateOne(state, {
-          id: visitId,
-          changes,
-        });
-      }
-    },
-    
-    // Filter management
-    setFilterParams: (state, action: PayloadAction<Partial<VisitFilterParams>>) => {
-      state.filterParams = { ...state.filterParams, ...action.payload };
-    },
-    
-    resetFilterParams: (state) => {
-      state.filterParams = initialState.filterParams;
-    },
-    
-    // Emergency visit creation
-    addEmergencyVisit: (state, action: PayloadAction<Visit>) => {
-      const visit = {
-        ...action.payload,
-        isEmergency: true,
-        status: VisitStatus.EMERGENCY,
+      // Update context
+      state.context = {
+        staffId,
+        departmentId: departmentId ?? visit.current_department_id ?? null,
+        facilityId: facilityId ?? visit.facility_id,
+        enteredAt: new Date().toISOString(),
       };
       
-      visitsAdapter.addOne(state, visit);
-      state.currentVisit = visit;
+      state.ui.hasVisitLoaded = true;
+      state.ui.error = null;
       
-      // Add to queue if appropriate status
-      if ([
-        VisitStatus.REGISTERED,
-        VisitStatus.TRIAGED,
-        VisitStatus.EMERGENCY
-      ].includes(visit.status)) {
-        state.queueItems.unshift(visit);
+      console.log('✅ Active visit set:', visit.visit_uuid);
+    },
+    
+    /**
+     * START TAKING ACTION - UI loading state
+     */
+    startTakingAction: (state) => {
+      state.ui.isTakingAction = true;
+      state.ui.error = null;
+    },
+    
+    /**
+     * ACTION COMPLETED - Clear active visit
+     */
+    clearActiveVisit: (state) => {
+      if (state.activeVisit) {
+        state.previousVisit = state.activeVisit;
+      }
+      
+      state.activeVisit = null;
+      state.context = {
+        facilityId: null,
+        departmentId: null,
+        staffId: null,
+        enteredAt: null,
+      };
+      state.ui.hasVisitLoaded = false;
+      
+      console.log('✅ Active visit cleared');
+    },
+    
+    /**
+     * UPDATE ACTIVE VISIT PHASE - When visit moves to next phase
+     */
+    updateActiveVisitPhase: (state, action: PayloadAction<{
+      phase: VisitPhase;
+      departmentId?: number;
+    }>) => {
+      if (state.activeVisit) {
+        state.activeVisit.current_phase = action.payload.phase;
+        if (action.payload.departmentId !== undefined) {
+          state.activeVisit.current_department_id = action.payload.departmentId;
+        }
       }
     },
     
-    // Dual-entity state synchronization
-    syncVisitCompletion: (
-      state, 
-      action: PayloadAction<{
-        visitId: string;
-        outcome: {
-          patientStatus?: PatientStatus;
-          followUpRequired: boolean;
-          dischargeInstructions?: string;
-        };
-      }>
-    ) => {
-      const { visitId, outcome } = action.payload;
-      const visit = state.entities[visitId];
-      
-      if (visit) {
-        const updatedVisit = {
-          ...visit,
-          status: VisitStatus.DISCHARGED,
-          disposition: {
-            type: 'DISCHARGE' as DispositionType,
-            instructions: outcome.dischargeInstructions,
-            followUpDate: outcome.followUpRequired ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() : undefined,
-          },
-          dischargeTime: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          auditTrail: [
-            ...visit.auditTrail,
-            `Visit completed with outcome: ${JSON.stringify(outcome)} at ${new Date().toISOString()}`,
-          ],
-        };
-        
-        visitsAdapter.updateOne(state, {
-          id: visitId,
-          changes: updatedVisit,
-        });
-        
-        // Remove from queue
-        state.queueItems = state.queueItems.filter(item => item.id !== visitId);
-        
-        // Note: Patient status update will be handled in patientSlice
+    /**
+     * UPDATE ACTIVE VISIT STATUS - When status changes
+     */
+    updateActiveVisitStatus: (state, action: PayloadAction<VisitStatus>) => {
+      if (state.activeVisit) {
+        state.activeVisit.status = action.payload;
       }
     },
     
-    // Loading states
-    setVisitsLoading: (state, action: PayloadAction<boolean>) => {
-      state.isLoading = action.payload;
+    /**
+     * SWITCH TO PREVIOUS VISIT - Quick navigation back
+     */
+    switchToPreviousVisit: (state) => {
+      if (state.previousVisit) {
+        const temp = state.activeVisit;
+        state.activeVisit = state.previousVisit;
+        state.previousVisit = temp;
+        
+        console.log('🔄 Switched to previous visit:', state.activeVisit?.visit_uuid);
+      }
     },
     
-    setVisitsError: (state, action: PayloadAction<string | null>) => {
-      state.error = action.payload;
+    /**
+     * UPDATE VISIT PATIENT INFO - When patient data is updated
+     */
+    updateActiveVisitPatient: (state, action: PayloadAction<Partial<QueueVisitItem['patient']>>) => {
+      if (state.activeVisit?.patient) {
+        state.activeVisit.patient = {
+          ...state.activeVisit.patient,
+          ...action.payload,
+        };
+      }
     },
     
-    // Reset state
-    resetVisitState: () => initialState,
+    /**
+     * SET ERROR STATE
+     */
+    setVisitError: (state, action: PayloadAction<string | null>) => {
+      state.ui.error = action.payload;
+    },
+    
+    /**
+     * RESET VISIT STATE - On logout or cleanup
+     */
+    resetVisitsState: () => initialState,
+    
+    /**
+     * EMERGENCY CLEAR - Force clear without storing as previous
+     */
+    emergencyClearVisit: (state) => {
+      state.activeVisit = null;
+      state.previousVisit = null;
+      state.context = initialState.context;
+      state.ui.hasVisitLoaded = false;
+    },
   },
 });
 
-// Export the entity adapter selectors
-export const {
-  selectAll: selectAllVisits,
-  selectById: selectVisitById,
-  selectIds: selectVisitIds,
-  selectTotal: selectTotalVisits,
-} = visitsAdapter.getSelectors((state: { visits: ReturnType<typeof visitSlice.reducer> }) => state.visits);
+/* -------------------------------------------------------------------------- */
+/*                         EXPORT REDUCER & ACTIONS                           */
+/* -------------------------------------------------------------------------- */
 
-// Export actions
 export const {
-  setVisits,
-  addVisit,
-  updateVisit,
-  removeVisit,
-  setCurrentVisit,
-  clearCurrentVisit,
-  setPatientVisits,
-  clearPatientVisits,
-  transitionVisitStatus,
-  startTransition,
-  endTransition,
-  setQueueItems,
-  updateQueueItem,
-  removeFromQueue,
-  updateVisitPriority,
-  assignVisit,
-  setFilterParams,
-  resetFilterParams,
-  addEmergencyVisit,
-  syncVisitCompletion,
-  setVisitsLoading,
-  setVisitsError,
-  resetVisitState,
-} = visitSlice.actions;
+  setActiveVisit,
+  startTakingAction,
+  clearActiveVisit,
+  updateActiveVisitPhase,
+  updateActiveVisitStatus,
+  switchToPreviousVisit,
+  updateActiveVisitPatient,
+  setVisitError,
+  resetVisitsState,
+  emergencyClearVisit,
+} = visitsSlice.actions;
 
-// Export reducer
-export default visitSlice.reducer;
+export default visitsSlice.reducer;

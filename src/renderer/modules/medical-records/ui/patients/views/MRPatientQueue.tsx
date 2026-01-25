@@ -31,7 +31,7 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({ theme, className = '' }
     // Navigation handled by this component
     // Use both patient and queue visit data if available
     console.log('Medical Records - Taking action for patient:', patient.patient_id, 'with visit:', queueVisit);
-    navigate(`${MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}}`);
+    navigate(`${MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}`);
   };
 
   const handleCreateNewPatient = () => {
