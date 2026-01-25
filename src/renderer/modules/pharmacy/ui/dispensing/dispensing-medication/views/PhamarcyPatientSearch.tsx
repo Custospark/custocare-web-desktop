@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
+
 import PatientSearch from './PatientSearch';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 
@@ -23,12 +24,18 @@ const PharmacyPatientSearch: React.FC<PharmacyPatientSearchProps> = ({ theme, cl
   const isDeceased = useMemo(() => selectedPatient?.status === PatientStatus.DECEASED, [selectedPatient]);
   const isTestPatient = useMemo(() => selectedPatient?.status === PatientStatus.TEST_PATIENT, [selectedPatient]);
 
-  const handleCreate = useCallback(() => {
-    navigate(PHARMACY_ROUTES.DISPENSING_QUICK_CREATE);
-  }, [navigate]);
+  const handleCreateNewPatient = useCallback(
+    (searchText: string) => {
+      // Navigate to create patient page with pre-filled search text
+      navigate(PHARMACY_ROUTES.DISPENSING_QUICK_CREATE, {
+        state: { prefillSearch: searchText }
+      });
+    },
+    [navigate]
+  );
 
   const handleTakeAction = useCallback(
-    async (patient: PatientSearchResult) => {
+    (patient: PatientSearchResult) => {
       // This is the Take Action button handler that redirects
       navigate(`${PHARMACY_ROUTES.DISPENSING_SEARCH_PRESCRIPTION}?patientId=${patient.patient_number}`);
     },
@@ -87,13 +94,10 @@ const PharmacyPatientSearch: React.FC<PharmacyPatientSearchProps> = ({ theme, cl
         subtitle="Search by patient number, name, DOB, phone to begin dispensing"
         filters={{ status: PatientStatus.ACTIVE }}
         onPatientSelect={setSelectedPatient}
+        onCreateNewPatient={handleCreateNewPatient}
         takeAction={{
           label: 'Take Action',
           onTakeAction: handleTakeAction,
-        }}
-        createAction={{
-          label: 'Register New Patient',
-          onCreate: () => handleCreate(),
         }}
       />
 

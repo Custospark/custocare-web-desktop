@@ -78,6 +78,9 @@ import Appearance from '../../modules/account/apearance/Appearance';
 import FrontDesk from '../../modules/medical-records/ui/patients/FrontDesk';
 import PatientCreate from '../../modules/pharmacy/ui/dispensing/dispensing-medication/views/PatientCreate';
 import PatientQueue from '../../modules/pharmacy/ui/dispensing/dispensing-medication/views/PatientQueue';
+import MedicalRecordsOverView from '../../modules/medical-records/ui/overview/MedicalRecordsOverView';
+import MRVisitActionCenter from '../../modules/medical-records/ui/visit-action-center/MRVisitActionCenter';
+import MRPatientSearch from '../../modules/medical-records/ui/patients/views/MRPatientSearch';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -215,11 +218,20 @@ const accountRoutes = [
 ];
 const medicalRecordsRoutes = [
   <Route
-    key="account-profile"
-    path="profile"
+    key="overview"
+    path={MEDICAL_RECORDS_ROUTES.OVERVIEW}
     element={
       <SuspenseWrapper variant="table">
-        <Profile />
+        <MedicalRecordsOverView />
+      </SuspenseWrapper>
+    }
+  />,
+  <Route
+    key="visit-action-center"
+    path={MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}
+    element={
+      <SuspenseWrapper variant="table">
+        <MRVisitActionCenter />
       </SuspenseWrapper>
     }
   />,
@@ -235,12 +247,12 @@ const medicalRecordsRoutes = [
     <Route index element={<Navigate to={MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH} replace />} />
     <Route path={MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH} element={
         <SuspenseWrapper variant="table">
-          <WithThemeProp Component={PatientSearch} />
+          <WithThemeProp Component={MRPatientSearch} />
         </SuspenseWrapper>
       } />
     <Route path={MEDICAL_RECORDS_ROUTES.PATIENTS_REGISTER} element={
         <SuspenseWrapper variant="table">
-          <WithThemeProp Component={PatientCreate} />
+          <WithThemeProp Component={QuickPatientCreate} />
         </SuspenseWrapper>
       } />
     <Route path={MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE} element={

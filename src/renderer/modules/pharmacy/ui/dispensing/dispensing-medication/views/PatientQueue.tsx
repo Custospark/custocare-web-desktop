@@ -1,13 +1,3 @@
-/**
- * ============================================================================
- * PATIENT QUEUE COMPONENT
- * ============================================================================
- * 
- * Reusable patient queue component that displays patient queue with filtering,
- * real-time updates, and action handlers. Can be customized for different
- * departments (pharmacy, triage, consultation, etc.)
- */
-
 import React, { useState, useMemo } from 'react';
 import {
   Users,
@@ -26,7 +16,7 @@ import { visitKeys, useGetMyQueue } from '../../../../api/dispensing/visit-queue
 import { type QueueFilters } from '../../../../api/dispensing/visit-queue/visitTypes';
 import type { QueuePatient, QueueVisit, VisitPhase } from '../../../../api/dispensing/visit-queue/visitTypes';
 import { calculateWaitTime, isVisitOverdue, getPhaseDisplayName, getTypeDisplayName } from '../../../../api/dispensing/visit-queue/useVisitQueries';
-import { ACUITY_SCORE_DESCRIPTIONS }  from '../../../../api/dispensing/visit-queue/visitTypes';
+import { ACUITY_SCORE_DESCRIPTIONS } from '../../../../api/dispensing/visit-queue/visitTypes';
 
 /* -------------------------------------------------------------------------- */
 /*                               TYPE DEFINITIONS                             */
@@ -41,6 +31,8 @@ export interface PatientQueueProps {
   initialFilters?: QueueFilters;
   /** Callback when a patient is selected */
   onPatientSelect?: (patient: QueuePatient, queueVisit?: QueueVisit) => void;
+  /** Callback for Take Action button */
+  onTakeAction?: (patient: QueuePatient, queueVisit?: QueueVisit) => void;
   /** Custom action button text */
   actionButtonText?: string;
   /** Custom action button icon */
@@ -107,7 +99,8 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   description = 'Patients waiting for service',
   initialFilters = {},
   onPatientSelect,
-  actionButtonText = 'Process',
+  onTakeAction,
+  actionButtonText = 'Take Action',
   actionButtonIcon = <ChevronRight className="w-4 h-4" />,
   showStats = true,
   allowPhaseFilter = true,
@@ -210,6 +203,15 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     onPatientSelect?.(patient, queueVisit);
   };
 
+  // Handle Take Action
+  const handleTakeAction = (patient: QueuePatient, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const queueVisit = queueData?.meta?.queue.find(
+      visit => visit.patient_id === parseInt(patient.patient_number.split('-').pop() || '0')
+    );
+    onTakeAction?.(patient, queueVisit);
+  };
+
   // Manual refresh with optimistic invalidation
   const handleManualRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: visitKeys.queue(filters) });
@@ -232,7 +234,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
 
   /* -------------------------------------------------------------------------- */
   /*                               RENDER FUNCTIONS                             */
-/* -------------------------------------------------------------------------- */
+  /* -------------------------------------------------------------------------- */
 
   // Default patient row renderer
   const defaultRenderPatientRow = (patient: QueuePatient, queueVisit?: QueueVisit) => {
@@ -261,7 +263,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 flex-1 min-w-0">
             {/* Patient Avatar/Initial */}
-            <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+            <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center cursor-default ${
               isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
             }`}>
               <User className="w-5 h-5" />
@@ -270,9 +272,9 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
             {/* Patient Information */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold truncate">{patient.name || 'Unknown Patient'}</h3>
+                <h3 className="font-semibold truncate cursor-pointer">{patient.name || 'Unknown Patient'}</h3>
                 {patient.requires_isolation && (
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium cursor-default ${
                     isDark ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-800'
                   }`}>
                     <AlertCircle className="w-3 h-3 mr-1" />
@@ -281,7 +283,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                 )}
               </div>
               
-              <div className={`text-sm flex flex-wrap gap-x-4 gap-y-1 ${
+              <div className={`text-sm flex flex-wrap gap-x-4 gap-y-1 cursor-default ${
                 isDark ? 'text-gray-400' : 'text-gray-600'
               }`}>
                 <span className="flex items-center gap-1">
@@ -302,14 +304,14 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
               <div className="flex-shrink-0 ml-4 text-right">
                 <div className="flex items-center gap-3">
                   {/* Visit Type */}
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                  <span className={`px-2 py-1 rounded text-xs font-medium cursor-default ${
                     isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-800'
                   }`}>
                     {getTypeDisplayName(queueVisit.visit_type)}
                   </span>
 
                   {/* Phase */}
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                  <span className={`px-2 py-1 rounded text-xs font-medium cursor-default ${
                     isDark ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-100 text-purple-800'
                   }`}>
                     {getPhaseDisplayName(queueVisit.current_phase)}
@@ -318,7 +320,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                   {/* Acuity Score */}
                   {acuityDisplay && (
                     <div
-                      className="px-2 py-1 rounded text-xs font-medium"
+                      className="px-2 py-1 rounded text-xs font-medium cursor-default"
                       style={{ 
                         backgroundColor: `${acuityDisplay.color}20`,
                         color: acuityDisplay.color
@@ -333,7 +335,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                   )}
 
                   {/* Wait Time */}
-                  <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                  <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium cursor-default ${
                     isOverdue
                       ? isDark
                         ? 'bg-red-900/30 text-red-300'
@@ -351,13 +353,10 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
             )}
           </div>
 
-          {/* Action Button */}
+          {/* Take Action Button */}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handlePatientSelect(patient);
-            }}
-            className={`ml-4 flex-shrink-0 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+            onClick={(e) => handleTakeAction(patient, e)}
+            className={`ml-4 flex-shrink-0 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 cursor-pointer ${
               isDark
                 ? 'bg-blue-600 hover:bg-blue-700 text-white'
                 : 'bg-blue-600 hover:bg-blue-700 text-white'
@@ -373,7 +372,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
 
   /* -------------------------------------------------------------------------- */
   /*                               MAIN RENDER                                  */
-/* -------------------------------------------------------------------------- */
+  /* -------------------------------------------------------------------------- */
 
   return (
     <div className={`p-6 ${isDark ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-900'} ${className}`}>
@@ -393,7 +392,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
               <button
                 onClick={handleManualRefresh}
                 disabled={isLoading}
-                className={`p-2 rounded-lg transition-colors ${
+                className={`p-2 rounded-lg transition-colors cursor-pointer ${
                   isDark
                     ? 'bg-gray-800 hover:bg-gray-700 text-gray-300 disabled:opacity-50'
                     : 'bg-white hover:bg-gray-100 text-gray-700 disabled:opacity-50'
@@ -405,7 +404,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
 
               {/* Queue Stats */}
               {showStats && queueStats && (
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                <div className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-default ${
                   isDark ? 'bg-blue-900/30' : 'bg-blue-100'
                 }`}>
                   <Users className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
@@ -422,7 +421,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
             isDark ? 'bg-gray-800' : 'bg-white border border-gray-200'
           }`}>
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4" />
+              <Filter className="w-4 h-4 cursor-default" />
               <span className="font-medium">Filters:</span>
             </div>
 
@@ -431,7 +430,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
               <select
                 value={filters.current_phase || 'all'}
                 onChange={(e) => handlePhaseFilterChange(e.target.value as VisitPhase | 'all')}
-                className={`px-3 py-1.5 rounded border text-sm ${
+                className={`px-3 py-1.5 rounded border text-sm cursor-pointer ${
                   isDark
                     ? 'bg-gray-700 border-gray-600 text-gray-300'
                     : 'bg-white border-gray-300 text-gray-700'
@@ -453,7 +452,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                 onChange={(e) => handleDepartmentFilterChange(
                   e.target.value === 'all' ? 'all' : parseInt(e.target.value)
                 )}
-                className={`px-3 py-1.5 rounded border text-sm ${
+                className={`px-3 py-1.5 rounded border text-sm cursor-pointer ${
                   isDark
                     ? 'bg-gray-700 border-gray-600 text-gray-300'
                     : 'bg-white border-gray-300 text-gray-700'
@@ -472,7 +471,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
             {showUnassignedToggle && (
               <button
                 onClick={handleUnassignedToggle}
-                className={`px-3 py-1.5 rounded border text-sm flex items-center gap-2 ${
+                className={`px-3 py-1.5 rounded border text-sm flex items-center gap-2 cursor-pointer ${
                   filters.include_unassigned
                     ? isDark
                       ? 'bg-blue-900/30 border-blue-700 text-blue-300'
@@ -497,21 +496,21 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
             <div className={`grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 ${
               isDark ? 'text-gray-300' : 'text-gray-700'
             }`}>
-              <div className={`p-4 rounded-lg ${
+              <div className={`p-4 rounded-lg cursor-default ${
                 isDark ? 'bg-gray-800' : 'bg-white border border-gray-200'
               }`}>
                 <div className="text-sm font-medium mb-1">Total Patients</div>
                 <div className="text-2xl font-bold">{queueStats.totalPatients}</div>
               </div>
               
-              <div className={`p-4 rounded-lg ${
+              <div className={`p-4 rounded-lg cursor-default ${
                 isDark ? 'bg-gray-800' : 'bg-white border border-gray-200'
               }`}>
                 <div className="text-sm font-medium mb-1">Avg Wait Time</div>
                 <div className="text-2xl font-bold">{formatWaitTime(queueStats.averageWaitTime)}</div>
               </div>
               
-              <div className={`p-4 rounded-lg ${
+              <div className={`p-4 rounded-lg cursor-default ${
                 isDark ? 'bg-gray-800' : 'bg-white border border-gray-200'
               }`}>
                 <div className="text-sm font-medium mb-1">Overdue Patients</div>
@@ -524,7 +523,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                 </div>
               </div>
               
-              <div className={`p-4 rounded-lg ${
+              <div className={`p-4 rounded-lg cursor-default ${
                 isDark ? 'bg-gray-800' : 'bg-white border border-gray-200'
               }`}>
                 <div className="text-sm font-medium mb-1">Active Phases</div>
@@ -540,7 +539,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
         {isLoading && (
           <div className="flex justify-center items-center py-12">
             <div className="text-center">
-              <RefreshCw className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-500" />
+              <RefreshCw className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-500 cursor-default" />
               <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
                 Loading queue data...
               </p>
@@ -553,14 +552,14 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
           <div className={`rounded-xl border p-8 text-center ${
             isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'
           }`}>
-            <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
+            <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500 cursor-default" />
             <h3 className="text-lg font-semibold mb-2">Failed to Load Queue</h3>
             <p className={isDark ? 'text-gray-400' : 'text-gray-600 mb-4'}>
               {error.message || 'An error occurred while loading the queue'}
             </p>
             <button
               onClick={handleManualRefresh}
-              className={`px-4 py-2 rounded-lg font-medium ${
+              className={`px-4 py-2 rounded-lg font-medium cursor-pointer ${
                 isDark
                   ? 'bg-red-600 hover:bg-red-700 text-white'
                   : 'bg-red-600 hover:bg-red-700 text-white'
@@ -590,7 +589,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
               <div className={`rounded-xl border p-12 text-center ${
                 isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
               }`}>
-                <Users className={`w-16 h-16 mx-auto mb-4 ${
+                <Users className={`w-16 h-16 mx-auto mb-4 cursor-default ${
                   isDark ? 'text-gray-600' : 'text-gray-400'
                 }`} />
                 <h3 className="text-lg font-semibold mb-2">Queue is Empty</h3>

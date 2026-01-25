@@ -28,12 +28,6 @@ const Patient: React.FC<PatientProps> = ({ theme }) => {
           to: MEDICAL_RECORDS_ROUTES.PATIENTS_REGISTER 
         },
         { 
-          key: 'profiles', 
-          label: 'Patient Profiles', 
-          icon: <Users className="w-4 h-4" />, 
-          to: MEDICAL_RECORDS_ROUTES.PATIENTS_PROFILES 
-        },
-        { 
           key: 'update', 
           label: 'Update Patient', 
           icon: <UserCog className="w-4 h-4" />, 

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, Search, UserPlus, X, ArrowRightCircle } from 'lucide-react';
+import { AlertCircle, Search, X, ArrowRightCircle } from 'lucide-react';
 import type { AxiosError } from 'axios';
 
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
@@ -31,11 +31,6 @@ type ProcessAction = {
   onlyWhenSelected?: boolean;
 };
 
-type CreateAction = {
-  label?: string;
-  onCreate: (prefill?: { searchText?: string }) => void | Promise<void>;
-};
-
 type TakeAction = {
   label?: string;
   onTakeAction: (patient: PatientSearchResult) => void | Promise<void>;
@@ -55,8 +50,8 @@ export interface PatientSearchProps {
   onPatientSelect?: (patient: PatientSearchResult) => void;
   onSearchSubmitted?: (searchText: string) => void;
   onNotFound?: (searchText: string) => void;
+  onCreateNewPatient?: (searchText: string) => void | Promise<void>;
   processAction?: ProcessAction;
-  createAction?: CreateAction;
   takeAction?: TakeAction;
   initialSearchText?: string;
   className?: string;
@@ -100,8 +95,8 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
   onPatientSelect,
   onSearchSubmitted,
   onNotFound,
+  onCreateNewPatient,
   processAction,
-  createAction,
   takeAction,
   initialSearchText = '',
   className,
@@ -207,7 +202,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
   );
 
   const handleCreateFromNotFound = useCallback(async () => {
-    if (!createAction) return;
+    if (!onCreateNewPatient) return;
 
     const ok = await confirm({
       title: 'Create New Patient',
@@ -219,8 +214,8 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
     });
 
     if (!ok) return;
-    await createAction.onCreate({ searchText: submittedText || searchText });
-  }, [confirm, createAction, searchText, submittedText, theme]);
+    await onCreateNewPatient(submittedText || searchText);
+  }, [confirm, onCreateNewPatient, searchText, submittedText, theme]);
 
   const colors = useMemo(
     () => ({
@@ -374,114 +369,114 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
         )}
 
         {/* Results State */}
-         {hasSearched && results.length > 0 && (
-  <div className="space-y-3">
-    {results.map((patient) => {
-      const isSelected = selectedPatientId === patient.patient_number;
-      const initials = getPatientInitials(patient);
-      const age = calculateAge(patient.date_of_birth);
-      const sexText = patient.biological_sex ? getBiologicalSexDisplayText(patient.biological_sex) : null;
+        {hasSearched && results.length > 0 && (
+          <div className="space-y-3">
+            {results.map((patient) => {
+              const isSelected = selectedPatientId === patient.patient_number;
+              const initials = getPatientInitials(patient);
+              const age = calculateAge(patient.date_of_birth);
+              const sexText = patient.biological_sex ? getBiologicalSexDisplayText(patient.biological_sex) : null;
 
-      return (
-        <div
-          key={patient.patient_number}
-          role="button"
-          tabIndex={0}
-          onClick={() => handleSelect(patient)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') handleSelect(patient);
-          }}
-          className={cn(
-            'rounded-xl border p-4 transition-all cursor-pointer',
-            colors.cardBg,
-            colors.cardBorder,
-            isSelected
-              ? isDark
-                ? 'ring-2 ring-blue-500'
-                : 'ring-2 ring-blue-500 bg-blue-50'
-              : isDark
-                ? 'hover:bg-gray-700'
-                : 'hover:bg-gray-50'
-          )}
-        >
-          <div className="flex">
-            {/* Patient Information - Left Side */}
-            <div className="flex items-start gap-3 flex-1">
-              <div className={cn('w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0', isDark ? 'bg-blue-900/30' : 'bg-blue-100')}>
-                <span className={cn('font-semibold', isDark ? 'text-blue-300' : 'text-blue-700')}>{initials}</span>
-              </div>
+              return (
+                <div
+                  key={patient.patient_number}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleSelect(patient)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') handleSelect(patient);
+                  }}
+                  className={cn(
+                    'rounded-xl border p-4 transition-all cursor-pointer',
+                    colors.cardBg,
+                    colors.cardBorder,
+                    isSelected
+                      ? isDark
+                        ? 'ring-2 ring-blue-500'
+                        : 'ring-2 ring-blue-500 bg-blue-50'
+                      : isDark
+                        ? 'hover:bg-gray-700'
+                        : 'hover:bg-gray-50'
+                  )}
+                >
+                  <div className="flex">
+                    {/* Patient Information - Left Side */}
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className={cn('w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0', isDark ? 'bg-blue-900/30' : 'bg-blue-100')}>
+                        <span className={cn('font-semibold', isDark ? 'text-blue-300' : 'text-blue-700')}>{initials}</span>
+                      </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className={cn('text-lg font-semibold truncate', colors.textPrimary)}>{formatPatientName(patient)}</div>
-                  <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', statusBadgeClasses(theme, patient.status))}>
-                    {getStatusDisplayText(patient.status)}
-                  </span>
-                </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className={cn('text-lg font-semibold truncate', colors.textPrimary)}>{formatPatientName(patient)}</div>
+                          <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', statusBadgeClasses(theme, patient.status))}>
+                            {getStatusDisplayText(patient.status)}
+                          </span>
+                        </div>
 
-                <div className={cn('text-sm space-y-1 mt-1', colors.textSecondary)}>
-                  <div>Patient Number: {patient.patient_number}</div>
-                  {patient.date_of_birth ? (
-                    <div>
-                      DOB: {new Date(patient.date_of_birth).toLocaleDateString()}
-                      {age !== null ? ` • Age: ${age}` : null}
+                        <div className={cn('text-sm space-y-1 mt-1', colors.textSecondary)}>
+                          <div>Patient Number: {patient.patient_number}</div>
+                          {patient.date_of_birth ? (
+                            <div>
+                              DOB: {new Date(patient.date_of_birth).toLocaleDateString()}
+                              {age !== null ? ` • Age: ${age}` : null}
+                            </div>
+                          ) : null}
+                          {sexText ? <div>Sex: {sexText}</div> : null}
+                          <div>Account: {patient.global_user_uuid ? 'Linked' : 'Unlinked'}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Take Action Button - Right Side */}
+                    <div className="flex items-center justify-center pl-4">
+                      {processAction && (processAction.onlyWhenSelected ?? true ? isSelected : true) ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleProcess(patient);
+                          }}
+                          className={cn('px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 flex-shrink-0 cursor-pointer', 'bg-blue-600 hover:bg-blue-700 text-white')}
+                        >
+                          {processAction.icon}
+                          {processAction.label}
+                        </button>
+                      ) : null}
+                      
+                      {takeAction && (
+                        <div className="flex items-center justify-center h-full">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleTakeAction(patient);
+                            }}
+                            className={cn('px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer', 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-shadow')}
+                          >
+                            <ArrowRightCircle className="w-4 h-4" />
+                            {takeAction.label ?? 'Take Action'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {patient.requires_isolation ? (
+                    <div
+                      className={cn(
+                        'mt-3 text-sm rounded-lg border p-3',
+                        isDark ? 'bg-yellow-900/20 border-yellow-800/50 text-yellow-200' : 'bg-yellow-50 border-yellow-100 text-yellow-800'
+                      )}
+                    >
+                      Isolation required
                     </div>
                   ) : null}
-                  {sexText ? <div>Sex: {sexText}</div> : null}
-                  <div>Account: {patient.global_user_uuid ? 'Linked' : 'Unlinked'}</div>
                 </div>
-              </div>
-            </div>
-
-            {/* Take Action Button - Right Side */}
-            <div className="flex items-center justify-center pl-4">
-              {processAction && (processAction.onlyWhenSelected ?? true ? isSelected : true) ? (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void handleProcess(patient);
-                  }}
-                  className={cn('px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 flex-shrink-0 cursor-pointer', 'bg-blue-600 hover:bg-blue-700 text-white')}
-                >
-                  {processAction.icon}
-                  {processAction.label}
-                </button>
-              ) : null}
-              
-              {takeAction && (
-                <div className="flex items-center justify-center h-full">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void handleTakeAction(patient);
-                    }}
-                    className={cn('px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer', 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-shadow')}
-                  >
-                    <ArrowRightCircle className="w-4 h-4" />
-                    {takeAction.label ?? 'Take Action'}
-                  </button>
-                </div>
-              )}
-            </div>
+              );
+            })}
           </div>
-
-          {patient.requires_isolation ? (
-            <div
-              className={cn(
-                'mt-3 text-sm rounded-lg border p-3',
-                isDark ? 'bg-yellow-900/20 border-yellow-800/50 text-yellow-200' : 'bg-yellow-50 border-yellow-100 text-yellow-800'
-              )}
-            >
-              Isolation required
-            </div>
-          ) : null}
-        </div>
-      );
-    })}
-  </div>
-)}
+        )}
 
         {/* Not Found State */}
         {hasSearched && notFound && (
@@ -495,16 +490,16 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
               No patient found for: <strong>{submittedText}</strong>
             </p>
 
-            {createAction ? (
+            {onCreateNewPatient && (
               <button
                 type="button"
                 onClick={() => void handleCreateFromNotFound()}
                 className={cn('inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer', 'bg-blue-600 hover:bg-blue-700 text-white')}
               >
-                <UserPlus className="w-5 h-5" />
-                {createAction.label ?? 'Create New Patient'}
+                <ArrowRightCircle className="w-5 h-5" />
+                Create New Patient
               </button>
-            ) : null}
+            )}
           </div>
         )}
       </div>
