@@ -232,7 +232,7 @@ const medicalRecordsRoutes = [
     path={MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}
     element={
       <SuspenseWrapper variant="table">
-        <MRVisitActionCenter />
+      <WithThemeProp Component={MRVisitActionCenter} />
       </SuspenseWrapper>
     }
   />,

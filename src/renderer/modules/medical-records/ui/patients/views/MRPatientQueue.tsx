@@ -1,11 +1,16 @@
+// components/medical-records/MRPatientQueue.tsx
 import React from 'react';
+import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Stethoscope } from 'lucide-react';
 
 import PatientQueue from '../../../../pharmacy/ui/dispensing/dispensing-medication/views/PatientQueue';
 import { cn } from '../../../../../shared/utils/classNameUtils';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
-import { QueueVisitItem, VisitPhase,} from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import { QueueVisitItem, VisitPhase } from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+
+// Import Redux actions
+import { setActiveVisit } from '../../../../../app/store/slices/visitSlice';
 
 /* -------------------------------------------------------------------------- */
 /*                               TYPE DEFINITIONS                             */
@@ -24,18 +29,26 @@ export interface MRPatientQueueProps {
 
 const MRPatientQueue: React.FC<MRPatientQueueProps> = ({ theme, className = '' }) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-
-
-  const handleTakeAction = (patient: QueueVisitItem, queueVisit?: QueueVisitItem) => {
-    // Navigation handled by this component
-    // Use both patient and queue visit data if available
-    console.log('Medical Records - Taking action for patient:', patient.patient_id, 'with visit:', queueVisit);
-    navigate(`${MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}`);
+  const handleTakeAction = (visit: QueueVisitItem) => {
+    // Get current staff ID from auth context or localStorage
+    const currentStaffId = parseInt(localStorage.getItem('staff_id') || '0', 10);
+    
+    // Dispatch to Redux to set active visit
+    dispatch(setActiveVisit({
+      visit,
+      staffId: currentStaffId,
+      // You can also pass departmentId and facilityId if available
+    }));
+    
+    console.log('✅ Active visit set in Redux:', visit.visit_uuid);
+    
+    // Navigate to action center
+    navigate(MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER);
   };
 
   const handleCreateNewPatient = () => {
-    // Navigation handled by this component
     navigate(MEDICAL_RECORDS_ROUTES.PATIENTS_REGISTER);
   };
 
@@ -58,7 +71,7 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({ theme, className = '' }
         theme={theme}
         className="cursor-default"
         initialFilters={{
-          current_phase: VisitPhase.REGISTRATION, // Focus on documentation phase for medical records
+          current_phase: VisitPhase.REGISTRATION,
           department_id: undefined,
           include_unassigned: true,
           limit: 100,
