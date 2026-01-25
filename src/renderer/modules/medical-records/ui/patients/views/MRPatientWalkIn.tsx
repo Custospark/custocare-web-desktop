@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import WalkInSessionCreator from '../../../../pharmacy/ui/dispensing/dispensing-medication/views/WalkInSessionCreator';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
-import { WalkInSession } from '../../../../pharmacy/api/dispensing/customer-walkin/useCustomerWalkInTypes';
+import { type WalkInSession } from '../../../../pharmacy/api/dispensing/customer-walkin/useCustomerWalkInTypes';
 
 interface MRPatientWalkInProps {
   theme?: 'light' | 'dark';

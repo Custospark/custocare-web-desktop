@@ -360,11 +360,11 @@ export const useCreateVisit = (
       
       callbacks.onSuccess?.(data);
     },
-    onError: (error, variables, context) => {
+    onError: (error) => {
       // Rollback optimistic update
-      if (context?.previousVisits) {
-        queryClient.setQueryData(visitKeys.lists(), context.previousVisits);
-      }
+      // if (context?.previousVisits) {
+      //   queryClient.setQueryData(visitKeys.lists(), context.previousVisits);
+      // }
 
       const apiMessage = error.response?.data?.message || error.message || 'Failed to create visit.';
       let errorDetails = '';
