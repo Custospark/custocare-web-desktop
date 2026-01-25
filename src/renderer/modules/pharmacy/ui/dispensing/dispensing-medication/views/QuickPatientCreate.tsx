@@ -17,8 +17,15 @@ const QuickPatientCreate: React.FC<QuickPatientCreateProps> = ({ theme, classNam
 
   const handleSuccess = useCallback(
     (patient: PatientSearchResult) => {
-      // The parent component handles what happens after successful patient creation
-      // Use replace instead of push to prevent going back to create form
+      // Handle immediate success (e.g., analytics, logging)
+      console.log('Patient created successfully for pharmacy:', patient.patient_number);
+    },
+    []
+  );
+
+  const handleProceed = useCallback(
+    (patient: PatientSearchResult) => {
+      // Navigate to prescription search after user clicks "Continue" in modal
       navigate(`${PHARMACY_ROUTES.DISPENSING_SEARCH_PRESCRIPTION}?patientId=${patient.patient_number}`, {
         replace: true,
       });
@@ -37,6 +44,7 @@ const QuickPatientCreate: React.FC<QuickPatientCreateProps> = ({ theme, classNam
         title="Register New Patient (Pharmacy)" 
         subtitle="Create a patient record to proceed with dispensing" 
         onSuccess={handleSuccess} 
+        onProceed={handleProceed}
         onCancel={handleCancel} 
       />
 
@@ -48,7 +56,8 @@ const QuickPatientCreate: React.FC<QuickPatientCreateProps> = ({ theme, classNam
             : 'bg-white border-gray-200 hover:bg-gray-50'
         )}>
           <div className={cn('text-sm flex-1', theme === 'dark' ? 'text-gray-300' : 'text-gray-700')}>
-            After registration, you'll be automatically redirected to the dispensing page to continue.
+            After registration, you'll see a confirmation modal with the patient number. 
+            Click "Continue" to proceed to prescription search for dispensing.
           </div>
           <div className="flex items-center gap-2 text-blue-600 flex-shrink-0">
             <Pill className="w-4 h-4" />

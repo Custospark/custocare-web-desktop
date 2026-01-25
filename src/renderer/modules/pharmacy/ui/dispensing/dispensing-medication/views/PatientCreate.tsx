@@ -38,6 +38,7 @@ export interface PatientCreateProps {
   subtitle?: string;
   initialValues?: Partial<CreatePatientRequest>;
   onSuccess?: (patient: PatientSearchResult) => void | Promise<void>;
+  onProceed?: (patient: PatientSearchResult) => void | Promise<void>;
   onCancel?: () => void;
   className?: string;
 }
@@ -190,10 +191,7 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
     if (onProceed) {
       onProceed();
     }
-    if (onClose) {
-      onClose();
-    }
-  }, [onProceed, onClose]);
+  }, [onProceed]);
 
   return (
     <div 
@@ -716,6 +714,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
   subtitle = 'Enter patient details to create a new record', 
   initialValues, 
   onSuccess, 
+  onProceed,
   onCancel, 
   className 
 }) => {
@@ -762,6 +761,11 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
           showToast('success', 'Patient created successfully', 3000);
         } else {
           showToast('info', 'Existing patient record found and linked', 3000);
+        }
+        
+        // Call onSuccess callback when patient is created/found
+        if (onSuccess) {
+          onSuccess(patient);
         }
         
       } else if (isPatientCreateConflictResponse(response)) {
@@ -917,10 +921,11 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
   }, [confirm, createMutation, form, markAllFieldsTouched, theme]);
 
   const handleSuccessModalProceed = useCallback(() => {
-    if (createdPatient && onSuccess) {
-      onSuccess(createdPatient);
+    if (createdPatient && onProceed) {
+      onProceed(createdPatient);
     }
-  }, [createdPatient, onSuccess]);
+    setShowSuccessModal(false);
+  }, [createdPatient, onProceed]);
 
   const handleSuccessModalClose = useCallback(() => {
     setShowSuccessModal(false);
@@ -1237,7 +1242,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
           theme={theme}
           patientNumber={createdPatient.patient_number}
           patientName={formatPatientName(createdPatient)}
-          onProceed={onSuccess ? handleSuccessModalProceed : undefined}
+          onProceed={onProceed ? handleSuccessModalProceed : undefined}
           onClose={handleSuccessModalClose}
           isNewPatient={isNewPatient}
         />

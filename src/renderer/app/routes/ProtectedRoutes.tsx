@@ -76,11 +76,11 @@ import MyInvitations from '../../modules/account/invitations/MyInvitations';
 import Message from '../../modules/account/message/Message';
 import Appearance from '../../modules/account/apearance/Appearance';
 import FrontDesk from '../../modules/medical-records/ui/patients/FrontDesk';
-import PatientCreate from '../../modules/pharmacy/ui/dispensing/dispensing-medication/views/PatientCreate';
 import PatientQueue from '../../modules/pharmacy/ui/dispensing/dispensing-medication/views/PatientQueue';
 import MedicalRecordsOverView from '../../modules/medical-records/ui/overview/MedicalRecordsOverView';
 import MRVisitActionCenter from '../../modules/medical-records/ui/visit-action-center/MRVisitActionCenter';
 import MRPatientSearch from '../../modules/medical-records/ui/patients/views/MRPatientSearch';
+import MRPatientCreate from '../../modules/medical-records/ui/patients/views/MRPatientCreate';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -252,7 +252,7 @@ const medicalRecordsRoutes = [
       } />
     <Route path={MEDICAL_RECORDS_ROUTES.PATIENTS_REGISTER} element={
         <SuspenseWrapper variant="table">
-          <WithThemeProp Component={QuickPatientCreate} />
+          <WithThemeProp Component={MRPatientCreate} />
         </SuspenseWrapper>
       } />
     <Route path={MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE} element={
