@@ -1,9 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Pill, AlertTriangle } from 'lucide-react';
-
+import { AlertTriangle } from 'lucide-react';
 import PatientSearch from './PatientSearch';
-import { useConfirm } from '../../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 
 import type { PatientSearchResult } from '../../../../api/dispensing/patient-search/usePatientTypes';
@@ -17,7 +15,6 @@ interface PharmacyPatientSearchProps {
 
 const PharmacyPatientSearch: React.FC<PharmacyPatientSearchProps> = ({ theme, className }) => {
   const navigate = useNavigate();
-  const { confirm } = useConfirm();
   const isDark = theme === 'dark';
 
   const [selectedPatient, setSelectedPatient] = useState<PatientSearchResult | null>(null);
@@ -30,47 +27,12 @@ const PharmacyPatientSearch: React.FC<PharmacyPatientSearchProps> = ({ theme, cl
     navigate(PHARMACY_ROUTES.DISPENSING_QUICK_CREATE);
   }, [navigate]);
 
-  const proceedToDispense = useCallback(
+  const handleTakeAction = useCallback(
     async (patient: PatientSearchResult) => {
-      if (patient.requires_isolation) {
-        const ok = await confirm({
-          title: 'Patient Requires Isolation',
-          message: 'This patient requires isolation. Please ensure you are wearing appropriate PPE before proceeding.',
-          confirmText: 'Proceed Anyway',
-          cancelText: 'Cancel',
-          variant: 'warning',
-          theme,
-        });
-        if (!ok) return;
-      }
-
-      if (patient.status === PatientStatus.DECEASED) {
-        const ok = await confirm({
-          title: 'Patient is Deceased',
-          message: 'This patient is marked as deceased. Are you sure you want to proceed with dispensing?',
-          confirmText: 'Yes, Proceed',
-          cancelText: 'Cancel',
-          variant: 'danger',
-          theme,
-        });
-        if (!ok) return;
-      }
-
-      if (patient.status === PatientStatus.TEST_PATIENT) {
-        const ok = await confirm({
-          title: 'Test Patient Record',
-          message: 'This is a test patient record. Dispensing actions should not be treated as real-world dispensing.',
-          confirmText: 'Proceed',
-          cancelText: 'Cancel',
-          variant: 'warning',
-          theme,
-        });
-        if (!ok) return;
-      }
-
+      // This is the Take Action button handler that redirects
       navigate(`${PHARMACY_ROUTES.DISPENSING_SEARCH_PRESCRIPTION}?patientId=${patient.patient_number}`);
     },
-    [confirm, navigate, theme]
+    [navigate]
   );
 
   const renderWarnings = () => {
@@ -79,7 +41,6 @@ const PharmacyPatientSearch: React.FC<PharmacyPatientSearchProps> = ({ theme, cl
     return (
       <div className={cn('rounded-xl border p-6 mt-6', isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200', className)}>
         <div className="flex items-center gap-3 mb-4">
-          <Pill className={cn('w-5 h-5', isDark ? 'text-blue-300' : 'text-blue-700')} />
           <div className={cn('font-semibold', isDark ? 'text-white' : 'text-gray-900')}>Pharmacy Warnings</div>
         </div>
 
@@ -126,11 +87,9 @@ const PharmacyPatientSearch: React.FC<PharmacyPatientSearchProps> = ({ theme, cl
         subtitle="Search by patient number, name, DOB, phone to begin dispensing"
         filters={{ status: PatientStatus.ACTIVE }}
         onPatientSelect={setSelectedPatient}
-        processAction={{
-          label: 'Dispense',
-          icon: <Pill className="w-4 h-4" />,
-          onProcess: proceedToDispense,
-          onlyWhenSelected: true,
+        takeAction={{
+          label: 'Take Action',
+          onTakeAction: handleTakeAction,
         }}
         createAction={{
           label: 'Register New Patient',
