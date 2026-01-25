@@ -28,7 +28,7 @@ import {
 import { useCreatePatientByStaff } from '../../../../api/dispensing/patient-search/usePatientQueries';
 
 // Import country codes
-import { type CountryCode, countryCodes } from  '../../../../../administration/onboarding/ui/auth/countryCodes';
+import { type CountryCode, countryCodes } from '../../../../../administration/onboarding/ui/auth/countryCodes';
 
 type Theme = 'light' | 'dark';
 
@@ -37,7 +37,7 @@ export interface PatientCreateProps {
   title?: string;
   subtitle?: string;
   initialValues?: Partial<CreatePatientRequest>;
-  onCreated?: (patient: PatientSearchResult) => void;
+  onSuccess?: (patient: PatientSearchResult) => void | Promise<void>;
   onCancel?: () => void;
   className?: string;
 }
@@ -86,16 +86,16 @@ function errorToMessage(error: unknown): string {
   return 'Failed to create patient. Please try again.';
 }
 
-interface PatientNumberModalProps {
+interface PatientSuccessModalProps {
   theme: Theme;
   patientNumber: string;
   patientName: string;
-  onProceed: () => void;
+  onProceed?: () => void;
   onClose?: () => void;
   isNewPatient?: boolean;
 }
 
-const PatientNumberModal: React.FC<PatientNumberModalProps> = ({ 
+const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({ 
   theme, 
   patientNumber, 
   patientName, 
@@ -133,7 +133,7 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
       
       copyTimerRef.current = window.setTimeout(() => setCopied(false), 3000);
     } catch (err) {
-        console.log(err);
+      console.error(err);
       try {
         const textArea = document.createElement('textarea');
         textArea.value = patientNumber;
@@ -154,7 +154,7 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
           showToast('error', 'Failed to copy patient number', 3000);
         }
       } catch (fallbackErr) {
-        console.log(fallbackErr);
+        console.error(fallbackErr);
         showToast('error', 'Failed to copy patient number', 3000);
       }
     }
@@ -175,7 +175,7 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
       URL.revokeObjectURL(url);
       showToast('success', 'Patient details downloaded', 3000);
     } catch (err) {
-        console.log(err);
+      console.error(err);
       showToast('error', 'Failed to download patient details', 3000);
     }
   }, [patientName, patientNumber, showToast]);
@@ -185,6 +185,15 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
       onClose();
     }
   }, [onClose]);
+
+  const handleProceedClick = useCallback(() => {
+    if (onProceed) {
+      onProceed();
+    }
+    if (onClose) {
+      onClose();
+    }
+  }, [onProceed, onClose]);
 
   return (
     <div 
@@ -200,7 +209,7 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
             type="button"
             onClick={onClose}
             className={cn(
-              'absolute top-4 right-4 p-2 rounded-full transition-colors',
+              'absolute top-4 right-4 p-2 rounded-full transition-colors cursor-pointer',
               isDark 
                 ? 'hover:bg-gray-700 text-gray-400 hover:text-white' 
                 : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
@@ -237,8 +246,8 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
           </h2>
           <p className={cn('text-center mb-6', isDark ? 'text-gray-400' : 'text-gray-600')}>
             {isNewPatient 
-              ? 'Please provide this patient number to the patient' 
-              : 'This patient already exists in the system'}
+              ? 'The patient record has been successfully created in the system.' 
+              : 'An existing patient record has been found and linked.'}
           </p>
 
           <div className={cn(
@@ -263,7 +272,7 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
               </div>
               <div
                 className={cn(
-                  'font-mono text-sm p-4 rounded-lg break-all select-text',
+                  'font-mono text-sm p-4 rounded-lg break-all select-text cursor-text',
                   isDark 
                     ? 'bg-gray-800 text-blue-300 border border-gray-700' 
                     : 'bg-white text-blue-600 border border-gray-300'
@@ -292,7 +301,7 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
                 onClick={handleCopy}
                 disabled={!patientNumber}
                 className={cn(
-                  'flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
+                  'flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
                   copied
                     ? isDark
                       ? 'bg-green-900/30 text-green-300 border border-green-700'
@@ -321,7 +330,7 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
                 onClick={handleDownload}
                 disabled={!patientNumber}
                 className={cn(
-                  'flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
+                  'flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
                   isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                 )}
                 aria-label="Download patient details"
@@ -331,18 +340,20 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={onProceed}
-              className="w-full py-3 rounded-lg font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              aria-label="Proceed to next step"
-            >
-              Proceed
-            </button>
+            {onProceed && (
+              <button
+                type="button"
+                onClick={handleProceedClick}
+                className="w-full py-3 rounded-lg font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer"
+                aria-label="Continue with patient"
+              >
+                Continue
+              </button>
+            )}
           </div>
 
           <p className={cn('text-xs text-center mt-4', isDark ? 'text-gray-500' : 'text-gray-500')}>
-            ⚠️ Important: Ensure patient receives this number for future visits
+            ⚠️ Important: Ensure the patient receives their patient number for future visits.
           </p>
         </div>
       </div>
@@ -350,7 +361,7 @@ const PatientNumberModal: React.FC<PatientNumberModalProps> = ({
   );
 };
 
-PatientNumberModal.displayName = 'PatientNumberModal';
+PatientSuccessModal.displayName = 'PatientSuccessModal';
 
 type ConflictType = 'duplicate' | 'existing_user' | null;
 
@@ -396,7 +407,7 @@ const FormInput = React.memo<FormInputProps>(({
     <div>
       <label 
         htmlFor={inputId}
-        className={cn('block text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}
+        className={cn('block text-sm font-medium mb-1 cursor-pointer', isDark ? 'text-gray-300' : 'text-gray-700')}
       >
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
@@ -409,7 +420,7 @@ const FormInput = React.memo<FormInputProps>(({
         disabled={disabled}
         placeholder={placeholder}
         className={cn(
-          'w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-colors',
+          'w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-colors cursor-text',
           isDark 
             ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500' 
             : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
@@ -567,7 +578,7 @@ const PhoneInputWithCountryCode: React.FC<PhoneInputProps> = ({
     <div>
       <label 
         htmlFor={inputId}
-        className={cn('block text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}
+        className={cn('block text-sm font-medium mb-1 cursor-pointer', isDark ? 'text-gray-300' : 'text-gray-700')}
       >
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
@@ -581,7 +592,7 @@ const PhoneInputWithCountryCode: React.FC<PhoneInputProps> = ({
             onClick={() => setShowCountryDropdown(!showCountryDropdown)}
             disabled={disabled}
             className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-colors min-w-[120px]',
+              'flex items-center gap-2 px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-colors min-w-[120px] cursor-pointer',
               isDark 
                 ? 'bg-gray-900 border-gray-700 text-white hover:bg-gray-800' 
                 : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50',
@@ -611,7 +622,7 @@ const PhoneInputWithCountryCode: React.FC<PhoneInputProps> = ({
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search country..."
                     className={cn(
-                      'w-full pl-9 pr-3 py-2 text-sm rounded border focus:outline-none focus:ring-2 focus:ring-blue-500',
+                      'w-full pl-9 pr-3 py-2 text-sm rounded border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-text',
                       isDark 
                         ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
                         : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500'
@@ -629,7 +640,7 @@ const PhoneInputWithCountryCode: React.FC<PhoneInputProps> = ({
                     type="button"
                     onClick={() => handleCountrySelect(country)}
                     className={cn(
-                      'flex items-center gap-3 w-full px-3 py-2 text-sm transition-colors',
+                      'flex items-center gap-3 w-full px-3 py-2 text-sm transition-colors cursor-pointer',
                       isDark 
                         ? 'hover:bg-gray-700 text-gray-200' 
                         : 'hover:bg-gray-100 text-gray-700',
@@ -664,7 +675,7 @@ const PhoneInputWithCountryCode: React.FC<PhoneInputProps> = ({
             disabled={disabled}
             placeholder="eg.78887..."
             className={cn(
-              'w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-colors',
+              'w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-colors cursor-text',
               isDark 
                 ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500' 
                 : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
@@ -704,7 +715,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
   title = 'Create New Patient', 
   subtitle = 'Enter patient details to create a new record', 
   initialValues, 
-  onCreated, 
+  onSuccess, 
   onCancel, 
   className 
 }) => {
@@ -723,7 +734,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
 
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [formError, setFormError] = useState<string | null>(null);
-  const [showResultModal, setShowResultModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdPatient, setCreatedPatient] = useState<PatientSearchResult | null>(null);
   const [isNewPatient, setIsNewPatient] = useState<boolean>(true);
   const [conflict, setConflict] = useState<ConflictState | null>(null);
@@ -743,7 +754,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
         
         setCreatedPatient(patient);
         setIsNewPatient(isNew);
-        setShowResultModal(true);
+        setShowSuccessModal(true);
         lastSubmittedDataRef.current = null;
         
         // Show appropriate toast based on whether it's new or existing
@@ -905,15 +916,14 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
     createMutation.mutate(payload);
   }, [confirm, createMutation, form, markAllFieldsTouched, theme]);
 
-  const handleProceed = useCallback(() => {
-    if (createdPatient) {
-      setShowResultModal(false);
-      onCreated?.(createdPatient);
+  const handleSuccessModalProceed = useCallback(() => {
+    if (createdPatient && onSuccess) {
+      onSuccess(createdPatient);
     }
-  }, [createdPatient, onCreated]);
+  }, [createdPatient, onSuccess]);
 
   const handleSuccessModalClose = useCallback(() => {
-    setShowResultModal(false);
+    setShowSuccessModal(false);
     if (onCancel) {
       onCancel();
     }
@@ -940,7 +950,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
       return (
         <div className={cn('rounded-lg border p-4 mb-6', isDark ? 'bg-yellow-900/10 border-yellow-800' : 'bg-yellow-50 border-yellow-200')}>
           <div className="flex gap-3 items-start">
-            <AlertCircle className={cn('w-5 h-5 mt-0.5 flex-shrink-0', isDark ? 'text-yellow-400' : 'text-yellow-600')} />
+            <AlertCircle className={cn('w-5 h-5 mt-0.5 flex-shrink-0 cursor-default', isDark ? 'text-yellow-400' : 'text-yellow-600')} />
             <div className="flex-1">
               <h4 className={cn('font-semibold mb-2', isDark ? 'text-yellow-300' : 'text-yellow-800')}>
                 Possible Duplicate Found
@@ -948,7 +958,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
               <p className={cn('text-sm mb-3', isDark ? 'text-yellow-400' : 'text-yellow-700')}>
                 A similar patient already exists in the system:
               </p>
-              <div className={cn('text-sm p-3 rounded-lg mb-3', isDark ? 'bg-gray-800/50' : 'bg-gray-100')}>
+              <div className={cn('text-sm p-3 rounded-lg mb-3 cursor-default', isDark ? 'bg-gray-800/50' : 'bg-gray-100')}>
                 <div><span className="font-medium">Name:</span> {duplicate.name}</div>
                 <div><span className="font-medium">DOB:</span> {duplicate.date_of_birth}</div>
                 <div><span className="font-medium">Patient Number:</span> {duplicate.patient_number}</div>
@@ -959,7 +969,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                   onClick={() => handleRetryWithAction(DuplicateAction.ALLOW)}
                   disabled={isSubmitting}
                   className={cn(
-                    'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                    'px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
                     isDark 
                       ? 'bg-yellow-600 hover:bg-yellow-700 text-white' 
                       : 'bg-yellow-600 hover:bg-yellow-700 text-white'
@@ -972,7 +982,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                   onClick={() => setConflict(null)}
                   disabled={isSubmitting}
                   className={cn(
-                    'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                    'px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
                     isDark 
                       ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' 
                       : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
@@ -991,7 +1001,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
       return (
         <div className={cn('rounded-lg border p-4 mb-6', isDark ? 'bg-blue-900/10 border-blue-800' : 'bg-blue-50 border-blue-200')}>
           <div className="flex gap-3 items-start">
-            <Info className={cn('w-5 h-5 mt-0.5 flex-shrink-0', isDark ? 'text-blue-400' : 'text-blue-600')} />
+            <Info className={cn('w-5 h-5 mt-0.5 flex-shrink-0 cursor-default', isDark ? 'text-blue-400' : 'text-blue-600')} />
             <div className="flex-1">
               <h4 className={cn('font-semibold mb-2', isDark ? 'text-blue-300' : 'text-blue-800')}>
                 Existing User Found
@@ -1005,7 +1015,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                   onClick={() => handleRetryWithAction(ExistingUserAction.USE_EXISTING)}
                   disabled={isSubmitting}
                   className={cn(
-                    'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                    'px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
                     isDark 
                       ? 'bg-blue-600 hover:bg-blue-700 text-white' 
                       : 'bg-blue-600 hover:bg-blue-700 text-white'
@@ -1018,7 +1028,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                   onClick={() => setConflict(null)}
                   disabled={isSubmitting}
                   className={cn(
-                    'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                    'px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
                     isDark 
                       ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' 
                       : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
@@ -1059,7 +1069,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                 'rounded-lg border p-4 mb-6 flex gap-3 items-start',
                 isDark ? 'bg-red-900/10 border-red-800' : 'bg-red-50 border-red-200'
               )}>
-                <AlertCircle className={cn('w-5 h-5 mt-0.5 flex-shrink-0', isDark ? 'text-red-400' : 'text-red-600')} />
+                <AlertCircle className={cn('w-5 h-5 mt-0.5 flex-shrink-0 cursor-default', isDark ? 'text-red-400' : 'text-red-600')} />
                 <div className={cn('text-sm', isDark ? 'text-red-300' : 'text-red-600')}>
                   {formError}
                 </div>
@@ -1071,7 +1081,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                 'rounded-lg border p-4 mb-6 flex gap-3 items-start',
                 isDark ? 'bg-red-900/10 border-red-800' : 'bg-red-50 border-red-200'
               )}>
-                <AlertCircle className={cn('w-5 h-5 mt-0.5 flex-shrink-0', isDark ? 'text-red-400' : 'text-red-600')} />
+                <AlertCircle className={cn('w-5 h-5 mt-0.5 flex-shrink-0 cursor-default', isDark ? 'text-red-400' : 'text-red-600')} />
                 <div className={cn('text-sm', isDark ? 'text-red-300' : 'text-red-600')}>
                   {errorToMessage(createMutation.error)}
                 </div>
@@ -1139,7 +1149,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
               />
 
               <div>
-                <label className={cn('block text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>
+                <label className={cn('block text-sm font-medium mb-1 cursor-pointer', isDark ? 'text-gray-300' : 'text-gray-700')}>
                   Biological Sex *
                 </label>
                 <select
@@ -1147,7 +1157,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                   onChange={(e) => handleFieldChange('biological_sex', e.target.value as BiologicalSex)}
                   disabled={isSubmitting}
                   className={cn(
-                    'w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-colors',
+                    'w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-colors cursor-pointer',
                     isDark 
                       ? 'bg-gray-900 border-gray-700 text-white' 
                       : 'bg-white border-gray-300 text-gray-900',
@@ -1171,7 +1181,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
 
             {validation.errors.contact?.[0] && touchedFields.has('email') && touchedFields.has('phone') && (
               <div className={cn('text-sm mb-4 flex items-center gap-1', isDark ? 'text-red-300' : 'text-red-600')}>
-                <AlertCircle className="w-3 h-3" />
+                <AlertCircle className="w-3 h-3 cursor-default" />
                 {validation.errors.contact[0]}
               </div>
             )}
@@ -1183,7 +1193,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                   onClick={onCancel}
                   disabled={isSubmitting}
                   className={cn(
-                    'flex-1 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
+                    'flex-1 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
                     isDark 
                       ? 'bg-gray-700 hover:bg-gray-600 text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500' 
                       : 'bg-gray-100 hover:bg-gray-200 text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300'
@@ -1199,7 +1209,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                 onClick={() => void submit()}
                 disabled={!isFormValid || isSubmitting || !!conflict}
                 className={cn(
-                  'flex-1 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
+                  'flex-1 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
                   'bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
                   isDark ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white'
                 )}
@@ -1212,7 +1222,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                   </>
                 ) : (
                   <>
-                    <UserPlus className="w-5 h-5 cursor-pointer" />
+                    <UserPlus className="w-5 h-5" />
                     Create Patient
                   </>
                 )}
@@ -1222,12 +1232,12 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
         </div>
       </div>
 
-      {showResultModal && createdPatient && (
-        <PatientNumberModal
+      {showSuccessModal && createdPatient && (
+        <PatientSuccessModal
           theme={theme}
           patientNumber={createdPatient.patient_number}
           patientName={formatPatientName(createdPatient)}
-          onProceed={handleProceed}
+          onProceed={onSuccess ? handleSuccessModalProceed : undefined}
           onClose={handleSuccessModalClose}
           isNewPatient={isNewPatient}
         />

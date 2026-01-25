@@ -15,8 +15,9 @@ interface QuickPatientCreateProps {
 const QuickPatientCreate: React.FC<QuickPatientCreateProps> = ({ theme, className }) => {
   const navigate = useNavigate();
 
-  const handleCreated = useCallback(
+  const handleSuccess = useCallback(
     (patient: PatientSearchResult) => {
+      // The parent component handles what happens after successful patient creation
       // Use replace instead of push to prevent going back to create form
       navigate(`${PHARMACY_ROUTES.DISPENSING_SEARCH_PRESCRIPTION}?patientId=${patient.patient_number}`, {
         replace: true,
@@ -35,7 +36,7 @@ const QuickPatientCreate: React.FC<QuickPatientCreateProps> = ({ theme, classNam
         theme={theme} 
         title="Register New Patient (Pharmacy)" 
         subtitle="Create a patient record to proceed with dispensing" 
-        onCreated={handleCreated} 
+        onSuccess={handleSuccess} 
         onCancel={handleCancel} 
       />
 
