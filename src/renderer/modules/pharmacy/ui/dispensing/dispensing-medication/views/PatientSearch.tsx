@@ -351,7 +351,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
         {/* Loading State */}
         {hasSearched && (isLoading || isFetching) && (
           <div className="mb-6">
-            <LoadingSkeleton variant="list" theme={theme} message="Searching patients..." />
+            <LoadingSkeleton variant="default" theme={theme} message="Searching patients..." />
           </div>
         )}
 

@@ -1,17 +1,3 @@
-/**
- * ============================================================================
- * WALK-IN SESSION CREATOR COMPONENT
- * ============================================================================
- * 
- * Reusable enterprise-grade component for creating walk-in sessions.
- * Pure business logic - no navigation or pharmacy-specific code.
- * Each module can implement its own "what happens after creation" logic.
- * 
- * @component WalkInSessionCreator
- * @author Healthcare System Team
- * @version 1.0.0
- */
-
 import React, { useState } from 'react';
 import { UserPlus, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -51,10 +37,10 @@ interface WalkInSessionCreatorProps {
 }
 
 /**
- * Reusable Walk-in Session Creator Component
+ * Simple Walk-in Session Creator Component
  * 
- * This component only handles session creation. What happens after
- * (navigation, next steps, etc.) is up to the parent component.
+ * Creates a system-generated walk-in session without requiring user input.
+ * Parent component handles what happens after creation.
  */
 export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
   theme = 'light',
@@ -62,7 +48,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
   customFacilityId,
   isLoading: externalLoading,
   error: externalError,
-  createButtonText = 'Create Walk-in Session',
+  createButtonText = 'Start Walk-in',
 }) => {
   const isDark = theme === 'dark';
   const { confirm } = useConfirm();
@@ -105,21 +91,6 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
   const error = externalError || localError || createError;
   const hasError = externalError || localError || hasCreateError || facilityError;
   
-  // Theme classes
-  const themeClasses = {
-    container: isDark 
-      ? 'bg-gradient-to-br from-gray-900 to-gray-800 text-gray-100' 
-      : 'bg-gradient-to-br from-gray-50 to-white text-gray-900',
-    card: isDark 
-      ? 'bg-gray-800/80 border-gray-700 backdrop-blur-sm' 
-      : 'bg-white/80 border-gray-200 backdrop-blur-sm',
-    textMuted: isDark ? 'text-gray-400' : 'text-gray-600',
-    textSubtle: isDark ? 'text-gray-300' : 'text-gray-700',
-    border: isDark ? 'border-gray-700' : 'border-gray-200',
-    highlight: isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-50 text-blue-700',
-    success: isDark ? 'bg-green-900/30 text-green-300' : 'bg-green-50 text-green-700',
-  };
-  
   // Event handlers
   const handleCreateWalkIn = () => {
     if (!hasValidFacility && !customFacilityId) {
@@ -143,16 +114,15 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
     });
     
     if (confirmed) {
-      // Could navigate to facility selection here if needed
       setLocalError(null);
     }
   };
   
   const handleRetry = async () => {
     const confirmed = await confirm({
-      title: 'Retry Creation',
-      message: 'Would you like to retry creating the walk-in session?',
-      confirmText: 'Retry',
+      title: 'Try Again',
+      message: 'Would you like to try creating the walk-in session again?',
+      confirmText: 'Try Again',
       cancelText: 'Cancel',
       variant: 'info',
       theme,
@@ -168,9 +138,9 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
   
   const handleReset = async () => {
     const confirmed = await confirm({
-      title: 'Create New Session',
-      message: 'Are you sure you want to create another walk-in session?',
-      confirmText: 'Create New',
+      title: 'Start New Walk-in',
+      message: 'Start a new walk-in session?',
+      confirmText: 'New Session',
       cancelText: 'Cancel',
       variant: 'info',
       theme,
@@ -187,7 +157,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
   const handleErrorDialogClose = async () => {
     const confirmed = await confirm({
       title: 'Close Error',
-      message: 'Close this error message and return to session creation?',
+      message: 'Close this error message?',
       confirmText: 'Close',
       cancelText: 'Stay',
       variant: 'warning',
@@ -200,7 +170,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
       resetCreateMutation();
     }
   };
-  
+
   // Render loading state
   if (isLoading && !showSuccess) {
     return (
@@ -209,13 +179,13 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
           <LoadingSkeleton 
             variant="default"
             theme={theme}
-            message="Creating walk-in session..."
+            message="Setting up walk-in session..."
           />
         </div>
       </div>
     );
   }
-  
+
   // Render success state
   if (showSuccess) {
     return (
@@ -226,24 +196,26 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <div className={`rounded-xl border p-8 ${themeClasses.success} border-green-500/20`}>
+            <div className={`rounded-xl border p-8 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
               <div className="text-center mb-6">
-                <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Walk-in Session Created!</h3>
-                <p className={themeClasses.textMuted}>
-                  Session is ready for further processing
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Walk-in Started!</h3>
+                <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                  Patient is now ready for service
                 </p>
               </div>
               
-              <div className={`mb-6 p-4 rounded-lg ${isDark ? 'bg-green-900/20' : 'bg-green-50'} border ${isDark ? 'border-green-500/20' : 'border-green-200'}`}>
+              <div className="mb-6 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-500/20">
                 <div className="flex items-start gap-3">
-                  <CheckCircle className={`w-5 h-5 mt-0.5 flex-shrink-0 ${isDark ? 'text-green-400' : 'text-green-600'}`} />
+                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <div className={`font-medium ${isDark ? 'text-green-300' : 'text-green-700'}`}>
-                      Ready for Next Steps
+                    <div className="font-medium text-green-800 dark:text-green-300">
+                      What happens next?
                     </div>
-                    <div className={`text-sm mt-1 ${isDark ? 'text-green-400' : 'text-green-600'}`}>
-                      The parent component will handle what happens next with this session.
+                    <div className="text-sm text-green-600 dark:text-green-400 mt-1">
+                      The parent component will guide you through the next steps for this patient.
                     </div>
                   </div>
                 </div>
@@ -253,11 +225,11 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
                 onClick={handleReset}
                 className={`w-full px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
                   isDark
-                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 hover:border-gray-600'
-                    : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 hover:border-gray-400'
+                    ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
                 } active:scale-[0.98]`}
               >
-                Create Another Session
+                Start Another Walk-in
               </button>
             </div>
           </motion.div>
@@ -265,8 +237,8 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
       </div>
     );
   }
-  
-  // Render error state with dialog
+
+  // Render error state
   if (hasError && !showSuccess) {
     return (
       <div className="p-6">
@@ -277,18 +249,18 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
             transition={{ duration: 0.3 }}
           >
             {/* Error Summary Card */}
-            <div className={`mb-4 p-4 rounded-lg ${isDark ? 'bg-red-900/20' : 'bg-red-50'} border ${isDark ? 'border-red-500/20' : 'border-red-200'}`}>
+            <div className="mb-4 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/20">
               <div className="flex items-start gap-3">
-                <AlertCircle className={`w-5 h-5 mt-0.5 flex-shrink-0 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className={`font-medium ${isDark ? 'text-red-300' : 'text-red-700'}`}>
-                    Session Creation Failed
+                  <div className="font-medium text-red-800 dark:text-red-300">
+                    Couldn't Start Walk-in
                   </div>
-                  <div className={`text-sm mt-1 ${isDark ? 'text-red-400' : 'text-red-600'}`}>
+                  <div className="text-sm text-red-600 dark:text-red-400 mt-1">
                     {error?.message || 
                      createError?.message || 
                      facilityError || 
-                     'Unable to create walk-in session. Please try again.'}
+                     'Unable to start walk-in session. Please try again.'}
                   </div>
                 </div>
               </div>
@@ -299,8 +271,8 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
                   disabled={isCreating}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     isDark
-                      ? 'bg-red-800 hover:bg-red-700 text-red-200 disabled:opacity-50 disabled:cursor-not-allowed'
-                      : 'bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed'
+                      ? 'bg-red-800 hover:bg-red-700 text-red-200 disabled:opacity-50'
+                      : 'bg-red-600 hover:bg-red-700 text-white disabled:opacity-50'
                   } active:scale-[0.98]`}
                 >
                   Try Again
@@ -319,14 +291,16 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
             </div>
             
             {/* Fallback to normal UI for retry */}
-            <div className={`rounded-xl border p-8 ${themeClasses.card}`}>
+            <div className={`rounded-xl border p-8 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
               <div className="text-center mb-6">
-                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${themeClasses.highlight}`}>
+                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
+                  isDark ? 'bg-blue-900/30' : 'bg-blue-100'
+                }`}>
                   <UserPlus className={`w-8 h-8 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
                 </div>
-                <h3 className="text-xl font-bold mb-2">Retry Walk-in Session</h3>
-                <p className={themeClasses.textMuted}>
-                  An error occurred. You can try creating the session again.
+                <h3 className="text-xl font-bold mb-2">Retry Walk-in</h3>
+                <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                  An error occurred. You can try starting the walk-in again.
                 </p>
               </div>
               
@@ -336,15 +310,13 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
                 className={`w-full px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
                   isCreating || (!hasValidFacility && !customFacilityId)
                     ? 'bg-blue-500/50 cursor-not-allowed text-white'
-                    : isDark
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
                     : 'bg-blue-600 hover:bg-blue-700 text-white'
                 } active:scale-[0.98] disabled:active:scale-100`}
               >
                 {isCreating ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    Creating...
+                    Setting up...
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-2">
@@ -355,8 +327,8 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
               </button>
               
               {(!hasValidFacility && !customFacilityId) && (
-                <p className={`text-sm text-center mt-3 ${themeClasses.textMuted}`}>
-                  Please select a facility before creating a walk-in session
+                <p className={`text-sm text-center mt-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Please select a facility before starting a walk-in
                 </p>
               )}
             </div>
@@ -365,7 +337,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
       </div>
     );
   }
-  
+
   // Render normal state (pre-creation)
   return (
     <div className="p-6">
@@ -376,23 +348,25 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
           transition={{ duration: 0.3 }}
         >
           <div className="text-center mb-8">
-            <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${themeClasses.highlight}`}>
+            <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
+              isDark ? 'bg-blue-900/30' : 'bg-blue-100'
+            }`}>
               <UserPlus className={`w-8 h-8 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Customer Walk-in</h2>
-            <p className={themeClasses.textMuted}>
-              System will automatically generate a customer profile and create a visit record
+            <h2 className="text-2xl font-bold mb-2">Quick Walk-in</h2>
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+              Start immediately - no forms needed
             </p>
           </div>
           
-          <div className={`rounded-xl border p-8 ${themeClasses.card}`}>
+          <div className={`rounded-xl border p-8 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
             <div className="space-y-4 mb-6">
               <div className="flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-medium">Auto-generated Customer Profile</div>
-                  <div className={`text-sm ${themeClasses.textMuted}`}>
-                    System creates a unique customer ID
+                  <div className="font-medium">System-Generated Patient Identity</div>
+                  <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    To ensure automatic billing and service tracking.
                   </div>
                 </div>
               </div>
@@ -400,9 +374,9 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
               <div className="flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-medium">Visit Record Created</div>
-                  <div className={`text-sm ${themeClasses.textMuted}`}>
-                    Service container to track all dispensed items
+                  <div className="font-medium">Ready for Service</div>
+                  <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Patient added to queue immediately
                   </div>
                 </div>
               </div>
@@ -410,9 +384,9 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
               <div className="flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-medium">Billing Cycle Ready</div>
-                  <div className={`text-sm ${themeClasses.textMuted}`}>
-                    Automatic billing setup for transactions
+                  <div className="font-medium">Billing Ready</div>
+                  <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Payment setup handled automatically
                   </div>
                 </div>
               </div>
@@ -432,7 +406,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
               {isCreating ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  Creating...
+                  Setting up...
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-2">
@@ -443,14 +417,14 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
             </button>
             
             {(!hasValidFacility && !customFacilityId) && (
-              <p className={`text-sm text-center mt-3 ${themeClasses.textMuted}`}>
-                Please select a facility before creating a walk-in session
+              <p className={`text-sm text-center mt-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Please select a facility before starting a walk-in
               </p>
             )}
             
             {customFacilityId && (
-              <p className={`text-sm text-center mt-3 ${themeClasses.textMuted}`}>
-                Creating session for Facility ID: {customFacilityId}
+              <p className={`text-sm text-center mt-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Starting walk-in at selected facility
               </p>
             )}
           </div>

@@ -81,6 +81,7 @@ import MRVisitActionCenter from '../../modules/medical-records/ui/visit-action-c
 import MRPatientSearch from '../../modules/medical-records/ui/patients/views/MRPatientSearch';
 import MRPatientCreate from '../../modules/medical-records/ui/patients/views/MRPatientCreate';
 import MRPatientQueue from '../../modules/medical-records/ui/patients/views/MRPatientQueue';
+import MRPatientWalkIn from '../../modules/medical-records/ui/patients/views/MRPatientWalkIn';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -262,7 +263,7 @@ const medicalRecordsRoutes = [
       } />
     <Route path={MEDICAL_RECORDS_ROUTES.WALKIN_PATIENT} element={
         <SuspenseWrapper variant="table">
-          <WithThemeProp Component={CustomerWalkIn} />
+          <WithThemeProp Component={MRPatientWalkIn} />
         </SuspenseWrapper>
       } />
   </Route>,

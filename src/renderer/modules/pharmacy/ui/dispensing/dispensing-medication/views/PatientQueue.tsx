@@ -20,6 +20,7 @@ import { type QueueFilters } from '../../../../api/dispensing/visit-queue/visitT
 import type { QueuePatient, QueueVisit, VisitPhase } from '../../../../api/dispensing/visit-queue/visitTypes';
 import { calculateWaitTime, isVisitOverdue, getPhaseDisplayName, getTypeDisplayName } from '../../../../api/dispensing/visit-queue/useVisitQueries';
 import { ACUITY_SCORE_DESCRIPTIONS } from '../../../../api/dispensing/visit-queue/visitTypes';
+import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 
 /* -------------------------------------------------------------------------- */
 /*                               TYPE DEFINITIONS                             */
@@ -739,14 +740,15 @@ const defaultRenderPatientRow = (patient: QueuePatient, queueVisit?: QueueVisit)
 
         {/* Loading State */}
         {isLoading && (
-          <div className="flex justify-center items-center py-12">
-            <div className="text-center">
-              <RefreshCw className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-500 cursor-default" />
-              <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                Loading queue data...
-              </p>
-            </div>
-          </div>
+          // <div className="flex justify-center items-center py-12">
+          //   <div className="text-center">
+          //     <RefreshCw className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-500 cursor-default" />
+          //     <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+          //       Loading queue data...
+          //     </p>
+          //   </div>
+          // </div>
+          <LoadingSkeleton theme={theme} variant="default" message='Loading queue data...'></LoadingSkeleton>
         )}
 
         {/* Error State */}

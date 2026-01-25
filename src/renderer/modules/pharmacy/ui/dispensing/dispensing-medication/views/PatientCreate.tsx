@@ -1065,7 +1065,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
           <div className={cn('rounded-xl border p-6', colors.bg, colors.border)}>
             {isSubmitting && (
               <div className="mb-6">
-                <LoadingSkeleton variant="form" theme={theme} message="Creating patient..." />
+                <LoadingSkeleton variant="default" theme={theme} message="Creating patient..." />
               </div>
             )}
 
