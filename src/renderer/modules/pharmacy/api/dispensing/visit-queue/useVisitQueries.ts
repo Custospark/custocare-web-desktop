@@ -47,6 +47,14 @@ import  {
   InsuranceVerificationStatus,DischargeDisposition,ModeOfArrival,VisitType
 } from './visitTypes';
 
+export type MyQueueQueryKey = ReturnType<typeof visitKeys.queue>;
+
+export type MyQueueQueryOptions = Omit<
+  UseQueryOptions<QueueResponse, AxiosError<ApiErrorResponse>, QueueResponse, MyQueueQueryKey>,
+  'queryKey' | 'queryFn'
+>;
+
+
 /* -------------------------------------------------------------------------- */
 /*                               QUERY KEYS                                   */
 /* -------------------------------------------------------------------------- */

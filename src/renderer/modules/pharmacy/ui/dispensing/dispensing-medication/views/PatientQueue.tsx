@@ -23,13 +23,10 @@ import type {
   QueueFilters,
   VisitPhase,
   QueueResponse,
-  ApiErrorResponse,
   VisitType,
   VisitStatus,
 } from '../../../../api/dispensing/visit-queue/visitTypes';
 import { ACUITY_SCORE_DESCRIPTIONS } from '../../../../api/dispensing/visit-queue/visitTypes';
-import type { AxiosError } from 'axios';
-import type { UseQueryOptions } from '@tanstack/react-query';
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
@@ -70,13 +67,12 @@ export interface QueueVisitItem {
   is_walk_in: boolean;
 }
 
-
 export interface PatientQueueProps {
   title?: string;
   description?: string;
   initialFilters?: QueueFilters;
 
-  /** Visit-centric callbacks (solves guest-visits collapsing) */
+  /** Visit-centric callbacks */
   onVisitSelect?: (visit: QueueVisitItem) => void;
   onTakeAction?: (visit: QueueVisitItem) => void;
 
@@ -118,10 +114,14 @@ const formatWaitTime = (minutes: number | null): string => {
 
 const calculateWaitTime = (waitingSince: string | null): number | null => {
   if (!waitingSince) return null;
-  const started = new Date(waitingSince).getTime();
-  if (Number.isNaN(started)) return null;
-  const mins = Math.floor((Date.now() - started) / 60000);
-  return Math.max(0, mins);
+  try {
+    const started = new Date(waitingSince).getTime();
+    if (Number.isNaN(started)) return null;
+    const mins = Math.floor((Date.now() - started) / 60000);
+    return Math.max(0, mins);
+  } catch {
+    return null;
+  }
 };
 
 const isVisitOverdue = (acuityScore: number, waitingSince: string | null): boolean => {
@@ -142,13 +142,16 @@ const getAcuityDisplay = (acuityScore: number) => {
   );
 };
 
-const getPhaseDisplayName = (phase: VisitPhase): string => phase.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-const getTypeDisplayName = (t: VisitType): string => t.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+const getPhaseDisplayName = (phase: VisitPhase): string => 
+  phase.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+const getTypeDisplayName = (t: VisitType): string => 
+  t.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 const normalizeQueueVisits = (queueData?: QueueResponse | null): QueueVisitItem[] => {
-  const visits = queueData?.meta?.queue_visits;
-  if (Array.isArray(visits)) return visits;
-  return [];
+  if (!queueData?.meta?.queue_visits) return [];
+  const visits = queueData.meta.queue_visits;
+  return Array.isArray(visits) ? visits : [];
 };
 
 const searchVisits = (visits: QueueVisitItem[], query: string): QueueVisitItem[] => {
@@ -182,58 +185,35 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   title = 'Patient Queue',
   description = 'Patients waiting for service',
   initialFilters = {},
-
   onVisitSelect,
   onTakeAction,
   onNewPatientRegistration,
-
   actionButtonText = 'Take Action',
   actionButtonIcon = <ChevronRight className="w-4 h-4" />,
-
   newPatientButtonText = 'New Patient',
   newPatientButtonIcon = <UserPlus className="w-4 h-4" />,
-
   showStats = true,
   allowPhaseFilter = true,
   allowDepartmentFilter = true,
   showUnassignedToggle = true,
   showSearch = true,
   showNewPatientRegistration = true,
-
-  refreshInterval = 30_000,
+  refreshInterval = 30000,
   theme = 'light',
-
   isLoading: externalLoading,
   error: externalError,
-
   className = '',
 }) => {
   const isDark = theme === 'dark';
   const queryClient = useQueryClient();
   const lastManualRefreshRef = useRef<number>(Date.now());
-
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
-
   const [filters, setFilters] = useState<QueueFilters>({
     ...initialFilters,
     include_unassigned: initialFilters.include_unassigned ?? false,
   });
-
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVisitUuid, setSelectedVisitUuid] = useState<string | null>(null);
-
-  const refetchInterval: number | false =
-    typeof refreshInterval === 'number' && refreshInterval > 0 ? refreshInterval : false;
-
-
-  const queryOptions: Omit<
-    UseQueryOptions<QueueResponse, AxiosError<ApiErrorResponse>, QueueResponse, readonly unknown[]>,
-    'queryKey' | 'queryFn'
-  > = {
-    refetchInterval,
-    refetchOnWindowFocus: true,
-    staleTime: 10_000,
-  };
 
   const {
     data: queueData,
@@ -241,21 +221,15 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     error: queryError,
     refetch,
     isRefetching,
-  } = useGetMyQueue(filters, queryOptions);
+  } = useGetMyQueue(filters, {
+    refetchInterval: refreshInterval > 0 ? refreshInterval : false,
+  });
 
   const isLoading = (externalLoading ?? queryLoading) || isManualRefreshing;
-
-  const error: Error | null =
-    (externalError as Error | null) ??
-    (queryError instanceof Error ? queryError : null) ??
-    (queryError as any)?.message
-      ? new Error((queryError as any).message)
-      : null;
-
-  const isActuallyRefreshing = Boolean(isRefetching || isManualRefreshing);
+  const error = externalError ?? (queryError instanceof Error ? queryError : null);
+  const isActuallyRefreshing = isRefetching || isManualRefreshing;
 
   const queueVisits = useMemo(() => normalizeQueueVisits(queueData), [queueData]);
-
   const filteredVisits = useMemo(() => searchVisits(queueVisits, searchQuery), [queueVisits, searchQuery]);
 
   const availablePhases = useMemo(() => {
@@ -270,11 +244,11 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   }, [queueData]);
 
   const queueStats = useMemo(() => {
-    if (!queueVisits.length) return null;
+    if (queueVisits.length === 0) return null;
 
     const waitTimes = queueVisits
       .map((v) => calculateWaitTime(v.waiting_since))
-      .filter((x): x is number => typeof x === 'number');
+      .filter((x): x is number => x !== null);
 
     const averageWaitTime =
       waitTimes.length > 0 ? Math.round(waitTimes.reduce((s, n) => s + n, 0) / waitTimes.length) : 0;
@@ -299,7 +273,10 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   };
 
   const handleDepartmentFilterChange = (departmentId: number | 'all') => {
-    setFilters((prev) => ({ ...prev, department_id: departmentId === 'all' ? undefined : departmentId }));
+    setFilters((prev) => ({ 
+      ...prev, 
+      department_id: departmentId === 'all' ? undefined : departmentId 
+    }));
   };
 
   const handleUnassignedToggle = () => {
@@ -332,7 +309,6 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   const renderVisitRow = (visit: QueueVisitItem) => {
     const p = visit.patient;
     const isSelected = selectedVisitUuid === visit.visit_uuid;
-
     const waitTime = calculateWaitTime(visit.waiting_since);
     const overdue = isVisitOverdue(visit.acuity_score, visit.waiting_since);
     const acuity = getAcuityDisplay(visit.acuity_score);
@@ -364,8 +340,6 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 min-w-0">
                 <h3 className="font-semibold truncate">{p?.name || 'Unknown Patient'}</h3>
-
-              
 
                 {p?.requires_isolation && (
                   <span
@@ -653,7 +627,11 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
           )}
         </div>
 
-        {isLoading && <LoadingSkeleton theme={theme} variant="default" message="Loading queue data..." />}
+        {isLoading && !queueData && (
+          <div className="py-12">
+            <LoadingSkeleton theme={theme} variant="default" message="Loading queue data..." />
+          </div>
+        )}
 
         {error && !isLoading && (
           <div className={`rounded-xl border p-8 text-center ${isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'}`}>
@@ -671,11 +649,11 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
           </div>
         )}
 
-        {!isLoading && !error && queueData && (
+        {!isLoading && !error && (
           <>
             {filteredVisits.length > 0 ? (
               <div className="space-y-3">{filteredVisits.map(renderVisitRow)}</div>
-            ) : (
+            ) : queueData ? (
               <div className={`rounded-xl border p-12 text-center ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                 {searchQuery ? (
                   <>
@@ -710,7 +688,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                   </>
                 )}
               </div>
-            )}
+            ) : null}
           </>
         )}
       </div>
