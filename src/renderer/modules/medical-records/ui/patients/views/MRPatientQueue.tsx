@@ -5,7 +5,7 @@ import { Stethoscope } from 'lucide-react';
 import PatientQueue from '../../../../pharmacy/ui/dispensing/dispensing-medication/views/PatientQueue';
 import { cn } from '../../../../../shared/utils/classNameUtils';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
-import { VisitPhase, type QueuePatient, type QueueVisit } from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import { QueueVisitItem, VisitPhase,} from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 
 /* -------------------------------------------------------------------------- */
 /*                               TYPE DEFINITIONS                             */
@@ -25,20 +25,13 @@ export interface MRPatientQueueProps {
 const MRPatientQueue: React.FC<MRPatientQueueProps> = ({ theme, className = '' }) => {
   const navigate = useNavigate();
 
-  const handlePatientSelect = (patient: QueuePatient, queueVisit?: QueueVisit) => {
-    // Handle patient selection (optional)
-    console.log('Medical Records - Patient selected:', patient.patient_number, 'Visit:', queueVisit);
-    // You could store the selected patient in context or state if needed
-    
-    // Optionally navigate to patient chart on selection
-    // navigate(`${MEDICAL_RECORDS_ROUTES.PATIENT_CHART}?patientId=${encodeURIComponent(patient.patient_number)}`);
-  };
 
-  const handleTakeAction = (patient: QueuePatient, queueVisit?: QueueVisit) => {
+
+  const handleTakeAction = (patient: QueueVisitItem, queueVisit?: QueueVisitItem) => {
     // Navigation handled by this component
     // Use both patient and queue visit data if available
-    console.log('Medical Records - Taking action for patient:', patient.patient_number, 'with visit:', queueVisit);
-    navigate(`${MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}?patientId=${encodeURIComponent(patient.patient_number)}`);
+    console.log('Medical Records - Taking action for patient:', patient.patient_id, 'with visit:', queueVisit);
+    navigate(`${MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}}`);
   };
 
   const handleCreateNewPatient = () => {
@@ -51,7 +44,6 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({ theme, className = '' }
       <PatientQueue
         title="Medical Records Queue"
         description="Patients requiring medical documentation and chart updates"
-        onPatientSelect={handlePatientSelect}
         onTakeAction={handleTakeAction}
         onNewPatientRegistration={handleCreateNewPatient}
         actionButtonText="Take Action"

@@ -527,7 +527,7 @@ export interface QueueVisitItem {
   facility_id: number;
 
   patient_id: number;
-  patient: QueuePatient | null; // snapshot for THIS visit row
+  patient: QueuePatient | null;
 
   current_phase: VisitPhase;
   current_department_id: number | null;
@@ -541,9 +541,9 @@ export interface QueueVisitItem {
 
   visit_type: VisitType;
   status: VisitStatus;
-
   is_walk_in: boolean;
 }
+
 
 /**
  * Queue response metadata

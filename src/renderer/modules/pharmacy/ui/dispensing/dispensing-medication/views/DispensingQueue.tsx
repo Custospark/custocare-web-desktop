@@ -5,7 +5,7 @@ import { UserPlus } from 'lucide-react';
 import PatientQueue from './PatientQueue';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import { PHARMACY_ROUTES } from '../../../../../../app/routes/routeConstants';
-import type { QueuePatient, QueueVisit } from '../../../../api/dispensing/visit-queue/visitTypes';
+import type { QueueVisitItem } from '../../../../api/dispensing/visit-queue/visitTypes';
 
 /* -------------------------------------------------------------------------- */
 /*                               TYPE DEFINITIONS                             */
@@ -25,17 +25,12 @@ export interface DispensingQueueProps {
 const DispensingQueue: React.FC<DispensingQueueProps> = ({ theme, className = '' }) => {
   const navigate = useNavigate();
 
-  const handlePatientSelect = (patient: QueuePatient, queueVisit?: QueueVisit) => {
-    // Handle patient selection (optional)
-    console.log('Patient selected:', patient.patient_number, 'Visit:', queueVisit);
-    // You could store the selected patient in context or state if needed
-  };
 
-  const handleTakeAction = (patient: QueuePatient, queueVisit?: QueueVisit) => {
+  const handleTakeAction = ( queueVisit?: QueueVisitItem) => {
     // Navigation handled by this component
     // Use both patient and queue visit data if available
-    console.log('Taking action for patient:', patient.patient_number, 'with visit:', queueVisit);
-    navigate(`${PHARMACY_ROUTES.DISPENSING_SEARCH_PRESCRIPTION}?patientId=${encodeURIComponent(patient.patient_number)}`);
+    console.log('Taking action for patient:','with visit:', queueVisit);
+    navigate(`${PHARMACY_ROUTES.DISPENSING_SEARCH_PRESCRIPTION}`);
   };
 
   const handleCreateNewPatient = () => {
@@ -48,7 +43,7 @@ const DispensingQueue: React.FC<DispensingQueueProps> = ({ theme, className = ''
       <PatientQueue
         title="Dispensing Queue"
         description="Patients waiting for medication dispensing"
-        onPatientSelect={handlePatientSelect}
+        // onPatientSelect={handlePatientSelect}
         onTakeAction={handleTakeAction}
         onNewPatientRegistration={handleCreateNewPatient}
         actionButtonText="Dispense"
