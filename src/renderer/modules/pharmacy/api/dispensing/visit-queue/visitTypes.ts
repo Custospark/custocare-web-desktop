@@ -172,35 +172,50 @@ export enum PaymentStatus {
  * Patient information from queue response
  * Lean representation for queue display
  */
-export interface QueuePatient {
-  patient_number: string;
-  global_user_uuid?: string;
-  name: string | null;
-  date_of_birth: string | null;
-  biological_sex: string | null;
-  blood_type: string | null;
-  status: string;
-  requires_isolation: boolean;
-  created_at: string | null;
+
+
+  // export interface QueueVisitItem {
+  //   visit_id: number;
+  //   visit_uuid: string;
+  //   facility_id: number;
+
+  //   patient_id: number;
+  //   patient: QueuePatient | null; // 👈 embedded patient snapshot for THIS visit row
+
+  //   current_phase: VisitPhase;
+  //   current_department_id: number | null;
+
+  //   assigned_staff_id: number | null;
+  //   assigned_at: string | null;
+
+  //   waiting_since: string | null;
+  //   acuity_score: number;
+  //   arrived_at: string | null;
+
+  //   visit_type: VisitType;
+  //   status: VisitStatus;
+  //   is_walk_in: boolean;
+  // }
+
+  export interface QueueMeta {
+  facility_id: number;
+  staff_id: number;
+  role_code: string | null;
+  filters: {
+    current_phase: VisitPhase | null;
+    department_id: number | null;
+    include_unassigned: boolean;
+  };
+  allowed_department_ids: number[] | null;
+
+  queue: QueueVisit[];              // legacy
+  queue_visits?: QueueVisitItem[];  // ✅ NEW (visit-centric)
+
+  total_visits: number;
+  total_patients: number;
 }
 
-/**
- * Queue visit information
- * Compact representation for queue management
- */
-export interface QueueVisit {
-  visit_uuid: string;
-  patient_id: number;
-  current_phase: VisitPhase;
-  current_department_id: number | null;
-  assigned_staff_id: number | null;
-  assigned_at: string | null;
-  waiting_since: string | null;
-  acuity_score: number;
-  arrived_at: string | null;
-  visit_type: VisitType;
-  status: VisitStatus;
-}
+
 
 /**
  * Complete visit entity as returned by API
@@ -361,6 +376,8 @@ export interface QueueFilters {
   department_id?: number;
   include_unassigned?: boolean;
   limit?: number;
+  facility_id?:number;
+  staff_id?:number;
 }
 
 /**
@@ -418,6 +435,25 @@ export interface CreateVisitRequest {
   metadata?: Record<string, unknown> | null;
 }
 
+
+export interface QueueVisitCardProps {
+  theme: 'light' | 'dark';
+  isSelected: boolean;
+  visit: QueueVisitItem;
+  onSelect: (visit: QueueVisitItem) => void;
+  onTakeAction: (visit: QueueVisitItem, e: React.MouseEvent<HTMLButtonElement>) => void;
+
+  actionButtonText: string;
+  actionButtonIcon?: React.ReactNode;
+
+  // your helpers
+  getTypeDisplayName: (t: VisitType) => string;
+  getPhaseDisplayName: (p: VisitPhase) => string;
+  formatWaitTime: (minutes: number) => string;
+  getAcuityDisplay?: (score: number) => { label: string; color: string } | null;
+}
+
+
 /**
  * Request payload for updating a visit
  */
@@ -437,6 +473,110 @@ export interface UpdateVisitPhaseRequest {
 export interface UpdateVisitStatusRequest {
   status: VisitStatus;
   additional_data?: Record<string, unknown>;
+}
+/* -------------------------------------------------------------------------- */
+/*                              CORE DATA TYPES                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Patient information from queue response
+ * Lean representation for queue display
+ */
+export interface QueuePatient {
+  patient_number: string;
+  global_user_uuid?: string;
+  name: string | null;
+  date_of_birth: string | null;
+  biological_sex: string | null;
+  blood_type: string | null;
+  status: string;
+  requires_isolation: boolean;
+  created_at: string | null;
+}
+
+/**
+ * Legacy queue visit information (visit-level but NOT visit-centric in UI)
+ * NOTE: legacy `meta.queue` stays for backward compatibility.
+ */
+export interface QueueVisit {
+  visit_uuid: string;
+  patient_id: number;
+
+  current_phase: VisitPhase;
+  current_department_id: number | null;
+
+  assigned_staff_id: number | null;
+  assigned_at: string | null;
+
+  waiting_since: string | null;
+  acuity_score: number;
+  arrived_at: string | null;
+
+  visit_type: VisitType;
+  status: VisitStatus;
+}
+
+/**
+ * ✅ New: Visit-centric queue item.
+ * Each row represents a VISIT (even if patient repeats).
+ * This is what you use to "unpack" guest visits.
+ */
+export interface QueueVisitItem {
+  visit_id: number;
+  visit_uuid: string;
+  facility_id: number;
+
+  patient_id: number;
+  patient: QueuePatient | null; // snapshot for THIS visit row
+
+  current_phase: VisitPhase;
+  current_department_id: number | null;
+
+  assigned_staff_id: number | null;
+  assigned_at: string | null;
+
+  waiting_since: string | null;
+  acuity_score: number;
+  arrived_at: string | null;
+
+  visit_type: VisitType;
+  status: VisitStatus;
+
+  is_walk_in: boolean;
+}
+
+/**
+ * Queue response metadata
+ * - `queue` remains legacy
+ * - `queue_visits` is NEW and visit-centric
+ */
+export interface QueueMeta {
+  facility_id: number;
+  staff_id: number;
+  role_code: string | null;
+
+  filters: {
+    current_phase: VisitPhase | null;
+    department_id: number | null;
+    include_unassigned: boolean;
+  };
+
+  allowed_department_ids: number[] | null;
+
+  queue: QueueVisit[];                 // ✅ legacy
+  queue_visits?: QueueVisitItem[];     // ✅ new (optional)
+
+  total_visits: number;
+  total_patients: number;
+}
+
+/**
+ * Queue response structure
+ */
+export interface QueueResponse {
+  success: boolean;
+  data: QueuePatient[]; // legacy patient list (optional for UI)
+  meta: QueueMeta;
 }
 
 /**
@@ -505,32 +645,6 @@ export type VisitResponse = ApiResponse<Visit>;
  */
 export type VisitListResponse = PaginatedResponse<Visit[]>;
 
-/**
- * Queue response metadata
- */
-export interface QueueMeta {
-  facility_id: number;
-  staff_id: number;
-  role_code: string | null;
-  filters: {
-    current_phase: VisitPhase | null;
-    department_id: number | null;
-    include_unassigned: boolean;
-  };
-  allowed_department_ids: number[] | null;
-  queue: QueueVisit[];
-  total_visits: number;
-  total_patients: number;
-}
-
-/**
- * Queue response structure
- */
-export interface QueueResponse {
-  success: boolean;
-  data: QueuePatient[];
-  meta: QueueMeta;
-}
 
 /**
  * Statistics response
