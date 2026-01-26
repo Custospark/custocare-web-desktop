@@ -13,7 +13,6 @@ import {
   Search,
   UserPlus,
   X,
-  ClipboardList,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -364,10 +363,10 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                 {p?.date_of_birth ? <span>DOB: {new Date(p.date_of_birth).toLocaleDateString()}</span> : null}
                 {p?.biological_sex ? <span>Sex: {p.biological_sex}</span> : null}
 
-                <span className="flex items-center gap-1" title="Visit UUID">
+                {/* <span className="flex items-center gap-1" title="Visit UUID">
                   <ClipboardList className="w-3 h-3" />
                  Visit Number: {visit.visit_uuid}
-                </span>
+                </span> */}
               </div>
             </div>
 

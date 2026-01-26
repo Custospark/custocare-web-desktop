@@ -1,544 +1,866 @@
+/**
+ * ============================================================================
+ * PATIENT COMPLAINTS COMPONENT
+ * ============================================================================
+ * 
+ * A production-ready component for capturing and managing patient chief complaints.
+ * Features real backend integration with optimistic updates.
+ * Handles single chief complaint only.
+ */
+
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { 
+  Edit2, 
+  X, 
+  Plus, 
+  AlertCircle, 
+  CheckCircle, 
+  Loader2,
+  MessageSquare,
+  ClipboardList,
+  Trash2
+} from 'lucide-react';
 import { useSelector } from 'react-redux';
-import { AlertCircle, Plus, X, Save, Edit2, Check, Trash2 } from 'lucide-react';
+
+// Hooks and utilities
+import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import { cn } from '../../../../shared/utils/classNameUtils';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
-import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import { useConfirm } from '../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
-import { useUpdateVisit } from '../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
-import { selectActiveVisit } from '../../../../app/store/slices/visitSlice';
-import type { RootState } from '../../../../app/store/rootReducer';
 
-type Theme = 'light' | 'dark';
+// Redux selectors
+import { 
+  selectActiveVisitUuid,
+  selectActivePatient,
+  selectActiveVisitInfo,
+  selectVisitContext
+} from '../../../../app/store/slices/visitSlice';
+
+// API hooks - Using the provided useUpdateVisit hook and adding useGetVisitByUUID
+import { 
+  useUpdateVisit,
+  useGetVisitByUUID
+} from '../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
+import type { 
+  VisitResponse,
+  ApiErrorResponse,
+  UpdateVisitRequest,
+} from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import type { AxiosError } from 'axios';
+
+/* -------------------------------------------------------------------------- */
+/*                                TYPE DEFINITIONS                            */
+/* -------------------------------------------------------------------------- */
 
 interface PatientComplaintsProps {
-  theme?: Theme;
+  theme: 'light' | 'dark';
   className?: string;
+  onComplaintsUpdated?: (complaints: string[]) => void | Promise<void>;
+  readOnly?: boolean;
+  compact?: boolean;
+  // Optional: if not using active visit from Redux
+  visitUuid?: string;
 }
 
-// Common complaint suggestions for quick entry
-const COMMON_COMPLAINTS = [
-  'Fever',
-  'Headache',
-  'Cough',
-  'Abdominal pain',
-  'Chest pain',
-  'Shortness of breath',
-  'Nausea',
-  'Vomiting',
-  'Diarrhea',
-  'Fatigue',
-  'Dizziness',
-  'Back pain',
-  'Sore throat',
-  'Body aches',
-  'Rash',
-];
+interface ComplaintDisplayProps {
+  theme: 'light' | 'dark';
+  complaint: string;
+  isEditing: boolean;
+  isSaving: boolean;
+  onEdit: () => void;
+  onSave: (text: string) => void;
+  onCancel: () => void;
+  onDelete: () => void;
+  readOnly?: boolean;
+}
 
-const PatientComplaints: React.FC<PatientComplaintsProps> = ({ 
-  theme = 'dark',
-  className 
+interface NewComplaintFormProps {
+  theme: 'light' | 'dark';
+  onSubmit: (text: string) => void;
+  onCancel: () => void;
+  isLoading?: boolean;
+  placeholder?: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                               SUB-COMPONENTS                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Complaint display component - shows single complaint with edit/delete options
+ */
+const ComplaintDisplay: React.FC<ComplaintDisplayProps> = React.memo(({
+  theme,
+  complaint,
+  isEditing,
+  isSaving,
+  onEdit,
+  onSave,
+  onCancel,
+  onDelete,
+  readOnly = false
 }) => {
   const isDark = theme === 'dark';
-  const { showToast } = useToast();
-  const { confirm } = useConfirm();
+  const [editText, setEditText] = useState(complaint);
   
-  // Get active visit from Redux store
-  const activeVisit = useSelector((state: RootState) => selectActiveVisit(state));
-  
-  // Local state for managing complaints
-  const [complaints, setComplaints] = useState<string[]>([]);
-  const [newComplaint, setNewComplaint] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [touchedInput, setTouchedInput] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const colors = useMemo(() => ({
+    bg: isDark ? 'bg-gray-800/50' : 'bg-gray-50',
+    border: isDark ? 'border-gray-700' : 'border-gray-200',
+    text: isDark ? 'text-gray-100' : 'text-gray-900',
+    textSecondary: isDark ? 'text-gray-400' : 'text-gray-600',
+    hoverBg: isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-100',
+    accent: isDark ? 'text-cyan-400' : 'text-blue-600',
+    accentBg: isDark ? 'bg-cyan-900/20' : 'bg-cyan-50',
+    danger: isDark ? 'text-red-400' : 'text-red-600',
+    dangerBg: isDark ? 'bg-red-900/20' : 'bg-red-50',
+    success: isDark ? 'text-green-400' : 'text-green-600'
+  }), [isDark]);
 
-  // Initialize complaints from active visit
-  useEffect(() => {
-    if (activeVisit?.chief_complaints) {
-      setComplaints(activeVisit.chief_complaints);
-    } else {
-      setComplaints([]);
+  const handleSave = useCallback(() => {
+    if (editText.trim() && !isSaving) {
+      onSave(editText.trim());
     }
-  }, [activeVisit]);
+  }, [editText, onSave, isSaving]);
 
-  // Update mutation
-  const updateMutation = useUpdateVisit({
-    onSuccess: (response) => {
-      showToast('success', 'Chief complaints updated successfully', 3000);
-      setIsEditing(false);
-      setEditingIndex(null);
-      setNewComplaint('');
-      setTouchedInput(false);
-      
-      // Update local state with server response
-      if (response.data.chief_complaints) {
-        setComplaints(response.data.chief_complaints);
-      }
-    },
-    onError: (error) => {
-      const errorMessage = error.response?.data?.message || 'Failed to update chief complaints';
-      showToast('error', errorMessage, 5000);
-    },
-  });
+  const handleCancel = useCallback(() => {
+    setEditText(complaint);
+    onCancel();
+  }, [complaint, onCancel]);
 
-  // Color tokens
-  const colors = useMemo(
-    () => ({
-      bg: {
-        primary: isDark ? 'bg-gray-900' : 'bg-white',
-        secondary: isDark ? 'bg-gray-800' : 'bg-gray-50',
-        elevated: isDark ? 'bg-gray-800' : 'bg-white',
-      },
-      border: {
-        primary: isDark ? 'border-gray-700' : 'border-gray-200',
-        secondary: isDark ? 'border-gray-600' : 'border-gray-300',
-      },
-      text: {
-        primary: isDark ? 'text-white' : 'text-gray-900',
-        secondary: isDark ? 'text-gray-400' : 'text-gray-600',
-        tertiary: isDark ? 'text-gray-500' : 'text-gray-500',
-      },
-    }),
-    [isDark]
-  );
-
-  // Validation
-  const validateComplaint = useCallback((value: string): string | null => {
-    const trimmed = value.trim();
-    if (!trimmed) return 'Complaint cannot be empty';
-    if (trimmed.length < 2) return 'Complaint must be at least 2 characters';
-    if (trimmed.length > 200) return 'Complaint must be less than 200 characters';
-    return null;
-  }, []);
-
-  const inputError = useMemo(() => {
-    if (!touchedInput || !newComplaint) return null;
-    return validateComplaint(newComplaint);
-  }, [newComplaint, touchedInput, validateComplaint]);
-
-  // Add new complaint
-  const handleAddComplaint = useCallback(async () => {
-    const error = validateComplaint(newComplaint);
-    if (error) {
-      setTouchedInput(true);
-      showToast('error', error, 3000);
-      return;
-    }
-
-    const trimmed = newComplaint.trim();
-    if (complaints.includes(trimmed)) {
-      showToast('error', 'This complaint has already been added', 3000);
-      return;
-    }
-
-    const updatedComplaints = [...complaints, trimmed];
-    setComplaints(updatedComplaints);
-    setNewComplaint('');
-    setTouchedInput(false);
-    setShowSuggestions(false);
-
-    // Save to backend if visit exists
-    if (activeVisit?.visit_uuid) {
-      updateMutation.mutate({
-        uuid: activeVisit.visit_uuid,
-        data: {
-          chief_complaints: updatedComplaints,
-        },
-      });
-    }
-  }, [newComplaint, complaints, validateComplaint, activeVisit, updateMutation, showToast]);
-
-  // Start editing a complaint
-  const handleStartEdit = useCallback((index: number) => {
-    setEditingIndex(index);
-    setEditValue(complaints[index]);
-    setIsEditing(true);
-  }, [complaints]);
-
-  // Save edited complaint
-  const handleSaveEdit = useCallback(async () => {
-    if (editingIndex === null) return;
-
-    const error = validateComplaint(editValue);
-    if (error) {
-      showToast('error', error, 3000);
-      return;
-    }
-
-    const trimmed = editValue.trim();
-    const updatedComplaints = [...complaints];
-    updatedComplaints[editingIndex] = trimmed;
+useEffect(() => {
+  if (isEditing) {
+    const timer = setTimeout(() => {
+      setEditText(complaint);
+    }, 0);
     
-    setComplaints(updatedComplaints);
-    setEditingIndex(null);
-    setEditValue('');
-    setIsEditing(false);
+    return () => clearTimeout(timer);
+  }
+}, [isEditing, complaint]);
 
-    // Save to backend if visit exists
-    if (activeVisit?.visit_uuid) {
-      updateMutation.mutate({
-        uuid: activeVisit.visit_uuid,
-        data: {
-          chief_complaints: updatedComplaints,
-        },
-      });
-    }
-  }, [editingIndex, editValue, complaints, validateComplaint, activeVisit, updateMutation, showToast]);
-
-  // Cancel editing
-  const handleCancelEdit = useCallback(() => {
-    setEditingIndex(null);
-    setEditValue('');
-    setIsEditing(false);
-  }, []);
-
-  // Remove complaint
-  const handleRemoveComplaint = useCallback(async (index: number) => {
-    const ok = await confirm({
-      title: 'Remove Complaint',
-      message: `Are you sure you want to remove "${complaints[index]}"?`,
-      confirmText: 'Yes, Remove',
-      cancelText: 'Cancel',
-      variant: 'warning',
-      theme,
-    });
-
-    if (!ok) return;
-
-    const updatedComplaints = complaints.filter((_, i) => i !== index);
-    setComplaints(updatedComplaints);
-
-    // Save to backend if visit exists
-    if (activeVisit?.visit_uuid) {
-      updateMutation.mutate({
-        uuid: activeVisit.visit_uuid,
-        data: {
-          chief_complaints: updatedComplaints,
-        },
-      });
-    }
-  }, [complaints, confirm, theme, activeVisit, updateMutation]);
-
-  // Add suggestion
-  const handleAddSuggestion = useCallback((suggestion: string) => {
-    if (complaints.includes(suggestion)) {
-      showToast('info', 'This complaint has already been added', 3000);
-      return;
-    }
-
-    const updatedComplaints = [...complaints, suggestion];
-    setComplaints(updatedComplaints);
-    setShowSuggestions(false);
-
-    // Save to backend if visit exists
-    if (activeVisit?.visit_uuid) {
-      updateMutation.mutate({
-        uuid: activeVisit.visit_uuid,
-        data: {
-          chief_complaints: updatedComplaints,
-        },
-      });
-    }
-  }, [complaints, activeVisit, updateMutation, showToast]);
-
-  // Filter suggestions based on input
-  const filteredSuggestions = useMemo(() => {
-    if (!newComplaint.trim()) return COMMON_COMPLAINTS;
-    const query = newComplaint.toLowerCase();
-    return COMMON_COMPLAINTS.filter(
-      (c) => c.toLowerCase().includes(query) && !complaints.includes(c)
-    );
-  }, [newComplaint, complaints]);
-
-  // Loading state
-  if (!activeVisit) {
+  if (isEditing) {
     return (
-      <div className={cn('p-6', className)}>
-        <div className={cn('rounded-xl border p-6', colors.border.primary, colors.bg.elevated)}>
-          <div className="text-center space-y-2">
-            <AlertCircle className={cn('w-12 h-12 mx-auto', colors.text.secondary)} />
-            <p className={cn('text-sm', colors.text.secondary)}>
-              No active visit selected. Please select a patient visit first.
-            </p>
-          </div>
+      <div className={cn('space-y-4', colors.bg, colors.border, 'p-4 rounded-lg border')}>
+        <div>
+          <label className={cn('block text-sm font-medium mb-2', colors.text)}>
+            Edit Chief Complaint
+          </label>
+          <textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            className={cn(
+              'w-full px-3 py-2 rounded-lg border resize-none min-h-[120px]',
+              'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors cursor-text',
+              isDark 
+                ? 'bg-gray-900 border-gray-600 text-white placeholder-gray-500 hover:border-gray-500' 
+                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 hover:border-gray-400'
+            )}
+            placeholder="Describe the chief complaint in detail..."
+            autoFocus
+            disabled={readOnly || isSaving}
+            rows={4}
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={handleCancel}
+            disabled={readOnly || isSaving}
+            className={cn(
+              'px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer',
+              'focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1',
+              isDark ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white',
+              isDark 
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' 
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700',
+              (readOnly || isSaving) && 'opacity-50 cursor-not-allowed'
+            )}
+            aria-label="Cancel edit"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!editText.trim() || readOnly || isSaving}
+            className={cn(
+              'px-4 py-2 rounded-lg font-medium transition-all duration-200 cursor-pointer',
+              'focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1',
+              isDark ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white',
+              editText.trim() && !readOnly && !isSaving
+                ? 'bg-green-600 hover:bg-green-700 text-white shadow-sm'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed',
+              readOnly && 'opacity-50',
+              isSaving && 'opacity-70 cursor-wait'
+            )}
+            aria-label="Save complaint"
+          >
+            {isSaving ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving...
+              </span>
+            ) : (
+              'Save Changes'
+            )}
+          </button>
         </div>
       </div>
     );
   }
 
-  const isSubmitting = updateMutation.isPending;
+  return (
+    <div className={cn(
+      'p-4 rounded-lg border transition-all duration-200',
+      colors.bg, colors.border,
+      !readOnly && colors.hoverBg
+    )}>
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <MessageSquare className={cn('w-5 h-5', colors.textSecondary)} />
+            <span className={cn('text-sm font-semibold', colors.text)}>
+              Chief Complaint
+            </span>
+          </div>
+          <p className={cn('text-sm leading-relaxed', colors.text)}>{complaint}</p>
+        </div>
+        {!readOnly && (
+          <div className="flex gap-2 ml-4">
+            <button
+              type="button"
+              onClick={onEdit}
+              disabled={isSaving}
+              className={cn(
+                'p-2 rounded-lg transition-colors cursor-pointer',
+                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
+                isDark ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white',
+                isDark 
+                  ? 'hover:bg-gray-700 text-gray-400 hover:text-white' 
+                  : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700',
+                isSaving && 'opacity-50 cursor-not-allowed'
+              )}
+              aria-label="Edit complaint"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={isSaving}
+              className={cn(
+                'p-2 rounded-lg transition-colors cursor-pointer',
+                'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1',
+                isDark ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white',
+                isDark 
+                  ? 'hover:bg-red-900/30 text-gray-400 hover:text-red-300' 
+                  : 'hover:bg-red-100 text-gray-500 hover:text-red-600',
+                isSaving && 'opacity-50 cursor-not-allowed'
+              )}
+              aria-label="Delete complaint"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+ComplaintDisplay.displayName = 'ComplaintDisplay';
+
+/**
+ * New complaint form component
+ */
+const NewComplaintForm: React.FC<NewComplaintFormProps> = React.memo(({
+  theme,
+  onSubmit,
+  onCancel,
+  isLoading = false,
+  placeholder = "Enter the patient's chief complaint or reason for visit..."
+}) => {
+  const isDark = theme === 'dark';
+  const [text, setText] = useState('');
+  
+  const colors = useMemo(() => ({
+    bg: isDark ? 'bg-gray-800' : 'bg-gray-50',
+    border: isDark ? 'border-gray-700' : 'border-gray-200',
+    text: isDark ? 'text-white' : 'text-gray-900',
+    placeholder: isDark ? 'placeholder-gray-500' : 'placeholder-gray-400',
+    accent: isDark ? 'border-cyan-700' : 'border-cyan-200',
+    accentBg: isDark ? 'bg-cyan-900/10' : 'bg-cyan-50'
+  }), [isDark]);
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    if (text.trim() && !isLoading) {
+      onSubmit(text.trim());
+      setText('');
+    }
+  }, [text, isLoading, onSubmit]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      handleSubmit(e);
+    }
+  }, [handleSubmit]);
 
   return (
-    <div className={cn('p-6', className)}>
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="space-y-2">
-          <h2 className={cn('text-2xl font-bold', colors.text.primary)}>
-            Chief Complaints
-          </h2>
-          <p className={colors.text.secondary}>
-            Document the patient's reason for visit and primary complaints
-          </p>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className={cn('block text-sm font-medium mb-2', colors.text)}>
+          Chief Complaint
+        </label>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className={cn(
+            'w-full px-3 py-3 rounded-lg border resize-none min-h-[120px]',
+            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors cursor-text',
+            colors.bg, colors.border, colors.text, colors.placeholder,
+            text.trim() && colors.accent
+          )}
+          disabled={isLoading}
+          rows={4}
+        />
+        {text.trim() && (
+          <div className="mt-2 text-right">
+            <div className={cn(
+              'text-xs px-2 py-1 rounded inline-block',
+              isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'
+            )}>
+              Press ⌘⏎ to save
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isLoading}
+          className={cn(
+            'px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer',
+            'focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2',
+            isDark ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white',
+            isDark 
+              ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' 
+              : 'bg-gray-200 hover:bg-gray-300 text-gray-700',
+            isLoading && 'opacity-50 cursor-not-allowed'
+          )}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={!text.trim() || isLoading}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 cursor-pointer',
+            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+            isDark ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white',
+            text.trim() && !isLoading
+              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
+            isLoading && 'opacity-70 cursor-wait'
+          )}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Adding...
+            </>
+          ) : (
+            <>
+              <Plus className="w-4 h-4" />
+              Add Complaint
+            </>
+          )}
+        </button>
+      </div>
+    </form>
+  );
+});
+
+NewComplaintForm.displayName = 'NewComplaintForm';
+
+/* -------------------------------------------------------------------------- */
+/*                         MAIN COMPONENT IMPLEMENTATION                      */
+/* -------------------------------------------------------------------------- */
+
+const PatientComplaints: React.FC<PatientComplaintsProps> = ({
+  theme,
+  className,
+  onComplaintsUpdated,
+  readOnly = false,
+  compact = false,
+  visitUuid: propVisitUuid,
+}) => {
+  const isDark = theme === 'dark';
+  const { showToast } = useToast();
+  const { confirm } = useConfirm();
+
+  // Redux selectors for visit data
+  const reduxVisitUuid = useSelector(selectActiveVisitUuid);
+  const activePatient = useSelector(selectActivePatient);
+  const visitInfo = useSelector(selectActiveVisitInfo);
+  const visitContext = useSelector(selectVisitContext);
+
+  // Use prop visitUuid if provided, otherwise use Redux
+  const visitUuid = propVisitUuid || reduxVisitUuid;
+
+  // Fetch visit data from backend
+  const { 
+    data: visitData,
+    isLoading: isLoadingVisit,
+    error: visitError,
+    refetch: refetchVisit 
+  } = useGetVisitByUUID(visitUuid || '', {
+    enabled: !!visitUuid,
+    staleTime: 10000,
+  });
+
+  // Extract chief complaint from visit data
+  const chiefComplaint = useMemo(() => {
+    if (!visitData?.data?.chief_complaints) return '';
+    // Handle single complaint - take the first one if array
+    const complaints = visitData.data.chief_complaints;
+    if (Array.isArray(complaints) && complaints.length > 0) {
+      return complaints[0];
+    }
+    return '';
+  }, [visitData]);
+
+  // Local state
+  const [isEditing, setIsEditing] = useState(false);
+  const [showNewForm, setShowNewForm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [optimisticComplaint, setOptimisticComplaint] = useState<string | null>(null);
+
+  // Use the update visit mutation with proper optimistic updates
+  const updateVisitMutation = useUpdateVisit({
+    onSuccess: (data: VisitResponse) => {
+      const updatedComplaints = data.data.chief_complaints || [];
+    
+      
+      setOptimisticComplaint(null);
+      setError(null);
+      setIsEditing(false);
+      setShowNewForm(false);
+      
+      if (onComplaintsUpdated) {
+        onComplaintsUpdated(updatedComplaints);
+      }
+            refetchVisit(); // Refetch to ensure data is fresh
+    },
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      // Revert optimistic update on error
+      setOptimisticComplaint(null);
+      
+      // Extract meaningful error message
+      let errorMessage = 'Failed to update complaint';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        // Handle validation errors
+        const errors = error.response.data.errors;
+        const firstError = Object.values(errors)[0];
+        if (Array.isArray(firstError) && firstError[0]) {
+          errorMessage = firstError[0];
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+      showToast('error', errorMessage, 5000);
+    },
+  });
+
+  // Display complaint with optimistic update
+  const displayComplaint = optimisticComplaint || chiefComplaint;
+
+  const colors = useMemo(() => ({
+    bg: isDark ? 'bg-gray-900' : 'bg-white',
+    border: isDark ? 'border-gray-800' : 'border-gray-200',
+    text: {
+      primary: isDark ? 'text-white' : 'text-gray-900',
+      secondary: isDark ? 'text-gray-400' : 'text-gray-600',
+      tertiary: isDark ? 'text-gray-500' : 'text-gray-500'
+    },
+    accent: {
+      bg: isDark ? 'bg-blue-900/20' : 'bg-blue-50',
+      text: isDark ? 'text-blue-300' : 'text-blue-600',
+      border: isDark ? 'border-blue-800' : 'border-blue-200'
+    },
+    success: {
+      bg: isDark ? 'bg-green-900/20' : 'bg-green-50',
+      text: isDark ? 'text-green-300' : 'text-green-600'
+    },
+    warning: {
+      bg: isDark ? 'bg-yellow-900/20' : 'bg-yellow-50',
+      text: isDark ? 'text-yellow-300' : 'text-yellow-600'
+    },
+    error: {
+      bg: isDark ? 'bg-red-900/20' : 'bg-red-50',
+      text: isDark ? 'text-red-300' : 'text-red-600',
+      border: isDark ? 'border-red-800' : 'border-red-200'
+    }
+  }), [isDark]);
+
+  const handleAddComplaint = useCallback(async (text: string) => {
+    if (!visitUuid || !text.trim() || updateVisitMutation.isPending) return;
+
+    // Optimistic update
+    setOptimisticComplaint(text);
+    setShowNewForm(false);
+    
+    try {
+      await updateVisitMutation.mutateAsync({
+        uuid: visitUuid,
+        data: { 
+          chief_complaints: [text], // Send as array with single element
+          updated_by_staff_id: visitContext.staffId || undefined
+        } as UpdateVisitRequest
+      });
+    } catch (error) {
+      // Error handling is done in mutation callbacks
+      console.error('Failed to add complaint:', error);
+    }
+  }, [updateVisitMutation, visitUuid, visitContext.staffId]);
+
+  const handleEditComplaint = useCallback(async (text: string) => {
+    if (!visitUuid || !text.trim() || updateVisitMutation.isPending) return;
+
+    // Optimistic update
+    setOptimisticComplaint(text);
+    setIsEditing(false);
+    
+    try {
+      await updateVisitMutation.mutateAsync({
+        uuid: visitUuid,
+        data: { 
+          chief_complaints: [text], // Send as array with single element
+          updated_by_staff_id: visitContext.staffId || undefined
+        } as UpdateVisitRequest
+      });
+    } catch (error) {
+      // Error handling is done in mutation callbacks
+      console.error('Failed to edit complaint:', error);
+    }
+  }, [updateVisitMutation, visitUuid, visitContext.staffId]);
+
+  const handleDeleteComplaint = useCallback(async () => {
+    if (!visitUuid || updateVisitMutation.isPending) return;
+
+    // Confirm deletion
+    const ok = await confirm({
+      title: 'Delete Chief Complaint',
+      message: 'Are you sure you want to delete this chief complaint? This action cannot be undone.',
+      confirmText: 'Yes, Delete',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      theme,
+    });
+
+    if (!ok) return;
+
+    // Optimistic update - clear complaint
+    setOptimisticComplaint('');
+    
+    try {
+      await updateVisitMutation.mutateAsync({
+        uuid: visitUuid,
+        data: { 
+          chief_complaints: [], // Empty array to clear complaint
+          updated_by_staff_id: visitContext.staffId || undefined
+        } as UpdateVisitRequest
+      });
+    } catch (error) {
+      // Error handling is done in mutation callbacks
+      console.error('Failed to delete complaint:', error);
+    }
+  }, [confirm, updateVisitMutation, visitUuid, visitContext.staffId, theme]);
+
+  const handleCancelEdit = useCallback(() => {
+    setIsEditing(false);
+  }, []);
+
+  const handleStartEdit = useCallback(() => {
+    setIsEditing(true);
+  }, []);
+
+  const handleCancelNew = useCallback(() => {
+    setShowNewForm(false);
+  }, []);
+
+  // Loading state
+  const isLoading = isLoadingVisit || (updateVisitMutation.isPending && !optimisticComplaint);
+
+  useEffect(() => {
+  if (visitError) {
+    const errorMessage = (visitError as AxiosError<ApiErrorResponse>)?.response?.data?.message || 
+                        'Failed to load visit data';
+    
+    // Make it asynchronous
+    const timer = setTimeout(() => {
+      setError(errorMessage);
+    }, 0);
+    
+    return () => clearTimeout(timer);
+  }
+}, [visitError]);
+
+  // No active visit
+  if (!visitUuid) {
+    return (
+      <div className={cn('rounded-xl border p-8 text-center', colors.bg, colors.border)}>
+        <ClipboardList className={cn('w-16 h-16 mx-auto mb-4', colors.text.secondary)} />
+        <h3 className={cn('text-xl font-bold mb-2', colors.text.primary)}>
+          No Active Visit Selected
+        </h3>
+        <p className={cn('max-w-md mx-auto mb-6', colors.text.secondary)}>
+          Please select a patient visit from the queue to view and manage chief complaints.
+        </p>
+        <div className={cn('inline-flex items-center gap-2 px-4 py-2 rounded-lg cursor-default', 
+          isDark ? 'bg-gray-800' : 'bg-gray-100'
+        )}>
+          <MessageSquare className={cn('w-4 h-4', colors.text.secondary)} />
+          <span className={colors.text.secondary}>Select a visit to begin</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (isLoadingVisit) {
+    return (
+      <div className={className}>
+        <LoadingSkeleton 
+          variant="detail"
+          theme={theme}
+          message="Loading patient complaint..."
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn('space-y-6', className)}>
+      {/* Header Card */}
+      <div className={cn('rounded-xl border', colors.bg, colors.border, 'shadow-sm')}>
+        <div className="p-6 border-b" style={{ borderColor: colors.border }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={cn('p-2.5 rounded-xl', colors.accent.bg)}>
+                <MessageSquare className={cn('w-6 h-6', colors.accent.text)} />
+              </div>
+              <div>
+                <h2 className={cn('text-xl font-bold', colors.text.primary)}>
+                  Chief Complaint
+                </h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className={cn('text-sm', colors.text.secondary)}>
+                    {activePatient?.name || visitInfo?.patientName || 'Patient Name Not Available'}
+                  </p>
+                  <span className={cn('text-xs px-2 py-0.5 rounded cursor-default', 
+                    isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
+                  )}>
+                    {visitInfo?.patientNumber || 'N/A'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {!readOnly && !showNewForm && !displayComplaint && (
+              <button
+                type="button"
+                onClick={() => setShowNewForm(true)}
+                disabled={updateVisitMutation.isPending}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 cursor-pointer',
+                  'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                  isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
+                  isDark 
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow' 
+                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow',
+                  updateVisitMutation.isPending && 'opacity-50 cursor-not-allowed'
+                )}
+              >
+                <Plus className="w-4 h-4" />
+                Add Complaint
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Main Content */}
-        <div className={cn('rounded-xl border p-6', colors.border.primary, colors.bg.elevated)}>
-          {/* Loading Skeleton */}
-          {isSubmitting && (
-            <div className="mb-6">
-              <LoadingSkeleton variant="minimal" theme={theme} message="Saving changes..." />
+        <div className="p-6">
+          {/* Error Display */}
+          {error && (
+            <div className={cn(
+              'rounded-lg border p-4 mb-6 flex gap-3 items-start animate-in fade-in',
+              colors.error.bg, colors.error.border
+            )}>
+              <AlertCircle className={cn('w-5 h-5 flex-shrink-0 mt-0.5', colors.error.text)} />
+              <div className="flex-1">
+                <p className={cn('text-sm font-medium mb-1', colors.error.text)}>
+                  {visitError ? 'Load Failed' : 'Update Failed'}
+                </p>
+                <p className={cn('text-sm', colors.error.text)}>
+                  {error}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className={cn(
+                  'p-1 rounded-lg transition-colors cursor-pointer',
+                  isDark 
+                    ? 'hover:bg-red-800/30 text-red-400' 
+                    : 'hover:bg-red-100 text-red-600'
+                )}
+                aria-label="Dismiss error"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           )}
 
-          {/* Patient Info */}
-          <div className={cn('mb-6 p-4 rounded-lg', colors.bg.secondary)}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={cn('text-sm font-medium', colors.text.secondary)}>Patient</p>
-                <p className={cn('text-lg font-semibold', colors.text.primary)}>
-                  {activeVisit.patient?.name || 'Unknown Patient'}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className={cn('text-sm font-medium', colors.text.secondary)}>Visit ID</p>
-                <p className={cn('text-sm font-mono', colors.text.primary)}>
-                  {activeVisit.visit_uuid.slice(0, 8)}...
-                </p>
+          {/* Global Loading State */}
+          {isLoading && (
+            <div className="mb-6">
+              <div className="flex items-center justify-center gap-3 p-4 rounded-lg bg-gradient-to-r from-blue-500/10 to-cyan-500/10">
+                <Loader2 className={cn('w-5 h-5 animate-spin', colors.accent.text)} />
+                <span className={cn('text-sm font-medium', colors.accent.text)}>
+                  {updateVisitMutation.isPending ? 'Updating complaint...' : 'Loading...'}
+                </span>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Add New Complaint */}
-          <div className="space-y-4 mb-6">
-            <label className={cn('block text-sm font-medium', colors.text.primary)}>
-              Add Chief Complaint
-            </label>
-            
-            <div className="flex gap-2">
-              <div className="flex-1 relative">
-                <input
-                  type="text"
-                  value={newComplaint}
-                  onChange={(e) => {
-                    setNewComplaint(e.target.value);
-                    setTouchedInput(true);
-                  }}
-                  onFocus={() => setShowSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      void handleAddComplaint();
-                    }
-                  }}
-                  placeholder="Enter patient complaint or select from suggestions..."
-                  disabled={isSubmitting}
-                  className={cn(
-                    'w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors',
-                    isDark 
-                      ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500' 
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
-                    inputError && 'border-red-500'
-                  )}
-                />
-                
-                {/* Suggestions Dropdown */}
-                {showSuggestions && filteredSuggestions.length > 0 && (
-                  <div className={cn(
-                    'absolute z-10 w-full mt-1 rounded-lg border shadow-lg max-h-60 overflow-y-auto',
-                    isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                  )}>
-                    {filteredSuggestions.map((suggestion) => (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        onClick={() => handleAddSuggestion(suggestion)}
-                        className={cn(
-                          'w-full px-4 py-2 text-left text-sm transition-colors',
-                          isDark 
-                            ? 'hover:bg-gray-700 text-gray-200' 
-                            : 'hover:bg-gray-100 text-gray-700'
-                        )}
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              
-              <button
-                type="button"
-                onClick={() => void handleAddComplaint()}
-                disabled={isSubmitting || !newComplaint.trim()}
-                className={cn(
-                  'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2',
-                  'bg-blue-600 hover:bg-blue-700 text-white',
-                  'disabled:opacity-50 disabled:cursor-not-allowed'
-                )}
-              >
-                <Plus className="w-5 h-5" />
-                Add
-              </button>
-            </div>
-
-            {inputError && (
-              <p className={cn('text-xs flex items-center gap-1', isDark ? 'text-red-300' : 'text-red-600')}>
-                <AlertCircle className="w-3 h-3" />
-                {inputError}
-              </p>
-            )}
-          </div>
-
-          {/* Complaints List */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className={cn('text-sm font-medium', colors.text.primary)}>
-                Current Complaints ({complaints.length})
+          {/* Empty State - No complaint recorded */}
+          {!displayComplaint && !showNewForm && !isLoading && (
+            <div className={cn(
+              'rounded-xl border-2 border-dashed p-8 text-center transition-colors',
+              colors.border,
+              'hover:border-blue-400/50'
+            )}>
+              <MessageSquare className={cn('w-16 h-16 mx-auto mb-4 opacity-50', colors.text.secondary)} />
+              <h3 className={cn('text-lg font-semibold mb-2', colors.text.primary)}>
+                No Complaint Recorded
               </h3>
-              {complaints.length > 0 && (
-                <p className={cn('text-xs', colors.text.tertiary)}>
-                  Click to edit or remove
-                </p>
+              <p className={cn('max-w-md mx-auto mb-6', colors.text.secondary)}>
+                {readOnly 
+                  ? "No chief complaint has been recorded for this visit."
+                  : "Document the patient's primary reason for visit or chief complaint."
+                }
+              </p>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => setShowNewForm(true)}
+                  className={cn(
+                    'inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all duration-200 cursor-pointer',
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                    isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
+                    isDark 
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow' 
+                      : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow'
+                  )}
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Complaint
+                </button>
               )}
             </div>
+          )}
 
-            {complaints.length === 0 ? (
-              <div className={cn('text-center py-12 rounded-lg border-2 border-dashed', colors.border.primary)}>
-                <AlertCircle className={cn('w-12 h-12 mx-auto mb-3', colors.text.tertiary)} />
-                <p className={cn('text-sm', colors.text.secondary)}>
-                  No chief complaints recorded yet
-                </p>
-                <p className={cn('text-xs mt-1', colors.text.tertiary)}>
-                  Add the patient's primary reasons for visiting
-                </p>
+          {/* Existing Complaint Display */}
+          {displayComplaint && !showNewForm && (
+            <ComplaintDisplay
+              theme={theme}
+              complaint={displayComplaint}
+              isEditing={isEditing}
+              isSaving={updateVisitMutation.isPending && !!optimisticComplaint}
+              onEdit={handleStartEdit}
+              onSave={handleEditComplaint}
+              onCancel={handleCancelEdit}
+              onDelete={handleDeleteComplaint}
+              readOnly={readOnly}
+            />
+          )}
+
+          {/* New Complaint Form */}
+          {showNewForm && (
+            <div className={cn(
+              'mt-6 p-4 rounded-xl border animate-in slide-in-from-bottom-4',
+              colors.accent.bg, colors.accent.border
+            )}>
+              <div className="flex items-center gap-2 mb-3">
+                <Plus className={cn('w-4 h-4', colors.accent.text)} />
+                <h4 className={cn('text-sm font-semibold', colors.accent.text)}>
+                  Add New Complaint
+                </h4>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {complaints.map((complaint, index) => (
-                  <div
-                    key={index}
-                    className={cn(
-                      'flex items-center gap-3 p-3 rounded-lg border transition-colors',
-                      isDark 
-                        ? 'bg-gray-900 border-gray-700 hover:border-gray-600' 
-                        : 'bg-gray-50 border-gray-200 hover:border-gray-300'
-                    )}
-                  >
-                    <div className={cn(
-                      'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold',
-                      isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'
-                    )}>
-                      {index + 1}
-                    </div>
-
-                    {editingIndex === index ? (
-                      <>
-                        <input
-                          type="text"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              void handleSaveEdit();
-                            } else if (e.key === 'Escape') {
-                              handleCancelEdit();
-                            }
-                          }}
-                          autoFocus
-                          className={cn(
-                            'flex-1 px-3 py-1 rounded border focus:outline-none focus:ring-2 focus:ring-blue-500',
-                            isDark 
-                              ? 'bg-gray-800 border-gray-600 text-white' 
-                              : 'bg-white border-gray-300 text-gray-900'
-                          )}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => void handleSaveEdit()}
-                          disabled={isSubmitting}
-                          className={cn(
-                            'p-2 rounded-lg transition-colors',
-                            isDark 
-                              ? 'hover:bg-green-900/30 text-green-400' 
-                              : 'hover:bg-green-100 text-green-600'
-                          )}
-                          title="Save"
-                        >
-                          <Check className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleCancelEdit}
-                          disabled={isSubmitting}
-                          className={cn(
-                            'p-2 rounded-lg transition-colors',
-                            isDark 
-                              ? 'hover:bg-gray-700 text-gray-400' 
-                              : 'hover:bg-gray-200 text-gray-600'
-                          )}
-                          title="Cancel"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <p className={cn('flex-1 text-sm', colors.text.primary)}>
-                          {complaint}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => handleStartEdit(index)}
-                          disabled={isSubmitting || isEditing}
-                          className={cn(
-                            'p-2 rounded-lg transition-colors',
-                            isDark 
-                              ? 'hover:bg-blue-900/30 text-blue-400' 
-                              : 'hover:bg-blue-100 text-blue-600',
-                            'disabled:opacity-50 disabled:cursor-not-allowed'
-                          )}
-                          title="Edit"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleRemoveComplaint(index)}
-                          disabled={isSubmitting || isEditing}
-                          className={cn(
-                            'p-2 rounded-lg transition-colors',
-                            isDark 
-                              ? 'hover:bg-red-900/30 text-red-400' 
-                              : 'hover:bg-red-100 text-red-600',
-                            'disabled:opacity-50 disabled:cursor-not-allowed'
-                          )}
-                          title="Remove"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Footer Info */}
-          {complaints.length > 0 && (
-            <div className={cn('mt-6 pt-6 border-t', colors.border.primary)}>
-              <p className={cn('text-xs text-center', colors.text.tertiary)}>
-                ⚠️ Changes are automatically saved. Ensure all complaints are accurately documented.
-              </p>
+              <NewComplaintForm
+                theme={theme}
+                onSubmit={handleAddComplaint}
+                onCancel={handleCancelNew}
+                isLoading={updateVisitMutation.isPending}
+                placeholder="Describe the patient's chief complaint in detail. Include duration, severity, and any associated symptoms..."
+              />
             </div>
           )}
         </div>
       </div>
+
+      {/* Success State Indicator */}
+      {updateVisitMutation.isSuccess && !updateVisitMutation.isPending && (
+        <div className={cn(
+          'rounded-lg border p-4 flex items-center gap-3 animate-in fade-in',
+          colors.success.bg, colors.success.bg
+        )}>
+          <CheckCircle className={cn('w-5 h-5 flex-shrink-0', colors.success.text)} />
+          <div className="flex-1">
+            <p className={cn('text-sm font-medium', colors.success.text)}>
+              Complaint updated successfully
+            </p>
+            <p className={cn('text-xs mt-1', colors.success.text)}>
+              Changes have been saved to the patient's visit record.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Additional Guidelines (Optional) */}
+      {!compact && !readOnly && (
+        <div className={cn('rounded-xl border p-5', colors.bg, colors.border)}>
+          <h4 className={cn('font-semibold mb-3 flex items-center gap-2 cursor-default', colors.text.primary)}>
+            <AlertCircle className="w-4 h-4" />
+            Documentation Guidelines
+          </h4>
+          <ul className={cn('space-y-2 text-sm cursor-default', colors.text.secondary)}>
+            <li className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 flex-shrink-0" />
+              <span>Use the patient's own words when possible</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 flex-shrink-0" />
+              <span>Be specific about onset, duration, and location</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 flex-shrink-0" />
+              <span>Document severity using pain scales when applicable</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 flex-shrink-0" />
+              <span>Note aggravating/relieving factors and associated symptoms</span>
+            </li>
+          </ul>
+        </div>
+      )}
     </div>
   );
 };

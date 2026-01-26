@@ -225,6 +225,8 @@ export const selectVisitError = (state: RootState) => state.visits.ui.error;
 // Derived selectors
 export const selectActiveVisitUuid = (state: RootState) => 
   state.visits.activeVisit?.visit_uuid || null;
+export const selectActiveVisitId = (state: RootState) => 
+  state.visits.activeVisit?.visit_id || null;
 
 export const selectActivePatient = (state: RootState) => 
   state.visits.activeVisit?.patient || null;
