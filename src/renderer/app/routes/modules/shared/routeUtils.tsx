@@ -1,8 +1,8 @@
 // routeUtils.ts
 import React, { Suspense } from 'react';
 import { useOutletContext,Outlet } from 'react-router-dom';
-import LoadingSkeleton from '../../../shared/components/Loading/LoadingSkeletons';
-import type { RootState } from '../../store/store';
+import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
+import type { RootState } from '../../../store/store';
 import { useSelector } from 'react-redux';
 
 /**

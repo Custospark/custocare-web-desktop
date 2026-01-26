@@ -1,10 +1,10 @@
 import { Route,Navigate} from "react-router-dom";
-import { SuspenseWrapper } from "./routeUtils";
+import { SuspenseWrapper } from "./shared/routeUtils";
 import MyInvitations from "../../../modules/account/invitations/MyInvitations";
 import Profile from "../../../modules/account/profile/Profile";
 import Security from "../../../modules/account/security/Security";
-import { PlaceholderPanel } from "./routeUtils";
-import { WithThemeProp } from "./routeUtils";
+import { PlaceholderPanel } from "./shared/routeUtils";
+import { WithThemeProp } from "./shared/routeUtils";
 import { ACCOUNT_ROUTES } from "../routeConstants";
 import Appearance from '../../../modules/account/apearance/Appearance';
 import Message from "../../../modules/account/message/Message";

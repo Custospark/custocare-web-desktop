@@ -1,0 +1,51 @@
+// ProtectedRoutes.tsx
+import React from 'react';
+import { Route } from 'react-router-dom';
+import { SuspenseWrapper } from "./routeUtils";
+import { ROUTES } from "../../routeConstants";
+import PatientPortalModule from '../../../../modules/patient-portal/ui/PatientPortalModule';
+const Dashboard = React.lazy(() => import('../../../../shared/pages/Dashboard'));
+const FacilityOnboardingModule = React.lazy(
+  () => import('../../../../shared/features/facilities/FacilityOnboardingModule'));
+
+/**
+ * Core Application Routes Configuration
+ */
+export const onboardingAndDashboardRoutes = [
+  <Route
+    key="dashboard"
+    path={ROUTES.DASHBOARD}
+    element={
+      <SuspenseWrapper variant="dashboard">
+        <Dashboard />
+      </SuspenseWrapper>
+    }
+  />,
+  <Route
+    key="patient-dashboard"
+    path={ROUTES.PATIENT_DASHBOARD}
+    element={
+      <SuspenseWrapper variant="dashboard">
+        <PatientPortalModule />
+      </SuspenseWrapper>
+    }
+  />,
+  <Route
+    key="facilities"
+    path={ROUTES.FACILITIES}
+    element={
+      <SuspenseWrapper variant="dashboard">
+        <FacilityOnboardingModule />
+      </SuspenseWrapper>
+    }
+  />,
+  <Route
+    key="facility-onboarding"
+    path={ROUTES.FACILITY_ONBOARDING}
+    element={
+      <SuspenseWrapper variant="dashboard">
+        <FacilityOnboardingModule />
+      </SuspenseWrapper>
+    }
+  />
+];

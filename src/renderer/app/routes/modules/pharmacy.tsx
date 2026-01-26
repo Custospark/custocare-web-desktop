@@ -1,5 +1,5 @@
 import { Navigate, Route } from "react-router-dom";
-import { PlaceholderPanel, WithThemeProp, SuspenseWrapper } from "./routeUtils";
+import { PlaceholderPanel, WithThemeProp, SuspenseWrapper } from "./shared/routeUtils";
 import { PHARMACY_ROUTES } from "../routeConstants";
 
 // Main Pharmacy Components

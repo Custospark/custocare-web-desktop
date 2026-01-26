@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks/useApp';
 import { initializeAuth } from '../store/slices/authSlice';
 import { ROUTES } from './routeConstants';
+import LoadingSkeleton from '../../shared/components/Loading/LoadingSkeletons';
 
 /**
  * AuthMiddlewareRoute Component
@@ -10,6 +11,7 @@ import { ROUTES } from './routeConstants';
  */
 function AuthMiddlewareRoute() {
   const dispatch = useAppDispatch();
+  const theme=useAppSelector((state)=>state.ui.theme);
   const { isAuthenticated, token, user, isInitialized } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
@@ -22,12 +24,7 @@ function AuthMiddlewareRoute() {
   // Show loading while initializing
   if (!isInitialized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="text-white">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
-          <p className="mt-2">Loading authentication...</p>
-        </div>
-      </div>
+      <LoadingSkeleton message='Checking authentication...' variant='detail' theme={theme}></LoadingSkeleton>
     );
   }
 

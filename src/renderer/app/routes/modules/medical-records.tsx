@@ -1,7 +1,7 @@
 import { Route,Navigate } from "react-router-dom";
 import { MEDICAL_RECORDS_ROUTES } from "../routeConstants";
-import { SuspenseWrapper } from "./routeUtils";
-import { WithThemeProp } from "./routeUtils";
+import { SuspenseWrapper } from "./shared/routeUtils";
+import { WithThemeProp } from "./shared/routeUtils";
 import FrontDesk from '../../../modules/medical-records/ui/patients/FrontDesk';
 import MedicalRecordsOverView from '../../../modules/medical-records/ui/overview/MedicalRecordsOverView';
 import MRVisitActionCenter from '../../../modules/medical-records/ui/visit-action-center/MRVisitActionCenter';
