@@ -10,6 +10,10 @@ import MRPatientCreate from '../../../modules/medical-records/ui/patients/views/
 import MRPatientQueue from '../../../modules/medical-records/ui/patients/views/MRPatientQueue';
 import MRPatientWalkIn from '../../../modules/medical-records/ui/patients/views/MRPatientWalkIn';
 import Appearance from "../../../modules/account/apearance/Appearance";
+import ForwardPatient from "../../../modules/medical-records/ui/visit-action-center/ForwardPatient";
+import PatientComplaints from "../../../modules/medical-records/ui/visit-action-center/PatientComplaints";
+import ClinicalNotes from "../../../modules/medical-records/ui/visit-action-center/ClinicalNotes";
+import PatientHostory from "../../../modules/medical-records/ui/visit-action-center/PatientHostory";
 export const medicalRecordsRoutes = [
   <Route
     key="overview"
@@ -17,15 +21,6 @@ export const medicalRecordsRoutes = [
     element={
       <SuspenseWrapper variant="table">
         <MedicalRecordsOverView />
-      </SuspenseWrapper>
-    }
-  />,
-  <Route
-    key="visit-action-center"
-    path={MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}
-    element={
-      <SuspenseWrapper variant="table">
-      <WithThemeProp Component={MRVisitActionCenter} />
       </SuspenseWrapper>
     }
   />,
@@ -60,6 +55,36 @@ export const medicalRecordsRoutes = [
         </SuspenseWrapper>
       } />
   </Route>,
+   <Route
+    key="visit-action-center"
+    path={MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}
+    element={
+      <SuspenseWrapper variant="table">
+      <WithThemeProp Component={MRVisitActionCenter} />
+      </SuspenseWrapper>
+    }>
+       <Route index element={<Navigate to={MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT} replace />} />
+    <Route path={MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT} element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={ForwardPatient} />
+        </SuspenseWrapper>
+      } />
+    <Route path={MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS} element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={PatientComplaints} />
+        </SuspenseWrapper>
+      } />
+    <Route path={MEDICAL_RECORDS_ROUTES.CLINICAL_NOTES} element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={ClinicalNotes} />
+        </SuspenseWrapper>
+      } />
+    <Route path={MEDICAL_RECORDS_ROUTES.PATIENT_HISTORY} element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={PatientHostory} />
+        </SuspenseWrapper>
+      } />
+    </Route>,
   <Route
     key="account-appearance"
     path="appearance"
