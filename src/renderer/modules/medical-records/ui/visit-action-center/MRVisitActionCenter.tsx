@@ -18,7 +18,7 @@ import {
   ArrowLeftRight,
 } from 'lucide-react';
 import { FaNotesMedical } from 'react-icons/fa';
-import { RootState } from '../../../../app/store/rootReducer';
+import { type RootState } from '../../../../app/store/rootReducer';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
 import { 
