@@ -113,7 +113,7 @@ const ComplaintDisplay: React.FC<ComplaintDisplayProps> = React.memo(({
     accentBg: isDark ? 'bg-cyan-900/20' : 'bg-cyan-50',
     danger: isDark ? 'text-red-400' : 'text-red-600',
     dangerBg: isDark ? 'bg-red-900/20' : 'bg-red-50',
-    success: isDark ? 'text-green-400' : 'text-green-600'
+    success: isDark ? 'text-blue-400' : 'text-blue-600'
   }), [isDark]);
 
   const handleSave = useCallback(() => {
@@ -184,10 +184,10 @@ useEffect(() => {
             disabled={!editText.trim() || readOnly || isSaving}
             className={cn(
               'px-4 py-2 rounded-lg font-medium transition-all duration-200 cursor-pointer',
-              'focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1',
+              'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
               isDark ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white',
               editText.trim() && !readOnly && !isSaving
-                ? 'bg-green-600 hover:bg-green-700 text-white shadow-sm'
+                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed',
               readOnly && 'opacity-50',
               isSaving && 'opacity-70 cursor-wait'
@@ -216,12 +216,12 @@ useEffect(() => {
     )}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
+          {/* <div className="flex items-center gap-2 mb-2">
             <MessageSquare className={cn('w-5 h-5', colors.textSecondary)} />
             <span className={cn('text-sm font-semibold', colors.text)}>
               Chief Complaint
             </span>
-          </div>
+          </div> */}
           <p className={cn('text-sm leading-relaxed', colors.text)}>{complaint}</p>
         </div>
         {!readOnly && (
@@ -495,8 +495,8 @@ const PatientComplaints: React.FC<PatientComplaintsProps> = ({
       border: isDark ? 'border-blue-800' : 'border-blue-200'
     },
     success: {
-      bg: isDark ? 'bg-green-900/20' : 'bg-green-50',
-      text: isDark ? 'text-green-300' : 'text-green-600'
+      bg: isDark ? 'bg-blue-900/20' : 'bg-blue-50',
+      text: isDark ? 'text-blue-300' : 'text-blue-600'
     },
     warning: {
       bg: isDark ? 'bg-yellow-900/20' : 'bg-yellow-50',
@@ -658,7 +658,7 @@ const PatientComplaints: React.FC<PatientComplaintsProps> = ({
               </div>
               <div>
                 <h2 className={cn('text-xl font-bold', colors.text.primary)}>
-                  Chief Complaint
+                  Primary Reason for Visit
                 </h2>
                 <div className="flex items-center gap-2 mt-1">
                   <p className={cn('text-sm', colors.text.secondary)}>
