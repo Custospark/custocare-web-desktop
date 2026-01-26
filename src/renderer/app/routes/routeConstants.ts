@@ -5,7 +5,7 @@
  * Centralized route management for maintainability
  * All routes use HashRouter format (prefixed with # in browser)
  */
-export { ROUTES } from "./constants/shared.paths";
+export * from "./constants/shared.paths";
 export { MEDICAL_RECORDS_ROUTES } from "./constants/medical-records.paths";
 export { NURSING_ROUTES } from "./constants/nursing.paths";
 export { CLINICAL_ROUTES } from "./constants/clinical.paths";

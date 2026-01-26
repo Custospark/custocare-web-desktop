@@ -1,12 +1,13 @@
 // ProtectedRoutes.tsx
-import React, { Suspense } from 'react';
-import { Navigate, Outlet, Route, useOutletContext } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import React from 'react';
+import { Navigate, Route } from 'react-router-dom';
 
 import AuthMiddlewareRoute from './AuthMiddlwareRoute';
 import Layout from '../../shared/components/Navigation/Layout';
 import { ROUTES, PHARMACY_ROUTES, ACCOUNT_ROUTES, MEDICAL_RECORDS_ROUTES } from './routeConstants';
-import type { RootState } from '../store/store';
+import { PlaceholderPanel } from './modules/routeUtils';
+import { ProtectedThemeOutlet } from './modules/routeUtils';
+import { accountRoutes } from './modules/account';
 
 // ============================================================================
 // LAZY LOADED COMPONENTS - CORE MODULES
@@ -23,9 +24,7 @@ const AccountModule = React.lazy(() => import('../../modules/account/AccountModu
 const AdminModule = React.lazy(
   () => import('../../modules/administration/admin-module/ui/AdminModule')
 );
-const LoadingSkeleton = React.lazy(
-  () => import('../../shared/components/Loading/LoadingSkeletons')
-);
+
 
 // ============================================================================
 // EAGERLY IMPORTED MODULES (Non-lazy for better initial load)
@@ -66,14 +65,6 @@ import PatientSearch from '../../modules/pharmacy/ui/dispensing/dispensing-medic
 import QuickPatientCreate from '../../modules/pharmacy/ui/dispensing/dispensing-medication/views/QuickPatientCreate';
 import DispensingQueue from '../../modules/pharmacy/ui/dispensing/dispensing-medication/views/DispensingQueue';
 
-// ============================================================================
-// ACCOUNT MODULE COMPONENTS
-// ============================================================================
-
-import Profile from '../../modules/account/profile/Profile';
-import Security from '../../modules/account/security/Security';
-import MyInvitations from '../../modules/account/invitations/MyInvitations';
-import Message from '../../modules/account/message/Message';
 import Appearance from '../../modules/account/apearance/Appearance';
 import FrontDesk from '../../modules/medical-records/ui/patients/FrontDesk';
 import MedicalRecordsOverView from '../../modules/medical-records/ui/overview/MedicalRecordsOverView';
@@ -82,141 +73,8 @@ import MRPatientSearch from '../../modules/medical-records/ui/patients/views/MRP
 import MRPatientCreate from '../../modules/medical-records/ui/patients/views/MRPatientCreate';
 import MRPatientQueue from '../../modules/medical-records/ui/patients/views/MRPatientQueue';
 import MRPatientWalkIn from '../../modules/medical-records/ui/patients/views/MRPatientWalkIn';
-
-// ============================================================================
-// TYPE DEFINITIONS
-// ============================================================================
-
-export type ThemeMode = 'light' | 'dark';
-
-export interface ProtectedOutletContext {
-  readonly theme: ThemeMode;
-}
-
-interface ThemeProp {
-  theme: ThemeMode;
-}
-
-// ============================================================================
-// UTILITY COMPONENTS
-// ============================================================================
-
-/**
- * Placeholder panel for unimplemented features
- */
-const PlaceholderPanel: React.FC<{ title: string }> = ({ title }) => (
-  <div className="h-full flex flex-col items-center justify-center text-center">
-    <h3 className="text-lg font-semibold mb-2">{title}</h3>
-    <p className="text-sm text-gray-500">
-      Temporary placeholder. Replace with real implementation.
-    </p>
-  </div>
-);
-
-/**
- * Theme Context Provider
- * 
- * Reads theme from Redux store and provides it to all child routes
- * via React Router Outlet context.
- */
-const ProtectedThemeOutlet: React.FC = () => {
-  const theme = useSelector((state: RootState) => state.ui.theme as ThemeMode);
-  return <Outlet context={{ theme } satisfies ProtectedOutletContext} />;
-};
-
-/**
- * Theme Prop Injector HOC
- * 
- * Injects theme prop from Outlet context into components that require it.
- * This allows legacy components to receive theme prop without prop drilling.
- */
-function WithThemeProp<P extends ThemeProp>({
-  Component,
-  props,
-}: {
-  Component: React.ComponentType<P>;
-  props?: Omit<P, keyof ThemeProp>;
-}): React.ReactElement {
-  const { theme } = useOutletContext<ProtectedOutletContext>();
-  const mergedProps = { ...(props ?? {}), theme } as P;
-  return <Component {...mergedProps} />;
-}
-
-/**
- * Suspense Wrapper
- * 
- * Standardized loading wrapper for lazy-loaded components
- */
-const SuspenseWrapper: React.FC<{
-  children: React.ReactNode;
-  variant?: 'dashboard' | 'table' | 'detail';
-}> = ({ children, variant = 'dashboard' }) => (
-  <Suspense fallback={<LoadingSkeleton variant={variant} />}>
-    {children}
-  </Suspense>
-);
-
-// ============================================================================
-// ROUTE CONFIGURATIONS
-// ============================================================================
-
-/**
- * Account Module Routes Configuration
- */
-const accountRoutes = [
-  <Route
-    key="account-profile"
-    path="profile"
-    element={
-      <SuspenseWrapper variant="table">
-        <Profile />
-      </SuspenseWrapper>
-    }
-  />,
-  <Route
-    key="account-security"
-    path="security"
-    element={
-      <SuspenseWrapper variant="table">
-        <Security />
-      </SuspenseWrapper>
-    }
-  />,
-  <Route
-    key="account-invitations"
-    path="invitations"
-    element={
-      <SuspenseWrapper variant="table">
-        <MyInvitations />
-      </SuspenseWrapper>
-    }
-  />,
-  <Route
-    key="account-messages"
-    path="messages"
-    element={
-      <SuspenseWrapper variant="table">
-        <WithThemeProp Component={Message} />
-      </SuspenseWrapper>
-    }
-  >
-    <Route index element={<Navigate to={ACCOUNT_ROUTES.MESSAGES_INBOX} replace />} />
-    <Route path="inbox" element={<PlaceholderPanel title="Inbox Messages" />} />
-    <Route path="sent" element={<PlaceholderPanel title="Sent Messages" />} />
-    <Route path="draft" element={<PlaceholderPanel title="Draft Messages" />} />
-    <Route path="trash" element={<PlaceholderPanel title="Trash Messages" />} />
-    <Route path="spam" element={<PlaceholderPanel title="Spam Messages" />} />
-  </Route>,
-  <Route
-    key="account-appearance"
-    path="appearance"
-    element={
-      <SuspenseWrapper variant="table">
-        <Appearance />
-      </SuspenseWrapper>
-    }
-  />,
-];
+import { SuspenseWrapper } from './modules/routeUtils';
+import { WithThemeProp } from './modules/routeUtils';
 const medicalRecordsRoutes = [
   <Route
     key="overview"
