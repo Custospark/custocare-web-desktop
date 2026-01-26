@@ -7,6 +7,7 @@ import PatientPortalModule from '../../../../modules/patient-portal/ui/PatientPo
 const Dashboard = React.lazy(() => import('../../../../shared/pages/Dashboard'));
 const FacilityOnboardingModule = React.lazy(
   () => import('../../../../shared/features/facilities/FacilityOnboardingModule'));
+  import { WithThemeProp } from './routeUtils';
 
 /**
  * Core Application Routes Configuration
@@ -17,7 +18,7 @@ export const onboardingAndDashboardRoutes = [
     path={ROUTES.DASHBOARD}
     element={
       <SuspenseWrapper variant="dashboard">
-        <Dashboard />
+        <WithThemeProp Component={Dashboard}></WithThemeProp>
       </SuspenseWrapper>
     }
   />,
