@@ -15,7 +15,7 @@ import {
   Users,
   UserPlus,
   Search,
-  ArrowLeft,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { FaNotesMedical } from 'react-icons/fa';
 import { RootState } from '../../../../app/store/rootReducer';
@@ -104,11 +104,7 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
               onClick={() => navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE)}
-              className={`inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
-                theme === 'dark'
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                  : 'bg-blue-500 hover:bg-blue-600 text-white'
-              }`}
+              className="cursor-pointer inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Users className="w-5 h-5" />
               Go to Patient Queue
@@ -116,10 +112,10 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
 
             <button
               onClick={() => navigate(MEDICAL_RECORDS_ROUTES.PATIENTS_REGISTER)}
-              className={`inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+              className={`cursor-pointer inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
                 theme === 'dark'
-                  ? 'bg-gray-700 hover:bg-gray-600 text-white border border-gray-600'
-                  : 'bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300'
+                  ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-700'
+                  : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'
               }`}
             >
               <UserPlus className="w-5 h-5" />
@@ -128,10 +124,10 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
 
             <button
               onClick={() => navigate(MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH)}
-              className={`inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+              className={`cursor-pointer inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
                 theme === 'dark'
-                  ? 'bg-gray-700 hover:bg-gray-600 text-white border border-gray-600'
-                  : 'bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300'
+                  ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-700'
+                  : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'
               }`}
             >
               <Search className="w-5 h-5" />
@@ -145,8 +141,8 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
 
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <div className="container mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="container mx-auto p-4 lg:p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
           {/* Left Sidebar - Patient Info Card */}
           <div className="lg:col-span-4 xl:col-span-3">
             <PatientInfoCard
@@ -222,10 +218,8 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({
   theme,
   patient,
   visitInfo,
-  visitContext,
   visitPhase,
   visitUuid,
-  formatTime,
   calculateWaitTime,
   getPhaseDisplayName,
   navigate
@@ -238,12 +232,12 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({
   
   if (!hasPatientData || !hasVisitData) {
     return (
-      <div className={`rounded-xl p-6 sticky top-6 ${
-        isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200 shadow-lg'
+      <div className={`rounded-xl p-6 sticky top-6 border ${
+        isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
       }`}>
         <div className="text-center py-8">
           <div className={`p-4 rounded-lg inline-flex mb-4 ${
-            isDark ? 'bg-gray-700' : 'bg-gray-100'
+            isDark ? 'bg-gray-800' : 'bg-gray-50'
           }`}>
             <User className={`w-8 h-8 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
           </div>
@@ -257,164 +251,172 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({
   }
   
   return (
-    <div className={`rounded-xl overflow-hidden sticky top-6 ${
-      isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200 shadow-lg'
+    <div className={`rounded-xl overflow-hidden sticky top-6 border ${
+      isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
     }`}>
-      {/* Header with gradient */}
-      <div className={`p-5 ${
-        isDark 
-          ? 'bg-gradient-to-br from-blue-900/40 to-purple-900/40 border-b border-gray-700' 
-          : 'bg-gradient-to-br from-blue-50 to-purple-50 border-b border-gray-200'
+      {/* Header - Compact */}
+      <div className={`p-4 border-b ${
+        isDark ? 'bg-gray-800/50 border-gray-800' : 'bg-gray-50 border-gray-200'
       }`}>
-        <div className="flex items-center gap-3 mb-3">
-          <div className={`p-2.5 rounded-lg ${
-            isDark ? 'bg-blue-500/20' : 'bg-blue-500/10'
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg ${
+            isDark ? 'bg-blue-600/20' : 'bg-blue-50'
           }`}>
-            <User className={`w-6 h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+            <User className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
           </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-sm uppercase tracking-wide opacity-70">Current Patient</h3>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-sm uppercase tracking-wide truncate">
+              Current Patient
+            </h3>
             <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               {getPhaseDisplayName(visitPhase || '')}
             </p>
           </div>
         </div>
-        
-        {/* Visit ID Badge */}
-        <div className={`inline-flex text-xs px-2.5 py-1 rounded-full font-mono ${
-          isDark ? 'bg-gray-700/50 text-gray-300' : 'bg-white/60 text-gray-700'
-        }`}>
-          ID: {visitUuid?.substring(0, 8) || 'N/A'}
-        </div>
       </div>
 
-      {/* Patient Details */}
-      <div className="p-5 space-y-4">
+      {/* Patient Details - Compact */}
+      <div className="p-4 space-y-3">
         {/* Patient Name */}
         <div>
-          <div className={`text-xs font-semibold uppercase tracking-wider mb-1.5 ${
+          <div className={`text-xs font-medium mb-1 ${
             isDark ? 'text-gray-400' : 'text-gray-500'
           }`}>
             Patient Name
           </div>
-          <div className="text-xl font-bold">{patient.name}</div>
+          <div className="text-lg font-bold truncate">{patient.name}</div>
         </div>
 
-        {/* Patient Number */}
-        <div>
-          <div className={`text-xs font-semibold uppercase tracking-wider mb-1.5 ${
-            isDark ? 'text-gray-400' : 'text-gray-500'
-          }`}>
-            Patient Number
+        {/* Patient Number & Visit ID - Inline */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <div className={`text-xs font-medium mb-1 ${
+              isDark ? 'text-gray-400' : 'text-gray-500'
+            }`}>
+              Patient No.
+            </div>
+            <div className="font-mono text-sm font-semibold truncate">
+              {patient.patient_number || 'N/A'}
+            </div>
           </div>
-          <div className="font-mono font-semibold text-lg">{patient.patient_number || 'N/A'}</div>
+          <div>
+            <div className={`text-xs font-medium mb-1 ${
+              isDark ? 'text-gray-400' : 'text-gray-500'
+            }`}>
+              Visit ID
+            </div>
+            <div className="font-mono text-xs truncate">
+              {visitUuid?.substring(0, 8) || 'N/A'}
+            </div>
+          </div>
         </div>
 
-        <div className={`border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`} />
+        <div className={`border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`} />
 
-        {/* Demographics Grid */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <Calendar className={`w-4 h-4 flex-shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
-            <div className="flex-1">
-              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Date of Birth</div>
-              <div className="text-sm font-medium mt-0.5">
-                {patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'N/A'}
+        {/* Demographics - Compact Grid */}
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+          <div className="flex items-start gap-2">
+            <Calendar className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${
+              isDark ? 'text-gray-400' : 'text-gray-500'
+            }`} />
+            <div className="min-w-0">
+              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                DOB
+              </div>
+              <div className="text-xs font-medium truncate">
+                {patient.date_of_birth 
+                  ? new Date(patient.date_of_birth).toLocaleDateString() 
+                  : 'N/A'}
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <User className={`w-4 h-4 flex-shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
-            <div className="flex-1">
-              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Sex</div>
-              <div className="text-sm font-medium mt-0.5">{patient.biological_sex || 'N/A'}</div>
+          <div className="flex items-start gap-2">
+            <User className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${
+              isDark ? 'text-gray-400' : 'text-gray-500'
+            }`} />
+            <div className="min-w-0">
+              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Sex
+              </div>
+              <div className="text-xs font-medium truncate">
+                {patient.biological_sex || 'N/A'}
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Activity className={`w-4 h-4 flex-shrink-0 ${isDark ? 'text-red-400' : 'text-red-500'}`} />
-            <div className="flex-1">
-              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Blood Type</div>
-              <div className="text-sm font-medium mt-0.5">{patient.blood_type || 'Unknown'}</div>
+          <div className="flex items-start gap-2">
+            <Activity className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${
+              isDark ? 'text-gray-400' : 'text-gray-500'
+            }`} />
+            <div className="min-w-0">
+              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Blood Type
+              </div>
+              <div className="text-xs font-medium truncate">
+                {patient.blood_type || 'Unknown'}
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Clock className={`w-4 h-4 flex-shrink-0 ${isDark ? 'text-yellow-400' : 'text-yellow-500'}`} />
-            <div className="flex-1">
-              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Wait Time</div>
-              <div className="text-sm font-semibold mt-0.5">{calculateWaitTime(visitInfo.arrivedAt)}</div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Clock className={`w-4 h-4 flex-shrink-0 ${isDark ? 'text-blue-400' : 'text-blue-500'}`} />
-            <div className="flex-1">
-              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Arrival Time</div>
-              <div className="text-sm font-medium mt-0.5">{formatTime(visitInfo.arrivedAt)}</div>
+          <div className="flex items-start gap-2">
+            <Clock className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${
+              isDark ? 'text-gray-400' : 'text-gray-500'
+            }`} />
+            <div className="min-w-0">
+              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Wait Time
+              </div>
+              <div className="text-xs font-semibold truncate">
+                {calculateWaitTime(visitInfo.arrivedAt)}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className={`border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`} />
+        <div className={`border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`} />
 
-        {/* Status Badges */}
+        {/* Status Badges - Compact */}
         <div className="space-y-2">
           {patient.requires_isolation && (
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
+            <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium ${
               isDark 
-                ? 'bg-yellow-900/30 text-yellow-300 border border-yellow-700/50' 
-                : 'bg-yellow-50 text-yellow-800 border border-yellow-200'
+                ? 'bg-yellow-900/20 text-yellow-400 border border-yellow-800/30' 
+                : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
             }`}>
-              <Shield className="w-4 h-4" />
-              Isolation Required
+              <Shield className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="truncate">Isolation Required</span>
             </div>
           )}
           
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
-            isDark 
-              ? 'bg-orange-900/30 text-orange-300 border border-orange-700/50' 
-              : 'bg-orange-50 text-orange-800 border border-orange-200'
-          }`}>
-            <Activity className="w-4 h-4" />
-            Acuity Level: {visitInfo.acuity || 'N/A'}
-          </div>
-          
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
-            isDark 
-              ? 'bg-purple-900/30 text-purple-300 border border-purple-700/50' 
-              : 'bg-purple-50 text-purple-800 border border-purple-200'
-          }`}>
-            <FileText className="w-4 h-4" />
-            {visitInfo.type ? visitInfo.type.replace('_', ' ') : 'N/A'}
-          </div>
-        </div>
-
-        {/* Staff Context */}
-        {visitContext?.staffId && (
-          <div className={`pt-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-            <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Attending Staff
+          {visitInfo.acuity && (
+            <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium ${
+              isDark 
+                ? 'bg-gray-800 text-gray-300 border border-gray-700' 
+                : 'bg-gray-50 text-gray-700 border border-gray-200'
+            }`}>
+              <Activity className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="truncate">Acuity: {visitInfo.acuity}</span>
             </div>
-            <div className="text-sm font-medium mt-1">{visitContext.staffId}</div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Footer Action */}
-      <div className={`p-4 border-t ${isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-200 bg-gray-50'}`}>
+      {/* Footer Action - Prominent "Work on Another Patient" Button */}
+      <div className={`p-4 border-t ${
+        isDark ? 'border-gray-800 bg-gray-800/30' : 'border-gray-200 bg-gray-50'
+      }`}>
         <button
           onClick={() => navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE)}
-          className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+          className={`cursor-pointer w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${
             isDark
-              ? 'bg-gray-700 hover:bg-gray-600 text-gray-100'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
           }`}
-          title="Switch to another patient"
+          title="Switch to work on another patient"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Switch Patient
+          <ArrowLeftRight className="w-4 h-4" />
+          Work on Another Patient
         </button>
       </div>
     </div>
