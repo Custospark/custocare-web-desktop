@@ -357,7 +357,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                 {p?.patient_number ? (
                   <span className="flex items-center gap-1">
                     <Hash className="w-3 h-3" />
-                    {p.patient_number}
+                   Patient Number: {p.patient_number}
                   </span>
                 ) : null}
 
@@ -366,7 +366,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
 
                 <span className="flex items-center gap-1" title="Visit UUID">
                   <ClipboardList className="w-3 h-3" />
-                  {visit.visit_uuid}
+                 Visit Number: {visit.visit_uuid}
                 </span>
               </div>
             </div>
