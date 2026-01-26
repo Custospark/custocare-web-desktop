@@ -4,10 +4,9 @@ import { Navigate, Route } from 'react-router-dom';
 
 import AuthMiddlewareRoute from './AuthMiddlwareRoute';
 import Layout from '../../shared/components/Navigation/Layout';
-import { ROUTES, PHARMACY_ROUTES, ACCOUNT_ROUTES } from './routeConstants';
+import { ROUTES, ACCOUNT_ROUTES } from './routeConstants';
 import { ProtectedThemeOutlet } from './modules/routeUtils';
 import { accountRoutes } from './modules/account';
-import { pharmacyDispensingRoutes,pharmacyInventoryRoutes } from './modules/pharmacy';
 
 // ============================================================================
 // LAZY LOADED COMPONENTS - CORE MODULES
@@ -24,11 +23,7 @@ const AccountModule = React.lazy(() => import('../../modules/account/AccountModu
 const AdminModule = React.lazy(
   () => import('../../modules/administration/admin-module/ui/AdminModule')
 );
-
-
-// ============================================================================
-// EAGERLY IMPORTED MODULES (Non-lazy for better initial load)
-// ============================================================================
+import { pharmacyRoutes } from './modules/pharmacy';
 
 import PharmacyModule from '../../modules/pharmacy/ui/PharmacyModule';
 import NursingModule from '../../modules/nursing/ui/NursingModule';
@@ -37,21 +32,7 @@ import LaboratoryModule from '../../modules/laboratory/ui/LaboratoryModule';
 import BillingModule from '../../modules/billling/ui/BillingModule';
 import PatientPortalModule from '../../modules/patient-portal/ui/PatientPortalModule';
 
-// ============================================================================
-// PHARMACY MODULE COMPONENTS
-// ============================================================================
 
-// Pharmacy Overview & Prescriptions
-import PharmacyOverview from '../../modules/pharmacy/ui/overview/PharmacyOverview';
-import Prescriptions from '../../modules/pharmacy/ui/precriptions/Prescriptions';
-import PharmacyBilling from '../../modules/pharmacy/ui/billing/Billing';
-
-// Pharmacy Inventory
-import Inventory from '../../modules/pharmacy/ui/inventory/Inventory';
-
-
-// Pharmacy Dispensing
-import Dispensing from '../../modules/pharmacy/ui/dispensing/Dispensing';
 
 import { medicalRecordsRoutes } from './modules/medical-records';
 
@@ -154,21 +135,6 @@ const specializedModuleRoutes = [
   />,
 ];
 
-// ============================================================================
-// MAIN PROTECTED ROUTES CONFIGURATION
-// ============================================================================
-
-/**
- * Protected Routes Configuration
- * 
- * All routes within this configuration require authentication.
- * The structure follows this hierarchy:
- * 
- * 1. AuthMiddlewareRoute (authentication check)
- * 2. Layout (main application layout)
- * 3. ProtectedThemeOutlet (theme context provider)
- * 4. Individual module routes
- */
 export const ProtectedRoutes = () => [
   <Route
     key="protected-routes"
@@ -184,10 +150,6 @@ export const ProtectedRoutes = () => [
           >
             {/* Core Application Routes */}
             {coreRoutes}
-
-            {/* =========================
-                ACCOUNT MODULE ROUTES
-              ========================= */}
             <Route
               key="account"
               path={ROUTES.ACCOUNT}
@@ -218,10 +180,6 @@ export const ProtectedRoutes = () => [
               />
               {medicalRecordsRoutes}
             </Route>
-
-            {/* =========================
-                PHARMACY MODULE ROUTES
-              ========================= */}
             <Route
               key="pharmacy"
               path={ROUTES.PHARMACY}
@@ -231,77 +189,7 @@ export const ProtectedRoutes = () => [
                 </SuspenseWrapper>
               }
             >
-              <Route 
-                index 
-                element={<Navigate to={PHARMACY_ROUTES.OVERVIEW} replace />} 
-              />
-
-              {/* Pharmacy Overview */}
-              <Route
-                key="pharmacy-overview"
-                path="overview"
-                element={
-                  <SuspenseWrapper variant="table">
-                    <WithThemeProp Component={PharmacyOverview} />
-                  </SuspenseWrapper>
-                }
-              />
-
-              {/* Pharmacy Prescriptions */}
-              <Route
-                key="pharmacy-prescriptions"
-                path="prescriptions"
-                element={
-                  <SuspenseWrapper variant="table">
-                    <WithThemeProp Component={Prescriptions} />
-                  </SuspenseWrapper>
-                }
-              />
-
-              {/* Pharmacy Inventory */}
-              <Route
-                key="pharmacy-inventory"
-                path="inventory"
-                element={
-                  <SuspenseWrapper variant="table">
-                    <WithThemeProp Component={Inventory} />
-                  </SuspenseWrapper>
-                }
-              >
-                <Route 
-                  index 
-                  element={<Navigate to={PHARMACY_ROUTES.INVENTORY_OVERVIEW} replace />} 
-                />
-                {pharmacyInventoryRoutes}
-              </Route>
-
-              {/* Pharmacy Dispensing */}
-              <Route
-                key="pharmacy-dispensing"
-                path="dispensing"
-                element={
-                  <SuspenseWrapper variant="table">
-                    <WithThemeProp Component={Dispensing} />
-                  </SuspenseWrapper>
-                }
-              >
-                <Route 
-                  index 
-                  element={<Navigate to={PHARMACY_ROUTES.DISPENSING_DISPENSE_MEDICATION} replace />} 
-                />
-                {pharmacyDispensingRoutes}
-              </Route>
-
-              {/* Pharmacy Billing */}
-              <Route
-                key="pharmacy-billing"
-                path="billing"
-                element={
-                  <SuspenseWrapper variant="table">
-                    <WithThemeProp Component={PharmacyBilling} />
-                  </SuspenseWrapper>
-                }
-              />
+              {pharmacyRoutes}
             </Route>
 
             {/* Specialized Module Routes */}
