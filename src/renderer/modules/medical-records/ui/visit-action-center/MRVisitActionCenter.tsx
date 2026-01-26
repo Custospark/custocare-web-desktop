@@ -295,7 +295,7 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({
             }`}>
               Patient No.
             </div>
-            <div className="font-mono text-sm font-semibold truncate">
+            <div className="font-mono text-sm font-semibold">
               {patient.patient_number || 'N/A'}
             </div>
           </div>
@@ -303,10 +303,10 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({
             <div className={`text-xs font-medium mb-1 ${
               isDark ? 'text-gray-400' : 'text-gray-500'
             }`}>
-              Visit ID
+              Visit No.
             </div>
-            <div className="font-mono text-xs truncate">
-              {visitUuid?.substring(0, 8) || 'N/A'}
+            <div className="font-mono text-xs">
+              {visitUuid || 'N/A'}
             </div>
           </div>
         </div>
