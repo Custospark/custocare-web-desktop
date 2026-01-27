@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   Eye,
   MoreVertical,
+  Shield,
 } from 'lucide-react';
 import { useGetStaffForGivenFacility } from '../../api/team-management/queries/useStaffQueries';
 import type { EmploymentStatus } from '../../api/team-management/types/staffTypes';
@@ -59,18 +60,18 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       result = result.filter(s => {
-        const fullName = `${s.user?.first_name} ${s.user?.last_name}`.toLowerCase();
+        const fullName = `${s.user?.profile.first_name} ${s.user?.profile.last_name}`.toLowerCase();
         return (
           fullName.includes(term) ||
           s.employee_id.toLowerCase().includes(term) ||
-          s.user?.email?.toLowerCase().includes(term)
+          s.user?.contact.email?.toLowerCase().includes(term)
         );
       });
     }
     
     result.sort((a, b) => {
       if (sortBy === 'name') {
-        return (a.user?.full_name || '').localeCompare(b.user?.full_name || '');
+        return (a.user?.profile.full_name || '').localeCompare(b.user?.profile.full_name || '');
       } else if (sortBy === 'employee_id') {
         return a.employee_id.localeCompare(b.employee_id);
       } else {
@@ -173,112 +174,166 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead className={isDark ? 'bg-gray-800/50' : 'bg-gray-50'}>
-                <tr>
-                  <th className={`px-4 py-3 text-left text-sm font-medium ${
-                    isDark ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
-                    Professional Number
-                  </th>
+         <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead className={isDark ? 'bg-gray-800/50' : 'bg-gray-50'}>
+              <tr>
+                <th className={`px-4 py-3 text-center text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Staff Name
+                </th>
 
-                  <th className={`px-4 py-3 text-left text-sm font-medium ${
-                    isDark ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
-                    Title
-                  </th>
+                <th className={`px-4 py-3 text-center text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Staff Number
+                </th>
 
-                  <th className={`px-4 py-3 text-left text-sm font-medium ${
-                    isDark ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
-                    Status
-                  </th>
+                <th className={`px-4 py-3 text-center text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Email
+                </th>
 
-                  <th className={`px-4 py-3 text-left text-sm font-medium ${
-                    isDark ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-                <tbody className={`divide-y ${isDark ? 'divide-gray-800' : 'divide-gray-200'}`}>
-                  {filteredAndSortedStaff.map((staffMember) => (
-                    <tr
-                      key={staffMember.id}
-                      className={`transition-colors ${
-                        isDark ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      {/* Professional Number */}
-                      <td className="px-4 py-3">
-                        <code className={`px-2 py-1 rounded text-sm ${
+                <th className={`px-4 py-3 text-center text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Title
+                </th>
+
+                <th className={`px-4 py-3 text-center text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Status
+                </th>
+
+                <th className={`px-4 py-3 text-right text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Actions
+                </th>
+              </tr>
+            </thead>
+
+            <tbody className={`divide-y ${isDark ? 'divide-gray-800' : 'divide-gray-200'}`}>
+              {filteredAndSortedStaff.map((staffMember) => {
+                const name = staffMember.staff_name || staffMember.user?.profile?.full_name || 'Staff Member';
+                const staffNo = staffMember.staff_uuid || '';
+                const email =
+                  (staffMember.user?.contact && (staffMember.user.contact).email) ||
+                  staffMember.user?.contact?.email ||
+                  null;
+
+                const roleLabel =
+                  staffMember.facility_role_summary?.role_at_facility;
+
+                const employmentStatus = (staffMember.facility_role_summary?.assignment_status)?.toUpperCase() || '';
+
+                const hasExpired = !!staffMember.has_expired_license;
+
+                return (
+                  <tr
+                    key={staffMember.id}
+                    className={`transition-colors ${isDark ? 'hover:bg-gray-800/40' : 'hover:bg-gray-50'}`}
+                  >
+                    {/* Staff (name + small meta) */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-semibold ${
+                          isDark ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {(name?.[0] || 'S').toUpperCase()}
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className={`text-sm font-semibold truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                            {name}
+                          </div>
+
+                          <div className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {staffMember.professional_title ? staffMember.professional_title : ''}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Staff Number */}
+                    <td className="px-4 py-3">
+                      <code className={`inline-flex px-2 py-1 rounded text-xs ${
+                        isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {staffNo}
+                      </code>
+                    </td>
+
+                    {/* Email */}
+                    <td className="px-4 py-3">
+                      <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                        {email ? email : <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>Not specified</span>}
+                      </span>
+                    </td>
+
+                    {/* Title */}
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                        isDark ? 'bg-blue-900/20 text-blue-300' : 'bg-blue-50 text-blue-700'
+                      }`}>
+                        {roleLabel}
+                      </span>
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Assignment status status */}
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
                         }`}>
-                          {staffMember.staff_uuid}
-                        </code>
-                      </td>
-
-                      {/* Title */}
-                      <td className="px-4 py-3">
-                        <span className="text-sm capitalize">
-                          {staffMember.global_role_level.replace(/_/g, ' ')}
+                          {employmentStatus.replace(/_/g, ' ')}
                         </span>
-                      </td>
 
-                      {/* Status */}
-                      <td className="px-4 py-3">
-                        {staffMember.has_expired_license ? (
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                            isDark
-                              ? 'bg-yellow-900/30 text-yellow-300'
-                              : 'bg-yellow-100 text-yellow-800'
+                        {/* License warning */}
+                        {hasExpired ? (
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                            isDark ? 'bg-yellow-900/30 text-yellow-300' : 'bg-yellow-100 text-yellow-800'
                           }`}>
                             <AlertTriangle className="w-3 h-3" />
-                            License Expired
+                            License expired
                           </span>
-                        ) : (
-                          <span className={`text-xs ${
-                            isDark ? 'text-gray-400' : 'text-gray-500'
-                          }`}>
-                            —
-                          </span>
-                        )}
-                      </td>
+                        ) : null}
+                      </div>
+                    </td>
 
-                      {/* Actions */}
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => onStaffSelect(staffMember.id)}
-                            className={`p-1.5 rounded-lg transition-colors ${
-                              isDark
-                                ? 'hover:bg-gray-700 text-gray-400'
-                                : 'hover:bg-gray-200 text-gray-600'
-                            }`}
-                            title="View details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
+                    {/* Actions */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => onStaffSelect(staffMember.id)}
+                          className={`p-2 rounded-lg transition-colors ${
+                            isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700'
+                          }`}
+                          title="View details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
 
-                          <button
-                            className={`p-1.5 rounded-lg transition-colors ${
-                              isDark
-                                ? 'hover:bg-gray-700 text-gray-400'
-                                : 'hover:bg-gray-200 text-gray-600'
-                            }`}
-                            title="More options"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <button
+                          className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            isDark
+                              ? 'bg-indigo-900/20 text-indigo-300 hover:bg-indigo-900/30'
+                              : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                          }`}
+                          title="Modify permissions"
+                        >
+                          <Shield className="w-4 h-4" />
+                          Permissions
+                        </button>
 
-          </div>
+                        <button
+                          className={`p-2 rounded-lg transition-colors ${
+                            isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700'
+                          }`}
+                          title="More options"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
         )}
       </div>
     </div>

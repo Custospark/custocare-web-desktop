@@ -251,6 +251,7 @@ export interface Staff {
   
   // Relationships
   user?: UserMetaData;
+  facility_role_summary?:FacilityRoleSummary;
   supervisor?: Staff;
   subordinates?: Staff[];
   
@@ -261,6 +262,61 @@ export interface Staff {
   has_expired_dea: boolean;
   requires_credential_renewal: boolean;
 }
+export interface FacilityRoleSummary {
+  // Assignment identity
+  assignment_uuid: string;
+
+  // Facility context
+  facility_id: number;
+  facility_uuid: string;
+  facility_name: string;
+
+  // Staff context
+  staff_id: number;
+  staff_uuid: string;
+  global_user_uuid: string;
+  staff_name: string | null;
+
+  // Core staff attributes
+  professional_title: string | null;
+  global_role_level: string;
+  employment_status: string;
+
+  // Role at facility
+  role_code: string;
+  role_at_facility: string;
+
+  // Assignment state
+  assignment_status: 'active' | 'inactive' | 'suspended' | string;
+  is_primary_facility: boolean;
+
+  // Department scope
+  department_ids: number[];
+  departments?: FacilityDepartmentSummary[];
+
+  // Access scope
+  module_codes: string[];
+
+  // Shift / workload
+  shift_type: string | null;
+  hours_per_week: number | null;
+
+  // Effective range
+  effective_from: string; // ISO date: YYYY-MM-DD
+  effective_to: string | null;
+
+  // Audit
+  created_at: string; // ISO datetime
+}
+export interface FacilityDepartmentSummary {
+  id: number;
+  department_uuid: string;
+  department_code: string;
+  department_name: string;
+  department_type: string;
+}
+
+
 
 /* -------------------------------------------------------------------------- */
 /*                          REQUEST/RESPONSE TYPES                            */
