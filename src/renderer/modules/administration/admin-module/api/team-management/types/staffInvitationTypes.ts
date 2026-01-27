@@ -13,7 +13,7 @@
 
 import type { Module } from './moduleTypes';
 import type { FacilityRole } from './facilityRolesTypes';
-import type { Staff } from './staffTypes';
+import type { Staff,UserMetaData } from './staffTypes';
 
 /* -------------------------------------------------------------------------- */
 /*                                   ENUMS                                    */
@@ -107,7 +107,7 @@ export interface StaffInvitation {
   deleted_at: string | null;
   
   // Relationships (loaded conditionally)
-  staff?: StaffReference;
+  staff?: StaffData;
   facility?: FacilityReference;
   department?: DepartmentReference;
   role?: FacilityRole;
@@ -122,6 +122,100 @@ export interface StaffInvitation {
   can_be_resent: boolean;
   days_until_expiry: number | null;
 }
+export type StaffData = {
+  id: number;
+  staff_uuid: string;
+  user_id: number;
+  employee_id: string | null;
+
+  professional_title: string | null;
+
+  license_issuing_state: string | null;
+  license_issuing_country: string | null;
+  license_expiry_date: string | null; 
+  license_status: "expired" | "valid" | "not_provided";
+
+  specialization_codes: string[] | null;
+  board_certifications: string[] | null;
+  additional_certifications: string[] | null;
+
+  npi_number: string | null;
+
+  dea_expiry_date: string | null;
+  dea_status: "expired" | "valid" | "not_provided";
+
+  employment_status: string; 
+  employment_type: string | null;
+
+  hire_date: string | null;
+  termination_date: string | null;
+  termination_reason: string | null;
+
+  clinical_privileges: unknown | null;
+  prescribing_authority: unknown | null;
+
+  can_supervise_trainees: boolean;
+  can_order_controlled_substances: boolean;
+  can_sign_death_certificates: boolean;
+
+  global_role_level: string;
+
+  reports_to_staff_id: number | null;
+
+  default_schedule: unknown | null;
+
+  max_concurrent_patients: number | null;
+  average_appointment_duration_minutes: number | null;
+
+  accepts_new_patients: boolean;
+
+  patient_satisfaction_score: number | null;
+  total_patients_treated: number;
+
+  quality_metrics: unknown | null;
+
+  last_peer_review_date: string | null;
+  last_competency_assessment_date: string | null;
+
+  background_check_completed: boolean;
+  background_check_date: string | null;
+
+  drug_screening_completed: boolean;
+  drug_screening_date: string | null;
+
+  immunization_records: unknown | null;
+  tb_test_records: unknown | null;
+
+  hipaa_training_completed: boolean;
+  hipaa_training_date: string | null;
+  hipaa_training_expiry: string | null;
+  hipaa_status: "expired" | "valid" | "not_completed";
+
+  system_permissions: unknown | null;
+  accessible_facility_ids: number[] | null;
+  accessible_department_ids: number[] | null;
+
+  created_at: string; // ISO datetime
+  updated_at: string; // ISO datetime
+  deleted_at: string | null;
+
+  // convenience fields you added in StaffResource
+  global_user_uuid: string | null;
+  staff_name: string | null;
+  user_title: string | null;
+  user_gender: "male" | "female" | "other" | null;
+  user_identity_state: "pending" | "verified" | "suspended" | "archived" | string;
+
+  user:UserMetaData;
+
+  // computed flags
+  is_active: boolean;
+  can_prescribe: boolean;
+  has_expired_license: boolean;
+  has_expired_dea: boolean;
+  requires_credential_renewal: boolean;
+};
+
 
 /* -------------------------------------------------------------------------- */
 /*                          REQUEST/RESPONSE TYPES                            */

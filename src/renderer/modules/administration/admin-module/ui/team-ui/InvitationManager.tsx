@@ -597,14 +597,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
         
         {/* Table Content */}
         {isLoading ? (
-          <div className="p-12 text-center">
-            <div className={`inline-flex items-center gap-3 ${
-              isDark ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-              <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              Loading invitations...
-            </div>
-          </div>
+          <LoadingSkeleton theme={theme} message='Loading staff invitations...' variant='default'></LoadingSkeleton>
         ) : filteredInvitations.length === 0 ? (
           <div className="p-12 text-center">
             <Mail className={`w-16 h-16 mx-auto mb-4 ${
@@ -656,103 +649,138 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                   
                   {/* Main Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4 mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="font-semibold text-lg">
-                            {invitation.staff?.professional_title || 'Staff Member'}
-                          </h4>
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                            getStatusColor(invitation.status)
-                          }`}>
-                            {getStatusIcon(invitation.status)}
-                            {invitation.status.charAt(0).toUpperCase() + invitation.status.slice(1)}
-                          </span>
-                        </div>
-                        
-                        <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2 text-sm ${
-                          isDark ? 'text-gray-400' : 'text-gray-600'
-                        }`}>
-                          {invitation.staff?.employee_id && (
-                            <div className="flex items-center gap-2">
-                              <Users className="w-4 h-4 flex-shrink-0" />
-                              <span>Staff Number: {invitation.staff.staff_uuid}</span>
-                            </div>
-                          )}
-                          
-                          {invitation.facility && (
-                            <div className="flex items-center gap-2">
-                              <Building2 className="w-4 h-4 flex-shrink-0" />
-                              <span className="truncate">{invitation.facility.facility_name}</span>
-                            </div>
-                          )}
-                          
-                          {invitation.department && (
-                            <div className="flex items-center gap-2">
-                              <Briefcase className="w-4 h-4 flex-shrink-0" />
-                              <span className="truncate">{invitation.department.department_name}</span>
-                            </div>
-                          )}
-                          
-                          {invitation.role && (
-                            <div className="flex items-center gap-2">
-                              <UserPlus className="w-4 h-4 flex-shrink-0" />
-                              <span className="truncate">{invitation.role.name}</span>
-                            </div>
-                          )}
-                          
-                          {invitation.module_code && Array.isArray(invitation.module_code) && invitation.module_code.length > 0 && (
-                            <div className="flex items-center gap-2">
-                              <Package className="w-4 h-4 flex-shrink-0" />
-                              <span>{invitation.module_code.length} module{invitation.module_code.length !== 1 ? 's' : ''}</span>
-                            </div>
-                          )}
-                          
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 flex-shrink-0" />
-                            <span>Sent: {formatDate(invitation.sent_at || invitation.created_at)}</span>
-                          </div>
-                          
-                          {invitation.expires_at && (
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 flex-shrink-0" />
-                              <span>Expires: {formatDate(invitation.expires_at)}</span>
-                            </div>
-                          )}
-                        </div>
+                   <div className="flex items-start justify-between gap-4 mb-3">
+                {/* LEFT: Identity + Context + Timeline */}
+                <div className="flex-1 min-w-0">
+                  {/* Row 1: Identity + Status */}
+                  <div className="flex flex-wrap items-center gap-3 mb-2">
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-lg truncate">
+                        {invitation.staff?.staff_name ||
+                          invitation.staff?.user?.profile?.full_name ||
+                          'Staff Member'}
+                      </h4>
+
+                      {/* Secondary identity line (small, optional) */}
+                      <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                        {invitation.staff?.professional_title ? (
+                          <span className="truncate">{invitation.staff.professional_title}</span>
+                        ) : (
+                          <span>Professional title not set</span>
+                        )}
+                        {invitation.staff?.staff_uuid ? (
+                          <span className="mx-2">•</span>
+                        ) : null}
+                        {invitation.staff?.staff_uuid ? (
+                          <span className="truncate">Staff No: {invitation.staff.staff_uuid}</span>
+                        ) : null}
                       </div>
-                      
-                      {/* Action Buttons */}
-                      {invitation.status === 'pending' && (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleResend(invitation.id)}
-                            disabled={resendMutation.isPending}
-                            className={`p-2 rounded-lg transition-colors ${
-                              isDark 
-                                ? 'hover:bg-gray-700 text-blue-400 hover:text-blue-300' 
-                                : 'hover:bg-blue-50 text-blue-600 hover:text-blue-700'
-                            } disabled:opacity-50`}
-                            title="Resend invitation"
-                          >
-                            <RefreshCw className={`w-4 h-4 ${resendMutation.isPending ? 'animate-spin' : ''}`} />
-                          </button>
-                          <button
-                            onClick={() => handleCancel(invitation.id)}
-                            disabled={cancelMutation.isPending}
-                            className={`p-2 rounded-lg transition-colors ${
-                              isDark 
-                                ? 'hover:bg-gray-700 text-red-400 hover:text-red-300' 
-                                : 'hover:bg-red-50 text-red-600 hover:text-red-700'
-                            } disabled:opacity-50`}
-                            title="Cancel invitation"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
                     </div>
-                    
+
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                        invitation.status
+                      )}`}
+                    >
+                      {getStatusIcon(invitation.status)}
+                      {invitation.status
+                        ? `Status: ${invitation.status.charAt(0).toUpperCase()}${invitation.status.slice(1)}`
+                        : 'Status: Unknown'}
+                    </span>
+                  </div>
+
+                  {/* Row 2: Context (Facility / Department / Role / Modules) */}
+                  <div
+                    className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2 text-sm ${
+                      isDark ? 'text-gray-400' : 'text-gray-600'
+                    }`}
+                  >
+                    {/* Facility */}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Briefcase className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">
+                        Facility: {invitation.facility?.facility_name || 'Not specified'}
+                      </span>
+                    </div>
+
+                    {/* Department */}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Briefcase className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">
+                        Department: {invitation.department?.department_name || 'Not specified'}
+                      </span>
+                    </div>
+
+                    {/* Role */}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <UserPlus className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">
+                        Role: {invitation.role?.name || 'Not specified'}
+                      </span>
+                    </div>
+
+                    {/* Modules */}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Package className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">
+                        Modules:{' '}
+                        {Array.isArray(invitation.module_code) && invitation.module_code.length > 0
+                          ? `${invitation.module_code.length} module${
+                              invitation.module_code.length !== 1 ? 's' : ''
+                            }`
+                          : 'Not specified'}
+                      </span>
+                    </div>
+
+                    {/* Sent */}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Calendar className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">
+                        Sent: {formatDate(invitation.sent_at || invitation.created_at)}
+                      </span>
+                    </div>
+
+                    {/* Expires */}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Clock className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">
+                        Expires: {invitation.expires_at ? formatDate(invitation.expires_at) : 'Not specified'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                  {/* RIGHT: Actions (only when pending) */}
+                  {invitation.status === 'pending' && (
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => handleResend(invitation.id)}
+                        disabled={resendMutation.isPending}
+                        className={`p-2 rounded-lg transition-colors ${
+                          isDark
+                            ? 'hover:bg-gray-700 text-blue-400 hover:text-blue-300'
+                            : 'hover:bg-blue-50 text-blue-600 hover:text-blue-700'
+                        } disabled:opacity-50`}
+                        title="Resend invitation"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${resendMutation.isPending ? 'animate-spin' : ''}`} />
+                      </button>
+
+                      <button
+                        onClick={() => handleCancel(invitation.id)}
+                        disabled={cancelMutation.isPending}
+                        className={`p-2 rounded-lg transition-colors ${
+                          isDark
+                            ? 'hover:bg-gray-700 text-red-400 hover:text-red-300'
+                            : 'hover:bg-red-50 text-red-600 hover:text-red-700'
+                        } disabled:opacity-50`}
+                        title="Cancel invitation"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>                   
                     {/* Module Tags */}
                     {invitation.module_code && Array.isArray(invitation.module_code) && invitation.module_code.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-3">
@@ -813,7 +841,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
             {/* Modal Body */}
             <div className="p-6 space-y-6 max-h-[calc(100vh-16rem)] overflow-y-auto">
               {isFormLoading ? (
-                <LoadingSkeleton variant='default' theme={theme} message='Loading form data...'/>
+                <LoadingSkeleton variant='form' theme={theme} message='Loading form data...'/>
               ) : (
                 <>
                   {/* Staff Lookup Section */}

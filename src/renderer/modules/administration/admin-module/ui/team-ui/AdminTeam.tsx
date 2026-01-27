@@ -15,7 +15,6 @@ import {
   Users, 
   Mail, 
   Settings,
-  Search,
   Download,
   RefreshCw
 } from 'lucide-react';
@@ -159,7 +158,7 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
             Staff List
           </button>
           
-          <button
+          {/* <button
             onClick={() => handleViewChange('search')}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               activeView === 'search'
@@ -169,7 +168,7 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
           >
             <Search className="w-4 h-4" />
             Search Staff
-          </button>
+          </button> */}
           
           {/* <button
             onClick={() => handleViewChange('create')}
