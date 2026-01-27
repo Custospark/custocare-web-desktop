@@ -101,7 +101,7 @@ interface DeleteVisitParams {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Status selector component
+ * Status selector component - Dropdown version
  */
 interface StatusSelectorProps {
   theme: 'light' | 'dark';
@@ -121,62 +121,187 @@ const StatusSelector: React.FC<StatusSelectorProps> = React.memo(({
   readOnly = false
 }) => {
   const isDark = theme === 'dark';
+  const [isOpen, setIsOpen] = useState(false);
   
   const colors = useMemo(() => ({
     bg: isDark ? 'bg-gray-900' : 'bg-white',
     border: isDark ? 'border-gray-700' : 'border-gray-200',
     text: isDark ? 'text-gray-100' : 'text-gray-900',
     textSecondary: isDark ? 'text-gray-400' : 'text-gray-600',
-    hoverBg: isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'
+    hoverBg: isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50',
+    dropdownBg: isDark ? 'bg-gray-800' : 'bg-white',
+    dropdownBorder: isDark ? 'border-gray-700' : 'border-gray-200',
   }), [isDark]);
+
+  const currentStatusOption = useMemo(() => 
+    availableStatuses.find(s => s.value === currentStatus),
+    [availableStatuses, currentStatus]
+  );
+
+  const handleStatusSelect = useCallback((status: VisitStatus) => {
+    if (status !== currentStatus) {
+      onStatusChange(status);
+    }
+    setIsOpen(false);
+  }, [currentStatus, onStatusChange]);
+
+  // Close dropdown when clicking outside
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+  
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <label className={cn('text-sm font-medium', colors.text)}>
-          Visit Status
-        </label>
-        {currentStatus && (
-          <span className={cn(
-            'text-xs px-2 py-1 rounded-full font-medium',
-            getStatusColor(currentStatus)
+      <label className={cn('text-sm font-medium block', colors.text)}>
+        Visit Status
+      </label>
+      
+      <div className="relative" ref={dropdownRef}>
+        {/* Dropdown Trigger */}
+        <button
+          type="button"
+          onClick={() => !readOnly && !isLoading && setIsOpen(!isOpen)}
+          disabled={readOnly || isLoading}
+          className={cn(
+            'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg border transition-all duration-200',
+            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
+            isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
+            colors.bg,
+            colors.border,
+            !readOnly && !isLoading && 'cursor-pointer',
+            (readOnly || isLoading) && 'opacity-50 cursor-not-allowed'
+          )}
+        >
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            {/* Current Status Icon & Label */}
+            {currentStatusOption ? (
+              <>
+                <div className={cn(
+                  'flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center',
+                  currentStatusOption.color
+                )}>
+                  {currentStatusOption.icon}
+                </div>
+                <div className="flex-1 text-left min-w-0">
+                  <div className={cn('text-sm font-medium', colors.text)}>
+                    {currentStatusOption.label}
+                  </div>
+                  <div className={cn('text-xs truncate', colors.textSecondary)}>
+                    {currentStatusOption.description}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <span className={cn('text-sm', colors.textSecondary)}>
+                Select status
+              </span>
+            )}
+          </div>
+
+          {/* Dropdown Arrow */}
+          <svg
+            className={cn(
+              'w-5 h-5 transition-transform duration-200 flex-shrink-0',
+              colors.textSecondary,
+              isOpen && 'transform rotate-180'
+            )}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {/* Dropdown Menu */}
+        {isOpen && !readOnly && !isLoading && (
+          <div className={cn(
+            'absolute z-50 w-full mt-2 rounded-lg border shadow-lg overflow-hidden',
+            'animate-in fade-in slide-in-from-top-2 duration-200',
+            colors.dropdownBg,
+            colors.dropdownBorder
           )}>
-            {availableStatuses.find(s => s.value === currentStatus)?.label}
-          </span>
+            <div className="max-h-80 overflow-y-auto">
+              {availableStatuses.map((status) => {
+                const isActive = status.value === currentStatus;
+                
+                return (
+                  <button
+                    key={status.value}
+                    type="button"
+                    onClick={() => handleStatusSelect(status.value)}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-4 py-3 transition-colors',
+                      'focus:outline-none cursor-pointer',
+                      isActive 
+                        ? cn(
+                            'bg-blue-50 dark:bg-blue-900/20',
+                            isDark ? 'border-l-4 border-blue-500' : 'border-l-4 border-blue-600'
+                          )
+                        : colors.hoverBg
+                    )}
+                  >
+                    <div className={cn(
+                      'flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center',
+                      status.color
+                    )}>
+                      {status.icon}
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <div className={cn(
+                        'text-sm font-medium flex items-center gap-2',
+                        colors.text
+                      )}>
+                        {status.label}
+                        {isActive && (
+                          <span className={cn(
+                            'text-xs px-1.5 py-0.5 rounded-full font-medium',
+                            'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                          )}>
+                            Current
+                          </span>
+                        )}
+                      </div>
+                      <div className={cn('text-xs truncate', colors.textSecondary)}>
+                        {status.description}
+                      </div>
+                    </div>
+                    {isActive && (
+                      <CheckCircle className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
-      
-      <div className="grid grid-cols-1 gap-2">
-        {availableStatuses.map((status) => (
-          <button
-            key={status.value}
-            type="button"
-            onClick={() => !readOnly && !isLoading && onStatusChange(status.value)}
-            disabled={readOnly || isLoading}
-            className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200 cursor-pointer',
-              'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
-              isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
-              currentStatus === status.value 
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                : colors.border,
-              colors.bg,
-              !readOnly && colors.hoverBg,
-              (readOnly || isLoading) && 'opacity-50 cursor-not-allowed'
-            )}
-          >
-            {status.icon}
-            <div className="flex-1 text-left">
-              <div className={cn('text-sm font-medium', colors.text)}>
-                {status.label}
-              </div>
-              <div className={cn('text-xs', colors.textSecondary)}>
-                {status.description}
-              </div>
-            </div>
-          </button>
-        ))}
-      </div>
+
+      {/* Current Status Badge */}
+      {currentStatusOption && (
+        <div className="flex items-center gap-2">
+          <span className={cn('text-xs', colors.textSecondary)}>
+            Current status:
+          </span>
+          <span className={cn(
+            'text-xs px-2.5 py-1 rounded-full font-medium',
+            currentStatusOption.color
+          )}>
+            {currentStatusOption.label}
+          </span>
+        </div>
+      )}
     </div>
   );
 });
@@ -478,7 +603,6 @@ const VisitStatusComponent: React.FC<VisitStatusProps> = ({
     enabled: !!visitUuid,
     staleTime: 10000,
   });
-  console.log(visitData,visitError)
 
   // Available statuses using the imported VisitStatus enum
   const availableStatuses = useMemo<StatusOption[]>(() => [
@@ -543,7 +667,7 @@ const VisitStatusComponent: React.FC<VisitStatusProps> = ({
   });
 
   const cancelVisitMutation = useCancelVisit({
-    onSuccess: () => {
+    onSuccess: (data: VisitResponse) => {
       setActionInProgress(null);
       setError(null);
       setShowCancelForm(false);
@@ -568,7 +692,7 @@ const VisitStatusComponent: React.FC<VisitStatusProps> = ({
   });
 
   const deleteVisitMutation = useDeleteVisit({
-    onSuccess: () => {
+    onSuccess: (data: VisitResponse) => {
       setActionInProgress(null);
       setError(null);
       setShowDeleteForm(false);
