@@ -98,6 +98,40 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
   const [staffLookupMode, setStaffLookupMode] = useState<'search' | 'select'>('search');
   const [filteredStaff, setFilteredStaff] = useState<any[]>([]);
   const [showStaffDetails, setShowStaffDetails] = useState(false);
+
+    function maskEmail(email?: string | null): string {
+    if (!email) return 'Not specified';
+
+    const [name, domain] = email.split('@');
+    if (!domain) return 'Not specified';
+
+    const maskedName =
+      name.length <= 2
+        ? name[0] + '*'
+        : name[0] + '*'.repeat(name.length - 2) + name[name.length - 1];
+
+    const domainParts = domain.split('.');
+    const maskedDomain =
+      domainParts[0][0] + '***.' + domainParts.slice(1).join('.');
+
+    return `${maskedName}@${maskedDomain}`;
+  }
+
+  function maskPhone(phone?: string | null): string {
+    if (!phone) return 'Not specified';
+
+    // Keep country code and last 2–3 digits
+    const visibleDigits = 3;
+    const cleaned = phone.replace(/\s+/g, '');
+
+    if (cleaned.length <= visibleDigits) return cleaned;
+
+    const maskedPart = '*'.repeat(cleaned.length - visibleDigits);
+    const visiblePart = cleaned.slice(-visibleDigits);
+
+    return maskedPart + visiblePart;
+  }
+
   
   // Fetch invitations
   const { data: invitationsResponse, isLoading: invitationsLoading, refetch } = useGetStaffInvitations(
@@ -779,7 +813,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
             {/* Modal Body */}
             <div className="p-6 space-y-6 max-h-[calc(100vh-16rem)] overflow-y-auto">
               {isFormLoading ? (
-                <LoadingSkeleton variant='form' theme={theme} message='Loading form data...'/>
+                <LoadingSkeleton variant='default' theme={theme} message='Loading form data...'/>
               ) : (
                 <>
                   {/* Staff Lookup Section */}
@@ -847,21 +881,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                               🔒 Only matching staff members will be shown to protect privacy
                             </p>
                           </div>
-                          
-                          {/* <div className={`p-3 rounded-lg border ${
-                            isDark ? 'bg-gray-900 border-gray-700' : 'bg-gray-100 border-gray-300'
-                          }`}>
-                            <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
-                              <Shield className="w-4 h-4 text-green-500" />
-                              Privacy Information
-                            </h5>
-                            <ul className={`text-xs space-y-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                              <li>• Staff numbers are masked for privacy protection</li>
-                              <li>• No browsing of all staff members allowed</li>
-                              <li>• Only verified matches are displayed</li>
-                              <li>• Search by UUID, staff number, or name</li>
-                            </ul>
-                          </div> */}
                         </div>
                       </>
                     ) : (
@@ -902,12 +921,12 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                                     }`}>
                                       <span className="inline-flex items-center gap-1">
                                         <Key className="w-3 h-3" />
-                                        {staff.staff_uuid}
+                                      Staff Number:  {staff.staff_uuid}
                                       </span>
                                       {staff.employee_id && (
                                         <span className="inline-flex items-center gap-1">
                                           <Users className="w-3 h-3" />
-                                          {staff.employee_id}
+                                          ({staff.user?.profile.full_name})
                                         </span>
                                       )}
                                     </div>
@@ -954,21 +973,32 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                         }`}>
                           <div className="space-y-2">
                             <div>
-                              <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Professional Title</div>
-                              <div className="font-medium">{selectedStaff.professional_title || 'Not specified'}</div>
+                              <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Name</div>
+                              <div className="font-medium">{selectedStaff.user?.profile.full_name || 'Not specified'}</div>
                             </div>
                             <div>
                               <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Staff Number</div>
                               <div className="font-mono font-medium">{selectedStaff.staff_uuid}</div>
                             </div>
                           </div>
-                          <div className="space-y-2">
+                      <div className="space-y-2">
+                          <div>
+                            <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Email</div>
                             <div>
-                              <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Employee ID</div>
-                              <div>{selectedStaff.employee_id || 'Not specified'}</div>
+                              {selectedStaff?.user?.contact?.email
+                                ? maskEmail(selectedStaff.user.contact.email)
+                                : 'Not specified'}
                             </div>
-                         
                           </div>
+                          <div>
+                            <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Phone</div>
+                            <div>
+                              {selectedStaff?.user?.contact?.phone
+                                ? maskPhone(selectedStaff.user.contact.phone)
+                                : 'Not specified'}
+                            </div>
+                          </div>
+                        </div>
                         </div>
                       )}
                       

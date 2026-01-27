@@ -92,9 +92,66 @@ export type SystemPermissions = Record<string, unknown>;
  */
 export type StaffMetadata = Record<string, unknown>;
 
-/**
- * Simplified user reference for staff.
- */
+
+export interface UserProfile {
+  first_name: string | null;
+  last_name: string | null;
+  full_name: string | null;
+  title: string | null;
+  display_name: string | null;
+  dob: string | null;
+  gender: "male" | "female" | "other" | null;
+}
+
+export interface UserMetaData {
+  id: number;
+  uuid: string;
+  national_id_country_code: string | null;
+
+  identity: {
+    state: "pending" | "verified" | "suspended" | "archived";
+    verified_at: string | null;
+    verification_method: string | null;
+  };
+
+  compliance: {
+    data_residency_region: string | null;
+    allowed_processing_regions: string[] | null;
+    created_from_facility_id: number | null;
+  };
+
+  profile: UserProfile;
+
+  contact: {
+    email: string | null;
+    phone: string | null;
+  };
+
+  address: {
+    line1: string | null;
+    line2: string | null;
+    city: string | null;
+    state: string | null;
+    country: string | null;
+    postal_code: string | null;
+  };
+
+  security: {
+    requires_password_change: boolean;
+    mfa_enabled: boolean;
+    failed_login_attempts: number;
+    account_locked_until: string | null;
+  };
+
+  activity: {
+    last_login_at: string | null;
+    created_at: string;
+    updated_at: string;
+  };
+
+}
+
+/** For simple dropdowns/autocomplete */
 export interface UserReference {
   id: number;
   uuid: string;
@@ -103,7 +160,10 @@ export interface UserReference {
   last_name: string;
   email: string | null;
   phone: string | null;
+  user_meta_data?:UserMetaData;
 }
+
+
 
 /* -------------------------------------------------------------------------- */
 /*                            CORE STAFF TYPE                                 */
@@ -133,6 +193,7 @@ export interface Staff {
   npi_number: string | null;
   dea_expiry_date: string | null;
   dea_status: 'expired' | 'valid' | 'not_provided';
+  staff_name?:string;
   
   // Employment
   employment_status: EmploymentStatus;
@@ -189,7 +250,7 @@ export interface Staff {
   metadata: StaffMetadata | null;
   
   // Relationships
-  user?: UserReference;
+  user?: UserMetaData;
   supervisor?: Staff;
   subordinates?: Staff[];
   
