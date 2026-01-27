@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { 
   FileText, 
   ArrowRight, 
-  ClipboardList,
   MessageSquare,
   User,
   Calendar,
@@ -174,10 +173,10 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
                   to: MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS 
                 },
                 { 
-                  key: 'clinical-notes', 
-                  label: 'Clinical Notes', 
-                  icon: <ClipboardList className="w-4 h-4" />, 
-                  to: MEDICAL_RECORDS_ROUTES.CLINICAL_NOTES 
+                  key: 'visit-status', 
+                  label: 'Visit Status', 
+                  icon: <Activity className="w-4 h-4" />, 
+                  to: MEDICAL_RECORDS_ROUTES.VISIT_STATUS 
                 },
                 { 
                   key: 'patient-history', 

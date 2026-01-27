@@ -24,6 +24,6 @@ export const MEDICAL_RECORDS_ROUTES = {
   // Visit Action Center nested routes
   FORWARD_PATIENT: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/forward-patient`,
   GET_COMPLAINTS: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/get-complaints`,
-  CLINICAL_NOTES: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/clinical-notes`,
+  VISIT_STATUS: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/visit-status`,
   PATIENT_HISTORY: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/patient-history`,
 } as const;

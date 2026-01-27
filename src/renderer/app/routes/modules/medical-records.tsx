@@ -12,8 +12,8 @@ import MRPatientWalkIn from '../../../modules/medical-records/ui/patients/views/
 import Appearance from "../../../modules/account/apearance/Appearance";
 import ForwardPatient from "../../../modules/medical-records/ui/visit-action-center/ForwardPatient";
 import PatientComplaints from "../../../modules/medical-records/ui/visit-action-center/PatientComplaints";
-import ClinicalNotes from "../../../modules/medical-records/ui/visit-action-center/ClinicalNotes";
 import PatientHostory from "../../../modules/medical-records/ui/visit-action-center/PatientHostory";
+import VisitStatus from "../../../modules/medical-records/ui/visit-action-center/VisitStatus";
 export const medicalRecordsRoutes = [
   <Route
     key="overview"
@@ -74,9 +74,9 @@ export const medicalRecordsRoutes = [
           <WithThemeProp Component={PatientComplaints} />
         </SuspenseWrapper>
       } />
-    <Route path={MEDICAL_RECORDS_ROUTES.CLINICAL_NOTES} element={
+    <Route path={MEDICAL_RECORDS_ROUTES.VISIT_STATUS} element={
         <SuspenseWrapper variant="table">
-          <WithThemeProp Component={ClinicalNotes} />
+          <WithThemeProp Component={VisitStatus} />
         </SuspenseWrapper>
       } />
     <Route path={MEDICAL_RECORDS_ROUTES.PATIENT_HISTORY} element={
