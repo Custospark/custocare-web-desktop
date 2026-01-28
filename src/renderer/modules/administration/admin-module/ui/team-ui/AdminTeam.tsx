@@ -215,7 +215,7 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
             theme={theme}
             facilityId={activeFacilityId}
             refreshKey={refreshKey}
-            staffId={selectedStaffId}
+            // staffId={selectedStaffId}
             onStaffSelect={handleStaffSelect}
             onCreateNew={() => handleViewChange('create')}
           />
@@ -230,14 +230,6 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
           />
         )}
         
-        {/* {activeView === 'create' && (
-          <StaffCreationForm
-            theme={theme}
-            facilityId={activeFacilityId}
-            onSuccess={handleStaffCreated}
-            onCancel={() => handleViewChange('list')}
-          />
-        )} */}
         
         {activeView === 'invitations' && (
           <InvitationManager

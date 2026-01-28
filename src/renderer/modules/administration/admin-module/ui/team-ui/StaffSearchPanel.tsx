@@ -64,9 +64,9 @@ export const StaffSearchPanel: React.FC<StaffSearchPanelProps> = ({
     
     const term = searchTerm.toLowerCase();
     return staff.filter(s => {
-      const fullName = `${s.user?.first_name} ${s.user?.last_name}`.toLowerCase();
-      const email = s.user?.email?.toLowerCase() || '';
-      const phone = s.user?.phone?.toLowerCase() || '';
+      const fullName = `${s.user?.profile.first_name} ${s.user?.profile.last_name}`.toLowerCase();
+      const email = s.user?.contact?.email?.toLowerCase() || '';
+      const phone = s.user?.contact?.phone?.toLowerCase() || '';
       const employeeId = s.employee_id.toLowerCase();
       const title = s.professional_title?.toLowerCase() || '';
       
@@ -329,7 +329,7 @@ export const StaffSearchPanel: React.FC<StaffSearchPanelProps> = ({
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-medium truncate">
                         {staffMember.professional_title && `${staffMember.professional_title} `}
-                        {staffMember.user?.full_name}
+                        {staffMember.user?.profile.full_name}
                       </h4>
                       {staffMember.is_active && (
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -351,21 +351,21 @@ export const StaffSearchPanel: React.FC<StaffSearchPanelProps> = ({
                         </div>
                       )}
                       
-                      {staffMember.user?.email && (
+                      {staffMember.user?.contact.email && (
                         <div className={`flex items-center gap-2 text-sm ${
                           isDark ? 'text-gray-400' : 'text-gray-600'
                         }`}>
                           <Mail className="w-4 h-4" />
-                          <span className="truncate">{staffMember.user.email}</span>
+                          <span className="truncate">{staffMember.user.contact.email}</span>
                         </div>
                       )}
                       
-                      {staffMember.user?.phone && (
+                      {staffMember.user?.contact.phone && (
                         <div className={`flex items-center gap-2 text-sm ${
                           isDark ? 'text-gray-400' : 'text-gray-600'
                         }`}>
                           <Phone className="w-4 h-4" />
-                          <span>{staffMember.user.phone}</span>
+                          <span>{staffMember.user.contact.phone}</span>
                         </div>
                       )}
                       

@@ -391,7 +391,7 @@ export const useUpdateFacilityStaffRole = (
           // Update activeContext with the new information
           dispatch(setUserContext(updatedContext));
           
-          showToast('info', 'User context updated with new permissions', 5000);
+          // showToast('info', 'User context updated with new permissions', 5000);
         }
         
         // Call optional success callback
