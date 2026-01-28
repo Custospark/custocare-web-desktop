@@ -155,18 +155,18 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
       <div className={`rounded-xl p-6 border ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
         {onBack && (
           <div className="mb-6">
-            <button
-              onClick={onBack}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
-                isDark
-                  ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Staff List
-            </button>
-          </div>
+        <button
+          onClick={onBack}
+          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all cursor-pointer ${
+            isDark
+              ? 'bg-blue-600 hover:bg-blue-500 text-white'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Staff List
+        </button>
+      </div>
         )}
         
         {/* Profile Overview */}
@@ -197,18 +197,6 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
                 {status.icon}
                 {status.label}
               </span>
-
-              {/* Accepting Patients */}
-              {staff.accepts_new_patients && (
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
-                  isDark 
-                    ? 'bg-blue-900/20 text-blue-300 border border-blue-700/20' 
-                    : 'bg-blue-50 text-blue-700 border border-blue-200'
-                }`}>
-                  <User className="w-3.5 h-3.5" />
-                  Accepting Patients
-                </span>
-              )}
 
               {/* Supervisor */}
               {staff.can_supervise_trainees && (
@@ -370,63 +358,71 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
             Clinical Capabilities
           </h3>
           
-                <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 rounded-lg border dark:border-gray-700/50 bg-white dark:bg-gray-800/60">
-            <div className="flex items-center gap-3">
-              <Users className={`w-4 h-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`} />
-              <span className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                Supervise Trainees
-              </span>
+            <div className="space-y-3">
+            <div className={`flex items-center justify-between p-3 rounded-lg ${
+              isDark 
+                ? 'bg-gray-800/60 text-gray-200 border border-gray-700/50' 
+                : 'bg-gray-50 text-gray-800 border border-gray-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <Users className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                <span className="font-medium">Supervise Trainees</span>
+              </div>
+              {staff.can_supervise_trainees ? (
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500" />
+              ) : (
+                <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              )}
             </div>
-            {staff.can_supervise_trainees ? (
-              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-            ) : (
-              <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-            )}
-          </div>
-          
-          <div className="flex items-center justify-between p-3 rounded-lg border dark:border-gray-700/50 bg-white dark:bg-gray-800/60">
-            <div className="flex items-center gap-3">
-              <Pill className={`w-4 h-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`} />
-              <span className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                Order Controlled Substances
-              </span>
+            
+            <div className={`flex items-center justify-between p-3 rounded-lg ${
+              isDark 
+                ? 'bg-gray-800/60 text-gray-200 border border-gray-700/50' 
+                : 'bg-gray-50 text-gray-800 border border-gray-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <Pill className={`w-4 h-4 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
+                <span className="font-medium">Order Controlled Substances</span>
+              </div>
+              {staff.can_order_controlled_substances ? (
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500" />
+              ) : (
+                <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              )}
             </div>
-            {staff.can_order_controlled_substances ? (
-              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-            ) : (
-              <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-            )}
-          </div>
-          
-          <div className="flex items-center justify-between p-3 rounded-lg border dark:border-gray-700/50 bg-white dark:bg-gray-800/60">
-            <div className="flex items-center gap-3">
-              <FileText className={`w-4 h-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`} />
-              <span className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                Sign Death Certificates
-              </span>
+            
+            <div className={`flex items-center justify-between p-3 rounded-lg ${
+              isDark 
+                ? 'bg-gray-800/60 text-gray-200 border border-gray-700/50' 
+                : 'bg-gray-50 text-gray-800 border border-gray-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <FileText className={`w-4 h-4 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
+                <span className="font-medium">Sign Death Certificates</span>
+              </div>
+              {staff.can_sign_death_certificates ? (
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500" />
+              ) : (
+                <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              )}
             </div>
-            {staff.can_sign_death_certificates ? (
-              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-            ) : (
-              <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-            )}
-          </div>
-          
-          <div className="flex items-center justify-between p-3 rounded-lg border dark:border-gray-700/50 bg-gray-50/80 dark:bg-gray-800/60">
-            <div className="flex items-center gap-3">
-              <User className={`w-4 h-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`} />
-              <span className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                Accept New Patients
-              </span>
+            
+            <div className={`flex items-center justify-between p-3 rounded-lg ${
+              isDark 
+                ? 'bg-gray-800/60 text-gray-200 border border-gray-700/50' 
+                : 'bg-gray-50 text-gray-800 border border-gray-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <User className={`w-4 h-4 ${isDark ? 'text-green-400' : 'text-green-600'}`} />
+                <span className="font-medium">Accept New Patients</span>
+              </div>
+              {staff.accepts_new_patients ? (
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500" />
+              ) : (
+                <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              )}
             </div>
-            {staff.accepts_new_patients ? (
-              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-            ) : (
-              <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-            )}
           </div>
-        </div>
         </div>
       </div>
     </div>
