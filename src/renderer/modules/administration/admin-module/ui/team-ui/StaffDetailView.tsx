@@ -18,7 +18,6 @@ import {
   Briefcase,
   Calendar,
   Shield,
-  Award,
   Clock,
   CheckCircle,
   XCircle,
@@ -26,18 +25,22 @@ import {
   PauseCircle,
   Ban,
   HelpCircle,
+  Users,
+  Stethoscope,
+  FileText,
+  Pill,
+  Building,
 } from 'lucide-react';
 import { useGetStaffById } from '../../api/team-management/queries/useStaffQueries';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 
 interface StaffDetailViewProps {
   theme: 'light' | 'dark';
-  staffId:number;
+  staffId: number;
   facilityId: number;
   onBack?: () => void;
-  refreshKey?:number;
-  onStaffSelect?:number;
-
+  refreshKey?: number;
+  onStaffSelect?: number;
 }
 
 export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
@@ -55,203 +58,223 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
   
   if (isLoading) {
     return (
-      <LoadingSkeleton variant='table' theme={theme} message='Loading staff details..' />);
+      <LoadingSkeleton variant='table' theme={theme} message='Loading staff details...' />
+    );
   }
 
-const assignmentStatus =staff?.facility_role_summary?.assignment_status ?? 'unknown';
+  const assignmentStatus = staff?.facility_role_summary?.assignment_status ?? 'unknown';
 
-const statusConfig: Record<string, { label: string; icon: JSX.Element; classes: string }> = {
-  active: {
-    label: 'Active',
-    icon: <CheckCircle className="w-4 h-4" />,
-    classes: isDark
-      ? 'bg-green-900/30 text-green-300'
-      : 'bg-green-100 text-green-800',
-  },
-  inactive: {
-    label: 'Inactive',
-    icon: <XCircle className="w-4 h-4" />,
-    classes: isDark
-      ? 'bg-gray-900/30 text-gray-300'
-      : 'bg-gray-100 text-gray-800',
-  },
-  suspended: {
-    label: 'Suspended',
-    icon: <PauseCircle className="w-4 h-4" />,
-    classes: isDark
-      ? 'bg-yellow-900/30 text-yellow-300'
-      : 'bg-yellow-100 text-yellow-800',
-  },
-  terminated: {
-    label: 'Terminated',
-    icon: <Ban className="w-4 h-4" />,
-    classes: isDark
-      ? 'bg-red-900/30 text-red-300'
-      : 'bg-red-100 text-red-800',
-  },
-  pending: {
-    label: 'Pending',
-    icon: <Clock className="w-4 h-4" />,
-    classes: isDark
-      ? 'bg-blue-900/30 text-blue-300'
-      : 'bg-blue-100 text-blue-800',
-  },
-};
+  const statusConfig: Record<string, { label: string; icon: JSX.Element; classes: string }> = {
+    active: {
+      label: 'Active',
+      icon: <CheckCircle className="w-4 h-4" />,
+      classes: isDark
+        ? 'bg-green-900/30 text-green-300 border border-green-700/30'
+        : 'bg-green-100 text-green-800 border border-green-200',
+    },
+    inactive: {
+      label: 'Inactive',
+      icon: <XCircle className="w-4 h-4" />,
+      classes: isDark
+        ? 'bg-gray-900/30 text-gray-300 border border-gray-700/30'
+        : 'bg-gray-100 text-gray-800 border border-gray-200',
+    },
+    suspended: {
+      label: 'Suspended',
+      icon: <PauseCircle className="w-4 h-4" />,
+      classes: isDark
+        ? 'bg-yellow-900/30 text-yellow-300 border border-yellow-700/30'
+        : 'bg-yellow-100 text-yellow-800 border border-yellow-200',
+    },
+    terminated: {
+      label: 'Terminated',
+      icon: <Ban className="w-4 h-4" />,
+      classes: isDark
+        ? 'bg-red-900/30 text-red-300 border border-red-700/30'
+        : 'bg-red-100 text-red-800 border border-red-200',
+    },
+    pending: {
+      label: 'Pending',
+      icon: <Clock className="w-4 h-4" />,
+      classes: isDark
+        ? 'bg-blue-900/30 text-blue-300 border border-blue-700/30'
+        : 'bg-blue-100 text-blue-800 border border-blue-200',
+    },
+  };
 
-const status =
-  assignmentStatus && statusConfig[assignmentStatus]
-    ? statusConfig[assignmentStatus]
-    : {
-        label: 'Unknown',
-        icon: <HelpCircle className="w-4 h-4" />,
-        classes: isDark
-          ? 'bg-gray-900/30 text-gray-400'
-          : 'bg-gray-100 text-gray-600',
-      };
+  const formatJoinedOn = (value?: string | null) => {
+    if (!value) return 'Not specified';
+
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return 'Not specified';
+
+    return new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(d);
+  };
+
+  const status =
+    assignmentStatus && statusConfig[assignmentStatus]
+      ? statusConfig[assignmentStatus]
+      : {
+          label: 'Unknown',
+          icon: <HelpCircle className="w-4 h-4" />,
+          classes: isDark
+            ? 'bg-gray-900/30 text-gray-400 border border-gray-700/30'
+            : 'bg-gray-100 text-gray-600 border border-gray-200',
+        };
   
   if (!staff) {
     return (
-      <div className={`rounded-xl p-12 text-center border ${
-        isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-      }`}>
-        <AlertTriangle className={`w-12 h-12 mx-auto mb-4 ${
-          isDark ? 'text-yellow-400' : 'text-yellow-600'
-        }`} />
-        <h3 className="text-lg font-medium mb-2">Staff Member Not Found</h3>
-        <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+      <div className={`rounded-xl p-12 text-center border ${isDark ? 'bg-gray-900/50 border-gray-700' : 'bg-white border-gray-200'}`}>
+        <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${isDark ? 'bg-yellow-900/20' : 'bg-yellow-100'}`}>
+          <AlertTriangle className={`w-8 h-8 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`} />
+        </div>
+        <h3 className="text-lg font-semibold mb-2">Staff Member Not Found</h3>
+        <p className={`mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
           The requested staff member could not be loaded.
         </p>
-        <button
-          onClick={onBack}
-          className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Go Back
-        </button>
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Return to List
+          </button>
+        )}
       </div>
     );
   }
   
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className={`rounded-xl p-6 border ${
-        isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-      }`}>
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <button
-          onClick={onBack}
-          className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
-            isDark
-              ? 'bg-blue-600 hover:bg-blue-500 text-white'
-              : 'bg-blue-500 hover:bg-blue-600 text-white'
-          }`}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to List
-        </button>
-        </div>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className={`rounded-xl p-6 border ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+        {onBack && (
+          <div className="mb-6">
+            <button
+              onClick={onBack}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                isDark
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Staff List
+            </button>
+          </div>
+        )}
         
-        {/* Profile Header */}
-        <div className="flex items-start gap-4">
-          <div className={`w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold ${
+        {/* Profile Overview */}
+        <div className="flex items-start gap-5">
+          {/* Profile Avatar */}
+          <div className={`flex-shrink-0 w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold ${
             isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'
           }`}>
             {staff.user?.profile.first_name?.[0]}{staff.user?.profile.last_name?.[0]}
           </div>
           
+          {/* Profile Details */}
           <div className="flex-1">
-            <h2 className="text-2xl font-bold">
-              {staff.professional_title && `${staff.professional_title} `}
-              {staff.user?.profile.full_name}
-            </h2>
-            <p className={`mt-1 capitalize ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              {staff.facility_role_summary?.role_at_facility.replace(/_/g, ' ')}
-            </p>
+            <div className="mb-3">
+              <h2 className="text-2xl font-bold">
+                {staff.professional_title && `${staff.professional_title} `}
+                {staff.user?.profile.full_name}
+              </h2>
+              <p className={`mt-1 text-sm font-medium capitalize ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+                {staff.facility_role_summary?.role_at_facility.replace(/_/g, ' ')}
+              </p>
+            </div>
             
-               <div className="flex flex-wrap gap-2 mt-3">
-            {/* Assignment Status */}
-            <span
-              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${status.classes}`}
-            >
-              {status.icon}
-              {status.label}
-            </span>
-
-            {/* Accepting Patients */}
-            {staff.accepts_new_patients && (
-              <span
-                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-800'
-                }`}
-              >
-                Accepting Patients
+            {/* Status Badges */}
+            <div className="flex flex-wrap gap-2">
+              {/* Assignment Status */}
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${status.classes}`}>
+                {status.icon}
+                {status.label}
               </span>
-            )}
 
-            {/* Supervisor */}
-            {staff.can_supervise_trainees && (
-              <span
-                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  isDark ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-100 text-purple-800'
-                }`}
-              >
-                Supervisor
-              </span>
-            )}
+              {/* Accepting Patients */}
+              {staff.accepts_new_patients && (
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
+                  isDark 
+                    ? 'bg-blue-900/20 text-blue-300 border border-blue-700/20' 
+                    : 'bg-blue-50 text-blue-700 border border-blue-200'
+                }`}>
+                  <User className="w-3.5 h-3.5" />
+                  Accepting Patients
+                </span>
+              )}
 
-            {/* License Expired */}
-            {staff.has_expired_license && (
-              <span
-                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
-                  isDark ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-800'
-                }`}
-              >
-                <AlertTriangle className="w-4 h-4" />
-                License Expired
-              </span>
-            )}
-          </div>
+              {/* Supervisor */}
+              {staff.can_supervise_trainees && (
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
+                  isDark 
+                    ? 'bg-purple-900/20 text-purple-300 border border-purple-700/20' 
+                    : 'bg-purple-50 text-purple-700 border border-purple-200'
+                }`}>
+                  <Users className="w-3.5 h-3.5" />
+                  Supervisor
+                </span>
+              )}
 
+              {/* License Expired */}
+              {staff.has_expired_license && (
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
+                  isDark 
+                    ? 'bg-red-900/20 text-red-300 border border-red-700/20' 
+                    : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  License Expired
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
       
       {/* Details Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Contact Information */}
-        <div className={`rounded-xl p-6 border ${
-          isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-        }`}>
+        <div className={`rounded-xl p-5 border ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <User className="w-5 h-5" />
+            <div className={`p-1.5 rounded-md ${isDark ? 'bg-blue-900/30' : 'bg-blue-100'}`}>
+              <User className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+            </div>
             Contact Information
           </h3>
           
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-start gap-3">
               <Mail className={`w-5 h-5 mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
               <div>
-                <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Email</div>
-                <div>{staff.user?.contact.email || 'Not provided'}</div>
+                <div className={`text-xs font-medium uppercase tracking-wide mb-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Email</div>
+                <div className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                  {staff.user?.contact.email || 'Not provided'}
+                </div>
               </div>
             </div>
             
             <div className="flex items-start gap-3">
               <Phone className={`w-5 h-5 mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
               <div>
-                <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Phone</div>
-                <div>{staff.user?.contact.phone || 'Not provided'}</div>
+                <div className={`text-xs font-medium uppercase tracking-wide mb-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Phone</div>
+                <div className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                  {staff.user?.contact.phone || 'Not provided'}
+                </div>
               </div>
             </div>
             
             <div className="flex items-start gap-3">
               <Badge className={`w-5 h-5 mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
               <div>
-                <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Professional Number</div>
-                <code className={`px-2 py-1 rounded text-sm ${
-                  isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
-                }`}>
+                <div className={`text-xs font-medium uppercase tracking-wide mb-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Staff ID</div>
+                <code className={`px-3 py-1.5 rounded-md text-sm font-mono ${isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
                   {staff.staff_uuid}
                 </code>
               </div>
@@ -260,147 +283,150 @@ const status =
         </div>
         
         {/* Employment Details */}
-        <div className={`rounded-xl p-6 border ${
-          isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-        }`}>
+        <div className={`rounded-xl p-5 border ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Briefcase className="w-5 h-5" />
+            <div className={`p-1.5 rounded-md ${isDark ? 'bg-green-900/30' : 'bg-green-100'}`}>
+              <Briefcase className={`w-4 h-4 ${isDark ? 'text-green-400' : 'text-green-600'}`} />
+            </div>
             Employment Details
           </h3>
           
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-start gap-3">
               <Shield className={`w-5 h-5 mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
               <div>
-                <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Employment Status</div>
-                <div className="capitalize">{staff.employment_status.replace(/_/g, ' ')}</div>
+                <div className={`text-xs font-medium uppercase tracking-wide mb-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Employment Status</div>
+                <div className={`font-medium capitalize ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                  {staff.employment_status.replace(/_/g, ' ')}
+                </div>
               </div>
             </div>
             
             <div className="flex items-start gap-3">
               <Calendar className={`w-5 h-5 mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
               <div>
-                <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Hire Date</div>
-                <div>{staff.hire_date ? new Date(staff.hire_date).toLocaleDateString() : 'Not specified'}</div>
+                <div className={`text-xs font-medium uppercase tracking-wide mb-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Joined On</div>
+                <div className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                  {formatJoinedOn(staff.facility_role_summary?.created_at)}
+                </div>
               </div>
             </div>
             
             <div className="flex items-start gap-3">
               <Clock className={`w-5 h-5 mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
               <div>
-                <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Employment Type</div>
-                <div className="capitalize">{staff.employment_type.replace(/_/g, ' ')}</div>
+                <div className={`text-xs font-medium uppercase tracking-wide mb-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Employment Type</div>
+                <div className={`font-medium capitalize ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                  {staff.employment_type.replace(/_/g, ' ')}
+                </div>
               </div>
             </div>
           </div>
         </div>
         
-        {/* Professional Info */}
-        <div className={`rounded-xl p-6 border ${
-          isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-        }`}>
+        {/* Department Assignments */}
+        <div className={`rounded-xl p-5 border ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Award className="w-5 h-5" />
-            Professional Information
+            <div className={`p-1.5 rounded-md ${isDark ? 'bg-purple-900/30' : 'bg-purple-100'}`}>
+              <Building className={`w-4 h-4 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
+            </div>
+            Department Assignments
           </h3>
           
-          <div className="space-y-3">
-            {staff.specialization_codes && staff.specialization_codes.length > 0 && (
-              <div>
-                <div className={`text-sm mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Specializations
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {staff.specialization_codes.map((spec, idx) => (
-                    <span
-                      key={idx}
-                      className={`px-2 py-1 rounded text-sm ${
-                        isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {spec}
-                    </span>
-                  ))}
-                </div>
+          <div>
+            <div className={`text-xs font-medium uppercase tracking-wide mb-3 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+              Assigned Departments
+            </div>
+            {(staff.facility_role_summary?.departments?.length ?? 0) > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {staff.facility_role_summary?.departments?.map((dept) => (
+                  <span
+                    key={dept.department_uuid}
+                    className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium ${
+                      isDark
+                        ? 'bg-blue-900/20 text-blue-300 border border-blue-700/20'
+                        : 'bg-blue-50 text-blue-700 border border-blue-200'
+                    }`}
+                    title={`${dept.department_name} (${dept.department_code})`}
+                  >
+                    {dept.department_name}
+                  </span>
+                ))}
               </div>
-            )}
-            
-            {staff.board_certifications && staff.board_certifications.length > 0 && (
-              <div>
-                <div className={`text-sm mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Board Certifications
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {staff.board_certifications.map((cert, idx) => (
-                    <span
-                      key={idx}
-                      className={`px-2 py-1 rounded text-sm ${
-                        isDark ? 'bg-green-900/20 text-green-300' : 'bg-green-50 text-green-700'
-                      }`}
-                    >
-                      {cert}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {staff.npi_number && (
-              <div>
-                <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>NPI Number</div>
-                <code className={`px-2 py-1 rounded text-sm ${
-                  isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
-                }`}>
-                  {staff.npi_number}
-                </code>
-              </div>
+            ) : (
+              <span className={`inline-flex items-center px-3 py-2 rounded-md text-sm ${isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
+                No departments assigned
+              </span>
             )}
           </div>
         </div>
         
         {/* Clinical Capabilities */}
-        <div className={`rounded-xl p-6 border ${
-          isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-        }`}>
-          <h3 className="text-lg font-semibold mb-4">Clinical Capabilities</h3>
+        <div className={`rounded-xl p-5 border ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <div className={`p-1.5 rounded-md ${isDark ? 'bg-teal-900/30' : 'bg-teal-100'}`}>
+              <Stethoscope className={`w-4 h-4 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
+            </div>
+            Clinical Capabilities
+          </h3>
           
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>Can Supervise Trainees</span>
-              {staff.can_supervise_trainees ? (
-                <CheckCircle className="w-5 h-5 text-green-500" />
-              ) : (
-                <XCircle className="w-5 h-5 text-gray-500" />
-              )}
+                <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 rounded-lg border dark:border-gray-700/50 bg-white dark:bg-gray-800/60">
+            <div className="flex items-center gap-3">
+              <Users className={`w-4 h-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`} />
+              <span className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                Supervise Trainees
+              </span>
             </div>
-            
-            <div className="flex items-center justify-between">
-              <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>Can Order Controlled Substances</span>
-              {staff.can_order_controlled_substances ? (
-                <CheckCircle className="w-5 h-5 text-green-500" />
-              ) : (
-                <XCircle className="w-5 h-5 text-gray-500" />
-              )}
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>Can Sign Death Certificates</span>
-              {staff.can_sign_death_certificates ? (
-                <CheckCircle className="w-5 h-5 text-green-500" />
-              ) : (
-                <XCircle className="w-5 h-5 text-gray-500" />
-              )}
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>Accepts New Patients</span>
-              {staff.accepts_new_patients ? (
-                <CheckCircle className="w-5 h-5 text-green-500" />
-              ) : (
-                <XCircle className="w-5 h-5 text-gray-500" />
-              )}
-            </div>
+            {staff.can_supervise_trainees ? (
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+            ) : (
+              <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            )}
           </div>
+          
+          <div className="flex items-center justify-between p-3 rounded-lg border dark:border-gray-700/50 bg-white dark:bg-gray-800/60">
+            <div className="flex items-center gap-3">
+              <Pill className={`w-4 h-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`} />
+              <span className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                Order Controlled Substances
+              </span>
+            </div>
+            {staff.can_order_controlled_substances ? (
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+            ) : (
+              <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            )}
+          </div>
+          
+          <div className="flex items-center justify-between p-3 rounded-lg border dark:border-gray-700/50 bg-white dark:bg-gray-800/60">
+            <div className="flex items-center gap-3">
+              <FileText className={`w-4 h-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`} />
+              <span className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                Sign Death Certificates
+              </span>
+            </div>
+            {staff.can_sign_death_certificates ? (
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+            ) : (
+              <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            )}
+          </div>
+          
+          <div className="flex items-center justify-between p-3 rounded-lg border dark:border-gray-700/50 bg-gray-50/80 dark:bg-gray-800/60">
+            <div className="flex items-center gap-3">
+              <User className={`w-4 h-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`} />
+              <span className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                Accept New Patients
+              </span>
+            </div>
+            {staff.accepts_new_patients ? (
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+            ) : (
+              <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            )}
+          </div>
+        </div>
         </div>
       </div>
     </div>
