@@ -44,6 +44,7 @@ interface StaffInfoForDrawer {
   current_assignment_status: string;
 }
 
+
 interface StaffPermissionDrawerProps {
   theme: 'light' | 'dark';
   open: boolean;
@@ -54,7 +55,7 @@ interface StaffPermissionDrawerProps {
 }
 
 interface FormData {
-  assignment_status: AssignmentStatus;
+  assignment_status: AssignmentStatus | '';
   role_code: string;
   department_ids: number[];
   module_codes: string[];
@@ -64,7 +65,6 @@ interface FormData {
   employment_type: string;
   effective_from: string; // ISO date string
 }
-
 
 export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
   theme,
@@ -76,17 +76,16 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
 }) => {
   const isDark = theme === 'dark';
 
-  
   // Get current date in YYYY-MM-DD format
   const getCurrentDate = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
   };
-  
+
   // Initialize form state with current staff info
   const getInitialFormData = useCallback((): FormData => ({
-    assignment_status: (staffInfo.current_assignment_status as AssignmentStatus) || 'active',
-    role_code: staffInfo.current_role_code || '',
+    assignment_status: '',
+    role_code: '',
     department_ids: [],
     module_codes: [],
     shift_schedule: null,
@@ -94,45 +93,48 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
     employment_status: '',
     employment_type: '',
     effective_from: getCurrentDate(),
-  }), [staffInfo]);
-  
+  }), []);
+
   const [formData, setFormData] = useState<FormData>(getInitialFormData());
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  
+
+  // Track if at least one field has been filled
+  const [, setHasAtLeastOneField] = useState<boolean>(false);
+
   // Focus management
   const firstFieldRef = useRef<HTMLSelectElement | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
-  
+
   // Fetch departments
   const { data: departmentsResponse, isLoading: departmentsLoading } = useGetDepartmentsByFacility(
     facilityId!,
     {},
     { enabled: open && !!facilityId }
   );
-  
+
   // Fetch roles
   const { data: rolesResponse, isLoading: rolesLoading } = useGetFacilityRoles(
     {},
     { enabled: open }
   );
-  
+
   // Fetch facility-specific roles
   const { data: facilityRolesResponse, isLoading: facilityRolesLoading } = useGetFacilitySpecificRoles(
     facilityId!,
     { enabled: open && !!facilityId }
   );
-  
+
   // Fetch modules
   const { data: modulesResponse, isLoading: modulesLoading } = useGetModules(
     { is_active: true },
     { enabled: open }
   );
-  
+
   // Combine roles (facility-specific roles first, then system roles)
   const roles = useMemo(() => {
     const facilityRoles = facilityRolesResponse?.data || [];
     const systemRoles = rolesResponse?.data || [];
-    
+
     // Deduplicate by code
     const roleMap = new Map();
     [...facilityRoles, ...systemRoles].forEach(role => {
@@ -140,13 +142,13 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
         roleMap.set(role.code, role);
       }
     });
-    
+
     return Array.from(roleMap.values());
   }, [facilityRolesResponse, rolesResponse]);
-  
+
   const departments = useMemo(() => departmentsResponse?.data || [], [departmentsResponse]);
   const allModules = useMemo(() => modulesResponse?.data || [], [modulesResponse]);
-  
+
   // Filter out "account" module
   const selectableModules = useMemo(() => {
     return allModules.filter(module => {
@@ -154,30 +156,47 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
       return codeNormalized !== 'account' && codeNormalized !== 'accounts';
     });
   }, [allModules]);
-  
+
   // Update mutation
   const updateMutation = useUpdateFacilityStaffRole({
     onSuccess: () => {
       onSuccess();
     },
   });
-  
+
   const isFormLoading = departmentsLoading || rolesLoading || facilityRolesLoading || modulesLoading;
-  
+
   // Create a stable key for tracking staffInfo changes
-  const staffKey = useMemo(() => 
+  const staffKey = useMemo(() =>
     `${staffInfo.staff_id}-${staffInfo.staff_uuid}`,
     [staffInfo]
   );
 
-  // Reset form when staffInfo changes or drawer opens
+  // Reset form when staffInfo changes or drawer opens - Fixed useEffect
   useEffect(() => {
     if (open && staffInfo) {
-      setFormData(getInitialFormData());
-      setFormErrors({});
+      // Use setTimeout to avoid synchronous setState in effect
+      const timer = setTimeout(() => {
+        const initialData = getInitialFormData();
+        setFormData(initialData);
+        setFormErrors({});
+        setHasAtLeastOneField(false);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [open, staffKey, getInitialFormData, staffInfo]);
-  
+
+const hasAtLeastOneField =
+  formData.assignment_status !== '' ||
+  formData.role_code !== '' ||
+  formData.department_ids.length > 0 ||
+  formData.module_codes.length > 0 ||
+  formData.shift_type !== null ||
+  formData.employment_status !== '' ||
+  formData.employment_type !== '' ||
+  (formData.effective_from !== '' && formData.effective_from !== getCurrentDate());
+
+
   // Auto-focus on first field when drawer opens
   useEffect(() => {
     if (open && firstFieldRef.current) {
@@ -187,7 +206,7 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
       return () => clearTimeout(timer);
     }
   }, [open]);
-  
+
   // Prevent body scroll when drawer is open
   useEffect(() => {
     if (open) {
@@ -195,111 +214,129 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
     } else {
       document.body.style.overflow = '';
     }
-    
+
     return () => {
       document.body.style.overflow = '';
     };
   }, [open]);
-  
+
   // Set partial form data with type safety
   const set = useCallback((patch: Partial<FormData>) => {
     setFormData(prev => ({ ...prev, ...patch }));
   }, []);
-  
-  // Validation with comprehensive checks
+
+  // Validation - All fields are now optional, but we need to validate data types when provided
   const validateForm = useCallback((): boolean => {
     const errors: Record<string, string> = {};
-    
-    // Required: Assignment Status
-    if (!formData.assignment_status || formData.assignment_status.trim() === '') {
-      errors.assignment_status = 'Assignment status is required';
+
+    // Validate assignment_status if provided
+    if (formData.assignment_status !== '' && formData.assignment_status.trim() === '') {
+      errors.assignment_status = 'Assignment status cannot be empty if provided';
     }
-    
-    // Required: Role Code
-    if (!formData.role_code || formData.role_code.trim() === '') {
-      errors.role_code = 'Role is required';
+
+    // Validate role_code if provided
+    if (formData.role_code !== '' && formData.role_code.trim() === '') {
+      errors.role_code = 'Role cannot be empty if provided';
     }
-    
-    // Required: At least one module
-    if (!Array.isArray(formData.module_codes) || formData.module_codes.length === 0) {
-      errors.module_codes = 'At least one module must be selected';
+
+    // Validate employment_status if provided
+    if (formData.employment_status !== '' && formData.employment_status.trim() === '') {
+      errors.employment_status = 'Employment status cannot be empty if provided';
     }
-    
-    // Required: Employment Status
-    if (!formData.employment_status || formData.employment_status.trim() === '') {
-      errors.employment_status = 'Employment status is required';
+
+    // Validate employment_type if provided
+    if (formData.employment_type !== '' && formData.employment_type.trim() === '') {
+      errors.employment_type = 'Employment type cannot be empty if provided';
     }
-    
-    // Required: Employment Type
-    if (!formData.employment_type || formData.employment_type.trim() === '') {
-      errors.employment_type = 'Employment type is required';
+
+    // Validate effective_from is a valid date if provided and not empty
+    if (formData.effective_from && formData.effective_from.trim() !== '' && !Date.parse(formData.effective_from)) {
+      errors.effective_from = 'Valid effective date is required if provided';
     }
-    
-    // Validate effective_from is a valid date
-    if (!formData.effective_from || !Date.parse(formData.effective_from)) {
-      errors.effective_from = 'Valid effective date is required';
-    }
-    
-    // Validate department_ids are valid integers
+
+    // Validate department_ids are valid integers if provided
     if (Array.isArray(formData.department_ids) && formData.department_ids.length > 0) {
-      const invalidDepts = formData.department_ids.filter(id => 
+      const invalidDepts = formData.department_ids.filter(id =>
         typeof id !== 'number' || !Number.isInteger(id) || id <= 0
       );
       if (invalidDepts.length > 0) {
         errors.department_ids = 'Invalid department IDs detected';
       }
     }
-    
+
+    // Validate module_codes if provided
+    if (Array.isArray(formData.module_codes) && formData.module_codes.length > 0) {
+      const invalidModules = formData.module_codes.filter(code =>
+        typeof code !== 'string' || code.trim() === ''
+      );
+      if (invalidModules.length > 0) {
+        errors.module_codes = 'Invalid module codes detected';
+      }
+    }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   }, [formData]);
-  
+
   // Handle submit with precise data structure
   const handleSubmit = useCallback(() => {
     if (!validateForm()) return;
-    
+
     if (!facilityId) {
       console.error('Facility ID is required');
       return;
     }
-    
-    // Construct update payload with exact types
-    const updateData: UpdateFacilityStaffRoleRequest = {
-      assignment_status: formData.assignment_status,
-      role_code: formData.role_code,
-      department_ids: formData.department_ids.length > 0 ? formData.department_ids : null,
-      module_codes: formData.module_codes,
-      shift_schedule: formData.shift_schedule,
-      shift_type: formData.shift_type,
-      employment_status: formData.employment_status,
-      employment_type: formData.employment_type,
-      effective_from: formData.effective_from,
-      facility_id: facilityId,
-      staff_id: staffInfo.staff_id,
-    };
-    
+
+    if (!hasAtLeastOneField) {
+      console.error('At least one field must be filled');
+      return;
+    }
+
+        const updateData: UpdateFacilityStaffRoleRequest = {
+        facility_id: facilityId,
+        staff_id: staffInfo.staff_id,
+
+        ...(formData.assignment_status ? { assignment_status: formData.assignment_status as AssignmentStatus } : {}),
+        ...(formData.role_code ? { role_code: formData.role_code } : {}),
+        ...(formData.department_ids.length > 0 ? { department_ids: formData.department_ids } : {}),
+        ...(formData.module_codes.length > 0 ? { module_codes: formData.module_codes } : {}),
+        ...(formData.shift_schedule !== null ? { shift_schedule: formData.shift_schedule } : {}),
+        ...(formData.shift_type !== null ? { shift_type: formData.shift_type } : {}),
+
+        ...(formData.employment_status
+          ? { employment_status: formData.employment_status as UpdateFacilityStaffRoleRequest['employment_status'] }
+          : {}),
+
+        ...(formData.employment_type
+          ? { employment_type: formData.employment_type as UpdateFacilityStaffRoleRequest['employment_type'] }
+          : {}),
+
+        ...(formData.effective_from ? { effective_from: formData.effective_from } : {}),
+      };
+
+
     updateMutation.mutate({
       id: staffInfo.staff_id,
       data: updateData,
     });
-  }, [validateForm, formData, facilityId, staffInfo.staff_id, updateMutation]);
-  
+  }, [validateForm, formData, facilityId, staffInfo.staff_id, updateMutation, hasAtLeastOneField]);
+
   // Handle module toggle with array integrity
   const handleToggleModule = useCallback((moduleCode: string) => {
     setFormData(prev => {
       const currentModules = prev.module_codes;
       const isCurrentlySelected = currentModules.includes(moduleCode);
-      
+
       const updatedModules = isCurrentlySelected
         ? currentModules.filter(code => code !== moduleCode)
         : [...currentModules, moduleCode];
-      
+
       return {
         ...prev,
         module_codes: updatedModules,
       };
     });
-    
+
     // Clear error when user makes a selection
     setFormErrors(prev => {
       if (!prev.module_codes) return prev;
@@ -308,23 +345,23 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
       return newErrors;
     });
   }, []);
-  
+
   // Handle department toggle with precise integer handling
   const handleToggleDepartment = useCallback((departmentId: number) => {
     setFormData(prev => {
       const currentDepartments = prev.department_ids;
       const isCurrentlySelected = currentDepartments.includes(departmentId);
-      
+
       const updatedDepartments = isCurrentlySelected
         ? currentDepartments.filter(id => id !== departmentId)
         : [...currentDepartments, departmentId];
-      
+
       return {
         ...prev,
         department_ids: updatedDepartments,
       };
     });
-    
+
     // Clear error if exists
     setFormErrors(prev => {
       if (!prev.department_ids) return prev;
@@ -333,14 +370,14 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
       return newErrors;
     });
   }, []);
-  
+
   // Handle backdrop click
   const handleBackdropClick = useCallback((e: React.MouseEvent) => {
     if (e.target === e.currentTarget && !updateMutation.isPending) {
       onClose();
     }
   }, [onClose, updateMutation.isPending]);
-  
+
   // Handle drawer key events
   const handleDrawerKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Escape' && !updateMutation.isPending) {
@@ -349,20 +386,12 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
     }
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      const canSubmit =
-        !!formData.assignment_status &&
-        !!formData.role_code &&
-        (formData.module_codes?.length ?? 0) > 0 &&
-        !!formData.employment_status &&
-        !!formData.employment_type &&
-        !!formData.effective_from;
-        
-      if (!updateMutation.isPending && canSubmit) {
+      if (!updateMutation.isPending && hasAtLeastOneField) {
         handleSubmit();
       }
     }
-  }, [onClose, updateMutation.isPending, formData, handleSubmit]);
-  
+  }, [onClose, updateMutation.isPending, handleSubmit, hasAtLeastOneField]);
+
   // Styling helpers
   const inputBase = `w-full px-3 py-2 rounded-lg border outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-transparent`;
   const inputTheme = isDark
@@ -372,23 +401,14 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
   const hintTheme = isDark ? 'text-gray-500' : 'text-gray-600';
   const sectionCard = isDark ? 'bg-gray-950 border-gray-800' : 'bg-white border-gray-200';
   const subtleDivider = isDark ? 'border-gray-800' : 'border-gray-200';
-  
-  // Can submit check
-  const canSubmit =
-    !!formData.assignment_status &&
-    !!formData.role_code &&
-    (formData.module_codes?.length ?? 0) > 0 &&
-    !!formData.employment_status &&
-    !!formData.employment_type &&
-    !!formData.effective_from;
-  
+
   // Don't render if not open
   if (!open) {
     return null;
   }
-    
+
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex justify-end"
       onKeyDown={handleDrawerKeyDown}
       role="dialog"
@@ -403,7 +423,7 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
         }`}
         aria-hidden="true"
       />
-      
+
       {/* Panel - Slide in from right */}
       <div
         ref={drawerRef}
@@ -430,7 +450,7 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                 Tip: Press <kbd className={`px-1 rounded ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>Ctrl/⌘ + Enter</kbd> to save
               </p>
             </div>
-            
+
             <button
               onClick={onClose}
               disabled={updateMutation.isPending}
@@ -444,7 +464,7 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
             </button>
           </div>
         </div>
-        
+
         {/* Body */}
         {isFormLoading ? (
           <div className="p-5">
@@ -489,17 +509,17 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                 </div>
               </div>
             </div>
-            
+
             {/* Effective Date */}
             <div className={`rounded-xl border ${sectionCard}`}>
               <div className={`px-4 py-3 border-b ${subtleDivider}`}>
                 <h4 className="text-sm font-semibold flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  Effective Date <span className="text-red-500">*</span>
+                  Effective Date
                 </h4>
                 <p className={`text-xs mt-1 ${hintTheme}`}>When should these changes take effect?</p>
               </div>
-              
+
               <div className="p-4">
                 <input
                   type="date"
@@ -528,7 +548,7 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                 </p>
               </div>
             </div>
-            
+
             {/* Section: Assignment Status & Role */}
             <div className={`rounded-xl border ${sectionCard}`}>
               <div className={`px-4 py-3 border-b ${subtleDivider}`}>
@@ -538,13 +558,13 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                 </h4>
                 <p className={`text-xs mt-1 ${hintTheme}`}>Core assignment configuration</p>
               </div>
-              
+
               <div className="p-4 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Assignment Status */}
                   <div>
                     <label htmlFor="assignment-status" className={`block text-sm font-medium mb-1 ${labelTheme}`}>
-                      Assignment Status <span className="text-red-500">*</span>
+                      Assignment Status
                     </label>
                     <div className="relative">
                       <select
@@ -552,7 +572,7 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                         ref={firstFieldRef}
                         value={formData.assignment_status}
                         onChange={(e) => {
-                          set({ assignment_status: e.target.value as AssignmentStatus });
+                          set({ assignment_status: e.target.value as AssignmentStatus | '' });
                           setFormErrors(prev => {
                             const newErrors = { ...prev };
                             delete newErrors.assignment_status;
@@ -564,6 +584,7 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                         } appearance-none pr-10`}
                         disabled={updateMutation.isPending}
                       >
+                        <option value="">Select status...</option>
                         <option value="active">Active</option>
                         <option value="on_leave">On Leave</option>
                         <option value="suspended">Suspended</option>
@@ -580,11 +601,11 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                       </p>
                     )}
                   </div>
-                  
+
                   {/* Facility Role */}
                   <div>
                     <label htmlFor="facility-role" className={`block text-sm font-medium mb-1 ${labelTheme}`}>
-                      Facility Role <span className="text-red-500">*</span>
+                      Facility Role
                     </label>
                     <div className="relative">
                       <select
@@ -624,7 +645,7 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                 </div>
               </div>
             </div>
-            
+
             {/* Section: Employment Details */}
             <div className={`rounded-xl border ${sectionCard}`}>
               <div className={`px-4 py-3 border-b ${subtleDivider}`}>
@@ -634,13 +655,13 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                 </h4>
                 <p className={`text-xs mt-1 ${hintTheme}`}>Employment status and type</p>
               </div>
-              
+
               <div className="p-4 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Employment Status */}
                   <div>
                     <label htmlFor="employment-status" className={`block text-sm font-medium mb-1 ${labelTheme}`}>
-                      Employment Status <span className="text-red-500">*</span>
+                      Employment Status
                     </label>
                     <div className="relative">
                       <select
@@ -678,11 +699,11 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                       </p>
                     )}
                   </div>
-                  
+
                   {/* Employment Type */}
                   <div>
                     <label htmlFor="employment-type" className={`block text-sm font-medium mb-1 ${labelTheme}`}>
-                      Employment Type <span className="text-red-500">*</span>
+                      Employment Type
                     </label>
                     <div className="relative">
                       <select
@@ -722,17 +743,17 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                 </div>
               </div>
             </div>
-            
+
             {/* Section: Shift Details */}
             <div className={`rounded-xl border ${sectionCard}`}>
               <div className={`px-4 py-3 border-b ${subtleDivider}`}>
                 <h4 className="text-sm font-semibold flex items-center gap-2">
                   <Clock className="w-4 h-4" />
-                  Shift Details <span className={`text-xs font-normal ${hintTheme}`}>(Optional)</span>
+                  Shift Details
                 </h4>
                 <p className={`text-xs mt-1 ${hintTheme}`}>Shift type and schedule</p>
               </div>
-              
+
               <div className="p-4 space-y-4">
                 <div>
                   <label htmlFor="shift-type" className={`block text-sm font-medium mb-1 ${labelTheme}`}>
@@ -763,13 +784,13 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                 </div>
               </div>
             </div>
-            
+
             {/* Section: Departments */}
             <div className={`rounded-xl border ${sectionCard}`}>
               <div className={`px-4 py-3 border-b ${subtleDivider}`}>
                 <h4 className="text-sm font-semibold flex items-center gap-2">
                   <Building2 className="w-4 h-4" />
-                  Department Access <span className={`text-xs font-normal ${hintTheme}`}>(Optional)</span>
+                  Department Access
                 </h4>
                 <p className={`text-xs mt-1 ${hintTheme}`}>
                   Select departments this staff member can access
@@ -842,7 +863,7 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                     } selected`
                   : 'No departments selected'}
               </div>
-              
+
               {formErrors.department_ids && (
                 <div className="px-4 pb-4">
                   <p className="text-sm text-red-500 flex items-center gap-1">
@@ -852,19 +873,19 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                 </div>
               )}
             </div>
- 
+
             {/* Section: Module Access */}
             <div className={`rounded-xl border ${sectionCard}`}>
               <div className={`px-4 py-3 border-b ${subtleDivider}`}>
                 <h4 className="text-sm font-semibold flex items-center gap-2">
                   <Package className="w-4 h-4" />
-                  Module Access <span className="text-red-500">*</span>
+                  Module Access
                 </h4>
                 <p className={`text-xs mt-1 ${hintTheme}`}>
-                  Select the modules this staff member can access (at least one required)
+                  Select the modules this staff member can access
                 </p>
               </div>
-              
+
               <div className="p-4 space-y-2 max-h-80 overflow-y-auto">
                 {selectableModules.length === 0 ? (
                   <div className={`p-4 rounded-lg text-center text-sm ${
@@ -875,7 +896,7 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                 ) : (
                   selectableModules.map((module) => {
                     const isChecked = formData.module_codes.includes(module.code);
-                    
+
                     return (
                       <label
                         key={module.id}
@@ -915,7 +936,7 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                   })
                 )}
               </div>
-              
+
               {formErrors.module_codes && (
                 <div className="px-4 pb-4">
                   <p className="text-sm text-red-500 flex items-center gap-1">
@@ -924,7 +945,7 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                   </p>
                 </div>
               )}
-              
+
               {formData.module_codes.length > 0 && (
                 <div className={`px-4 pb-4 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   {formData.module_codes.length} module{formData.module_codes.length !== 1 ? 's' : ''} selected
@@ -933,16 +954,16 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
             </div>
           </div>
         )}
-        
+
         {/* Footer - Sticky */}
         <div className={`sticky bottom-0 p-4 sm:p-5 border-t ${subtleDivider} backdrop-blur-md ${
           isDark ? 'bg-gray-950/95' : 'bg-white/95'
         }`}>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <p className={`text-xs ${hintTheme}`}>
-              Fields marked with <span className="text-red-500">*</span> are required.
+              At least one field must be filled to enable save.
             </p>
-            
+
             <div className="flex items-center gap-3">
               <button
                 onClick={onClose}
@@ -956,24 +977,24 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
               >
                 Cancel
               </button>
-              
-             <button
-                  onClick={handleSubmit}
-                  disabled={updateMutation.isPending || !canSubmit}
-                  type="button"
-                  className={`flex-1 sm:flex-none px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                    isDark ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
-                  } ${!(updateMutation.isPending || !canSubmit) ? 'cursor-pointer' : ''}`}
-                >
-                  {updateMutation.isPending ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Saving...
-                    </span>
-                  ) : (
-                    'Save'
-                  )}
-                </button>
+
+              <button
+                onClick={handleSubmit}
+                disabled={updateMutation.isPending || !hasAtLeastOneField}
+                type="button"
+                className={`flex-1 sm:flex-none px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isDark ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
+                } ${!(updateMutation.isPending || !hasAtLeastOneField) ? 'cursor-pointer' : ''}`}
+              >
+                {updateMutation.isPending ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </span>
+                ) : (
+                  'Save'
+                )}
+              </button>
             </div>
           </div>
         </div>

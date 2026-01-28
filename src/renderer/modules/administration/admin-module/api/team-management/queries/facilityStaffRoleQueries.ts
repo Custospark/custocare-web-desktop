@@ -285,7 +285,7 @@ export const useUpdateFacilityStaffRole = (
       return response.data;
     },
     onSuccess: (data) => {
-      const successMessage = data.message || 'Staff role assignment updated successfully!';
+      const successMessage ='Staff role assignment updated successfully!';
       showToast('success', successMessage, 8000);
       callbacks.onSuccess?.(data);
     },

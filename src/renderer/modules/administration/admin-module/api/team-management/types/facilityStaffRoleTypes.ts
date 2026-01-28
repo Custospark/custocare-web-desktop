@@ -133,13 +133,14 @@ export interface FacilityStaffRole {
  * Request payload for updating a facility staff role.
  * All fields are optional - only provided fields will be updated.
  */
-export interface UpdateFacilityStaffRoleRequest {
-  // Optional fields for update
-  facility_id?: number;
-  staff_id?: number;
-  employment_type:string;
+ export interface UpdateFacilityStaffRoleRequest {
+  facility_id: number;   // make required if always sent
+  staff_id: number;      // make required if always sent
+
+  employment_type?: string;
+  employment_status?: string;
+
   role_code?: string;
-  employment_status:string;
   department_ids?: number[] | null;
   is_primary_facility?: boolean;
   module_codes?: string[] | null;
@@ -161,6 +162,7 @@ export interface UpdateFacilityStaffRoleRequest {
   facility_satisfaction_score?: number | null;
   metadata?: Record<string, string> | null;
 }
+
 
 /**
  * Query parameters for filtering facility staff role list.
