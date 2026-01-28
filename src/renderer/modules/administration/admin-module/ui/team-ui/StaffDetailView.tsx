@@ -8,7 +8,7 @@
  * @component StaffDetailView
  */
 
-import React from 'react';
+import React, { JSX } from 'react';
 import {
   ArrowLeft,
   User,
@@ -20,11 +20,12 @@ import {
   Shield,
   Award,
   Clock,
-  Edit,
-  Trash2,
   CheckCircle,
   XCircle,
   AlertTriangle,
+  PauseCircle,
+  Ban,
+  HelpCircle,
 } from 'lucide-react';
 import { useGetStaffById } from '../../api/team-management/queries/useStaffQueries';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
@@ -34,7 +35,6 @@ interface StaffDetailViewProps {
   staffId:number;
   facilityId: number;
   onBack?: () => void;
-  onEdit?: () => void;
   refreshKey?:number;
   onStaffSelect?:number;
 
@@ -44,7 +44,6 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
   theme,
   staffId,
   onBack,
-  onEdit,
 }) => {
   const isDark = theme === 'dark';
   
@@ -58,6 +57,57 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
     return (
       <LoadingSkeleton variant='table' theme={theme} message='Loading staff details..' />);
   }
+
+const assignmentStatus =staff?.facility_role_summary?.assignment_status ?? 'unknown';
+
+const statusConfig: Record<string, { label: string; icon: JSX.Element; classes: string }> = {
+  active: {
+    label: 'Active',
+    icon: <CheckCircle className="w-4 h-4" />,
+    classes: isDark
+      ? 'bg-green-900/30 text-green-300'
+      : 'bg-green-100 text-green-800',
+  },
+  inactive: {
+    label: 'Inactive',
+    icon: <XCircle className="w-4 h-4" />,
+    classes: isDark
+      ? 'bg-gray-900/30 text-gray-300'
+      : 'bg-gray-100 text-gray-800',
+  },
+  suspended: {
+    label: 'Suspended',
+    icon: <PauseCircle className="w-4 h-4" />,
+    classes: isDark
+      ? 'bg-yellow-900/30 text-yellow-300'
+      : 'bg-yellow-100 text-yellow-800',
+  },
+  terminated: {
+    label: 'Terminated',
+    icon: <Ban className="w-4 h-4" />,
+    classes: isDark
+      ? 'bg-red-900/30 text-red-300'
+      : 'bg-red-100 text-red-800',
+  },
+  pending: {
+    label: 'Pending',
+    icon: <Clock className="w-4 h-4" />,
+    classes: isDark
+      ? 'bg-blue-900/30 text-blue-300'
+      : 'bg-blue-100 text-blue-800',
+  },
+};
+
+const status =
+  assignmentStatus && statusConfig[assignmentStatus]
+    ? statusConfig[assignmentStatus]
+    : {
+        label: 'Unknown',
+        icon: <HelpCircle className="w-4 h-4" />,
+        classes: isDark
+          ? 'bg-gray-900/30 text-gray-400'
+          : 'bg-gray-100 text-gray-600',
+      };
   
   if (!staff) {
     return (
@@ -90,34 +140,16 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
       }`}>
         <div className="flex items-start justify-between gap-4 mb-6">
           <button
-            onClick={onBack}
-            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors ${
-              isDark 
-                ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' 
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to List
-          </button>
-          
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onEdit}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-            >
-              <Edit className="w-4 h-4" />
-              Edit Profile
-            </button>
-            <button
-              className={`p-2 rounded-lg transition-colors ${
-                isDark ? 'hover:bg-gray-800 text-red-400' : 'hover:bg-gray-100 text-red-600'
-              }`}
-              title="Delete staff"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
+          onClick={onBack}
+          className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
+            isDark
+              ? 'bg-blue-600 hover:bg-blue-500 text-white'
+              : 'bg-blue-500 hover:bg-blue-600 text-white'
+          }`}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to List
+        </button>
         </div>
         
         {/* Profile Header */}
@@ -125,53 +157,62 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
           <div className={`w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold ${
             isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'
           }`}>
-            {staff.user?.first_name?.[0]}{staff.user?.last_name?.[0]}
+            {staff.user?.profile.first_name?.[0]}{staff.user?.profile.last_name?.[0]}
           </div>
           
           <div className="flex-1">
             <h2 className="text-2xl font-bold">
               {staff.professional_title && `${staff.professional_title} `}
-              {staff.user?.full_name}
+              {staff.user?.profile.full_name}
             </h2>
             <p className={`mt-1 capitalize ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              {staff.global_role_level.replace(/_/g, ' ')}
+              {staff.facility_role_summary?.role_at_facility.replace(/_/g, ' ')}
             </p>
             
-            <div className="flex flex-wrap gap-2 mt-3">
-              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
-                staff.is_active
-                  ? (isDark ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-800')
-                  : (isDark ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-800')
-              }`}>
-                {staff.is_active ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                {staff.is_active ? 'Active' : 'Inactive'}
-              </span>
-              
-              {staff.accepts_new_patients && (
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+               <div className="flex flex-wrap gap-2 mt-3">
+            {/* Assignment Status */}
+            <span
+              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${status.classes}`}
+            >
+              {status.icon}
+              {status.label}
+            </span>
+
+            {/* Accepting Patients */}
+            {staff.accepts_new_patients && (
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                   isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-800'
-                }`}>
-                  Accepting Patients
-                </span>
-              )}
-              
-              {staff.can_supervise_trainees && (
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                }`}
+              >
+                Accepting Patients
+              </span>
+            )}
+
+            {/* Supervisor */}
+            {staff.can_supervise_trainees && (
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                   isDark ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-100 text-purple-800'
-                }`}>
-                  Supervisor
-                </span>
-              )}
-              
-              {staff.has_expired_license && (
-                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                }`}
+              >
+                Supervisor
+              </span>
+            )}
+
+            {/* License Expired */}
+            {staff.has_expired_license && (
+              <span
+                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
                   isDark ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-800'
-                }`}>
-                  <AlertTriangle className="w-4 h-4" />
-                  License Expired
-                </span>
-              )}
-            </div>
+                }`}
+              >
+                <AlertTriangle className="w-4 h-4" />
+                License Expired
+              </span>
+            )}
+          </div>
+
           </div>
         </div>
       </div>
@@ -192,7 +233,7 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
               <Mail className={`w-5 h-5 mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
               <div>
                 <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Email</div>
-                <div>{staff.user?.email || 'Not provided'}</div>
+                <div>{staff.user?.contact.email || 'Not provided'}</div>
               </div>
             </div>
             
@@ -200,7 +241,7 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
               <Phone className={`w-5 h-5 mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
               <div>
                 <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Phone</div>
-                <div>{staff.user?.phone || 'Not provided'}</div>
+                <div>{staff.user?.contact.phone || 'Not provided'}</div>
               </div>
             </div>
             

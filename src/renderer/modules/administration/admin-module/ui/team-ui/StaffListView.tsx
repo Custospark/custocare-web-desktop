@@ -34,7 +34,6 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
   theme,
   facilityId,
   onStaffSelect,
-  onCreateNew,
 }) => {
   const isDark = theme === 'dark';
   
@@ -164,14 +163,9 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
             }`} />
             <h3 className="text-lg font-medium mb-2">No Staff Found</h3>
             <p className={`mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              {searchTerm ? 'No staff match your search.' : 'No staff members to display.'}
+              {searchTerm ? 'No staff match your search.' : 'No staff members to display.Invite staff to your faciity and they will appear here.'}
             </p>
-            <button
-              onClick={onCreateNew}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-            >
-              Add First Staff Member
-            </button>
+         
           </div>
         ) : (
          <div className="overflow-x-auto">
@@ -198,7 +192,7 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
                   Status
                 </th>
 
-                <th className={`px-4 py-3 text-right text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                <th className={`px-4 py-3 text-center text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   Actions
                 </th>
               </tr>
@@ -296,36 +290,43 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
                     {/* Actions */}
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => onStaffSelect(staffMember.id)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700'
-                          }`}
-                          title="View details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                        {/* View details */}
+                      <button
+                        onClick={() => onStaffSelect(staffMember.id)}
+                        className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                          isDark
+                            ? 'hover:bg-blue-900/30 text-blue-300'
+                            : 'hover:bg-blue-100 text-blue-600'
+                        }`}
+                        title="View details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
 
-                        <button
-                          className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            isDark
-                              ? 'bg-indigo-900/20 text-indigo-300 hover:bg-indigo-900/30'
-                              : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
-                          }`}
-                          title="Modify permissions"
-                        >
-                          <Shield className="w-4 h-4" />
-                          Permissions
-                        </button>
+                      {/* Modify permissions (primary action) */}
+                      <button
+                        className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                          isDark
+                            ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                            : 'bg-blue-500 hover:bg-blue-600 text-white'
+                        }`}
+                        title="Modify permissions"
+                      >
+                        <Shield className="w-4 h-4" />
+                        Permissions
+                      </button>
 
-                        <button
-                          className={`p-2 rounded-lg transition-colors ${
-                            isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700'
-                          }`}
-                          title="More options"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
+                      {/* More options */}
+                      <button
+                        className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                          isDark
+                            ? 'hover:bg-blue-900/30 text-blue-300'
+                            : 'hover:bg-blue-100 text-blue-600'
+                        }`}
+                        title="More options"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
                       </div>
                     </td>
                   </tr>

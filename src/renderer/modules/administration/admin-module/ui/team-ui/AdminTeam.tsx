@@ -262,10 +262,7 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
             staffId={selectedStaffId}
             facilityId={activeFacilityId}
             onBack={() => handleViewChange('list')}
-            onEdit={() => {
-              // Could open edit modal or navigate to edit view
-              console.log('Edit staff:', selectedStaffId);
-            }}
+         
           />
         )}
       </div>
