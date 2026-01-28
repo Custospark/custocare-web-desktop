@@ -58,7 +58,7 @@ interface FormData {
   assignment_status: AssignmentStatus | '';
   role_code: string;
   department_ids: number[];
-  module_codes: string[];
+  module_code: string[];
   shift_schedule: Record<string, string> | null;
   shift_type: ShiftType | null;
   employment_status: string;
@@ -87,7 +87,7 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
     assignment_status: '',
     role_code: '',
     department_ids: [],
-    module_codes: [],
+    module_code: [],
     shift_schedule: null,
     shift_type: null,
     employment_status: '',
@@ -190,7 +190,7 @@ const hasAtLeastOneField =
   formData.assignment_status !== '' ||
   formData.role_code !== '' ||
   formData.department_ids.length > 0 ||
-  formData.module_codes.length > 0 ||
+  formData.module_code.length > 0 ||
   formData.shift_type !== null ||
   formData.employment_status !== '' ||
   formData.employment_type !== '' ||
@@ -264,13 +264,13 @@ const hasAtLeastOneField =
       }
     }
 
-    // Validate module_codes if provided
-    if (Array.isArray(formData.module_codes) && formData.module_codes.length > 0) {
-      const invalidModules = formData.module_codes.filter(code =>
+    // Validate module_code if provided
+    if (Array.isArray(formData.module_code) && formData.module_code.length > 0) {
+      const invalidModules = formData.module_code.filter(code =>
         typeof code !== 'string' || code.trim() === ''
       );
       if (invalidModules.length > 0) {
-        errors.module_codes = 'Invalid module codes detected';
+        errors.module_code = 'Invalid module codes detected';
       }
     }
 
@@ -291,28 +291,61 @@ const hasAtLeastOneField =
       console.error('At least one field must be filled');
       return;
     }
+const baseModuleCodes = formData.module_code ?? [];
 
-        const updateData: UpdateFacilityStaffRoleRequest = {
-        facility_id: facilityId,
-        staff_id: staffInfo.staff_id,
+const moduleCodesWithAccount =
+  baseModuleCodes.length > 0
+    ? Array.from(new Set([...baseModuleCodes, 'account']))
+    : [];
 
-        ...(formData.assignment_status ? { assignment_status: formData.assignment_status as AssignmentStatus } : {}),
-        ...(formData.role_code ? { role_code: formData.role_code } : {}),
-        ...(formData.department_ids.length > 0 ? { department_ids: formData.department_ids } : {}),
-        ...(formData.module_codes.length > 0 ? { module_codes: formData.module_codes } : {}),
-        ...(formData.shift_schedule !== null ? { shift_schedule: formData.shift_schedule } : {}),
-        ...(formData.shift_type !== null ? { shift_type: formData.shift_type } : {}),
+const updateData: UpdateFacilityStaffRoleRequest = {
+  facility_id: facilityId,
+  staff_id: staffInfo.staff_id,
 
-        ...(formData.employment_status
-          ? { employment_status: formData.employment_status as UpdateFacilityStaffRoleRequest['employment_status'] }
-          : {}),
+  ...(formData.assignment_status
+    ? { assignment_status: formData.assignment_status as AssignmentStatus }
+    : {}),
 
-        ...(formData.employment_type
-          ? { employment_type: formData.employment_type as UpdateFacilityStaffRoleRequest['employment_type'] }
-          : {}),
+  ...(formData.role_code
+    ? { role_code: formData.role_code }
+    : {}),
 
-        ...(formData.effective_from ? { effective_from: formData.effective_from } : {}),
-      };
+  ...(formData.department_ids.length > 0
+    ? { department_ids: formData.department_ids }
+    : {}),
+
+  ...(moduleCodesWithAccount.length > 0
+    ? { module_code: moduleCodesWithAccount }
+    : {}),
+
+  ...(formData.shift_schedule !== null
+    ? { shift_schedule: formData.shift_schedule }
+    : {}),
+
+  ...(formData.shift_type !== null
+    ? { shift_type: formData.shift_type }
+    : {}),
+
+  ...(formData.employment_status
+    ? {
+        employment_status:
+          formData.employment_status as UpdateFacilityStaffRoleRequest['employment_status'],
+      }
+    : {}),
+
+  ...(formData.employment_type
+    ? {
+        employment_type:
+          formData.employment_type as UpdateFacilityStaffRoleRequest['employment_type'],
+      }
+    : {}),
+
+  ...(formData.effective_from
+    ? { effective_from: formData.effective_from }
+    : {}),
+};
+
+
 
 
     updateMutation.mutate({
@@ -324,7 +357,7 @@ const hasAtLeastOneField =
   // Handle module toggle with array integrity
   const handleToggleModule = useCallback((moduleCode: string) => {
     setFormData(prev => {
-      const currentModules = prev.module_codes;
+      const currentModules = prev.module_code;
       const isCurrentlySelected = currentModules.includes(moduleCode);
 
       const updatedModules = isCurrentlySelected
@@ -333,15 +366,15 @@ const hasAtLeastOneField =
 
       return {
         ...prev,
-        module_codes: updatedModules,
+        module_code: updatedModules,
       };
     });
 
     // Clear error when user makes a selection
     setFormErrors(prev => {
-      if (!prev.module_codes) return prev;
+      if (!prev.module_code) return prev;
       const newErrors = { ...prev };
-      delete newErrors.module_codes;
+      delete newErrors.module_code;
       return newErrors;
     });
   }, []);
@@ -443,9 +476,9 @@ const hasAtLeastOneField =
                 <Shield className="w-5 h-5 flex-shrink-0" />
                 Edit Staff Permissions
               </h3>
-              <p className={`text-xs sm:text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Update role, modules, and employment details
-              </p>
+              {/* <p className={`text-xs sm:text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Update role, P, and employment details
+              </p> */}
               <p className={`text-xs mt-1 ${hintTheme}`}>
                 Tip: Press <kbd className={`px-1 rounded ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>Ctrl/⌘ + Enter</kbd> to save
               </p>
@@ -468,7 +501,7 @@ const hasAtLeastOneField =
         {/* Body */}
         {isFormLoading ? (
           <div className="p-5">
-            <LoadingSkeleton variant='default' theme={theme} message='Loading permissions...' />
+            <LoadingSkeleton variant='form' theme={theme} message='Loading permissions...' />
           </div>
         ) : (
           <div className="p-4 sm:p-5 space-y-4 sm:space-y-5">
@@ -879,10 +912,10 @@ const hasAtLeastOneField =
               <div className={`px-4 py-3 border-b ${subtleDivider}`}>
                 <h4 className="text-sm font-semibold flex items-center gap-2">
                   <Package className="w-4 h-4" />
-                  Module Access
+                  Grant Access
                 </h4>
                 <p className={`text-xs mt-1 ${hintTheme}`}>
-                  Select the modules this staff member can access
+                  Select the access level this staff member
                 </p>
               </div>
 
@@ -895,7 +928,7 @@ const hasAtLeastOneField =
                   </div>
                 ) : (
                   selectableModules.map((module) => {
-                    const isChecked = formData.module_codes.includes(module.code);
+                    const isChecked = formData.module_code.includes(module.code);
 
                     return (
                       <label
@@ -937,18 +970,18 @@ const hasAtLeastOneField =
                 )}
               </div>
 
-              {formErrors.module_codes && (
+              {formErrors.module_code && (
                 <div className="px-4 pb-4">
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
-                    {formErrors.module_codes}
+                    {formErrors.module_code}
                   </p>
                 </div>
               )}
 
-              {formData.module_codes.length > 0 && (
+              {formData.module_code.length > 0 && (
                 <div className={`px-4 pb-4 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {formData.module_codes.length} module{formData.module_codes.length !== 1 ? 's' : ''} selected
+                  {formData.module_code.length} module{formData.module_code.length !== 1 ? 's' : ''} selected
                 </div>
               )}
             </div>

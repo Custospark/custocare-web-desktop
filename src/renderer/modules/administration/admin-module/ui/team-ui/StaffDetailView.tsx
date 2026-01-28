@@ -26,9 +26,6 @@ import {
   Ban,
   HelpCircle,
   Users,
-  Stethoscope,
-  FileText,
-  Pill,
   Building,
 } from 'lucide-react';
 import { useGetStaffById } from '../../api/team-management/queries/useStaffQueries';
@@ -58,7 +55,7 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
   
   if (isLoading) {
     return (
-      <LoadingSkeleton variant='table' theme={theme} message='Loading staff details...' />
+      <LoadingSkeleton variant='form' theme={theme} message='Loading staff details...' />
     );
   }
 
@@ -102,18 +99,31 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
     },
   };
 
-  const formatJoinedOn = (value?: string | null) => {
-    if (!value) return 'Not specified';
+        const formatPermissionLabel = (value: string) => {
+        const formatted = value
+          .replace(/[_-]/g, ' ')
+          .replace(/\b\w/g, (char) => char.toUpperCase());
 
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return 'Not specified';
+        if (value === 'account') {
+          return `${formatted} (Default)`;
+        }
 
-    return new Intl.DateTimeFormat('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    }).format(d);
-  };
+        return formatted;
+      };
+
+      const formatJoinedOn = (value?: string | null): string => {
+        if (!value) return 'Not specified';
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return 'Not specified';
+
+        return new Intl.DateTimeFormat('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }).format(date);
+      };
+
 
   const status =
     assignmentStatus && statusConfig[assignmentStatus]
@@ -349,81 +359,63 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
           </div>
         </div>
         
-        {/* Clinical Capabilities */}
-        <div className={`rounded-xl p-5 border ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+     {/* Permission Access */}
+        <div
+          className={`rounded-xl p-5 border ${
+            isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
+          }`}
+        >
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <div className={`p-1.5 rounded-md ${isDark ? 'bg-teal-900/30' : 'bg-teal-100'}`}>
-              <Stethoscope className={`w-4 h-4 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
+            <div
+              className={`p-1.5 rounded-md ${
+                isDark ? 'bg-blue-900/30' : 'bg-blue-100'
+              }`}
+            >
+              <Shield className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
             </div>
-            Clinical Capabilities
+            Permission Access
           </h3>
-          
-            <div className="space-y-3">
-            <div className={`flex items-center justify-between p-3 rounded-lg ${
-              isDark 
-                ? 'bg-gray-800/60 text-gray-200 border border-gray-700/50' 
-                : 'bg-gray-50 text-gray-800 border border-gray-200'
-            }`}>
-              <div className="flex items-center gap-3">
-                <Users className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
-                <span className="font-medium">Supervise Trainees</span>
+
+          <div className="space-y-3">
+            {Array.isArray(staff.facility_role_summary?.module_codes) &&
+            staff.facility_role_summary.module_codes.length > 0 ? (
+              staff.facility_role_summary.module_codes.map((permission: string) => (
+                <div
+                  key={permission}
+                  className={`flex items-center justify-between p-3 rounded-lg ${
+                    isDark
+                      ? 'bg-gray-800/60 text-gray-200 border border-gray-700/50'
+                      : 'bg-gray-50 text-gray-800 border border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Shield
+                      className={`w-4 h-4 ${
+                        isDark ? 'text-blue-400' : 'text-blue-600'
+                      }`}
+                    />
+                    <span className="font-medium">
+                      {formatPermissionLabel(permission)}
+                    </span>
+                  </div>
+
+                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500" />
+                </div>
+              ))
+            ) : (
+              <div
+                className={`p-4 rounded-lg text-center text-sm ${
+                  isDark
+                    ? 'bg-gray-800 text-gray-400'
+                    : 'bg-gray-50 text-gray-600'
+                }`}
+              >
+                No permissions assigned
               </div>
-              {staff.can_supervise_trainees ? (
-                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500" />
-              ) : (
-                <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-              )}
-            </div>
-            
-            <div className={`flex items-center justify-between p-3 rounded-lg ${
-              isDark 
-                ? 'bg-gray-800/60 text-gray-200 border border-gray-700/50' 
-                : 'bg-gray-50 text-gray-800 border border-gray-200'
-            }`}>
-              <div className="flex items-center gap-3">
-                <Pill className={`w-4 h-4 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
-                <span className="font-medium">Order Controlled Substances</span>
-              </div>
-              {staff.can_order_controlled_substances ? (
-                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500" />
-              ) : (
-                <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-              )}
-            </div>
-            
-            <div className={`flex items-center justify-between p-3 rounded-lg ${
-              isDark 
-                ? 'bg-gray-800/60 text-gray-200 border border-gray-700/50' 
-                : 'bg-gray-50 text-gray-800 border border-gray-200'
-            }`}>
-              <div className="flex items-center gap-3">
-                <FileText className={`w-4 h-4 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
-                <span className="font-medium">Sign Death Certificates</span>
-              </div>
-              {staff.can_sign_death_certificates ? (
-                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500" />
-              ) : (
-                <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-              )}
-            </div>
-            
-            <div className={`flex items-center justify-between p-3 rounded-lg ${
-              isDark 
-                ? 'bg-gray-800/60 text-gray-200 border border-gray-700/50' 
-                : 'bg-gray-50 text-gray-800 border border-gray-200'
-            }`}>
-              <div className="flex items-center gap-3">
-                <User className={`w-4 h-4 ${isDark ? 'text-green-400' : 'text-green-600'}`} />
-                <span className="font-medium">Accept New Patients</span>
-              </div>
-              {staff.accepts_new_patients ? (
-                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500" />
-              ) : (
-                <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-              )}
-            </div>
+            )}
           </div>
         </div>
+
       </div>
     </div>
   );

@@ -320,33 +320,36 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-center gap-2">
                             {/* View details */}
-                            <button
-                              onClick={() => onStaffSelect(staffMember.id)}
-                              className={`p-2 rounded-lg transition-colors cursor-pointer ${
-                                isDark
-                                  ? 'hover:bg-blue-900/30 text-blue-300'
-                                  : 'hover:bg-blue-100 text-blue-600'
-                              }`}
-                              title="View details"
-                              type="button"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
+                           {/* View */}
+                  <button
+                    onClick={() => onStaffSelect(staffMember.id)}
+                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                      isDark
+                        ? 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300'
+                        : 'bg-blue-50 hover:bg-blue-100 text-blue-700'
+                    }`}
+                    title="View details"
+                    type="button"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>View</span>
+                  </button>
 
-                            {/* Modify permissions */}
-                            <button
-                              onClick={() => handleOpenPermissions(staffMember)}
-                              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
-                                isDark
-                                  ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                                  : 'bg-blue-500 hover:bg-blue-600 text-white'
-                              }`}
-                              title="Modify permissions"
-                              type="button"
-                            >
-                              <Shield className="w-4 h-4" />
-                              <span className="hidden sm:inline">Permissions</span>
-                            </button>
+                  {/* Modify permissions */}
+                  <button
+                    onClick={() => handleOpenPermissions(staffMember)}
+                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                      isDark
+                        ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                    }`}
+                    title="Modify permissions"
+                    type="button"
+                  >
+                    <Shield className="w-4 h-4" />
+                    <span className="hidden sm:inline">Permissions</span>
+                  </button>
+
 
                             {/* More options */}
                             <button

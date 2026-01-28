@@ -69,7 +69,7 @@ export interface FacilityStaffRole {
   termination_reason: string | null;
 
   // Privileges at this facility
-  module_codes: string[] | null;
+  module_code: string[] | null;
   privileges_bitmask: string[] | null;
   accessible_patient_populations: string[] | null;
   prescribing_authority_at_facility: string[] | null;

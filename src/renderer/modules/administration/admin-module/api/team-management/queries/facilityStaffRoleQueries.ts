@@ -1,15 +1,15 @@
 /**
  * ============================================================================
- * FACILITY STAFF ROLE REACT QUERY HOOKS
+ * FACILITY STAFF ROLE REACT QUERY HOOKS - WITH ACTIVE CONTEXT SYNC
  * ============================================================================
  * 
  * This file contains all React Query mutation and query hooks for facility
  * staff role management operations. Handles API communication, error handling,
- * and toast notifications.
+ * and toast notifications with automatic user context synchronization.
  * 
  * @module useFacilityStaffRoleQueries
  * @description Provides type-safe, reusable hooks for all facility staff role
- * CRUD operations and assignments.
+ * CRUD operations and assignments with automatic context updates.
  * 
  * @requires @tanstack/react-query
  * @requires axios
@@ -19,8 +19,14 @@ import { useMutation, useQuery, type UseQueryOptions } from '@tanstack/react-que
 import type { AxiosError } from 'axios';
 import { axiosInstance } from '../../../../../../app/api/axiosConfig';
 import { useToast } from '../../../../../../app/store/contexts/toast/useToast';
+import { useAppDispatch } from '../../../../../../app/store/hooks/useApp';
+import { 
+  setUserContext,
+  setLoading as setContextLoading,
+  setError as setContextError,
+  type UserContext,
+} from '../../../../../../app/store/slices/activeContextSlice';
 import type {
-  ApiErrorResponse,
   FacilityStaffRoleFilters,
   FacilityStaffRole,
   FacilityStaffRoleId,
@@ -62,6 +68,69 @@ export const facilityStaffRoleKeys = {
     facilityId,
     status
   ] as const,
+  userContext: () => ['user-context'] as const,
+};
+
+/* -------------------------------------------------------------------------- */
+/*                              UTILITY FUNCTIONS                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Fetch updated user context after facility staff role updates
+ * This ensures the user's facility roles and permissions are up-to-date
+ */
+export const fetchUpdatedUserContext = async (): Promise<UserContext> => {
+  try {
+    const response = await axiosInstance.get('/user/context/resolve');
+    
+    if (response.data && response.data.data) {
+      return response.data.data;
+    }
+    
+    throw new Error('Invalid context response from server');
+  } catch (error) {
+    console.error('Failed to fetch updated user context:', error);
+    throw error;
+  }
+};
+
+/**
+ * Helper function to extract error message from Axios error.
+ * Prioritizes API message, falls back to generic error message.
+ * 
+ * @param error - Axios error from failed request
+ * @param fallbackMessage - Default message if API message unavailable
+ * @returns Human-readable error message
+ * 
+ * @internal
+ */
+export const extractErrorMessage = (
+  error: AxiosError<ApiErrorResponse>,
+  fallbackMessage = 'An unexpected error occurred.'
+): string => {
+  return error.response?.data?.message || error.message || fallbackMessage;
+};
+
+/**
+ * Helper function to format validation errors into readable string.
+ * Converts Laravel validation error format to user-friendly display.
+ * 
+ * @param errors - Validation errors object from API
+ * @returns Formatted error string or empty string if no errors
+ * 
+ * @internal
+ */
+export const formatValidationErrors = (errors?: Record<string, string[]>): string => {
+  if (!errors || Object.keys(errors).length === 0) {
+    return '';
+  }
+
+  return Object.entries(errors)
+    .map(([field, messages]) => {
+      const fieldName = field.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+      return `${fieldName}: ${messages.join(', ')}`;
+    })
+    .join(' | ');
 };
 
 /* -------------------------------------------------------------------------- */
@@ -199,6 +268,17 @@ export const useGetFacilityStaffAssignments = (
 /*                             MUTATION HOOKS                                 */
 /* -------------------------------------------------------------------------- */
 
+interface ApiErrorResponse {
+  message?: string;
+  errors?: Record<string, string[]>;
+}
+
+interface UseUpdateFacilityStaffRoleOptions {
+  onSuccess?: (data: UpdateFacilityStaffRoleResponse) => void;
+  onError?: (error: AxiosError<ApiErrorResponse>) => void;
+  syncUserContext?: boolean; // Whether to sync user context after update
+}
+
 /**
  * Creates a new facility staff role assignment.
  * Handles validation errors and displays appropriate toast notifications.
@@ -255,15 +335,17 @@ export const useCreateFacilityStaffRole = (
 };
 
 /**
- * Updates an existing facility staff role assignment by ID.
+ * Updates an existing facility staff role assignment by ID with automatic user context sync.
  * Supports partial updates - only provided fields are modified.
+ * Automatically fetches and updates user context if syncUserContext is true.
  * 
- * @param callbacks - Optional onSuccess and onError callbacks
+ * @param options - Configuration options including callbacks and context sync
  * @returns Mutation object with mutate function and state
  * 
  * @example
  * const { mutate } = useUpdateFacilityStaffRole({
- *   onSuccess: () => queryClient.invalidateQueries({ queryKey: facilityStaffRoleKeys.all }),
+ *   onSuccess: (data) => console.log('Updated successfully'),
+ *   syncUserContext: true,
  * });
  * 
  * mutate({
@@ -275,20 +357,71 @@ export const useCreateFacilityStaffRole = (
  * });
  */
 export const useUpdateFacilityStaffRole = (
-  callbacks: MutationCallbacks<UpdateFacilityStaffRoleResponse, AxiosError<ApiErrorResponse>> = {}
+  options: UseUpdateFacilityStaffRoleOptions = {}
 ) => {
   const { showToast } = useToast();
+  const dispatch = useAppDispatch();
+  const { onSuccess, onError, syncUserContext = true } = options;
 
   return useMutation<UpdateFacilityStaffRoleResponse, AxiosError<ApiErrorResponse>, UpdateFacilityStaffRoleParams>({
     mutationFn: async ({ id, data }: UpdateFacilityStaffRoleParams) => {
       const response = await axiosInstance.put<UpdateFacilityStaffRoleResponse>(`/facility-staff-roles/${id}`, data);
       return response.data;
     },
-    onSuccess: (data) => {
-      const successMessage ='Staff role assignment updated successfully!';
-      showToast('success', successMessage, 8000);
-      callbacks.onSuccess?.(data);
+    
+    onMutate: () => {
+      // Set loading state before mutation starts
+      if (syncUserContext) {
+        dispatch(setContextLoading(true));
+      }
     },
+    
+    onSuccess: async (data) => {
+      try {
+        // Show success toast
+        const successMessage ='Staff role assignment updated successfully!';
+        showToast('success', successMessage, 8000);
+        
+        // Sync user context if enabled
+        if (syncUserContext) {
+          dispatch(setContextLoading(true));
+          
+          const updatedContext = await fetchUpdatedUserContext();
+          
+          // Update activeContext with the new information
+          dispatch(setUserContext(updatedContext));
+          
+          showToast('info', 'User context updated with new permissions', 5000);
+        }
+        
+        // Call optional success callback
+        onSuccess?.(data);
+        
+      } catch (contextError) {
+        // Role updated but context update failed
+        console.error('Failed to update user context:', contextError);
+        
+        if (syncUserContext) {
+          dispatch(setContextError(
+            contextError instanceof Error 
+              ? contextError.message 
+              : 'Failed to update user context'
+          ));
+          
+          // Still show success for role update
+          showToast(
+            'warning',
+            'Role updated but context sync failed. Some permissions may not reflect immediately.',
+            7000
+          );
+        }
+      } finally {
+        if (syncUserContext) {
+          dispatch(setContextLoading(false));
+        }
+      }
+    },
+    
     onError: (error: AxiosError<ApiErrorResponse>) => {
       const apiMessage = error.response?.data?.message || error.message || 'Failed to update staff role assignment.';
 
@@ -300,10 +433,46 @@ export const useUpdateFacilityStaffRole = (
       }
 
       const displayMessage = errorDetails ? `${apiMessage} (${errorDetails})` : apiMessage;
-      showToast('error', displayMessage, 8000);
+      showToast('error', displayMessage, 9000);
 
-      callbacks.onError?.(error);
+      // Set error in context slice
+      if (syncUserContext) {
+        dispatch(setContextError(displayMessage));
+      }
+
+      // Reset loading state
+      if (syncUserContext) {
+        dispatch(setContextLoading(false));
+      }
+
+      // Call optional error callback
+      onError?.(error);
     },
+    
+    onSettled: () => {
+      // Ensure loading state is reset regardless of success/error
+      if (syncUserContext) {
+        dispatch(setContextLoading(false));
+      }
+    },
+  });
+};
+
+/**
+ * Updates facility staff role (legacy version for backward compatibility)
+ * 
+ * @param callbacks - Optional onSuccess and onError callbacks
+ * @returns Mutation object with mutate function and state
+ * 
+ * @deprecated Use useUpdateFacilityStaffRole with options instead
+ */
+export const useUpdateFacilityStaffRoleLegacy = (
+  callbacks: MutationCallbacks<UpdateFacilityStaffRoleResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  return useUpdateFacilityStaffRole({
+    onSuccess: callbacks.onSuccess,
+    onError: callbacks.onError,
+    syncUserContext: false, // Legacy version doesn't sync context
   });
 };
 
@@ -355,47 +524,8 @@ export const useDeleteFacilityStaffRole = (
 };
 
 /* -------------------------------------------------------------------------- */
-/*                           UTILITY FUNCTIONS                                */
+/*                           ADDITIONAL UTILITY FUNCTIONS                     */
 /* -------------------------------------------------------------------------- */
-
-/**
- * Helper function to extract error message from Axios error.
- * Prioritizes API message, falls back to generic error message.
- * 
- * @param error - Axios error from failed request
- * @param fallbackMessage - Default message if API message unavailable
- * @returns Human-readable error message
- * 
- * @internal
- */
-export const extractErrorMessage = (
-  error: AxiosError<ApiErrorResponse>,
-  fallbackMessage = 'An unexpected error occurred.'
-): string => {
-  return error.response?.data?.message || error.message || fallbackMessage;
-};
-
-/**
- * Helper function to format validation errors into readable string.
- * Converts Laravel validation error format to user-friendly display.
- * 
- * @param errors - Validation errors object from API
- * @returns Formatted error string or empty string if no errors
- * 
- * @internal
- */
-export const formatValidationErrors = (errors?: Record<string, string[]>): string => {
-  if (!errors || Object.keys(errors).length === 0) {
-    return '';
-  }
-
-  return Object.entries(errors)
-    .map(([field, messages]) => {
-      const fieldName = field.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-      return `${fieldName}: ${messages.join(', ')}`;
-    })
-    .join(' | ');
-};
 
 /**
  * Helper to get active assignments for a staff member at a facility.
@@ -420,6 +550,28 @@ export const getPrimaryFacilityAssignment = (assignments: FacilityStaffRole[]): 
   return assignments.find(assignment => assignment.is_primary_facility) || null;
 };
 
+/**
+ * Helper to check if staff has specific role at a facility
+ * 
+ * @param assignments - Array of staff role assignments
+ * @param roleCode - Role code to check for
+ * @param facilityId - Facility ID to check (optional)
+ * @returns True if staff has the specified role
+ */
+export const hasRoleAtFacility = (
+  assignments: FacilityStaffRole[],
+  roleCode: string,
+  facilityId?: number
+): boolean => {
+  const activeAssignments = getActiveAssignments(assignments);
+  
+  return activeAssignments.some(assignment => {
+    const roleMatch = assignment.role_code === roleCode;
+    const facilityMatch = facilityId ? assignment.facility_id === facilityId : true;
+    return roleMatch && facilityMatch;
+  });
+};
+
 /* -------------------------------------------------------------------------- */
 /*                            EXPORT ALL HOOKS                                */
 /* -------------------------------------------------------------------------- */
@@ -432,6 +584,14 @@ export default {
   // Query keys
   facilityStaffRoleKeys,
   
+  // Utility functions
+  fetchUpdatedUserContext,
+  extractErrorMessage,
+  formatValidationErrors,
+  getActiveAssignments,
+  getPrimaryFacilityAssignment,
+  hasRoleAtFacility,
+  
   // Query hooks
   useGetFacilityStaffRoles,
   useGetFacilityStaffRoleById,
@@ -441,11 +601,6 @@ export default {
   // Mutation hooks
   useCreateFacilityStaffRole,
   useUpdateFacilityStaffRole,
+  useUpdateFacilityStaffRoleLegacy,
   useDeleteFacilityStaffRole,
-  
-  // Utility functions
-  extractErrorMessage,
-  formatValidationErrors,
-  getActiveAssignments,
-  getPrimaryFacilityAssignment,
 };

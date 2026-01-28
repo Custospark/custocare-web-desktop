@@ -189,13 +189,6 @@ export const useRegisterStaff = (options: UseRegisterStaffOptions = {}) => {
             const hasFacilities = hasFacilityAssignments(updatedContext);
             
             if (hasFacilities) {
-              // User has facility assignments
-              const facilityCount = updatedContext.capabilities.staff?.facilities?.length || 0;
-              showToast(
-                'success',
-                `Staff access granted! You have access to ${facilityCount} facility(s).`,
-                5000
-              );
               
               // Automatically select first facility role if configured
               if (autoSelectFacilityRole) {
@@ -216,20 +209,23 @@ export const useRegisterStaff = (options: UseRegisterStaffOptions = {}) => {
               }
             } else {
               // Staff registered but no facilities yet
-              showToast(
-                'info',
-                'Staff registration complete! You will need facility assignment to access professional tools.',
-                6000
-              );
+              setTimeout(() => {
+                showToast(
+                  'info',
+                  'Staff registration complete! You will need facility assignment to access professional tools.',
+                  6000 // how long the toast stays visible
+                );
+              }, 6000); // wait 6 seconds before showing
             }
+
           }
         } else {
           // Staff registration succeeded but staff capability not in context
-          showToast(
-            'warning',
-            'Staff registration completed, but staff access is not yet available. Please contact support.',
-            7000
-          );
+          // showToast(
+          //   'warning',
+          //   'Staff registration completed, but staff access is not yet available. Please contact support.',
+          //   7000
+          // );
         }
         
         // Call custom success handler if provided
@@ -242,19 +238,9 @@ export const useRegisterStaff = (options: UseRegisterStaffOptions = {}) => {
               // Has staff access - navigate to appropriate destination
               if (hasFacilityAssignments(updatedContext)) {
                 navigate(redirectTo);
-                showToast(
-                  'info',
-                  'You can now access the staff portal with your assigned facilities.',
-                  4000
-                );
               } else {
                 // No facility access yet
                 navigate(ROUTES.PORTAL_SELECTOR);
-                showToast(
-                  'warning',
-                  'Please contact your facility administrator for workspace assignment.',
-                  6000
-                );
               }
             } else {
               // No staff access - navigate to portal selector

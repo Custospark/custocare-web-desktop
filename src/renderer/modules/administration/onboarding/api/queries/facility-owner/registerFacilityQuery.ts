@@ -46,7 +46,7 @@ interface UseRegisterFacilityOptions {
  * Fetch updated user context after facility registration
  * This ensures the user's facility roles are up-to-date
  */
-const fetchUpdatedUserContext = async (): Promise<UserContext> => {
+export const fetchUpdatedUserContext = async (): Promise<UserContext> => {
   try {
     const response = await axiosInstance.get('/user/context/resolve');
     
