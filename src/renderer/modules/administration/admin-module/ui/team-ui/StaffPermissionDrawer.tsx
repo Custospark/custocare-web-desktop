@@ -28,8 +28,8 @@ import { useUpdateFacilityStaffRole } from '../../api/team-management/queries/fa
 import { useGetDepartmentsByFacility } from '../../api/department-managment/useDepartmentQueries';
 import { useGetFacilityRoles, useGetFacilitySpecificRoles } from '../../api/team-management/queries/useFacilityRoleQueries';
 import { useGetModules } from '../../api/team-management/queries/useModuleQueries';
+import { useGetFacilityStaffRoles } from '../../api/team-management/queries/facilityStaffRoleQueries';
 import type {
-  FacilityStaffRole,
   AssignmentStatus,
   ShiftType,
   UpdateFacilityStaffRoleRequest,
@@ -39,8 +39,14 @@ import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSke
 interface StaffPermissionDrawerProps {
   theme: 'light' | 'dark';
   open: boolean;
-  staffRole: FacilityStaffRole;
+  staffId: number;
   facilityId: number;
+  staffData: {
+    name: string;
+    employeeNumber: string;
+    currentRole: string;
+    currentStatus: string;
+  } | null;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -60,8 +66,9 @@ interface FormData {
 export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
   theme,
   open,
-  staffRole,
+  staffId,
   facilityId,
+  staffData,
   onClose,
   onSuccess,
 }) => {
@@ -73,22 +80,27 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
     return today.toISOString().split('T')[0];
   };
   
-  // Initialize form state - memoized to prevent unnecessary recreations
-  const getInitialFormData = useCallback((): FormData => ({
-    assignment_status: staffRole.assignment_status,
-    role_code: staffRole.role_code || '',
-    department_ids: Array.isArray(staffRole.department_ids) 
-      ? staffRole.department_ids.filter((id): id is number => typeof id === 'number')
-      : [],
-    module_codes: Array.isArray(staffRole.module_codes) ? staffRole.module_codes : [],
-    shift_schedule: staffRole.shift_schedule || null,
-    shift_type: staffRole.shift_type || null,
-    employment_status: staffRole.employment_status || '',
-    employment_type: staffRole.employment_type || '',
-    effective_from: staffRole.effective_from || getCurrentDate(),
-  }), [staffRole]);
+  // Fetch existing staff role data
+  const { data: staffRoleResponse, isLoading: staffRoleLoading } = useGetFacilityStaffRoles(
+    { staff_id: staffId, facility_id: facilityId },
+    { enabled: open && !!staffId && !!facilityId }
+  );
   
-  const [formData, setFormData] = useState<FormData>(getInitialFormData());
+  const existingStaffRole = staffRoleResponse?.data?.[0];
+  
+  // Initialize form state
+  const [formData, setFormData] = useState<FormData>({
+    assignment_status: 'active',
+    role_code: '',
+    department_ids: [],
+    module_codes: [],
+    shift_schedule: null,
+    shift_type: null,
+    employment_status: '',
+    employment_type: '',
+    effective_from: getCurrentDate(),
+  });
+  
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   
   // Focus management
@@ -154,21 +166,26 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
     },
   });
   
-  const isFormLoading = departmentsLoading || rolesLoading || facilityRolesLoading || modulesLoading;
+  const isFormLoading = staffRoleLoading || departmentsLoading || rolesLoading || facilityRolesLoading || modulesLoading;
   
-  // Create a stable key for tracking staffRole changes
-  const roleKey = useMemo(() => 
-    staffRole?.assignment_uuid ?? staffRole?.id ?? null,
-    [staffRole]
-  );
-
-  // Reset form when staffRole changes or drawer opens
+  // Load existing data when available
   useEffect(() => {
-    if (open && staffRole) {
-      setFormData(getInitialFormData());
-      setFormErrors({});
+    if (existingStaffRole) {
+      setFormData({
+        assignment_status: existingStaffRole.assignment_status || 'active',
+        role_code: existingStaffRole.role_code || '',
+        department_ids: Array.isArray(existingStaffRole.department_ids) 
+          ? existingStaffRole.department_ids.filter((id): id is number => typeof id === 'number')
+          : [],
+        module_codes: Array.isArray(existingStaffRole.module_codes) ? existingStaffRole.module_codes : [],
+        shift_schedule: existingStaffRole.shift_schedule || null,
+        shift_type: existingStaffRole.shift_type || null,
+        employment_status: existingStaffRole.employment_status || '',
+        employment_type: existingStaffRole.employment_type || '',
+        effective_from: existingStaffRole.effective_from || getCurrentDate(),
+      });
     }
-  }, [open, roleKey, getInitialFormData, staffRole]);
+  }, [existingStaffRole, getCurrentDate]);
   
   // Auto-focus on first field when drawer opens
   useEffect(() => {
@@ -262,14 +279,21 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
       employment_type: formData.employment_type,
       effective_from: formData.effective_from,
       facility_id: facilityId,
-      staff_id: staffRole.staff_id,
+      staff_id: staffId, // Pass staff_id from props
     };
     
-    updateMutation.mutate({
-      id: staffRole.id,
-      data: updateData,
-    });
-  }, [validateForm, formData, facilityId, staffRole, updateMutation]);
+    // If we have an existing role ID, update it
+    if (existingStaffRole?.id) {
+      updateMutation.mutate({
+        id: existingStaffRole.id,
+        data: updateData,
+      });
+    } else {
+      // Handle creation or update without ID
+      console.error('No existing staff role found for update');
+      // You might want to implement create functionality here
+    }
+  }, [validateForm, formData, facilityId, staffId, existingStaffRole, updateMutation]);
   
   // Handle module toggle with array integrity
   const handleToggleModule = useCallback((moduleCode: string) => {
@@ -414,6 +438,9 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                 Update role, modules, and employment details
               </p>
               <p className={`text-xs mt-1 ${hintTheme}`}>
+                Staff ID: {staffId} | Facility ID: {facilityId}
+              </p>
+              <p className={`text-xs mt-1 ${hintTheme}`}>
                 Tip: Press <kbd className={`px-1 rounded ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>Ctrl/⌘ + Enter</kbd> to save
               </p>
             </div>
@@ -445,7 +472,7 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
             }`}>
               <div className="flex items-center gap-3 mb-3">
                 <UserCheck className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                <h4 className="font-medium text-sm sm:text-base">Current Staff Information</h4>
+                <h4 className="font-medium text-sm sm:text-base">Staff Information</h4>
               </div>
               <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm ${
                 isDark ? 'text-gray-300' : 'text-gray-700'
@@ -453,27 +480,25 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
                 <div>
                   <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Name</div>
                   <div className="font-medium truncate">
-                    {staffRole.staff?.user?.profile?.full_name || 
-                     staffRole.staff?.user?.profile?.first_name || 
-                     'Not specified'}
+                    {staffData?.name || existingStaffRole?.staff?.user?.profile?.full_name || 'Not specified'}
                   </div>
                 </div>
                 <div>
                   <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Employee Number</div>
                   <div className="font-medium font-mono text-xs truncate">
-                    {staffRole.employee_number || 'Not specified'}
+                    {staffData?.employeeNumber || existingStaffRole?.employee_number || 'Not specified'}
                   </div>
                 </div>
                 <div>
                   <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Current Role</div>
                   <div className="font-medium capitalize truncate">
-                    {staffRole.role_code?.replace(/_/g, ' ') || 'Not specified'}
+                    {staffData?.currentRole || existingStaffRole?.role_code?.replace(/_/g, ' ') || 'Not specified'}
                   </div>
                 </div>
                 <div>
                   <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Current Status</div>
                   <div className="font-medium capitalize">
-                    {staffRole.assignment_status?.replace(/_/g, ' ') || 'Not specified'}
+                    {staffData?.currentStatus || existingStaffRole?.assignment_status?.replace(/_/g, ' ') || 'Not specified'}
                   </div>
                 </div>
               </div>

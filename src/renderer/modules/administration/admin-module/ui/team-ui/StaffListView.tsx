@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { useGetStaffForGivenFacility } from '../../api/team-management/queries/useStaffQueries';
 import type { EmploymentStatus } from '../../api/team-management/types/staffTypes';
-import type { FacilityStaffRole } from '../../api/team-management/types/facilityStaffRoleTypes';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 import { StaffPermissionDrawer } from './StaffPermissionDrawer';
 
@@ -30,6 +29,17 @@ interface StaffListViewProps {
   refreshKey: number;
   onStaffSelect: (staffId: number) => void;
   onCreateNew: () => void;
+}
+
+interface DrawerState {
+  isOpen: boolean;
+  staffId: number | null;
+  staffData: {
+    name: string;
+    employeeNumber: string;
+    currentRole: string;
+    currentStatus: string;
+  } | null;
 }
 
 export const StaffListView: React.FC<StaffListViewProps> = ({
@@ -44,8 +54,11 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
   const [sortBy, setSortBy] = useState<'name' | 'employee_id' | 'role'>('name');
   
   // Drawer state
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [selectedStaffRole, setSelectedStaffRole] = useState<FacilityStaffRole | null>(null);
+  const [drawerState, setDrawerState] = useState<DrawerState>({
+    isOpen: false,
+    staffId: null,
+    staffData: null,
+  });
   
   const { data: staffResponse, isLoading, refetch } = useGetStaffForGivenFacility(
     {
@@ -93,27 +106,43 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
   
   // Handle opening permissions drawer
   const handleOpenPermissions = (staffMember: any) => {
-    // Find the facility role for this staff member at this facility
-    const facilityRole = staffMember.facility_roles?.find(
-      (role: any) => role.facility_id === facilityId
-    );
+    // Extract staff information to pass to drawer
+    const staffData = {
+      name: staffMember.staff_name || staffMember.user?.profile?.full_name || 'Staff Member',
+      employeeNumber: staffMember.staff_uuid || '',
+      currentRole: staffMember.facility_role_summary?.role_at_facility || '',
+      currentStatus: (staffMember.facility_role_summary?.assignment_status)?.toUpperCase() || '',
+    };
+ 
     
-    if (facilityRole) {
-      setSelectedStaffRole(facilityRole);
-      setIsDrawerOpen(true);
-    } else {
-      console.warn('No facility role found for this staff member at this facility');
-      setIsDrawerOpen(true);
-    }
-
+    // Set drawer state with staff ID and basic info
+    setDrawerState({
+      isOpen: true,
+      staffId: staffMember.id,
+      staffData,
+    });
+    
+    console.log('Opening permissions drawer for staff:', {
+      staffId: staffMember.id,
+      facilityId,
+      staffData
+    });
   };
   
   // Handle drawer close
   const handleDrawerClose = () => {
-    setIsDrawerOpen(false);
-    // Delay clearing selected staff to allow drawer animation to complete
+    setDrawerState(prev => ({
+      ...prev,
+      isOpen: false,
+    }));
+    
+    // Clear staff data after animation delay
     setTimeout(() => {
-      setSelectedStaffRole(null);
+      setDrawerState({
+        isOpen: false,
+        staffId: null,
+        staffData: null,
+      });
     }, 300);
   };
   
@@ -365,13 +394,14 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
         </div>
       </div>
 
-      {/* Permissions Drawer - Render when selectedStaffRole exists */}
-      {selectedStaffRole && (
+      {/* Permissions Drawer */}
+      {drawerState.staffId !== null && (
         <StaffPermissionDrawer
           theme={theme}
-          open={isDrawerOpen}
-          staffRole={selectedStaffRole}
+          open={drawerState.isOpen}
+          staffId={drawerState.staffId}
           facilityId={facilityId}
+          staffData={drawerState.staffData}
           onClose={handleDrawerClose}
           onSuccess={handleDrawerSuccess}
         />
