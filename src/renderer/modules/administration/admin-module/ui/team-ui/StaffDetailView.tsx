@@ -192,7 +192,7 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
           <div className="flex-1">
             <div className="mb-3">
               <h2 className="text-2xl font-bold">
-                {staff.professional_title && `${staff.professional_title} `}
+                {/* {staff.professional_title && `${staff.professional_title} `} */}
                 {staff.user?.profile.full_name}
               </h2>
               <p className={`mt-1 text-sm font-medium capitalize ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
