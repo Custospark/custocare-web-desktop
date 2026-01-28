@@ -137,7 +137,9 @@ export interface UpdateFacilityStaffRoleRequest {
   // Optional fields for update
   facility_id?: number;
   staff_id?: number;
+  employment_type:string;
   role_code?: string;
+  employment_status:string;
   department_ids?: number[] | null;
   is_primary_facility?: boolean;
   module_codes?: string[] | null;
