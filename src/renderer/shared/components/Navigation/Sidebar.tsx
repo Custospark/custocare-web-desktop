@@ -213,18 +213,18 @@ const menuConfig: MenuItem[] = useMemo(() => [
 
   // Administration Module
   {
-    id: 'administration',
-    label: 'Administration',
-    icon: <MonitorCheckIcon className="w-5 h-5" />,
-    href: ROUTES.ADMINISTRATION,
-    route: ROUTES.ADMINISTRATION,
-    description: 'Users & configuration',
-    stats: 'Admin',
-    glowColor: 'from-gray-600 to-gray-500',
-    moduleCode: 'administration',
-    category: 'admin',
-    alwaysAccessible: false
-  },
+  id: 'administration',
+  label: 'Facility Governance',
+  icon: <MonitorCheckIcon className="w-5 h-5" />,
+  href: ROUTES.ADMINISTRATION,
+  route: ROUTES.ADMINISTRATION,
+  description: 'Configure facilities, manage workforce access, services, and operational controls',
+  stats: 'Governance',
+  glowColor: 'from-slate-600 to-slate-500',
+  moduleCode: 'administration',
+  category: 'admin',
+  alwaysAccessible: false,
+},
 
   // Account Module - ALWAYS ACCESSIBLE
   {

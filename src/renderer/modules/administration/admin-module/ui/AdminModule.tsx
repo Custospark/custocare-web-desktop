@@ -59,31 +59,31 @@ import AdminInventory from './inventory/AdminInventoryItems';
 const ADMIN_OPERATIONS: Operation[] = [
   {
     id: 'overview',
-    label: 'Overview',
+    label: 'Command Center',
     icon: <LayoutDashboard className="w-4 h-4" />,
     description: 'Administrative overview and setup status',
   },
   {
     id: 'facility-setup',
-    label: 'Facility Setup',
+    label: 'Facility Configuration',
     icon: <Building2 className="w-4 h-4" />,
     description: 'Configure departments and facility structure',
   },
   {
     id: 'team',
-    label: 'Staff Managment',
+    label: 'Workforce Administration',
     icon: <Users className="w-4 h-4" />,
     description: 'Manage staff, invitations, and roles',
   },
   {
     id: 'service-catalog',
-    label: 'Service Catalog',
+    label: 'Clinical & Billing Services',
     icon: <Layers className="w-4 h-4" />,
     description: 'Manage services and pricing versions',
   },
     {
     id: 'inventory',
-    label: 'Inventory',
+    label: 'Supply & Inventory Management',
     icon: <Boxes className="w-4 h-4" />,
     description: 'Manage stock items, locations, and inventory controls',
   },
@@ -179,7 +179,7 @@ export const AdminModule: React.FC = () => {
       activeOperation={activeOperation}
       onOperationChange={handleOperationChange}
       defaultOperation="overview"
-      contextTitle="Administration"
+      contextTitle="Facility Governance"
 
     >
       {renderWorkspaceContent()}

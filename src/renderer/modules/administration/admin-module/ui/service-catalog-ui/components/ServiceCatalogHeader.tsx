@@ -32,7 +32,7 @@ export const ServiceCatalogHeader: React.FC<Props> = ({
       {/* Top header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Service Catalog</h1>
+          <h1 className="text-2xl font-semibold">Clinical & Billing Services</h1>
           <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Manage healthcare services, pricing, availability, and governance rules for your facility.
           </p>

@@ -55,7 +55,7 @@ export const InventoryItemHeader: React.FC<Props> = ({
       {/* Top header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-semibold leading-tight">Inventory Management</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold leading-tight">Supply & Inventory Management</h1>
           <p className={`mt-1 text-sm sm:text-base ${isDark ? 'text-gray-400' : 'text-gray-600'} max-w-2xl`}>
             Manage medical supplies, medications, equipment, and other inventory items for your facility.
           </p>

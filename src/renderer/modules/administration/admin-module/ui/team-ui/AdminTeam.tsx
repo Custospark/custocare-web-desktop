@@ -106,7 +106,7 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
         <div>
           <h1 className="text-2xl font-semibold flex items-center gap-2 cursor-default">
             <Users className="w-7 h-7" />
-            Team Management
+            Workforce Administration
           </h1>
           <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'} cursor-default`}>
             Manage staff accounts, invitations, and access permissions for your facility
@@ -158,7 +158,7 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
             type="button"
           >
             <Users className="w-4 h-4" />
-            Staff List
+              Workforce Directory
           </button>
           
           <button
@@ -171,7 +171,7 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
             type="button"
           >
             <Mail className="w-4 h-4" />
-            Staff Invitations
+            Access Invitations
           </button>
           
           <button
@@ -184,7 +184,7 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
             type="button"
           >
             <Settings className="w-4 h-4" />
-            Roles & Access
+            Roles & Privileges
           </button>
         </div>
       </div>
