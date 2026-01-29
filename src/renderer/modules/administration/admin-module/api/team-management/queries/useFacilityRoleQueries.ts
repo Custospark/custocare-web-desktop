@@ -253,7 +253,7 @@ export const useUpdateFacilityRole = (
 
   return useMutation<FacilityRoleResponse, AxiosError<ApiErrorResponse>, UpdateFacilityRoleParams>({
     mutationFn: async ({ id, data }: UpdateFacilityRoleParams) => {
-      const response = await axiosInstance.put<FacilityRoleResponse>(`/roles/${id}`, data);
+      const response = await axiosInstance.put<FacilityRoleResponse>(`/facility-roles/${id}`, data);
       return response.data;
     },
     onSuccess: (data) => {
@@ -300,7 +300,7 @@ export const useDeleteFacilityRole = (
 
   return useMutation<DeleteFacilityRoleResponse, AxiosError<ApiErrorResponse>, DeleteFacilityRoleParams>({
     mutationFn: async ({ id }: DeleteFacilityRoleParams) => {
-      const response = await axiosInstance.delete<DeleteFacilityRoleResponse>(`/roles/${id}`);
+      const response = await axiosInstance.delete<DeleteFacilityRoleResponse>(`/facility-roles/${id}`);
       return response.data;
     },
     onSuccess: (data) => {

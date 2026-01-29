@@ -3,574 +3,828 @@
  * ROLE ACCESS MANAGER COMPONENT
  * ============================================================================
  * 
- * Manage facility roles and module access permissions.
- * Fetches both system-defined roles and facility-specific roles based on
- * the active facility context.
+ * Comprehensive role management interface for healthcare facilities.
+ * Provides tabular view with filtering between system and custom roles.
+ * Supports full CRUD operations with optimistic updates for seamless UX.
  * 
  * @component RoleAccessManager
+ * @description Manage facility-specific access roles and permissions
  */
 
 import React, { useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Shield,
-  Settings,
-  CheckSquare,
+  ShieldCheck,
+  ShieldOff,
+  Search,
   Plus,
   Edit,
-  Save,
+  Trash2,
   X,
-  AlertCircle,
-  Building2,
+  AlertTriangle,
+  Users,
+  RefreshCw,
 } from 'lucide-react';
 
-import { 
-  useGetFacilityRoles,
+import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
+import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
+
+import {
+  facilityRoleKeys,
+  useGetSystemFacilityRoles,
   useGetFacilitySpecificRoles,
   useCreateFacilityRole,
-} from '../../api/team-management/queries/useFacilityRoleQueries';
-import { useGetModules, useAssignRoleModuleDefault } from '../../api/team-management/queries/useModuleQueries';
-import { useSelector } from 'react-redux';
-import type { RootState } from '../../../../../app/store/rootReducer';
-import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
+  useUpdateFacilityRole,
+  useDeleteFacilityRole,
+} from  '../../api/team-management/queries/useFacilityRoleQueries';
+
+import type {
+  FacilityRole,
+  CreateFacilityRoleRequest,
+  UpdateFacilityRoleRequest,
+} from '../../api/team-management/types/facilityRolesTypes';
 
 interface RoleAccessManagerProps {
   theme: 'light' | 'dark';
-  refreshKey?: number;
-  facilityId?:number;
+  facilityId: number;
+  refreshKey: number;
 }
 
-interface CreateRoleFormData {
-  name: string;
-  code: string;
-  description: string;
-}
+type RoleType = 'all' | 'system' | 'custom';
+type DrawerMode = 'create' | 'edit';
 
 export const RoleAccessManager: React.FC<RoleAccessManagerProps> = ({
   theme,
+  facilityId,
 }) => {
   const isDark = theme === 'dark';
-  
-  // Get active facility ID from Redux store (same way axios does)
-  const activeFacilityId = useSelector(
-    (state: RootState) => state.activeContext.activeFacilityId
-  );
-  
-  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
-  const [editingRoleId, setEditingRoleId] = useState<number | null>(null);
-  const [tempPermissions, setTempPermissions] = useState<string[]>([]);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createFormData, setCreateFormData] = useState<CreateRoleFormData>({
+  const queryClient = useQueryClient();
+  const { confirm } = useConfirm();
+
+  // State management
+  const [activeRoleType, setActiveRoleType] = useState<RoleType>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState<DrawerMode>('create');
+  const [selectedRole, setSelectedRole] = useState<FacilityRole | null>(null);
+  const [formData, setFormData] = useState<CreateFacilityRoleRequest>({
     name: '',
     code: '',
     description: '',
+    is_system_role: false,
+    facility_id: facilityId,
   });
-  
-  // Fetch system roles
-  const { data: systemRolesResponse, isLoading: systemRolesLoading } = useGetFacilityRoles(
-    { is_system_role: true },
-    { enabled: true }
-  );
-  
-  // Fetch facility-specific roles (only if we have an active facility)
-  const { data: facilityRolesResponse, isLoading: facilityRolesLoading } = useGetFacilitySpecificRoles(
-    activeFacilityId!,
-    { enabled: !!activeFacilityId }
-  );
-  
-  // Fetch modules
-  const { data: modulesResponse, isLoading: modulesLoading } = useGetModules(
-    { is_active: true },
-  );
-  
+
+  // Fetch roles
+  const {
+    data: systemRolesResponse,
+    isLoading: isLoadingSystem,
+    refetch: refetchSystem,
+  } = useGetSystemFacilityRoles();
+
+  const {
+    data: customRolesResponse,
+    isLoading: isLoadingCustom,
+    refetch: refetchCustom,
+  } = useGetFacilitySpecificRoles(facilityId);
+
   const systemRoles = systemRolesResponse?.data || [];
-  const facilityRoles = facilityRolesResponse?.data || [];
-  const modules = modulesResponse?.data || [];
+  const customRoles = customRolesResponse?.data || [];
+  const allRoles = [...systemRoles, ...customRoles];
   
-  // Combine system and facility roles
-  const allRoles = useMemo(() => {
-    return [...facilityRoles,...systemRoles];
-  }, [systemRoles, facilityRoles]);
-  
-  const createRoleMutation = useCreateFacilityRole();
-  const assignModuleMutation = useAssignRoleModuleDefault();
-  
-  const selectedRole = allRoles.find(r => r.id === selectedRoleId);
-  
-  const handleEditStart = (roleId: number) => {
-    const role = allRoles.find(r => r.id === roleId);
-    if (!role) return;
+  // Filter and search logic
+  const filteredRoles = useMemo(() => {
+    let roles = allRoles;
     
-    setEditingRoleId(roleId);
-    // TODO: Load current module permissions for this role
-    // For now, using empty array as placeholder
-    setTempPermissions(['kk','yy']);
-  };
-  
-  const handleEditCancel = () => {
-    setEditingRoleId(null);
-    setTempPermissions([]);
-  };
-  
-  const handleToggleModule = (moduleCode: string) => {
-    setTempPermissions(prev =>
-      prev.includes(moduleCode)
-        ? prev.filter(c => c !== moduleCode)
-        : [...prev, moduleCode]
-    );
-  };
-  
-  const handleSavePermissions = async () => {
-    if (!editingRoleId || !selectedRole) return;
+    // Filter by type
+    if (activeRoleType === 'system') {
+      roles = systemRoles;
+    } else if (activeRoleType === 'custom') {
+      roles = customRoles;
+    }
     
-    try {
-      // Assign each module permission
-      for (const moduleCode of tempPermissions) {
-        await assignModuleMutation.mutateAsync({
-          role_code: selectedRole.code,
-          module_code: moduleCode,
-          default_access: true,
-        });
-      }
-      
-      setEditingRoleId(null);
-      setTempPermissions([]);
-    } catch (error) {
-      // Error already handled by mutation hook
-      console.error('Failed to save permissions:', error);
+    // Apply search
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      roles = roles.filter(role =>
+        role.name.toLowerCase().includes(term) ||
+        role.code.toLowerCase().includes(term) ||
+        (role.description?.toLowerCase() || '').includes(term)
+      );
+    }
+    
+    return roles;
+  }, [allRoles, systemRoles, customRoles, activeRoleType, searchTerm]);
+
+  // Loading states
+  const isLoading = isLoadingSystem || isLoadingCustom;
+  const isEmpty = !isLoading && filteredRoles.length === 0;
+
+  // Role statistics
+  const roleStats = {
+    total: allRoles.length,
+    system: systemRoles.length,
+    custom: customRoles.length,
+    showing: filteredRoles.length,
+  };
+
+  // Clear search
+  const handleClearSearch = () => setSearchTerm('');
+
+  // Refresh data
+  const handleRefresh = () => {
+    refetchSystem();
+    refetchCustom();
+  };
+
+  // Drawer handlers
+  const openCreateDrawer = () => {
+    setDrawerMode('create');
+    setSelectedRole(null);
+    setFormData({
+      name: '',
+      code: '',
+      description: '',
+      is_system_role: false,
+      facility_id: facilityId,
+    });
+    setDrawerOpen(true);
+  };
+
+  const openEditDrawer = (role: FacilityRole) => {
+    setDrawerMode('edit');
+    setSelectedRole(role);
+    setFormData({
+      name: role.name,
+      code: role.code,
+      description: role.description || '',
+      is_system_role: role.is_system_role,
+      facility_id: role.facility_id,
+    });
+    setDrawerOpen(true);
+  };
+
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+    setSelectedRole(null);
+    setFormData({
+      name: '',
+      code: '',
+      description: '',
+      is_system_role: false,
+      facility_id: facilityId,
+    });
+  };
+
+  // Optimistic update helper
+  const updateCache = (roleType: RoleType, updater: (roles: FacilityRole[]) => FacilityRole[]) => {
+    if (roleType === 'system' || roleType === 'all') {
+      queryClient.setQueryData(facilityRoleKeys.systemRoles(), (old: any) => ({
+        ...old,
+        data: updater(old?.data || []),
+      }));
+    }
+    if (roleType === 'custom' || roleType === 'all') {
+      queryClient.setQueryData(facilityRoleKeys.facilitySpecific(facilityId), (old: any) => ({
+        ...old,
+        data: updater(old?.data || []),
+      }));
     }
   };
-  
-  const handleCreateRole = () => {
-    if (!activeFacilityId) {
-      console.error('No active facility ID');
+
+  // Mutations
+  const createMutation = useCreateFacilityRole({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: facilityRoleKeys.all });
+      closeDrawer();
+    },
+  });
+
+  const updateMutation = useUpdateFacilityRole({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: facilityRoleKeys.all });
+      closeDrawer();
+    },
+  });
+
+  const deleteMutation = useDeleteFacilityRole({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: facilityRoleKeys.all });
+    },
+  });
+
+  // Form submission with optimistic updates
+  const handleSubmit = () => {
+    if (!facilityId) return;
+
+    if (drawerMode === 'create') {
+      const previousCache = queryClient.getQueryData(facilityRoleKeys.facilitySpecific(facilityId));
+      const now = new Date().toISOString();
+      const tempId = -Date.now(); // Negative ID for optimistic update
+
+      const optimisticRole: FacilityRole = {
+        id: tempId,
+        code: formData.code || formData.name.toLowerCase().replace(/\s+/g, '-'),
+        name: formData.name,
+        description: formData.description || null,
+        is_system_role: false,
+        facility_id: facilityId,
+        created_at: now,
+        updated_at: now,
+      };
+
+      // Optimistic update
+      updateCache('custom', current => [optimisticRole, ...current]);
+
+      // Execute mutation
+      createMutation.mutate(formData, {
+        onError: () => {
+          // Revert on error
+          if (previousCache) {
+            queryClient.setQueryData(facilityRoleKeys.facilitySpecific(facilityId), previousCache);
+          }
+        },
+      });
+    } else if (drawerMode === 'edit' && selectedRole) {
+      const cacheKey = selectedRole.is_system_role 
+        ? facilityRoleKeys.systemRoles()
+        : facilityRoleKeys.facilitySpecific(facilityId);
+      
+      const previousCache = queryClient.getQueryData(cacheKey);
+      const roleType = selectedRole.is_system_role ? 'system' : 'custom';
+
+      // Optimistic update
+      updateCache(roleType, current =>
+        current.map(role =>
+          role.id === selectedRole.id
+            ? { ...role, ...formData, updated_at: new Date().toISOString() }
+            : role
+        )
+      );
+
+      // Execute mutation
+      updateMutation.mutate(
+        {
+          id: selectedRole.id,
+          data: formData as UpdateFacilityRoleRequest,
+        },
+        {
+          onError: () => {
+            // Revert on error
+            if (previousCache) {
+              queryClient.setQueryData(cacheKey, previousCache);
+            }
+          },
+        }
+      );
+    }
+  };
+
+  // Delete role with confirmation
+  const handleDeleteRole = async (role: FacilityRole) => {
+    if (role.is_system_role) {
+      await confirm({
+        title: 'System Role Protection',
+        message: 'System-defined roles cannot be deleted as they are required for core functionality.',
+        confirmText: 'Understood',
+        cancelText: "No, close.",
+        variant: 'info',
+        theme,
+      });
       return;
     }
-    
-    createRoleMutation.mutate(
+
+    const confirmed = await confirm({
+      title: 'Delete Role',
+      message: `Are you sure you want to delete the role "${role.name}"? This action cannot be undone.`,
+      confirmText: 'Delete Role',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      theme,
+    });
+
+    if (!confirmed) return;
+
+    const previousCache = queryClient.getQueryData(facilityRoleKeys.facilitySpecific(facilityId));
+
+    // Optimistic removal
+    updateCache('custom', current => current.filter(r => r.id !== role.id));
+
+    // Execute mutation
+    deleteMutation.mutate(
+      { id: role.id },
       {
-        name: createFormData.name,
-        code: createFormData.code,
-        description: createFormData.description,
-        is_system_role: false,
-        facility_id: activeFacilityId,
-      },
-      {
-        onSuccess: () => {
-          setShowCreateForm(false);
-          setCreateFormData({ name: '', code: '', description: '' });
+        onError: () => {
+          // Revert on error
+          if (previousCache) {
+            queryClient.setQueryData(facilityRoleKeys.facilitySpecific(facilityId), previousCache);
+          }
         },
       }
     );
   };
-  
-  const isLoading = systemRolesLoading || facilityRolesLoading || modulesLoading;
-  
+
+  // Validation
+  const canSubmit = formData.name.trim().length > 0;
+
+  // Render loading state
+  if (isLoading && !systemRolesResponse && !customRolesResponse) {
+    return (
+      <div className="space-y-6">
+        <LoadingSkeleton variant="dashboard" theme={theme} message="Loading roles..." />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      {/* Header */}
+    <div className="space-y-6">
+      {/* Header Section */}
       <div className={`rounded-xl p-6 border ${
         isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
       }`}>
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Shield className="w-6 h-6" />
-              Roles & Access Management
+            <h2 className="text-xl font-semibold flex items-center gap-2 mb-1 cursor-default">
+              <Shield className="w-5 h-5" />
+              Role Management
             </h2>
-            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              Configure facility roles and their module access permissions
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Manage system and custom roles for your facility
             </p>
-            {activeFacilityId && (
-              <div className={`mt-2 inline-flex items-center gap-2 px-2 py-1 rounded text-xs ${
-                isDark ? 'bg-blue-900/20 text-blue-300' : 'bg-blue-50 text-blue-700'
-              }`}>
-                <Building2 className="w-3 h-3" />
-              </div>
-            )}
           </div>
+          
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleRefresh}
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                isDark
+                  ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+              type="button"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
+            
+            <button
+              onClick={openCreateDrawer}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                isDark
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+              type="button"
+            >
+              <Plus className="w-4 h-4" />
+              Create Custom Role
+            </button>
+          </div>
+        </div>
+
+        {/* Role Type Tabs */}
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          <button
+            onClick={() => setActiveRoleType('all')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              activeRoleType === 'all'
+                ? (isDark ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white')
+                : (isDark ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-300' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900')
+            }`}
+            type="button"
+          >
+            <Users className="w-4 h-4" />
+            All Roles ({roleStats.total})
+          </button>
           
           <button
-            onClick={() => setShowCreateForm(true)}
-            disabled={!activeFacilityId}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-              !activeFacilityId
-                ? (isDark ? 'bg-gray-800 text-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed')
-                : (isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
+            onClick={() => setActiveRoleType('system')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              activeRoleType === 'system'
+                ? (isDark ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white')
+                : (isDark ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-300' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900')
             }`}
-            title={!activeFacilityId ? 'No active facility selected' : 'Create custom facility role'}
+            type="button"
           >
-            <Plus className="w-4 h-4" />
-            Create Custom Role
+            <ShieldCheck className="w-4 h-4" />
+            System Roles ({roleStats.system})
+          </button>
+          
+          <button
+            onClick={() => setActiveRoleType('custom')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              activeRoleType === 'custom'
+                ? (isDark ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white')
+                : (isDark ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-300' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900')
+            }`}
+            type="button"
+          >
+            <ShieldOff className="w-4 h-4" />
+            Custom Roles ({roleStats.custom})
           </button>
         </div>
-      </div>
-      
-      {/* Create Role Form Modal */}
-      {showCreateForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className={`rounded-xl max-w-md w-full p-6 ${
-            isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'
-          }`}>
-            <h3 className="text-lg font-semibold mb-4">Create Custom Role</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${
-                  isDark ? 'text-gray-300' : 'text-gray-700'
-                }`}>
-                  Role Name *
-                </label>
-                <input
-                  type="text"
-                  value={createFormData.name}
-                  onChange={(e) => setCreateFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className={`w-full px-3 py-2 rounded-lg border ${
-                    isDark 
-                      ? 'bg-gray-800 border-gray-700 text-gray-100' 
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                  placeholder="e.g., Senior Nurse"
-                />
-              </div>
-              
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${
-                  isDark ? 'text-gray-300' : 'text-gray-700'
-                }`}>
-                  Role Code *
-                </label>
-                <input
-                  type="text"
-                  value={createFormData.code}
-                  onChange={(e) => setCreateFormData(prev => ({ 
-                    ...prev, 
-                    code: e.target.value.toLowerCase().replace(/\s+/g, '_') 
-                  }))}
-                  className={`w-full px-3 py-2 rounded-lg border ${
-                    isDark 
-                      ? 'bg-gray-800 border-gray-700 text-gray-100' 
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                  placeholder="e.g., senior_nurse"
-                />
-                <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                  Unique identifier (lowercase, underscores only)
-                </p>
-              </div>
-              
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${
-                  isDark ? 'text-gray-300' : 'text-gray-700'
-                }`}>
-                  Description
-                </label>
-                <textarea
-                  value={createFormData.description}
-                  onChange={(e) => setCreateFormData(prev => ({ ...prev, description: e.target.value }))}
-                  rows={3}
-                  className={`w-full px-3 py-2 rounded-lg border ${
-                    isDark 
-                      ? 'bg-gray-800 border-gray-700 text-gray-100' 
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                  placeholder="Brief description of this role..."
-                />
-              </div>
-              
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  onClick={handleCreateRole}
-                  disabled={!createFormData.name || !createFormData.code || createRoleMutation.isPending}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {createRoleMutation.isPending ? 'Creating...' : 'Create Role'}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    setCreateFormData({ name: '', code: '', description: '' });
-                  }}
-                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    isDark 
-                      ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' 
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
+            isDark ? 'text-gray-500' : 'text-gray-400'
+          }`} />
+          <input
+            type="text"
+            placeholder="Search roles by name, code, or description..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={`w-full pl-10 pr-10 py-2 rounded-lg border ${
+              isDark
+                ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
+                : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'
+            } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors cursor-text`}
+          />
+          
+          {searchTerm && (
+            <button
+              onClick={handleClearSearch}
+              className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded-full transition-colors cursor-pointer ${
+                isDark
+                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-300'
+                  : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
+              }`}
+              aria-label="Clear search"
+              type="button"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
-      )}
-      
-      {isLoading ? (
-        // <div className={`rounded-xl p-12 text-center border ${
-        //   isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-        // }`}>
-        //   <div className={`inline-flex items-center gap-3 ${
-        //     isDark ? 'text-gray-400' : 'text-gray-600'
-        //   }`}>
-        //     <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        //     Loading roles and permissions...
-        //   </div>
-        // </div>
-        <LoadingSkeleton variant='detail' theme={theme} message='Loading roles and permissions...'/>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Roles List */}
-          <div className={`rounded-xl border overflow-hidden ${
-            isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-          }`}>
-            <div className={`p-4 border-b ${
-              isDark ? 'border-gray-800 bg-gray-800/50' : 'border-gray-200 bg-gray-50'
-            }`}>
-              <h3 className="font-semibold">
-                All Roles ({allRoles.length})
-              </h3>
-              <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                {systemRoles.length} system · {facilityRoles.length} facility
-              </p>
-            </div>
-            
-            <div className={`divide-y max-h-[600px] overflow-y-auto ${
-              isDark ? 'divide-gray-800' : 'divide-gray-200'
-            }`}>
-              {allRoles.map((role) => (
-                <button
-                  key={role.id}
-                  onClick={() => setSelectedRoleId(role.id)}
-                  className={`w-full p-4 text-left transition-colors ${
-                    selectedRoleId === role.id
-                      ? (isDark ? 'bg-blue-900/20 border-l-2 border-blue-500' : 'bg-blue-50 border-l-2 border-blue-500')
-                      : (isDark ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50')
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{role.name}</div>
-                      {role.description && (
-                        <div className={`text-sm mt-1 line-clamp-2 ${
-                          isDark ? 'text-gray-400' : 'text-gray-600'
-                        }`}>
-                          {role.description}
+
+        {/* Results Summary */}
+        {searchTerm && (
+          <div className="mt-3 flex items-center justify-between">
+            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Showing {roleStats.showing} of {activeRoleType === 'all' ? roleStats.total : 
+              activeRoleType === 'system' ? roleStats.system : roleStats.custom} roles
+            </span>
+            <button
+              onClick={handleClearSearch}
+              className={`text-sm flex items-center gap-1 cursor-pointer ${
+                isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
+              }`}
+              type="button"
+            >
+              <X className="w-3 h-3" />
+              Clear search
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Roles Table */}
+      <div className={`rounded-xl border overflow-hidden ${
+        isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+      }`}>
+        {isEmpty ? (
+          <div className="p-12 text-center">
+            <Shield className={`w-12 h-12 mx-auto mb-4 ${
+              isDark ? 'text-gray-600' : 'text-gray-400'
+            }`} />
+            <h3 className="text-lg font-medium mb-2">
+              {searchTerm ? 'No matching roles found' : 'No Roles Available'}
+            </h3>
+            <p className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              {searchTerm ? (
+                <>
+                  No roles match "<span className="font-semibold">{searchTerm}</span>"
+                  <button
+                    onClick={handleClearSearch}
+                    className={`ml-2 px-2 py-1 rounded text-sm cursor-pointer ${
+                      isDark
+                        ? 'text-blue-400 hover:text-blue-300 hover:bg-gray-800'
+                        : 'text-blue-600 hover:text-blue-700 hover:bg-gray-100'
+                    } transition-colors`}
+                    type="button"
+                  >
+                    Clear search
+                  </button>
+                </>
+              ) : activeRoleType === 'custom' ? (
+                'Create custom roles to define specific access permissions for your facility.'
+              ) : (
+                'No roles available for display in this category.'
+              )}
+            </p>
+            {activeRoleType === 'custom' && !searchTerm && (
+              <button
+                onClick={openCreateDrawer}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                  isDark
+                    ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+                type="button"
+              >
+                <Plus className="w-4 h-4" />
+                Create Your First Custom Role
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead className={isDark ? 'bg-gray-800/50' : 'bg-gray-50'}>
+                <tr>
+                  <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                    isDark ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
+                    Role Details
+                  </th>
+                  <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                    isDark ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
+                    Code
+                  </th>
+                  <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                    isDark ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
+                    Type
+                  </th>
+                  <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                    isDark ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
+                    Created
+                  </th>
+                  <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                    isDark ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y ${isDark ? 'divide-gray-800' : 'divide-gray-200'}`}>
+                {filteredRoles.map((role) => (
+                  <tr
+                    key={role.id}
+                    className={`transition-colors ${isDark ? 'hover:bg-gray-800/40' : 'hover:bg-gray-50'}`}
+                  >
+                    <td className="px-6 py-4">
+                      <div className="min-w-0">
+                        <div className={`text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                          {role.name}
                         </div>
-                      )}
-                      <div className="flex items-center gap-2 mt-2 flex-wrap">
-                        <code className={`px-2 py-0.5 rounded text-xs ${
-                          isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {role.code}
-                        </code>
-                        {role.is_system_role ? (
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            isDark ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-100 text-purple-800'
-                          }`}>
-                            System
-                          </span>
-                        ) : (
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            isDark ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-800'
-                          }`}>
-                            Facility
-                          </span>
+                        {role.description && (
+                          <div className={`text-xs mt-1 max-w-md ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {role.description}
+                          </div>
                         )}
                       </div>
-                    </div>
-                    
-                    {selectedRoleId === role.id && (
-                      <Shield className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                    )}
-                  </div>
-                </button>
-              ))}
-              
-              {allRoles.length === 0 && (
-                <div className="p-8 text-center">
-                  <Shield className={`w-12 h-12 mx-auto mb-2 ${
-                    isDark ? 'text-gray-700' : 'text-gray-300'
-                  }`} />
-                  <p className={isDark ? 'text-gray-500' : 'text-gray-500'}>
-                    No roles available
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Module Access Configuration */}
-          <div className={`lg:col-span-2 rounded-xl border ${
-            isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-          }`}>
-            {selectedRole ? (
-              <>
-                <div className={`p-4 border-b ${
-                  isDark ? 'border-gray-800 bg-gray-800/50' : 'border-gray-200 bg-gray-50'
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold flex items-center gap-2">
-                        {selectedRole.name}
-                        {selectedRole.is_system_role ? (
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            isDark ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-100 text-purple-800'
-                          }`}>
-                            System Role
-                          </span>
-                        ) : (
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            isDark ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-800'
-                          }`}>
-                            Facility Role
-                          </span>
-                        )}
-                      </h3>
-                      <p className={`text-sm mt-0.5 ${
-                        isDark ? 'text-gray-400' : 'text-gray-600'
+                    </td>
+                    <td className="px-6 py-4">
+                      <code className={`inline-flex px-2 py-1 rounded text-xs ${
+                        isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
                       }`}>
-                        Assign module access permissions
-                      </p>
-                    </div>
-                    
-                    {editingRoleId === selectedRole.id ? (
+                        {role.code}
+                      </code>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                        role.is_system_role
+                          ? (isDark ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-800')
+                          : (isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-800')
+                      }`}>
+                        {role.is_system_role ? (
+                          <>
+                            <ShieldCheck className="w-3 h-3" />
+                            System
+                          </>
+                        ) : (
+                          <>
+                            <ShieldOff className="w-3 h-3" />
+                            Custom
+                          </>
+                        )}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {new Date(role.created_at).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={handleSavePermissions}
-                          disabled={assignModuleMutation.isPending}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                        >
-                          <Save className="w-4 h-4" />
-                          {assignModuleMutation.isPending ? 'Saving...' : 'Save'}
-                        </button>
-                        <button
-                          onClick={handleEditCancel}
-                          disabled={assignModuleMutation.isPending}
-                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                            isDark 
-                              ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' 
+                          onClick={() => openEditDrawer(role)}
+                          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                            isDark
+                              ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
                               : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                           }`}
+                          title="Edit role"
+                          type="button"
                         >
-                          <X className="w-4 h-4" />
-                          Cancel
+                          <Edit className="w-3 h-3" />
+                          Edit
+                        </button>
+                        
+                        <button
+                          onClick={() => handleDeleteRole(role)}
+                          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                            role.is_system_role
+                              ? (isDark
+                                  ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                                  : 'bg-gray-100 text-gray-400 cursor-not-allowed')
+                              : (isDark
+                                  ? 'bg-red-900/20 hover:bg-red-900/30 text-red-300'
+                                  : 'bg-red-50 hover:bg-red-100 text-red-700')
+                          }`}
+                          title={role.is_system_role ? 'System roles cannot be deleted' : 'Delete role'}
+                          type="button"
+                          disabled={role.is_system_role}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Delete
                         </button>
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => handleEditStart(selectedRole.id)}
-                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                          isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                        }`}
-                      >
-                        <Edit className="w-4 h-4" />
-                        Edit Permissions
-                      </button>
-                    )}
-                  </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Create/Edit Role Drawer */}
+      {drawerOpen && (
+        <div className={`fixed inset-0 z-50 overflow-hidden ${
+          isDark ? 'bg-black/50' : 'bg-black/30'
+        }`}>
+          <div className="absolute inset-0" onClick={closeDrawer} />
+          <div className={`absolute right-0 top-0 h-full w-full max-w-md ${
+            isDark ? 'bg-gray-900' : 'bg-white'
+          } shadow-xl`}>
+            <div className="flex flex-col h-full">
+              {/* Drawer Header */}
+              <div className={`px-6 py-4 border-b ${
+                isDark ? 'border-gray-800' : 'border-gray-200'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">
+                    {drawerMode === 'create' ? 'Create New Role' : 'Edit Role'}
+                  </h3>
+                  <button
+                    onClick={closeDrawer}
+                    className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                      isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'
+                    }`}
+                    type="button"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-                
-                <div className="p-6">
-                  {selectedRole.is_system_role && editingRoleId !== selectedRole.id && (
-                    <div className={`mb-4 p-3 rounded-lg flex items-start gap-2 ${
-                      isDark ? 'bg-blue-900/20 text-blue-300' : 'bg-blue-50 text-blue-700'
+                <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {drawerMode === 'create'
+                    ? 'Define a new custom role for your facility'
+                    : 'Update role details'}
+                </p>
+              </div>
+
+              {/* Drawer Content */}
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="space-y-4">
+                  {/* Role Name */}
+                  <div>
+                    <label className={`block text-sm font-medium mb-1 ${
+                      isDark ? 'text-gray-300' : 'text-gray-700'
                     }`}>
-                      <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                      <div className="text-sm">
-                        This is a system-defined role. You can still assign module access permissions to customize what this role can access in your facility.
+                      Role Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className={`w-full px-3 py-2 rounded-lg border ${
+                        isDark
+                          ? 'bg-gray-800 border-gray-700 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
+                      } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-text`}
+                      placeholder="e.g., Senior Nurse"
+                    />
+                  </div>
+
+                  {/* Role Code */}
+                  <div>
+                    <label className={`block text-sm font-medium mb-1 ${
+                      isDark ? 'text-gray-300' : 'text-gray-700'
+                    }`}>
+                      Role Code
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.code}
+                      onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                      className={`w-full px-3 py-2 rounded-lg border ${
+                        isDark
+                          ? 'bg-gray-800 border-gray-700 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
+                      } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-text`}
+                      placeholder="e.g., senior-nurse (auto-generated if empty)"
+                    />
+                    <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                      Unique identifier for the role
+                    </p>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className={`block text-sm font-medium mb-1 ${
+                      isDark ? 'text-gray-300' : 'text-gray-700'
+                    }`}>
+                      Description
+                    </label>
+                    <textarea
+                      value={formData.description || ''}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      rows={3}
+                      className={`w-full px-3 py-2 rounded-lg border ${
+                        isDark
+                          ? 'bg-gray-800 border-gray-700 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
+                      } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none cursor-text`}
+                      placeholder="Describe the role's purpose and permissions..."
+                    />
+                  </div>
+
+                  {/* System Role Warning */}
+                  {drawerMode === 'edit' && selectedRole?.is_system_role && (
+                    <div className={`p-3 rounded-lg ${
+                      isDark ? 'bg-yellow-900/20 border-yellow-800/30' : 'bg-yellow-50 border-yellow-200'
+                    } border`}>
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                          isDark ? 'text-yellow-400' : 'text-yellow-600'
+                        }`} />
+                        <div>
+                          <p className={`text-sm font-medium ${
+                            isDark ? 'text-yellow-300' : 'text-yellow-800'
+                          }`}>
+                            System Role
+                          </p>
+                          <p className={`text-xs mt-1 ${
+                            isDark ? 'text-yellow-400/80' : 'text-yellow-700'
+                          }`}>
+                            This is a system-defined role. Some fields may be restricted.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-medium">Module Access</h4>
-                      <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {modules.length} modules available
-                      </span>
-                    </div>
-                    
-                    {modules.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Settings className={`w-12 h-12 mx-auto mb-2 ${
-                          isDark ? 'text-gray-700' : 'text-gray-300'
-                        }`} />
-                        <p className={isDark ? 'text-gray-500' : 'text-gray-500'}>
-                          No modules available
-                        </p>
-                      </div>
-                    ) : (
-                      modules.map((module) => {
-                        const isChecked = editingRoleId === selectedRole.id
-                          ? tempPermissions.includes(module.code)
-                          : false; // In real app, check actual permissions from role.modules
-                        
-                        return (
-                          <label
-                            key={module.id}
-                            className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
-                              editingRoleId !== selectedRole.id
-                                ? 'cursor-default'
-                                : 'cursor-pointer'
-                            } ${
-                              isChecked
-                                ? (isDark ? 'bg-blue-900/20 border-blue-700' : 'bg-blue-50 border-blue-300')
-                                : (isDark ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-gray-50 border-gray-300 hover:border-gray-400')
-                            }`}
-                          >
-                            <div className="mt-0.5">
-                              {editingRoleId === selectedRole.id ? (
-                                <input
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={() => handleToggleModule(module.code)}
-                                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                              ) : (
-                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                                  isChecked
-                                    ? 'bg-blue-600 border-blue-600'
-                                    : (isDark ? 'border-gray-600' : 'border-gray-300')
-                                }`}>
-                                  {isChecked && <CheckSquare className="w-3 h-3 text-white" />}
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <div className="font-medium">{module.name}</div>
-                                <code className={`px-2 py-0.5 rounded text-xs ${
-                                  isDark ? 'bg-gray-900 text-gray-400' : 'bg-white text-gray-600'
-                                }`}>
-                                  {module.code}
-                                </code>
-                              </div>
-                              {module.description && (
-                                <div className={`text-sm mt-1 ${
-                                  isDark ? 'text-gray-400' : 'text-gray-600'
-                                }`}>
-                                  {module.description}
-                                </div>
-                              )}
-                            </div>
-                          </label>
-                        );
-                      })
-                    )}
-                  </div>
                 </div>
-              </>
-            ) : (
-              <div className="p-12 text-center">
-                <Settings className={`w-12 h-12 mx-auto mb-4 ${
-                  isDark ? 'text-gray-600' : 'text-gray-400'
-                }`} />
-                <h3 className="text-lg font-medium mb-2">Select a Role</h3>
-                <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                  Choose a role from the list to view and manage its module access permissions
-                </p>
               </div>
-            )}
+
+              {/* Drawer Footer */}
+              <div className={`px-6 py-4 border-t ${
+                isDark ? 'border-gray-800' : 'border-gray-200'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={closeDrawer}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                      isDark
+                        ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!canSubmit || createMutation.isPending || updateMutation.isPending}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                      !canSubmit || createMutation.isPending || updateMutation.isPending
+                        ? (isDark
+                            ? 'bg-blue-800/50 text-blue-300/50 cursor-not-allowed'
+                            : 'bg-blue-400 text-white cursor-not-allowed')
+                        : (isDark
+                            ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white')
+                    }`}
+                    type="button"
+                  >
+                    {createMutation.isPending || updateMutation.isPending ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin inline mr-2" />
+                        {drawerMode === 'create' ? 'Creating...' : 'Updating...'}
+                      </>
+                    ) : drawerMode === 'create' ? (
+                      'Create Role'
+                    ) : (
+                      'Update Role'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
