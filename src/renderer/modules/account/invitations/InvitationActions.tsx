@@ -13,7 +13,7 @@
  */
 
 import React, { useCallback } from 'react';
-import { Check, X, Loader2, Eye } from 'lucide-react';
+import { Check, X, Loader2} from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useConfirm } from '../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
@@ -34,7 +34,6 @@ import {
 import { axiosInstance } from '../../../../renderer/app/api/axiosConfig';
 import { ROUTES } from '../../administration/onboarding/routes/onboardingRouteConstants';
 
-
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
 /* -------------------------------------------------------------------------- */
@@ -45,6 +44,8 @@ interface InvitationActionsProps {
   onActionComplete?: () => void;
   onViewDetails?: (invitation: StaffInvitation) => void;
   layout?: 'horizontal' | 'vertical';
+  disabled?: boolean;
+  showLabels?: boolean;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -80,6 +81,8 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
   onActionComplete,
   onViewDetails,
   layout = 'horizontal',
+  disabled = false,
+  showLabels = true,
 }) => {
   const isDark = theme === 'dark';
   const queryClient = useQueryClient();
@@ -117,7 +120,7 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
           // This shouldn't happen, but handle gracefully
           showToast(
             'warning',
-            'Invitation accepted, but facility access not detected. Please reload the Application',
+            'Invitation accepted, but facility access not detected. Please reload the application.',
             7000
           );
         }
@@ -220,10 +223,43 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
   });
 
   const isProcessing = acceptMutation.isPending || declineMutation.isPending;
+  const isGlobalDisabled = disabled || isProcessing;
+
+  /* ---------------------------- Cursor Utilities --------------------------- */
+
+  const getCursorClass = (isActionDisabled: boolean = false) => {
+    if (isGlobalDisabled || isActionDisabled) {
+      return 'cursor-not-allowed';
+    }
+    return 'cursor-pointer hover:cursor-pointer active:cursor-pointer';
+  };
+
+  const getTooltipContent = (action: 'accept' | 'decline' | 'view') => {
+    if (isGlobalDisabled) return 'Actions are currently disabled';
+    
+    if (isProcessing) {
+      if (action === 'accept' && acceptMutation.isPending) return 'Accepting invitation...';
+      if (action === 'decline' && declineMutation.isPending) return 'Declining invitation...';
+      return 'Processing another action...';
+    }
+
+    switch (action) {
+      case 'accept':
+        return `Accept invitation from ${invitation.facility?.facility_name || 'this facility'}`;
+      case 'decline':
+        return `Decline invitation from ${invitation.facility?.facility_name || 'this facility'}`;
+      case 'view':
+        return 'View invitation details';
+      default:
+        return '';
+    }
+  };
 
   /* ----------------------------- Event Handlers --------------------------- */
 
   const handleAccept = useCallback(async (): Promise<void> => {
+    if (isGlobalDisabled) return;
+
     try {
       const confirmed = await confirm({
         title: 'Accept Invitation',
@@ -244,9 +280,11 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
       console.error('Error in handleAccept:', error);
       dispatch(setContextLoading(false));
     }
-  }, [confirm, invitation, theme, acceptMutation, dispatch]);
+  }, [confirm, invitation, theme, acceptMutation, dispatch, isGlobalDisabled]);
 
   const handleDecline = useCallback(async (): Promise<void> => {
+    if (isGlobalDisabled) return;
+
     try {
       const confirmed = await confirm({
         title: 'Decline Invitation',
@@ -263,13 +301,63 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
     } catch (error) {
       console.error('Error in handleDecline:', error);
     }
-  }, [confirm, invitation, theme, declineMutation]);
+  }, [confirm, invitation, theme, declineMutation, isGlobalDisabled]);
 
-  const handleViewDetails = useCallback((): void => {
-    if (onViewDetails) {
-      onViewDetails(invitation);
-    }
-  }, [onViewDetails, invitation]);
+
+  /* --------------------------- Button Styling ----------------------------- */
+
+  const getButtonClasses = (
+    type: 'accept' | 'decline' | 'view',
+    isActionAvailable: boolean = true
+  ) => {
+    const isActionDisabled = !isActionAvailable || isGlobalDisabled;
+    const baseClasses = [
+      'inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md',
+      'text-xs font-medium transition-all duration-200',
+      'focus:outline-none focus:ring-2 focus:ring-offset-2',
+      'disabled:opacity-50 disabled:transform-none disabled:shadow-none',
+      getCursorClass(isActionDisabled),
+    ];
+
+    const stateClasses = isActionDisabled
+      ? [
+          'opacity-50',
+          'cursor-not-allowed',
+          'hover:transform-none',
+          'active:transform-none',
+        ]
+      : [
+          'hover:scale-[1.02]',
+          'active:scale-[0.98]',
+          'hover:shadow-md',
+          'focus:shadow-lg',
+        ];
+
+    const typeClasses = {
+      accept: [
+        'bg-green-600 hover:bg-green-700 active:bg-green-800',
+        'text-white shadow-sm',
+        'focus:ring-green-500 focus:ring-offset-2',
+        isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
+      ],
+      decline: [
+        'bg-red-600 hover:bg-red-700 active:bg-red-800',
+        'text-white shadow-sm',
+        'focus:ring-red-500 focus:ring-offset-2',
+        isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
+      ],
+      view: [
+        isDark
+          ? 'bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-gray-300'
+          : 'bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700',
+        'shadow-sm',
+        'focus:ring-gray-500 focus:ring-offset-2',
+        isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
+      ],
+    };
+
+    return [...baseClasses, ...stateClasses, ...typeClasses[type]].join(' ');
+  };
 
   /* --------------------------- Conditional Rendering ---------------------- */
 
@@ -288,80 +376,77 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
 
   return (
     <div className={containerClasses}>
+        {/* Decline Button */}
+      {(
+        <button
+          onClick={handleDecline}
+          disabled={isGlobalDisabled}
+          className={getButtonClasses('decline', invitation.can_be_declined)}
+          aria-label={getTooltipContent('decline')}
+          title={getTooltipContent('decline')}
+          aria-busy={declineMutation.isPending}
+          aria-disabled={isGlobalDisabled}
+        >
+          {declineMutation.isPending ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+              <span className={showLabels ? 'hidden sm:inline' : 'sr-only'}>
+                Declining...
+              </span>
+            </>
+          ) : (
+            <>
+              <X className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className={showLabels ? 'hidden sm:inline' : 'sr-only'}>
+                Decline
+              </span>
+            </>
+          )}
+        </button>
+      )} 
+
       {/* Accept Button */}
       {invitation.can_be_accepted && (
         <button
           onClick={handleAccept}
-          disabled={isProcessing}
-          className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-            isProcessing
-              ? 'opacity-50 cursor-not-allowed'
-              : 'hover:scale-[1.02] active:scale-[0.98]'
-          } bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
-          aria-label="Accept invitation"
-          title="Accept this invitation"
+          disabled={isGlobalDisabled}
+          className={getButtonClasses('accept', invitation.can_be_accepted)}
+          aria-label={getTooltipContent('accept')}
+          title={getTooltipContent('accept')}
+          aria-busy={acceptMutation.isPending}
+          aria-disabled={isGlobalDisabled}
         >
           {acceptMutation.isPending ? (
             <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span className="hidden sm:inline">Accepting...</span>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+              <span className={showLabels ? 'hidden sm:inline' : 'sr-only'}>
+                Accepting...
+              </span>
             </>
           ) : (
             <>
-              <Check className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Accept</span>
+              <Check className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className={showLabels ? 'hidden sm:inline' : 'sr-only'}>
+                Accept
+              </span>
             </>
           )}
         </button>
       )}
 
-      {/* Decline Button */}
-      {(
-        <button
-          onClick={handleDecline}
-          disabled={isProcessing}
-          className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-            isProcessing
-              ? 'opacity-50 cursor-not-allowed'
-              : 'hover:scale-[1.02] active:scale-[0.98]'
-          } bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
-          aria-label="Decline invitation"
-          title="Decline this invitation"
-        >
-          {declineMutation.isPending ? (
-            <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span className="hidden sm:inline">Declining...</span>
-            </>
-          ) : (
-            <>
-              <X className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Decline</span>
-            </>
-          )}
-        </button>
-      )}
+      
 
-      {/* View Details Button (Optional) */}
-      {onViewDetails && (
-        <button
-          onClick={handleViewDetails}
-          disabled={isProcessing}
-          className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-            isProcessing
-              ? 'opacity-50 cursor-not-allowed'
-              : 'hover:scale-[1.02] active:scale-[0.98]'
-          } ${
-            isDark
-              ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-          } shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
-          aria-label="View invitation details"
-          title="View invitation details"
-        >
-          <Eye className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Details</span>
-        </button>
+      {/* Status Indicator (for debugging/visual feedback) */}
+      {(acceptMutation.isPending || declineMutation.isPending) && (
+        <div 
+          className={`
+            absolute inset-0 rounded-md pointer-events-none
+            bg-gradient-to-r from-transparent via-white/10 to-transparent
+            animate-pulse-subtle
+            ${isDark ? 'mix-blend-lighten' : 'mix-blend-multiply'}
+          `}
+          aria-hidden="true"
+        />
       )}
     </div>
   );

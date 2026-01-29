@@ -17,17 +17,14 @@ import {
   Clock, 
   ChevronDown, 
   ChevronUp,
-  MapPin,
   Briefcase,
-  Grid,
-  AlertCircle,
-  CheckCircle2,
   User,
   Mail,
   Phone,
 } from 'lucide-react';
 
 import type { StaffInvitation } from '../../administration/admin-module/api/team-management/types/staffInvitationTypes';
+import { cn } from '../../../shared/utils/classNameUtils';
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
@@ -138,15 +135,60 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
       urgent: false
     };
   }, [invitation.expires_at, invitation.days_until_expiry, isDark]);
+  const getStatusStyles = (status?: string) => {
+  switch (status) {
+    case 'pending':
+      return {
+        label: 'Pending',
+        classes: isDark
+          ? 'bg-amber-900/30 text-amber-300 border border-amber-800'
+          : 'bg-amber-100 text-amber-800 border border-amber-200',
+      };
 
-  const getRoleDisplayName = useCallback((roleCode?: string | null): string => {
-    if (!roleCode) return '—';
+    case 'accepted':
+      return {
+        label: 'Accepted',
+        classes: isDark
+          ? 'bg-green-900/30 text-green-300 border border-green-800'
+          : 'bg-green-100 text-green-800 border border-green-200',
+      };
 
-    return roleCode
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-  }, []);
+    case 'declined':
+    case 'cancelled':
+      return {
+        label: 'Cancelled',
+        classes: isDark
+          ? 'bg-red-900/30 text-red-300 border border-red-800'
+          : 'bg-red-100 text-red-800 border border-red-200',
+      };
+
+    case 'expired':
+      return {
+        label: 'Expired',
+        classes: isDark
+          ? 'bg-gray-800 text-gray-300 border border-gray-700'
+          : 'bg-gray-200 text-gray-700 border border-gray-300',
+      };
+
+    default:
+      return {
+        label: 'Unknown',
+        classes: isDark
+          ? 'bg-gray-800 text-gray-300 border border-gray-700'
+          : 'bg-gray-100 text-gray-700 border border-gray-300',
+      };
+  }
+};
+
+
+ const getRoleDisplayName = useCallback((roleCode?: string | null): string => {
+      if (!roleCode) return '—';
+
+      return roleCode
+        .replace(/[_-]+/g, ' ')
+        .toUpperCase();
+    }, []);
+
 
   const toggleExpanded = useCallback((): void => {
     setIsExpanded(prev => !prev);
@@ -162,127 +204,112 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
         isDark 
           ? 'bg-gray-900 border-gray-800 hover:border-gray-700' 
           : 'bg-white border-gray-200 hover:border-gray-300'
-      } ${expiryStatus.urgent ? 'ring-2 ring-opacity-50 ' + (isDark ? 'ring-orange-400/20' : 'ring-orange-500/20') : ''}`}
+      } ${expiryStatus.urgent ? 'ring-2 ring-opacity-50 ' + (isDark ? 'ring-blue-400/20' : 'ring-blue-500/20') : ''}`}
     >
       {/* Card Header */}
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            {/* Facility Name */}
-            <div className="flex items-center gap-2 mb-2">
-              <Building2 className={`w-5 h-5 flex-shrink-0 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
-              <h3 className="text-lg font-semibold truncate">
-                Facility Name: {invitation.facility?.facility_name || 'Unknown Facility'}
-              </h3>
+    <div className="p-5">
+      {/* Top Row: Facility + Status */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3 min-w-0">
+          <Building2
+            className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
+              isDark ? 'text-blue-400' : 'text-blue-600'
+            }`}
+          />
+
+          <div className="min-w-0">
+            <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Inviting Facility
             </div>
 
-            {/* Facility Code & Department */}
-            <div className="flex flex-wrap items-center gap-3 mb-3">
-              <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Facility Number: {invitation.facility?.facility_code || 'N/A'}
-              </span>
-              {invitation.department && (
-                <>
-                  <span className={isDark ? 'text-gray-700' : 'text-gray-300'}>•</span>
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className={`w-3.5 h-3.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-                    <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {invitation.department.department_name}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
+            <h3 className="text-lg font-semibold truncate">
+              {invitation.facility?.facility_name || 'Unknown Facility'}
+            </h3>
 
-            {/* Role Badge */}
-            <div className="flex items-center gap-2 mb-3">
-              <Briefcase className="w-4 h-4" />
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                isDark ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-100 text-purple-800'
-              }`}>
-                {invitation.role?.name || getRoleDisplayName(invitation.role_code)}
-              </span>
-            </div>
+            {/* Invited as */}
+            {invitation.role_code && (
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Invited as
+                </span>
 
-            {/* Modules */}
-            {invitation.modules && invitation.modules.length > 0 && (
-              <div className="flex items-start gap-2">
-                <Grid className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-                <div className="flex flex-wrap gap-1.5">
-                  {invitation.modules.map((module) => (
-                    <span
-                      key={module.code}
-                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                        isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'
-                      }`}
-                    >
-                      {module.name}
-                    </span>
-                  ))}
-                </div>
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                    isDark
+                      ? 'bg-indigo-900/30 text-indigo-300 border border-indigo-800'
+                      : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                  }`}
+                >
+                  {getRoleDisplayName(invitation.role_code)}
+                </span>
               </div>
             )}
           </div>
-
-          {/* Expiry Status Badge */}
-          <div className="flex flex-col items-end gap-2">
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${expiryStatus.bgColor} ${expiryStatus.color}`}>
-              {expiryStatus.urgent ? <AlertCircle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-              {expiryStatus.text}
-            </span>
-          </div>
         </div>
 
-        {/* Timestamp Info */}
-        <div className={`flex flex-wrap items-center gap-4 mt-4 pt-4 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
-          <div className="flex items-center gap-1.5">
-            <Calendar className={`w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              Sent: {formatDate(invitation.sent_at)}
+        {/* Status Badge */}
+        {(() => {
+          const statusConfig = getStatusStyles(invitation.status);
+          return (
+            <span
+              className={cn(
+                'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold flex-shrink-0',
+                statusConfig.classes
+              )}
+            >
+              {statusConfig.label}
             </span>
-          </div>
-          {invitation.expires_at && (
-            <>
-              <span className={isDark ? 'text-gray-700' : 'text-gray-300'}>•</span>
-              <div className="flex items-center gap-1.5">
-                <Clock className={`w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-                <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Expires: {formatDate(invitation.expires_at)}
-                </span>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Action Buttons Slot */}
-        {actionSlot && (
-          <div className="mt-4">
-            {actionSlot}
-          </div>
-        )}
-
-        {/* Expand/Collapse Button */}
-        <button
-          onClick={toggleExpanded}
-          className={`mt-4 w-full flex items-center justify-center gap-2 py-2 rounded-lg transition-colors ${
-            isDark 
-              ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' 
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-          }`}
-          aria-expanded={isExpanded}
-          aria-label={isExpanded ? 'Show less details' : 'View more details'}
-        >
-          <span className="text-sm font-medium">
-            {isExpanded ? 'Show Less' : 'View Details'}
-          </span>
-          {isExpanded ? (
-            <ChevronUp className="w-4 h-4" />
-          ) : (
-            <ChevronDown className="w-4 h-4" />
-          )}
-        </button>
+          );
+        })()}
       </div>
 
+      {/* Timestamp Info */}
+      <div
+        className={cn(
+          'flex flex-wrap items-center gap-4 mt-4 pt-4 border-t',
+          isDark ? 'border-gray-800' : 'border-gray-200'
+        )}
+      >
+        <div className="flex items-center gap-1.5">
+          <Calendar className={`w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+          <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            Sent: {formatDate(invitation.sent_at)}
+          </span>
+        </div>
+
+        {invitation.expires_at && (
+          <>
+            <span className={isDark ? 'text-gray-700' : 'text-gray-300'}>•</span>
+            <div className="flex items-center gap-1.5">
+              <Clock className={`w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+              <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Expires: {formatDate(invitation.expires_at)}
+              </span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Action Buttons Slot */}
+      {actionSlot && <div className="mt-4">{actionSlot}</div>}
+
+      {/* Expand/Collapse Button */}
+      <button
+        type="button"
+        onClick={toggleExpanded}
+        className={cn(
+          'mt-4 w-full flex items-center justify-center gap-2 py-2 rounded-lg transition-colors cursor-pointer',
+          isDark
+            ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+        )}
+        aria-expanded={isExpanded}
+        aria-label={isExpanded ? 'Show less details' : 'View details'}
+      >
+        <span className="text-sm font-medium">{isExpanded ? 'Show Less' : 'View Details'}</span>
+        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+      </button>
+    </div>
       {/* Expanded Details */}
       {isExpanded && (
         <div className={`border-t px-5 py-4 ${isDark ? 'bg-gray-900/50 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
@@ -341,19 +368,19 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
                   </div>
                   <div>
                     <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                      Professional Number
+                      Staff Number
                     </dt>
                     <dd className={`text-sm font-mono ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                       {invitation.invited_by.staff_uuid}
                     </dd>
                   </div>
-                  {invitation.invited_by.global_role_level && (
+                  {invitation.role_code && (
                     <div>
                       <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
                         Role
                       </dt>
                       <dd className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                        {getRoleDisplayName(invitation.invited_by.global_role_level)}
+                        {getRoleDisplayName(invitation.role_code)}
                       </dd>
                     </div>
                   )}

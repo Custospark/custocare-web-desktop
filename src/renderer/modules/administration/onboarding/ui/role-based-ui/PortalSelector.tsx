@@ -27,10 +27,7 @@ import {
   Sun,
   Moon,
   Plus,
-  Users,
   User,
-  Building2,
-  Mail,
   UserCog,
   CheckCircle,
   Inbox,
@@ -294,7 +291,7 @@ export const PortalSelector: React.FC = () => {
             <button
               onClick={() => dispatch(toggleTheme())}
               className={cn(
-                'p-2 rounded-lg transition-all duration-200',
+                'p-2 rounded-lg transition-all duration-200 cursor-pointer',
                 theme === 'dark'
                   ? 'hover:bg-gray-800 text-gray-400'
                   : 'hover:bg-gray-100 text-gray-600'
@@ -307,7 +304,7 @@ export const PortalSelector: React.FC = () => {
             <button
               onClick={handleLogout}
               className={cn(
-                'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer',
                 'bg-blue-600 text-white hover:bg-blue-700'
               )}
             >
@@ -431,17 +428,6 @@ export const PortalSelector: React.FC = () => {
                   healthcare credentials.
                 </p>
 
-                {capabilities.staff && (
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className={cn('text-xs font-medium', designSystem.colors.tertiary)}>
-                      Staff ID:
-                    </span>
-                    <span className={cn('text-xs font-mono', designSystem.colors.secondary)}>
-                      {capabilities.staff.staff_id}
-                    </span>
-                  </div>
-                )}
-
                 <div className="flex flex-wrap gap-3">
                   {staffDashboardFeatures.map((feature, index) => (
                     <div
@@ -459,64 +445,28 @@ export const PortalSelector: React.FC = () => {
                   ))}
                 </div>
               </div>
+                <button
+                  type="button"
+                  className={cn(
+                    'px-6 py-3 rounded-lg font-medium text-sm',
+                    'flex items-center gap-2 flex-shrink-0',
+                    'transition-all duration-300',
+                    
+                    // Cursor
+                    'cursor-pointer',
 
-              <button
-                className={cn(
-                  'px-6 py-3 rounded-lg font-medium text-sm',
-                  'flex items-center gap-2 flex-shrink-0',
-                  'transition-all duration-300',
-                  'bg-gradient-to-r from-blue-600 to-cyan-600 text-white',
-                  'hover:from-blue-700 hover:to-cyan-700',
-                  'transform hover:scale-105 shadow-md hover:shadow-lg'
-                )}
-              >
-                <Sparkles className="w-4 h-4" />
-                View Dashboard
-              </button>
+                    // Visuals
+                    'bg-gradient-to-r from-blue-600 to-cyan-600 text-white',
+                    'hover:from-blue-700 hover:to-cyan-700',
+                    'transform hover:scale-105 shadow-md hover:shadow-lg'
+                  )}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Open Dashboard
+                </button>
+
             </div>
           </motion.div>
-
-          {/* Info Card */}
-          <div
-            className={cn(
-              'rounded-xl border p-6',
-              designSystem.colors.card,
-              'shadow-sm'
-            )}
-          >
-            <div className="flex items-start gap-4">
-              <div
-                className={cn(
-                  'w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0',
-                  'bg-blue-500/10'
-                )}
-              >
-                <Mail className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className={cn('text-lg font-bold mb-2', designSystem.colors.primary)}>
-                  Facility Invitations
-                </h3>
-                <p className={cn('text-sm mb-4', designSystem.colors.secondary)}>
-                  You can receive invitations from healthcare facilities to join their team. Check your
-                  dashboard for pending invitations or register a new facility.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={handleRegisterFacility}
-                    className={cn(
-                      'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
-                      'bg-blue-600 text-white hover:bg-blue-700',
-                      'transition-all duration-200'
-                    )}
-                  >
-                    <Plus className="w-4 h-4" />
-                    Register New Facility
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
         </motion.div>
       );
     }
@@ -623,25 +573,7 @@ export const PortalSelector: React.FC = () => {
                           Access your {getRoleDisplayName(facilityRole.role_code).toLowerCase()}{' '}
                           dashboard to manage patients, review clinical data, and coordinate care.
                         </p>
-
-                        <div className="flex items-center gap-4 text-xs">
-                          <div className="flex items-center gap-1.5">
-                            <Building2
-                              className={cn('w-3.5 h-3.5', designSystem.colors.tertiary)}
-                            />
-                            <span className={designSystem.colors.secondary}>
-                              Facility ID: {facilityRole.facility_id}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <Users className={cn('w-3.5 h-3.5', designSystem.colors.tertiary)} />
-                            <span className={designSystem.colors.secondary}>
-                              Staff ID: {facilityRole.staff_id}
-                            </span>
-                          </div>
-                        </div>
                       </div>
-
                       <button
                         className={cn(
                           'ml-4 px-5 py-2.5 rounded-lg font-medium text-sm',
@@ -651,7 +583,7 @@ export const PortalSelector: React.FC = () => {
                           'transform hover:scale-105 shadow-sm hover:shadow-md'
                         )}
                       >
-                        Enter Dashboard
+                        Open Dashboard
                         <ArrowRight
                           className={cn(
                             'w-4 h-4 transition-transform duration-300',
@@ -728,32 +660,48 @@ export const PortalSelector: React.FC = () => {
                 </p>
                 
                 <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={handleActivatePatientPortal}
-                    className={cn(
-                      'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
-                      'bg-gradient-to-r from-purple-600 to-pink-600 text-white',
-                      'hover:from-purple-700 hover:to-pink-700',
-                      'transition-all duration-200 flex-shrink-0'
-                    )}
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    Activate Patient Portal
-                  </button>
-                  
+                 <button
+                  type="button"
+                  onClick={handleActivatePatientPortal}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium flex-shrink-0',
+
+                    // Cursor behavior
+                    'cursor-pointer disabled:cursor-not-allowed disabled:opacity-60',
+
+                    // Visual weight
+                    'bg-gradient-to-r from-purple-600 to-pink-600 text-white',
+                    'hover:from-purple-700 hover:to-pink-700',
+
+                    // Motion
+                    'transition-all duration-200'
+                  )}
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Activate Patient Portal
+                </button>
                   {!isStaff && (
-                    <button
+                  <button
+                      type="button"
                       onClick={handleRegisterAsMedicalStaff}
                       className={cn(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
+                        'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium flex-shrink-0',
+
+                        // Cursor behavior
+                        'cursor-pointer disabled:cursor-not-allowed disabled:opacity-60',
+
+                        // Visuals
                         'bg-gradient-to-r from-blue-600 to-cyan-600 text-white',
                         'hover:from-blue-700 hover:to-cyan-700',
-                        'transition-all duration-200 flex-shrink-0'
+
+                        // Motion
+                        'transition-all duration-200'
                       )}
                     >
                       <Stethoscope className="w-4 h-4" />
                       Register as Medical Staff
                     </button>
+
                   )}
                 </div>
               </div>
@@ -822,10 +770,10 @@ export const PortalSelector: React.FC = () => {
               {capabilities.patient && (
                 <div className="flex items-center gap-2 mb-4">
                   <span className={cn('text-xs font-medium', designSystem.colors.tertiary)}>
-                    Patient ID:
+                    Patient Number:
                   </span>
                   <span className={cn('text-xs font-mono', designSystem.colors.secondary)}>
-                    {capabilities.patient.patient_id}
+                    {capabilities.patient.patient_uuid}
                   </span>
                 </div>
               )}
@@ -880,7 +828,7 @@ export const PortalSelector: React.FC = () => {
       <button
         onClick={handleRegisterFacility}
         className={cn(
-          'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
+          'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer',
           'transition-all duration-200',
           theme === 'dark'
             ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
@@ -895,7 +843,7 @@ export const PortalSelector: React.FC = () => {
         <button
           onClick={handleActivatePatientPortal}
           className={cn(
-            'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
+            'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer',
             'transition-all duration-200',
             theme === 'dark'
               ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
@@ -911,7 +859,7 @@ export const PortalSelector: React.FC = () => {
         <button
           onClick={handleRegisterAsMedicalStaff}
           className={cn(
-            'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
+            'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer',
             'transition-all duration-200',
             theme === 'dark'
               ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
