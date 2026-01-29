@@ -17,9 +17,9 @@ import {
   Eye,
   MoreVertical,
   Shield,
+  X,
 } from 'lucide-react';
 import { useGetStaffForGivenFacility } from '../../api/team-management/queries/useStaffQueries';
-import type { EmploymentStatus } from '../../api/team-management/types/staffTypes';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 import { StaffPermissionDrawer } from './StaffPermissionDrawer';
 
@@ -48,8 +48,7 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
   const isDark = theme === 'dark';
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<EmploymentStatus | 'all'>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'employee_id' | 'role'>('name');
+  const [sortBy] = useState<'name' | 'employee_id' | 'role'>('name');
   
   // Drawer state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -58,7 +57,6 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
   const { data: staffResponse, isLoading, refetch } = useGetStaffForGivenFacility(
     {
       facility_id: facilityId,
-      employment_status: statusFilter === 'all' ? undefined : statusFilter,
     },
     {
       enabled: !!facilityId,
@@ -98,6 +96,18 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
     
     return result;
   }, [staff, searchTerm, sortBy]);
+  
+  // Handle clearing search
+  const handleClearSearch = () => {
+    setSearchTerm('');
+  };
+  
+  // Handle key down events for search
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      handleClearSearch();
+    }
+  };
   
   // Handle opening permissions drawer
   const handleOpenPermissions = (staffMember: any) => {
@@ -144,6 +154,7 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
             </h2>
           </div>
           
+          {/* Enhanced Search Bar with Clear Button */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative">
               <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
@@ -151,45 +162,63 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
               }`} />
               <input
                 type="text"
-                placeholder="Search staff by name, ID, or email..."
+                placeholder="Search staff by staf number,name, email or phone number..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
+                onKeyDown={handleKeyDown}
+                className={`w-full pl-10 pr-10 py-2 rounded-lg border ${
                   isDark 
                     ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' 
                     : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
               />
+              
+              {/* Clear Search Button (Cross Icon) */}
+              {searchTerm && (
+                <button
+                  onClick={handleClearSearch}
+                  className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded-full transition-colors cursor-pointer ${
+                    isDark 
+                      ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-300' 
+                      : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
+                  }`}
+                  aria-label="Clear search"
+                  type="button"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+              
+              {/* Search Hint (only visible when there's a search term) */}
+              {searchTerm && (
+                <div className={`absolute -bottom-6 left-0 text-xs ${
+                  isDark ? 'text-gray-400' : 'text-gray-500'
+                }`}>
+                  Press ESC to clear search
+                </div>
+              )}
             </div>
             
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as EmploymentStatus | 'all')}
-              className={`px-3 py-2 rounded-lg border cursor-pointer ${
-                isDark 
-                  ? 'bg-gray-800 border-gray-700 text-white' 
-                  : 'bg-gray-50 border-gray-300 text-gray-900'
-              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-            >
-              <option value="all">All Status</option>
-              <option value="employed">Employed</option>
-              <option value="suspended">Suspended</option>
-              <option value="terminated">Terminated</option>
-            </select>
-            
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'name' | 'employee_id' | 'role')}
-              className={`px-3 py-2 rounded-lg border cursor-pointer ${
-                isDark 
-                  ? 'bg-gray-800 border-gray-700 text-white' 
-                  : 'bg-gray-50 border-gray-300 text-gray-900'
-              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-            >
-              <option value="name">Sort by Name</option>
-              <option value="employee_id">Sort by ID</option>
-              <option value="role">Sort by Role</option>
-            </select>
+            {/* Results Summary */}
+            {searchTerm && (
+              <div className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm ${
+                isDark ? 'bg-blue-900/20 text-blue-300' : 'bg-blue-50 text-blue-700'
+              }`}>
+                <span>Found {filteredAndSortedStaff.length} result{filteredAndSortedStaff.length !== 1 ? 's' : ''}</span>
+             <button
+                onClick={handleClearSearch}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs cursor-pointer ${
+                  isDark 
+                    ? 'hover:bg-blue-800/30 text-blue-200' 
+                    : 'hover:bg-blue-100 text-blue-600'
+                } transition-colors`}
+                type="button"
+              >
+                <X className="w-3 h-3" />
+                Clear
+              </button>
+              </div>
+            )}
           </div>
         </div>
         
@@ -204,9 +233,26 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
               <Users className={`w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 ${
                 isDark ? 'text-gray-600' : 'text-gray-400'
               }`} />
-              <h3 className="text-base sm:text-lg font-medium mb-2">No Staff Found</h3>
+              <h3 className="text-base sm:text-lg font-medium mb-2">
+                {searchTerm ? 'No matching staff found' : 'No Staff Found'}
+              </h3>
               <p className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                {searchTerm ? 'No staff match your search.' : 'No staff members to display. Invite staff to your facility and they will appear here.'}
+                {searchTerm ? (
+                  <>
+                    No staff members match "<span className="font-semibold">{searchTerm}</span>"
+                    <button
+                      onClick={handleClearSearch}
+                      className={`ml-2 px-2 py-1 rounded text-sm cursor-pointer ${
+                        isDark 
+                          ? 'text-blue-400 hover:text-blue-300 hover:bg-gray-800' 
+                          : 'text-blue-600 hover:text-blue-700 hover:bg-gray-100'
+                      } transition-colors`}
+                      type="button"
+                    >
+                      Clear search and show all staff
+                    </button>
+                  </>
+                ) : 'No staff members to display. Invite staff to your facility and they will appear here.'}
               </p>
             </div>
           ) : (
@@ -320,36 +366,34 @@ export const StaffListView: React.FC<StaffListViewProps> = ({
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-center gap-2">
                             {/* View details */}
-                           {/* View */}
-                  <button
-                    onClick={() => onStaffSelect(staffMember.id)}
-                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
-                      isDark
-                        ? 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300'
-                        : 'bg-blue-50 hover:bg-blue-100 text-blue-700'
-                    }`}
-                    title="View details"
-                    type="button"
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span>View</span>
-                  </button>
+                            <button
+                              onClick={() => onStaffSelect(staffMember.id)}
+                              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                                isDark
+                                  ? 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300'
+                                  : 'bg-blue-50 hover:bg-blue-100 text-blue-700'
+                              }`}
+                              title="View details"
+                              type="button"
+                            >
+                              <Eye className="w-4 h-4" />
+                              <span>View</span>
+                            </button>
 
-                  {/* Modify permissions */}
-                  <button
-                    onClick={() => handleOpenPermissions(staffMember)}
-                    className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
-                      isDark
-                        ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                        : 'bg-blue-500 hover:bg-blue-600 text-white'
-                    }`}
-                    title="Modify permissions"
-                    type="button"
-                  >
-                    <Shield className="w-4 h-4" />
-                    <span className="hidden sm:inline">Permissions</span>
-                  </button>
-
+                            {/* Modify permissions */}
+                            <button
+                              onClick={() => handleOpenPermissions(staffMember)}
+                              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                                isDark
+                                  ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+                              }`}
+                              title="Modify permissions"
+                              type="button"
+                            >
+                              <Shield className="w-4 h-4" />
+                              <span className="hidden sm:inline">Permissions</span>
+                            </button>
 
                             {/* More options */}
                             <button

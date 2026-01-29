@@ -181,7 +181,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
 };
 
 
- const getRoleDisplayName = useCallback((roleCode?: string | null): string => {
+const getRoleDisplayName = useCallback((roleCode?: string | null): string => {
       if (!roleCode) return '—';
 
       return roleCode

@@ -1,28 +1,18 @@
 /**
  * ============================================================================
- * STAFF INVITATION MANAGER COMPONENT (PRODUCTION-READY)
+ * STAFF INVITATION MANAGER COMPONENT
  * ============================================================================
  * 
- * Enhanced staff invitation management with intelligent batch operations,
- * status-aware actions, and comprehensive edge case handling.
+ * Enhanced staff invitation management with proper hook usage, cursor states,
+ * and comprehensive edge case handling.
  * 
  * @component InvitationManager
  * @description Production-grade invitation management with:
- * - Smart batch selection (status-aware)
- * - Appropriate actions per invitation status
- * - Delete support for declined invitations
- * - Enhanced layout and information display
+ * - Correct single vs batch operation hooks
+ * - Proper cursor states for all interactive elements
+ * - Disabled states during processing
+ * - Status-aware actions with proper validation
  * - Full type safety and error handling
- * - Best practice patterns (loading states, confirmations, toast notifications)
- * 
- * @features
- * - Secure staff lookup system
- * - Status-based action filtering
- * - Batch operations (resend/cancel)
- * - Individual actions (resend/cancel/delete)
- * - Real-time validation
- * - Responsive design
- * - Accessibility compliant
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -69,7 +59,11 @@ import { useGetFacilityRoles } from '../../api/team-management/queries/useFacili
 import { useGetModules } from '../../api/team-management/queries/useModuleQueries';
 import { useGetDepartmentsByFacility } from '../../api/department-managment/useDepartmentQueries';
 import { useGetFacilitySpecificRoles } from '../../api/team-management/queries/useFacilityRoleQueries';
-import type { InvitationStatus, StaffInvitation } from '../../api/team-management/types/staffInvitationTypes';
+import type { 
+  InvitationStatus, 
+  StaffInvitation,
+  CreateStaffInvitationRequest 
+} from '../../api/team-management/types/staffInvitationTypes';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 
@@ -92,9 +86,6 @@ interface CreateInvitationFormData {
   module_codes: string[];
 }
 
-/**
- * Batch action configuration based on selected invitation statuses
- */
 interface BatchActionConfig {
   canResend: boolean;
   canCancel: boolean;
@@ -106,9 +97,6 @@ interface BatchActionConfig {
 /*                         UTILITY FUNCTIONS                                  */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Masks email for privacy display
- */
 function maskEmail(email?: string | null): string {
   if (!email) return 'Not specified';
 
@@ -127,9 +115,6 @@ function maskEmail(email?: string | null): string {
   return `${maskedName}@${maskedDomain}`;
 }
 
-/**
- * Masks phone number for privacy display
- */
 function maskPhone(phone?: string | null): string {
   if (!phone) return 'Not specified';
 
@@ -144,9 +129,6 @@ function maskPhone(phone?: string | null): string {
   return maskedPart + visiblePart;
 }
 
-/**
- * Determines available batch actions based on selected invitation statuses
- */
 function getBatchActionConfig(
   selectedInvitations: StaffInvitation[]
 ): BatchActionConfig {
@@ -157,7 +139,6 @@ function getBatchActionConfig(
   const statuses = new Set(selectedInvitations.map((inv) => inv.status));
   const hasMultipleStatuses = statuses.size > 1;
 
-  // Cannot perform batch operations on mixed statuses
   if (hasMultipleStatuses) {
     return {
       canResend: false,
@@ -204,9 +185,6 @@ function getBatchActionConfig(
   }
 }
 
-/**
- * Formats date to human-readable format
- */
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', {
@@ -227,7 +205,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
 }) => {
   const isDark = theme === 'dark';
 
-  // Get active facility from Redux store
   const activeFacilityId = useSelector(
     (state: RootState) => state.activeContext.activeFacilityId
   );
@@ -239,7 +216,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
   const [showFilters, setShowFilters] = useState(false);
   const [selectedInvitationIds, setSelectedInvitationIds] = useState<number[]>([]);
 
-  // Enhanced form state for secure staff lookup
   const [formData, setFormData] = useState<CreateInvitationFormData>({
     staff_id: null,
     staff_uuid: '',
@@ -260,7 +236,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
   /*                              DATA FETCHING                                 */
   /* -------------------------------------------------------------------------- */
 
-  // Fetch invitations
   const {
     data: invitationsResponse,
     isLoading: invitationsLoading,
@@ -275,7 +250,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     }
   );
 
-  // Fetch staff (limited data for privacy)
   const { data: staffResponse, isLoading: staffLoading } = useGetStaff(
     {
       limit: 100,
@@ -284,19 +258,16 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     { enabled: true }
   );
 
-  // Fetch roles
   const { data: rolesResponse, isLoading: rolesLoading } = useGetFacilityRoles(
     {},
     { enabled: showCreateModal }
   );
 
-  // Fetch modules
   const { data: modulesResponse, isLoading: modulesLoading } = useGetModules(
     { is_active: true },
     { enabled: showCreateModal }
   );
 
-  // Fetch departments
   const { data: departmentsResponse, isLoading: departmentsLoading } =
     useGetDepartmentsByFacility(
       activeFacilityId || 0,
@@ -332,6 +303,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     },
   });
 
+  // SINGLE OPERATION MUTATIONS (use correct hooks with { id } parameter)
   const resendMutation = useResendInvitation({
     onSuccess: () => refetch(),
   });
@@ -350,6 +322,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     },
   });
 
+  // BATCH OPERATION MUTATIONS (use correct hooks with { invitation_ids } parameter)
   const batchResendMutation = useBatchResendInvitations({
     onSuccess: () => {
       refetch();
@@ -364,11 +337,13 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     },
   });
 
+  // Track batch delete processing state
+  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+
   /* -------------------------------------------------------------------------- */
   /*                         COMPUTED VALUES                                    */
   /* -------------------------------------------------------------------------- */
 
-  // Filter and search invitations
   const filteredInvitations = useMemo(() => {
     return invitations.filter((invitation) => {
       const matchesSearch =
@@ -381,17 +356,14 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     });
   }, [invitations, searchTerm]);
 
-  // Get selected invitation objects
   const selectedInvitations = useMemo(() => {
     return filteredInvitations.filter((inv) => selectedInvitationIds.includes(inv.id));
   }, [filteredInvitations, selectedInvitationIds]);
 
-  // Batch action configuration
   const batchActionConfig = useMemo(() => {
     return getBatchActionConfig(selectedInvitations);
   }, [selectedInvitations]);
 
-  // Status statistics
   const statusStats = useMemo(() => {
     return invitations.reduce(
       (acc, inv) => {
@@ -402,19 +374,24 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     );
   }, [invitations]);
 
-  // Selected staff details
   const selectedStaff = useMemo(() => {
     if (!formData.staff_id) return null;
     return allStaff.find((staff) => staff.id === formData.staff_id);
   }, [formData.staff_id, allStaff]);
 
+  // Check if any mutation is in progress
+  const isAnyMutationPending =
+    resendMutation.isPending ||
+    cancelMutation.isPending ||
+    deleteMutation.isPending ||
+    batchResendMutation.isPending ||
+    batchCancelMutation.isPending ||
+    isBatchDeleting;
+
   /* -------------------------------------------------------------------------- */
   /*                         EVENT HANDLERS                                     */
   /* -------------------------------------------------------------------------- */
 
-  /**
-   * Enhanced staff lookup function
-   */
   const handleStaffUUIDLookup = useCallback(() => {
     setStaffLookupError('');
 
@@ -425,7 +402,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
 
     const searchTerm = formData.staff_uuid.trim().toLowerCase();
 
-    // Search for staff by UUID, employee ID, or name
     const results = allStaff.filter((staff) => {
       const uuidMatch = staff.staff_uuid?.toLowerCase().includes(searchTerm);
       const employeeIdMatch = staff.employee_id?.toLowerCase().includes(searchTerm);
@@ -441,7 +417,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
       setFilteredStaff([]);
       setFormData((prev) => ({ ...prev, staff_id: null }));
     } else if (results.length === 1) {
-      // Auto-select if only one match
       setFormData((prev) => ({
         ...prev,
         staff_id: results[0].id,
@@ -451,16 +426,12 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
       setFilteredStaff([results[0]]);
       setShowStaffDetails(true);
     } else {
-      // Show selection list for multiple matches
       setFilteredStaff(results);
       setStaffLookupMode('select');
       setFormData((prev) => ({ ...prev, staff_id: null }));
     }
   }, [formData.staff_uuid, allStaff]);
 
-  /**
-   * Handle staff selection from filtered results
-   */
   const handleStaffSelect = useCallback((staffId: number, staffUUID: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -471,9 +442,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     setShowStaffDetails(true);
   }, []);
 
-  /**
-   * Reset staff search
-   */
   const resetStaffSearch = useCallback(() => {
     setStaffLookupMode('search');
     setFormData((prev) => ({ ...prev, staff_id: null, staff_uuid: '' }));
@@ -482,9 +450,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     setShowStaffDetails(false);
   }, []);
 
-  /**
-   * Form validation
-   */
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
@@ -504,24 +469,23 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     return Object.keys(errors).length === 0;
   };
 
-  /**
-   * Handle form submission
-   */
   const handleCreateInvitation = () => {
     if (!validateForm() || !activeFacilityId) return;
 
-    createMutation.mutate({
+    const payload: CreateStaffInvitationRequest = {
       staff_id: formData.staff_id!,
       facility_id: activeFacilityId,
-      department_id: formData.department_id || undefined,
       role_code: formData.role_code,
       module_code: formData.module_codes,
-    });
+    };
+
+    if (formData.department_id) {
+      payload.department_id = formData.department_id;
+    }
+
+    createMutation.mutate(payload);
   };
 
-  /**
-   * Reset form
-   */
   const resetForm = () => {
     setFormData({
       staff_id: null,
@@ -534,9 +498,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     resetStaffSearch();
   };
 
-  /**
-   * Handle resend invitation
-   */
+  // SINGLE OPERATION HANDLERS (use correct parameter format)
   const handleResend = async (id: number) => {
     const confirmed = await confirm({
       title: 'Resend Invitation',
@@ -553,9 +515,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     resendMutation.mutate({ id });
   };
 
-  /**
-   * Handle cancel invitation
-   */
   const handleCancel = async (id: number) => {
     const confirmed = await confirm({
       title: 'Cancel Invitation',
@@ -572,9 +531,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     cancelMutation.mutate({ id });
   };
 
-  /**
-   * Handle delete invitation (for declined invitations)
-   */
   const handleDelete = async (id: number) => {
     const confirmed = await confirm({
       title: 'Delete Invitation',
@@ -591,9 +547,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     deleteMutation.mutate({ id });
   };
 
-  /**
-   * Handle batch resend
-   */
+  // BATCH OPERATION HANDLERS (use correct parameter format)
   const handleBatchResend = async () => {
     if (!batchActionConfig.canResend) return;
 
@@ -611,9 +565,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     batchResendMutation.mutate({ invitation_ids: selectedInvitationIds });
   };
 
-  /**
-   * Handle batch cancel
-   */
   const handleBatchCancel = async () => {
     if (!batchActionConfig.canCancel) return;
 
@@ -631,9 +582,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     batchCancelMutation.mutate({ invitation_ids: selectedInvitationIds });
   };
 
-  /**
-   * Handle batch delete (for declined invitations)
-   */
   const handleBatchDelete = async () => {
     if (!batchActionConfig.canDelete) return;
 
@@ -648,18 +596,21 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
 
     if (!confirmed) return;
 
-    // Delete one by one (no batch delete endpoint in provided queries)
-    for (const id of selectedInvitationIds) {
-      await deleteMutation.mutateAsync({ id });
-    }
+    setIsBatchDeleting(true);
 
-    refetch();
-    setSelectedInvitationIds([]);
+    try {
+      // Delete one by one since no batch delete endpoint exists
+      for (const id of selectedInvitationIds) {
+        await deleteMutation.mutateAsync({ id });
+      }
+
+      refetch();
+      setSelectedInvitationIds([]);
+    } finally {
+      setIsBatchDeleting(false);
+    }
   };
 
-  /**
-   * Handle toggle module selection
-   */
   const handleToggleModule = (moduleCode: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -668,15 +619,11 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
         : [...prev.module_codes, moduleCode],
     }));
 
-    // Clear error when user makes a selection
     if (formErrors.module_codes) {
       setFormErrors((prev) => ({ ...prev, module_codes: '' }));
     }
   };
 
-  /**
-   * Handle select all invitations
-   */
   const handleSelectAll = () => {
     if (selectedInvitationIds.length === filteredInvitations.length) {
       setSelectedInvitationIds([]);
@@ -685,9 +632,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     }
   };
 
-  /**
-   * Handle individual invitation selection toggle
-   */
   const handleToggleSelection = (id: number) => {
     setSelectedInvitationIds((prev) =>
       prev.includes(id) ? prev.filter((invId) => invId !== id) : [...prev, id]
@@ -783,7 +727,13 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
 
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm"
+            disabled={isAnyMutationPending}
+            className={cn(
+              'inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors shadow-sm',
+              'bg-blue-600 hover:bg-blue-700 text-white',
+              'disabled:opacity-50',
+              isAnyMutationPending ? 'cursor-not-allowed' : 'cursor-pointer'
+            )}
           >
             <Send className="w-4 h-4" />
             Send Invitation
@@ -837,22 +787,32 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
               placeholder="Search by employee ID, title, or role..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
+              disabled={isAnyMutationPending}
+              className={cn(
+                'w-full pl-10 pr-4 py-2 rounded-lg border',
                 isDark
                   ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
-                  : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'
-              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                  : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400',
+                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'disabled:opacity-50',
+                isAnyMutationPending ? 'cursor-not-allowed' : 'cursor-text'
+              )}
             />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as InvitationStatus | 'all')}
-            className={`px-3 py-2 rounded-lg border ${
+            disabled={isAnyMutationPending}
+            className={cn(
+              'px-3 py-2 rounded-lg border',
               isDark
                 ? 'bg-gray-800 border-gray-700 text-white'
-                : 'bg-gray-50 border-gray-300 text-gray-900'
-            } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                : 'bg-gray-50 border-gray-300 text-gray-900',
+              'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+              'disabled:opacity-50',
+              isAnyMutationPending ? 'cursor-not-allowed' : 'cursor-pointer'
+            )}
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
@@ -863,11 +823,15 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
 
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors ${
+            disabled={isAnyMutationPending}
+            className={cn(
+              'inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors',
               isDark
                 ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700',
+              'disabled:opacity-50',
+              isAnyMutationPending ? 'cursor-not-allowed' : 'cursor-pointer'
+            )}
           >
             <Filter className="w-4 h-4" />
             Filters
@@ -875,12 +839,15 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
 
           <button
             onClick={() => refetch()}
-            disabled={isLoading}
-            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors ${
+            disabled={isLoading || isAnyMutationPending}
+            className={cn(
+              'inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors',
               isDark
                 ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            } disabled:opacity-50`}
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700',
+              'disabled:opacity-50',
+              isLoading || isAnyMutationPending ? 'cursor-not-allowed' : 'cursor-pointer'
+            )}
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
@@ -907,8 +874,13 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                 filteredInvitations.length > 0
               }
               onChange={handleSelectAll}
-              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              disabled={filteredInvitations.length === 0}
+              disabled={filteredInvitations.length === 0 || isAnyMutationPending}
+              className={cn(
+                'w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500',
+                filteredInvitations.length === 0 || isAnyMutationPending
+                  ? 'cursor-not-allowed'
+                  : 'cursor-pointer'
+              )}
             />
             <h3 className="font-semibold">
               {filteredInvitations.length} Invitation
@@ -937,13 +909,16 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
               {batchActionConfig.canResend && (
                 <button
                   onClick={handleBatchResend}
-                  disabled={batchResendMutation.isPending}
+                  disabled={batchResendMutation.isPending || isAnyMutationPending}
                   className={cn(
                     'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
                     isDark
                       ? 'bg-blue-900/30 hover:bg-blue-900/50 text-blue-300'
                       : 'bg-blue-100 hover:bg-blue-200 text-blue-700',
-                    'disabled:opacity-50 disabled:cursor-not-allowed'
+                    'disabled:opacity-50',
+                    batchResendMutation.isPending || isAnyMutationPending
+                      ? 'cursor-not-allowed'
+                      : 'cursor-pointer'
                   )}
                 >
                   {batchResendMutation.isPending ? (
@@ -960,13 +935,16 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
               {batchActionConfig.canCancel && (
                 <button
                   onClick={handleBatchCancel}
-                  disabled={batchCancelMutation.isPending}
+                  disabled={batchCancelMutation.isPending || isAnyMutationPending}
                   className={cn(
                     'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
                     isDark
                       ? 'bg-red-900/30 hover:bg-red-900/50 text-red-300'
                       : 'bg-red-100 hover:bg-red-200 text-red-700',
-                    'disabled:opacity-50 disabled:cursor-not-allowed'
+                    'disabled:opacity-50',
+                    batchCancelMutation.isPending || isAnyMutationPending
+                      ? 'cursor-not-allowed'
+                      : 'cursor-pointer'
                   )}
                 >
                   {batchCancelMutation.isPending ? (
@@ -983,26 +961,20 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
               {batchActionConfig.canDelete && (
                 <button
                   onClick={handleBatchDelete}
-                  disabled={deleteMutation.isPending}
+                  disabled={isBatchDeleting || isAnyMutationPending}
                   type="button"
                   className={cn(
                     'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-                    
-                    // Cursor logic
-                    deleteMutation.isPending
-                      ? 'cursor-progress'
-                      : 'cursor-pointer',
-
-                    // Theme
                     isDark
                       ? 'bg-red-900/30 hover:bg-red-900/50 text-red-300'
                       : 'bg-red-100 hover:bg-red-200 text-red-700',
-
-                    // Disabled overrides
-                    'disabled:opacity-50 disabled:cursor-not-allowed'
+                    'disabled:opacity-50',
+                    isBatchDeleting || isAnyMutationPending
+                      ? 'cursor-not-allowed'
+                      : 'cursor-pointer'
                   )}
                 >
-                  {deleteMutation.isPending ? (
+                  {isBatchDeleting ? (
                     <>
                       <Trash2 className="w-3.5 h-3.5 animate-pulse" />
                       Deleting…
@@ -1014,7 +986,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                     </>
                   )}
                 </button>
-
               )}
             </div>
           )}
@@ -1045,7 +1016,13 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
             {!searchTerm && statusFilter === 'all' && (
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                disabled={isAnyMutationPending}
+                className={cn(
+                  'inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors',
+                  'bg-blue-600 hover:bg-blue-700 text-white',
+                  'disabled:opacity-50',
+                  isAnyMutationPending ? 'cursor-not-allowed' : 'cursor-pointer'
+                )}
               >
                 <Plus className="w-4 h-4" />
                 Send First Invitation
@@ -1073,7 +1050,11 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                     type="checkbox"
                     checked={selectedInvitationIds.includes(invitation.id)}
                     onChange={() => handleToggleSelection(invitation.id)}
-                    className="mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    disabled={isAnyMutationPending}
+                    className={cn(
+                      'mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500',
+                      isAnyMutationPending ? 'cursor-not-allowed' : 'cursor-pointer'
+                    )}
                   />
 
                   {/* Main Content */}
@@ -1090,7 +1071,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                                 'Staff Member'}
                             </h4>
 
-                            {/* Secondary identity line */}
                             <div
                               className={`text-xs ${
                                 isDark ? 'text-gray-500' : 'text-gray-500'
@@ -1129,13 +1109,12 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                           </span>
                         </div>
 
-                        {/* Row 2: Context (Facility / Department / Role / Modules) */}
+                        {/* Row 2: Context */}
                         <div
                           className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2 text-sm ${
                             isDark ? 'text-gray-400' : 'text-gray-600'
                           }`}
                         >
-                          {/* Facility */}
                           <div className="flex items-center gap-2 min-w-0">
                             <Briefcase className="w-4 h-4 flex-shrink-0" />
                             <span className="truncate">
@@ -1144,7 +1123,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                             </span>
                           </div>
 
-                          {/* Department */}
                           <div className="flex items-center gap-2 min-w-0">
                             <Briefcase className="w-4 h-4 flex-shrink-0" />
                             <span className="truncate">
@@ -1153,7 +1131,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                             </span>
                           </div>
 
-                          {/* Role */}
                           <div className="flex items-center gap-2 min-w-0">
                             <UserPlus className="w-4 h-4 flex-shrink-0" />
                             <span className="truncate">
@@ -1161,7 +1138,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                             </span>
                           </div>
 
-                          {/* Modules */}
                           <div className="flex items-center gap-2 min-w-0">
                             <Package className="w-4 h-4 flex-shrink-0" />
                             <span className="truncate">
@@ -1175,7 +1151,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                             </span>
                           </div>
 
-                          {/* Sent */}
                           <div className="flex items-center gap-2 min-w-0">
                             <Calendar className="w-4 h-4 flex-shrink-0" />
                             <span className="truncate">
@@ -1184,7 +1159,6 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                             </span>
                           </div>
 
-                          {/* Expires */}
                           <div className="flex items-center gap-2 min-w-0">
                             <Clock className="w-4 h-4 flex-shrink-0" />
                             <span className="truncate">
@@ -1204,14 +1178,17 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                           <>
                             <button
                               onClick={() => handleResend(invitation.id)}
-                              disabled={resendMutation.isPending}
+                              disabled={resendMutation.isPending || isAnyMutationPending}
                               type="button"
                               className={cn(
-                                'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer',
+                                'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors',
                                 isDark
                                   ? 'hover:bg-gray-700 text-blue-400 hover:text-blue-300'
                                   : 'hover:bg-blue-50 text-blue-600 hover:text-blue-700',
-                                'disabled:opacity-50 disabled:cursor-not-allowed'
+                                'disabled:opacity-50',
+                                resendMutation.isPending || isAnyMutationPending
+                                  ? 'cursor-not-allowed'
+                                  : 'cursor-pointer'
                               )}
                               title="Resend invitation"
                             >
@@ -1226,14 +1203,17 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
 
                             <button
                               onClick={() => handleCancel(invitation.id)}
-                              disabled={cancelMutation.isPending}
+                              disabled={cancelMutation.isPending || isAnyMutationPending}
                               type="button"
                               className={cn(
-                                'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer',
+                                'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors',
                                 isDark
                                   ? 'hover:bg-gray-700 text-red-400 hover:text-red-300'
                                   : 'hover:bg-red-50 text-red-600 hover:text-red-700',
-                                'disabled:opacity-50 disabled:cursor-not-allowed'
+                                'disabled:opacity-50',
+                                cancelMutation.isPending || isAnyMutationPending
+                                  ? 'cursor-not-allowed'
+                                  : 'cursor-pointer'
                               )}
                               title="Cancel invitation"
                             >
@@ -1247,14 +1227,17 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                         {invitation.status === 'declined' && (
                           <button
                             onClick={() => handleDelete(invitation.id)}
-                            disabled={deleteMutation.isPending}
+                            disabled={deleteMutation.isPending || isAnyMutationPending}
                             type="button"
                             className={cn(
-                              'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer',
+                              'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors',
                               isDark
                                 ? 'hover:bg-gray-700 text-red-400 hover:text-red-300'
                                 : 'hover:bg-red-50 text-red-600 hover:text-red-700',
-                              'disabled:opacity-50 disabled:cursor-not-allowed'
+                              'disabled:opacity-50',
+                              deleteMutation.isPending || isAnyMutationPending
+                                ? 'cursor-not-allowed'
+                                : 'cursor-pointer'
                             )}
                             title="Delete declined invitation"
                           >
@@ -1268,14 +1251,17 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                           <>
                             <button
                               onClick={() => handleResend(invitation.id)}
-                              disabled={resendMutation.isPending}
+                              disabled={resendMutation.isPending || isAnyMutationPending}
                               type="button"
                               className={cn(
-                                'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer',
+                                'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors',
                                 isDark
                                   ? 'hover:bg-gray-700 text-blue-400 hover:text-blue-300'
                                   : 'hover:bg-blue-50 text-blue-600 hover:text-blue-700',
-                                'disabled:opacity-50 disabled:cursor-not-allowed'
+                                'disabled:opacity-50',
+                                resendMutation.isPending || isAnyMutationPending
+                                  ? 'cursor-not-allowed'
+                                  : 'cursor-pointer'
                               )}
                               title="Resend expired invitation"
                             >
@@ -1290,14 +1276,17 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
 
                             <button
                               onClick={() => handleDelete(invitation.id)}
-                              disabled={deleteMutation.isPending}
+                              disabled={deleteMutation.isPending || isAnyMutationPending}
                               type="button"
                               className={cn(
-                                'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer',
+                                'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors',
                                 isDark
                                   ? 'hover:bg-gray-700 text-red-400 hover:text-red-300'
                                   : 'hover:bg-red-50 text-red-600 hover:text-red-700',
-                                'disabled:opacity-50 disabled:cursor-not-allowed'
+                                'disabled:opacity-50',
+                                deleteMutation.isPending || isAnyMutationPending
+                                  ? 'cursor-not-allowed'
+                                  : 'cursor-pointer'
                               )}
                               title="Delete expired invitation"
                             >
@@ -1307,7 +1296,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                           </>
                         )}
 
-                        {/* Accepted: No actions (read-only) */}
+                        {/* Accepted: No actions */}
                         {invitation.status === 'accepted' && (
                           <span
                             className={`text-xs italic ${
@@ -1376,11 +1365,15 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                     setShowCreateModal(false);
                     resetForm();
                   }}
-                  className={`p-2 rounded-lg transition-colors ${
+                  disabled={createMutation.isPending}
+                  className={cn(
+                    'p-2 rounded-lg transition-colors',
                     isDark
                       ? 'hover:bg-gray-800 text-gray-400'
-                      : 'hover:bg-gray-100 text-gray-600'
-                  }`}
+                      : 'hover:bg-gray-100 text-gray-600',
+                    'disabled:opacity-50',
+                    createMutation.isPending ? 'cursor-not-allowed' : 'cursor-pointer'
+                  )}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1445,14 +1438,19 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                                     }));
                                     setStaffLookupError('');
                                   }}
+                                  disabled={createMutation.isPending}
                                   placeholder="e.g., STF-12345 or staff name..."
-                                  className={`w-full pl-10 pr-4 py-2.5 rounded-lg border ${
+                                  className={cn(
+                                    'w-full pl-10 pr-4 py-2.5 rounded-lg border',
                                     staffLookupError
                                       ? 'border-red-500 focus:ring-red-500'
                                       : isDark
                                       ? 'bg-gray-800 border-gray-700 text-white'
-                                      : 'bg-white border-gray-300 text-gray-900'
-                                  } focus:outline-none focus:ring-2 focus:border-transparent`}
+                                      : 'bg-white border-gray-300 text-gray-900',
+                                    'focus:outline-none focus:ring-2 focus:border-transparent',
+                                    'disabled:opacity-50',
+                                    createMutation.isPending ? 'cursor-not-allowed' : 'cursor-text'
+                                  )}
                                   onKeyDown={(e) =>
                                     e.key === 'Enter' && handleStaffUUIDLookup()
                                   }
@@ -1460,8 +1458,15 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                               </div>
                               <button
                                 onClick={handleStaffUUIDLookup}
-                                disabled={!formData.staff_uuid.trim()}
-                                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                                disabled={!formData.staff_uuid.trim() || createMutation.isPending}
+                                className={cn(
+                                  'px-4 py-2.5 rounded-lg font-medium transition-colors inline-flex items-center gap-2',
+                                  'bg-blue-600 hover:bg-blue-700 text-white',
+                                  'disabled:opacity-50',
+                                  !formData.staff_uuid.trim() || createMutation.isPending
+                                    ? 'cursor-not-allowed'
+                                    : 'cursor-pointer'
+                                )}
                               >
                                 <Search className="w-4 h-4" />
                                 Search
@@ -1494,11 +1499,15 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                             </h5>
                             <button
                               onClick={resetStaffSearch}
-                              className={`text-sm flex items-center gap-1 ${
+                              disabled={createMutation.isPending}
+                              className={cn(
+                                'text-sm flex items-center gap-1',
                                 isDark
                                   ? 'text-gray-400 hover:text-gray-300'
-                                  : 'text-gray-600 hover:text-gray-900'
-                              }`}
+                                  : 'text-gray-600 hover:text-gray-900',
+                                'disabled:opacity-50',
+                                createMutation.isPending ? 'cursor-not-allowed' : 'cursor-pointer'
+                              )}
                             >
                               <RefreshCw className="w-3 h-3" />
                               New Search
@@ -1509,16 +1518,22 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                             {filteredStaff.map((staff) => (
                               <div
                                 key={staff.id}
-                                className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                                className={cn(
+                                  'p-3 rounded-lg border transition-all',
                                   formData.staff_id === staff.id
                                     ? isDark
                                       ? 'bg-blue-900/20 border-blue-700 ring-2 ring-blue-500/20'
                                       : 'bg-blue-50 border-blue-300 ring-2 ring-blue-500/20'
                                     : isDark
                                     ? 'bg-gray-800 border-gray-700 hover:border-gray-600'
-                                    : 'bg-gray-50 border-gray-300 hover:border-gray-400'
-                                }`}
-                                onClick={() => handleStaffSelect(staff.id, staff.staff_uuid)}
+                                    : 'bg-gray-50 border-gray-300 hover:border-gray-400',
+                                  createMutation.isPending ? 'cursor-not-allowed' : 'cursor-pointer'
+                                )}
+                                onClick={() => {
+                                  if (!createMutation.isPending) {
+                                    handleStaffSelect(staff.id, staff.staff_uuid);
+                                  }
+                                }}
                               >
                                 <div className="flex items-center justify-between">
                                   <div>
@@ -1569,9 +1584,13 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                         </h5>
                         <button
                           onClick={() => setShowStaffDetails(!showStaffDetails)}
-                          className={`p-1 rounded ${
-                            isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-200'
-                          }`}
+                          disabled={createMutation.isPending}
+                          className={cn(
+                            'p-1 rounded',
+                            isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-200',
+                            'disabled:opacity-50',
+                            createMutation.isPending ? 'cursor-not-allowed' : 'cursor-pointer'
+                          )}
                         >
                           {showStaffDetails ? (
                             <EyeOff className="w-4 h-4" />
@@ -1678,13 +1697,18 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                             department_id: e.target.value ? Number(e.target.value) : null,
                           }))
                         }
-                        className={`w-full pl-10 pr-4 py-2.5 rounded-lg border ${
+                        disabled={createMutation.isPending}
+                        className={cn(
+                          'w-full pl-10 pr-4 py-2.5 rounded-lg border appearance-none',
                           isDark
                             ? 'bg-gray-800 border-gray-700 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
-                        } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none`}
+                            : 'bg-white border-gray-300 text-gray-900',
+                          'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                          'disabled:opacity-50',
+                          createMutation.isPending ? 'cursor-not-allowed' : 'cursor-pointer'
+                        )}
                       >
-                        <option value="">No specific department</option>
+                        <option value="">Select department</option>
                         {departments.map((dept) => (
                           <option key={dept.id} value={dept.id}>
                             {dept.department_name}
@@ -1720,13 +1744,18 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                           setFormData((prev) => ({ ...prev, role_code: e.target.value }));
                           setFormErrors((prev) => ({ ...prev, role_code: '' }));
                         }}
-                        className={`w-full pl-10 pr-4 py-2.5 rounded-lg border ${
+                        disabled={createMutation.isPending}
+                        className={cn(
+                          'w-full pl-10 pr-4 py-2.5 rounded-lg border appearance-none',
                           formErrors.role_code
                             ? 'border-red-500 focus:ring-red-500'
                             : isDark
                             ? 'bg-gray-800 border-gray-700 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
-                        } focus:outline-none focus:ring-2 focus:border-transparent appearance-none`}
+                            : 'bg-white border-gray-300 text-gray-900',
+                          'focus:outline-none focus:ring-2 focus:border-transparent',
+                          'disabled:opacity-50',
+                          createMutation.isPending ? 'cursor-not-allowed' : 'cursor-pointer'
+                        )}
                       >
                         <option value="">Select a role...</option>
                         {roles.map((role) => (
@@ -1777,21 +1806,27 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                         modules.map((module) => (
                           <label
                             key={module.id}
-                            className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            className={cn(
+                              'flex items-start gap-3 p-3 rounded-lg border transition-colors',
                               formData.module_codes.includes(module.code)
                                 ? isDark
                                   ? 'bg-blue-900/20 border-blue-700'
                                   : 'bg-blue-50 border-blue-300'
                                 : isDark
                                 ? 'bg-gray-800 border-gray-700 hover:border-gray-600'
-                                : 'bg-gray-50 border-gray-300 hover:border-gray-400'
-                            }`}
+                                : 'bg-gray-50 border-gray-300 hover:border-gray-400',
+                              createMutation.isPending ? 'cursor-not-allowed' : 'cursor-pointer'
+                            )}
                           >
                             <input
                               type="checkbox"
                               checked={formData.module_codes.includes(module.code)}
                               onChange={() => handleToggleModule(module.code)}
-                              className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              disabled={createMutation.isPending}
+                              className={cn(
+                                'mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500',
+                                createMutation.isPending ? 'cursor-not-allowed' : 'cursor-pointer'
+                              )}
                             />
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
@@ -1855,11 +1890,14 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                   resetForm();
                 }}
                 disabled={createMutation.isPending}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={cn(
+                  'px-4 py-2 rounded-lg font-medium transition-colors',
                   isDark
                     ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                } disabled:opacity-50`}
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700',
+                  'disabled:opacity-50',
+                  createMutation.isPending ? 'cursor-not-allowed' : 'cursor-pointer'
+                )}
               >
                 Cancel
               </button>
@@ -1868,7 +1906,14 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                 disabled={
                   createMutation.isPending || isFormLoading || !formData.staff_id
                 }
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                className={cn(
+                  'px-6 py-2 rounded-lg font-medium transition-colors inline-flex items-center gap-2',
+                  'bg-blue-600 hover:bg-blue-700 text-white',
+                  'disabled:opacity-50',
+                  createMutation.isPending || isFormLoading || !formData.staff_id
+                    ? 'cursor-not-allowed'
+                    : 'cursor-pointer'
+                )}
               >
                 {createMutation.isPending ? (
                   <>

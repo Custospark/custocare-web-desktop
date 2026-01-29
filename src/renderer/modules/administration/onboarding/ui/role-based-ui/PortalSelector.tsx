@@ -576,7 +576,7 @@ export const PortalSelector: React.FC = () => {
                       </div>
                       <button
                         className={cn(
-                          'ml-4 px-5 py-2.5 rounded-lg font-medium text-sm',
+                          'ml-4 px-5 py-2.5 rounded-lg font-medium text-sm cursor-pointer',
                           'flex items-center gap-2 flex-shrink-0',
                           'transition-all duration-300',
                           'bg-blue-600 text-white hover:bg-blue-700',

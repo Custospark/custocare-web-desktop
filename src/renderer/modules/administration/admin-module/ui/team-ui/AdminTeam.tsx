@@ -15,8 +15,8 @@ import {
   Users, 
   Mail, 
   Settings,
-  Download,
-  RefreshCw
+  // Download,
+  // RefreshCw
 } from 'lucide-react';
 
 // Import modular components
@@ -76,14 +76,14 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
   };
   
   // Refresh all data
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
-  };
+  // const handleRefresh = () => {
+  //   setRefreshKey(prev => prev + 1);
+  // };
   
   // Facility check
   if (!activeFacilityId) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 cursor-default">
         <div className={`rounded-xl p-12 text-center border ${
           isDark ? 'bg-gray-900/50 border-gray-800' : 'bg-gray-50 border-gray-200'
         }`}>
@@ -104,41 +104,43 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
       {/* Header Section */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
+          <h1 className="text-2xl font-semibold flex items-center gap-2 cursor-default">
             <Users className="w-7 h-7" />
             Team Management
           </h1>
-          <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'} cursor-default`}>
             Manage staff accounts, invitations, and access permissions for your facility
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
+        {/* <div className="flex items-center gap-3">
           <button
             onClick={handleRefresh}
-            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
               isDark 
                 ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' 
                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
             }`}
             title="Refresh data"
+            type="button"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
           </button>
           
           <button
-            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
               isDark 
                 ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' 
                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
             }`}
             title="Export data"
+            type="button"
           >
             <Download className="w-4 h-4" />
             Export
           </button>
-        </div>
+        </div> */}
       </div>
       
       {/* Navigation Tabs */}
@@ -148,47 +150,25 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
         <div className="flex flex-wrap items-center gap-2 p-2">
           <button
             onClick={() => handleViewChange('list')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
               activeView === 'list'
-                ? (isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700')
-                : (isDark ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100')
+                ? (isDark ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white')
+                : (isDark ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-300' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900')
             }`}
+            type="button"
           >
             <Users className="w-4 h-4" />
             Staff List
           </button>
           
-          {/* <button
-            onClick={() => handleViewChange('search')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeView === 'search'
-                ? (isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700')
-                : (isDark ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100')
-            }`}
-          >
-            <Search className="w-4 h-4" />
-            Search Staff
-          </button> */}
-          
-          {/* <button
-            onClick={() => handleViewChange('create')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeView === 'create'
-                ? (isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700')
-                : (isDark ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100')
-            }`}
-          >
-            <UserPlus className="w-4 h-4" />
-            Create Staff
-          </button> */}
-          
           <button
             onClick={() => handleViewChange('invitations')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
               activeView === 'invitations'
-                ? (isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700')
-                : (isDark ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100')
+                ? (isDark ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white')
+                : (isDark ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-300' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900')
             }`}
+            type="button"
           >
             <Mail className="w-4 h-4" />
             Staff Invitations
@@ -196,11 +176,12 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
           
           <button
             onClick={() => handleViewChange('roles')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
               activeView === 'roles'
-                ? (isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700')
-                : (isDark ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100')
+                ? (isDark ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white')
+                : (isDark ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-300' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900')
             }`}
+            type="button"
           >
             <Settings className="w-4 h-4" />
             Roles & Access
@@ -209,13 +190,12 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
       </div>
       
       {/* Dynamic Content Area */}
-      <div className="min-h-[600px]">
+      <div className="min-h-[600px] cursor-default">
         {activeView === 'list' && (
           <StaffListView
             theme={theme}
             facilityId={activeFacilityId}
             refreshKey={refreshKey}
-            // staffId={selectedStaffId}
             onStaffSelect={handleStaffSelect}
             onCreateNew={() => handleViewChange('create')}
           />
@@ -229,7 +209,6 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
             onCreateNew={() => handleViewChange('create')}
           />
         )}
-        
         
         {activeView === 'invitations' && (
           <InvitationManager
@@ -254,7 +233,6 @@ export const AdminTeam: React.FC<AdminTeamProps> = ({ theme }) => {
             staffId={selectedStaffId}
             facilityId={activeFacilityId}
             onBack={() => handleViewChange('list')}
-         
           />
         )}
       </div>

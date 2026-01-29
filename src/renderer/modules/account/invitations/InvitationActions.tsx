@@ -33,6 +33,7 @@ import {
 } from '../../../app/store/slices/activeContextSlice';
 import { axiosInstance } from '../../../../renderer/app/api/axiosConfig';
 import { ROUTES } from '../../administration/onboarding/routes/onboardingRouteConstants';
+import { getRoleDisplayName } from '../../../shared/utils/facilityRoleFormator';
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
@@ -174,9 +175,7 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
       const fullErrorMessage = errorDetails 
         ? `${apiMessage} (${errorDetails})` 
         : apiMessage;
-      
-      showToast('error', fullErrorMessage, 8000);
-      
+            
       // Set error in context slice
       dispatch(setContextError(fullErrorMessage));
       
@@ -263,7 +262,7 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
     try {
       const confirmed = await confirm({
         title: 'Accept Invitation',
-        message: `Are you sure you want to accept the invitation from ${invitation.facility?.facility_name || 'this facility'}? You will be granted access to their system with the role of ${invitation.role?.code || invitation.role}.`,
+        message: `Are you sure you want to accept the invitation from ${invitation.facility?.facility_name || 'this facility'}? You will be granted access to their system with the role of ${getRoleDisplayName(invitation.role_code) || ''}.`,
         confirmText: 'Accept Invitation',
         cancelText: 'Cancel',
         variant: 'info',
@@ -302,7 +301,6 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
       console.error('Error in handleDecline:', error);
     }
   }, [confirm, invitation, theme, declineMutation, isGlobalDisabled]);
-
 
   /* --------------------------- Button Styling ----------------------------- */
 
@@ -376,7 +374,8 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
 
   return (
     <div className={containerClasses}>
-        {/* Decline Button */}
+      {/* Decline Button */}
+      {/* {invitation.can_be_declined && ( Note:To be enforced for all Invitations,we currently showing only pending invitations.*/}
       {(
         <button
           onClick={handleDecline}
@@ -432,21 +431,6 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
             </>
           )}
         </button>
-      )}
-
-      
-
-      {/* Status Indicator (for debugging/visual feedback) */}
-      {(acceptMutation.isPending || declineMutation.isPending) && (
-        <div 
-          className={`
-            absolute inset-0 rounded-md pointer-events-none
-            bg-gradient-to-r from-transparent via-white/10 to-transparent
-            animate-pulse-subtle
-            ${isDark ? 'mix-blend-lighten' : 'mix-blend-multiply'}
-          `}
-          aria-hidden="true"
-        />
       )}
     </div>
   );

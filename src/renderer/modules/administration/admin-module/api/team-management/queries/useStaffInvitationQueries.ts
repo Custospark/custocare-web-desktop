@@ -603,7 +603,7 @@ export const useBatchResendInvitations = (
 
   return useMutation<BatchResendInvitationsResponse, AxiosError<ApiErrorResponse>, BatchResendInvitationsRequest>({
     mutationFn: async (data: BatchResendInvitationsRequest) => {
-      const response = await axiosInstance.post<BatchResendInvitationsResponse>('/staff-invitations/batch/resend', data);
+      const response = await axiosInstance.post<BatchResendInvitationsResponse>('/staff-invitations/batch-resend', data);
       return response.data;
     },
     onSuccess: (data) => {
@@ -641,7 +641,7 @@ export const useBatchCancelInvitations = (
 
   return useMutation<BatchCancelInvitationsResponse, AxiosError<ApiErrorResponse>, BatchCancelInvitationsRequest>({
     mutationFn: async (data: BatchCancelInvitationsRequest) => {
-      const response = await axiosInstance.post<BatchCancelInvitationsResponse>('/staff-invitations/batch/cancel', data);
+      const response = await axiosInstance.post<BatchCancelInvitationsResponse>('/staff-invitations/batch-cancel', data);
       return response.data;
     },
     onSuccess: (data) => {
