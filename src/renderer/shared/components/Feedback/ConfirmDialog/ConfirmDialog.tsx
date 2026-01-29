@@ -81,18 +81,23 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     <AnimatePresence>
       {open && (
         <>
-          {/* Clean Backdrop */}
+          {/* Clean Backdrop - interactive for closing */}
           <motion.div
-            className="fixed inset-0 z-40 bg-black/40"
+            className="fixed inset-0 z-40 bg-black/40 cursor-pointer"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
+            onClick={onCancel}
           />
 
           {/* Dialog */}
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0" onClick={onCancel} />
+            {/* Interactive backdrop - also closes dialog */}
+            <div 
+              className="absolute inset-0 cursor-pointer" 
+              onClick={onCancel} 
+            />
             
             <motion.div
               className="relative w-full max-w-md z-50"
@@ -137,7 +142,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                     {/* Close button - more subtle */}
                     <button
                       onClick={onCancel}
-                      className={`ml-2 p-1.5 rounded-lg transition-all duration-150 ${
+                      className={`ml-2 p-1.5 rounded-lg transition-all duration-150 cursor-pointer ${
                         isDark 
                           ? 'hover:bg-gray-800 text-gray-400 hover:text-gray-300' 
                           : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
@@ -165,7 +170,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                   <div className="flex justify-end gap-3">
                     <button
                       onClick={onCancel}
-                      className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
                         isDark 
                           ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 active:bg-gray-600' 
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
@@ -175,7 +180,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                     </button>
                     <button
                       onClick={onConfirm}
-                      className={`px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-all duration-200 ${
+                      className={`px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-all duration-200 cursor-pointer ${
                         config.confirmColor(isDark)
                       } ${config.confirmHover(isDark)} active:scale-[0.98] shadow-sm hover:shadow`}
                       autoFocus

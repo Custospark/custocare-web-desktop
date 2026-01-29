@@ -44,6 +44,7 @@ import {
   useResendInvitation,
   useCancelInvitation,
 } from '../../api/team-management/queries/useStaffInvitationQueries';
+import { cn } from '../../../../../shared/utils/classNameUtils';
 import { useGetStaff } from '../../api/team-management/queries/useStaffQueries';
 import { useGetFacilityRoles } from '../../api/team-management/queries/useFacilityRoleQueries';
 import { useGetModules } from '../../api/team-management/queries/useModuleQueries';
@@ -51,6 +52,7 @@ import { useGetDepartmentsByFacility } from '../../api/department-managment/useD
 import { useGetFacilitySpecificRoles } from '../../api/team-management/queries/useFacilityRoleQueries';
 import type { InvitationStatus } from '../../api/team-management/types/staffInvitationTypes';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
+import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 
 interface InvitationManagerProps {
   theme: 'light' | 'dark';
@@ -98,6 +100,8 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
   const [staffLookupMode, setStaffLookupMode] = useState<'search' | 'select'>('search');
   const [filteredStaff, setFilteredStaff] = useState<any[]>([]);
   const [showStaffDetails, setShowStaffDetails] = useState(false);
+  const { confirm } = useConfirm();
+  
 
     function maskEmail(email?: string | null): string {
     if (!email) return 'Not specified';
@@ -335,20 +339,50 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
     resetStaffSearch();
   };
   
-  const handleResend = (id: number) => {
-    resendMutation.mutate({ id }, {
-      onSuccess: () => refetch(),
+    const handleResend = async (id: number) => {
+    const confirmed = await confirm({
+      title: 'Resend Invitation',
+      message: 'This will resend the existing invitation to the staff member using the current details.',
+      confirmText: 'Resend Invitation',
+      cancelText: 'Cancel',
+      variant: 'info',
+      theme,
     });
+
+    if (!confirmed) return;
+
+    resendMutation.mutate(
+      { id },
+      {
+        onSuccess: () => refetch(),
+      }
+    );
   };
+
   
-  const handleCancel = (id: number) => {
-    cancelMutation.mutate({ id }, {
-      onSuccess: () => {
-        refetch();
-        setSelectedInvitations(prev => prev.filter(invId => invId !== id));
-      },
-    });
-  };
+    const handleCancel = async (id: number) => {
+      const confirmed = await confirm({
+        title: 'Cancel Invitation',
+        message: 'This will revoke the pending invitation. The staff member will no longer be able to accept it.',
+        confirmText: 'Cancel Invitation',
+        cancelText: 'Keep Invitation',
+        variant: 'warning',
+        theme,
+      });
+
+      if (!confirmed) return;
+
+      cancelMutation.mutate(
+        { id },
+        {
+          onSuccess: () => {
+            refetch();
+            setSelectedInvitations(prev => prev.filter(invId => invId !== id));
+          },
+        }
+      );
+    };
+
   
   const handleToggleModule = (moduleCode: string) => {
     setFormData(prev => ({
@@ -715,7 +749,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                     <div className="flex items-center gap-2 min-w-0">
                       <UserPlus className="w-4 h-4 flex-shrink-0" />
                       <span className="truncate">
-                        Role: {invitation.role?.name || 'Not specified'}
+                        Role: {invitation.role?.code || 'Not specified'}
                       </span>
                     </div>
 
@@ -723,9 +757,9 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                     <div className="flex items-center gap-2 min-w-0">
                       <Package className="w-4 h-4 flex-shrink-0" />
                       <span className="truncate">
-                        Modules:{' '}
+                        Access Rights:{' '}
                         {Array.isArray(invitation.module_code) && invitation.module_code.length > 0
-                          ? `${invitation.module_code.length} module${
+                          ? `${invitation.module_code.length} Permission${
                               invitation.module_code.length !== 1 ? 's' : ''
                             }`
                           : 'Not specified'}
@@ -752,33 +786,48 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
 
                   {/* RIGHT: Actions (only when pending) */}
                   {invitation.status === 'pending' && (
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => handleResend(invitation.id)}
-                        disabled={resendMutation.isPending}
-                        className={`p-2 rounded-lg transition-colors ${
-                          isDark
-                            ? 'hover:bg-gray-700 text-blue-400 hover:text-blue-300'
-                            : 'hover:bg-blue-50 text-blue-600 hover:text-blue-700'
-                        } disabled:opacity-50`}
-                        title="Resend invitation"
-                      >
-                        <RefreshCw className={`w-4 h-4 ${resendMutation.isPending ? 'animate-spin' : ''}`} />
-                      </button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Resend invitation */}
+                <button
+                  onClick={() => handleResend(invitation.id)}
+                  disabled={resendMutation.isPending}
+                  type="button"
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer',
+                    isDark
+                      ? 'hover:bg-gray-700 text-blue-400 hover:text-blue-300'
+                      : 'hover:bg-blue-50 text-blue-600 hover:text-blue-700',
+                    'disabled:opacity-50 disabled:cursor-not-allowed'
+                  )}
+                  title="Resend invitation"
+                >
+                  <RefreshCw
+                    className={cn(
+                      'w-3.5 h-3.5',
+                      resendMutation.isPending && 'animate-spin'
+                    )}
+                  />
+                  <span>Resend</span>
+                </button>
 
-                      <button
-                        onClick={() => handleCancel(invitation.id)}
-                        disabled={cancelMutation.isPending}
-                        className={`p-2 rounded-lg transition-colors ${
-                          isDark
-                            ? 'hover:bg-gray-700 text-red-400 hover:text-red-300'
-                            : 'hover:bg-red-50 text-red-600 hover:text-red-700'
-                        } disabled:opacity-50`}
-                        title="Cancel invitation"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
+                {/* Cancel invitation */}
+                <button
+                  onClick={() => handleCancel(invitation.id)}
+                  disabled={cancelMutation.isPending}
+                  type="button"
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer',
+                    isDark
+                      ? 'hover:bg-gray-700 text-red-400 hover:text-red-300'
+                      : 'hover:bg-red-50 text-red-600 hover:text-red-700',
+                    'disabled:opacity-50 disabled:cursor-not-allowed'
+                  )}
+                  title="Cancel invitation"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>Cancel</span>
+                </button>
+              </div>
                   )}
                 </div>                   
                     {/* Module Tags */}
@@ -1124,10 +1173,10 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                     <label className={`block text-sm font-medium mb-2 ${
                       isDark ? 'text-gray-300' : 'text-gray-700'
                     }`}>
-                      Module Access *
+                      Permission Access *
                     </label>
                     <p className={`text-xs mb-3 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                      Select the modules this staff member can access
+                      Grant permissions this staff can have.
                     </p>
                     
                     <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -1135,7 +1184,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                         <div className={`p-4 rounded-lg text-center ${
                           isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-50 text-gray-600'
                         }`}>
-                          No modules available
+                          No access available
                         </div>
                       ) : (
                         modules.map((module) => (

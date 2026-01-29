@@ -23,6 +23,7 @@ interface LoadingScreenProps {
  * - Initial app load
  * - Authentication flows
  * - Critical data fetching
+ * -Log out.
  */
 const LoadingScreen: React.FC<LoadingScreenProps> = ({ message }) => {
   const theme = useAppSelector((state) => state.ui.theme);
@@ -30,31 +31,32 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ message }) => {
   const [loadingPhase, setLoadingPhase] = useState(0);
 
   const phases: LoadingPhase[] = [
-    { 
-      icon: Cpu, 
-      text: 'Initializing AI Engine', 
-      color: 'emerald',
-      gradient: 'from-emerald-500 to-emerald-600'
-    },
-    { 
-      icon: Database, 
-      text: 'Syncing database', 
-      color: 'cyan',
-      gradient: 'from-cyan-500 to-cyan-600'
-    },
-    { 
-      icon: Zap, 
-      text: 'Setting Up Analytics', 
-      color: 'blue',
-      gradient: 'from-blue-500 to-blue-600'
-    },
-    { 
-      icon: Shield, 
-      text: 'Securing Connection', 
-      color: 'purple',
-      gradient: 'from-purple-500 to-purple-600'
-    },
-  ];
+  {
+    icon: Cpu,
+    text: 'Preparing system',
+    color: 'emerald',
+    gradient: 'from-emerald-500 to-emerald-600',
+  },
+  {
+    icon: Database,
+    text: 'Syncing data',
+    color: 'cyan',
+    gradient: 'from-cyan-500 to-cyan-600',
+  },
+  {
+    icon: Shield,
+    text: 'Applying security checks',
+    color: 'purple',
+    gradient: 'from-purple-500 to-purple-600',
+  },
+  {
+    icon: Zap,
+    text: 'Finalizing',
+    color: 'blue',
+    gradient: 'from-blue-500 to-blue-600',
+  },
+];
+
 
   useEffect(() => {
     const progressInterval = setInterval(() => {
@@ -287,7 +289,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ message }) => {
               "text-xs font-medium",
               theme === 'dark' ? "text-gray-500" : "text-gray-600"
             )}>
-              {message || 'Loading...'}
+              {message || 'Syncing...'}
             </span>
             <motion.span 
               key={progress}

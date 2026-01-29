@@ -8,7 +8,7 @@
  * @component StaffDetailView
  */
 
-import React, { JSX } from 'react';
+import React, { type JSX } from 'react';
 import {
   ArrowLeft,
   User,

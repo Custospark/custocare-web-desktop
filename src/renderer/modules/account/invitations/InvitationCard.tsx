@@ -172,14 +172,14 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
             <div className="flex items-center gap-2 mb-2">
               <Building2 className={`w-5 h-5 flex-shrink-0 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
               <h3 className="text-lg font-semibold truncate">
-                {invitation.facility?.facility_name || 'Unknown Facility'}
+                Facility Name: {invitation.facility?.facility_name || 'Unknown Facility'}
               </h3>
             </div>
 
             {/* Facility Code & Department */}
             <div className="flex flex-wrap items-center gap-3 mb-3">
               <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                {invitation.facility?.facility_code || 'N/A'}
+                Facility Number: {invitation.facility?.facility_code || 'N/A'}
               </span>
               {invitation.department && (
                 <>
@@ -294,14 +294,6 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
                 Invitation Details
               </h4>
               <dl className="space-y-2">
-                <div>
-                  <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                    Invitation ID
-                  </dt>
-                  <dd className={`text-sm font-mono ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    {invitation.invitation_uuid.slice(0, 8)}...
-                  </dd>
-                </div>
                 <div>
                   <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
                     Status
@@ -424,7 +416,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
                 </div>
                 <div>
                   <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                    Facility Code
+                    Facility Number
                   </dt>
                   <dd className={`text-sm font-mono ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                     {invitation.facility?.facility_code || 'N/A'}
