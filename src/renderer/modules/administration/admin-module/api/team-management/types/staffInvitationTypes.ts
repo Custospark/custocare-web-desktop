@@ -121,6 +121,8 @@ export interface StaffInvitation {
   can_be_declined: boolean;
   can_be_resent: boolean;
   days_until_expiry: number | null;
+  can_be_cancelled: boolean;
+  can_be_deleted: boolean;
 }
 export type StaffData = {
   id: number;
@@ -297,12 +299,7 @@ export interface AcceptInvitationResult {
   };
 }
 
-/**
- * Request payload for batch resending invitations.
- */
-export interface BatchResendInvitationsRequest {
-  invitation_ids: number[];
-}
+
 
 /**
  * Request payload for batch canceling invitations.
@@ -422,6 +419,80 @@ export interface BatchCancelInvitationsResponse extends ApiSuccessResponse<{
     successful_count: number;
     failed_count: number;
   };
+}
+
+/**
+ * Request payload for batch deleting invitations.
+ * Used for permanently removing declined/expired invitations.
+ */
+export interface BatchDeleteInvitationsRequest {
+  invitation_ids: number[];
+}
+
+/**
+ * Response for batch delete operation.
+ */
+export interface BatchDeleteInvitationsResponse extends ApiSuccessResponse<{
+  successful: number[];
+  failed: { id: number; reason: string }[];
+}> {
+  meta: {
+    total_requested: number;
+    successful_count: number;
+    failed_count: number;
+  };
+}
+
+
+
+/**
+ * Request payload for batch resending invitations.
+ */
+export interface BatchResendInvitationsRequest {
+  invitation_ids: number[];
+}
+
+
+/**
+ * Request payload for batch deleting invitations.
+ * Used for permanently removing declined/expired invitations.
+ */
+export interface BatchDeleteInvitationsRequest {
+  invitation_ids: number[];
+}
+
+/**
+ * Common response structure for batch operations.
+ */
+export interface BatchOperationResult {
+  successful: number[];
+  failed: Array<{
+    id: number;
+    reason: string;
+  }>;
+}
+
+/**
+ * Common meta structure for batch operations.
+ */
+export interface BatchOperationMeta {
+  total_requested: number;
+  successful_count: number;
+  failed_count: number;
+}
+
+/**
+ * Response for batch resend operation.
+ */
+export interface BatchResendInvitationsResponse extends ApiSuccessResponse<BatchOperationResult> {
+  meta: BatchOperationMeta;
+}
+
+/**
+ * Response for batch cancel operation.
+ */
+export interface BatchCancelInvitationsResponse extends ApiSuccessResponse<BatchOperationResult> {
+  meta: BatchOperationMeta;
 }
 
 /**
@@ -572,6 +643,8 @@ export interface InvitationSummary {
   expired_count: number;
   expiring_soon_count: number; // Expiring within 7 days
 }
+
+
 
 /**
  * Invitation statistics by facility.

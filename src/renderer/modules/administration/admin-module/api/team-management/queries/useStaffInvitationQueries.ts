@@ -16,24 +16,6 @@
  * @requires axios
  */
 
-/**
- * ============================================================================
- * STAFF INVITATION REACT QUERY HOOKS
- * ============================================================================
- * 
- * This file contains all React Query mutation and query hooks for staff invitation
- * management operations. Handles API communication, error handling, and
- * toast notifications.
- * 
- * @module useStaffInvitationQueries
- * @description Provides type-safe, reusable hooks for all staff invitation CRUD
- * operations, acceptance/decline workflows, and batch operations. Component redirects
- * are handled externally.
- * 
- * @requires @tanstack/react-query
- * @requires axios
- */
-
 import { useMutation, useQuery, type UseQueryOptions } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { axiosInstance } from '../../../../../../app/api/axiosConfig';
@@ -56,6 +38,8 @@ import type {
   GetMyPendingInvitationsResponse,
   BatchResendInvitationsRequest,
   BatchCancelInvitationsRequest,
+  BatchDeleteInvitationsRequest,
+  BatchDeleteInvitationsResponse,
   BatchResendInvitationsResponse,
   BatchCancelInvitationsResponse,
   ProcessExpiredInvitationsResponse,
@@ -226,7 +210,6 @@ export const useGetMyPendingInvitations = (
     queryKey: staffInvitationKeys.myPending(),
     queryFn: async () => {
       const response = await axiosInstance.get<GetMyPendingInvitationsResponse>('/staff-invitations/my/pending-invitations');
-      console.log(response);
       return response.data;
     },
     ...options,
@@ -676,6 +659,46 @@ export const useBatchCancelInvitations = (
 };
 
 /**
+ * Batch deletes multiple invitations.
+ * Permanent deletion for declined/expired invitations only.
+ * 
+ * @param callbacks - Optional onSuccess and onError callbacks
+ * @returns Mutation object with mutate function and state
+ * 
+ * @example
+ * const { mutate } = useBatchDeleteInvitations({
+ *   onSuccess: (data) => {
+ *     console.log(`Deleted: ${data.meta.successful_count}, Failed: ${data.meta.failed_count}`);
+ *   },
+ * });
+ * 
+ * mutate({ invitation_ids: [1, 2, 3] });
+ */
+export const useBatchDeleteInvitations = (
+  callbacks: MutationCallbacks<BatchDeleteInvitationsResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const { showToast } = useToast();
+
+  return useMutation<BatchDeleteInvitationsResponse, AxiosError<ApiErrorResponse>, BatchDeleteInvitationsRequest>({
+    mutationFn: async (data: BatchDeleteInvitationsRequest) => {
+      const response = await axiosInstance.post<BatchDeleteInvitationsResponse>('/staff-invitations/batch/delete', data);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const { successful_count, failed_count } = data.meta;
+      const successMessage = `Successfully deleted ${successful_count} invitation(s). ${failed_count > 0 ? `Failed: ${failed_count}.` : ''}`;
+      showToast('success', successMessage, 8000);
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to delete invitations.';
+      showToast('error', apiMessage, 8000);
+      callbacks.onError?.(error);
+    },
+  });
+};
+
+/**
  * Processes all expired invitations (admin operation).
  * Marks expired invitations as 'expired' status.
  * 
@@ -785,6 +808,7 @@ export default {
   useCancelInvitation,
   useBatchResendInvitations,
   useBatchCancelInvitations,
+  useBatchDeleteInvitations,
   useProcessExpiredInvitations,
 
   // Utilities
