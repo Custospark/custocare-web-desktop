@@ -14,7 +14,8 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ROUTES } from '../../routes/onboardingRouteConstants';
+import { ROUTES } from '../../../../../app/routes/routeConstants';
+import { ROUTES as ONBOARDING_ROUTES } from '../../routes/onboardingRouteConstants';
 import {
   Heart,
   ArrowRight,
@@ -141,7 +142,7 @@ export const PortalSelector: React.FC = () => {
     dispatch(switchFacility(facilityRole.facility_id));
 
     // Navigate to staff dashboard
-    navigate(ROUTES.STAFF_DASHBOARD, {
+    navigate(ROUTES.DASHBOARD, {
       state: {
         user,
         facilityRole,
@@ -164,7 +165,7 @@ export const PortalSelector: React.FC = () => {
     dispatch(switchCapability('staff'));
 
     // Navigate to staff dashboard
-    navigate(ROUTES.STAFF_DASHBOARD, {
+    navigate(ROUTES.DASHBOARD, {
       state: {
         user,
         staffWithoutFacility: true,
@@ -183,7 +184,7 @@ export const PortalSelector: React.FC = () => {
     dispatch(switchCapability('patient'));
 
     // Navigate to patient dashboard
-    navigate(ROUTES.PATIENT_DASHBOARD, {
+    navigate(ROUTES.DASHBOARD, {
       state: {
         user,
         timestamp: new Date().toISOString(),
@@ -197,21 +198,21 @@ export const PortalSelector: React.FC = () => {
    * Handle facility registration
    */
   const handleRegisterFacility = (): void => {
-    navigate(ROUTES.HEALTHCARE_ONBOARDING);
+    navigate(ONBOARDING_ROUTES.HEALTHCARE_ONBOARDING);
   };
 
   /**
    * Handle patient portal activation
    */
   const handleActivatePatientPortal = (): void => {
-    navigate(ROUTES.PATIENT_ONBOARDING);
+    navigate(ONBOARDING_ROUTES.PATIENT_ONBOARDING);
   };
 
   /**
    * Handle medical staff registration
    */
   const handleRegisterAsMedicalStaff = (): void => {
-    navigate(ROUTES.STAFF_ONBOARDING);
+    navigate(ONBOARDING_ROUTES.STAFF_ONBOARDING);
   };
 
   /**
