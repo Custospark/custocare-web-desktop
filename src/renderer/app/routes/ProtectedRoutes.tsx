@@ -1,7 +1,7 @@
 // ProtectedRoutes.tsx
 import React from 'react';
 import { Navigate, Route } from 'react-router-dom';
-import AuthMiddlewareRoute from './AuthMiddlwareRoute';
+import AuthMiddlewareRoute from './middleware/AuthMiddlwareRoute';
 import Layout from '../../shared/components/Navigation/Layout';
 import { ROUTES, ACCOUNT_ROUTES } from './routeConstants';
 import { ProtectedThemeOutlet } from './modules/shared/routeUtils';
@@ -24,12 +24,17 @@ const NursingModule = React.lazy(() => import('../../modules/nursing/ui/NursingM
 const ClinicalModule = React.lazy(() => import('../../modules/clinical/ui/ClinicalModule'));
 const LaboratoryModule = React.lazy(() => import('../../modules/laboratory/ui/LaboratoryModule'));
 const BillingModule = React.lazy(() => import('../../modules/billling/ui/BillingModule'));
+const ModuleAccessMiddleware = React.lazy(() => import('./middleware/ModuleAccessMiddleware'));
 
 export const ProtectedRoutes = () => [
   <Route
     key="protected-routes"
     element={<AuthMiddlewareRoute />}
   >
+   <Route
+   key="restricted-module-codes"
+   element={<ModuleAccessMiddleware/>}
+   >
     <Route
       key="layout"
       element={<Layout />}
@@ -136,4 +141,6 @@ export const ProtectedRoutes = () => [
       </Route>
     </Route>
   </Route>
+  </Route>
+
 ];

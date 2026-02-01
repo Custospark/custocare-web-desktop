@@ -1,9 +1,9 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useAppDispatch, useAppSelector } from '../store/hooks/useApp';
-import { initializeAuth } from '../store/slices/authSlice';
-import { ROUTES } from './routeConstants';
-import LoadingSkeleton from '../../shared/components/Loading/LoadingSkeletons';
+import { useAppDispatch, useAppSelector } from '../../store/hooks/useApp';
+import { initializeAuth } from '../../store/slices/authSlice';
+import { ROUTES } from '../routeConstants';
+import LoadingSkeleton from '../../../shared/components/Loading/LoadingSkeletons';
 
 /**
  * AuthMiddlewareRoute Component
