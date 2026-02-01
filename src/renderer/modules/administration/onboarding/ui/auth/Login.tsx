@@ -319,32 +319,36 @@ export const Login: React.FC = () => {
             Forgot password?
           </Link>
         </div>
+          <button
+              type="submit"
+              disabled={isLoading || !isFormValid}
+              className={cn(
+                'w-full py-3.5 px-6 rounded-xl font-semibold text-base',
+                'transition-all duration-200',
+                'focus:outline-none focus:ring-4 focus:ring-offset-2',
+                'flex items-center justify-center gap-3',
 
-        <button
-          type="submit"
-          disabled={isLoading || !isFormValid}
-          className={cn(
-            'w-full py-3.5 px-6 rounded-xl font-semibold text-base',
-            'transition-all duration-200',
-            'focus:outline-none focus:ring-4 focus:ring-offset-2',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-            'flex items-center justify-center gap-3',
-            theme === 'dark'
-              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
-              : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
-            !isLoading && isFormValid && 'shadow-lg hover:shadow-xl hover:scale-[1.02]'
-          )}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Signing in...</span>
-            </>
-          ) : (
-            <span>Sign In</span>
-          )}
-        </button>
+                // Cursor logic (meaningful)
+                isLoading || !isFormValid
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'cursor-pointer',
 
+                theme === 'dark'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
+                  : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
+
+                !isLoading && isFormValid && 'shadow-lg hover:shadow-xl hover:scale-[1.02]'
+              )}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Signing in...</span>
+                </>
+              ) : (
+                <span>Sign In</span>
+              )}
+            </button>
         <div
           className={cn(
             'text-center text-sm pt-4',

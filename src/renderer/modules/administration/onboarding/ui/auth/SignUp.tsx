@@ -587,7 +587,7 @@ export const SignUp: React.FC = () => {
           <Link
             to="/login"
             className={cn(
-              'font-semibold',
+              'font-semibold cursor-pointer',
               theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
             )}
           >
