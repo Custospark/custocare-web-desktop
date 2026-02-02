@@ -2,10 +2,13 @@ import { Navigate, Route } from "react-router-dom";
 import { ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from "../../constants/administration.paths";
 import { SuspenseWrapper, WithThemeProp } from "../shared/routeUtils";
 
-import ClinicalRooms from "../../../../modules/administration/admin-module/ui/clinical-space/ClinicalRooms";
-import WardManagement from "../../../../modules/administration/admin-module/ui/clinical-space/Wardmanagment";
-import FacilityZones from "../../../../modules/administration/admin-module/ui/clinical-space/FacilityZone";
-import SpaceAllocation from "../../../../modules/administration/admin-module/ui/clinical-space/SpaceAllocation";
+import React from 'react';
+
+const ClinicalRooms = React.lazy(() => import("../../../../modules/administration/admin-module/ui/clinical-space/ClinicalRooms"));
+const WardManagement = React.lazy(() => import("../../../../modules/administration/admin-module/ui/clinical-space/Wardmanagment"));
+const FacilityZones = React.lazy(() => import("../../../../modules/administration/admin-module/ui/clinical-space/FacilityZone"));
+const SpaceAllocation = React.lazy(() => import("../../../../modules/administration/admin-module/ui/clinical-space/SpaceAllocation")
+);
 
 export const clinicalSpaceManagementRoutes = [
   /* Default redirect to Clinical Rooms */
