@@ -165,9 +165,9 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
             <button
               onClick={onToggleTopBarsVisible}
               aria-label={topBarsVisible ? 'Hide top bars' : 'Show top bars'}
-              title={topBarsVisible ? 'Hide top bars (desktop only)' : 'Show top bars (desktop only)'}
+              title={topBarsVisible ? 'Hide top bars' : 'Show top bars'}
               className={cn(
-                'p-2 rounded-xl border backdrop-blur-xl',
+                'p-2 rounded-xl border backdrop-blur-xl cursor-pointer',
                 'transition-all duration-200',
                 'hover:scale-105 active:scale-95',
                 'focus:outline-none focus:ring-2 focus:ring-offset-2',

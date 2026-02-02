@@ -8,12 +8,14 @@ import {
   Building2,
   Layers,
   Boxes,
+  MapIcon,
 } from 'lucide-react';
 import AdminOverview from './admin-overview-ui/AdminOverview';
 import AdminTeam from './team-ui/AdminTeam';
 import AdminFacilitySetup from './facility-setup-ui/AdminFacilitySetup';
 import AdminServiceCatalog from './service-catalog-ui/AdminServiceCatalog';
 import AdminInventory from './inventory/AdminInventoryItems';
+import ClinicalSpaceManagement from './clinical-space/ClinicalSpaceManagement';
 
 /**
  * ============================================================================
@@ -87,6 +89,12 @@ const ADMIN_OPERATIONS: Operation[] = [
     icon: <Boxes className="w-4 h-4" />,
     description: 'Manage stock items, locations, and inventory controls',
   },
+  {
+  id: 'space-governance',
+  label: 'Clinical Space Management',
+  icon: <MapIcon className="w-4 h-4" />,
+  description: 'Define rooms, floors, buildings, and manage staff space assignments',
+},
 ];
 
 /* ============================================================================
@@ -98,7 +106,9 @@ export type AdminOperationId =
   | 'team'
   | 'facility-setup'
   | 'service-catalog'
-  | 'inventory';
+  | 'inventory'
+  | 'space-governance'
+  ;
 
 /* ============================================================================
    SUBCOMPONENT IMPORTS
@@ -161,6 +171,8 @@ export const AdminModule: React.FC = () => {
         return <AdminInventory theme={theme} />;
       case 'service-catalog':
         return <AdminServiceCatalog theme={theme} />;
+      case 'space-governance':
+        return <ClinicalSpaceManagement theme={theme} />;
 
       default:
         return <AdminOverview theme={theme} />;
