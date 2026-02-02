@@ -84,7 +84,7 @@ export const useGetFacilitySpaces = (
   return useQuery<GetFacilitySpacesResponse, AxiosError<ApiErrorResponse>>({
     queryKey: facilitySpaceKeys.list(filters),
     queryFn: async () => {
-      const response = await axiosInstance.get<GetFacilitySpacesResponse>('/facilities/spaces', {
+      const response = await axiosInstance.get<GetFacilitySpacesResponse>('/facility/spaces', {
         params: filters,
       });
       return response.data;
@@ -110,7 +110,7 @@ export const useGetFacilitySpaceById = (
   return useQuery<FacilitySpaceResponse, AxiosError<ApiErrorResponse>>({
     queryKey: facilitySpaceKeys.detail(id),
     queryFn: async () => {
-      const response = await axiosInstance.get<FacilitySpaceResponse>(`/facilities/spaces/${id}`);
+      const response = await axiosInstance.get<FacilitySpaceResponse>(`/facility/spaces/${id}`);
       return response.data;
     },
     enabled: !!id, // Only run query if ID is provided
@@ -138,7 +138,7 @@ export const useGetFacilitySpacesByFacility = (
   return useQuery<GetFacilitySpacesResponse, AxiosError<ApiErrorResponse>>({
     queryKey: facilitySpaceKeys.byFacility(facilityId),
     queryFn: async () => {
-      const response = await axiosInstance.get<GetFacilitySpacesResponse>('/facilities/spaces', {
+      const response = await axiosInstance.get<GetFacilitySpacesResponse>('/facility/spaces', {
         params: { facility_id: facilityId, ...filters },
       });
       return response.data;
@@ -168,7 +168,7 @@ export const useGetFacilitySpacesByType = (
   return useQuery<GetFacilitySpacesResponse, AxiosError<ApiErrorResponse>>({
     queryKey: facilitySpaceKeys.byType(type),
     queryFn: async () => {
-      const response = await axiosInstance.get<GetFacilitySpacesResponse>('/facilities/spaces', {
+      const response = await axiosInstance.get<GetFacilitySpacesResponse>('/facility/spaces', {
         params: { type, ...filters },
       });
       return response.data;
@@ -191,7 +191,7 @@ export const useGetFacilitySpacesByType = (
  * 
  * @example
  * const { mutate, isPending } = useCreateFacilitySpace({
- *   onSuccess: (data) => navigate(`/facilities/spaces/${data.data.id}`),
+ *   onSuccess: (data) => navigate(`/facility/spaces/${data.data.id}`),
  * });
  * 
  * mutate({
@@ -209,7 +209,7 @@ export const useCreateFacilitySpace = (
 
   return useMutation<FacilitySpaceResponse, AxiosError<ApiErrorResponse>, CreateFacilitySpaceRequest>({
     mutationFn: async (data: CreateFacilitySpaceRequest) => {
-      const response = await axiosInstance.post<FacilitySpaceResponse>('/facilities/spaces', data);
+      const response = await axiosInstance.post<FacilitySpaceResponse>('/facility/spaces', data);
       return response.data;
     },
     onSuccess: (data) => {
@@ -260,7 +260,7 @@ export const useUpdateFacilitySpace = (
 
   return useMutation<FacilitySpaceResponse, AxiosError<ApiErrorResponse>, UpdateFacilitySpaceParams>({
     mutationFn: async ({ id, data }: UpdateFacilitySpaceParams) => {
-      const response = await axiosInstance.patch<FacilitySpaceResponse>(`/facilities/spaces/${id}`, data);
+      const response = await axiosInstance.patch<FacilitySpaceResponse>(`/facility/spaces/${id}`, data);
       return response.data;
     },
     onSuccess: (data) => {
@@ -295,7 +295,7 @@ export const useUpdateFacilitySpace = (
  * 
  * @example
  * const { mutate, isPending } = useDeleteFacilitySpace({
- *   onSuccess: () => navigate('/facilities/spaces'),
+ *   onSuccess: () => navigate('/facility/spaces'),
  * });
  * 
  * mutate({ id: 123 });
@@ -307,7 +307,7 @@ export const useDeleteFacilitySpace = (
 
   return useMutation<DeleteFacilitySpaceResponse, AxiosError<ApiErrorResponse>, DeleteFacilitySpaceParams>({
     mutationFn: async ({ id }: DeleteFacilitySpaceParams) => {
-      const response = await axiosInstance.delete<DeleteFacilitySpaceResponse>(`/facilities/spaces/${id}`);
+      const response = await axiosInstance.delete<DeleteFacilitySpaceResponse>(`/facility/spaces/${id}`);
       return response.data;
     },
     onSuccess: (data) => {

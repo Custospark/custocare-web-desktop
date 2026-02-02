@@ -4,7 +4,7 @@ import { SuspenseWrapper, WithThemeProp } from "../shared/routeUtils";
 
 import React from 'react';
 
-const ClinicalRooms = React.lazy(() => import("../../../../modules/administration/admin-module/ui/clinical-space/ClinicalRooms"));
+import { FacilitySpace } from "../../../../modules/administration/admin-module/ui/clinical-space/FacilitySpace";
 const WardManagement = React.lazy(() => import("../../../../modules/administration/admin-module/ui/clinical-space/Wardmanagment"));
 const FacilityZones = React.lazy(() => import("../../../../modules/administration/admin-module/ui/clinical-space/FacilityZone"));
 const SpaceAllocation = React.lazy(() => import("../../../../modules/administration/admin-module/ui/clinical-space/SpaceAllocation")
@@ -28,7 +28,7 @@ export const clinicalSpaceManagementRoutes = [
     path={ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.CLINICAL_ROOMS}
     element={
       <SuspenseWrapper variant="table">
-        <WithThemeProp Component={ClinicalRooms} />
+        <WithThemeProp Component={FacilitySpace} />
       </SuspenseWrapper>
     }
   />,
