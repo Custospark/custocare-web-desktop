@@ -2,10 +2,10 @@
  * ============================================================================
  * FACILITY SPACE MANAGEMENT COMPONENT
  * ============================================================================
- * 
+ *
  * Enterprise-grade facility space management with comprehensive CRUD operations,
  * optimistic UI updates, client-side filtering, and theme-aware design.
- * 
+ *
  * @module FacilitySpace
  * @description Full-featured space management with:
  * - Complete CRUD operations (Create, Read, Update, Delete)
@@ -16,7 +16,7 @@
  * - Type-safe operations with full TypeScript support
  * - Confirm dialogs for destructive actions
  * - Loading skeletons and error states
- * 
+ *
  * @requires React Query for data fetching and caching
  * @requires Redux for theme and active context management
  */
@@ -34,7 +34,6 @@ import {
   Trash2,
   AlertCircle,
   Building2,
-  MapPin,
   Layers,
   Activity,
   Box,
@@ -42,6 +41,7 @@ import {
   XCircle,
   ChevronDown,
   ChevronUp,
+  Building,
 } from 'lucide-react';
 
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
@@ -136,6 +136,34 @@ const getSpaceTypeColor = (type: FacilitySpaceType): string => {
 };
 
 /* -------------------------------------------------------------------------- */
+/*                            SAFETY HELPERS                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Ensures we never call .toLowerCase() on undefined/null/non-string.
+ * (Keeps filtering resilient without weakening types.)
+ */
+const safeLower = (value: string | null | undefined): string => (value ?? '').toLowerCase();
+
+/**
+ * Safe date formatting (prevents "Invalid time value" crashes).
+ */
+const safeDate = (value: string | null | undefined): Date | null => {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+/**
+ * Narrow unknown errors to a readable message without using `any`.
+ */
+const getErrorMessage = (err: unknown): string => {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return 'Unknown error';
+};
+
+/* -------------------------------------------------------------------------- */
 /*                            MAIN COMPONENT                                  */
 /* -------------------------------------------------------------------------- */
 
@@ -162,8 +190,8 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<'create' | 'edit'>('create');
   const [selectedSpace, setSelectedSpace] = useState<FacilitySpace | null>(null);
-  const [formData, setFormData] = useState<FacilitySpaceFormData>(() => 
-    getEmptyFormData(activeFacilityId)
+  const [formData, setFormData] = useState<FacilitySpaceFormData>(() =>
+    getEmptyFormData(activeFacilityId ?? null)
   );
 
   // Expanded rows (for list view details)
@@ -171,40 +199,55 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
 
   /* ---------------------------- API Queries ------------------------------- */
 
-  const filters: FacilitySpaceFilters = useMemo(() => ({
-    facility_id: activeFacilityId || undefined,
-    type: typeFilter !== 'all' ? typeFilter : undefined,
-    is_active: statusFilter === 'all' ? undefined : statusFilter === 'active',
-  }), [activeFacilityId, typeFilter, statusFilter]);
+  const filters: FacilitySpaceFilters = useMemo(
+    () => ({
+      facility_id: activeFacilityId || undefined,
+      type: typeFilter !== 'all' ? typeFilter : undefined,
+      is_active: statusFilter === 'all' ? undefined : statusFilter === 'active',
+    }),
+    [activeFacilityId, typeFilter, statusFilter]
+  );
 
   const listQueryKey = useMemo(() => facilitySpaceKeys.list(filters), [filters]);
 
-  const {
-    data: spacesResponse,
-    isLoading,
-    error,
-    refetch,
-  } = useGetFacilitySpaces(filters, {
+  const { data: spacesResponse, isLoading, error, refetch } = useGetFacilitySpaces(filters, {
     enabled: !!activeFacilityId,
     staleTime: 1000 * 30,
   });
 
-  const spaces = spacesResponse?.data ?? [];
+  /**
+   * Defensive normalization:
+   * - `spacesResponse?.data` is already typed as FacilitySpace[] by GetFacilitySpacesResponse
+   * - but we still guard to avoid runtime crashes if API misbehaves.
+   */
+  const spaces: FacilitySpace[] = useMemo(() => {
+    const data = spacesResponse?.data;
+    return Array.isArray(data) ? data : [];
+  }, [spacesResponse]);
 
   /* ------------------------ Client-Side Filtering ------------------------- */
 
   const filteredSpaces = useMemo(() => {
-  if (!searchTerm.trim()) return spaces;
+    const term = safeLower(searchTerm).trim();
+    if (!term) return spaces;
 
-  const term = searchTerm.toLowerCase();
-  return spaces.filter(space => {
-    return (space.name || '').toLowerCase().includes(term) ||
-           (space.type_label || '').toLowerCase().includes(term) ||
-           (space.floor || '').toLowerCase().includes(term) ||
-           (space.building || '').toLowerCase().includes(term) ||
-           (space.full_location || '').toLowerCase().includes(term);
-  });
-}, [spaces, searchTerm]);
+    return spaces.filter(space => {
+      // space is strongly typed, but keep runtime safe for unexpected nullish values
+      const name = safeLower(space?.name);
+      const typeLabel = safeLower(space?.type_label);
+      const floor = safeLower(space?.floor ?? undefined);
+      const building = safeLower(space?.building ?? undefined);
+      const fullLocation = safeLower(space?.full_location ?? undefined);
+
+      return (
+        name.includes(term) ||
+        typeLabel.includes(term) ||
+        floor.includes(term) ||
+        building.includes(term) ||
+        fullLocation.includes(term)
+      );
+    });
+  }, [spaces, searchTerm]);
 
   /* ---------------------------- Mutations --------------------------------- */
 
@@ -242,20 +285,23 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
   const openCreateDrawer = () => {
     setDrawerMode('create');
     setSelectedSpace(null);
-    setFormData(getEmptyFormData(activeFacilityId));
+    setFormData(getEmptyFormData(activeFacilityId ?? null));
     setDrawerOpen(true);
   };
 
   const openEditDrawer = (space: FacilitySpace) => {
+    // keep runtime safe
+    if (!space) return;
+
     setDrawerMode('edit');
     setSelectedSpace(space);
     setFormData({
-      facility_id: space.facility_id,
-      name: space.name,
-      type: space.type,
-      floor: space.floor || '',
-      building: space.building || '',
-      is_active: space.is_active,
+      facility_id: space.facility_id ?? null,
+      name: space.name ?? '',
+      type: space.type ?? '',
+      floor: space.floor ?? '',
+      building: space.building ?? '',
+      is_active: space.is_active ?? true,
     });
     setDrawerOpen(true);
   };
@@ -263,20 +309,22 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
   const closeDrawer = () => {
     setDrawerOpen(false);
     setSelectedSpace(null);
-    setFormData(getEmptyFormData(activeFacilityId));
+    setFormData(getEmptyFormData(activeFacilityId ?? null));
   };
 
   /* -------------------------- Form Submission ----------------------------- */
 
   const handleSubmit = () => {
-    if (!formData.facility_id || !formData.name.trim() || !formData.type) {
-      return;
-    }
+    const facilityId = formData.facility_id;
+    const name = formData.name.trim();
+    const type = formData.type;
+
+    if (!facilityId || !name || !type) return;
 
     const payload: CreateFacilitySpaceRequest = {
-      facility_id: formData.facility_id,
-      name: formData.name.trim(),
-      type: formData.type as FacilitySpaceType,
+      facility_id: facilityId,
+      name,
+      type: type as FacilitySpaceType,
       floor: formData.floor.trim() || undefined,
       building: formData.building.trim() || undefined,
       is_active: formData.is_active,
@@ -294,10 +342,10 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
         name: payload.name,
         type: payload.type,
         type_label: getSpaceTypeLabel(payload.type),
-        floor: payload.floor || null,
-        building: payload.building || null,
+        floor: payload.floor ?? null,
+        building: payload.building ?? null,
         is_active: payload.is_active ?? true,
-        status: payload.is_active ? SpaceStatus.ACTIVE: SpaceStatus.INACTIVE,
+        status: payload.is_active ? SpaceStatus.ACTIVE : SpaceStatus.INACTIVE,
         status_label: payload.is_active ? 'Active' : 'Inactive',
         created_at: now,
         updated_at: now,
@@ -306,25 +354,21 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
       };
 
       setListCache(current => {
-        if (!current) return current;
-        return {
-          ...current,
-          data: [optimisticSpace, ...current.data],
-        };
+        if (!current || !Array.isArray(current.data)) return current;
+        return { ...current, data: [optimisticSpace, ...current.data] };
       });
 
       createMutation.mutate(payload, {
         onError: () => {
-          // Rollback on error
           queryClient.setQueryData(listQueryKey, previousData);
         },
       });
-    } else if (drawerMode === 'edit' && selectedSpace) {
+    } else if (drawerMode === 'edit' && selectedSpace?.id != null) {
       // Optimistic update for edit
       const previousData = queryClient.getQueryData<GetFacilitySpacesResponse>(listQueryKey);
 
       setListCache(current => {
-        if (!current) return current;
+        if (!current || !Array.isArray(current.data)) return current;
         return {
           ...current,
           data: current.data.map(space =>
@@ -333,7 +377,7 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                   ...space,
                   ...payload,
                   type_label: getSpaceTypeLabel(payload.type),
-                  status: payload.is_active ? SpaceStatus.ACTIVE: SpaceStatus.INACTIVE,
+                  status: payload.is_active ? SpaceStatus.ACTIVE : SpaceStatus.INACTIVE,
                   status_label: payload.is_active ? 'Active' : 'Inactive',
                   full_location: [payload.building, payload.floor].filter(Boolean).join(', ') || null,
                   updated_at: new Date().toISOString(),
@@ -347,7 +391,6 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
         { id: selectedSpace.id, data: payload as UpdateFacilitySpaceRequest },
         {
           onError: () => {
-            // Rollback on error
             queryClient.setQueryData(listQueryKey, previousData);
           },
         }
@@ -358,9 +401,11 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
   /* -------------------------- Delete Handler ------------------------------ */
 
   const handleDelete = async (space: FacilitySpace) => {
+    if (!space?.id) return;
+
     const confirmed = await confirm({
       title: 'Delete Facility Space',
-      message: `Are you sure you want to delete "${space.name}"? This action cannot be undone.`,
+      message: `Are you sure you want to delete "${space.name ?? ''}"? This action cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       variant: 'danger',
@@ -369,22 +414,17 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
 
     if (!confirmed) return;
 
-    // Optimistic update
     const previousData = queryClient.getQueryData<GetFacilitySpacesResponse>(listQueryKey);
 
     setListCache(current => {
-      if (!current) return current;
-      return {
-        ...current,
-        data: current.data.filter(s => s.id !== space.id),
-      };
+      if (!current || !Array.isArray(current.data)) return current;
+      return { ...current, data: current.data.filter(s => s.id !== space.id) };
     });
 
     deleteMutation.mutate(
       { id: space.id },
       {
         onError: () => {
-          // Rollback on error
           queryClient.setQueryData(listQueryKey, previousData);
         },
       }
@@ -394,6 +434,7 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
   /* ------------------------- Toggle Handlers ------------------------------ */
 
   const toggleExpand = (id: number) => {
+    if (!id) return;
     setExpandedRows(prev => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -407,11 +448,7 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
 
   /* --------------------------- Validation --------------------------------- */
 
-  const canSubmit =
-    !!formData.facility_id &&
-    !!formData.name.trim() &&
-    !!formData.type;
-
+  const canSubmit = !!formData.facility_id && !!formData.name.trim() && !!formData.type;
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   /* ---------------------------- Color Tokens ------------------------------ */
@@ -465,9 +502,8 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
       <div className={cn('rounded-xl p-6 border', colors.border.primary, colors.bg.elevated)}>
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex-1 min-w-0">
-            <h1 className={cn('text-2xl font-bold mb-2', colors.text.primary)}>
-              Facility Spaces
-            </h1>
+            <h1 className={cn('text-2xl font-bold mb-2', colors.text.primary)}>Clinical Space Management
+</h1>
             <p className={colors.text.secondary}>
               Manage consultation rooms, wards, labs, and other facility spaces
             </p>
@@ -536,9 +572,9 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
               <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5', colors.text.tertiary)} />
               <input
                 type="text"
-                placeholder="Search spaces..."
+                placeholder="Search clincial spaces and rooms..."
                 value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                 className={cn(
                   'w-full pl-10 pr-4 py-2 rounded-lg border transition-colors cursor-text',
                   colors.border.primary,
@@ -590,7 +626,10 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
 
         {/* Expanded Filters */}
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t" style={{ borderColor: colors.border.primary.split(' ')[0].replace('border-', '') }}>
+          <div
+            className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t"
+            style={{ borderColor: colors.border.primary.split(' ')[0].replace('border-', '') }}
+          >
             {/* Type Filter */}
             <div>
               <label className={cn('block text-sm font-medium mb-2', colors.text.secondary)}>
@@ -598,7 +637,9 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
               </label>
               <select
                 value={typeFilter}
-                onChange={e => setTypeFilter(e.target.value as FacilitySpaceType | 'all')}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                  setTypeFilter(e.target.value as FacilitySpaceType | 'all')
+                }
                 className={cn(
                   'w-full px-3 py-2 rounded-lg border transition-colors cursor-pointer',
                   colors.border.primary,
@@ -622,7 +663,9 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
               </label>
               <select
                 value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                  setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')
+                }
                 className={cn(
                   'w-full px-3 py-2 rounded-lg border transition-colors cursor-pointer',
                   colors.border.primary,
@@ -664,7 +707,7 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
             <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
             <div>
               <p className="font-medium text-red-500">Error Loading Spaces</p>
-              <p className={cn('text-sm', colors.text.secondary)}>{error.message}</p>
+              <p className={cn('text-sm', colors.text.secondary)}>{getErrorMessage(error)}</p>
             </div>
             <button
               onClick={() => refetch()}
@@ -681,9 +724,7 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
         <div className={cn('rounded-xl p-12 text-center', colors.bg.secondary)}>
           <Building2 className={cn('w-16 h-16 mx-auto mb-4', colors.text.tertiary)} />
           <h3 className={cn('text-lg font-medium mb-2', colors.text.primary)}>
-            {searchTerm || typeFilter !== 'all' || statusFilter !== 'all'
-              ? 'No Spaces Found'
-              : 'No Spaces Yet'}
+            {searchTerm || typeFilter !== 'all' || statusFilter !== 'all' ? 'No Spaces Found' : 'No Spaces Yet'}
           </h3>
           <p className={cn('mb-6', colors.text.secondary)}>
             {searchTerm || typeFilter !== 'all' || statusFilter !== 'all'
@@ -714,7 +755,7 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
           <div className={cn('grid grid-cols-12 gap-4 p-4 font-medium border-b', colors.bg.secondary, colors.border.primary)}>
             <div className="col-span-3">Space Name</div>
             <div className="col-span-2">Type</div>
-            <div className="col-span-3">Location</div>
+            <div className="col-span-3">Building</div>
             <div className="col-span-2">Status</div>
             <div className="col-span-2 text-right">Actions</div>
           </div>
@@ -724,6 +765,9 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
             {filteredSpaces.map(space => {
               const isExpanded = expandedRows.has(space.id);
               const Icon = getSpaceTypeIcon(space.type);
+
+              const created = safeDate(space.created_at);
+              const updated = safeDate(space.updated_at);
 
               return (
                 <div key={space.id} className={cn('border-b last:border-b-0', colors.border.primary)}>
@@ -739,7 +783,7 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                     <div className="col-span-3">
                       <div className="flex items-center gap-2">
                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        <span className={cn('font-medium', colors.text.primary)}>{space.name}</span>
+                        <span className={cn('font-medium', colors.text.primary)}>{space.name ?? '—'}</span>
                       </div>
                     </div>
 
@@ -747,16 +791,18 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                     <div className="col-span-2">
                       <div className="flex items-center gap-2">
                         <Icon className={cn('w-4 h-4', getSpaceTypeColor(space.type))} />
-                        <span className={colors.text.secondary}>{space.type_label}</span>
+                        <span className={colors.text.secondary}>
+                          {space.type_label ?? getSpaceTypeLabel(space.type)}
+                        </span>
                       </div>
                     </div>
 
                     {/* Location */}
                     <div className="col-span-3">
                       <div className="flex items-center gap-2">
-                        <MapPin className={cn('w-4 h-4', colors.text.tertiary)} />
+                        <Building className={cn('w-4 h-4', colors.text.tertiary)} />
                         <span className={colors.text.secondary}>
-                          {space.full_location || 'No location'}
+                          {space.building ?? 'Not specified'}
                         </span>
                       </div>
                     </div>
@@ -779,7 +825,7 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                     {/* Actions */}
                     <div className="col-span-2 flex items-center justify-end gap-2">
                       <button
-                        onClick={(e) => {
+                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation();
                           openEditDrawer(space);
                         }}
@@ -793,9 +839,9 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={(e) => {
+                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation();
-                          handleDelete(space);
+                          void handleDelete(space);
                         }}
                         className="p-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
                         title="Delete"
@@ -811,23 +857,19 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
                           <p className={cn('text-sm font-medium mb-1', colors.text.secondary)}>Building</p>
-                          <p className={colors.text.primary}>{space.building || '—'}</p>
+                          <p className={colors.text.primary}>{space.building ?? '—'}</p>
                         </div>
                         <div>
                           <p className={cn('text-sm font-medium mb-1', colors.text.secondary)}>Floor</p>
-                          <p className={colors.text.primary}>{space.floor || '—'}</p>
+                          <p className={colors.text.primary}>{space.floor ?? '—'}</p>
                         </div>
                         <div>
                           <p className={cn('text-sm font-medium mb-1', colors.text.secondary)}>Created</p>
-                          <p className={colors.text.primary}>
-                            {new Date(space.created_at).toLocaleDateString()}
-                          </p>
+                          <p className={colors.text.primary}>{created ? created.toLocaleDateString() : '—'}</p>
                         </div>
                         <div>
                           <p className={cn('text-sm font-medium mb-1', colors.text.secondary)}>Updated</p>
-                          <p className={colors.text.primary}>
-                            {new Date(space.updated_at).toLocaleDateString()}
-                          </p>
+                          <p className={colors.text.primary}>{updated ? updated.toLocaleDateString() : '—'}</p>
                         </div>
                       </div>
                     </div>
@@ -862,8 +904,10 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                       <Icon className={cn('w-6 h-6', getSpaceTypeColor(space.type))} />
                     </div>
                     <div>
-                      <h3 className={cn('font-semibold', colors.text.primary)}>{space.name}</h3>
-                      <p className={cn('text-sm', colors.text.secondary)}>{space.type_label}</p>
+                      <h3 className={cn('font-semibold', colors.text.primary)}>{space.name ?? '—'}</h3>
+                      <p className={cn('text-sm', colors.text.secondary)}>
+                        {space.type_label ?? getSpaceTypeLabel(space.type)}
+                      </p>
                     </div>
                   </div>
 
@@ -879,13 +923,13 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                   <div className="flex items-center gap-2 mb-2">
                     <Building2 className={cn('w-4 h-4', colors.text.tertiary)} />
                     <span className={cn('text-sm', colors.text.secondary)}>
-                      {space.building || 'No building'}
+                      {space.building ?? 'No building'}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Layers className={cn('w-4 h-4', colors.text.tertiary)} />
                     <span className={cn('text-sm', colors.text.secondary)}>
-                      {space.floor || 'No floor'}
+                      {space.floor ?? 'No floor'}
                     </span>
                   </div>
                 </div>
@@ -904,7 +948,7 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                     <span>Edit</span>
                   </button>
                   <button
-                    onClick={() => handleDelete(space)}
+                    onClick={() => void handleDelete(space)}
                     className="p-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -931,9 +975,7 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                 {drawerMode === 'create' ? 'Create New Space' : 'Edit Space'}
               </h2>
               <p className={colors.text.secondary}>
-                {drawerMode === 'create'
-                  ? 'Add a new space to your facility'
-                  : `Editing: ${selectedSpace?.name}`}
+                {drawerMode === 'create' ? 'Add a new space to your facility' : `Editing: ${selectedSpace?.name ?? ''}`}
               </p>
             </div>
 
@@ -947,7 +989,9 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setFormData(prev => ({ ...prev, name: e.target.value }))
+                  }
                   placeholder="e.g., Consultation Room 101"
                   className={cn(
                     'w-full px-4 py-2 rounded-lg border transition-colors cursor-text',
@@ -966,7 +1010,9 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                 </label>
                 <select
                   value={formData.type}
-                  onChange={e => setFormData(prev => ({ ...prev, type: e.target.value as FacilitySpaceType }))}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    setFormData(prev => ({ ...prev, type: e.target.value as FacilitySpaceType }))
+                  }
                   className={cn(
                     'w-full px-4 py-2 rounded-lg border transition-colors cursor-pointer',
                     colors.border.primary,
@@ -992,7 +1038,9 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                   <input
                     type="text"
                     value={formData.building}
-                    onChange={e => setFormData(prev => ({ ...prev, building: e.target.value }))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setFormData(prev => ({ ...prev, building: e.target.value }))
+                    }
                     placeholder="e.g., Main Building"
                     className={cn(
                       'w-full px-4 py-2 rounded-lg border transition-colors cursor-text',
@@ -1011,7 +1059,9 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                   <input
                     type="text"
                     value={formData.floor}
-                    onChange={e => setFormData(prev => ({ ...prev, floor: e.target.value }))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setFormData(prev => ({ ...prev, floor: e.target.value }))
+                    }
                     placeholder="e.g., 1st Floor"
                     className={cn(
                       'w-full px-4 py-2 rounded-lg border transition-colors cursor-text',
@@ -1030,7 +1080,9 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                   type="checkbox"
                   id="is_active"
                   checked={formData.is_active}
-                  onChange={e => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setFormData(prev => ({ ...prev, is_active: e.target.checked }))
+                  }
                   className="w-4 h-4 rounded border-gray-300 text-cyan-500 focus:ring-cyan-500 cursor-pointer"
                 />
                 <label htmlFor="is_active" className={cn('font-medium cursor-pointer', colors.text.primary)}>
@@ -1073,4 +1125,3 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
     </div>
   );
 };
-

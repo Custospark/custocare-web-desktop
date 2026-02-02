@@ -2,10 +2,10 @@
  * ============================================================================
  * FACILITY SPACE TYPE DEFINITIONS
  * ============================================================================
- * 
+ *
  * This file contains all TypeScript type declarations for facility space-related
  * operations in the healthcare facility management system.
- * 
+ *
  * @module facilitySpaceTypes
  * @description Comprehensive type definitions for facility spaces, including
  * request/response types, enums, and utility types for type-safe API interactions.
@@ -77,28 +77,28 @@ export interface FacilitySpace {
   // Primary identifiers
   id: number;
   facility_id: number;
-  
+
   // Basic information
   name: string;
   type: FacilitySpaceType;
   type_label: string;
-  
+
   // Location details
   floor: string | null;
   building: string | null;
-  
+
   // Status
   is_active: boolean;
   status: SpaceStatus;
   status_label: string;
-  
+
   // Audit timestamps
   created_at: string;
   updated_at: string;
-  
+
   // Relationships (loaded conditionally)
   facility?: FacilityReference;
-  
+
   // Computed attributes
   full_location: string | null;
   is_available: boolean;
@@ -117,7 +117,7 @@ export interface CreateFacilitySpaceRequest {
   facility_id: number;
   name: string;
   type: FacilitySpaceType;
-  
+
   // Optional fields
   floor?: string | null;
   building?: string | null;
@@ -191,10 +191,9 @@ export interface ApiErrorResponse {
 /**
  * Response for facility space list endpoint (GET /facilities/spaces).
  */
-export type GetFacilitySpacesResponse =
-  ApiSuccessResponse<FacilitySpace[]> & {
-    meta?: PaginationMeta;
-  };
+export type GetFacilitySpacesResponse = ApiSuccessResponse<FacilitySpace[]> & {
+  meta?: PaginationMeta;
+};
 
 /**
  * Response for single facility space operations (GET, POST, PATCH).
@@ -229,12 +228,24 @@ export type FacilitySpaceApiResponse =
   | FacilitySpaceResponse
   | DeleteFacilitySpaceResponse;
 
+/* -------------------------------------------------------------------------- */
+/*                              TYPE GUARDS                                   */
+/* -------------------------------------------------------------------------- */
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const hasOwn = <K extends PropertyKey>(
+  obj: object,
+  key: K
+): obj is Record<K, unknown> => Object.prototype.hasOwnProperty.call(obj, key);
+
 /**
  * Type guard to check if response is an error.
- * 
+ *
  * @param response - API response to check
  * @returns True if response is an error response
- * 
+ *
  * @example
  * if (isApiErrorResponse(response)) {
  *   console.error(response.message);
@@ -245,6 +256,117 @@ export function isApiErrorResponse(
 ): response is ApiErrorResponse {
   return response.success === false;
 }
+
+/**
+ * Type guard to check whether an unknown value matches ApiErrorResponse.
+ * Useful when catching thrown errors or dealing with untyped API clients.
+ */
+export function isApiErrorResponseUnknown(value: unknown): value is ApiErrorResponse {
+  if (!isRecord(value)) return false;
+  if (!hasOwn(value, 'success') || value.success !== false) return false;
+  if (!hasOwn(value, 'message') || typeof value.message !== 'string') return false;
+
+  if (hasOwn(value, 'errors') && value.errors !== undefined) {
+    const errors = value.errors;
+    if (!isRecord(errors)) return false;
+
+    for (const key of Object.keys(errors)) {
+      const entry = errors[key];
+      if (!Array.isArray(entry) || !entry.every(v => typeof v === 'string')) return false;
+    }
+  }
+
+  if (hasOwn(value, 'error') && value.error !== undefined && typeof value.error !== 'string') {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Type guard to check whether an unknown value matches ApiSuccessResponse<T>.
+ * (Lightweight shape validation; does not deep-validate `data`.)
+ */
+export function isApiSuccessResponseUnknown<TData = unknown>(
+  value: unknown
+): value is ApiSuccessResponse<TData> {
+  if (!isRecord(value)) return false;
+  if (!hasOwn(value, 'success') || value.success !== true) return false;
+  if (!hasOwn(value, 'message') || typeof value.message !== 'string') return false;
+  if (!hasOwn(value, 'data')) return false;
+  return true;
+}
+
+/**
+ * Type guard: checks if an unknown value is a FacilitySpaceType.
+ * Useful for safely handling values from query params / form inputs.
+ */
+export function isFacilitySpaceType(value: unknown): value is FacilitySpaceType {
+  return typeof value === 'string' && (Object.values(FacilitySpaceType) as string[]).includes(value);
+}
+
+/**
+ * Type guard: checks if an unknown value is a SpaceStatus.
+ */
+export function isSpaceStatus(value: unknown): value is SpaceStatus {
+  return typeof value === 'string' && (Object.values(SpaceStatus) as string[]).includes(value);
+}
+
+/**
+ * Type guard: validates FacilitySpace shape at runtime (pragmatic checks).
+ * This helps remove `any` usage in UI code by enabling narrowing from unknown.
+ */
+export function isFacilitySpace(value: unknown): value is FacilitySpace {
+  if (!isRecord(value)) return false;
+
+  return (
+    typeof value.id === 'number' &&
+    typeof value.facility_id === 'number' &&
+    typeof value.name === 'string' &&
+    isFacilitySpaceType(value.type) &&
+    typeof value.type_label === 'string' &&
+    (value.floor === null || typeof value.floor === 'string') &&
+    (value.building === null || typeof value.building === 'string') &&
+    typeof value.is_active === 'boolean' &&
+    isSpaceStatus(value.status) &&
+    typeof value.status_label === 'string' &&
+    typeof value.created_at === 'string' &&
+    typeof value.updated_at === 'string' &&
+    (value.full_location === null || typeof value.full_location === 'string') &&
+    typeof value.is_available === 'boolean'
+  );
+}
+
+/**
+ * Type guard for GetFacilitySpacesResponse at runtime.
+ * Ensures `data` is an array of FacilitySpace.
+ */
+export function isGetFacilitySpacesResponse(value: unknown): value is GetFacilitySpacesResponse {
+  if (!isApiSuccessResponseUnknown<unknown>(value)) return false;
+
+  const data = value.data;
+  if (!Array.isArray(data)) return false;
+  if (!data.every(isFacilitySpace)) return false;
+
+  // Optional meta: if present, lightly validate pagination keys
+  if (value.meta !== undefined) {
+    const meta = value.meta as unknown;
+    if (!isRecord(meta)) return false;
+
+    // If it's pagination meta, these should be numbers. If backend sometimes uses meta as
+    // other shape, we don't hard-fail unless keys exist with invalid types.
+    const numKeys: Array<keyof PaginationMeta> = ['current_page', 'last_page', 'per_page', 'total'];
+    for (const k of numKeys) {
+      if (hasOwn(meta, k) && meta[k] !== undefined && typeof meta[k] !== 'number') return false;
+    }
+  }
+
+  return true;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                        MUTATION / PARAMETER TYPES                          */
+/* -------------------------------------------------------------------------- */
 
 /**
  * Options for mutation callbacks.
