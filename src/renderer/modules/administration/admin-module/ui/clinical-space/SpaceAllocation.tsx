@@ -48,6 +48,7 @@ import {
   Activity,
   FlaskConical,
 } from 'lucide-react';
+import { getRoleDisplayName as formatName } from '../../../../../shared/utils/facilityRoleFormator';
 
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
@@ -756,7 +757,7 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
               <span className={cn('font-medium', colors.text.primary)}>{space.name}</span>
               {!space.is_active && (
                 <span className="text-xs px-2 py-1 rounded bg-red-500/10 text-red-500">
-                  Inactive
+                  Occupied
                 </span>
               )}
             </div>
@@ -880,18 +881,14 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
           <div className={cn('p-4 border-t', colors.bg.secondary, colors.border.primary)}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <p className={cn('text-sm font-medium mb-1', colors.text.secondary)}>Assignment ID</p>
-                <p className={colors.text.primary}>#{assignment.id}</p>
-              </div>
-              <div>
                 <p className={cn('text-sm font-medium mb-1', colors.text.secondary)}>Assigned On</p>
                 <p className={colors.text.primary}>{formatDateTime(assignment.assigned_at)}</p>
               </div>
               <div>
                 <p className={cn('text-sm font-medium mb-1', colors.text.secondary)}>Staff Details</p>
                 <p className={colors.text.primary}>
-                  ID: {assignment.staff?.employee_id || 'N/A'}<br/>
-                  Role: {assignment.staff?.role_code || 'N/A'}
+                  Staff Number: {assignment.staff?.staff_uuid || 'N/A'}<br/>
+                  Role: {formatName(assignment.staff?.role_code) || 'N/A'}
                 </p>
               </div>
               <div>

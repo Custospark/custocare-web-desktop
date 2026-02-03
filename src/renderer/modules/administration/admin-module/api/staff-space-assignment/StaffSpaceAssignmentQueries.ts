@@ -115,7 +115,10 @@ export const useGetCurrentOccupancy = (
       const response = await axiosInstance.get<OccupancyResponse>('/facility/spaces-occupancy', {
         params: filters,
       });
+      console.log("Current Ocupany:")
+      console.log(response.data);
       return response.data;
+    
     },
     enabled: !!filters.facility_id,
     ...options,
