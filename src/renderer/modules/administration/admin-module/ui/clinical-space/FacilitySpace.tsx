@@ -470,8 +470,8 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
       tertiary: isDark ? 'text-gray-500' : 'text-gray-500',
     },
     accent: {
-      primary: isDark ? 'bg-cyan-500' : 'bg-blue-600',
-      hover: isDark ? 'hover:bg-cyan-600' : 'hover:bg-blue-700',
+      primary: isDark ? 'bg-blue-600' : 'bg-blue-600',
+      hover: isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-700',
       text: 'text-white',
     },
   };
