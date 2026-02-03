@@ -720,7 +720,7 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
         <Building2 className={cn('w-12 h-12 mx-auto mb-4', colors.text.tertiary)} />
         <h3 className={cn('text-lg font-medium mb-2', colors.text.primary)}>No Facility Selected</h3>
         <p className={colors.text.secondary}>
-          Please select a facility from the sidebar to manage space allocations.
+          Please select a facility from the sidebar to manage room allocations.
         </p>
       </div>
     );
@@ -788,7 +788,7 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
                     {assignment?.staff?.user?.full_name || 'Unknown Staff'}
                   </p>
                   <p className={cn('text-sm', colors.text.secondary)}>
-                    {assignment?.staff?.employee_id || ''} • {assignment?.staff?.role_code || ''}
+                    {assignment?.staff?.staff_uuid || ''} • {formatName(assignment?.staff?.role_code) || ''}
                   </p>
                 </div>
               </div>
@@ -972,10 +972,6 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Building className={cn('w-4 h-4', colors.text.tertiary)} />
-            <span className={cn('text-sm', colors.text.secondary)}>
-              Space ID: {space.id}
-            </span>
           </div>
           {!space.is_active && (
             <div className="mt-2">
@@ -1051,7 +1047,7 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
               )}
             >
               <User className="w-4 h-4" />
-              <span>Assign Space</span>
+              <span>Assign Room</span>
             </button>
           )}
         </div>
@@ -1067,7 +1063,7 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
       <div className={cn('rounded-xl p-6 border', colors.border.primary, colors.bg.elevated)}>
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex-1 min-w-0">
-            <h1 className={cn('text-2xl font-bold mb-2', colors.text.primary)}>Space Allocation</h1>
+            <h1 className={cn('text-2xl font-bold mb-2', colors.text.primary)}>Room Allocation</h1>
             <p className={colors.text.secondary}>
               Manage workspace assignments for staff members across the facility
             </p>
@@ -1099,7 +1095,7 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
               type="button"
             >
               <Plus className="w-5 h-5" />
-              <span>Assign Space</span>
+              <span>Assign Room</span>
             </button>
           </div>
         </div>
@@ -1318,7 +1314,7 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
             <div>
-              <p className="font-medium text-red-500">Error Loading Space Allocations</p>
+              <p className="font-medium text-red-500">Error Loading Room Allocations</p>
               <p className={cn('text-sm', colors.text.secondary)}>{getErrorMessage(occupancyError)}</p>
             </div>
             <button
@@ -1356,7 +1352,7 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
               type="button"
             >
               <Plus className="w-5 h-5" />
-              <span>Assign First Space</span>
+              <span>Assign First Room</span>
             </button>
           )}
         </div>
@@ -1400,7 +1396,7 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
             {/* Drawer Header */}
             <div className={cn('sticky top-0 p-6 border-b z-10', colors.bg.elevated, colors.border.primary)}>
               <h2 className={cn('text-xl font-bold', colors.text.primary)}>
-                Assign Space to Staff
+                Assign Room to Staff
               </h2>
               <p className={colors.text.secondary}>
                 Select a space and staff member to create an assignment
@@ -1410,70 +1406,328 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
             {/* Drawer Body */}
             <div className="p-6 space-y-6">
               {/* Space Selection */}
-              <div>
-                <label className={cn('block text-sm font-medium mb-2', colors.text.secondary)}>
-                  Select Space <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={assignFormData.space_id || ''}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setAssignFormData(prev => ({ 
-                      ...prev, 
-                      space_id: e.target.value ? parseInt(e.target.value) : null 
-                    }))
-                  }
-                  className={cn(
-                    'w-full px-4 py-2 rounded-lg border transition-colors cursor-pointer',
-                    colors.border.primary,
-                    colors.bg.primary,
-                    colors.text.primary
-                  )}
-                >
-                  <option value="">Select a space...</option>
-                  {normalizedAvailableSpaces.map(space => (
-                    <option key={space.id} value={space.id}>
-                      {space.name} - {space.type} ({space.building || 'No building'} {space.floor ? `, ${space.floor}` : ''})
-                    </option>
-                  ))}
-                </select>
-                <p className={cn('text-xs mt-1', colors.text.tertiary)}>
-                  {normalizedAvailableSpaces.length} available spaces
-                </p>
-              </div>
+             <div>
+              <label className={cn('block text-sm font-medium mb-2', colors.text.secondary)}>
+                Select room <span className="text-red-500">*</span>
+              </label>
+              
+              {normalizedAvailableSpaces.length === 0 ? (
+                // No rooms available state
+                <div className={cn(
+                  'w-full px-4 py-3 rounded-lg border transition-colors',
+                  'bg-blue-50 border-blue-200',
+                  'dark:bg-amber-900/20 dark:border-amber-700/30'
+                )}>
+                  <div className="flex items-center gap-2">
+                    <svg 
+                      className="w-5 h-5 text-blue-500" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z" 
+                      />
+                    </svg>
+                    <span className={cn('text-sm font-medium', colors.text.secondary)}>
+                      No rooms available for assignment
+                    </span>
+                  </div>
+                  <p className="text-xs mt-2 text-blue-600 dark:text-blue-400">
+                    All rooms are currently occupied. Please check back later or release a room first.
+                  </p>
+                </div>
+              ) : (
+                // Rooms available state
+                <>
+                  <div className="relative">
+                    <select
+                      value={assignFormData.space_id || ''}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                        setAssignFormData(prev => ({ 
+                          ...prev, 
+                          space_id: e.target.value ? parseInt(e.target.value) : null 
+                        }))
+                      }
+                      className={cn(
+                        'w-full px-4 py-3 pl-10 rounded-lg border transition-colors cursor-pointer',
+                        'appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent',
+                        colors.border.primary,
+                        colors.bg.primary,
+                        colors.text.primary,
+                        assignFormData.space_id ? 'border-primary-400' : 'border-gray-300 dark:border-gray-600'
+                      )}
+                    >
+                      <option value="">Select a room...</option>
+                      {normalizedAvailableSpaces.map(space => (
+                        <option key={space.id} value={space.id}>
+                          {space.name} - {formatName(space.type)} 
+                          {space.building && ` • ${space.building}`}
+                          {space.floor && ` • Floor ${space.floor}`}
+                        </option>
+                      ))}
+                    </select>
+                    {/* Dropdown icon */}
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                      <svg 
+                        className="w-5 h-5 text-gray-400" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M19 9l-7 7-7-7" 
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  {/* Room counter with visual indicator */}
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        'w-2 h-2 rounded-full',
+                        normalizedAvailableSpaces.length > 5 
+                          ? 'bg-green-500' 
+                          : normalizedAvailableSpaces.length > 0
+                            ? 'bg-amber-500'
+                            : 'bg-red-500'
+                      )} />
+                      <p className={cn('text-xs', colors.text.tertiary)}>
+                        {normalizedAvailableSpaces.length} {normalizedAvailableSpaces.length === 1 ? 'room' : 'rooms'} available
+                      </p>
+                    </div>
+                    
+                    {/* Selected room info */}
+                    {assignFormData.space_id && (
+                      <div className="flex items-center gap-1">
+                        <svg 
+                          className="w-4 h-4 text-green-500" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth={2} 
+                            d="M5 13l4 4L19 7" 
+                          />
+                        </svg>
+                        <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                          Ready to assign
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
 
               {/* Staff Selection */}
               <div>
                 <label className={cn('block text-sm font-medium mb-2', colors.text.secondary)}>
                   Select Staff <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={assignFormData.staff_id || ''}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setAssignFormData(prev => ({ 
-                      ...prev, 
-                      staff_id: e.target.value ? parseInt(e.target.value) : null 
-                    }))
-                  }
-                  className={cn(
-                    'w-full px-4 py-2 rounded-lg border transition-colors cursor-pointer',
-                    colors.border.primary,
-                    colors.bg.primary,
-                    colors.text.primary
-                  )}
-                  disabled={isLoadingStaff}
-                >
-                  <option value="">Select a staff member...</option>
-                  {normalizedStaff.map(staff => (
-                    <option key={staff.staff_id} value={staff.staff_id}>
-                      {staff.full_name} - {staff.staff_uuid} ({formatDisplayName(staff.role_code)})
-                    </option>
-                  ))}
-                </select>
-                <p className={cn('text-xs mt-1', colors.text.tertiary)}>
-                  {isLoadingStaff ? 'Loading staff...' : `${normalizedStaff.length} staff members available`}
-                </p>
+                
+                {isLoadingStaff ? (
+                  // Loading state
+                  <div className={cn(
+                    'w-full px-4 py-3 rounded-lg border transition-colors',
+                    'bg-gray-50 border-gray-200 animate-pulse',
+                    'dark:bg-gray-800/50 dark:border-gray-700'
+                  )}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700" />
+                        <div className="space-y-1">
+                          <div className="h-3 w-32 bg-gray-300 dark:bg-gray-700 rounded" />
+                          <div className="h-2 w-24 bg-gray-200 dark:bg-gray-800 rounded" />
+                        </div>
+                      </div>
+                      <div className="h-6 w-16 bg-gray-300 dark:bg-gray-700 rounded-full" />
+                    </div>
+                  </div>
+                ) : normalizedStaff.length === 0 ? (
+                  // No staff available state
+                  <div className={cn(
+                    'w-full px-4 py-4 rounded-lg border transition-colors text-center',
+                    'bg-blue-50 border-blue-200',
+                    'dark:bg-blue-900/20 dark:border-blue-700/30'
+                  )}>
+                    <svg 
+                      className="w-10 h-10 mx-auto text-blue-500 mb-2" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={1.5} 
+                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" 
+                      />
+                    </svg>
+                    <p className={cn('font-medium mb-1', colors.text.secondary)}>
+                      No staff available
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                      All staff members already have room assignments
+                    </p>
+                  </div>
+                ) : (
+                  // Staff available state
+                  <>
+                    <div className="relative group">
+                      <select
+                        value={assignFormData.staff_id || ''}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                          setAssignFormData(prev => ({ 
+                            ...prev, 
+                            staff_id: e.target.value ? parseInt(e.target.value) : null 
+                          }))
+                        }
+                        className={cn(
+                          'w-full px-4 py-3 pr-10 rounded-lg border transition-all cursor-pointer',
+                          'appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400',
+                          colors.border.primary,
+                          colors.bg.primary,
+                          colors.text.primary,
+                          'group-hover:border-primary-300',
+                          assignFormData.staff_id && 'border-primary-400 bg-primary-50/50 dark:bg-primary-900/10',
+                          'disabled:opacity-50 disabled:cursor-not-allowed'
+                        )}
+                        disabled={isLoadingStaff}
+                      >
+                       <option value="">Choose a staff member...</option>
+                          {normalizedStaff.map(staff => (
+                            <option 
+                              key={staff.staff_id} 
+                              value={staff.staff_id} 
+                              className="py-3 px-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                            >
+                              <div className="space-y-2">
+                                {/* Main row: Name and Role */}
+                                <div className="flex items-center justify-between gap-4">
+                                  <div>
+                                    <div className="font-semibold text-gray-900 dark:text-gray-100">
+                                      {staff.full_name.concat("  ")}
+                                    </div>
+                                    
+                                  </div>
+                                  
+                                  <div className="text-right">
+                                    <div className="text-xs font-medium text-primary-600 dark:text-primary-400">
+                                      ({formatDisplayName(staff.role_code)})
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {/* Bottom row: UUID */}
+                                <div className="flex items-center gap-2">
+                                  <svg 
+                                    className="w-3 h-3 text-gray-400" 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path 
+                                      strokeLinecap="round" 
+                                      strokeLinejoin="round" 
+                                      strokeWidth={2} 
+                                      d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" 
+                                    />
+                                  </svg>
+                                  
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                                    ({staff.staff_uuid})
+                                  </span>
+                                </div>
+                              </div>
+                            </option>
+                          ))}
+                      </select>
+                      
+                      {/* Custom dropdown arrow */}
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                        <svg 
+                          className={cn(
+                            "w-5 h-5 transition-transform group-hover:rotate-180",
+                            isLoadingStaff ? "text-gray-400" : "text-gray-500"
+                          )} 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth={2} 
+                            d="M19 9l-7 7-7-7" 
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                    
+                    {/* Staff information and stats */}
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="flex items-center gap-2">
+                        <div className={cn(
+                          'w-2 h-2 rounded-full',
+                          normalizedStaff.length > 10 
+                            ? 'bg-green-500' 
+                            : normalizedStaff.length > 3
+                              ? 'bg-blue-500'
+                              : 'bg-amber-500'
+                        )} />
+                        <p className={cn('text-xs', colors.text.tertiary)}>
+                          {normalizedStaff.length} {normalizedStaff.length === 1 ? 'staff member' : 'staff members'} available
+                        </p>
+                      </div>
+                      
+                      {/* Selected staff info */}
+                      {assignFormData.staff_id && (
+                        <div className="flex items-center gap-1">
+                          <svg 
+                            className="w-4 h-4 text-green-500" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round" 
+                              strokeWidth={2} 
+                              d="M5 13l4 4L19 7" 
+                            />
+                          </svg>
+                          <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                            Ready to assign
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                
+                  </>
+                )}
+                
+                {/* Loading indicator text */}
+                {isLoadingStaff && (
+                  <p className={cn('text-xs mt-2 flex items-center gap-2', colors.text.tertiary)}>
+                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Loading staff members...
+                  </p>
+                )}
               </div>
-
               {/* Notes */}
               <div>
                 <label className={cn('block text-sm font-medium mb-2', colors.text.secondary)}>
