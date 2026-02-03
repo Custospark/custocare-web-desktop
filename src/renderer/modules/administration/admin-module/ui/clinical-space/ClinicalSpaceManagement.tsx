@@ -5,9 +5,10 @@
  */
 
 import React from 'react';
-import { MapPin, LayoutGrid, Hospital, Shuffle } from 'lucide-react';
+import { MapPin, Hospital, Shuffle, DoorOpen } from 'lucide-react';
 import { BaseActionWorkspace } from '../../../../../shared/components/workspace/BaseActionWorkspace';
 import { ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from '../../../../../app/routes/constants/administration.paths';
+import { FaHospitalUser } from 'react-icons/fa';
 interface ClinicalSpaceManagementProps {
   theme: 'light' | 'dark';
 }
@@ -16,14 +17,14 @@ const ClinicalSpaceManagement: React.FC<ClinicalSpaceManagementProps> = ({ theme
   return (
     <BaseActionWorkspace
       title="Clinical Space Management"
-      icon={<MapPin className="w-6 h-6" />}
+      icon={<FaHospitalUser className="w-6 h-6" />}
       theme={theme}
       defaultActionTo={ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.CLINICAL_ROOMS}
       actions={[
         {
           key: 'rooms',
           label: 'Clinical Rooms',
-          icon: <LayoutGrid className="w-4 h-4" />,
+          icon: <DoorOpen className="w-4 h-4" />,
           to: ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.CLINICAL_ROOMS,
         },
         {
