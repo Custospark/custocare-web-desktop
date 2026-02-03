@@ -112,7 +112,7 @@ export const useGetCurrentOccupancy = (
   return useQuery<OccupancyResponse, AxiosError<ApiErrorResponse>>({
     queryKey: staffSpaceAssignmentKeys.occupancy(filters),
     queryFn: async () => {
-      const response = await axiosInstance.get<OccupancyResponse>('/facility/spaces/occupancy', {
+      const response = await axiosInstance.get<OccupancyResponse>('/facility/spaces-occupancy', {
         params: filters,
       });
       return response.data;
@@ -143,7 +143,7 @@ export const useGetAvailableSpaces = (
   return useQuery<AvailableSpacesResponse, AxiosError<ApiErrorResponse>>({
     queryKey: staffSpaceAssignmentKeys.availableSpaces(filters),
     queryFn: async () => {
-      const response = await axiosInstance.get<AvailableSpacesResponse>('/facility/spaces/available', {
+      const response = await axiosInstance.get<AvailableSpacesResponse>('/facility/spaces-available', {
         params: filters,
       });
       return response.data;

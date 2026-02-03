@@ -7,8 +7,7 @@ import React from 'react';
 import { FacilitySpace } from "../../../../modules/administration/admin-module/ui/clinical-space/FacilitySpace";
 import { FacilityWard } from "../../../../modules/administration/admin-module/ui/clinical-space/FacilityWard";
 const FacilityZones = React.lazy(() => import("../../../../modules/administration/admin-module/ui/clinical-space/FacilityZone"));
-const SpaceAllocation = React.lazy(() => import("../../../../modules/administration/admin-module/ui/clinical-space/SpaceAllocation")
-);
+import { SpaceAllocation } from "../../../../modules/administration/admin-module/ui/clinical-space/SpaceAllocation";
 
 export const clinicalSpaceManagementRoutes = [
   /* Default redirect to Clinical Rooms */
