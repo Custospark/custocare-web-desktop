@@ -657,7 +657,7 @@ export const FacilityWard: React.FC<FacilityWardProps> = ({ theme }) => {
                   colors.border.primary,
                   colors.bg.primary,
                   colors.text.primary,
-                  'focus:outline-none focus:ring-2 focus:ring-cyan-500/50'
+                  'focus:outline-none focus:ring-2 focus:ring-blue-500'
                 )}
               />
             </div>
@@ -1122,7 +1122,7 @@ export const FacilityWard: React.FC<FacilityWardProps> = ({ theme }) => {
                     colors.border.primary,
                     colors.bg.primary,
                     colors.text.primary,
-                    'focus:outline-none focus:ring-2 focus:ring-cyan-500/50'
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500'
                   )}
                 />
               </div>
@@ -1144,7 +1144,7 @@ export const FacilityWard: React.FC<FacilityWardProps> = ({ theme }) => {
                     colors.border.primary,
                     colors.bg.primary,
                     colors.text.primary,
-                    'focus:outline-none focus:ring-2 focus:ring-cyan-500/50'
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500'
                   )}
                 />
               </div>
@@ -1193,7 +1193,7 @@ export const FacilityWard: React.FC<FacilityWardProps> = ({ theme }) => {
                       colors.border.primary,
                       colors.bg.primary,
                       colors.text.primary,
-                      'focus:outline-none focus:ring-2 focus:ring-cyan-500/50'
+                      'focus:outline-none focus:ring-2 focus:ring-blue-500'
                     )}
                   />
                 </div>
@@ -1214,7 +1214,7 @@ export const FacilityWard: React.FC<FacilityWardProps> = ({ theme }) => {
                       colors.border.primary,
                       colors.bg.primary,
                       colors.text.primary,
-                      'focus:outline-none focus:ring-2 focus:ring-cyan-500/50'
+                      'focus:outline-none focus:ring-2 focus:ring-blue-500'
                     )}
                   />
                 </div>
@@ -1239,7 +1239,7 @@ export const FacilityWard: React.FC<FacilityWardProps> = ({ theme }) => {
                       colors.border.primary,
                       colors.bg.primary,
                       colors.text.primary,
-                      'focus:outline-none focus:ring-2 focus:ring-cyan-500/50'
+                      'focus:outline-none focus:ring-2 focus:ring-blue-500'
                     )}
                   />
                 </div>
@@ -1261,7 +1261,7 @@ export const FacilityWard: React.FC<FacilityWardProps> = ({ theme }) => {
                       colors.border.primary,
                       colors.bg.primary,
                       colors.text.primary,
-                      'focus:outline-none focus:ring-2 focus:ring-cyan-500/50'
+                      'focus:outline-none focus:ring-2 focus:ring-blue-500'
                     )}
                   />
                 </div>
@@ -1360,7 +1360,7 @@ export const FacilityWard: React.FC<FacilityWardProps> = ({ theme }) => {
                     colors.border.primary,
                     colors.bg.primary,
                     colors.text.primary,
-                    'focus:outline-none focus:ring-2 focus:ring-cyan-500/50'
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500'
                   )}
                 />
               </div>

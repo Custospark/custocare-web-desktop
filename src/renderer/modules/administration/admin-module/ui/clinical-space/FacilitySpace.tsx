@@ -580,7 +580,7 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                   colors.border.primary,
                   colors.bg.primary,
                   colors.text.primary,
-                  'focus:outline-none focus:ring-2 focus:ring-cyan-500/50'
+                  'focus:outline-none focus:ring-2 focus:ring-blue-500'
                 )}
               />
             </div>
@@ -998,7 +998,7 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                     colors.border.primary,
                     colors.bg.primary,
                     colors.text.primary,
-                    'focus:outline-none focus:ring-2 focus:ring-cyan-500/50'
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500'
                   )}
                 />
               </div>
@@ -1047,7 +1047,7 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                       colors.border.primary,
                       colors.bg.primary,
                       colors.text.primary,
-                      'focus:outline-none focus:ring-2 focus:ring-cyan-500/50'
+                      'focus:outline-none focus:ring-2 focus:ring-blue-500'
                     )}
                   />
                 </div>
@@ -1068,7 +1068,7 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                       colors.border.primary,
                       colors.bg.primary,
                       colors.text.primary,
-                      'focus:outline-none focus:ring-2 focus:ring-cyan-500/50'
+                      'focus:outline-none focus:ring-2 focus:ring-blue-500'
                     )}
                   />
                 </div>
@@ -1083,7 +1083,7 @@ export const FacilitySpace: React.FC<FacilitySpaceProps> = ({ theme }) => {
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setFormData(prev => ({ ...prev, is_active: e.target.checked }))
                   }
-                  className="w-4 h-4 rounded border-gray-300 text-cyan-500 focus:ring-cyan-500 cursor-pointer"
+                  className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500 cursor-pointer"
                 />
                 <label htmlFor="is_active" className={cn('font-medium cursor-pointer', colors.text.primary)}>
                   Active
