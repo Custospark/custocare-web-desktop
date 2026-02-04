@@ -315,14 +315,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   </div>
 
   {/* RIGHT: ACTIONS */}
- <div
-  className={cn(
-    // Mobile: do NOT stretch; start from left
-    'flex items-center gap-2 sm:gap-3 justify-start flex-nowrap',
-    // Desktop: take remaining space and align to right
-    'md:flex-1 md:justify-end'
-  )}
->
+<div className="flex items-center justify-between w-full md:flex-1 md:justify-end md:gap-3">
   {/* Mobile menu (mobile only) */}
   <button
     onClick={onMenuClick}
