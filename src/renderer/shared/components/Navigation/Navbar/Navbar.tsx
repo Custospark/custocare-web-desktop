@@ -18,12 +18,6 @@ import {
   Moon, 
   Sun,
   Heart, 
-  Workflow,
-  Users, 
-  FileText, 
-  Calendar, 
-  TrendingUp,
-  BarChart3,
   Briefcase, 
   UserCheck,
 } from 'lucide-react';
@@ -49,9 +43,7 @@ import {
 } from '../../../../app/store/utils/contextSelectors';
 
 // Import sub-components
-import { SmartSearch } from './SmartSearch';
 import { NotificationCenter } from './NotificationCenter';
-import { QuickActions } from './QuickActions';
 import { UserProfileMenu } from './UserProfileMenu';
 import ContextSwitcher from './ContextSwitcher';
 import StaffPresence from './StaffPresence';
@@ -77,24 +69,6 @@ interface ContextOption {
   isActive: boolean;
 }
 
-interface QuickAction {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  shortcut?: string;
-  badge?: number;
-  color: string;
-  description?: string;
-}
-
-interface SmartSearchItem {
-  id: string;
-  category: string;
-  title: string;
-  path: string;
-  icon: React.ReactNode;
-}
-
 export const Navbar: React.FC<NavbarProps> = ({ 
   theme = 'dark',
   onThemeToggle,
@@ -105,9 +79,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   // ============================================================================
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
-  const [isSmartSearchOpen, setIsSmartSearchOpen] = useState(false);
-  const [isWorkflowOpen, setIsWorkflowOpen] = useState(false);
   const [isContextSwitcherOpen, setIsContextSwitcherOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -233,53 +204,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     return allContextOptions.find(opt => opt.isActive) || allContextOptions[0];
   }, [allContextOptions]);
 
-  // ============================================================================
-  // MOCK DATA
-  // ============================================================================
-  const quickActions: QuickAction[] = [
-    { 
-      id: 'patients', 
-      label: 'Patients', 
-      icon: <Users className="w-4 h-4" />, 
-      badge: 12, 
-      color: 'blue',
-      description: 'Manage patient records',
-      shortcut: '⌘P'
-    },
-    { 
-      id: 'reports', 
-      label: 'Reports', 
-      icon: <FileText className="w-4 h-4" />, 
-      badge: 5, 
-      color: 'purple',
-      description: 'Generate & view reports',
-      shortcut: '⌘R'
-    },
-    { 
-      id: 'appointments', 
-      label: 'Appointments', 
-      icon: <Calendar className="w-4 h-4" />, 
-      badge: 8, 
-      color: 'emerald',
-      description: 'Schedule management',
-      shortcut: '⌘A'
-    },
-    { 
-      id: 'analytics', 
-      label: 'Analytics', 
-      icon: <TrendingUp className="w-4 h-4" />, 
-      color: 'amber',
-      description: 'View insights & trends',
-      shortcut: '⌘L'
-    },
-  ];
-
-  const smartSearchItems: SmartSearchItem[] = [
-    { id: '1', category: 'Patients', title: 'Sarah Johnson - Ward 3B', path: '/patients/101', icon: <Users className="w-4 h-4" /> },
-    { id: '2', category: 'Reports', title: 'Monthly Analytics Report', path: '/reports/monthly', icon: <BarChart3 className="w-4 h-4" /> },
-    { id: '3', category: 'Appointments', title: 'Surgery Schedule - Dr. Martinez', path: '/appointments/surgery', icon: <Calendar className="w-4 h-4" /> },
-  ];
-
   const unreadCount = 3;
 
   // ============================================================================
@@ -296,7 +220,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setIsSmartSearchOpen(true);
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
         e.preventDefault();
@@ -304,11 +227,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       }
       if (e.key === 'Escape') {
         setIsContextSwitcherOpen(false);
-        setIsSmartSearchOpen(false);
         setIsNotificationsOpen(false);
         setIsUserDropdownOpen(false);
-        setIsQuickActionsOpen(false);
-        setIsWorkflowOpen(false);
       }
     };
 
@@ -434,46 +354,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           />
         )}
 
-        {/* Smart Search */}
-        <SmartSearch
-          isOpen={isSmartSearchOpen}
-          onToggle={() => setIsSmartSearchOpen(!isSmartSearchOpen)}
-          isDark={isDark}
-          isMobile={isMobile}
-          searchItems={smartSearchItems}
-        />
 
-        {/* Workflow Automation (Desktop only) */}
-        <div className="relative hidden lg:block">
-          <button
-            onClick={() => setIsWorkflowOpen(!isWorkflowOpen)}
-            className={cn(
-              'p-2 rounded-lg transition-all duration-300 hover:scale-105 cursor-pointer',
-              isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-            )}
-            title="Workflow automation"
-          >
-            <Workflow className={cn(
-              'w-5 h-5 transition-colors',
-              isWorkflowOpen 
-                ? (isDark ? 'text-cyan-400' : 'text-blue-500') 
-                : (isDark ? 'text-gray-400' : 'text-gray-600')
-            )} />
-          </button>
-        </div>
-
-        {/* Quick Actions */}
-        <QuickActions
-          isOpen={isQuickActionsOpen}
-          onToggle={() => setIsQuickActionsOpen(!isQuickActionsOpen)}
-          isDark={isDark}
-          isMobile={isMobile}
-          actions={quickActions}
-        />
 
         {/* Staff Presence */}
+         {inStaffMode && activeFacilityId && (
         <StaffPresence isDark={isDark} />
+              )}
 
+      {/* My space for slef room booking. */}
+        {inStaffMode && activeFacilityId && (
+                <MySpace isDark={isDark} />
+              )}
         {/* Theme Toggle */}
         <button
           onClick={onThemeToggle}
@@ -489,10 +380,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Moon className="w-5 h-5 text-indigo-600" />
           )}
         </button>
-      {/* My space for slef room booking. */}
-        {inStaffMode && activeFacilityId && (
-                <MySpace isDark={isDark} />
-              )}
         {/* Notifications */}
         <NotificationCenter
           unreadCount={unreadCount}
