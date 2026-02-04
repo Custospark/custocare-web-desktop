@@ -14,6 +14,7 @@
  * - Theme-aware error display
  * - Provides contact support information
  * - ✅ Shows loading skeleton for 2 seconds before checking access
+ * - ✅ Immediately redirects patient mode users to patient dashboard
  * 
  * @component ModuleAccessMiddleware
  */
@@ -26,6 +27,8 @@ import type { RootState } from '../../store/store';
 import { selectAccessibleModuleCodes } from '../../store/slices/activeContextSlice';
 import { ROUTES } from './../routeConstants';
 import LoadingSkeleton from '../../../shared/components/Loading/LoadingSkeletons';
+import { isInPatientMode } from '../../store/utils/contextSelectors';
+
 /**
  * Mapping of route paths to their corresponding module codes
  */
@@ -52,6 +55,25 @@ const UNRESTRICTED_ROUTES = [
   '/settings',
   '/profile',
 ];
+
+/**
+ * Check if current path is a patient dashboard
+ */
+const isPatientDashboardRoute = (pathname: string): boolean => {
+  const cleanPath = pathname.startsWith('#') ? pathname.substring(1) : pathname;
+  return cleanPath === ROUTES.PATIENT_DASHBOARD || cleanPath.startsWith(`${ROUTES.PATIENT_DASHBOARD}/`);
+};
+
+/**
+ * Check if a route is unrestricted for patient mode
+ */
+const isUnrestrictedForPatient = (pathname: string): boolean => {
+  const cleanPath = pathname.startsWith('#') ? pathname.substring(1) : pathname;
+  
+  return UNRESTRICTED_ROUTES.some(route => 
+    cleanPath === route || cleanPath.startsWith(`${route}/`)
+  ) || isPatientDashboardRoute(cleanPath);
+};
 
 /**
  * Extract the base module path from a given pathname
@@ -161,7 +183,7 @@ const AccessDenied: React.FC<AccessDeniedProps> = ({ theme, moduleName, onNaviga
               <p className={`text-sm font-medium ${
                 isDark ? 'text-gray-200' : 'text-gray-800'
               }`}>
-                Permission for  Access Required
+                Permission for Access Required
               </p>
               <p className={`text-xs leading-relaxed ${
                 isDark ? 'text-gray-400' : 'text-gray-600'
@@ -235,6 +257,7 @@ export const ModuleAccessMiddleware: React.FC = () => {
   // Get theme and accessible modules from Redux
   const theme = useSelector((state: RootState) => state.ui.theme);
   const accessibleModuleCodes = useSelector(selectAccessibleModuleCodes);
+  const isPatientMode = useSelector(isInPatientMode);
   
   // ✅ State to control loading delay
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
@@ -243,21 +266,64 @@ export const ModuleAccessMiddleware: React.FC = () => {
   const currentPathname = location.hash 
     ? location.hash.substring(1) // Remove # for HashRouter
     : location.pathname;
-  
-  // Check if current path requires validation
+
+  // ✅ IMMEDIATELY redirect patient mode users to patient dashboard
+  useEffect(() => {
+    if (isPatientMode && !isUnrestrictedForPatient(currentPathname)) {
+      console.log('[ModuleAccessMiddleware] Patient mode detected, redirecting to patient dashboard');
+      navigate(ROUTES.PATIENT_DASHBOARD, { replace: true });
+      return;
+    }
+  }, [isPatientMode, currentPathname, navigate]);
+
+  // Check if current path requires validation (only for staff mode)
   const requiresValidation = useMemo(
-    () => isRestrictedPath(currentPathname),
-    [currentPathname]
+    () => isPatientMode ? false : isRestrictedPath(currentPathname),
+    [currentPathname, isPatientMode]
   );
   
-  // Get required module code for current path
+  // Get required module code for current path (only for staff mode)
   const requiredModuleCode = useMemo(
-    () => getRequiredModuleCode(currentPathname),
-    [currentPathname]
+    () => isPatientMode ? null : getRequiredModuleCode(currentPathname),
+    [currentPathname, isPatientMode]
   );
   
-  // Check if user has access to the required module
+  // Get human-readable module name (only for staff mode)
+  const moduleName = useMemo(() => {
+    if (!requiredModuleCode) return 'Unknown Module';
+    
+    return requiredModuleCode
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }, [requiredModuleCode]);
+  
+  // Handle navigation back to dashboard
+  const handleNavigateHome = () => {
+    if (isPatientMode) {
+      navigate(ROUTES.PATIENT_DASHBOARD, { replace: true });
+    } else {
+      navigate(ROUTES.DASHBOARD, { replace: true });
+    }
+  };
+  
+  // ✅ Timer to show loading skeleton for 2 seconds before checking access (staff mode only)
+  useEffect(() => {
+    const delay = isPatientMode ? 0 : 2000;
+    const timer = setTimeout(() => {
+      setIsCheckingAccess(false);
+    }, delay);
+    
+    return () => clearTimeout(timer);
+  }, [isPatientMode]);
+  
+  // Check if user has access to the required module (staff mode only)
   const hasAccess = useMemo(() => {
+    // Skip all access checks for patient mode
+    if (isPatientMode) {
+      return true;
+    }
+    
     if (!requiresValidation) {
       return true;
     }
@@ -273,45 +339,22 @@ export const ModuleAccessMiddleware: React.FC = () => {
     
     // Check if user has the required module code
     return accessibleModuleCodes.includes(requiredModuleCode);
-  }, [requiresValidation, requiredModuleCode, accessibleModuleCodes]);
-  
-  // Get human-readable module name
-  const moduleName = useMemo(() => {
-    if (!requiredModuleCode) return 'Unknown Module';
-    
-    return requiredModuleCode
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  }, [requiredModuleCode]);
-  
-  // Handle navigation back to dashboard
-  const handleNavigateHome = () => {
-    navigate(ROUTES.DASHBOARD, { replace: true });
-  };
-  
-  // ✅ Timer to show loading skeleton for 2 seconds before checking access
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsCheckingAccess(false);
-    }, 3000); // 3 second delay
-    
-    return () => clearTimeout(timer);
-  }, []);
+  }, [requiresValidation, requiredModuleCode, accessibleModuleCodes, isPatientMode]);
   
   // Log access attempts for debugging (optional - remove in production)
   useEffect(() => {
-    if (!isCheckingAccess && requiresValidation && !hasAccess) {
+    if (!isPatientMode && !isCheckingAccess && requiresValidation && !hasAccess) {
       console.warn('[ModuleAccessMiddleware] Access denied:', {
         path: currentPathname,
         requiredModule: requiredModuleCode,
         accessibleModules: accessibleModuleCodes,
+        mode: 'staff',
       });
     }
-  }, [requiresValidation, hasAccess, currentPathname, requiredModuleCode, accessibleModuleCodes, isCheckingAccess]);
+  }, [requiresValidation, hasAccess, currentPathname, requiredModuleCode, accessibleModuleCodes, isCheckingAccess, isPatientMode]);
   
-  // ✅ Show loading skeleton while checking access
-  if (isCheckingAccess) {
+  // ✅ Show loading skeleton only for staff mode
+  if (!isPatientMode && isCheckingAccess) {
     // Determine which loading variant to show based on the route
     const getLoadingVariant = () => {
       if (requiredModuleCode) {
@@ -328,14 +371,13 @@ export const ModuleAccessMiddleware: React.FC = () => {
       <LoadingSkeleton 
         variant={getLoadingVariant()}
         theme={theme}
-        message={`Loading ${moduleName || 'Module'}...`}
+        message={`Processing.....`}
       />
     );
   }
   
-  // ✅ Now check access after the 2-second delay
-  // Render access denied screen if user doesn't have access
-  if (requiresValidation && !hasAccess) {
+  // ✅ For staff mode: Render access denied screen if user doesn't have access
+  if (!isPatientMode && requiresValidation && !hasAccess) {
     return (
       <AccessDenied 
         theme={theme}
