@@ -3,14 +3,17 @@
  * MY SPACE COMPONENT - STAFF SELF-SERVICE ROOM BOOKING
  * ============================================================================
  * 
- * Self-service dropdown for staff to occupy/leave clinical spaces.
+ * Premium staff space booking with status management
  * Features:
- * - Client-side search
- * - Real-time room status (Occupied/Available)
- * - Staff can only leave their own occupied rooms
- * - Blue theme with appropriate status colors
+ * - Blue-themed color palette (consistent with StaffPresence)
+ * - Space rings for visual clarity
+ * - Enhanced contrast for accessibility
  * - Mobile-responsive design
- * - Type-safe with proper error handling
+ * - Real-time status updates
+ * - Enterprise-grade UX with clear affordances
+ * - Improved cursor feedback
+ * - Compact layout for better space utilization
+ * - Client-side search functionality
  * 
  * @module MySpace
  * @description Staff interface for self-managing space assignments
@@ -22,8 +25,6 @@ import {
   Search,
   DoorOpen,
   DoorClosed,
-  MapPin,
-  Building,
   CheckCircle2,
   XCircle,
   Loader2,
@@ -40,11 +41,12 @@ import {
   useGetCurrentOccupancy,
   useAssignMySpace,
   useReleaseMySpace,
-}  from '../../../../modules/administration/admin-module/api/staff-space-assignment/StaffSpaceAssignmentQueries';
+} from '../../../../modules/administration/admin-module/api/staff-space-assignment/StaffSpaceAssignmentQueries';
 import type {
   SpaceWithAssignment,
   OccupancyFilters,
-} from  '../../../../modules/administration/admin-module/api/staff-space-assignment/StaffSpaceAssignmentTypes';
+} from '../../../../modules/administration/admin-module/api/staff-space-assignment/StaffSpaceAssignmentTypes';
+
 /* -------------------------------------------------------------------------- */
 /*                                COMPONENT PROPS                             */
 /* -------------------------------------------------------------------------- */
@@ -98,7 +100,7 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, className }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   /* ---------------------------- Local State ------------------------------- */
-  const [isOpen, setIsOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   /* ---------------------------- Redux State ------------------------------- */
@@ -117,10 +119,11 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, className }) => {
   const { 
     data: occupancyData, 
     isLoading, 
-    error,
+    isError,
+    isRefetching,
     refetch 
   } = useGetCurrentOccupancy(occupancyFilters, {
-    enabled: !!activeFacilityId && activeFacilityId > 0 && isOpen,
+    enabled: !!activeFacilityId && activeFacilityId > 0 && isDropdownOpen,
     staleTime: 1000 * 30,
   });
 
@@ -178,6 +181,7 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, className }) => {
     );
   }, [normalizedSpaces, currentStaffId]);
 
+  const currentSpaceLabel = myCurrentSpace?.name || 'No Space';
   const availableCount = normalizedSpaces.filter(s => !s.current_assignment).length;
   const occupiedCount = normalizedSpaces.filter(s => s.current_assignment).length;
 
@@ -185,7 +189,7 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, className }) => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        setIsDropdownOpen(false);
       }
     };
     
@@ -194,11 +198,9 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, className }) => {
   }, []);
 
   /* -------------------------- Event Handlers ------------------------------ */
-  const handleToggle = () => {
-    setIsOpen(!isOpen);
-    if (!isOpen) {
-      setSearchTerm('');
-    }
+  const handleSpaceClick = () => {
+    if (isLoading || assignMutation.isPending || releaseMutation.isPending) return;
+    setIsDropdownOpen(!isDropdownOpen);
   };
 
   const handleOccupy = async (space: SpaceWithAssignment) => {
@@ -232,80 +234,83 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, className }) => {
     return null;
   }
 
-  const isPending = assignMutation.isPending || releaseMutation.isPending;
-
-  /* ---------------------------- Color Tokens ------------------------------ */
-  const colors = {
-    bg: {
-      primary: isDark ? 'bg-gray-900' : 'bg-white',
-      secondary: isDark ? 'bg-gray-800' : 'bg-gray-50',
-      hover: isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50',
-    },
-    border: {
-      primary: isDark ? 'border-gray-700' : 'border-gray-200',
-      secondary: isDark ? 'border-gray-600' : 'border-gray-300',
-    },
-    text: {
-      primary: isDark ? 'text-gray-100' : 'text-gray-900',
-      secondary: isDark ? 'text-gray-400' : 'text-gray-600',
-      tertiary: isDark ? 'text-gray-500' : 'text-gray-500',
-    },
-  };
+  const isPending = isLoading || isRefetching || assignMutation.isPending || releaseMutation.isPending;
 
   /* ---------------------------- Render JSX -------------------------------- */
   return (
     <div ref={dropdownRef} className={cn('relative', className)}>
-      {/* Trigger Button */}
+      {/* Space Button with Ring */}
       <button
-        onClick={handleToggle}
+        onClick={handleSpaceClick}
         disabled={isPending}
+        aria-label="Manage my space"
+        aria-expanded={isDropdownOpen}
         className={cn(
-          'flex items-center gap-2 p-2 rounded-lg transition-all duration-200 cursor-pointer',
-          isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100',
+          'group relative flex items-center gap-2 px-3 py-1.5 rounded-lg',
+          'transition-all duration-200 cursor-pointer',
+          'ring-1',
+          myCurrentSpace
+            ? (isDark ? 'ring-blue-500/60' : 'ring-blue-600/70')
+            : (isDark ? 'ring-gray-500/50' : 'ring-gray-400/60'),
+          isDark 
+            ? 'bg-gray-800/40 hover:bg-gray-800/70' 
+            : 'bg-white hover:bg-gray-50',
           'focus:outline-none focus:ring-2',
           isDark ? 'focus:ring-blue-500/40' : 'focus:ring-blue-500/25',
-          !isPending && 'hover:scale-105 active:scale-95',
+          !isPending && 'hover:scale-[1.02] active:scale-[0.98]',
           isPending && 'opacity-75 cursor-not-allowed'
         )}
-        title="My Space"
-        aria-label="Manage my space"
-        aria-expanded={isOpen}
       >
-        {/* Icon - Visible on both mobile and desktop */}
+        {/* Space Indicator with Ring */}
         <div className={cn(
-          'relative flex items-center justify-center w-8 h-8 rounded-full',
+          'relative flex items-center justify-center w-7 h-7 rounded-full',
           'ring-1 ring-offset-1',
           myCurrentSpace
-            ? 'ring-blue-500/60 bg-blue-500/15'
-            : 'ring-gray-500/50 bg-gray-500/10',
+            ? (isDark ? 'ring-blue-500/60 bg-blue-500/15' : 'ring-blue-600/70 bg-blue-50')
+            : (isDark ? 'ring-gray-500/50 bg-gray-500/10' : 'ring-gray-400/60 bg-gray-100'),
           isDark ? 'ring-offset-gray-900' : 'ring-offset-white'
         )}>
-          {myCurrentSpace ? (
-            <DoorClosed className="w-4 h-4 text-blue-500" />
-          ) : (
-            <DoorOpen className="w-4 h-4 text-gray-500" />
+          <div className={myCurrentSpace ? 'text-blue-500' : (isDark ? 'text-gray-400' : 'text-gray-600')}>
+            {myCurrentSpace ? (
+              <DoorClosed className="w-3.5 h-3.5" />
+            ) : (
+              <DoorOpen className="w-3.5 h-3.5" />
+            )}
+          </div>
+          
+          {/* Pulse Animation for Occupied Space */}
+          {myCurrentSpace && (
+            <span className={cn(
+              'absolute inset-0 rounded-full animate-ping opacity-25',
+              isDark ? 'bg-blue-500/15' : 'bg-blue-50'
+            )} />
           )}
         </div>
-
-        {/* Text - Visible only on large screens */}
+        
+        {/* Space Text - Desktop Only */}
         <div className="hidden lg:flex flex-col items-start min-w-0">
           <span className={cn(
             'text-xs font-semibold truncate',
-            colors.text.primary
+            isDark ? 'text-gray-100' : 'text-gray-900'
           )}>
-            {myCurrentSpace ? myCurrentSpace.name : 'No Space'}
+            {isLoading ? 'Loading...' : currentSpaceLabel}
           </span>
-          <span className={cn('text-xs truncate', colors.text.secondary)}>
-            My Space
+          <span className={cn(
+            'text-xs truncate',
+            isDark ? 'text-gray-400' : 'text-gray-600'
+          )}>
+            {isPending ? 'Syncing...' : 'My Space'}
           </span>
         </div>
-
+        
+        {/* Chevron Indicator */}
         <ChevronDown className={cn(
-          'hidden lg:block w-3 h-3 transition-transform duration-200',
-          colors.text.secondary,
-          isOpen && 'rotate-180'
+          'hidden lg:block w-3 h-3 ml-auto transition-transform duration-200',
+          isDark ? 'text-gray-400' : 'text-gray-500',
+          isDropdownOpen && 'rotate-180'
         )} />
-
+        
+        {/* Loading Spinner */}
         {isPending && (
           <div className="absolute -top-1 -right-1">
             <Loader2 className={cn(
@@ -315,55 +320,84 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, className }) => {
           </div>
         )}
       </button>
-
+      
       {/* Dropdown Menu */}
-      {isOpen && (
+      {isDropdownOpen && (
         <div className={cn(
-          'absolute right-0 mt-2 w-80 sm:w-96 rounded-xl shadow-xl z-50',
+          'absolute right-0 mt-1.5 w-80 rounded-lg shadow-xl z-50',
           'animate-in slide-in-from-top-2 fade-in duration-150',
           'ring-1',
-          colors.bg.primary,
-          colors.border.primary
+          isDark 
+            ? 'bg-gray-900 ring-gray-700' 
+            : 'bg-white ring-gray-200'
         )}>
-          {/* Header */}
+          {/* Header - Compact */}
           <div className={cn(
-            'px-4 py-3 border-b',
-            colors.border.primary
+            'px-3 py-2 border-b',
+            isDark ? 'border-gray-800' : 'border-gray-200'
           )}>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className={cn('text-sm font-bold', colors.text.primary)}>
-                My Space
-              </h3>
-              <div className="flex items-center gap-2">
+            <h3 className={cn(
+              'text-xs font-bold mb-0.5',
+              isDark ? 'text-gray-100' : 'text-gray-900'
+            )}>
+              My Space
+            </h3>
+            <div className="flex items-center justify-between">
+              <p className={cn(
+                'text-xs',
+                isDark ? 'text-gray-400' : 'text-gray-600'
+              )}>
+                {isLoading ? 'Loading...' : `Current: ${currentSpaceLabel}`}
+              </p>
+              <div className="flex items-center gap-1.5">
                 <span className={cn(
-                  'px-2 py-0.5 text-xs rounded-full',
+                  'px-1.5 py-0.5 text-xs rounded-full',
                   'bg-green-500/10 text-green-500'
                 )}>
-                  {availableCount} Available
+                  {availableCount}
                 </span>
                 <span className={cn(
-                  'px-2 py-0.5 text-xs rounded-full',
+                  'px-1.5 py-0.5 text-xs rounded-full',
                   'bg-blue-500/10 text-blue-500'
                 )}>
-                  {occupiedCount} Occupied
+                  {occupiedCount}
                 </span>
               </div>
             </div>
+          </div>
 
-            {/* Current Space Status */}
-            {myCurrentSpace ? (
+          {/* Current Space Status - Compact */}
+          {myCurrentSpace && (
+            <div className={cn(
+              'px-3 py-2 border-b',
+              isDark ? 'border-gray-800' : 'border-gray-200'
+            )}>
               <div className={cn(
-                'p-2 rounded-lg border flex items-center justify-between',
-                'bg-blue-500/10 border-blue-500/30'
+                'flex items-center justify-between gap-2 p-2 rounded-md',
+                isDark 
+                  ? 'bg-blue-500/10 ring-1 ring-blue-500/30' 
+                  : 'bg-blue-50 ring-1 ring-blue-200/50'
               )}>
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <DoorClosed className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                  <div className={cn(
+                    'flex items-center justify-center w-6 h-6 rounded-full flex-shrink-0',
+                    'ring-1',
+                    isDark ? 'ring-blue-500/60 bg-blue-500/15' : 'ring-blue-600/70 bg-blue-50'
+                  )}>
+                    <DoorClosed className="w-3 h-3 text-blue-500" />
+                  </div>
                   <div className="min-w-0">
-                    <p className={cn('text-xs font-medium truncate', colors.text.primary)}>
-                      Currently in: {myCurrentSpace.name}
+                    <p className={cn(
+                      'text-xs font-semibold truncate',
+                      isDark ? 'text-gray-200' : 'text-gray-900'
+                    )}>
+                      {myCurrentSpace.name}
                     </p>
-                    <p className={cn('text-xs truncate', colors.text.secondary)}>
-                      {formatDisplayName(myCurrentSpace.type)} • {myCurrentSpace.building || 'N/A'}
+                    <p className={cn(
+                      'text-xs truncate',
+                      isDark ? 'text-gray-500' : 'text-gray-600'
+                    )}>
+                      {formatDisplayName(myCurrentSpace.type)}
                     </p>
                   </div>
                 </div>
@@ -371,9 +405,11 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, className }) => {
                   onClick={handleLeave}
                   disabled={isPending}
                   className={cn(
-                    'flex items-center gap-1 px-2 py-1 rounded text-xs font-medium',
+                    'flex items-center gap-1 px-2 py-1 rounded text-xs font-medium flex-shrink-0',
                     'bg-orange-500/10 text-orange-500 hover:bg-orange-500/20',
-                    'transition-colors cursor-pointer flex-shrink-0',
+                    'transition-colors cursor-pointer',
+                    'focus:outline-none focus:ring-1 focus:ring-inset',
+                    isDark ? 'focus:ring-orange-500/40' : 'focus:ring-orange-500/30',
                     isPending && 'opacity-50 cursor-not-allowed'
                   )}
                 >
@@ -381,192 +417,213 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, className }) => {
                   Leave
                 </button>
               </div>
-            ) : (
-              <div className={cn(
-                'p-2 rounded-lg border text-center',
-                colors.bg.secondary,
-                colors.border.primary
-              )}>
-                <p className={cn('text-xs', colors.text.secondary)}>
-                  No space currently assigned
-                </p>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Search Bar */}
-          <div className={cn('px-4 py-3 border-b', colors.border.primary)}>
+          {/* Search Bar - Compact */}
+          <div className={cn(
+            'px-3 py-2 border-b',
+            isDark ? 'border-gray-800' : 'border-gray-200'
+          )}>
             <div className="relative">
               <Search className={cn(
-                'absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4',
-                colors.text.tertiary
+                'absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5',
+                isDark ? 'text-gray-500' : 'text-gray-400'
               )} />
               <input
                 type="text"
-                placeholder="Search rooms..."
+                placeholder="Search spaces..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className={cn(
-                  'w-full pl-9 pr-4 py-2 rounded-lg border text-sm transition-colors',
-                  colors.border.primary,
-                  colors.bg.secondary,
-                  colors.text.primary,
-                  'focus:outline-none focus:ring-2 focus:ring-blue-500/30'
+                  'w-full pl-8 pr-3 py-1.5 rounded-md border text-xs transition-colors',
+                  isDark 
+                    ? 'bg-gray-800 border-gray-700 text-gray-200 placeholder-gray-500' 
+                    : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400',
+                  'focus:outline-none focus:ring-1 focus:ring-inset',
+                  isDark ? 'focus:ring-blue-500/40' : 'focus:ring-blue-500/30'
                 )}
               />
             </div>
           </div>
-
-          {/* Spaces List */}
-          <div className="max-h-96 overflow-y-auto">
+          
+          {/* Spaces List - Compact */}
+          <div className="max-h-80 overflow-y-auto">
             {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className={cn('w-6 h-6 animate-spin', colors.text.tertiary)} />
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className={cn(
+                  'w-5 h-5 animate-spin',
+                  isDark ? 'text-gray-500' : 'text-gray-400'
+                )} />
               </div>
-            ) : error ? (
+            ) : isError ? (
               <div className="p-4 text-center">
-                <AlertCircle className="w-8 h-8 mx-auto mb-2 text-red-500" />
-                <p className={cn('text-sm', colors.text.secondary)}>
+                <AlertCircle className="w-6 h-6 mx-auto mb-2 text-red-500" />
+                <p className={cn(
+                  'text-xs',
+                  isDark ? 'text-gray-400' : 'text-gray-600'
+                )}>
                   Failed to load spaces
                 </p>
               </div>
             ) : filteredSpaces.length === 0 ? (
-              <div className="p-8 text-center">
-                <Layers className={cn('w-12 h-12 mx-auto mb-3', colors.text.tertiary)} />
-                <p className={cn('text-sm', colors.text.secondary)}>
+              <div className="p-6 text-center">
+                <Layers className={cn(
+                  'w-8 h-8 mx-auto mb-2',
+                  isDark ? 'text-gray-500' : 'text-gray-400'
+                )} />
+                <p className={cn(
+                  'text-xs',
+                  isDark ? 'text-gray-400' : 'text-gray-600'
+                )}>
                   {searchTerm ? 'No spaces found' : 'No spaces available'}
                 </p>
               </div>
             ) : (
-              <div className="p-2 space-y-1">
+              <div className="p-1.5 space-y-0.5">
                 {filteredSpaces.map((space) => {
                   const isOccupied = !!space.current_assignment;
                   const isMySpace = space.current_assignment?.staff_id === currentStaffId;
                   const canOccupy = !isOccupied && !myCurrentSpace;
+                  const isUpdatingThis = (assignMutation.isPending && assignMutation.variables?.space_id === space.id) ||
+                                        (releaseMutation.isPending && isMySpace);
 
                   return (
-                    <div
+                    <button
                       key={space.id}
+                      onClick={() => canOccupy && handleOccupy(space)}
+                      disabled={!canOccupy || isPending}
                       className={cn(
-                        'p-3 rounded-lg border transition-all',
-                        colors.border.primary,
-                        isMySpace && 'bg-blue-500/10 border-blue-500/30',
-                        !isMySpace && colors.bg.secondary
+                        'group/item w-full flex items-center gap-2.5 p-2 rounded-md',
+                        'transition-all duration-150',
+                        canOccupy && 'cursor-pointer',
+                        'focus:outline-none focus:ring-1 focus:ring-inset',
+                        isDark ? 'focus:ring-blue-500/40' : 'focus:ring-blue-500/30',
+                        canOccupy && (isDark ? 'hover:bg-blue-500/10' : 'hover:bg-blue-100/70'),
+                        !canOccupy && !isMySpace && (isDark ? 'hover:bg-gray-500/5' : 'hover:bg-gray-200/70'),
+                        !canOccupy && 'cursor-default',
+                        canOccupy && !isPending && 'hover:scale-[1.01] active:scale-[0.99]',
+                        isMySpace && (isDark 
+                          ? 'bg-blue-500/10 ring-1 ring-blue-500/30' 
+                          : 'bg-blue-50 ring-1 ring-blue-200/50'),
+                        isPending && !isUpdatingThis && 'opacity-40 cursor-not-allowed'
                       )}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        {/* Space Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className={cn(
-                              'text-sm font-semibold truncate',
-                              colors.text.primary
-                            )}>
-                              {space.name}
-                            </h4>
-                            {isOccupied ? (
-                              <span className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-blue-500/10 text-blue-500 flex-shrink-0">
-                                <DoorClosed className="w-3 h-3" />
-                                Occupied
-                              </span>
-                            ) : (
-                              <span className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-green-500/10 text-green-500 flex-shrink-0">
-                                <CheckCircle2 className="w-3 h-3" />
-                                Available
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className={cn(
-                                'text-xs',
-                                getSpaceTypeColor(space.type)
-                              )}>
-                                {formatDisplayName(space.type)}
-                              </span>
-                            </div>
-                            
-                            {(space.building || space.floor) && (
-                              <div className="flex items-center gap-2 text-xs">
-                                {space.building && (
-                                  <div className="flex items-center gap-1">
-                                    <Building className="w-3 h-3" />
-                                    <span className={colors.text.secondary}>
-                                      {space.building}
-                                    </span>
-                                  </div>
-                                )}
-                                {space.floor && (
-                                  <div className="flex items-center gap-1">
-                                    <MapPin className="w-3 h-3" />
-                                    <span className={colors.text.secondary}>
-                                      {space.floor}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {isOccupied && !isMySpace && (
-                            <p className={cn('text-xs mt-2', colors.text.tertiary)}>
-                              In use by: {space.current_assignment?.staff?.user?.full_name|| 'Unknown'}
-                            </p>
+                      {/* Space Icon with Ring */}
+                      <div className={cn(
+                        'relative flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0',
+                        'ring-1',
+                        isOccupied
+                          ? (isDark ? 'ring-blue-500/60 bg-blue-500/15' : 'ring-blue-600/70 bg-blue-50')
+                          : (isDark ? 'ring-green-500/60 bg-green-500/15' : 'ring-green-600/70 bg-green-50'),
+                        'transition-all duration-150',
+                        canOccupy && 'group-hover/item:scale-105'
+                      )}>
+                        <div className={isOccupied ? 'text-blue-500' : 'text-green-500'}>
+                          {isOccupied ? (
+                            <DoorClosed className="w-3.5 h-3.5" />
+                          ) : (
+                            <DoorOpen className="w-3.5 h-3.5" />
                           )}
                         </div>
-
-                        {/* Action Button */}
-                        <div className="flex-shrink-0">
-                          {canOccupy ? (
-                            <button
-                              onClick={() => handleOccupy(space)}
-                              disabled={isPending}
-                              className={cn(
-                                'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium',
-                                'bg-blue-600 text-white hover:bg-blue-700',
-                                'transition-colors cursor-pointer',
-                                isPending && 'opacity-50 cursor-not-allowed'
-                              )}
-                            >
-                              <LogIn className="w-3 h-3" />
-                              Occupy
-                            </button>
-                          ) : isOccupied && !isMySpace ? (
-                            <div className={cn(
-                              'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs',
-                              'bg-gray-500/10 text-gray-500'
-                            )}>
-                              <XCircle className="w-3 h-3" />
-                              Unavailable
-                            </div>
-                          ) : !canOccupy && !isOccupied ? (
-                            <div className={cn(
-                              'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs',
-                              'bg-orange-500/10 text-orange-500'
-                            )}>
-                              <AlertCircle className="w-3 h-3" />
-                              Leave current
-                            </div>
-                          ) : null}
-                        </div>
                       </div>
-                    </div>
+                      
+                      {/* Space Info */}
+                      <div className="flex-1 text-left min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className={cn(
+                            'text-xs font-semibold truncate',
+                            isDark ? 'text-gray-200' : 'text-gray-900'
+                          )}>
+                            {space.name}
+                          </span>
+                          {isMySpace && (
+                            <CheckCircle2 className={cn(
+                              'w-3 h-3 flex-shrink-0',
+                              isDark ? 'text-blue-400' : 'text-blue-600'
+                            )} />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            'text-xs truncate',
+                            getSpaceTypeColor(space.type)
+                          )}>
+                            {formatDisplayName(space.type)}
+                          </span>
+                          {(space.building || space.floor) && (
+                            <span className={cn(
+                              'text-xs truncate',
+                              isDark ? 'text-gray-500' : 'text-gray-600'
+                            )}>
+                              {space.building && `${space.building}`}
+                              {space.building && space.floor && ' • '}
+                              {space.floor}
+                            </span>
+                          )}
+                        </div>
+                        {isOccupied && !isMySpace && space.current_assignment?.staff?.user?.full_name && (
+                          <p className={cn(
+                            'text-xs mt-0.5 truncate',
+                            isDark ? 'text-gray-500' : 'text-gray-600'
+                          )}>
+                            By: {space.current_assignment.staff.user.full_name}
+                          </p>
+                        )}
+                      </div>
+                      
+                      {/* Status Indicator */}
+                      <div className="flex-shrink-0">
+                        {isUpdatingThis ? (
+                          <Loader2 className={cn(
+                            'w-3 h-3 animate-spin',
+                            isDark ? 'text-blue-400' : 'text-blue-600'
+                          )} />
+                        ) : canOccupy ? (
+                          <LogIn className={cn(
+                            'w-3.5 h-3.5',
+                            isDark ? 'text-blue-400' : 'text-blue-600'
+                          )} />
+                        ) : isOccupied && !isMySpace ? (
+                          <XCircle className={cn(
+                            'w-3.5 h-3.5',
+                            isDark ? 'text-gray-500' : 'text-gray-400'
+                          )} />
+                        ) : null}
+                      </div>
+                    </button>
                   );
                 })}
               </div>
             )}
           </div>
-
-          {/* Footer */}
+          
+          {/* Footer - Compact */}
           <div className={cn(
-            'px-4 py-3 border-t text-center',
-            colors.border.primary,
-            colors.bg.secondary
+            'px-3 py-2 border-t',
+            isDark ? 'border-gray-800 bg-gray-800/20' : 'border-gray-200 bg-gray-50/50'
           )}>
-            <p className={cn('text-xs', colors.text.secondary)}>
+            <p className={cn(
+              'text-xs text-center leading-relaxed',
+              isDark ? 'text-gray-400' : 'text-gray-600'
+            )}>
               Occupy spaces for your work shifts
             </p>
+          </div>
+        </div>
+      )}
+      
+      {/* Error Indicator */}
+      {isError && (
+        <div 
+          className="absolute -top-1 -right-1 z-10 cursor-help" 
+          title="Failed to load spaces"
+        >
+          <div className={cn(
+            'p-0.5 rounded-full',
+            isDark ? 'bg-gray-900' : 'bg-white'
+          )}>
+            <AlertCircle className="w-3 h-3 text-red-500" />
           </div>
         </div>
       )}
