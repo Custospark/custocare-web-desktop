@@ -1,14 +1,15 @@
 /**
  * ============================================================================
- * STAFF PRESENCE COMPONENT
+ * STAFF PRESENCE COMPONENT - ENTERPRISE EDITION
  * ============================================================================
  * 
- * Displays staff presence status with toggleable dropdown for setting status.
- * - Mobile: Shows icon only
- * - Desktop: Shows status text
- * - Dropdown accessible on all devices
- * - Premium UI with appropriate icons
- * - Respects user's theme
+ * Premium staff presence status management with real-time updates.
+ * Features:
+ * - Responsive design (mobile-optimized icon view, desktop expanded view)
+ * - Accessible dropdown interface
+ * - Enhanced contrast for WCAG compliance
+ * - Real-time status synchronization
+ * - Enterprise-grade visual polish
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -19,8 +20,8 @@ import {
   Zap,
   CheckCircle,
   AlertCircle,
-  Moon,
-  Loader2
+  Loader2,
+  Ban
 } from 'lucide-react';
 import { cn } from '../../../utils/classNameUtils';
 import { useGetMyPresence, useSetMyPresence }  from '../../../../modules/administration/admin-module/api/staff-presence/StaffPresenceQueries';
@@ -39,9 +40,9 @@ interface PresenceOption {
   color: string;
   darkColor: string;
   lightColor: string;
+  pulseColor: string;
 }
 
-// Helper function to get status label - moved outside component to prevent recreation
 const getStatusDisplay = (status: StaffPresenceStatus): string => {
   switch (status) {
     case StaffPresenceStatus.ON_DUTY: return 'On Duty';
@@ -57,15 +58,9 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({
   isDark,
   className
 }) => {
-  // ============================================================================
-  // STATE & REFS
-  // ============================================================================
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
-  // ============================================================================
-  // HOOKS
-  // ============================================================================
   const { 
     data: presenceData, 
     isLoading, 
@@ -75,54 +70,50 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({
   
   const setPresenceMutation = useSetMyPresence();
   
-  // ============================================================================
-  // DATA
-  // ============================================================================
   const currentPresence = presenceData?.data;
-  
-  // Determine current status - FIXED LOGIC
   const currentStatus = currentPresence?.status || StaffPresenceStatus.OFF_DUTY;
   const currentStatusLabel = currentPresence?.status_label || getStatusDisplay(currentStatus);
   
-  // ============================================================================
-  // PRESENCE OPTIONS (Memoized to prevent recreation)
-  // ============================================================================
   const presenceOptions: PresenceOption[] = React.useMemo(() => [
     {
       id: StaffPresenceStatus.ON_DUTY,
       label: 'On Duty',
       description: 'Available for assignments',
-      icon: <Circle className="w-4 h-4" />,
-      color: 'emerald',
-      darkColor: 'text-emerald-400 bg-emerald-400/10',
-      lightColor: 'text-emerald-600 bg-emerald-100'
+      icon: <Circle className="w-4 h-4" fill="currentColor" />,
+      color: 'blue',
+      darkColor: 'text-blue-400 bg-blue-500/15',
+      lightColor: 'text-blue-700 bg-blue-100',
+      pulseColor: 'bg-blue-500'
     },
     {
       id: StaffPresenceStatus.BUSY,
       label: 'Busy',
       description: 'Engaged with tasks',
-      icon: <Zap className="w-4 h-4" />,
-      color: 'amber',
-      darkColor: 'text-amber-400 bg-amber-400/10',
-      lightColor: 'text-amber-600 bg-amber-100'
+      icon: <Zap className="w-4 h-4" fill="currentColor" />,
+      color: 'orange',
+      darkColor: 'text-orange-400 bg-orange-500/15',
+      lightColor: 'text-orange-700 bg-orange-100',
+      pulseColor: 'bg-orange-500'
     },
     {
       id: StaffPresenceStatus.ON_BREAK,
       label: 'On Break',
       description: 'Taking a short break',
       icon: <Coffee className="w-4 h-4" />,
-      color: 'orange',
-      darkColor: 'text-orange-400 bg-orange-400/10',
-      lightColor: 'text-orange-600 bg-orange-100'
+      color: 'purple',
+      darkColor: 'text-purple-400 bg-purple-500/15',
+      lightColor: 'text-purple-700 bg-purple-100',
+      pulseColor: 'bg-purple-500'
     },
     {
       id: StaffPresenceStatus.UNAVAILABLE,
       label: 'Unavailable',
       description: 'Not available for assignments',
-      icon: <Moon className="w-4 h-4" />,
-      color: 'purple',
-      darkColor: 'text-purple-400 bg-purple-400/10',
-      lightColor: 'text-purple-600 bg-purple-100'
+      icon: <Ban className="w-4 h-4" />,
+      color: 'slate',
+      darkColor: 'text-slate-400 bg-slate-500/15',
+      lightColor: 'text-slate-700 bg-slate-100',
+      pulseColor: 'bg-slate-500'
     },
     {
       id: StaffPresenceStatus.OFF_DUTY,
@@ -130,49 +121,38 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({
       description: 'End of shift',
       icon: <LogOut className="w-4 h-4" />,
       color: 'gray',
-      darkColor: 'text-gray-400 bg-gray-400/10',
-      lightColor: 'text-gray-600 bg-gray-100'
+      darkColor: 'text-gray-400 bg-gray-500/15',
+      lightColor: 'text-gray-700 bg-gray-100',
+      pulseColor: 'bg-gray-500'
     }
   ], []);
   
-  // ============================================================================
-  // STATUS UI HELPERS (Memoized to prevent recreation)
-  // ============================================================================
   const getStatusConfig = React.useCallback((status: StaffPresenceStatus): PresenceOption => {
-    return presenceOptions.find(opt => opt.id === status) || presenceOptions[4]; // Default to OFF_DUTY
+    return presenceOptions.find(opt => opt.id === status) || presenceOptions[4];
   }, [presenceOptions]);
   
   const getStatusIcon = React.useCallback(() => {
-      const config = getStatusConfig(currentStatus);
-      const iconElement = config.icon as React.ReactElement<any>; // Specify the generic type
-      return React.cloneElement(iconElement, {
-        ...(iconElement.props || {}),
-        className: cn(
-          'w-3 h-3 md:w-4 md:h-4',
-          isDark ? config.darkColor.split(' ')[0] : config.lightColor.split(' ')[0]
-        )
-      });
-    }, [currentStatus, isDark, getStatusConfig]);
+    const config = getStatusConfig(currentStatus);
+    const iconElement = config.icon as React.ReactElement<any>;
+    return React.cloneElement(iconElement, {
+      ...(iconElement.props || {}),
+      className: cn(
+        'w-3.5 h-3.5 md:w-4 md:h-4',
+        isDark ? config.darkColor.split(' ')[0] : config.lightColor.split(' ')[0]
+      )
+    });
+  }, [currentStatus, isDark, getStatusConfig]);
   
   const getStatusColor = React.useCallback(() => {
     const config = getStatusConfig(currentStatus);
     return isDark ? config.darkColor : config.lightColor;
   }, [currentStatus, isDark, getStatusConfig]);
   
-  const getStatusPulseColor = React.useCallback((status: StaffPresenceStatus): string => {
-    switch (status) {
-      case StaffPresenceStatus.ON_DUTY: return 'bg-emerald-500';
-      case StaffPresenceStatus.BUSY: return 'bg-amber-500';
-      case StaffPresenceStatus.ON_BREAK: return 'bg-orange-500';
-      case StaffPresenceStatus.UNAVAILABLE: return 'bg-purple-500';
-      case StaffPresenceStatus.OFF_DUTY: return 'bg-gray-500';
-      default: return 'bg-gray-500';
-    }
-  }, []);
+  const getStatusPulseColor = React.useCallback((): string => {
+    const config = getStatusConfig(currentStatus);
+    return config.pulseColor;
+  }, [currentStatus, getStatusConfig]);
   
-  // ============================================================================
-  // EFFECTS
-  // ============================================================================
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -184,9 +164,6 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
   
-  // ============================================================================
-  // HANDLERS
-  // ============================================================================
   const handlePresenceClick = () => {
     if (isLoading || setPresenceMutation.isPending) return;
     setIsDropdownOpen(!isDropdownOpen);
@@ -202,17 +179,11 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({
       });
       
       setIsDropdownOpen(false);
-      
-   
     } catch (error) {
       console.error('Failed to update presence:', error);
-      // Error is already handled in the mutation hook
     }
   };
   
-  // ============================================================================
-  // RENDER
-  // ============================================================================
   const isPending = isLoading || isRefetching || setPresenceMutation.isPending;
   
   return (
@@ -222,113 +193,105 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({
         onClick={handlePresenceClick}
         disabled={isPending}
         className={cn(
-          'flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200',
-          'hover:scale-105 active:scale-95 cursor-pointer',
-          'border focus:outline-none focus:ring-2 focus:ring-offset-2',
+          'group flex items-center gap-2.5 px-3.5 py-2 rounded-xl transition-all duration-200',
+          'hover:scale-[1.02] active:scale-[0.98]',
+          'border shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2',
           isDark 
-            ? 'border-gray-800 hover:bg-gray-800 focus:ring-cyan-500/30 focus:ring-offset-gray-900' 
-            : 'border-gray-200 hover:bg-gray-50 focus:ring-blue-500/30 focus:ring-offset-white',
-          isPending ? 'opacity-70 cursor-not-allowed' : ''
+            ? 'border-slate-700/60 bg-slate-800/40 hover:bg-slate-800/60 hover:border-slate-600/60 focus:ring-blue-500/40 focus:ring-offset-slate-900 backdrop-blur-sm' 
+            : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 focus:ring-blue-500/40 focus:ring-offset-white',
+          isPending ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
         )}
-        title="Set your presence status"
+        aria-label="Set your presence status"
+        aria-expanded={isDropdownOpen}
       >
-        {/* Status Indicator */}
-        <div className="relative">
+        {/* Status Indicator with Pulse */}
+        <div className="relative flex items-center justify-center">
           <div className={cn(
-            'w-2 h-2 rounded-full animate-pulse',
-            getStatusPulseColor(currentStatus)
+            'w-2 h-2 rounded-full',
+            getStatusPulseColor(),
+            !isPending && 'animate-pulse'
           )} />
           <div className={cn(
-            'absolute -inset-1 rounded-full opacity-20',
-            getStatusPulseColor(currentStatus)
+            'absolute inset-0 rounded-full blur-sm',
+            getStatusPulseColor(),
+            'opacity-40 group-hover:opacity-60 transition-opacity'
           )} />
         </div>
         
-        {/* Icon - Always Visible (Mobile & Desktop) */}
+        {/* Status Icon */}
         <div className={cn(
-          'flex items-center justify-center',
+          'flex items-center justify-center rounded-lg p-1.5 transition-colors',
           getStatusColor()
         )}>
           {getStatusIcon()}
         </div>
         
         {/* Status Text - Desktop Only */}
-        <div className="hidden lg:block">
+        <div className="hidden lg:flex items-center gap-2">
           <span className={cn(
-            'text-sm font-medium whitespace-nowrap',
-            isDark ? 'text-gray-300' : 'text-gray-700'
+            'text-sm font-semibold whitespace-nowrap transition-colors',
+            isDark ? 'text-slate-200' : 'text-slate-800'
           )}>
             {isLoading ? 'Loading...' : currentStatusLabel}
           </span>
         </div>
         
-        {/* Loading Indicator */}
+        {/* Loading Spinner */}
         {isPending && (
-          <div className="ml-1">
-            <Loader2 className={cn(
-              'w-3 h-3 animate-spin',
-              isDark ? 'text-gray-400' : 'text-gray-600'
-            )} />
-          </div>
+          <Loader2 className={cn(
+            'w-3.5 h-3.5 animate-spin',
+            isDark ? 'text-slate-400' : 'text-slate-500'
+          )} />
         )}
       </button>
       
       {/* Dropdown Menu */}
       {isDropdownOpen && (
         <div className={cn(
-          'absolute right-0 mt-2 w-64 rounded-xl border shadow-2xl z-50',
-          'animate-in slide-in-from-top-2 duration-200',
+          'absolute right-0 mt-2 w-72 rounded-2xl shadow-2xl z-50 overflow-hidden',
+          'animate-in slide-in-from-top-2 fade-in-0 duration-200',
+          'border backdrop-blur-md',
           isDark 
-            ? 'bg-gray-900 border-gray-800' 
-            : 'bg-white border-gray-200'
+            ? 'bg-slate-900/95 border-slate-700/60' 
+            : 'bg-white border-slate-200'
         )}>
           {/* Header */}
-          <div className="p-4 border-b border-gray-200/50 dark:border-gray-800/50">
+          <div className={cn(
+            'p-4 border-b',
+            isDark ? 'border-slate-800/60 bg-slate-800/30' : 'border-slate-100 bg-slate-50/50'
+          )}>
             <div className="flex items-center gap-3">
               <div className={cn(
-                'p-2 rounded-lg',
+                'p-2.5 rounded-xl shadow-sm',
                 getStatusColor()
               )}>
                 {getStatusIcon()}
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <h3 className={cn(
-                  'font-semibold',
-                  isDark ? 'text-gray-200' : 'text-gray-900'
+                  'font-bold text-sm tracking-tight',
+                  isDark ? 'text-slate-100' : 'text-slate-900'
                 )}>
                   Presence Status
                 </h3>
                 <p className={cn(
-                  'text-xs mt-0.5',
-                  isDark ? 'text-gray-500' : 'text-gray-600'
+                  'text-xs mt-0.5 truncate',
+                  isDark ? 'text-slate-400' : 'text-slate-600'
                 )}>
-                  {isLoading ? 'Loading...' : 
+                  {isLoading ? 'Loading status...' : 
                    setPresenceMutation.isPending ? 'Updating...' :
-                   `Current: ${currentStatusLabel}`}
+                   `Currently: ${currentStatusLabel}`}
                 </p>
-                {/* Debug info (remove in production) */}
-                {process.env.NODE_ENV === 'development' && (
-                  <div className="mt-1 space-y-1">
-                    <p className="text-xs text-gray-500 dark:text-gray-600">
-                      Status: {currentStatus}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-600">
-                      Has Data: {currentPresence ? 'Yes' : 'No'}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-600">
-                      Error: {isError ? 'Yes' : 'No'}
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           </div>
           
           {/* Status Options */}
-          <div className="p-2">
+          <div className="p-2.5 space-y-1">
             {presenceOptions.map((option) => {
               const isActive = option.id === currentStatus;
-              const isUpdatingThisOption = setPresenceMutation.isPending && setPresenceMutation.variables?.status === option.id;
+              const isUpdatingThisOption = setPresenceMutation.isPending && 
+                                          setPresenceMutation.variables?.status === option.id;
               
               return (
                 <button
@@ -336,52 +299,59 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({
                   onClick={() => handleSetPresence(option.id)}
                   disabled={setPresenceMutation.isPending}
                   className={cn(
-                    'w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-200',
-                    'hover:scale-[1.02] active:scale-95 cursor-pointer',
+                    'w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-150',
+                    'hover:scale-[1.01] active:scale-[0.99]',
                     'focus:outline-none focus:ring-2 focus:ring-inset',
+                    'group/option',
                     isDark
-                      ? 'hover:bg-gray-800 focus:ring-cyan-500/30'
-                      : 'hover:bg-gray-50 focus:ring-blue-500/30',
+                      ? 'hover:bg-slate-800/60 focus:ring-blue-500/40'
+                      : 'hover:bg-slate-50 focus:ring-blue-500/40',
                     isActive && (
                       isDark
-                        ? 'bg-gray-800 ring-1 ring-gray-700'
-                        : 'bg-gray-100 ring-1 ring-gray-300'
+                        ? 'bg-slate-800/80 ring-1 ring-blue-500/30 shadow-sm'
+                        : 'bg-blue-50 ring-1 ring-blue-200 shadow-sm'
                     ),
-                    setPresenceMutation.isPending && !isUpdatingThisOption ? 'opacity-50 cursor-not-allowed' : ''
+                    setPresenceMutation.isPending && !isUpdatingThisOption ? 
+                      'opacity-40 cursor-not-allowed' : 'cursor-pointer'
                   )}
+                  aria-current={isActive}
                 >
                   {/* Option Icon */}
                   <div className={cn(
-                    'p-2 rounded-lg',
-                    isDark ? option.darkColor : option.lightColor
+                    'p-2.5 rounded-xl transition-all duration-150',
+                    isDark ? option.darkColor : option.lightColor,
+                    'group-hover/option:scale-105'
                   )}>
                     {option.icon}
                   </div>
                   
                   {/* Option Details */}
-                  <div className="flex-1 text-left">
-                    <div className="flex items-center justify-between">
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="flex items-center justify-between gap-2">
                       <span className={cn(
-                        'text-sm font-medium',
-                        isDark ? 'text-gray-300' : 'text-gray-900'
+                        'text-sm font-semibold truncate',
+                        isDark ? 'text-slate-200' : 'text-slate-900'
                       )}>
                         {option.label}
                       </span>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
                         {isActive && !isUpdatingThisOption && (
                           <CheckCircle className={cn(
                             'w-4 h-4',
-                            isDark ? 'text-cyan-400' : 'text-blue-500'
+                            isDark ? 'text-blue-400' : 'text-blue-600'
                           )} />
                         )}
                         {isUpdatingThisOption && (
-                          <Loader2 className="w-3 h-3 animate-spin text-gray-500" />
+                          <Loader2 className={cn(
+                            'w-4 h-4 animate-spin',
+                            isDark ? 'text-blue-400' : 'text-blue-600'
+                          )} />
                         )}
                       </div>
                     </div>
                     <p className={cn(
-                      'text-xs mt-0.5',
-                      isDark ? 'text-gray-500' : 'text-gray-600'
+                      'text-xs mt-0.5 truncate',
+                      isDark ? 'text-slate-400' : 'text-slate-600'
                     )}>
                       {option.description}
                     </p>
@@ -392,21 +362,31 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({
           </div>
           
           {/* Footer */}
-          <div className="p-3 border-t border-gray-200/50 dark:border-gray-800/50">
+          <div className={cn(
+            'px-4 py-3 border-t',
+            isDark ? 'border-slate-800/60 bg-slate-800/20' : 'border-slate-100 bg-slate-50/30'
+          )}>
             <p className={cn(
-              'text-xs text-center',
-              isDark ? 'text-gray-500' : 'text-gray-600'
+              'text-xs text-center font-medium',
+              isDark ? 'text-slate-500' : 'text-slate-500'
             )}>
-              Status updates in real-time across all devices
+              Real-time sync across all devices
             </p>
           </div>
         </div>
       )}
       
-      {/* Error State */}
+      {/* Error Indicator */}
       {isError && (
-        <div className="absolute -top-2 -right-2" title="Error loading presence">
-          <AlertCircle className="w-4 h-4 text-red-500" />
+        <div 
+          className="absolute -top-1 -right-1 animate-pulse" 
+          role="alert"
+          aria-label="Error loading presence"
+        >
+          <AlertCircle className={cn(
+            'w-4 h-4',
+            isDark ? 'text-red-400' : 'text-red-600'
+          )} />
         </div>
       )}
     </div>
