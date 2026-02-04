@@ -1,7 +1,6 @@
 import React, { useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import {
   Menu,
-  X,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightClose,
@@ -151,6 +150,7 @@ export const Layout: React.FC = () => {
         ? (sidebarOpen ? 'left-0 lg:left-80' : 'left-0 lg:left-20')
         : (sidebarOpen ? 'right-0 lg:right-80' : 'right-0 lg:right-20'),
       navbarFull: isLeft ? 'right-0' : 'left-0',
+      hamburgerPosition: isLeft ? 'left-4' : 'right-4', // Position hamburger on the same side as sidebar
     };
   }, [localState.sidebarPosition, sidebarOpen, localState.mobileSidebarOpen]);
 
@@ -347,6 +347,30 @@ export const Layout: React.FC = () => {
           />
         )}
 
+        {/* Hamburger Menu Button - ONLY visible on mobile when sidebar is closed */}
+        {!localState.mobileSidebarOpen && (
+          <button
+            onClick={handleToggleMobileSidebar}
+            className={cn(
+              'fixed z-50 lg:hidden', // Only show on mobile
+              'p-2.5 rounded-xl backdrop-blur-xl border shadow-lg',
+              'transition-all duration-200 ease-in-out',
+              'hover:scale-105 active:scale-95',
+              positionClasses.hamburgerPosition,
+              theme === 'dark'
+                ? 'bg-gray-900/95 hover:bg-gray-800/60 text-gray-400 border-gray-700/50'
+                : 'bg-white/95 hover:bg-gray-100/80 text-gray-600 border-gray-200/50'
+            )}
+            style={{
+              top: localState.topBarsVisible ? STATUS_BAR_H + 8 : 8, // Position below status bar or at top
+            }}
+            aria-label="Open menu"
+            aria-expanded={localState.mobileSidebarOpen}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+
         {/* Sidebar */}
         <aside
           className={cn(
@@ -373,36 +397,6 @@ export const Layout: React.FC = () => {
             theme={theme}
           />
         </aside>
-
-        {/* Navbar mobile menu button (kept exactly like your original UX) */}
-        <div
-          className={cn('fixed z-40 lg:hidden')}
-          style={{
-            top: localState.topBarsVisible ? STATUS_BAR_H : 0,
-            left: 0,
-            right: 0,
-            pointerEvents: 'none',
-          }}
-        >
-          <div className={cn('px-4 py-2.5')}>
-            <div className={cn('flex', localState.sidebarPosition === 'right' ? 'flex-row-reverse' : 'flex-row')}>
-              <button
-                onClick={handleToggleMobileSidebar}
-                aria-label={localState.mobileSidebarOpen ? 'Close menu' : 'Open menu'}
-                aria-expanded={localState.mobileSidebarOpen}
-                className={cn(
-                  'pointer-events-auto p-1.5 rounded-lg',
-                  'transition-all duration-200 ease-in-out',
-                  'hover:scale-105 active:scale-95',
-                  localState.sidebarPosition === 'left' ? 'mr-3' : 'ml-3',
-                  theme === 'dark' ? 'hover:bg-gray-800/60 text-gray-400' : 'hover:bg-gray-100/80 text-gray-600'
-                )}
-              >
-                {localState.mobileSidebarOpen ? <X className="w-4.5 h-4.5" /> : <Menu className="w-4.5 h-4.5" />}
-              </button>
-            </div>
-          </div>
-        </div>
 
         {/* Content */}
         <div className={cn('min-h-screen flex flex-col', 'transition-all duration-300 ease-in-out', positionClasses.contentMargin)}>

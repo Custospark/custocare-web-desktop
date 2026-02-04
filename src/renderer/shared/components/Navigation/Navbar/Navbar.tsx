@@ -269,38 +269,39 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <nav className={cn('flex items-center justify-between gap-2 sm:gap-4 px-4 py-3', className)}>
       {/* LEFT: BRAND */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        <div className="w-8 sm:ms-4 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20 cursor-pointer">
-          <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-        </div>
+     <div className="hidden md:flex items-center gap-2 sm:gap-3">
+    <div className="w-8 sm:ms-4 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20 cursor-pointer">
+      <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+    </div>
 
-        <div className="hidden md:block">
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                'text-base sm:text-lg font-bold bg-gradient-to-r bg-clip-text text-transparent',
-                isDark ? 'from-white to-gray-300' : 'from-gray-900 to-gray-700'
-              )}
-            >
-              Custocare AI
-            </span>
-            <span
-              className={cn(
-                'px-2 py-0.5 text-xs font-bold rounded-full border',
-                isDark
-                  ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-cyan-300 border-cyan-500/30'
-                  : 'bg-gradient-to-r from-blue-100 to-cyan-50 text-blue-700 border-blue-300'
-              )}
-            >
-              <Sparkles className="w-3 h-3 inline mr-1" />
-              Pro
-            </span>
-          </div>
-          <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-500' : 'text-gray-600')}>
-            AI Powered Health Management System
-          </p>
-        </div>
-      </div>
+  <div className="hidden md:block">
+    <div className="flex items-center gap-2">
+      <span
+        className={cn(
+          'text-base sm:text-lg font-bold bg-gradient-to-r bg-clip-text text-transparent',
+          isDark ? 'from-white to-gray-300' : 'from-gray-900 to-gray-700'
+        )}
+      >
+        Custocare AI
+      </span>
+      <span
+        className={cn(
+          'px-2 py-0.5 text-xs font-bold rounded-full border',
+          isDark
+            ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-cyan-300 border-cyan-500/30'
+            : 'bg-gradient-to-r from-blue-100 to-cyan-50 text-blue-700 border-blue-300'
+        )}
+      >
+        <Sparkles className="w-3 h-3 inline mr-1" />
+        Pro
+      </span>
+    </div>
+    <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-500' : 'text-gray-600')}>
+      AI Powered Health Management System
+    </p>
+  </div>
+</div>
+
 
       {/* RIGHT: ACTION BUTTONS */}
       <div className="flex items-center gap-3 sm:gap-3 flex-wrap justify-end">
