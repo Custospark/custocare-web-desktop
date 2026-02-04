@@ -55,6 +55,7 @@ import { QuickActions } from './QuickActions';
 import { UserProfileMenu } from './UserProfileMenu';
 import ContextSwitcher from './ContextSwitcher';
 import StaffPresence from './StaffPresence';
+import MySpace from './MySpace';
 export interface NavbarProps {
   theme: 'light' | 'dark';
   onMenuClick?: () => void;
@@ -489,6 +490,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </button>
 
+        <MySpace isDark={isDark} />
         {/* Notifications */}
         <NotificationCenter
           unreadCount={unreadCount}

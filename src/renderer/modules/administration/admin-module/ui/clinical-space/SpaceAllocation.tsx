@@ -55,12 +55,12 @@ import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDia
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 
 import {
-  useGetCurrentOccupancy,
+  staffSpaceAssignmentKeys,
   useGetAvailableSpaces,
+  useGetCurrentOccupancy,
   useGetStaffForAssignment,
   useAssignSpaceByAdmin,
   useReleaseSpaceByAdmin,
-  staffSpaceAssignmentKeys,
 } from '../../api/staff-space-assignment/StaffSpaceAssignmentQueries';
 import type {
   SpaceWithAssignment,
