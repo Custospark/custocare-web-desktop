@@ -3,28 +3,32 @@
  * STAFF PRESENCE COMPONENT - ENTERPRISE EDITION
  * ============================================================================
  * 
- * Premium staff presence status management with real-time updates.
+ * Premium staff presence indicator with status management
  * Features:
- * - Responsive design (mobile-optimized icon view, desktop expanded view)
- * - Accessible dropdown interface
- * - Enhanced contrast for WCAG compliance
- * - Real-time status synchronization
- * - Enterprise-grade visual polish
+ * - Blue-themed color palette (blue-500 primary with green, purple, orange accents)
+ * - Status rings for visual clarity
+ * - Enhanced contrast for accessibility
+ * - Mobile-responsive design
+ * - Real-time status updates
+ * - Enterprise-grade UX with clear affordances
+ * - Improved cursor feedback
+ * - Compact layout for better space utilization
  */
 
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Circle,
+  Activity,
   Coffee,
   LogOut,
   Zap,
-  CheckCircle,
+  CheckCircle2,
   AlertCircle,
+  Clock,
   Loader2,
-  Ban
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '../../../utils/classNameUtils';
-import { useGetMyPresence, useSetMyPresence }  from '../../../../modules/administration/admin-module/api/staff-presence/StaffPresenceQueries';
+import { useGetMyPresence, useSetMyPresence } from '../../../../modules/administration/admin-module/api/staff-presence/StaffPresenceQueries';
 import { StaffPresenceStatus } from '../../../../modules/administration/admin-module/api/staff-presence/StaffPresenceTypes';
 
 interface StaffPresenceProps {
@@ -37,37 +41,28 @@ interface PresenceOption {
   label: string;
   description: string;
   icon: React.ReactNode;
-  color: string;
-  darkColor: string;
-  lightColor: string;
-  pulseColor: string;
+  ringColor: string;
+  bgColor: string;
+  textColor: string;
+  hoverBg: string;
 }
 
 const getStatusDisplay = (status: StaffPresenceStatus): string => {
-  switch (status) {
-    case StaffPresenceStatus.ON_DUTY: return 'On Duty';
-    case StaffPresenceStatus.BUSY: return 'Busy';
-    case StaffPresenceStatus.ON_BREAK: return 'On Break';
-    case StaffPresenceStatus.UNAVAILABLE: return 'Unavailable';
-    case StaffPresenceStatus.OFF_DUTY: return 'Off Duty';
-    default: return 'Off Duty';
-  }
+  const labels: Record<StaffPresenceStatus, string> = {
+    [StaffPresenceStatus.ON_DUTY]: 'On Duty',
+    [StaffPresenceStatus.BUSY]: 'Busy',
+    [StaffPresenceStatus.ON_BREAK]: 'On Break',
+    [StaffPresenceStatus.UNAVAILABLE]: 'Unavailable',
+    [StaffPresenceStatus.OFF_DUTY]: 'Off Duty',
+  };
+  return labels[status] || 'Off Duty';
 };
 
-const StaffPresence: React.FC<StaffPresenceProps> = ({
-  isDark,
-  className
-}) => {
+const StaffPresence: React.FC<StaffPresenceProps> = ({ isDark, className }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
-  const { 
-    data: presenceData, 
-    isLoading, 
-    isError,
-    isRefetching
-  } = useGetMyPresence();
-  
+  const { data: presenceData, isLoading, isError, isRefetching } = useGetMyPresence();
   const setPresenceMutation = useSetMyPresence();
   
   const currentPresence = presenceData?.data;
@@ -79,79 +74,59 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({
       id: StaffPresenceStatus.ON_DUTY,
       label: 'On Duty',
       description: 'Available for assignments',
-      icon: <Circle className="w-4 h-4" fill="currentColor" />,
-      color: 'blue',
-      darkColor: 'text-blue-400 bg-blue-500/15',
-      lightColor: 'text-blue-700 bg-blue-100',
-      pulseColor: 'bg-blue-500'
+      icon: <Activity className="w-3.5 h-3.5" />,
+      ringColor: isDark ? 'ring-emerald-500/60' : 'ring-emerald-600/70',
+      bgColor: isDark ? 'bg-emerald-500/15' : 'bg-emerald-50',
+      textColor: isDark ? 'text-emerald-400' : 'text-emerald-700',
+      hoverBg: isDark ? 'hover:bg-emerald-500/10' : 'hover:bg-emerald-100/70'
     },
     {
       id: StaffPresenceStatus.BUSY,
       label: 'Busy',
-      description: 'Engaged with tasks',
-      icon: <Zap className="w-4 h-4" fill="currentColor" />,
-      color: 'orange',
-      darkColor: 'text-orange-400 bg-orange-500/15',
-      lightColor: 'text-orange-700 bg-orange-100',
-      pulseColor: 'bg-orange-500'
+      description: 'Occupied, limited availability',
+      icon: <Zap className="w-3.5 h-3.5" />,
+      ringColor: isDark ? 'ring-orange-500/60' : 'ring-orange-600/70',
+      bgColor: isDark ? 'bg-orange-500/15' : 'bg-orange-50',
+      textColor: isDark ? 'text-orange-400' : 'text-orange-700',
+      hoverBg: isDark ? 'hover:bg-orange-500/10' : 'hover:bg-orange-100/70'
     },
     {
       id: StaffPresenceStatus.ON_BREAK,
       label: 'On Break',
-      description: 'Taking a short break',
-      icon: <Coffee className="w-4 h-4" />,
-      color: 'purple',
-      darkColor: 'text-purple-400 bg-purple-500/15',
-      lightColor: 'text-purple-700 bg-purple-100',
-      pulseColor: 'bg-purple-500'
+      description: 'Taking break, back soon',
+      icon: <Coffee className="w-3.5 h-3.5" />,
+      ringColor: isDark ? 'ring-blue-500/60' : 'ring-blue-600/70',
+      bgColor: isDark ? 'bg-blue-500/15' : 'bg-blue-50',
+      textColor: isDark ? 'text-blue-400' : 'text-blue-700',
+      hoverBg: isDark ? 'hover:bg-blue-500/10' : 'hover:bg-blue-100/70'
     },
     {
       id: StaffPresenceStatus.UNAVAILABLE,
       label: 'Unavailable',
-      description: 'Not available for assignments',
-      icon: <Ban className="w-4 h-4" />,
-      color: 'slate',
-      darkColor: 'text-slate-400 bg-slate-500/15',
-      lightColor: 'text-slate-700 bg-slate-100',
-      pulseColor: 'bg-slate-500'
+      description: 'Out of office or meeting',
+      icon: <Clock className="w-3.5 h-3.5" />,
+      ringColor: isDark ? 'ring-purple-500/60' : 'ring-purple-600/70',
+      bgColor: isDark ? 'bg-purple-500/15' : 'bg-purple-50',
+      textColor: isDark ? 'text-purple-400' : 'text-purple-700',
+      hoverBg: isDark ? 'hover:bg-purple-500/10' : 'hover:bg-purple-100/70'
     },
     {
       id: StaffPresenceStatus.OFF_DUTY,
       label: 'Off Duty',
-      description: 'End of shift',
-      icon: <LogOut className="w-4 h-4" />,
-      color: 'gray',
-      darkColor: 'text-gray-400 bg-gray-500/15',
-      lightColor: 'text-gray-700 bg-gray-100',
-      pulseColor: 'bg-gray-500'
+      description: 'Shift ended',
+      icon: <LogOut className="w-3.5 h-3.5" />,
+      ringColor: isDark ? 'ring-gray-500/50' : 'ring-gray-400/60',
+      bgColor: isDark ? 'bg-gray-500/10' : 'bg-gray-100',
+      textColor: isDark ? 'text-gray-400' : 'text-gray-600',
+      hoverBg: isDark ? 'hover:bg-gray-500/5' : 'hover:bg-gray-200/70'
     }
-  ], []);
+  ], [isDark]);
   
   const getStatusConfig = React.useCallback((status: StaffPresenceStatus): PresenceOption => {
     return presenceOptions.find(opt => opt.id === status) || presenceOptions[4];
   }, [presenceOptions]);
   
-  const getStatusIcon = React.useCallback(() => {
-    const config = getStatusConfig(currentStatus);
-    const iconElement = config.icon as React.ReactElement<any>;
-    return React.cloneElement(iconElement, {
-      ...(iconElement.props || {}),
-      className: cn(
-        'w-3.5 h-3.5 md:w-4 md:h-4',
-        isDark ? config.darkColor.split(' ')[0] : config.lightColor.split(' ')[0]
-      )
-    });
-  }, [currentStatus, isDark, getStatusConfig]);
-  
-  const getStatusColor = React.useCallback(() => {
-    const config = getStatusConfig(currentStatus);
-    return isDark ? config.darkColor : config.lightColor;
-  }, [currentStatus, isDark, getStatusConfig]);
-  
-  const getStatusPulseColor = React.useCallback((): string => {
-    const config = getStatusConfig(currentStatus);
-    return config.pulseColor;
-  }, [currentStatus, getStatusConfig]);
+  const currentConfig = React.useMemo(() => getStatusConfig(currentStatus), [currentStatus, getStatusConfig]);
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -172,12 +147,10 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({
   const handleSetPresence = async (status: StaffPresenceStatus) => {
     try {
       const option = presenceOptions.find(opt => opt.id === status);
-      
       await setPresenceMutation.mutateAsync({ 
         status,
-        note: `Changed to ${option?.label || status}`
+        note: `Status changed to ${option?.label || status}`
       });
-      
       setIsDropdownOpen(false);
     } catch (error) {
       console.error('Failed to update presence:', error);
@@ -188,110 +161,110 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({
   
   return (
     <div ref={dropdownRef} className={cn('relative', className)}>
-      {/* Presence Toggle Button */}
+      {/* Status Button with Ring */}
       <button
         onClick={handlePresenceClick}
         disabled={isPending}
-        className={cn(
-          'group flex items-center gap-2.5 px-3.5 py-2 rounded-xl transition-all duration-200',
-          'hover:scale-[1.02] active:scale-[0.98]',
-          'border shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2',
-          isDark 
-            ? 'border-slate-700/60 bg-slate-800/40 hover:bg-slate-800/60 hover:border-slate-600/60 focus:ring-blue-500/40 focus:ring-offset-slate-900 backdrop-blur-sm' 
-            : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 focus:ring-blue-500/40 focus:ring-offset-white',
-          isPending ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
-        )}
-        aria-label="Set your presence status"
+        aria-label="Manage presence status"
         aria-expanded={isDropdownOpen}
+        className={cn(
+          'group relative flex items-center gap-2 px-3 py-1.5 rounded-lg',
+          'transition-all duration-200 cursor-pointer',
+          'ring-1',
+          currentConfig.ringColor,
+          isDark 
+            ? 'bg-gray-800/40 hover:bg-gray-800/70' 
+            : 'bg-white hover:bg-gray-50',
+          'focus:outline-none focus:ring-2',
+          isDark ? 'focus:ring-blue-500/40' : 'focus:ring-blue-500/25',
+          !isPending && 'hover:scale-[1.02] active:scale-[0.98]',
+          isPending && 'opacity-75 cursor-not-allowed'
+        )}
       >
-        {/* Status Indicator with Pulse */}
-        <div className="relative flex items-center justify-center">
-          <div className={cn(
-            'w-2 h-2 rounded-full',
-            getStatusPulseColor(),
-            !isPending && 'animate-pulse'
-          )} />
-          <div className={cn(
-            'absolute inset-0 rounded-full blur-sm',
-            getStatusPulseColor(),
-            'opacity-40 group-hover:opacity-60 transition-opacity'
-          )} />
-        </div>
-        
-        {/* Status Icon */}
+        {/* Status Indicator with Ring */}
         <div className={cn(
-          'flex items-center justify-center rounded-lg p-1.5 transition-colors',
-          getStatusColor()
+          'relative flex items-center justify-center w-7 h-7 rounded-full',
+          'ring-1 ring-offset-1',
+          currentConfig.ringColor,
+          currentConfig.bgColor,
+          isDark ? 'ring-offset-gray-900' : 'ring-offset-white'
         )}>
-          {getStatusIcon()}
+          <div className={currentConfig.textColor}>
+            {currentConfig.icon}
+          </div>
+          
+          {/* Pulse Animation */}
+          {currentStatus === StaffPresenceStatus.ON_DUTY && (
+            <span className={cn(
+              'absolute inset-0 rounded-full animate-ping opacity-25',
+              currentConfig.bgColor
+            )} />
+          )}
         </div>
         
         {/* Status Text - Desktop Only */}
-        <div className="hidden lg:flex items-center gap-2">
+        <div className="hidden lg:flex flex-col items-start min-w-0">
           <span className={cn(
-            'text-sm font-semibold whitespace-nowrap transition-colors',
-            isDark ? 'text-slate-200' : 'text-slate-800'
+            'text-xs font-semibold truncate',
+            isDark ? 'text-gray-100' : 'text-gray-900'
           )}>
             {isLoading ? 'Loading...' : currentStatusLabel}
           </span>
         </div>
         
+        {/* Chevron Indicator */}
+        <ChevronDown className={cn(
+          'hidden lg:block w-3 h-3 ml-auto transition-transform duration-200',
+          isDark ? 'text-gray-400' : 'text-gray-500',
+          isDropdownOpen && 'rotate-180'
+        )} />
+        
         {/* Loading Spinner */}
         {isPending && (
-          <Loader2 className={cn(
-            'w-3.5 h-3.5 animate-spin',
-            isDark ? 'text-slate-400' : 'text-slate-500'
-          )} />
+          <div className="absolute -top-1 -right-1">
+            <Loader2 className={cn(
+              'w-3 h-3 animate-spin',
+              isDark ? 'text-blue-400' : 'text-blue-600'
+            )} />
+          </div>
         )}
       </button>
       
       {/* Dropdown Menu */}
       {isDropdownOpen && (
         <div className={cn(
-          'absolute right-0 mt-2 w-72 rounded-2xl shadow-2xl z-50 overflow-hidden',
-          'animate-in slide-in-from-top-2 fade-in-0 duration-200',
-          'border backdrop-blur-md',
+          'absolute right-0 mt-1.5 w-64 rounded-lg shadow-xl z-50',
+          'animate-in slide-in-from-top-2 fade-in duration-150',
+          'ring-1',
           isDark 
-            ? 'bg-slate-900/95 border-slate-700/60' 
-            : 'bg-white border-slate-200'
+            ? 'bg-gray-900 ring-gray-700' 
+            : 'bg-white ring-gray-200'
         )}>
-          {/* Header */}
+          {/* Header - More Compact */}
           <div className={cn(
-            'p-4 border-b',
-            isDark ? 'border-slate-800/60 bg-slate-800/30' : 'border-slate-100 bg-slate-50/50'
+            'px-3 py-2 border-b',
+            isDark ? 'border-gray-800' : 'border-gray-200'
           )}>
-            <div className="flex items-center gap-3">
-              <div className={cn(
-                'p-2.5 rounded-xl shadow-sm',
-                getStatusColor()
-              )}>
-                {getStatusIcon()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className={cn(
-                  'font-bold text-sm tracking-tight',
-                  isDark ? 'text-slate-100' : 'text-slate-900'
-                )}>
-                  Presence Status
-                </h3>
-                <p className={cn(
-                  'text-xs mt-0.5 truncate',
-                  isDark ? 'text-slate-400' : 'text-slate-600'
-                )}>
-                  {isLoading ? 'Loading status...' : 
-                   setPresenceMutation.isPending ? 'Updating...' :
-                   `Currently: ${currentStatusLabel}`}
-                </p>
-              </div>
-            </div>
+            <h3 className={cn(
+              'text-xs font-bold mb-0.5',
+              isDark ? 'text-gray-100' : 'text-gray-900'
+            )}>
+              Status
+            </h3>
+            <p className={cn(
+              'text-xs',
+              isDark ? 'text-gray-400' : 'text-gray-600'
+            )}>
+              {isLoading ? 'Loading...' : `Current: ${currentStatusLabel}`}
+            </p>
           </div>
           
-          {/* Status Options */}
-          <div className="p-2.5 space-y-1">
+          {/* Status Options - More Compact */}
+          <div className="p-1.5 space-y-0.5">
             {presenceOptions.map((option) => {
               const isActive = option.id === currentStatus;
-              const isUpdatingThisOption = setPresenceMutation.isPending && 
-                                          setPresenceMutation.variables?.status === option.id;
+              const isUpdating = setPresenceMutation.isPending && 
+                               setPresenceMutation.variables?.status === option.id;
               
               return (
                 <button
@@ -299,78 +272,78 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({
                   onClick={() => handleSetPresence(option.id)}
                   disabled={setPresenceMutation.isPending}
                   className={cn(
-                    'w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-150',
-                    'hover:scale-[1.01] active:scale-[0.99]',
-                    'focus:outline-none focus:ring-2 focus:ring-inset',
-                    'group/option',
-                    isDark
-                      ? 'hover:bg-slate-800/60 focus:ring-blue-500/40'
-                      : 'hover:bg-slate-50 focus:ring-blue-500/40',
-                    isActive && (
-                      isDark
-                        ? 'bg-slate-800/80 ring-1 ring-blue-500/30 shadow-sm'
-                        : 'bg-blue-50 ring-1 ring-blue-200 shadow-sm'
-                    ),
-                    setPresenceMutation.isPending && !isUpdatingThisOption ? 
-                      'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+                    'group/item w-full flex items-center gap-2.5 p-2 rounded-md',
+                    'transition-all duration-150 cursor-pointer',
+                    'focus:outline-none focus:ring-1 focus:ring-inset',
+                    isDark ? 'focus:ring-blue-500/40' : 'focus:ring-blue-500/30',
+                    option.hoverBg,
+                    !setPresenceMutation.isPending && 'hover:scale-[1.01] active:scale-[0.99]',
+                    isActive && (isDark 
+                      ? 'bg-blue-500/10 ring-1 ring-blue-500/30' 
+                      : 'bg-blue-50 ring-1 ring-blue-200/50'),
+                    setPresenceMutation.isPending && !isUpdating && 'opacity-40 cursor-not-allowed'
                   )}
-                  aria-current={isActive}
                 >
-                  {/* Option Icon */}
+                  {/* Status Icon with Ring */}
                   <div className={cn(
-                    'p-2.5 rounded-xl transition-all duration-150',
-                    isDark ? option.darkColor : option.lightColor,
-                    'group-hover/option:scale-105'
+                    'relative flex items-center justify-center w-8 h-8 rounded-full',
+                    'ring-1',
+                    option.ringColor,
+                    option.bgColor,
+                    'transition-all duration-150',
+                    !isActive && 'group-hover/item:scale-105'
                   )}>
-                    {option.icon}
+                    <div className={option.textColor}>
+                      {option.icon}
+                    </div>
                   </div>
                   
-                  {/* Option Details */}
+                  {/* Status Info */}
                   <div className="flex-1 text-left min-w-0">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
                       <span className={cn(
-                        'text-sm font-semibold truncate',
-                        isDark ? 'text-slate-200' : 'text-slate-900'
+                        'text-xs font-semibold truncate',
+                        isDark ? 'text-gray-200' : 'text-gray-900'
                       )}>
                         {option.label}
                       </span>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {isActive && !isUpdatingThisOption && (
-                          <CheckCircle className={cn(
-                            'w-4 h-4',
-                            isDark ? 'text-blue-400' : 'text-blue-600'
-                          )} />
-                        )}
-                        {isUpdatingThisOption && (
-                          <Loader2 className={cn(
-                            'w-4 h-4 animate-spin',
-                            isDark ? 'text-blue-400' : 'text-blue-600'
-                          )} />
-                        )}
-                      </div>
+                      {isActive && !isUpdating && (
+                        <CheckCircle2 className={cn(
+                          'w-3 h-3 flex-shrink-0',
+                          isDark ? 'text-blue-400' : 'text-blue-600'
+                        )} />
+                      )}
                     </div>
                     <p className={cn(
                       'text-xs mt-0.5 truncate',
-                      isDark ? 'text-slate-400' : 'text-slate-600'
+                      isDark ? 'text-gray-500' : 'text-gray-600'
                     )}>
                       {option.description}
                     </p>
                   </div>
+                  
+                  {/* Loading Indicator */}
+                  {isUpdating && (
+                    <Loader2 className={cn(
+                      'w-3 h-3 animate-spin flex-shrink-0',
+                      isDark ? 'text-blue-400' : 'text-blue-600'
+                    )} />
+                  )}
                 </button>
               );
             })}
           </div>
           
-          {/* Footer */}
+          {/* Footer - More Compact */}
           <div className={cn(
-            'px-4 py-3 border-t',
-            isDark ? 'border-slate-800/60 bg-slate-800/20' : 'border-slate-100 bg-slate-50/30'
+            'px-3 py-2 border-t',
+            isDark ? 'border-gray-800 bg-gray-800/20' : 'border-gray-200 bg-gray-50/50'
           )}>
             <p className={cn(
-              'text-xs text-center font-medium',
-              isDark ? 'text-slate-500' : 'text-slate-500'
+              'text-xs text-center leading-relaxed',
+              isDark ? 'text-gray-400' : 'text-gray-600'
             )}>
-              Real-time sync across all devices
+            Let others know your work status
             </p>
           </div>
         </div>
@@ -379,14 +352,15 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({
       {/* Error Indicator */}
       {isError && (
         <div 
-          className="absolute -top-1 -right-1 animate-pulse" 
-          role="alert"
-          aria-label="Error loading presence"
+          className="absolute -top-1 -right-1 z-10 cursor-help" 
+          title="Failed to load presence status"
         >
-          <AlertCircle className={cn(
-            'w-4 h-4',
-            isDark ? 'text-red-400' : 'text-red-600'
-          )} />
+          <div className={cn(
+            'p-0.5 rounded-full',
+            isDark ? 'bg-gray-900' : 'bg-white'
+          )}>
+            <AlertCircle className="w-3 h-3 text-red-500" />
+          </div>
         </div>
       )}
     </div>
