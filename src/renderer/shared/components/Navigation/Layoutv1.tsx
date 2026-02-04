@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useEffect, useState, useRef } from 'react';
-import { Navbar } from './Navbar';
+import Navbar from './Navbar/Navbar';
 import { Sidebar } from './Sidebar';
 import { Footer } from './Footer';
 import { cn } from '../../types/cn';
