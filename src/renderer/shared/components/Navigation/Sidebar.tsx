@@ -1,7 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard,
   Users,
   X,
   Shield,
@@ -19,17 +18,13 @@ import {
 import { type SidebarProps } from '../../types/index';
 import { cn } from '../../types/cn';
 import { ROUTES } from '../../../app/routes/routeConstants';
-import { useAppSelector, useAppDispatch } from '../../../app/store/hooks/useApp';
+import { useAppSelector } from '../../../app/store/hooks/useApp';
 import { 
   selectAccessibleModuleCodes,
   selectCurrentCapabilityName,
   selectActiveFacilityName,
   selectActiveRoleCode,
-  selectStaffFacilities,
-  switchCapability,
-  switchFacility,
   getRoleDisplayName,
-  type StaffFacilityAssignment,
 } from '../../../app/store/slices/activeContextSlice';
 import {FaRegCreditCard } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
@@ -65,7 +60,6 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const dispatch = useAppDispatch();
   const [activeHover, setActiveHover] = useState<string | null>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -76,8 +70,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
   const currentCapabilityName = useAppSelector(selectCurrentCapabilityName);
   const activeFacilityName = useAppSelector(selectActiveFacilityName);
   const activeRoleCode = useAppSelector(selectActiveRoleCode);
-  const staffFacilities = useAppSelector(selectStaffFacilities);
-  const [isRoleSwitcherVisible, setIsRoleSwitcherVisible] = useState(false);
+
 
   //Get Patient Numbers and Staff Numbers
   const staffNumber=useSelector(getStaffUuid);
@@ -90,10 +83,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
   
   const { 
     user, 
-    availableCapabilities, 
-    activeCapability,
-    activeFacilityId,
-    isStaffWithFacility,
+  
   } = activeContext;
 
   const isDark = theme === 'dark';
@@ -320,16 +310,6 @@ const currentMenuItems = useMemo(() => {
     }
   }, [navigate, onClose]);
 
-  // Capability switcher handler
-  const handleCapabilitySwitch = useCallback((capability: string) => {
-    dispatch(switchCapability(capability));
-  }, [dispatch]);
-
-  // Facility switcher handler (for staff)
-  const handleFacilitySwitch = useCallback((facilityId: number) => {
-    dispatch(switchFacility(facilityId));
-  }, [dispatch]);
-
   // Touch gesture handling
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     setTouchStart(e.touches[0].clientX);
@@ -511,69 +491,7 @@ const currentMenuItems = useMemo(() => {
     );
   }, [collapsed, activeHover, isDark, isRouteActive, handleNavigation]);
 
-  // Render capability switcher dropdown
-  const renderCapabilitySwitcher = useCallback(() => {
-    if (availableCapabilities.length <= 1) return null;
 
-    return (
-      <div className="mb-4">
-        <label className={cn(
-          'block text-xs font-medium mb-2',
-          isDark ? 'text-gray-400' : 'text-gray-600'
-        )}>
-          Select Portal.
-        </label>
-        <select
-          value={activeCapability || ''}
-          onChange={(e) => handleCapabilitySwitch(e.target.value)}
-          className={cn(
-            'w-full px-3 py-2 rounded-lg border text-sm',
-            isDark 
-              ? 'bg-gray-800 border-gray-700 text-white' 
-              : 'bg-gray-50 border-gray-300 text-gray-900'
-          )}
-        >
-          {availableCapabilities.map(capability => (
-            <option key={capability} value={capability}>
-              {getRoleDisplayName(capability)}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-  }, [availableCapabilities, activeCapability, isDark, handleCapabilitySwitch]);
-
-  // Render facility switcher (for staff with facilities)
-  const renderFacilitySwitcher = useCallback(() => {
-    if (!isStaffWithFacility || staffFacilities.length <= 1) return null;
-
-    return (
-      <div className="mb-4">
-        <label className={cn(
-          'block text-xs font-medium mb-2',
-          isDark ? 'text-gray-400' : 'text-gray-600'
-        )}>
-          Switch Facility(Auto)
-        </label>
-        <select
-          value={activeFacilityId || ''}
-          onChange={(e) => handleFacilitySwitch(parseInt(e.target.value, 10))}
-          className={cn(
-            'w-full px-3 py-2 rounded-lg border text-sm',
-            isDark 
-              ? 'bg-gray-800 border-gray-700 text-white' 
-              : 'bg-gray-50 border-gray-300 text-gray-900'
-          )}
-        >
-          {staffFacilities.map((facility: StaffFacilityAssignment) => (
-            <option key={facility.facility_id} value={facility.facility_id}>
-              {facility.facility_name} ({getRoleDisplayName(facility.role_code)})
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-  }, [isStaffWithFacility, staffFacilities, activeFacilityId, isDark, handleFacilitySwitch]);
 
   // Get context subtitle for header
   const getContextSubtitle = useCallback(() => {
@@ -651,52 +569,6 @@ const currentMenuItems = useMemo(() => {
   </button>
 </div>
 
-
-  {/* Capability & Facility Switchers */}
-  {!collapsed && (
-    <>
-      {/* Role switcher toggle indicator - shown by default */}
-      <div className="mt-4">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsRoleSwitcherVisible(!isRoleSwitcherVisible)}
-            className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300 w-full',
-              'hover:scale-[1.02] active:scale-95',
-              isDark
-                ? 'hover:bg-gray-800/50 text-gray-300'
-                : 'hover:bg-gray-100 text-gray-700'
-            )}
-            aria-label="Toggle role switcher"
-          >
-            <div className="flex items-center gap-2 flex-1 cursor-pointer">
-              <span className="text-sm font-medium">Switch Workspace.</span>
-              <div className={cn(
-                'px-2 py-0.5 text-xs rounded-full',
-                isDark 
-                  ? 'bg-blue-500/20 text-blue-300' 
-                  : 'bg-blue-100 text-blue-600'
-              )}>
-                Available
-              </div>
-            </div>
-            <LayoutDashboard   className={cn(
-              'w-4 h-4 transition-transform duration-300',
-              isRoleSwitcherVisible && 'rotate-90'
-            )} />
-          </button>
-        </div>
-      </div>
-
-      {/* Role switcher content - hidden by default */}
-      {isRoleSwitcherVisible && (
-        <div className="mt-2">
-          {renderCapabilitySwitcher()}
-          {renderFacilitySwitcher()}
-        </div>
-      )}
-    </>
-  )}
 </div>
 
       {/* Navigation */}

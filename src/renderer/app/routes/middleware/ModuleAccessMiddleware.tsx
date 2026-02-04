@@ -371,7 +371,7 @@ export const ModuleAccessMiddleware: React.FC = () => {
       <LoadingSkeleton 
         variant={getLoadingVariant()}
         theme={theme}
-        message={`Processing.....`}
+        message={`Switching session....`}
       />
     );
   }
