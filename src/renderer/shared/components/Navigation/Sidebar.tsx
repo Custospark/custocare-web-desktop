@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Users,
-  X,
   Shield,
   Bell,
   Stethoscope,
@@ -14,6 +13,7 @@ import {
   MicroscopeIcon,
   MonitorCheckIcon,
   HeadphonesIcon,
+  X,
 } from 'lucide-react';
 import { type SidebarProps } from '../../types/index';
 import { cn } from '../../types/cn';
@@ -511,6 +511,9 @@ const currentMenuItems = useMemo(() => {
         isDark 
           ? 'bg-gray-900/98' 
           : 'bg-white/98',
+        // Mobile layout: 3/4 width on small screens
+        'w-full lg:w-auto',
+        'max-w-[75vw] sm:max-w-[75vw] lg:max-w-none',
         className
       )}
       onTouchStart={handleTouchStart}
@@ -519,57 +522,58 @@ const currentMenuItems = useMemo(() => {
       {/* Header */}
       <div className={cn('shrink-0 p-4 border-b', isDark ? 'border-gray-800/50' : 'border-gray-200/50')}>
         <div className="flex items-center justify-between gap-3">
-  {/* Logo / Brand */}
-  <div
-    className={cn(
-      'flex items-center gap-3 flex-1 min-w-0 transition-all duration-300',
-      collapsed && 'justify-center'
-    )}
-  >
-    <div className="w-11 h-11 bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shrink-0">
-      <Shield className="w-6 h-6 text-white" />
-    </div>
+          {/* Logo / Brand */}
+          <div
+            className={cn(
+              'flex items-center gap-3 flex-1 min-w-0 transition-all duration-300',
+              collapsed && 'justify-center'
+            )}
+          >
+            <div className="w-11 h-11 bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shrink-0">
+              <Shield className="w-6 h-6 text-white" />
+            </div>
 
-    {/* Text only renders when expanded */}
-    {!collapsed && (
-      <div className="min-w-0">
-        <h2
-          className={cn(
-            'font-bold text-base truncate',
-            isDark ? 'text-white' : 'text-gray-900'
-          )}
-        >
-          Custocare AI
-        </h2>
-        <p
-          className={cn(
-            'text-xs truncate',
-            isDark ? 'text-gray-400' : 'text-gray-600'
-          )}
-        >
-          {getContextSubtitle()}
-        </p>
+            {/* Text only renders when expanded */}
+            {!collapsed && (
+              <div className="min-w-0">
+                <h2
+                  className={cn(
+                    'font-bold text-base truncate',
+                    isDark ? 'text-white' : 'text-gray-900'
+                  )}
+                >
+                  Custocare AI
+                </h2>
+                <p
+                  className={cn(
+                    'text-xs truncate',
+                    isDark ? 'text-gray-400' : 'text-gray-600'
+                  )}
+                >
+                  {getContextSubtitle()}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Single cross icon appearing on the right */}
+      <button
+            onClick={() => onClose?.()}
+            className={cn(
+              'p-2.5 rounded-xl transition-all duration-300 shrink-0',
+              'hover:scale-105 active:scale-95',
+              'lg:hidden', // 👈 hide on large screens and above
+              isDark
+                ? 'hover:bg-red-500/10 text-gray-400 hover:text-red-400'
+                : 'hover:bg-red-50 text-gray-600 hover:text-red-600'
+            )}
+            aria-label="Close sidebar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+        </div>
       </div>
-    )}
-  </div>
-
-  {/* Close button (mobile only) */}
-  <button
-    onClick={() => onClose?.()}
-    className={cn(
-      'lg:hidden p-2.5 rounded-xl transition-all duration-300 shrink-0',
-      'hover:scale-105 active:scale-95',
-      isDark
-        ? 'hover:bg-red-500/10 text-gray-400 hover:text-red-400'
-        : 'hover:bg-red-50 text-gray-600 hover:text-red-600'
-    )}
-    aria-label="Close sidebar"
-  >
-    <X className="w-5 h-5" />
-  </button>
-</div>
-
-</div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain">
