@@ -7,6 +7,7 @@
  * - Pass `isMobile` down to StaffPresence/MySpace for ProfileMenu-like dropdown positioning
  * - Slight wrapping/spacing improvements for small screens
  * - ✅ Enforces navigation to /dashboard after ANY account/context switch
+ * - ✅ Mobile menu icon is now among the right-side items (first item on mobile)
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -18,6 +19,7 @@ import {
   Heart,
   Briefcase,
   UserCheck,
+  Menu,
 } from 'lucide-react';
 import { cn } from '../../../types/cn';
 import { useNavigate } from 'react-router-dom';
@@ -69,6 +71,7 @@ interface ContextOption {
 
 export const Navbar: React.FC<NavbarProps> = ({
   theme = 'dark',
+  onMenuClick,
   onThemeToggle,
   className,
 }) => {
@@ -267,104 +270,159 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <nav className={cn('flex items-center justify-between gap-2 sm:gap-4 px-4 py-3', className)}>
-      {/* LEFT: BRAND */}
-     <div className="hidden md:flex items-center gap-2 sm:gap-3">
+   <nav
+  className={cn(
+    // Mobile: tighter padding, items start at left
+    // Desktop: normal padding, spread out
+    'flex items-center gap-2 px-2 sm:px-4 py-3 md:justify-between',
+    className
+  )}
+>
+  {/* LEFT: BRAND (desktop only) */}
+  <div className="hidden md:flex items-center gap-2 sm:gap-3 shrink-0">
     <div className="w-8 sm:ms-4 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20 cursor-pointer">
       <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
     </div>
 
-  <div className="hidden md:block">
-    <div className="flex items-center gap-2">
-      <span
-        className={cn(
-          'text-base sm:text-lg font-bold bg-gradient-to-r bg-clip-text text-transparent',
-          isDark ? 'from-white to-gray-300' : 'from-gray-900 to-gray-700'
-        )}
-      >
-        Custocare AI
-      </span>
-      <span
-        className={cn(
-          'px-2 py-0.5 text-xs font-bold rounded-full border',
-          isDark
-            ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-cyan-300 border-cyan-500/30'
-            : 'bg-gradient-to-r from-blue-100 to-cyan-50 text-blue-700 border-blue-300'
-        )}
-      >
-        <Sparkles className="w-3 h-3 inline mr-1" />
-        Pro
-      </span>
+    <div className="hidden md:block">
+      <div className="flex items-center gap-2">
+        <span
+          className={cn(
+            'text-base sm:text-lg font-bold bg-gradient-to-r bg-clip-text text-transparent',
+            isDark ? 'from-white to-gray-300' : 'from-gray-900 to-gray-700'
+          )}
+        >
+          Custocare AI
+        </span>
+
+        <span
+          className={cn(
+            'px-2 py-0.5 text-xs font-bold rounded-full border',
+            isDark
+              ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-cyan-300 border-cyan-500/30'
+              : 'bg-gradient-to-r from-blue-100 to-cyan-50 text-blue-700 border-blue-300'
+          )}
+        >
+          <Sparkles className="w-3 h-3 inline mr-1" />
+          Pro
+        </span>
+      </div>
+
+      <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-500' : 'text-gray-600')}>
+        AI Powered Health Management System
+      </p>
     </div>
-    <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-500' : 'text-gray-600')}>
-      AI Powered Health Management System
-    </p>
+  </div>
+
+  {/* RIGHT: ACTIONS */}
+ <div
+  className={cn(
+    // Mobile: do NOT stretch; start from left
+    'flex items-center gap-2 sm:gap-3 justify-start flex-nowrap',
+    // Desktop: take remaining space and align to right
+    'md:flex-1 md:justify-end'
+  )}
+>
+  {/* Mobile menu (mobile only) */}
+  <button
+    onClick={onMenuClick}
+    className={cn(
+      'md:hidden flex items-center justify-center shrink-0 cursor-pointer',
+      'w-10 h-10 rounded-lg',
+      '-ml-2 sm:-ml-1 md:ml-0',
+      'transition-all duration-300 hover:scale-105',
+      'focus:outline-none focus:ring-2 focus:ring-offset-2',
+      isDark
+        ? 'bg-gray-800/80 hover:bg-gray-700/80 text-gray-300 border border-gray-700/50 focus:ring-cyan-500/50'
+        : 'bg-gray-100/80 hover:bg-gray-200/80 text-gray-700 border border-gray-300/50 focus:ring-blue-500/50'
+    )}
+    aria-label="Open menu"
+    title="Open menu"
+  >
+    <Menu className="w-5 h-5" />
+  </button>
+
+  {/* Context switcher */}
+  {allContextOptions.length > 0 && (
+    <div className="cursor-pointer" title="Switch facility or role">
+      <ContextSwitcher
+        isOpen={isContextSwitcherOpen}
+        onToggle={() => setIsContextSwitcherOpen(!isContextSwitcherOpen)}
+        activeContextOption={activeContextOption}
+        groupedContextOptions={groupedContextOptions}
+        allContextOptions={allContextOptions}
+        userName={user?.full_name || 'User'}
+        isDark={isDark}
+        isMobile={isMobile}
+        onContextSwitch={handleContextSwitch}
+      />
+    </div>
+  )}
+
+  {/* Staff presence */}
+  {inStaffMode && activeFacilityId && (
+    <div className="cursor-pointer" title="Set your work status">
+      <StaffPresence isDark={isDark} isMobile={isMobile} />
+    </div>
+  )}
+
+  {/* My space */}
+  {inStaffMode && activeFacilityId && (
+    <div className="cursor-pointer" title="Manage your workspace">
+      <MySpace isDark={isDark} isMobile={isMobile} />
+    </div>
+  )}
+
+  {/* Theme toggle */}
+  <button
+    onClick={onThemeToggle}
+    className={cn(
+      'hidden md:flex items-center justify-center shrink-0 cursor-pointer',
+      'w-10 h-10 rounded-lg',
+      'transition-all duration-300 hover:scale-105',
+      'focus:outline-none focus:ring-2 focus:ring-offset-2',
+      isDark
+        ? 'bg-gray-800/80 hover:bg-gray-700/80 text-amber-400 border border-gray-700/50 focus:ring-amber-500/50'
+        : 'bg-gray-100/80 hover:bg-gray-200/80 text-indigo-600 border border-gray-300/50 focus:ring-indigo-500/50'
+    )}
+    title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+  >
+    {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+  </button>
+
+
+  {/* Notifications */}
+  <div className="cursor-pointer" title="Notifications">
+    <NotificationCenter
+      unreadCount={unreadCount}
+      isOpen={isNotificationsOpen}
+      isDark={isDark}
+      onNotificationClick={handleNotification}
+    />
+  </div>
+
+  {/* User profile */}
+  <div className="cursor-pointer" title="Account & settings">
+    <UserProfileMenu
+      isOpen={isUserDropdownOpen}
+      onToggle={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+      isDark={isDark}
+      isMobile={isMobile}
+      userName={user?.first_name}
+      userEmail={user?.email ?? undefined}
+      currentCapabilityName={currentCapabilityName}
+      inStaffMode={inStaffMode}
+      inPatientMode={inPatientMode}
+      staffNumber={staffNumber ?? undefined}
+      patientNumber={patientNumber ?? undefined}
+      onLogout={handleLogout}
+      onNavigate={(route) => navigate(route)}
+    />
   </div>
 </div>
 
+</nav>
 
-      {/* RIGHT: ACTION BUTTONS */}
-      <div className="flex items-center gap-3 sm:gap-3 flex-wrap justify-end">
-        {allContextOptions.length > 0 && (
-          <ContextSwitcher
-            isOpen={isContextSwitcherOpen}
-            onToggle={() => setIsContextSwitcherOpen(!isContextSwitcherOpen)}
-            activeContextOption={activeContextOption}
-            groupedContextOptions={groupedContextOptions}
-            allContextOptions={allContextOptions}
-            userName={user?.full_name || 'User'}
-            isDark={isDark}
-            isMobile={isMobile}
-            onContextSwitch={handleContextSwitch}
-          />
-        )}
-
-        {/* Staff Presence */}
-        {inStaffMode && activeFacilityId && (
-          <StaffPresence isDark={isDark} isMobile={isMobile} />
-        )}
-
-        {/* My Space */}
-        {inStaffMode && activeFacilityId && (
-          <MySpace isDark={isDark} isMobile={isMobile} />
-        )}
-
-        {/* Theme Toggle */}
-        <button
-          onClick={onThemeToggle}
-          className={cn(
-            'p-2 rounded-lg transition-all duration-300 hover:scale-105 hidden sm:block cursor-pointer',
-            isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-          )}
-          title="Toggle theme"
-        >
-          {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-indigo-600" />}
-        </button>
-
-        <NotificationCenter
-          unreadCount={unreadCount}
-          isOpen={isNotificationsOpen}
-          isDark={isDark}
-          onNotificationClick={handleNotification}
-        />
-
-        <UserProfileMenu
-          isOpen={isUserDropdownOpen}
-          onToggle={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-          isDark={isDark}
-          isMobile={isMobile}
-          userName={user?.first_name}
-          userEmail={user?.email ?? undefined}
-          currentCapabilityName={currentCapabilityName}
-          inStaffMode={inStaffMode}
-          inPatientMode={inPatientMode}
-          staffNumber={staffNumber ?? undefined}
-          patientNumber={patientNumber ?? undefined}
-          onLogout={handleLogout}
-          onNavigate={(route) => navigate(route)}
-        />
-      </div>
-    </nav>
   );
 };
 

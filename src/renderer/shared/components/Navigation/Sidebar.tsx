@@ -29,6 +29,7 @@ import {
 import { FaRegCreditCard } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import { getPatientUuid, getStaffUuid, isInPatientMode, isInStaffMode } from '../../../app/store/utils/contextSelectors';
+import { getRoleDisplayName as formatName } from '../../utils/facilityRoleFormator';
 
 interface MenuItem {
   id: string;
@@ -514,10 +515,10 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
                 <p
                   className={cn(
                     'text-xs truncate',
-                    isDark ? 'text-gray-400' : 'text-gray-600'
+                    isDark ? 'text-blue-400' : 'text-blue-600'
                   )}
                 >
-                  {getContextSubtitle()}
+                  {formatName(getContextSubtitle())}
                 </p>
               </div>
             )}
