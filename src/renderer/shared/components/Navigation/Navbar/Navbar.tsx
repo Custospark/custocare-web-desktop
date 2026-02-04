@@ -489,8 +489,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Moon className="w-5 h-5 text-indigo-600" />
           )}
         </button>
-
-        <MySpace isDark={isDark} />
+      {/* My space for slef room booking. */}
+        {inStaffMode && activeFacilityId && (
+                <MySpace isDark={isDark} />
+              )}
         {/* Notifications */}
         <NotificationCenter
           unreadCount={unreadCount}
