@@ -115,12 +115,21 @@ export const useGetCurrentOccupancy = (
       const response = await axiosInstance.get<OccupancyResponse>('/facility/spaces-occupancy', {
         params: filters,
       });
-      console.log("Current Ocupany:")
+      console.log("Current Occupancy:")
       console.log(response.data);
       return response.data;
-    
     },
     enabled: !!filters.facility_id,
+    retry: (failureCount, error) => {
+      // Don't retry on 404 (no occupancy data) or 403 (no permission)
+      if (error.response?.status === 404 || error.response?.status === 403) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: 1000 * 30, // 30 seconds
+    gcTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: true,
     ...options,
   });
 };

@@ -13,18 +13,19 @@
  * - Handles nested routes within modules
  * - Theme-aware error display
  * - Provides contact support information
+ * - ✅ Shows loading skeleton for 2 seconds before checking access
  * 
  * @component ModuleAccessMiddleware
  */
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ShieldAlert, AlertTriangle, Home } from 'lucide-react';
 import type { RootState } from '../../store/store';
 import { selectAccessibleModuleCodes } from '../../store/slices/activeContextSlice';
 import { ROUTES } from './../routeConstants';
-
+import LoadingSkeleton from '../../../shared/components/Loading/LoadingSkeletons';
 /**
  * Mapping of route paths to their corresponding module codes
  */
@@ -235,6 +236,9 @@ export const ModuleAccessMiddleware: React.FC = () => {
   const theme = useSelector((state: RootState) => state.ui.theme);
   const accessibleModuleCodes = useSelector(selectAccessibleModuleCodes);
   
+  // ✅ State to control loading delay
+  const [isCheckingAccess, setIsCheckingAccess] = useState(true);
+  
   // Extract current pathname (handle both BrowserRouter and HashRouter)
   const currentPathname = location.hash 
     ? location.hash.substring(1) // Remove # for HashRouter
@@ -286,17 +290,50 @@ export const ModuleAccessMiddleware: React.FC = () => {
     navigate(ROUTES.DASHBOARD, { replace: true });
   };
   
+  // ✅ Timer to show loading skeleton for 2 seconds before checking access
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsCheckingAccess(false);
+    }, 3000); // 3 second delay
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
   // Log access attempts for debugging (optional - remove in production)
   useEffect(() => {
-    if (requiresValidation && !hasAccess) {
+    if (!isCheckingAccess && requiresValidation && !hasAccess) {
       console.warn('[ModuleAccessMiddleware] Access denied:', {
         path: currentPathname,
         requiredModule: requiredModuleCode,
         accessibleModules: accessibleModuleCodes,
       });
     }
-  }, [requiresValidation, hasAccess, currentPathname, requiredModuleCode, accessibleModuleCodes]);
+  }, [requiresValidation, hasAccess, currentPathname, requiredModuleCode, accessibleModuleCodes, isCheckingAccess]);
   
+  // ✅ Show loading skeleton while checking access
+  if (isCheckingAccess) {
+    // Determine which loading variant to show based on the route
+    const getLoadingVariant = () => {
+      if (requiredModuleCode) {
+        const module = requiredModuleCode.toLowerCase();
+        if (module.includes('dashboard')) return 'dashboard';
+        if (module.includes('medical') || module.includes('clinical')) return 'detail';
+        if (module.includes('billing') || module.includes('pharmacy')) return 'table';
+        if (module.includes('administration')) return 'card';
+      }
+      return 'default';
+    };
+    
+    return (
+      <LoadingSkeleton 
+        variant={getLoadingVariant()}
+        theme={theme}
+        message={`Loading ${moduleName || 'Module'}...`}
+      />
+    );
+  }
+  
+  // ✅ Now check access after the 2-second delay
   // Render access denied screen if user doesn't have access
   if (requiresValidation && !hasAccess) {
     return (

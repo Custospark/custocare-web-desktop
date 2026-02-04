@@ -170,7 +170,7 @@ export const useGetMyPresence = (
       return failureCount < 2;
     },
     staleTime: 1000 * 30, // 30 seconds
-    gcTime: 1000 * 60 * 50, // 50 minutes
+    gcTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: true,
     ...options,
   });

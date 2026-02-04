@@ -2,23 +2,21 @@
  * ============================================================================
  * NAVBAR - MAIN COMPONENT
  * ============================================================================
- * 
- * Refactored into modular components:
- * - ContextSwitcher: Workspace/capability switching
- * - SmartSearch: AI-powered search
- * - NotificationCenter: Notification bell with badge
- * - QuickActions: Fast access menu
- * - UserProfileMenu: Profile dropdown
+ *
+ * Layout-only adjustments:
+ * - Pass `isMobile` down to StaffPresence/MySpace for ProfileMenu-like dropdown positioning
+ * - Slight wrapping/spacing improvements for small screens
+ * - ✅ Enforces navigation to /dashboard after ANY account/context switch
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Shield, 
+import {
+  Shield,
   Sparkles,
-  Moon, 
+  Moon,
   Sun,
-  Heart, 
-  Briefcase, 
+  Heart,
+  Briefcase,
   UserCheck,
 } from 'lucide-react';
 import { cn } from '../../../types/cn';
@@ -27,7 +25,7 @@ import { ROUTES, ACCOUNT_ROUTES } from '../../../../app/routes/routeConstants';
 import { logout } from '../../../../app/store/slices/authSlice';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
-import { 
+import {
   switchCapability,
   switchFacility,
   selectCurrentCapabilityName,
@@ -35,19 +33,19 @@ import {
   getRoleDisplayName,
 } from '../../../../app/store/slices/activeContextSlice';
 import { useSelector } from 'react-redux';
-import { 
-  getStaffUuid, 
-  isInPatientMode, 
-  isInStaffMode, 
-  getPatientUuid 
+import {
+  getStaffUuid,
+  isInPatientMode,
+  isInStaffMode,
+  getPatientUuid,
 } from '../../../../app/store/utils/contextSelectors';
 
-// Import sub-components
 import { NotificationCenter } from './NotificationCenter';
 import { UserProfileMenu } from './UserProfileMenu';
 import ContextSwitcher from './ContextSwitcher';
 import StaffPresence from './StaffPresence';
 import MySpace from './MySpace';
+
 export interface NavbarProps {
   theme: 'light' | 'dark';
   onMenuClick?: () => void;
@@ -69,14 +67,11 @@ interface ContextOption {
   isActive: boolean;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ 
+export const Navbar: React.FC<NavbarProps> = ({
   theme = 'dark',
   onThemeToggle,
-  className
+  className,
 }) => {
-  // ============================================================================
-  // STATE MANAGEMENT
-  // ============================================================================
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isContextSwitcherOpen, setIsContextSwitcherOpen] = useState(false);
@@ -89,36 +84,24 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const isDark = theme === 'dark';
 
-  // ============================================================================
-  // REDUX STATE & SELECTORS
-  // ============================================================================
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  const {
-    user,
-    activeCapability,
-    activeFacilityId,
-    availableCapabilities,
-  } = useAppSelector((state) => state.activeContext);
+  const { user, activeCapability, activeFacilityId, availableCapabilities } = useAppSelector(
+    (state) => state.activeContext
+  );
 
   const currentCapabilityName = useAppSelector(selectCurrentCapabilityName);
   const staffFacilities = useAppSelector(selectStaffFacilities);
 
-  // ============================================================================
-  // CONTEXT OPTIONS BUILDER
-  // ============================================================================
   const allContextOptions = useMemo((): ContextOption[] => {
     const options: ContextOption[] = [];
 
     const hasPatient = availableCapabilities.includes('patient');
     const hasStaff = availableCapabilities.includes('staff');
-    const spatieRoles = availableCapabilities.filter(cap => 
-      cap !== 'patient' && cap !== 'staff'
-    );
+    const spatieRoles = availableCapabilities.filter((cap) => cap !== 'patient' && cap !== 'staff');
 
-    // Personal Space
     if (hasPatient) {
       options.push({
         id: 'patient',
@@ -145,7 +128,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       });
     }
 
-    // Professional Workspace
     if (hasStaff && staffFacilities.length > 0) {
       staffFacilities.forEach((facility) => {
         options.push({
@@ -164,7 +146,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       });
     }
 
-    // System Administration
     spatieRoles.forEach((roleCapability: string) => {
       options.push({
         id: `admin-${roleCapability}`,
@@ -179,12 +160,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     });
 
     return options;
-  }, [
-    availableCapabilities,
-    staffFacilities,
-    activeCapability,
-    activeFacilityId,
-  ]);
+  }, [availableCapabilities, staffFacilities, activeCapability, activeFacilityId]);
 
   const groupedContextOptions = useMemo(() => {
     const groups = {
@@ -201,14 +177,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [allContextOptions]);
 
   const activeContextOption = useMemo(() => {
-    return allContextOptions.find(opt => opt.isActive) || allContextOptions[0];
+    return allContextOptions.find((opt) => opt.isActive) || allContextOptions[0];
   }, [allContextOptions]);
 
   const unreadCount = 3;
 
-  // ============================================================================
-  // EFFECTS
-  // ============================================================================
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -218,9 +191,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') e.preventDefault();
       if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
         e.preventDefault();
         setIsContextSwitcherOpen(true);
@@ -236,9 +207,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // ============================================================================
-  // EVENT HANDLERS
-  // ============================================================================
   const handleLogout = () => {
     dispatch(logout());
     showToast(
@@ -249,9 +217,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     navigate(ROUTES.HOME);
   };
 
-  const handleNotification = () => {
-    navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
-  };
+  const handleNotification = () => navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
 
   const handleContextSwitch = (option: ContextOption) => {
     try {
@@ -265,43 +231,41 @@ export const Navbar: React.FC<NavbarProps> = ({
       switch (option.type) {
         case 'personal':
           dispatch(switchCapability(option.capability));
-          if (inPatientMode) {
-            navigate(ROUTES.PATIENT_DASHBOARD);
-          }
+          // ✅ Always navigate to dashboard after switching context
+          navigate(ROUTES.DASHBOARD);
           showToast('success', `Switched to ${option.title}`, 3000);
           break;
 
         case 'professional':
           if (option.facilityId) {
-            if (activeCapability !== 'staff') {
-              dispatch(switchCapability('staff'));
-            }
+            if (activeCapability !== 'staff') dispatch(switchCapability('staff'));
             dispatch(switchFacility(option.facilityId));
-            showToast(
-              'success', 
-              `Switched to ${option.title} at ${option.facilityName}`, 
-              3000
-            );
+            // ✅ Always navigate to dashboard after switching context
+            navigate(ROUTES.DASHBOARD);
+            showToast('success', `Switched to ${option.title} at ${option.facilityName}`, 3000);
           }
           break;
 
         case 'administrative':
           dispatch(switchCapability(option.capability));
+          // ✅ Always navigate to dashboard after switching context
+          navigate(ROUTES.DASHBOARD);
           showToast('success', `Switched to ${option.title}`, 3000);
           break;
 
         default:
-          console.warn('Unknown context option type:', option);
+          // ✅ Always navigate to dashboard as fallback
+          navigate(ROUTES.DASHBOARD);
+          break;
       }
     } catch (error) {
       console.error('Error switching context:', error);
       showToast('error', 'Failed to switch workspace. Please try again.', 4000);
+      // ✅ Even on error, navigate to dashboard for consistency
+      navigate(ROUTES.DASHBOARD);
     }
   };
 
-  // ============================================================================
-  // RENDER
-  // ============================================================================
   return (
     <nav className={cn('flex items-center justify-between gap-2 sm:gap-4 px-4 py-3', className)}>
       {/* LEFT: BRAND */}
@@ -309,37 +273,37 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="w-8 sm:ms-4 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20 cursor-pointer">
           <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
         </div>
-        
+
         <div className="hidden md:block">
           <div className="flex items-center gap-2">
-            <span className={cn(
-              'text-base sm:text-lg font-bold bg-gradient-to-r bg-clip-text text-transparent',
-              isDark ? 'from-white to-gray-300' : 'from-gray-900 to-gray-700'
-            )}>
+            <span
+              className={cn(
+                'text-base sm:text-lg font-bold bg-gradient-to-r bg-clip-text text-transparent',
+                isDark ? 'from-white to-gray-300' : 'from-gray-900 to-gray-700'
+              )}
+            >
               Custocare AI
             </span>
-            <span className={cn(
-              'px-2 py-0.5 text-xs font-bold rounded-full border',
-              isDark 
-                ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-cyan-300 border-cyan-500/30' 
-                : 'bg-gradient-to-r from-blue-100 to-cyan-50 text-blue-700 border-blue-300'
-            )}>
+            <span
+              className={cn(
+                'px-2 py-0.5 text-xs font-bold rounded-full border',
+                isDark
+                  ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-cyan-300 border-cyan-500/30'
+                  : 'bg-gradient-to-r from-blue-100 to-cyan-50 text-blue-700 border-blue-300'
+              )}
+            >
               <Sparkles className="w-3 h-3 inline mr-1" />
               Pro
             </span>
           </div>
-          <p className={cn(
-            'text-xs mt-0.5',
-            isDark ? 'text-gray-500' : 'text-gray-600'
-          )}>
+          <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-500' : 'text-gray-600')}>
             AI Powered Health Management System
           </p>
         </div>
       </div>
 
       {/* RIGHT: ACTION BUTTONS */}
-      <div className="flex items-center gap-3 sm:gap-3">
-        {/* Context Switcher */}
+      <div className="flex items-center gap-3 sm:gap-3 flex-wrap justify-end">
         {allContextOptions.length > 0 && (
           <ContextSwitcher
             isOpen={isContextSwitcherOpen}
@@ -354,17 +318,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           />
         )}
 
-
-
         {/* Staff Presence */}
-         {inStaffMode && activeFacilityId && (
-        <StaffPresence isDark={isDark} />
-              )}
-
-      {/* My space for slef room booking. */}
         {inStaffMode && activeFacilityId && (
-                <MySpace isDark={isDark} />
-              )}
+          <StaffPresence isDark={isDark} isMobile={isMobile} />
+        )}
+
+        {/* My Space */}
+        {inStaffMode && activeFacilityId && (
+          <MySpace isDark={isDark} isMobile={isMobile} />
+        )}
+
         {/* Theme Toggle */}
         <button
           onClick={onThemeToggle}
@@ -374,13 +337,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
           title="Toggle theme"
         >
-          {isDark ? (
-            <Sun className="w-5 h-5 text-amber-400" />
-          ) : (
-            <Moon className="w-5 h-5 text-indigo-600" />
-          )}
+          {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-indigo-600" />}
         </button>
-        {/* Notifications */}
+
         <NotificationCenter
           unreadCount={unreadCount}
           isOpen={isNotificationsOpen}
@@ -388,7 +347,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           onNotificationClick={handleNotification}
         />
 
-        {/* User Profile */}
         <UserProfileMenu
           isOpen={isUserDropdownOpen}
           onToggle={() => setIsUserDropdownOpen(!isUserDropdownOpen)}

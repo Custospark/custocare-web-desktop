@@ -2,11 +2,9 @@ import React, { useMemo, useRef, useState } from 'react';
 import {
   Users,
   Clock,
-  Filter,
   RefreshCw,
   ChevronRight,
   AlertCircle,
-  CheckCircle,
   User,
   Activity,
   Hash,
@@ -193,9 +191,6 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   newPatientButtonText = 'New Patient',
   newPatientButtonIcon = <UserPlus className="w-4 h-4" />,
   showStats = true,
-  allowPhaseFilter = true,
-  allowDepartmentFilter = true,
-  showUnassignedToggle = true,
   showSearch = true,
   showNewPatientRegistration = true,
   refreshInterval = 30000,
@@ -208,7 +203,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   const queryClient = useQueryClient();
   const lastManualRefreshRef = useRef<number>(Date.now());
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
-  const [filters, setFilters] = useState<QueueFilters>({
+  const [filters] = useState<QueueFilters>({
     ...initialFilters,
     include_unassigned: initialFilters.include_unassigned ?? false,
   });
@@ -232,16 +227,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   const queueVisits = useMemo(() => normalizeQueueVisits(queueData), [queueData]);
   const filteredVisits = useMemo(() => searchVisits(queueVisits, searchQuery), [queueVisits, searchQuery]);
 
-  const availablePhases = useMemo(() => {
-    const phases = new Set<VisitPhase>();
-    queueVisits.forEach((v) => phases.add(v.current_phase));
-    return Array.from(phases).sort();
-  }, [queueVisits]);
 
-  const availableDepartments = useMemo(() => {
-    const ids = queueData?.meta?.allowed_department_ids;
-    return Array.isArray(ids) ? ids : [];
-  }, [queueData]);
 
   const queueStats = useMemo(() => {
     if (queueVisits.length === 0) return null;
@@ -268,20 +254,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     };
   }, [queueVisits, queueData]);
 
-  const handlePhaseFilterChange = (phase: VisitPhase | 'all') => {
-    setFilters((prev) => ({ ...prev, current_phase: phase === 'all' ? undefined : phase }));
-  };
 
-  const handleDepartmentFilterChange = (departmentId: number | 'all') => {
-    setFilters((prev) => ({ 
-      ...prev, 
-      department_id: departmentId === 'all' ? undefined : departmentId 
-    }));
-  };
-
-  const handleUnassignedToggle = () => {
-    setFilters((prev) => ({ ...prev, include_unassigned: !prev.include_unassigned }));
-  };
 
   const handleClearSearch = () => setSearchQuery('');
 
@@ -436,9 +409,6 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
               <h2 className="text-2xl font-bold mb-2">{title}</h2>
               <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
                 {description}
-                {refreshInterval > 0 && (
-                  <span className="ml-2 text-sm opacity-75">• Auto-refresh every {refreshInterval / 1000}s</span>
-                )}
               </p>
             </div>
 
@@ -501,7 +471,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                   <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
                   <input
                     type="text"
-                    placeholder="Search queue by name, patient number, visit UUID, phase, or type..."
+                    placeholder="Search Patients in the queue by patient number, name,DOB, phase, or type..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className={`w-full pl-10 pr-10 py-3 lg:py-2.5 rounded-lg border-2 transition-all duration-200 outline-none ${
@@ -531,73 +501,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
               </div>
             )}
 
-            <div
-              className={`flex flex-wrap items-center gap-3 p-4 rounded-lg transition-colors ${
-                isDark ? 'bg-gray-800' : 'bg-white border border-gray-200'
-              } ${!showSearch ? 'flex-1' : 'lg:w-auto'}`}
-            >
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <Filter className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
-                <span className={`font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Filters:</span>
-              </div>
-
-              {allowPhaseFilter && availablePhases.length > 0 && (
-                <select
-                  value={filters.current_phase || 'all'}
-                  onChange={(e) => handlePhaseFilterChange(e.target.value as VisitPhase | 'all')}
-                  className={`px-3 py-2 lg:py-1.5 rounded-lg border-2 text-sm cursor-pointer transition-colors focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 min-w-[140px] ${
-                    isDark
-                      ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
-                >
-                  <option value="all">All Phases</option>
-                  {availablePhases.map((p) => (
-                    <option key={p} value={p}>
-                      {getPhaseDisplayName(p)}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {allowDepartmentFilter && availableDepartments.length > 0 && (
-                <select
-                  value={filters.department_id || 'all'}
-                  onChange={(e) => handleDepartmentFilterChange(e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10))}
-                  className={`px-3 py-2 lg:py-1.5 rounded-lg border-2 text-sm cursor-pointer transition-colors focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 min-w-[160px] ${
-                    isDark
-                      ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
-                >
-                  <option value="all">All Departments</option>
-                  {availableDepartments.map((id) => (
-                    <option key={id} value={id}>
-                      Department {id}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {showUnassignedToggle && (
-                <button
-                  onClick={handleUnassignedToggle}
-                  className={`px-3 py-2 lg:py-1.5 rounded-lg border-2 text-sm flex items-center gap-2 cursor-pointer transition-all duration-200 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 whitespace-nowrap ${
-                    filters.include_unassigned
-                      ? isDark
-                        ? 'bg-blue-900/30 border-blue-600 text-blue-300 hover:border-blue-500'
-                        : 'bg-blue-100 border-blue-400 text-blue-700 hover:border-blue-500'
-                      : isDark
-                      ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500 hover:bg-gray-600'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50'
-                  }`}
-                >
-                  {filters.include_unassigned ? <CheckCircle className="w-4 h-4" /> : <Users className="w-4 h-4" />}
-                  <span className="hidden sm:inline">{filters.include_unassigned ? 'Show Assigned Only' : 'Include Unassigned'}</span>
-                  <span className="sm:hidden">{filters.include_unassigned ? 'Assigned Only' : 'Unassigned'}</span>
-                </button>
-              )}
-            </div>
+         
           </div>
 
           {showStats && queueStats && (
@@ -659,7 +563,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                   <>
                     <Search className={`w-16 h-16 mx-auto mb-4 cursor-default ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
                     <h3 className="text-lg font-semibold mb-2">No Matching Visits</h3>
-                    <p className={isDark ? 'text-gray-400' : 'text-gray-600 mb-4'}>No visits found matching "{searchQuery}"</p>
+                    <p className={isDark ? 'text-gray-400' : 'text-gray-600 mb-4'}>No Patients found matching "{searchQuery}"</p>
                     <button
                       onClick={handleClearSearch}
                       className={`px-4 py-2 rounded-lg font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500/20 ${
