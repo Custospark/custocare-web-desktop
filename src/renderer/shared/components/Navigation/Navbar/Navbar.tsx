@@ -48,15 +48,13 @@ import {
   getPatientUuid 
 } from '../../../../app/store/utils/contextSelectors';
 
-
 // Import sub-components
 import { SmartSearch } from './SmartSearch';
 import { NotificationCenter } from './NotificationCenter';
 import { QuickActions } from './QuickActions';
 import { UserProfileMenu } from './UserProfileMenu';
 import ContextSwitcher from './ContextSwitcher';
-import { PresenceStatus } from './PresenceStatus';
-
+import StaffPresence from './StaffPresence';
 export interface NavbarProps {
   theme: 'light' | 'dark';
   onMenuClick?: () => void;
@@ -281,8 +279,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: '3', category: 'Appointments', title: 'Surgery Schedule - Dr. Martinez', path: '/appointments/surgery', icon: <Calendar className="w-4 h-4" /> },
   ];
 
- 
-
   const unreadCount = 3;
 
   // ============================================================================
@@ -389,7 +385,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     <nav className={cn('flex items-center justify-between gap-2 sm:gap-4 px-4 py-3', className)}>
       {/* LEFT: BRAND */}
       <div className="flex items-center gap-2 sm:gap-3">
-        <div className="w-8 sm:ms-4 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20">
+        <div className="w-8 sm:ms-4 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20 cursor-pointer">
           <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
         </div>
         
@@ -451,7 +447,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => setIsWorkflowOpen(!isWorkflowOpen)}
             className={cn(
-              'p-2 rounded-lg transition-all duration-300 hover:scale-105',
+              'p-2 rounded-lg transition-all duration-300 hover:scale-105 cursor-pointer',
               isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
             )}
             title="Workflow automation"
@@ -474,8 +470,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           actions={quickActions}
         />
 
-        {/* Activity Indicator (Desktop only) */}
-      <PresenceStatus isDark={isDark} />
+        {/* Staff Presence */}
+        <StaffPresence isDark={isDark} />
 
         {/* Theme Toggle */}
         <button
@@ -508,7 +504,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           isDark={isDark}
           isMobile={isMobile}
           userName={user?.first_name}
-        userEmail={user?.email ?? undefined}
+          userEmail={user?.email ?? undefined}
           currentCapabilityName={currentCapabilityName}
           inStaffMode={inStaffMode}
           inPatientMode={inPatientMode}

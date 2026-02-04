@@ -28,7 +28,6 @@ import {
   isInStaffMode,
 } from '../../../../../app/store/utils/contextSelectors';
 import type {
-  // Import all types from the types file as the single source of truth
   ApiErrorResponse,
   EligibleForForwardingQuery,
   EligibleForForwardingResponse,
@@ -43,8 +42,7 @@ import type {
   PresenceId,
 } from './StaffPresenceTypes';
 import {
-    // Import enums from the types file
-    UpdatedBy,
+  UpdatedBy,
   StaffPresenceStatus,
 } from './StaffPresenceTypes';
 
@@ -62,12 +60,34 @@ export const staffPresenceKeys = {
   list: (filters: Record<string, unknown>) => [...staffPresenceKeys.lists(), filters] as const,
   details: () => [...staffPresenceKeys.all, 'detail'] as const,
   detail: (id: PresenceId) => [...staffPresenceKeys.details(), id] as const,
-  myPresence: (facilityId?: FacilityId) => [...staffPresenceKeys.all, 'my-presence', facilityId] as const,
-  eligibleForForwarding: (facilityId: FacilityId) => [...staffPresenceKeys.all, 'eligible-for-forwarding', facilityId] as const,
-  staffHistory: (staffId: StaffId) => [...staffPresenceKeys.all, 'staff-history', staffId] as const,
-  facilityPresence: (facilityId: FacilityId) => [...staffPresenceKeys.all, 'facility', facilityId] as const,
+  myPresence: (facilityId?: FacilityId, staffId?: StaffId) => [
+    ...staffPresenceKeys.all, 
+    'my-presence', 
+    facilityId, 
+    staffId
+  ] as const,
+  eligibleForForwarding: (facilityId: FacilityId) => [
+    ...staffPresenceKeys.all, 
+    'eligible-for-forwarding', 
+    facilityId
+  ] as const,
+  staffHistory: (staffId: StaffId, facilityId?: FacilityId) => [
+    ...staffPresenceKeys.all, 
+    'staff-history', 
+    staffId, 
+    facilityId
+  ] as const,
+  facilityPresence: (facilityId: FacilityId) => [
+    ...staffPresenceKeys.all, 
+    'facility', 
+    facilityId
+  ] as const,
   activePresence: () => [...staffPresenceKeys.all, 'active'] as const,
-  presenceStats: (facilityId: FacilityId) => [...staffPresenceKeys.all, 'stats', facilityId] as const,
+  presenceStats: (facilityId: FacilityId) => [
+    ...staffPresenceKeys.all, 
+    'stats', 
+    facilityId
+  ] as const,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -119,18 +139,10 @@ export const useHasStaffPresenceContext = (): boolean => {
 
 /**
  * Fetches the current user's active presence in the active facility.
- * Automatically uses the active facility ID from context.
+ * Automatically uses the active facility ID and staff ID from context.
  * 
  * @param options - React Query options for customizing behavior
  * @returns Query result with current presence or null
- * 
- * @example
- * const { data, isLoading, error } = useGetMyPresence();
- * 
- * // Error handling example:
- * if (error?.message?.includes('not in staff mode')) {
- *   // Show user-friendly message
- * }
  */
 export const useGetMyPresence = (
   options?: Omit<UseQueryOptions<MyPresenceResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
@@ -139,10 +151,13 @@ export const useGetMyPresence = (
   const staffId = useCurrentStaffId();
 
   return useQuery<MyPresenceResponse, AxiosError<ApiErrorResponse>>({
-    queryKey: staffPresenceKeys.myPresence(facilityId),
+    queryKey: staffPresenceKeys.myPresence(facilityId, staffId),
     queryFn: async () => {
-      const response = await axiosInstance.get<MyPresenceResponse>('/staff/presence', {
-        params: { facility_id: facilityId },
+      const response = await axiosInstance.get<MyPresenceResponse>('/staff/presence/facility', {
+        params: { 
+          facility_id: facilityId,
+          staff_id: staffId
+        },
       });
       return response.data;
     },
@@ -152,14 +167,14 @@ export const useGetMyPresence = (
       if (error.response?.status === 404 || error.response?.status === 403) {
         return false;
       }
-      return failureCount < 3;
+      return failureCount < 2;
     },
     staleTime: 1000 * 30, // 30 seconds
     gcTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: true,
     ...options,
   });
 };
-
 
 /**
  * Fetches all active presence records for the active facility.
@@ -167,10 +182,6 @@ export const useGetMyPresence = (
  * 
  * @param options - React Query options for customizing behavior
  * @returns Query result with active presence records
- * 
- * @example
- * const { data, refetch } = useGetFacilityPresence();
- * // data.data contains array of active StaffPresence records
  */
 export const useGetFacilityPresence = (
   options?: Omit<UseQueryOptions<EligibleForForwardingResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
@@ -181,7 +192,7 @@ export const useGetFacilityPresence = (
     queryKey: staffPresenceKeys.facilityPresence(facilityId),
     queryFn: async () => {
       const response = await axiosInstance.get<EligibleForForwardingResponse>(
-        '/staff/presence/facility',
+        '/staff/presence/facility/all',
         { params: { facility_id: facilityId } }
       );
       return response.data;
@@ -203,13 +214,6 @@ export const useGetFacilityPresence = (
  * @param staffId - Staff ID to fetch history for (defaults to current staff)
  * @param options - React Query options for customizing behavior
  * @returns Query result with historical presence records
- * 
- * @example
- * // Get current staff's history
- * const { data } = useGetStaffPresenceHistory();
- * 
- * // Get specific staff's history (admin use)
- * const { data } = useGetStaffPresenceHistory(123);
  */
 export const useGetStaffPresenceHistory = (
   staffId?: StaffId,
@@ -220,7 +224,7 @@ export const useGetStaffPresenceHistory = (
   const facilityId = useActiveFacilityId();
 
   return useQuery<EligibleForForwardingResponse, AxiosError<ApiErrorResponse>>({
-    queryKey: staffPresenceKeys.staffHistory(targetStaffId),
+    queryKey: staffPresenceKeys.staffHistory(targetStaffId, facilityId),
     queryFn: async () => {
       const response = await axiosInstance.get<EligibleForForwardingResponse>(
         `/staff/presence/history/${targetStaffId}`,
@@ -236,8 +240,6 @@ export const useGetStaffPresenceHistory = (
   });
 };
 
-
-
 /**
  * Fetches staff members eligible for forwarding in the active facility.
  * Based on backend's scopeEligibleForForwarding (status in ['on_duty', 'busy']).
@@ -245,17 +247,6 @@ export const useGetStaffPresenceHistory = (
  * @param filters - Additional filters (search term)
  * @param options - React Query options for customizing behavior
  * @returns Query result with eligible staff presence records
- * 
- * @example
- * const { data, isLoading } = useGetEligibleForForwarding({ search: 'doctor' });
- * 
- * // Data structure:
- * // {
- * //   success: true,
- * //   message: 'Staff eligible for forwarding retrieved',
- * //   data: [...],
- * //   meta: { facility_id: 1, count: 5, timestamp: '...' }
- * // }
  */
 export const useGetEligibleForForwarding = (
   filters: Omit<EligibleForForwardingQuery, 'facility_id'> = {},
@@ -294,31 +285,39 @@ export const useGetEligibleForForwarding = (
 /* -------------------------------------------------------------------------- */
 
 /**
+ * Gets the display label for a presence status.
+ */
+const getStatusLabel = (status: string): string => {
+  const labels: Record<string, string> = {
+    [StaffPresenceStatus.OFF_DUTY]: 'Off Duty',
+    [StaffPresenceStatus.ON_DUTY]: 'On Duty',
+    [StaffPresenceStatus.ON_BREAK]: 'On Break',
+    [StaffPresenceStatus.BUSY]: 'Busy',
+    [StaffPresenceStatus.UNAVAILABLE]: 'Unavailable',
+  };
+  return labels[status] || status;
+};
+
+/**
+ * Determines if a presence status is eligible for forwarding.
+ */
+const isEligibleForForwardingStatus = (status: StaffPresenceStatus | string): boolean => {
+  return status === StaffPresenceStatus.ON_DUTY || status === StaffPresenceStatus.BUSY;
+};
+
+/**
  * Sets the current user's presence status in the active facility.
  * Used by staff members to update their own status.
  * 
  * @param callbacks - Optional onSuccess and onError callbacks
  * @returns Mutation object with mutate function and state
- * 
- * @example
- * const { mutate, isPending, error } = useSetMyPresence({
- *   onSuccess: (data) => {
- *     // Update local cache
- *     queryClient.setQueryData(staffPresenceKeys.myPresence(facilityId), data);
- *   },
- * });
- * 
- * // Set status to on_duty
- * mutate({
- *   status: 'on_duty',
- *   note: 'Starting morning shift'
- * });
  */
 export const useSetMyPresence = (
   callbacks: MutationCallbacks<SetMyPresenceResponse, AxiosError<ApiErrorResponse>> = {}
 ) => {
   const { showToast } = useToast();
   const facilityId = useActiveFacilityId();
+  const staffId = useCurrentStaffId();
   const queryClient = useQueryClient();
 
   return useMutation<SetMyPresenceResponse, AxiosError<ApiErrorResponse>, Omit<SetPresenceRequest, 'facility_id'>>({
@@ -326,48 +325,46 @@ export const useSetMyPresence = (
       const payload: SetPresenceRequest = {
         ...data,
         facility_id: facilityId,
-        updated_by: UpdatedBy.STAFF, // Default for self-updates
+        updated_by: UpdatedBy.STAFF,
       };
       
-      const response = await axiosInstance.post<SetMyPresenceResponse>('/staff/presence', payload);
+      const response = await axiosInstance.post<SetMyPresenceResponse>('/staff/presence/facility', payload);
       return response.data;
     },
     onMutate: async (variables) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: staffPresenceKeys.myPresence(facilityId) });
+      await queryClient.cancelQueries({ queryKey: staffPresenceKeys.myPresence(facilityId, staffId) });
       await queryClient.cancelQueries({ queryKey: staffPresenceKeys.eligibleForForwarding(facilityId) });
 
       // Snapshot the previous value
-      const previousPresence = queryClient.getQueryData<MyPresenceResponse>(staffPresenceKeys.myPresence(facilityId));
+      const previousPresence = queryClient.getQueryData<MyPresenceResponse>(
+        staffPresenceKeys.myPresence(facilityId, staffId)
+      );
 
-      // Optimistically update to the new value
-      if (previousPresence) {
-        const optimisticData: MyPresenceResponse = {
-          success: true,
-          message: 'Updating presence...',
-          data: {
-            id: previousPresence.data?.id || 0,
-            staff_id: previousPresence.data?.staff_id || 0,
-            facility_id: facilityId,
-            status: variables.status,
-            status_label: getStatusLabel(variables.status),
-            note: variables.note || null,
-            started_at: previousPresence.data?.started_at || new Date().toISOString(),
-            ended_at: null,
-            updated_by: UpdatedBy.STAFF,
-            updated_by_user_id: null,
-            created_at: previousPresence.data?.created_at || new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            is_active: true,
-            is_eligible_for_forwarding: isEligibleForForwardingStatus(variables.status),
-            staff: previousPresence.data?.staff,
-            facility: previousPresence.data?.facility,
-            updated_by_user: previousPresence.data?.updated_by_user,
-          },
-        };
+      // Create optimistic update
+      const optimisticData: MyPresenceResponse = {
+        success: true,
+        message: 'Updating presence...',
+        data: {
+          id: previousPresence?.data?.id || Date.now(), // Temporary ID for optimistic update
+          staff_id: staffId,
+          facility_id: facilityId,
+          status: variables.status,
+          status_label: getStatusLabel(variables.status),
+          note: variables.note || null,
+          started_at: previousPresence?.data?.started_at || new Date().toISOString(),
+          ended_at: null,
+          updated_by: UpdatedBy.STAFF,
+          updated_by_user_id: null,
+          created_at: previousPresence?.data?.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          is_active: true,
+          is_eligible_for_forwarding: isEligibleForForwardingStatus(variables.status),
+        },
+      };
 
-        queryClient.setQueryData(staffPresenceKeys.myPresence(facilityId), optimisticData);
-      }
+      // Optimistically update the cache
+      queryClient.setQueryData(staffPresenceKeys.myPresence(facilityId, staffId), optimisticData);
 
       return { previousPresence };
     },
@@ -375,17 +372,19 @@ export const useSetMyPresence = (
       const successMessage = data.message || 'Presence updated successfully!';
       showToast('success', successMessage, 5000);
       
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: staffPresenceKeys.myPresence(facilityId) });
+      // Update cache with real API data
+      queryClient.setQueryData(staffPresenceKeys.myPresence(facilityId, staffId), data);
+      
+      // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: staffPresenceKeys.eligibleForForwarding(facilityId) });
       queryClient.invalidateQueries({ queryKey: staffPresenceKeys.facilityPresence(facilityId) });
       
       callbacks.onSuccess?.(data);
     },
     onError: (error) => {
+
       const apiMessage = error.response?.data?.message || error.message || 'Failed to update presence.';
 
-      // Extract validation errors if present
       let errorDetails = '';
       if (error.response?.data?.errors) {
         errorDetails = Object.entries(error.response.data.errors)
@@ -399,8 +398,8 @@ export const useSetMyPresence = (
       callbacks.onError?.(error);
     },
     onSettled: () => {
-      // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: staffPresenceKeys.myPresence(facilityId) });
+      // Always refetch to ensure we have latest data
+      queryClient.invalidateQueries({ queryKey: staffPresenceKeys.myPresence(facilityId, staffId) });
     },
   });
 };
@@ -411,37 +410,32 @@ export const useSetMyPresence = (
  * 
  * @param callbacks - Optional onSuccess and onError callbacks
  * @returns Mutation object with mutate function and state
- * 
- * @example
- * const { mutate } = useEndMyPresence({
- *   onSuccess: () => {
- *     navigate('/dashboard');
- *   },
- * });
- * 
- * mutate({ note: 'End of shift, see you tomorrow!' });
  */
 export const useEndMyPresence = (
   callbacks: MutationCallbacks<SetMyPresenceResponse, AxiosError<ApiErrorResponse>> = {}
 ) => {
   const { showToast } = useToast();
   const facilityId = useActiveFacilityId();
+  const staffId = useCurrentStaffId();
   const queryClient = useQueryClient();
 
   return useMutation<SetMyPresenceResponse, AxiosError<ApiErrorResponse>, { note?: string }>({
     mutationFn: async ({ note } = {}) => {
       const response = await axiosInstance.post<SetMyPresenceResponse>('/staff/presence/end', {
         facility_id: facilityId,
+        staff_id: staffId,
         note,
         updated_by: UpdatedBy.STAFF,
       });
       return response.data;
     },
     onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: staffPresenceKeys.myPresence(facilityId) });
+      await queryClient.cancelQueries({ queryKey: staffPresenceKeys.myPresence(facilityId, staffId) });
       await queryClient.cancelQueries({ queryKey: staffPresenceKeys.eligibleForForwarding(facilityId) });
 
-      const previousPresence = queryClient.getQueryData<MyPresenceResponse>(staffPresenceKeys.myPresence(facilityId));
+      const previousPresence = queryClient.getQueryData<MyPresenceResponse>(
+        staffPresenceKeys.myPresence(facilityId, staffId)
+      );
 
       if (previousPresence?.data) {
         const optimisticData: MyPresenceResponse = {
@@ -459,7 +453,7 @@ export const useEndMyPresence = (
           },
         };
 
-        queryClient.setQueryData(staffPresenceKeys.myPresence(facilityId), optimisticData);
+        queryClient.setQueryData(staffPresenceKeys.myPresence(facilityId, staffId), optimisticData);
       }
 
       return { previousPresence };
@@ -468,13 +462,17 @@ export const useEndMyPresence = (
       const successMessage = data.message || 'Presence session ended successfully!';
       showToast('success', successMessage, 5000);
       
-      queryClient.invalidateQueries({ queryKey: staffPresenceKeys.myPresence(facilityId) });
+      // Update cache with real data
+      queryClient.setQueryData(staffPresenceKeys.myPresence(facilityId, staffId), data);
+      
+      // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: staffPresenceKeys.eligibleForForwarding(facilityId) });
       queryClient.invalidateQueries({ queryKey: staffPresenceKeys.facilityPresence(facilityId) });
       
       callbacks.onSuccess?.(data);
     },
     onError: (error) => {
+
       const apiMessage = error.response?.data?.message || error.message || 'Failed to end presence session.';
       showToast('error', apiMessage, 8000);
       callbacks.onError?.(error);
@@ -488,18 +486,6 @@ export const useEndMyPresence = (
  * 
  * @param callbacks - Optional onSuccess and onError callbacks
  * @returns Mutation object with mutate function and state
- * 
- * @example
- * // Admin updating another staff's presence
- * const { mutate } = useUpdateStaffPresence();
- * 
- * mutate({
- *   staff_id: 456,
- *   facility_id: 1,
- *   status: 'busy',
- *   note: 'In emergency surgery',
- *   updated_by: 'admin'
- * });
  */
 export const useUpdateStaffPresence = (
   callbacks: MutationCallbacks<SetMyPresenceResponse, AxiosError<ApiErrorResponse>> = {}
@@ -516,13 +502,17 @@ export const useUpdateStaffPresence = (
       const successMessage = data.message || 'Staff presence updated successfully!';
       showToast('success', successMessage, 5000);
       
-      // Invalidate queries for the affected facility
+      // Invalidate queries for the affected facility and staff
       const facilityId = data.data?.facility_id;
+      const staffId = data.data?.staff_id;
+      
       if (facilityId) {
         queryClient.invalidateQueries({ queryKey: staffPresenceKeys.eligibleForForwarding(facilityId) });
         queryClient.invalidateQueries({ queryKey: staffPresenceKeys.facilityPresence(facilityId) });
-        if (data.data.staff_id) {
-          queryClient.invalidateQueries({ queryKey: staffPresenceKeys.staffHistory(data.data.staff_id) });
+        
+        if (staffId) {
+          queryClient.invalidateQueries({ queryKey: staffPresenceKeys.staffHistory(staffId, facilityId) });
+          queryClient.invalidateQueries({ queryKey: staffPresenceKeys.myPresence(facilityId, staffId) });
         }
       }
       
@@ -587,27 +577,6 @@ export const isEligibleForForwarding = (presence: StaffPresence | null): boolean
 };
 
 /**
- * Determines if a presence status is eligible for forwarding.
- */
-export const isEligibleForForwardingStatus = (status: StaffPresenceStatus | string): boolean => {
-  return status === StaffPresenceStatus.ON_DUTY || status === StaffPresenceStatus.BUSY;
-};
-
-/**
- * Gets the display label for a presence status.
- */
-export const getStatusLabel = (status: string): string => {
-  const labels: Record<string, string> = {
-    [StaffPresenceStatus.OFF_DUTY]: 'Off Duty',
-    [StaffPresenceStatus.ON_DUTY]: 'On Duty',
-    [StaffPresenceStatus.ON_BREAK]: 'On Break',
-    [StaffPresenceStatus.BUSY]: 'Busy',
-    [StaffPresenceStatus.UNAVAILABLE]: 'Unavailable',
-  };
-  return labels[status] || status;
-};
-
-/**
  * Gets the color for a presence status (for UI indicators).
  */
 export const getStatusColor = (status: string): string => {
@@ -667,7 +636,7 @@ export const formatPresenceDuration = (minutes: number | null): string => {
  * Checks if a presence session is currently active.
  */
 export const isPresenceActive = (presence: StaffPresence | null | undefined): boolean => {
-  return !!presence && presence.is_active;
+  return !!presence && !presence.ended_at;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -677,21 +646,11 @@ export const isPresenceActive = (presence: StaffPresence | null | undefined): bo
 /**
  * Hook to manage staff presence state and operations.
  * Provides a simplified interface for common presence operations.
- * 
- * @example
- * const {
- *   currentPresence,
- *   isLoading,
- *   isOnDuty,
- *   setOnDuty,
- *   setOnBreak,
- *   setBusy,
- *   endPresence,
- *   error
- * } = useStaffPresence();
  */
 export const useStaffPresence = () => {
   const facilityId = useActiveFacilityId();
+  const staffId = useCurrentStaffId();
+  
   const {
     data: presenceData,
     isLoading,
@@ -759,6 +718,7 @@ export const useStaffPresence = () => {
     
     // Context
     facilityId,
+    staffId,
   };
 };
 
