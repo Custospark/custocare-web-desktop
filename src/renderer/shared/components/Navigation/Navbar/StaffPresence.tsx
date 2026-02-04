@@ -70,57 +70,58 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({ isDark, className }) => {
   const currentStatusLabel = currentPresence?.status_label || getStatusDisplay(currentStatus);
   
   const presenceOptions: PresenceOption[] = React.useMemo(() => [
-    {
-      id: StaffPresenceStatus.ON_DUTY,
-      label: 'On Duty',
-      description: 'Available for assignments',
-      icon: <Activity className="w-3.5 h-3.5" />,
-      ringColor: isDark ? 'ring-emerald-500/60' : 'ring-emerald-600/70',
-      bgColor: isDark ? 'bg-emerald-500/15' : 'bg-emerald-50',
-      textColor: isDark ? 'text-emerald-400' : 'text-emerald-700',
-      hoverBg: isDark ? 'hover:bg-emerald-500/10' : 'hover:bg-emerald-100/70'
-    },
-    {
-      id: StaffPresenceStatus.BUSY,
-      label: 'Busy',
-      description: 'Occupied, limited availability',
-      icon: <Zap className="w-3.5 h-3.5" />,
-      ringColor: isDark ? 'ring-orange-500/60' : 'ring-orange-600/70',
-      bgColor: isDark ? 'bg-orange-500/15' : 'bg-orange-50',
-      textColor: isDark ? 'text-orange-400' : 'text-orange-700',
-      hoverBg: isDark ? 'hover:bg-orange-500/10' : 'hover:bg-orange-100/70'
-    },
-    {
-      id: StaffPresenceStatus.ON_BREAK,
-      label: 'On Break',
-      description: 'Taking break, back soon',
-      icon: <Coffee className="w-3.5 h-3.5" />,
-      ringColor: isDark ? 'ring-blue-500/60' : 'ring-blue-600/70',
-      bgColor: isDark ? 'bg-blue-500/15' : 'bg-blue-50',
-      textColor: isDark ? 'text-blue-400' : 'text-blue-700',
-      hoverBg: isDark ? 'hover:bg-blue-500/10' : 'hover:bg-blue-100/70'
-    },
-    {
-      id: StaffPresenceStatus.UNAVAILABLE,
-      label: 'Unavailable',
-      description: 'Out of office or meeting',
-      icon: <Clock className="w-3.5 h-3.5" />,
-      ringColor: isDark ? 'ring-purple-500/60' : 'ring-purple-600/70',
-      bgColor: isDark ? 'bg-purple-500/15' : 'bg-purple-50',
-      textColor: isDark ? 'text-purple-400' : 'text-purple-700',
-      hoverBg: isDark ? 'hover:bg-purple-500/10' : 'hover:bg-purple-100/70'
-    },
-    {
-      id: StaffPresenceStatus.OFF_DUTY,
-      label: 'Off Duty',
-      description: 'Shift ended',
-      icon: <LogOut className="w-3.5 h-3.5" />,
-      ringColor: isDark ? 'ring-gray-500/50' : 'ring-gray-400/60',
-      bgColor: isDark ? 'bg-gray-500/10' : 'bg-gray-100',
-      textColor: isDark ? 'text-gray-400' : 'text-gray-600',
-      hoverBg: isDark ? 'hover:bg-gray-500/5' : 'hover:bg-gray-200/70'
-    }
-  ], [isDark]);
+  {
+    id: StaffPresenceStatus.ON_DUTY,
+    label: 'On Duty',
+    description: 'You will receive patients',
+    icon: <Activity className="w-3.5 h-3.5" />,
+    ringColor: isDark ? 'ring-emerald-500/60' : 'ring-emerald-600/70',
+    bgColor: isDark ? 'bg-emerald-500/15' : 'bg-emerald-50',
+    textColor: isDark ? 'text-emerald-400' : 'text-emerald-700',
+    hoverBg: isDark ? 'hover:bg-emerald-500/10' : 'hover:bg-emerald-100/70'
+  },
+  {
+    id: StaffPresenceStatus.BUSY,
+    label: 'Busy',
+    description: 'You will receive patients (limited)',
+    icon: <Zap className="w-3.5 h-3.5" />,
+    ringColor: isDark ? 'ring-orange-500/60' : 'ring-orange-600/70',
+    bgColor: isDark ? 'bg-orange-500/15' : 'bg-orange-50',
+    textColor: isDark ? 'text-orange-400' : 'text-orange-700',
+    hoverBg: isDark ? 'hover:bg-orange-500/10' : 'hover:bg-orange-100/70'
+  },
+  {
+    id: StaffPresenceStatus.ON_BREAK,
+    label: 'On Break',
+    description: 'You will NOT receive patients',
+    icon: <Coffee className="w-3.5 h-3.5" />,
+    ringColor: isDark ? 'ring-blue-500/60' : 'ring-blue-600/70',
+    bgColor: isDark ? 'bg-blue-500/15' : 'bg-blue-50',
+    textColor: isDark ? 'text-blue-400' : 'text-blue-700',
+    hoverBg: isDark ? 'hover:bg-blue-500/10' : 'hover:bg-blue-100/70'
+  },
+  {
+    id: StaffPresenceStatus.UNAVAILABLE,
+    label: 'Unavailable',
+    description: 'You will NOT receive patients',
+    icon: <Clock className="w-3.5 h-3.5" />,
+    ringColor: isDark ? 'ring-purple-500/60' : 'ring-purple-600/70',
+    bgColor: isDark ? 'bg-purple-500/15' : 'bg-purple-50',
+    textColor: isDark ? 'text-purple-400' : 'text-purple-700',
+    hoverBg: isDark ? 'hover:bg-purple-500/10' : 'hover:bg-purple-100/70'
+  },
+  {
+    id: StaffPresenceStatus.OFF_DUTY,
+    label: 'Off Duty',
+    description: 'You will NOT receive patients',
+    icon: <LogOut className="w-3.5 h-3.5" />,
+    ringColor: isDark ? 'ring-gray-500/50' : 'ring-gray-400/60',
+    bgColor: isDark ? 'bg-gray-500/10' : 'bg-gray-100',
+    textColor: isDark ? 'text-gray-400' : 'text-gray-600',
+    hoverBg: isDark ? 'hover:bg-gray-500/5' : 'hover:bg-gray-200/70'
+  }
+], [isDark]);
+
   
   const getStatusConfig = React.useCallback((status: StaffPresenceStatus): PresenceOption => {
     return presenceOptions.find(opt => opt.id === status) || presenceOptions[4];
@@ -209,6 +210,12 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({ isDark, className }) => {
             isDark ? 'text-gray-100' : 'text-gray-900'
           )}>
             {isLoading ? 'Loading...' : currentStatusLabel}
+          </span>
+            <span className={cn(
+            'text-xs truncate',
+            isDark ? 'text-gray-100' : 'text-gray-900'
+          )}>
+            {isPending ? 'Syncing...' : 'Click to change'}
           </span>
         </div>
         
