@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '../../types/cn';
-import { Navbar } from './Navbar';
+import Navbar from './Navbar/Navbar';
 import StatusBar, { type SidebarPosition,type  SystemStatus, type ThemeMode } from './StatusBar';
 
 export interface LayoutTopBarsThemeClasses {

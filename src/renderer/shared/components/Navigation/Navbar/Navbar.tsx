@@ -1,0 +1,535 @@
+/**
+ * ============================================================================
+ * NAVBAR - MAIN COMPONENT
+ * ============================================================================
+ * 
+ * Refactored into modular components:
+ * - ContextSwitcher: Workspace/capability switching
+ * - SmartSearch: AI-powered search
+ * - NotificationCenter: Notification bell with badge
+ * - QuickActions: Fast access menu
+ * - UserProfileMenu: Profile dropdown
+ */
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Shield, 
+  Sparkles,
+  Moon, 
+  Sun,
+  Heart, 
+  Workflow,
+  Users, 
+  FileText, 
+  Calendar, 
+  TrendingUp,
+  BarChart3,
+  Briefcase, 
+  UserCheck,
+} from 'lucide-react';
+import { cn } from '../../../types/cn';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES, ACCOUNT_ROUTES } from '../../../../app/routes/routeConstants';
+import { logout } from '../../../../app/store/slices/authSlice';
+import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
+import { useToast } from '../../../../app/store/contexts/toast/useToast';
+import { 
+  switchCapability,
+  switchFacility,
+  selectCurrentCapabilityName,
+  selectStaffFacilities,
+  getRoleDisplayName,
+} from '../../../../app/store/slices/activeContextSlice';
+import { useSelector } from 'react-redux';
+import { 
+  getStaffUuid, 
+  isInPatientMode, 
+  isInStaffMode, 
+  getPatientUuid 
+} from '../../../../app/store/utils/contextSelectors';
+
+
+// Import sub-components
+import { SmartSearch } from './SmartSearch';
+import { NotificationCenter } from './NotificationCenter';
+import { QuickActions } from './QuickActions';
+import { UserProfileMenu } from './UserProfileMenu';
+import ContextSwitcher from './ContextSwitcher';
+
+export interface NavbarProps {
+  theme: 'light' | 'dark';
+  onMenuClick?: () => void;
+  onThemeToggle?: () => void;
+  className?: string;
+}
+
+interface ContextOption {
+  id: string;
+  type: 'personal' | 'professional' | 'administrative';
+  capability: string;
+  facilityId?: number;
+  facilityName?: string;
+  roleCode?: string;
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  color: 'blue' | 'purple' | 'rose' | 'amber' | 'emerald' | 'cyan' | 'indigo' | 'teal';
+  isActive: boolean;
+}
+
+interface QuickAction {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  shortcut?: string;
+  badge?: number;
+  color: string;
+  description?: string;
+}
+
+interface SmartSearchItem {
+  id: string;
+  category: string;
+  title: string;
+  path: string;
+  icon: React.ReactNode;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ 
+  theme = 'dark',
+  onThemeToggle,
+  className
+}) => {
+  // ============================================================================
+  // STATE MANAGEMENT
+  // ============================================================================
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
+  const [isSmartSearchOpen, setIsSmartSearchOpen] = useState(false);
+  const [isWorkflowOpen, setIsWorkflowOpen] = useState(false);
+  const [isContextSwitcherOpen, setIsContextSwitcherOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  const inPatientMode = useSelector(isInPatientMode);
+  const inStaffMode = useSelector(isInStaffMode);
+  const staffNumber = useSelector(getStaffUuid);
+  const patientNumber = useSelector(getPatientUuid);
+
+  const isDark = theme === 'dark';
+
+  // ============================================================================
+  // REDUX STATE & SELECTORS
+  // ============================================================================
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+
+  const {
+    user,
+    activeCapability,
+    activeFacilityId,
+    availableCapabilities,
+  } = useAppSelector((state) => state.activeContext);
+
+  const currentCapabilityName = useAppSelector(selectCurrentCapabilityName);
+  const staffFacilities = useAppSelector(selectStaffFacilities);
+
+  // ============================================================================
+  // CONTEXT OPTIONS BUILDER
+  // ============================================================================
+  const allContextOptions = useMemo((): ContextOption[] => {
+    const options: ContextOption[] = [];
+
+    const hasPatient = availableCapabilities.includes('patient');
+    const hasStaff = availableCapabilities.includes('staff');
+    const spatieRoles = availableCapabilities.filter(cap => 
+      cap !== 'patient' && cap !== 'staff'
+    );
+
+    // Personal Space
+    if (hasPatient) {
+      options.push({
+        id: 'patient',
+        type: 'personal',
+        capability: 'patient',
+        title: 'Patient Portal',
+        subtitle: 'My Personal Health Dashboard',
+        icon: <Heart className="w-4 h-4" />,
+        color: 'rose',
+        isActive: activeCapability === 'patient',
+      });
+    }
+
+    if (hasStaff && staffFacilities.length === 0) {
+      options.push({
+        id: 'staff-portal',
+        type: 'personal',
+        capability: 'staff',
+        title: 'Staff Portal',
+        subtitle: 'Invitations & Profile Management',
+        icon: <UserCheck className="w-4 h-4" />,
+        color: 'cyan',
+        isActive: activeCapability === 'staff',
+      });
+    }
+
+    // Professional Workspace
+    if (hasStaff && staffFacilities.length > 0) {
+      staffFacilities.forEach((facility) => {
+        options.push({
+          id: `staff-facility-${facility.facility_id}`,
+          type: 'professional',
+          capability: 'staff',
+          facilityId: facility.facility_id,
+          facilityName: facility.facility_name,
+          roleCode: facility.role_code,
+          title: getRoleDisplayName(facility.role_code),
+          subtitle: facility.facility_name,
+          icon: <Briefcase className="w-4 h-4" />,
+          color: 'blue',
+          isActive: activeCapability === 'staff' && activeFacilityId === facility.facility_id,
+        });
+      });
+    }
+
+    // System Administration
+    spatieRoles.forEach((roleCapability: string) => {
+      options.push({
+        id: `admin-${roleCapability}`,
+        type: 'administrative',
+        capability: roleCapability,
+        title: getRoleDisplayName(roleCapability),
+        subtitle: 'System Administration',
+        icon: <Shield className="w-4 h-4" />,
+        color: 'amber',
+        isActive: activeCapability === roleCapability,
+      });
+    });
+
+    return options;
+  }, [
+    availableCapabilities,
+    staffFacilities,
+    activeCapability,
+    activeFacilityId,
+  ]);
+
+  const groupedContextOptions = useMemo(() => {
+    const groups = {
+      personal: [] as ContextOption[],
+      professional: [] as ContextOption[],
+      administrative: [] as ContextOption[],
+    };
+
+    allContextOptions.forEach((option) => {
+      groups[option.type].push(option);
+    });
+
+    return groups;
+  }, [allContextOptions]);
+
+  const activeContextOption = useMemo(() => {
+    return allContextOptions.find(opt => opt.isActive) || allContextOptions[0];
+  }, [allContextOptions]);
+
+  // ============================================================================
+  // MOCK DATA
+  // ============================================================================
+  const quickActions: QuickAction[] = [
+    { 
+      id: 'patients', 
+      label: 'Patients', 
+      icon: <Users className="w-4 h-4" />, 
+      badge: 12, 
+      color: 'blue',
+      description: 'Manage patient records',
+      shortcut: '⌘P'
+    },
+    { 
+      id: 'reports', 
+      label: 'Reports', 
+      icon: <FileText className="w-4 h-4" />, 
+      badge: 5, 
+      color: 'purple',
+      description: 'Generate & view reports',
+      shortcut: '⌘R'
+    },
+    { 
+      id: 'appointments', 
+      label: 'Appointments', 
+      icon: <Calendar className="w-4 h-4" />, 
+      badge: 8, 
+      color: 'emerald',
+      description: 'Schedule management',
+      shortcut: '⌘A'
+    },
+    { 
+      id: 'analytics', 
+      label: 'Analytics', 
+      icon: <TrendingUp className="w-4 h-4" />, 
+      color: 'amber',
+      description: 'View insights & trends',
+      shortcut: '⌘L'
+    },
+  ];
+
+  const smartSearchItems: SmartSearchItem[] = [
+    { id: '1', category: 'Patients', title: 'Sarah Johnson - Ward 3B', path: '/patients/101', icon: <Users className="w-4 h-4" /> },
+    { id: '2', category: 'Reports', title: 'Monthly Analytics Report', path: '/reports/monthly', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: '3', category: 'Appointments', title: 'Surgery Schedule - Dr. Martinez', path: '/appointments/surgery', icon: <Calendar className="w-4 h-4" /> },
+  ];
+
+ 
+
+  const unreadCount = 3;
+
+  // ============================================================================
+  // EFFECTS
+  // ============================================================================
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSmartSearchOpen(true);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
+        e.preventDefault();
+        setIsContextSwitcherOpen(true);
+      }
+      if (e.key === 'Escape') {
+        setIsContextSwitcherOpen(false);
+        setIsSmartSearchOpen(false);
+        setIsNotificationsOpen(false);
+        setIsUserDropdownOpen(false);
+        setIsQuickActionsOpen(false);
+        setIsWorkflowOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // ============================================================================
+  // EVENT HANDLERS
+  // ============================================================================
+  const handleLogout = () => {
+    dispatch(logout());
+    showToast(
+      'info',
+      "You've been logged out successfully. Thank you for using Custocare AI — see you again soon!",
+      5000
+    );
+    navigate(ROUTES.HOME);
+  };
+
+  const handleNotification = () => {
+    navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
+  };
+
+  const handleContextSwitch = (option: ContextOption) => {
+    try {
+      setIsContextSwitcherOpen(false);
+
+      if (option.isActive) {
+        showToast('info', `Already in ${option.title}`, 2000);
+        return;
+      }
+
+      switch (option.type) {
+        case 'personal':
+          dispatch(switchCapability(option.capability));
+          if (inPatientMode) {
+            navigate(ROUTES.PATIENT_DASHBOARD);
+          }
+          showToast('success', `Switched to ${option.title}`, 3000);
+          break;
+
+        case 'professional':
+          if (option.facilityId) {
+            if (activeCapability !== 'staff') {
+              dispatch(switchCapability('staff'));
+            }
+            dispatch(switchFacility(option.facilityId));
+            showToast(
+              'success', 
+              `Switched to ${option.title} at ${option.facilityName}`, 
+              3000
+            );
+          }
+          break;
+
+        case 'administrative':
+          dispatch(switchCapability(option.capability));
+          showToast('success', `Switched to ${option.title}`, 3000);
+          break;
+
+        default:
+          console.warn('Unknown context option type:', option);
+      }
+    } catch (error) {
+      console.error('Error switching context:', error);
+      showToast('error', 'Failed to switch workspace. Please try again.', 4000);
+    }
+  };
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
+  return (
+    <nav className={cn('flex items-center justify-between gap-2 sm:gap-4 px-4 py-3', className)}>
+      {/* LEFT: BRAND */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="w-8 sm:ms-4 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20">
+          <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+        </div>
+        
+        <div className="hidden md:block">
+          <div className="flex items-center gap-2">
+            <span className={cn(
+              'text-base sm:text-lg font-bold bg-gradient-to-r bg-clip-text text-transparent',
+              isDark ? 'from-white to-gray-300' : 'from-gray-900 to-gray-700'
+            )}>
+              Custocare AI
+            </span>
+            <span className={cn(
+              'px-2 py-0.5 text-xs font-bold rounded-full border',
+              isDark 
+                ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-cyan-300 border-cyan-500/30' 
+                : 'bg-gradient-to-r from-blue-100 to-cyan-50 text-blue-700 border-blue-300'
+            )}>
+              <Sparkles className="w-3 h-3 inline mr-1" />
+              Pro
+            </span>
+          </div>
+          <p className={cn(
+            'text-xs mt-0.5',
+            isDark ? 'text-gray-500' : 'text-gray-600'
+          )}>
+            AI Powered Health Management System
+          </p>
+        </div>
+      </div>
+
+      {/* RIGHT: ACTION BUTTONS */}
+      <div className="flex items-center gap-3 sm:gap-3">
+        {/* Context Switcher */}
+        {allContextOptions.length > 0 && (
+          <ContextSwitcher
+            isOpen={isContextSwitcherOpen}
+            onToggle={() => setIsContextSwitcherOpen(!isContextSwitcherOpen)}
+            activeContextOption={activeContextOption}
+            groupedContextOptions={groupedContextOptions}
+            allContextOptions={allContextOptions}
+            userName={user?.full_name || 'User'}
+            isDark={isDark}
+            isMobile={isMobile}
+            onContextSwitch={handleContextSwitch}
+          />
+        )}
+
+        {/* Smart Search */}
+        <SmartSearch
+          isOpen={isSmartSearchOpen}
+          onToggle={() => setIsSmartSearchOpen(!isSmartSearchOpen)}
+          isDark={isDark}
+          isMobile={isMobile}
+          searchItems={smartSearchItems}
+        />
+
+        {/* Workflow Automation (Desktop only) */}
+        <div className="relative hidden lg:block">
+          <button
+            onClick={() => setIsWorkflowOpen(!isWorkflowOpen)}
+            className={cn(
+              'p-2 rounded-lg transition-all duration-300 hover:scale-105',
+              isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+            )}
+            title="Workflow automation"
+          >
+            <Workflow className={cn(
+              'w-5 h-5 transition-colors',
+              isWorkflowOpen 
+                ? (isDark ? 'text-cyan-400' : 'text-blue-500') 
+                : (isDark ? 'text-gray-400' : 'text-gray-600')
+            )} />
+          </button>
+        </div>
+
+        {/* Quick Actions */}
+        <QuickActions
+          isOpen={isQuickActionsOpen}
+          onToggle={() => setIsQuickActionsOpen(!isQuickActionsOpen)}
+          isDark={isDark}
+          isMobile={isMobile}
+          actions={quickActions}
+        />
+
+        {/* Activity Indicator (Desktop only) */}
+        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800">
+          <div className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </div>
+          <span className={cn(
+            'text-xs font-medium',
+            isDark ? 'text-gray-400' : 'text-gray-600'
+          )}>
+            Active
+          </span>
+        </div>
+
+        {/* Theme Toggle */}
+        <button
+          onClick={onThemeToggle}
+          className={cn(
+            'p-2 rounded-lg transition-all duration-300 hover:scale-105 hidden sm:block cursor-pointer',
+            isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+          )}
+          title="Toggle theme"
+        >
+          {isDark ? (
+            <Sun className="w-5 h-5 text-amber-400" />
+          ) : (
+            <Moon className="w-5 h-5 text-indigo-600" />
+          )}
+        </button>
+
+        {/* Notifications */}
+        <NotificationCenter
+          unreadCount={unreadCount}
+          isOpen={isNotificationsOpen}
+          isDark={isDark}
+          onNotificationClick={handleNotification}
+        />
+
+        {/* User Profile */}
+        <UserProfileMenu
+          isOpen={isUserDropdownOpen}
+          onToggle={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+          isDark={isDark}
+          isMobile={isMobile}
+          userName={user?.first_name}
+        userEmail={user?.email ?? undefined}
+          currentCapabilityName={currentCapabilityName}
+          inStaffMode={inStaffMode}
+          inPatientMode={inPatientMode}
+          staffNumber={staffNumber ?? undefined}
+          patientNumber={patientNumber ?? undefined}
+          onLogout={handleLogout}
+          onNavigate={(route) => navigate(route)}
+        />
+      </div>
+    </nav>
+  );
+};
+
+export default React.memo(Navbar);
