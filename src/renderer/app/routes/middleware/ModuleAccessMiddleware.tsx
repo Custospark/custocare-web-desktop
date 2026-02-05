@@ -14,6 +14,7 @@
  * - Theme-aware UI components
  * - Support for both BrowserRouter and HashRouter
  * - Detailed access denied screens with support information
+ * - ✅ COMPLETELY BYPASSED for account routes
  * 
  * @component ModuleAccessMiddleware
  */
@@ -43,10 +44,11 @@ interface RouteAccessCheck {
   requiredModuleCode: string | null;
   moduleName: string;
   isRestricted: boolean;
+  isAccountRoute: boolean;
 }
 
 interface AccessState {
-  status: 'checking' | 'granted' | 'denied' | 'redirecting';
+  status: 'checking' | 'granted' | 'denied' | 'redirecting' | 'bypassed';
   message?: string;
   redirectTo?: string;
 }
@@ -72,6 +74,7 @@ const MODULE_ACCESS_CONFIG: readonly ModuleAccessConfig[] = [
 
 /**
  * Routes that are always accessible regardless of permissions
+ * Account routes should COMPLETELY bypass the middleware
  */
 const UNRESTRICTED_ROUTES: readonly string[] = [
   ROUTES.DASHBOARD,
@@ -80,6 +83,18 @@ const UNRESTRICTED_ROUTES: readonly string[] = [
   '/onboarding',
   '/settings',
   '/profile',
+  '/auth',
+  '/login',
+  '/logout',
+  '/error',
+  '/404',
+] as const;
+
+/**
+ * Routes that COMPLETELY bypass middleware (immediate render)
+ */
+const BYPASS_ROUTES: readonly string[] = [
+  ROUTES.ACCOUNT,
   '/auth',
   '/login',
   '/logout',
@@ -155,6 +170,22 @@ const extractBasePath = (pathname: string): string => {
 };
 
 /**
+ * Checks if a path should completely bypass middleware
+ * Returns true for account routes and auth routes
+ */
+const shouldBypassMiddleware = (pathname: string): boolean => {
+  const normalized = normalizePath(pathname);
+  const basePath = extractBasePath(normalized);
+  
+  return BYPASS_ROUTES.some(route => {
+    const normalizedRoute = normalizePath(route);
+    return normalized === normalizedRoute || 
+           normalized.startsWith(`${normalizedRoute}/`) ||
+           basePath === normalizedRoute;
+  });
+};
+
+/**
  * Checks if a path is unrestricted (always accessible)
  */
 const isUnrestrictedRoute = (pathname: string): boolean => {
@@ -187,18 +218,33 @@ const isPatientAccessibleRoute = (pathname: string): boolean => {
  */
 const analyzeRouteAccess = (pathname: string): RouteAccessCheck => {
   const normalized = normalizePath(pathname);
+  const basePath = extractBasePath(normalized);
   
-  // Check if route is unrestricted
+  // Check if this is an account route
+  const isAccountRoute = basePath === ROUTES.ACCOUNT || normalized.startsWith(`${ROUTES.ACCOUNT}/`);
+  
+  // If it's a bypass route (like account), return early with bypass flag
+  if (shouldBypassMiddleware(normalized)) {
+    return {
+      requiresValidation: false,
+      requiredModuleCode: null,
+      moduleName: '',
+      isRestricted: false,
+      isAccountRoute,
+    };
+  }
+  
+  // Check if route is unrestricted (but not a bypass route)
   if (isUnrestrictedRoute(normalized)) {
     return {
       requiresValidation: false,
       requiredModuleCode: null,
       moduleName: '',
       isRestricted: false,
+      isAccountRoute,
     };
   }
   
-  const basePath = extractBasePath(normalized);
   const requiredModuleCode = ROUTE_TO_MODULE_MAP[basePath] || null;
   const moduleName = requiredModuleCode 
     ? MODULE_CODE_TO_DISPLAY_NAME[requiredModuleCode] || formatModuleName(requiredModuleCode)
@@ -209,6 +255,7 @@ const analyzeRouteAccess = (pathname: string): RouteAccessCheck => {
     requiredModuleCode,
     moduleName,
     isRestricted: requiredModuleCode !== null,
+    isAccountRoute,
   };
 };
 
@@ -395,6 +442,11 @@ export const ModuleAccessMiddleware: React.FC = () => {
     return validateModuleAccess(accessibleModuleCodes, routeAnalysis.requiredModuleCode);
   }, [routeAnalysis, accessibleModuleCodes]);
   
+  // ✅ EARLY BYPASS: If this is an account route, immediately render the outlet
+  const shouldBypass = useMemo(() => {
+    return shouldBypassMiddleware(currentPath);
+  }, [currentPath]);
+  
   // Handle navigation to dashboard
   const handleNavigateHome = useCallback(() => {
     const targetRoute = isPatientMode ? ROUTES.PATIENT_DASHBOARD : ROUTES.DASHBOARD;
@@ -469,6 +521,14 @@ export const ModuleAccessMiddleware: React.FC = () => {
   
   // Effect to trigger access check when path or dependencies change
   useEffect(() => {
+    // If this is a bypass route, skip all checks
+    if (shouldBypass) {
+      const rafId = requestAnimationFrame(() => {
+        setAccessState({ status: 'bypassed' });
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+    
     // Schedule the access check on next animation frame
     const rafId = requestAnimationFrame(() => {
       performAccessCheck();
@@ -480,7 +540,7 @@ export const ModuleAccessMiddleware: React.FC = () => {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [performAccessCheck, currentPath]);
+  }, [performAccessCheck, currentPath, shouldBypass]);
   
   // Reset redirecting flag when path changes
   useEffect(() => {
@@ -493,8 +553,11 @@ export const ModuleAccessMiddleware: React.FC = () => {
   useEffect(() => {
     if (currentPath !== lastCheckedPathRef.current) {
       console.log('[ModuleAccess] Route changed:', currentPath);
+      if (shouldBypass) {
+        console.log('[ModuleAccess] Bypassing middleware for:', currentPath);
+      }
     }
-  }, [currentPath]);
+  }, [currentPath, shouldBypass]);
   
   // Cleanup on unmount
   useEffect(() => {
@@ -512,6 +575,12 @@ export const ModuleAccessMiddleware: React.FC = () => {
       console.log('[ModuleAccess] In redirect state, target:', accessState.redirectTo);
     }
   }, [accessState.status, accessState.redirectTo]);
+  
+  // ✅ IMMEDIATE BYPASS RENDER: If this is an account/auth route, render immediately
+  if (shouldBypass) {
+    console.log('[ModuleAccess] Bypassing middleware for route:', currentPath);
+    return <Outlet />;
+  }
   
   // Render loading state
   if (accessState.status === 'checking' || accessState.status === 'redirecting') {
