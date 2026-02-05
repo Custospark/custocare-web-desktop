@@ -7,6 +7,7 @@ import {
   selectAccessibleModuleCodes,
 } from '../../app/store/slices/activeContextSlice';
 import LoadingSkeleton from '../components/Loading/LoadingSkeletons';
+import { isInPatientMode } from '../../app/store/utils/contextSelectors'; // Import the selector
 
 /**
  * Dashboard Component - Redirect to first accessible module
@@ -42,9 +43,24 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const theme = useSelector((state: RootState) => state.ui.theme);
   const accessibleModuleCodes = useSelector(selectAccessibleModuleCodes);
+  const isPatientMode = useSelector(isInPatientMode); // Get patient mode status
   
-  // Find first accessible module in priority order
+  // ✅ Check if user is in patient mode
+  useEffect(() => {
+    if (isPatientMode) {
+      console.log('[Dashboard] Patient mode detected, redirecting to patient dashboard');
+      navigate(ROUTES.PATIENT_DASHBOARD, { replace: true });
+      return;
+    }
+  }, [isPatientMode, navigate]);
+  
+  // Find first accessible module in priority order (only for staff mode)
   const getTargetModule = () => {
+    // Skip priority logic if in patient mode (should have already redirected)
+    if (isPatientMode) {
+      return 'patient_dashboard';
+    }
+    
     for (const moduleCode of MODULE_PRIORITY) {
       if (accessibleModuleCodes.includes(moduleCode)) {
         return moduleCode;
@@ -72,6 +88,11 @@ export const Dashboard: React.FC = () => {
   const loadingMessage = loadingMessages[targetModule] || 'Loading workspace...';
   
   useEffect(() => {
+    // Skip redirection timer if in patient mode (already redirected)
+    if (isPatientMode) {
+      return;
+    }
+    
     const redirectTimer = setTimeout(() => {
       console.log(`Redirecting to: ${targetRoute} (module: ${targetModule})`);
       console.log(`All accessible modules: ${accessibleModuleCodes.join(', ')}`);
@@ -79,7 +100,21 @@ export const Dashboard: React.FC = () => {
     }, 800);
     
     return () => clearTimeout(redirectTimer);
-  }, [targetRoute, navigate, accessibleModuleCodes, targetModule]);
+  }, [targetRoute, navigate, accessibleModuleCodes, targetModule, isPatientMode]);
+  
+  // Show different loading message for patient mode (though they should redirect immediately)
+  if (isPatientMode) {
+    return (
+      <div className="min-h-screen">
+        <LoadingSkeleton
+          variant="dashboard"
+          message="Loading patient dashboard..."
+          theme={theme}
+          className="h-screen"
+        />
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen">
