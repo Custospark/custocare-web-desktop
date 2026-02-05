@@ -245,11 +245,13 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
               </h1>
             )}
           </div>
-
           <button
             onClick={() => setMobileOpen((p) => !p)}
             className={cn(
-              'flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl',
+              // 👇 mobile-first top spacing
+              'flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl mt-3',
+              // optional: slightly less margin on larger screens
+              'sm:mt-3 md:mt-2',
               'transition-all duration-200',
               'focus:outline-none focus:ring-2 focus:ring-offset-0',
               theme === 'dark'
@@ -266,12 +268,22 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
               Actions
             </span>
           </button>
+
         </div>
       )}
 
       {/* Desktop layout: sidebar + content in separate containers */}
       <div className="flex-1 min-h-0">
-        <div className={cn('h-full min-h-0 px-4 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6')}>
+          <div
+            className={cn(
+              // Mobile
+              'h-full min-h-0 px-2 py-2',
+              // Small / tablet
+              'sm:px-3 sm:py-3',
+              // Desktop (tighter than before)
+              'lg:px-4 lg:py-4'
+            )}
+          >
           {/* Reduced spacing between content and sidebar (requirement #4) */}
           <div className="h-full min-h-0 flex gap-3">
             {/* Desktop: dock left */}

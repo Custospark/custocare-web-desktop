@@ -372,19 +372,49 @@ export const Layout: React.FC = () => {
           />
         </aside>
 
-        {/* Content */}
-        <div className={cn('min-h-screen flex flex-col', 'transition-all duration-300 ease-in-out', positionClasses.contentMargin)}>
+            {/* Content */}
+        <div
+          className={cn(
+            'min-h-screen flex flex-col',
+            'transition-all duration-300 ease-in-out',
+            positionClasses.contentMargin
+          )}
+        >
           <main className="flex-1">
-            <div className={cn('px-4 sm:px-2 lg:px-1 py-1 mt-4', 'min-h-[calc(100vh-11rem)]', themeClasses.contentArea)}>
+            <div
+              className={cn(
+                //  tighter margins on mobile
+                'px-1 py-1 mt-4',
+                // small phones
+                'sm:px-2 sm:py-2 sm:mt-3',
+                // desktop
+                'md:px-3 md:py-3 md:mt-4',
+                'min-h-[calc(100vh-11rem)]',
+                themeClasses.contentArea
+              )}
+            >
               <Outlet />
             </div>
           </main>
 
           {/* Footer */}
-          <footer className={cn('border-t backdrop-blur-xl', 'transition-colors duration-300', themeClasses.glass)}>
-            <Footer theme={theme} showContact={true} showSocial={true} showCopyright={true} compact={true} />
+          <footer
+            className={cn(
+              'border-t backdrop-blur-xl',
+              'transition-colors duration-300',
+              themeClasses.glass
+            )}
+          >
+            <Footer
+              theme={theme}
+              showContact={true}
+              showSocial={true}
+              showCopyright={true}
+              compact={true}
+            />
           </footer>
         </div>
+
       </div>
 
       {/* Decorative */}

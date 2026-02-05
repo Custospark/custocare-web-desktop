@@ -7,11 +7,6 @@ export interface LayoutMainContentProps {
   scrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
-/**
- * MainContent:
- * - Scrolls independently (requirement #3)
- * - Stable padding/spacing regardless of dock side
- */
 export const LayoutMainContent: React.FC<LayoutMainContentProps> = ({
   children,
   className,
@@ -21,7 +16,8 @@ export const LayoutMainContent: React.FC<LayoutMainContentProps> = ({
     <section
       className={cn(
         'flex-1 min-w-0 min-h-0',
-        'rounded-2xl overflow-hidden',
+        // tighter corners on mobile
+        'rounded-lg sm:rounded-xl md:rounded-2xl overflow-hidden',
         className
       )}
       aria-label="Main content"
@@ -30,9 +26,9 @@ export const LayoutMainContent: React.FC<LayoutMainContentProps> = ({
         ref={scrollRef as React.RefObject<HTMLDivElement>}
         className={cn(
           'main-content-area',
-          'h-full w-full overflow-auto',
-          'px-4 py-4 sm:px-5 sm:py-5 lg:px-4 lg:py-4', // slightly reduced spacing
-          'scroll-smooth'
+          'h-full w-full overflow-auto scroll-smooth',
+          // 🔥 very tight on mobile
+          'px-1 py-1 sm:px-2 sm:py-2 md:px-4 md:py-4'
         )}
       >
         {children}
