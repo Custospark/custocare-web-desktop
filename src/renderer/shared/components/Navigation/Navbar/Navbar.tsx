@@ -212,12 +212,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleLogout = () => {
     dispatch(logout());
+    navigate(ROUTES.LANDING);
     showToast(
       'info',
       "You've been logged out successfully. Thank you for using Custocare AI — see you again soon!",
       5000
     );
-    navigate(ROUTES.HOME);
   };
 
   const handleNotification = () => navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
