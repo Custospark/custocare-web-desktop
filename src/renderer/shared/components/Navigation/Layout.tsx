@@ -133,24 +133,24 @@ export const Layout: React.FC = () => {
   }, [localState.sidebarPosition, sidebarOpen]);
 
   const positionClasses = useMemo(() => {
-    const isLeft = localState.sidebarPosition === 'left';
+  const isLeft = localState.sidebarPosition === 'left';
 
-    return {
-      sidebarPosition: isLeft ? 'left-0' : 'right-0',
-      sidebarBorder: isLeft ? 'border-r' : 'border-l',
-      sidebarWidth: sidebarOpen ? 'lg:w-80' : 'lg:w-20',
-      sidebarTransformMobile: localState.mobileSidebarOpen
-        ? 'translate-x-0'
-        : isLeft
-          ? '-translate-x-full'
-          : 'translate-x-full',
-      contentMargin: isLeft ? (sidebarOpen ? 'lg:ml-80' : 'lg:ml-20') : (sidebarOpen ? 'lg:mr-80' : 'lg:mr-20'),
-      navbarPosition: isLeft
-        ? (sidebarOpen ? 'left-0 lg:left-80' : 'left-0 lg:left-20')
-        : (sidebarOpen ? 'right-0 lg:right-80' : 'right-0 lg:right-20'),
-      navbarFull: isLeft ? 'right-0' : 'left-0',
-    };
-  }, [localState.sidebarPosition, sidebarOpen, localState.mobileSidebarOpen]);
+  return {
+    sidebarPosition: isLeft ? 'left-0' : 'right-0',
+    sidebarBorder: isLeft ? 'border-r' : 'border-l',
+    sidebarWidth: sidebarOpen ? 'lg:w-70' : 'lg:w-20', // Changed from lg:w-72 to lg:w-70 (280px)
+    sidebarTransformMobile: localState.mobileSidebarOpen
+      ? 'translate-x-0'
+      : isLeft
+        ? '-translate-x-full'
+        : 'translate-x-full',
+    contentMargin: isLeft ? (sidebarOpen ? 'lg:ml-70' : 'lg:ml-20') : (sidebarOpen ? 'lg:mr-70' : 'lg:mr-20'), // Updated to lg:ml-70/lg:mr-70
+    navbarPosition: isLeft
+      ? (sidebarOpen ? 'left-0 lg:left-70' : 'left-0 lg:left-20') // Updated to lg:left-70
+      : (sidebarOpen ? 'right-0 lg:right-70' : 'right-0 lg:right-20'), // Updated to lg:right-70
+    navbarFull: isLeft ? 'right-0' : 'left-0',
+  };
+}, [localState.sidebarPosition, sidebarOpen, localState.mobileSidebarOpen]);
 
   const topPaddingPx = useMemo(() => {
     // On desktop, can hide/show the full top bars (status+navbar)

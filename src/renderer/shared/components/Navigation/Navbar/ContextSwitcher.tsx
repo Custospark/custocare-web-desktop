@@ -18,6 +18,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { cn } from '../../../utils/classNameUtils';
+import { getRoleDisplayName as formatName } from '../../../utils/facilityRoleFormator';
 interface ContextOption {
   id: string;
   type: 'personal' | 'professional' | 'administrative';
@@ -222,13 +223,13 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
         <div className="hidden lg:block text-left">
           <p className={cn(
             'text-xs font-semibold leading-tight',
-            isDark ? 'text-gray-200' : 'text-gray-900'
+            isDark ? 'text-gray-100' : 'text-gray-900'
           )}>
-            {activeContextOption.title}
+            {formatName(activeContextOption.title)}
           </p>
           <p className={cn(
-            'text-xs leading-tight',
-            isDark ? 'text-gray-500' : 'text-gray-600'
+            'text-xs leading-tight text-center',
+            isDark ? 'text-gray-100' : 'text-gray-900'
           )}>
             {activeContextOption.subtitle}
           </p>

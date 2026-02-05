@@ -263,7 +263,7 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
             {topLineText}
           </span>
           {/* ✅ BOTTOM LINE: "Syncing..." when syncing, otherwise "My Room" */}
-          <span className={cn('text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-600')}>
+          <span className={cn('text-xs truncate', isDark ? 'text-gray-100' : 'text-gray-900')}>
             {bottomLineText}
           </span>
         </div>
