@@ -34,6 +34,7 @@ import {
   selectStaffFacilities,
   getRoleDisplayName,
 } from '../../../../app/store/slices/activeContextSlice';
+import LogoImage from '../../../assets/LogoImage';
 import { useSelector } from 'react-redux';
 import {
   getStaffUuid,
@@ -280,10 +281,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 >
   {/* LEFT: BRAND (desktop only) */}
   <div className="hidden md:flex items-center gap-2 sm:gap-3 shrink-0">
-    <div className="w-8 sm:ms-4 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20 cursor-pointer">
-      <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-    </div>
-
+  <LogoImage/>
     <div className="hidden md:block">
       <div className="flex items-center gap-2">
         <span

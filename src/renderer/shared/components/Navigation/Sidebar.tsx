@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Users,
-  Shield,
   Bell,
   Stethoscope,
   HeartPulse,
@@ -30,6 +29,7 @@ import { FaRegCreditCard } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import { getPatientUuid, getStaffUuid, isInPatientMode, isInStaffMode } from '../../../app/store/utils/contextSelectors';
 import { getRoleDisplayName as formatName } from '../../utils/facilityRoleFormator';
+import LogoImage from '../../assets/LogoImage';
 
 interface MenuItem {
   id: string;
@@ -497,10 +497,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
               collapsed && 'justify-center'
             )}
           >
-            <div className="w-11 h-11 bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shrink-0">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-
+              <LogoImage></LogoImage>
             {/* Text only renders when expanded */}
             {!collapsed && (
               <div className="min-w-0">

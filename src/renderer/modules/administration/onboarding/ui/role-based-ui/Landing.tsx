@@ -29,6 +29,7 @@ import { itemVariants} from '../../../../../shared/components/animations/motionV
 import { cardHoverVariants} from '../../../../../shared/components/animations/motionVariants'
 import { floatingVariants} from '../../../../../shared/components/animations/motionVariants'
 import TrustBadges from '../shared/TrustBadges'
+import LogoImage from '../../../../../shared/assets/LogoImage';
 
 /* ==========================================================================
    PROFESSIONAL HEALTHCARE IMAGES
@@ -145,14 +146,10 @@ export const Landing: React.FC = () => {
               transition={{ duration: 0.6, ease: "easeOut" }}
               className="flex items-center gap-3"
             >
-              <motion.div 
-                whileHover={{ rotate: 360, scale: 1.12 }}
-                transition={{ duration: 0.7, ease: "easeInOut" }}
-                className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 via-blue-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-blue-500/30 ring-2 ring-white/10"
-                aria-hidden="true"
-              >
-                <Heart className="w-6 h-6 text-white drop-shadow-sm" />
-              </motion.div>
+            {/* Logo */}
+           
+            <LogoImage/>  
+   
               <div className="hidden sm:block">
                 <div className="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-600 via-blue-500 to-emerald-600 bg-clip-text text-transparent">
                   Custocare AI
@@ -662,9 +659,9 @@ export const Landing: React.FC = () => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
             <div className="text-center md:text-left">
               <div className="flex items-center justify-center md:justify-start gap-3 mb-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-emerald-600 flex items-center justify-center shadow-lg ring-2 ring-white/10">
-                  <Heart className="w-5 h-5 text-white drop-shadow-sm" aria-hidden="true" />
-                </div>
+              
+              {/* Logo Image */}
+              <LogoImage></LogoImage>
                 <span className={cn(
                   "text-lg font-bold tracking-tight",
                   theme === 'dark' ? "text-white" : "text-slate-900"

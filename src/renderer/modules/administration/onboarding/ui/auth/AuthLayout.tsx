@@ -5,6 +5,7 @@ import { Moon, Sun, Shield, Activity, Home, Lock, CheckCircle2 } from 'lucide-re
 import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../../app/store/slices/uiSlice';
 import { cn } from '../../../../../shared/types/cn';
+import LogoImage from '../../../../../shared/assets/LogoImage';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -119,13 +120,8 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
             transition={{ duration: 0.6, delay: 0.2 }}
           >
             <Link to="/" className="inline-flex items-center gap-3 group w-fit">
-              <motion.div 
-                whileHover={{ rotate: 360, scale: 1.1 }}
-                transition={{ duration: 0.7, ease: "easeInOut" }}
-                className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-2xl ring-2 ring-white/20"
-              >
-                <Activity className="w-7 h-7 text-white" strokeWidth={2.5} />
-              </motion.div>
+             
+                <LogoImage></LogoImage>
               <div>
                 <h1 className="text-xl font-bold tracking-tight">Custocare AI</h1>
                 <p className="text-xs text-cyan-100/90 font-medium">Continuous Care. Operational Excellence.</p>
