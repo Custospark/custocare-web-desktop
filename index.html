@@ -2,11 +2,56 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ✅ Correct favicon path (avoid /public in href for Vite/React builds) -->
+    <link rel="icon" type="image/png" href="/src/renderer/shared/assets/icon.png" />
+
+    <!-- ✅ iOS / Apple touch icon -->
+    <link rel="apple-touch-icon" href="/src/renderer/shared/assets/icon.png" />
+
+    <!-- ✅ Viewport -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- ✅ Title + description (basic SEO + share snippets) -->
     <title>Custocare AI</title>
+    <meta
+      name="description"
+      content="Custocare AI is an intelligent healthcare platform powering continuity of care and operational excellence."
+    />
+
+
+    <!-- ✅ Open Graph (social previews) -->
+    <meta property="og:title" content="Custocare AI" />
+    <meta
+      property="og:description"
+      content="Powering continuity of care and operational excellence across healthcare facilities."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/assets/og-image.png" />
+    <meta property="og:url" content="https://custocare-ai.custospark.com" />
+
+    <!-- ✅ Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Custocare AI" />
+    <meta
+      name="twitter:description"
+      content="Powering continuity of care and operational excellence across healthcare facilities."
+    />
+    <meta name="twitter:image" content="/assets/og-image.png" />
+
+    <!-- ✅ PWA (optional but recommended if web app) -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- ✅ Improves font rendering -->
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
   </head>
+
   <body>
+    <noscript>
+      Custocare AI requires JavaScript enabled to run.
+    </noscript>
+
     <div id="root"></div>
     <script type="module" src="/src/renderer/main.tsx"></script>
   </body>

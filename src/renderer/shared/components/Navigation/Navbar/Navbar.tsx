@@ -211,15 +211,20 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate(ROUTES.HOME);
-    showToast(
-      'info',
-      "You've been logged out successfully. Thank you for using Custocare AI — see you again soon!",
-      5000
-    );
-  };
+    const handleLogout = () => {
+      // 1. First show toast (immediate feedback to user)
+      showToast(
+        'info',
+        "You've been logged out successfully. Thank you for using Custocare AI — see you again soon!",
+        5000
+      );
+      
+      // 2. Then dispatch logout (clears auth state)
+      dispatch(logout());
+      
+      // 3. Finally navigate (redirects user)
+      navigate(ROUTES.HOME);
+    };
 
   const handleNotification = () => navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
 
