@@ -1,5 +1,5 @@
 import { useSelector } from 'react-redux';
-import { RootState } from '../../app/store/store';
+import { type RootState } from '../../app/store/store';
 import darkThemeLogo from './continousLogoDark.png';
 import lightThemeLogo from './continuousLogoLight.png';
 
