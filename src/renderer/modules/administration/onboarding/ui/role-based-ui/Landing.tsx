@@ -151,7 +151,7 @@ export const Landing: React.FC = () => {
             <LogoImage/>  
    
               <div className="hidden sm:block">
-                <div className="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-600 via-blue-500 to-emerald-600 bg-clip-text text-transparent">
+                <div className="text-base sm:text-lg font-bold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
                   Custocare AI
                 </div>
                 <div className={cn(
@@ -663,8 +663,7 @@ export const Landing: React.FC = () => {
               {/* Logo Image */}
               <LogoImage></LogoImage>
                 <span className={cn(
-                  "text-lg font-bold tracking-tight",
-                  theme === 'dark' ? "text-white" : "text-slate-900"
+                  "text-base sm:text-lg font-bold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent",
                 )}>
                   Custocare AI
                 </span>

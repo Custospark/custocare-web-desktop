@@ -213,7 +213,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleLogout = () => {
     dispatch(logout());
-    navigate(ROUTES.LANDING);
+    navigate(ROUTES.HOME);
     showToast(
       'info',
       "You've been logged out successfully. Thank you for using Custocare AI — see you again soon!",

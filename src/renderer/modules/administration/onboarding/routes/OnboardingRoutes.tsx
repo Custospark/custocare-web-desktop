@@ -26,6 +26,15 @@ import PatientPortalModule from '../../../patient-portal/ui/PatientPortalModule'
  */
 export const OnboardingRoutes = () => [
   <Route 
+    key="home"
+    path={ROUTES.HOME} //should still take to the landing page.
+    element={
+      <Suspense fallback={<LoadingScreen />}>
+        <Landing />
+      </Suspense>
+    } 
+  />,
+  <Route 
     key="landing"
     path={ROUTES.LANDING} 
     element={
