@@ -97,8 +97,8 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         <div className={cn(
           'absolute inset-0 z-10',
           theme === 'dark'
-            ? 'bg-gradient-to-br from-cyan-900/50 via-blue-900/40 to-purple-900/50'
-            : 'bg-gradient-to-br from-blue-600/30 via-cyan-600/20 to-purple-600/25'
+            ? 'bg-linear-to-br from-cyan-900/50 via-blue-900/40 to-purple-900/50'
+            : 'bg-linear-to-br from-blue-600/30 via-cyan-600/20 to-purple-600/25'
         )} />
         
         {/* Hero Image */}

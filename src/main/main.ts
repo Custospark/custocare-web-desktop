@@ -24,7 +24,7 @@ function createWindow(): BrowserWindow {
     show: false,
     frame: true,
     autoHideMenuBar: true,
-    backgroundColor: '#141c2f',
+    backgroundColor: '#ffffff',
     fullscreenable: true,
     icon: path.join(__dirname, 'assets/icon.png'),
     webPreferences: {
