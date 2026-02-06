@@ -286,8 +286,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="flex items-center gap-2">
         <span
           className={cn(
-            'text-base sm:text-lg font-bold bg-gradient-to-r bg-clip-text text-transparent',
-            isDark ? 'from-white to-gray-300' : 'from-gray-900 to-gray-700'
+            'text-base sm:text-lg font-bold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent',
           )}
         >
           Custocare AI
@@ -297,8 +296,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           className={cn(
             'px-2 py-0.5 text-xs font-bold rounded-full border',
             isDark
-              ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-cyan-300 border-cyan-500/30'
-              : 'bg-gradient-to-r from-blue-100 to-cyan-50 text-blue-700 border-blue-300'
+              ? 'bg-linear-to-r from-blue-500/20 to-cyan-500/20 text-cyan-300 border-cyan-500/30'
+              : 'bg-linear-to-r from-blue-100 to-cyan-50 text-blue-700 border-blue-300'
           )}
         >
           <Sparkles className="w-3 h-3 inline mr-1" />

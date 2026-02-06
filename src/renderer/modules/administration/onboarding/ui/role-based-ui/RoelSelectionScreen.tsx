@@ -18,7 +18,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Hospital,
   Heart,
   Stethoscope,
   Building2,
@@ -32,6 +31,7 @@ import { useAppDispatch, useAppSelector } from  '../../../../../app/store/hooks/
 import { toggleTheme } from '../../../../../app/store/slices/uiSlice';
 import { ROUTES } from '../../routes/onboardingRouteConstants';
 import { itemVariants, containerVariants } from  '../../../../../shared/components/animations/motionVariants';
+import LogoImage from '../../../../../shared/assets/LogoImage';
 
 /* ==========================================================================
    ROLE DATA - SIMPLIFIED
@@ -112,8 +112,8 @@ export const RoleSelection: React.FC = () => {
     <div className={cn(
       "min-h-screen flex flex-col relative",
       theme === 'dark' 
-        ? "bg-gradient-to-br from-slate-950 via-gray-900 to-slate-950" 
-        : "bg-gradient-to-br from-slate-50 via-white to-blue-50/40"
+        ? "bg-linear-to-br from-slate-950 via-gray-900 to-slate-950" 
+        : "bg-linear-to-br from-slate-50 via-white to-blue-50/40"
     )}>
       {/* Decorative Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
@@ -142,11 +142,9 @@ export const RoleSelection: React.FC = () => {
               animate={{ opacity: 1, x: 0 }}
               className="flex items-center gap-3"
             >
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-emerald-600 flex items-center justify-center shadow-lg ring-2 ring-white/10">
-                <Hospital className="w-6 h-6 text-white" />
-              </div>
+              <LogoImage></LogoImage>
               <div>
-                <div className="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+                <div className="text-xl font-bold tracking-tight bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
                   Custocare AI
                 </div>
                 <div className={cn(

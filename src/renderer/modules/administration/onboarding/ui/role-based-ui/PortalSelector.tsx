@@ -19,7 +19,6 @@ import { ROUTES as ONBOARDING_ROUTES } from '../../routes/onboardingRouteConstan
 import {
   Heart,
   ArrowRight,
-  Shield,
   Activity,
   FileText,
   Calendar,
@@ -47,6 +46,7 @@ import {
   type FacilityRole,
 } from '../../../../../app/store/slices/activeContextSlice';
 import { containerVariants, cardVariants } from '../../../../../shared/components/animations/motionVariants';
+import LogoImage from '../../../../../shared/assets/LogoImage';
 
 /* Default images */
 const DEFAULT_WORKSPACE_IMAGE = 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=400&h=300&fit=crop&q=80';
@@ -277,13 +277,12 @@ export const PortalSelector: React.FC = () => {
           <div className="flex items-center gap-3">
             <div
               className={cn(
-                'w-8 h-8 rounded-lg flex items-center justify-center',
-                'bg-gradient-to-br from-blue-600 to-cyan-600'
+                'rounded-lg flex items-center justify-center',
               )}
             >
-              <Shield className="w-5 h-5 text-white" />
+              <LogoImage></LogoImage>
             </div>
-            <span className={cn('text-lg font-bold', designSystem.colors.primary)}>
+            <span className={cn('text-lg font-bold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent', designSystem.colors.primary)}>
               Custocare AI
             </span>
           </div>

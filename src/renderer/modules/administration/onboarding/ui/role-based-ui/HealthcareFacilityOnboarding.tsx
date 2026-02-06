@@ -60,6 +60,7 @@ import type {
   OperatingHours
 } from '../../api/queries/facility-owner/registerFacilityTypes';
 import { countryCodes } from '../auth/countryCodes';
+import LogoImage from '../../../../../shared/assets/LogoImage';
 
 /* ==========================================================================
    DATA CONSTANTS
@@ -1376,13 +1377,14 @@ export const HealthcareFacilityOnboarding: React.FC = () => {
         <nav className="max-w-5xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <motion.div
+              {/* <motion.div
                 whileHover={{ rotate: 360 }}
                 transition={{ duration: 0.6 }}
                 className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-emerald-600 flex items-center justify-center shadow-lg"
               >
                 <Hospital className="w-5 h-5 text-white" />
-              </motion.div>
+              </motion.div> */}
+              <LogoImage></LogoImage>
               <div>
                 <div className="text-base font-black tracking-tight bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
                   Custocare AI

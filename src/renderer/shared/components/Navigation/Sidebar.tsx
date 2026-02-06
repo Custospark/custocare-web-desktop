@@ -503,8 +503,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
               <div className="min-w-0">
                 <h2
                   className={cn(
-                    'font-bold text-base truncate',
-                    isDark ? 'text-white' : 'text-gray-900'
+                    'font-bold text-base truncate bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent',
                   )}
                 >
                   Custocare AI

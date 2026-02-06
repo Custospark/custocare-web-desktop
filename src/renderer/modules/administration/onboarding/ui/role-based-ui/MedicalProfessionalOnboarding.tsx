@@ -29,7 +29,6 @@ import {
   Sun,
   Moon,
   ChevronLeft,
-  Hospital,
   BadgeCheck,
   AlertCircle,
   Loader2,
@@ -41,6 +40,7 @@ import { toggleTheme } from '../../../../../app/store/slices/uiSlice';
 import { ROUTES } from '../../routes/onboardingRouteConstants';
 import { useRegisterStaff } from '../../api/queries/register-staff/registerStaffQuery';
 import { type RegisterStaffRequest } from '../../api/queries/register-staff/registerStaffTypes';
+import LogoImage from '../../../../../shared/assets/LogoImage';
 
 /* ==========================================================================
    TYPE DEFINITIONS
@@ -799,18 +799,16 @@ export const MedicalProfessionalOnboarding: React.FC = () => {
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-emerald-600 flex items-center justify-center shadow-lg">
-                <Hospital className="w-6 h-6 text-white" />
-              </div>
+             <LogoImage></LogoImage>
               <div>
-                <div className="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+                <div className="text-xl font-bold tracking-tight bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
                   Custocare AI
                 </div>
                 <div className={cn(
                   "text-[11px] font-semibold tracking-wide uppercase",
                   theme === 'dark' ? "text-slate-500" : "text-slate-500"
                 )}>
-                  Staff Registration
+                  Care Team Member
                 </div>
               </div>
             </div>

@@ -31,7 +31,6 @@ import {
   Moon,
   Users,
   ChevronLeft,
-  Hospital,
   BadgeCheck,
   AlertCircle,
   Loader2,
@@ -42,6 +41,7 @@ import { toggleTheme } from '../../../../../app/store/slices/uiSlice';
 import { ROUTES } from '../../routes/onboardingRouteConstants';
 import { useRegisterPatient } from '../../api/queries/register-patient/queries/registerpatientQuery';
 import type { RegisterPatientRequest } from '../../api/queries/register-patient/queries/registerPatientTypes';
+import LogoImage from '../../../../../shared/assets/LogoImage';
 
 /* ==========================================================================
    TYPE DEFINITIONS
@@ -701,11 +701,9 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-emerald-600 flex items-center justify-center shadow-lg">
-                <Hospital className="w-6 h-6 text-white" />
-              </div>
+              <LogoImage></LogoImage>
               <div>
-                <div className="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+                <div className="text-xl font-bold tracking-tight bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
                   Custocare AI
                 </div>
                 <div className={cn(

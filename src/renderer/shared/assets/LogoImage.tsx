@@ -1,8 +1,7 @@
-import React from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../app/store/store';
-import heartPlusLogoDark from './heartPlusLogoDark.png';
-import heartPlusLogoLight from './heartPlusLogoLight.png';
+import darkThemeLogo from './continousLogoDark.png';
+import lightThemeLogo from './continuousLogoLight.png';
 
 interface LogoImageProps {
   className?: string;
@@ -14,13 +13,13 @@ export default function LogoImage({
   size = 'md' 
 }: LogoImageProps) {
   const theme = useSelector((state: RootState) => state.ui.theme);
-  const logo = theme === 'dark' ? heartPlusLogoDark : heartPlusLogoLight;
+  const logo = theme === 'dark' ? darkThemeLogo : lightThemeLogo;
   
   // Size mapping
   const sizeClasses = {
     sm: 'h-8',
     md: 'h-10',
-    lg: 'h-12'
+    lg: 'h-16'
   };
 
   return (
@@ -42,16 +41,8 @@ export default function LogoImage({
         ${className}
       `}
       title="Custocare AI"
-      // Add loading="lazy" for better performance
       loading="lazy"
-      // Add aria-label for accessibility
       aria-label="Custocare AI Logo"
-      // Optional: Add subtle border that matches theme
-      style={{
-        border: theme === 'dark' 
-          ? '1px solid rgba(255,255,255,0.05)' 
-          : '1px solid rgba(0,0,0,0.05)'
-      }}
     />
   );
 }
