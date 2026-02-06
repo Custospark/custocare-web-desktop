@@ -128,7 +128,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
               </motion.div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight">Custocare AI</h1>
-                <p className="text-xs text-cyan-100/90 font-medium">Medical Decision Support</p>
+                <p className="text-xs text-cyan-100/90 font-medium">Continuous Care. Operational Excellence.</p>
               </div>
             </Link>
           </motion.div>
@@ -160,7 +160,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
               {[
                 { label: 'HIPAA Compliant', icon: Shield },
                 { label: '256-bit Encryption', icon: Lock },
-                { label: 'SOC 2 Certified', icon: CheckCircle2 }
+                { label: 'SOC 2 Compliant', icon: CheckCircle2 }
               ].map((badge, index) => (
                 <motion.div 
                   key={badge.label}

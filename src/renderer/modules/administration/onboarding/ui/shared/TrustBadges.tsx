@@ -32,7 +32,7 @@ import { itemVariants} from '../../../../../shared/components/animations/motionV
         },
         { 
           icon: Award, 
-          text: "ISO 27001 Certified", 
+          text: "ISO 27001 Complaint", 
           color: "purple",
           description: "International information security standard"
         }

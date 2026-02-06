@@ -308,8 +308,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         </span>
       </div>
 
-      <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-500' : 'text-gray-600')}>
-        AI Powered Health Management System
+      <p className={cn('text-xs mt-0.5 font-semibold', isDark ? 'text-blue-500' : 'text-blue-600')}>
+        Continuous Care. Operational Excellence.
       </p>
     </div>
   </div>
@@ -395,7 +395,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   </div>
 
   {/* User profile */}
-  <div className="cursor-pointer" title="Account & settings">
+  <div className="cursor-pointer" title="">
     <UserProfileMenu
       isOpen={isUserDropdownOpen}
       onToggle={() => setIsUserDropdownOpen(!isUserDropdownOpen)}

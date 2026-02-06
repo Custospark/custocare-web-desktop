@@ -6,7 +6,6 @@ import {
   Shield, 
   Stethoscope, 
   ChevronRight,
-  Sparkles,
   CheckCircle2,
   Users,
   Lock,
@@ -19,6 +18,7 @@ import {
   Monitor,
   ArrowRight,
   TrendingUp,
+  Sparkles,
 } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../../app/store/slices/uiSlice';
@@ -161,7 +161,7 @@ export const Landing: React.FC = () => {
                   "text-[11px] font-semibold tracking-wide uppercase",
                   theme === 'dark' ? "text-slate-500" : "text-slate-500"
                 )}>
-                  Enterprise Healthcare Platform
+                Healthcare Operations Platform
                 </div>
               </div>
             </motion.div>
@@ -245,7 +245,7 @@ export const Landing: React.FC = () => {
       </motion.header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-12 lg:py-16 relative z-10">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-12 lg:py-6 relative z-10">
         <div className="w-full max-w-7xl">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
             
@@ -256,7 +256,7 @@ export const Landing: React.FC = () => {
               animate="visible"
               className="text-center lg:text-left space-y-8 order-2 lg:order-1"
             >
-              <div className="space-y-6 lg:space-y-7">
+              <div className="space-y-3 lg:space-y-3">
                 {/* Badge */}
                 <motion.div variants={itemVariants} className="flex justify-center lg:justify-start">
                   <motion.div 
@@ -267,8 +267,9 @@ export const Landing: React.FC = () => {
                   >
                     <Sparkles className="w-4 h-4 text-white animate-pulse" aria-hidden="true" />
                     <span className="text-sm font-bold text-white tracking-tight">
-                      Trusted by 10,000+ Healthcare Institutions
-                    </span>
+                    Built for Continuous Care & Operational Excellence.
+                  </span>
+
                   </motion.div>
                 </motion.div>
                 
@@ -276,22 +277,22 @@ export const Landing: React.FC = () => {
                 <motion.h1 
                   variants={itemVariants}
                   className={cn(
-                    "text-[2.5rem] sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold leading-[1.08] tracking-tight",
+                    "text-[2.5rem] sm:text-4xl lg:text-5xl xl:text-7xl font-extrabold leading-[1.08] tracking-tight",
                     theme === 'dark' ? "text-white" : "text-slate-900"
                   )}
                 >
-                  Healthcare Intelligence,{' '}
-                  <span className="relative inline-block">
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-500 to-emerald-600">
-                      Personalized Care
-                    </span>
-                    <motion.div
-                      className="absolute -bottom-2 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-blue-500 to-emerald-600 rounded-full shadow-lg"
-                      initial={{ scaleX: 0, originX: 0 }}
-                      animate={{ scaleX: 1 }}
-                      transition={{ duration: 0.9, delay: 0.5, ease: "easeOut" }}
-                    />
+               Healthcare Intelligence,{' '}
+                <span className="relative inline-block">
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-500 to-emerald-600">
+                    Continuous Care.
                   </span>
+                  <motion.div
+                    className="absolute -bottom-2 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-blue-500 to-emerald-600 rounded-full shadow-lg"
+                    initial={{ scaleX: 0, originX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ duration: 0.9, delay: 0.5, ease: "easeOut" }}
+                  />
+                </span>
                 </motion.h1>
                 
                 {/* Subtitle */}
@@ -302,10 +303,7 @@ export const Landing: React.FC = () => {
                     theme === 'dark' ? "text-slate-300" : "text-slate-700"
                   )}
                 >
-                  Transforming healthcare through AI-powered intelligence 
-                  and compassionate care delivery.
-                  {/* Custocare AI is an African-owned, secure healthcare operating system designed for national data sovereignty, local workflows, and long-term public health resilience. */}
-                {/* Custocare AI is an African-owned, secure healthcare operating system, designed for national data sovereignty, local workflows, and long-term public health resilience—transforming healthcare through AI-powered intelligence and compassionate care delivery. */}
+                  Powering Continuity of Care and Operational Excellence in Healthcare.
                   </motion.p>
 
 
@@ -316,7 +314,7 @@ export const Landing: React.FC = () => {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
-                className="lg:hidden pt-4"
+                className="lg:hidden pt-2"
               >
                 <AccessPanel 
                   theme={theme}
@@ -330,30 +328,31 @@ export const Landing: React.FC = () => {
               {/* Key Benefits Grid - Hidden on Mobile */}
               <motion.div 
                 variants={containerVariants}
-                className="lg:grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2"
+                className="hidden lg:grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2"
               >
                 {[
                   {
                     icon: UserCheck,
                     title: "For Patients",
-                    description: "Personal health monitoring & AI-powered insights",
+                    description: "Continuous, coordinated care across every visit, facility, and department.",
                     gradient: "from-blue-500 to-blue-600",
-                    color: "blue"
+                    color: "blue",
                   },
                   {
                     icon: Stethoscope,
-                    title: "For Professionals",
-                    description: "Clinical decision support & patient management",
+                    title: "For Care Teams",
+                    description: "Faster, safer workflows with real-time patient context and operational clarity.",
                     gradient: "from-emerald-500 to-emerald-600",
-                    color: "emerald"
+                    color: "emerald",
                   },
                   {
                     icon: Building,
-                    title: "For Facilities",
-                    description: "Operational efficiency & comprehensive analytics",
+                    title: "For Health Facilities",
+                    description: "Operational excellence with real-time visibility.",
                     gradient: "from-purple-500 to-purple-600",
-                    color: "purple"
+                    color: "purple",
                   }
+
                 ].map((benefit, index) => (
                   <motion.div
                     key={index}
@@ -378,7 +377,7 @@ export const Landing: React.FC = () => {
                       )}
                       aria-hidden="true"
                     >
-                      <benefit.icon className="w-6 h-6 text-white drop-shadow-sm" />
+                      <benefit.icon className="w-5 h-5 text-white drop-shadow-sm" />
                     </motion.div>
                     <h3 
                       id={`benefit-${index}-title`}
@@ -406,52 +405,68 @@ export const Landing: React.FC = () => {
               </div>
 
               {/* Social Proof - Hidden on Mobile */}
-              <motion.div 
-                variants={itemVariants}
-                className="hidden lg:flex flex-wrap items-center justify-center lg:justify-start gap-6 pt-2"
+              <motion.div
+        variants={itemVariants}
+        className="hidden lg:flex flex-wrap items-center justify-center lg:justify-start gap-6 pt-2"
+      >
+        <div className="flex items-center gap-3">
+          {/* Trust indicators */}
+          <div
+            className="flex -space-x-2.5"
+            role="img"
+            aria-label="Platform trust indicators"
+          >
+            {[1, 2, 3, 4].map((i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, scale: 0, x: -20 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                transition={{ delay: 0.9 + i * 0.08, type: "spring" }}
+                className="w-11 h-11 rounded-full border-[3px] border-white dark:border-slate-900 bg-gradient-to-br from-blue-400 to-emerald-400 shadow-md"
+                aria-hidden="true"
+              />
+            ))}
+          </div>
+
+          {/* Copy */}
+          <div className="text-left">
+            <div
+              className={cn(
+                "text-sm font-bold tracking-tight",
+                theme === "dark" ? "text-white" : "text-slate-900"
+              )}
+            >
+              Built for Healthcare Teams
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {[...Array(5)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 1.1 + i * 0.04, type: "spring" }}
+                >
+                  <CheckCircle2
+                    className="w-3.5 h-3.5 text-emerald-500"
+                    aria-hidden="true"
+                  />
+                </motion.div>
+              ))}
+
+              <span
+                className={cn(
+                  "text-xs font-semibold ml-1",
+                  theme === "dark" ? "text-slate-400" : "text-slate-600"
+                )}
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex -space-x-2.5" role="img" aria-label="User avatars">
-                    {[1, 2, 3, 4].map((i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, scale: 0, x: -20 }}
-                        animate={{ opacity: 1, scale: 1, x: 0 }}
-                        transition={{ delay: 0.9 + i * 0.08, type: "spring" }}
-                        className="w-11 h-11 rounded-full border-[3px] border-white dark:border-slate-900 bg-gradient-to-br from-blue-400 to-emerald-400 shadow-md"
-                        aria-hidden="true"
-                      />
-                    ))}
-                  </div>
-                  <div className="text-left">
-                    <div className={cn(
-                      "text-sm font-bold tracking-tight",
-                      theme === 'dark' ? "text-white" : "text-slate-900"
-                    )}>
-                      50,000+ Active Users
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {[...Array(5)].map((_, i) => (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, scale: 0 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: 1.1 + i * 0.04, type: "spring" }}
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" aria-hidden="true" />
-                        </motion.div>
-                      ))}
-                      <span className={cn(
-                        "text-xs font-semibold ml-1",
-                        theme === 'dark' ? "text-slate-400" : "text-slate-600"
-                      )}>
-                        4.9/5 Rating
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
+                Secure • Intelligent • Scalable
+              </span>
+            </div>
+          </div>
+        </div>
+        </motion.div>
+      </motion.div>
 
             {/* DESKTOP ONLY: Access Panel */}
             <motion.div 
@@ -484,40 +499,42 @@ export const Landing: React.FC = () => {
             aria-label="Platform statistics"
           >
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10">
-              {[
-                { 
-                  value: "50K+", 
-                  label: "Active Patients", 
-                  sublabel: "Growing daily", 
-                  icon: Users, 
-                  color: "blue",
-                  description: "Over 50,000 active patients trust our platform"
-                },
-                { 
-                  value: "98.7%", 
-                  label: "Satisfaction Rate", 
-                  sublabel: "Verified reviews", 
-                  icon: Heart, 
-                  color: "emerald",
-                  description: "98.7% patient satisfaction rate from verified reviews"
-                },
-                { 
-                  value: "24/7", 
-                  label: "AI Monitoring", 
-                  sublabel: "Real-time alerts", 
-                  icon: Activity, 
-                  color: "purple",
-                  description: "24/7 AI-powered health monitoring with real-time alerts"
-                },
-                { 
-                  value: "47%", 
-                  label: "Efficiency Boost", 
-                  sublabel: "Average improvement", 
-                  icon: TrendingUp, 
-                  color: "orange",
-                  description: "47% average efficiency improvement for healthcare facilities"
-                }
-              ].map((stat, index) => (
+             {
+             [
+          { 
+            value: "Unified",
+            label: "Patient Records",
+            sublabel: "Across visits & facilities",
+            icon: Users,
+            color: "blue",
+            description: "Centralized patient records supporting continuity of care across departments and facilities"
+          },
+          { 
+            value: "Real-Time",
+            label: "Operational Visibility",
+            sublabel: "Facility-wide insights",
+            icon: Activity,
+            color: "emerald",
+            description: "Live visibility into care delivery, queues, and operational workflows"
+          },
+          { 
+            value: "Audit-Ready",
+            label: "System Design",
+            sublabel: "Compliance-first",
+            icon: Heart,
+            color: "purple",
+            description: "Built-in audit trails, access control, and traceability across all workflows"
+          },
+          { 
+            value: "Scalable",
+            label: "Healthcare Operations",
+            sublabel: "Clinic to national level",
+            icon: TrendingUp,
+            color: "orange",
+            description: "Designed to scale from single facilities to regional and national health systems"
+          }
+        ]
+.map((stat, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, scale: 0.85 }}
@@ -545,7 +562,7 @@ export const Landing: React.FC = () => {
                   </motion.div>
                   <motion.div 
                     className={cn(
-                      "text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-2 tracking-tight group-hover:scale-110 transition-transform",
+                      "text-3xl sm:text-1xl lg:text-2xl font-extrabold mb-2 tracking-tight group-hover:scale-110 transition-transform",
                       theme === 'dark' ? "text-white" : "text-slate-900"
                     )}
                   >
@@ -597,13 +614,16 @@ export const Landing: React.FC = () => {
                   Custocare AI
                 </span>
               </div>
-              <p className={cn(
-                "text-sm max-w-md leading-relaxed",
-                theme === 'dark' ? "text-slate-400" : "text-slate-600"
-              )}>
-                Delivering measurable healthcare outcomes through 
-                AI-powered intelligence and compassionate innovation.
+                <p
+                className={cn(
+                  "text-sm max-w-md leading-relaxed",
+                  theme === 'dark' ? "text-slate-400" : "text-slate-600"
+                )}
+              >
+                Enabling continuous, coordinated care through intelligent workflows
+                and operational clarity.
               </p>
+
             </div>
             
             <nav className="flex flex-wrap items-center justify-center gap-6" aria-label="Footer navigation">
@@ -632,7 +652,7 @@ export const Landing: React.FC = () => {
               : "border-slate-200 text-slate-500"
           )}>
             <p>
-              © {new Date().getFullYear()} Custocare AI Health Platform. HIPAA-compliant healthcare data protection. 
+              © {new Date().getFullYear()} Custocare AI Health Operations Platform. HIPAA-compliant healthcare data protection. 
               For authorized healthcare use only.
             </p>
           </div>
@@ -690,7 +710,7 @@ export const Landing: React.FC = () => {
                   <Heart className="w-9 h-9 text-emerald-500 drop-shadow-lg" aria-hidden="true" />
                 </motion.div>
               </div>
-              <div className="text-center space-y-3">
+              <div className="text-center space-y-2">
                 <motion.p 
                   className={cn(
                     "font-bold text-xl tracking-tight",
@@ -954,7 +974,7 @@ const AccessPanel: React.FC<AccessPanelProps> = ({
             theme === 'dark' ? "text-slate-500" : "text-slate-600"
           )}>
             Your healthcare data is protected with 256-bit encryption, HIPAA compliance, 
-            and ISO 27001 certification. Privacy guaranteed.
+            and ISO 27001 Compliant. Privacy guaranteed.
           </p>
         </motion.div>
       </motion.div>

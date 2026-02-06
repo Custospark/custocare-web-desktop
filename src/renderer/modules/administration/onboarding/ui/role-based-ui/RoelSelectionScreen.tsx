@@ -39,47 +39,51 @@ import { itemVariants, containerVariants } from  '../../../../../shared/componen
 const ROLES = [
   {
     id: 'medical-professional',
-    title: 'Medical Professional',
-    subtitle: 'Doctors, Nurses & Healthcare Providers',
-    description: 'Streamline your practice with AI-powered patient management and instant credential verification.',
+    title: 'Care Team Member',
+    subtitle: 'Pharmacists, Doctors, Nurses & Allied Health Professionals',
+    description:
+      'Deliver continuous, coordinated care with real-time patient context and streamlined clinical workflows.',
     icon: Stethoscope,
     gradient: 'from-blue-600 to-cyan-600',
     route: ROUTES.STAFF_ONBOARDING,
     benefits: [
-      'AI-powered patient management',
-      'Instant credential verification',
-      'Connect with 50K+ facilities'
+      'Unified patient visit history',
+      'Clear task and workflow visibility',
+      'Reduced administrative burden'
     ]
   },
   {
     id: 'patient',
     title: 'Patient',
-    subtitle: 'Individuals Seeking Healthcare',
-    description: 'Take control of your health journey with verified doctors and instant appointment booking.',
+    subtitle: 'Individuals Receiving Care',
+    description:
+      'Experience seamless, coordinated care across visits, departments, and healthcare facilities.',
     icon: Heart,
     gradient: 'from-emerald-600 to-teal-600',
     route: ROUTES.PATIENT_ONBOARDING,
     benefits: [
-      'Find verified healthcare providers',
-      'Instant appointment booking',
-      'Secure health record access'
+      'Continuity of care across facilities',
+      'Accurate, centralized health records',
+      'Safer, more coordinated care'
     ]
   },
   {
     id: 'facility-owner',
-    title: 'Healthcare Facility Owner',
-    subtitle: 'Hospitals, Clinics & Organizations',
-    description: 'Transform operations with enterprise-grade AI tools and boost efficiency by 40% on average.',
+    title: 'Healthcare Facility',
+    subtitle: 'Clinics, Pharmacies, Hospitals & Health Organizations',
+    description:
+      'Run efficient, connected healthcare operations with full visibility across care delivery and facility workflows.',
     icon: Building2,
     gradient: 'from-purple-600 to-pink-600',
     route: ROUTES.HEALTHCARE_ONBOARDING,
     benefits: [
-      'AI operations management',
-      'Provider network integration',
-      'Revenue optimization tools'
+      'Operational excellence across departments',
+      'Real-time facility performance insights',
+      'Scalable, audit-ready healthcare operations'
     ]
   }
 ];
+
 
 
 /* ==========================================================================
@@ -102,7 +106,7 @@ export const RoleSelection: React.FC = () => {
   };
 
     const { user } = useAppSelector((state) => state.auth);
-    const loggInUserName=user?.profile.first_name
+    const loggedInUserName=user?.profile.first_name
 
   return (
     <div className={cn(
@@ -176,13 +180,13 @@ export const RoleSelection: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-2 py-6 relative z-10">
+      <main className="flex-1 flex items-center justify-center px-2 py-2 relative z-10">
         <div className="w-full max-w-6xl">
           <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="space-y-12"
+            className="space-y-6"
           >
             {/* Header Section */}
               <motion.div variants={itemVariants} className="text-center space-y-2">
@@ -192,18 +196,17 @@ export const RoleSelection: React.FC = () => {
                     theme === 'dark' ? "text-white" : "text-slate-900"
                   )}
                 >
-                  Hi{" "}
-                  <span
-                    className={cn(
-                      "font-medium",
-                      theme === 'dark'
-                        ? "text-indigo-300"
-                        : "text-indigo-600"
-                    )}
-                  >
-                    {loggInUserName}
-                  </span>
-                  , choose your role to continue..
+                Hi{" "}
+              <span
+                className={cn(
+                  "font-medium",
+                  theme === 'dark' ? "text-indigo-300" : "text-indigo-600"
+                )}
+              >
+                {loggedInUserName}
+              </span>
+              , select your role to continue...
+
                 </h1>
 
 
@@ -283,7 +286,7 @@ export const RoleSelection: React.FC = () => {
                     </motion.div>
 
                     {/* Content */}
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       <div>
                         <h3 className={cn(
                           "text-2xl font-bold mb-2",
@@ -331,7 +334,7 @@ export const RoleSelection: React.FC = () => {
                           ? "bg-slate-700/50 text-slate-300 border border-slate-600"
                           : "bg-slate-100 text-slate-700 border border-slate-300"
                       )}>
-                        {isSelected ? 'Selected' : 'Select Role'}
+                        {isSelected ? 'Selected' : 'Proceed'}
                       </div>
                     </div>
                   </motion.button>
@@ -346,20 +349,20 @@ export const RoleSelection: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 20 }}
-                  className="flex justify-center pt-2"
+                  className="flex justify-center pt-1"
                 >
                   <motion.button
                     onClick={handleContinue}
                     whileHover={{ scale: 1.03, y: -2 }}
                     whileTap={{ scale: 0.98 }}
                     className={cn(
-                      "flex items-center gap-3 px-10 py-4 rounded-2xl font-bold text-lg shadow-2xl cursor-pointer transition-all focus:outline-none focus:ring-4",
+                      "flex items-center gap-3 px-10 py-1 rounded-2xl font-bold text-lg shadow-2xl cursor-pointer transition-all focus:outline-none focus:ring-4",
                       selectedRoleData
                         ? `bg-gradient-to-r ${selectedRoleData.gradient} text-white hover:shadow-3xl focus:ring-blue-500/50`
                         : "bg-slate-400 text-white"
                     )}
                   >
-                    Continue as {selectedRoleData?.title}
+                    Proceed as {selectedRoleData?.title}
                     <ArrowRight className="w-6 h-6" />
                   </motion.button>
                 </motion.div>
