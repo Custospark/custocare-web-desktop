@@ -158,10 +158,10 @@ export const Landing: React.FC = () => {
                   Custocare AI
                 </div>
                 <div className={cn(
-                  "text-[11px] font-semibold tracking-wide uppercase",
+                  "text-[11px] font-bold tracking-wide uppercase",
                   theme === 'dark' ? "text-slate-500" : "text-slate-500"
                 )}>
-                Healthcare Operations Platform
+          Continuous Care. Operational Excellence.
                 </div>
               </div>
             </motion.div>
@@ -534,7 +534,7 @@ export const Landing: React.FC = () => {
             description: "Designed to scale from single facilities to regional and national health systems"
           }
         ]
-.map((stat, index) => (
+      .map((stat, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, scale: 0.85 }}
