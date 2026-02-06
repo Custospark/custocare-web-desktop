@@ -325,79 +325,137 @@ export const Landing: React.FC = () => {
                 />
               </motion.div>
 
-              {/* Key Benefits Grid - Hidden on Mobile */}
-              <motion.div 
-                variants={containerVariants}
-                className="hidden lg:grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2"
-              >
-                {[
-                  {
-                    icon: UserCheck,
-                    title: "For Patients",
-                    description: "Continuous, coordinated care across every visit, facility, and department.",
-                    gradient: "from-blue-500 to-blue-600",
-                    color: "blue",
-                  },
-                  {
-                    icon: Stethoscope,
-                    title: "For Care Teams",
-                    description: "Faster, safer workflows with real-time patient context and operational clarity.",
-                    gradient: "from-emerald-500 to-emerald-600",
-                    color: "emerald",
-                  },
-                  {
-                    icon: Building,
-                    title: "For Health Facilities",
-                    description: "Operational excellence with real-time visibility.",
-                    gradient: "from-purple-500 to-purple-600",
-                    color: "purple",
-                  }
+            {/* Key Benefits Grid - Hidden on Mobile */}
+           <motion.div 
+              variants={containerVariants}
+              className="hidden lg:grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2"
+            >
+              {[
+                {
+                  icon: Stethoscope,
+                  title: "For Care Teams",
+                  description: "Faster, safer workflows with real-time patient context and operational clarity.",
+                  gradient: "from-blue-500 to-blue-600",
+                  color: "blue",
+                },
+                {
+                  icon: UserCheck,
+                  title: "For Patients",
+                  description: "Continuous, coordinated care across every visit & facilities.",
+                  gradient: "from-emerald-500 to-emerald-600",
+                  color: "emerald",
+                },
+                {
+                  icon: Building,
+                  title: "For Health Facilities",
+                  description: "Operational excellence with real-time visibility.",
+                  gradient: "from-purple-500 to-purple-600",
+                  color: "purple",
+                }
+              ].map((benefit, index) => (
+                <motion.div
+                  key={index}
+                  variants={itemVariants}
+                  whileHover="hover"
+                  initial="rest"
+                  animate="rest"
+                  className={cn(
+                    "group relative p-5 rounded-2xl border transition-all duration-400 cursor-pointer overflow-hidden",
+                    // Height reduction
+                    "min-h-[220px]",
+                    // Base border colors (very subtle in light mode)
+                    benefit.color === 'blue' && "border-blue-100/30 dark:border-blue-900/20",
+                    benefit.color === 'emerald' && "border-emerald-100/30 dark:border-emerald-900/20",
+                    benefit.color === 'purple' && "border-purple-100/30 dark:border-purple-900/20",
+                    // Background - flatter in light mode
+                    theme === 'dark'
+                      ? "bg-gradient-to-br from-slate-800/50 via-slate-800/40 to-slate-900/50 hover:from-slate-800/70 hover:via-slate-800/60 hover:to-slate-900/70"
+                      : "bg-white hover:bg-white",
+                    // Hover effects - border color intensifies
+                    benefit.color === 'blue' && "hover:border-blue-300 dark:hover:border-blue-500/50",
+                    benefit.color === 'emerald' && "hover:border-emerald-300 dark:hover:border-emerald-500/50",
+                    benefit.color === 'purple' && "hover:border-purple-300 dark:hover:border-purple-500/50",
+                    // Ring effects - lighter in light mode
+                    benefit.color === 'blue' && "hover:ring-2 hover:ring-blue-100/60 hover:ring-offset-2 dark:hover:ring-4 dark:hover:ring-blue-900/30 dark:hover:ring-offset-slate-900",
+                    benefit.color === 'emerald' && "hover:ring-2 hover:ring-emerald-100/60 hover:ring-offset-2 dark:hover:ring-4 dark:hover:ring-emerald-900/30 dark:hover:ring-offset-slate-900",
+                    benefit.color === 'purple' && "hover:ring-2 hover:ring-purple-100/60 hover:ring-offset-2 dark:hover:ring-4 dark:hover:ring-purple-900/30 dark:hover:ring-offset-slate-900",
+                    // Shadow - minimal in light mode, deeper in dark mode
+                    theme === 'dark'
+                      ? "shadow-lg hover:shadow-xl shadow-slate-900/40 hover:shadow-slate-800/60"
+                      : "shadow-sm hover:shadow-md shadow-slate-200/40 hover:shadow-slate-300/50"
+                  )}
+                  role="article"
+                  aria-labelledby={`benefit-${index}-title`}
+                >
+                  {/* Colored background glow - only in dark mode */}
+                  {theme === 'dark' && (
+                    <div className={cn(
+                      "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl",
+                      benefit.color === 'blue' && "bg-blue-500/5",
+                      benefit.color === 'emerald' && "bg-emerald-500/5",
+                      benefit.color === 'purple' && "bg-purple-500/5"
+                    )} />
+                  )}
+                  
+                  {/* Subtle inner shadow - only in dark mode */}
+                  {theme === 'dark' && (
+                    <div className="absolute inset-0 rounded-2xl pointer-events-none shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.05)]" />
+                  )}
 
-                ].map((benefit, index) => (
-                  <motion.div
-                    key={index}
-                    variants={itemVariants}
-                    whileHover="hover"
-                    initial="rest"
-                    animate="rest"
+                  <motion.div 
+                    variants={cardHoverVariants}
                     className={cn(
-                      "group p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer",
+                      "inline-flex items-center justify-center w-11 h-11 rounded-xl mb-4 bg-gradient-to-br shadow relative z-10",
+                      benefit.gradient,
+                      // Icon container shadow - lighter in light mode
                       theme === 'dark'
-                        ? "bg-slate-800/40 border-slate-700/60 hover:bg-slate-800/70 hover:border-slate-600 hover:shadow-xl hover:shadow-slate-900/20"
-                        : "bg-white/80 border-slate-200 hover:bg-white hover:shadow-2xl hover:shadow-slate-200/50 hover:border-slate-300"
+                        ? "shadow-md group-hover:shadow-lg"
+                        : "shadow-sm group-hover:shadow",
+                      benefit.color === 'blue' && "group-hover:shadow-blue-200/30 dark:group-hover:shadow-blue-900/20",
+                      benefit.color === 'emerald' && "group-hover:shadow-emerald-200/30 dark:group-hover:shadow-emerald-900/20",
+                      benefit.color === 'purple' && "group-hover:shadow-purple-200/30 dark:group-hover:shadow-purple-900/20"
                     )}
-                    role="article"
-                    aria-labelledby={`benefit-${index}-title`}
+                    aria-hidden="true"
                   >
-                    <motion.div 
-                      variants={cardHoverVariants}
-                      className={cn(
-                        "inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 bg-gradient-to-br shadow-lg",
-                        benefit.gradient
-                      )}
-                      aria-hidden="true"
-                    >
-                      <benefit.icon className="w-5 h-5 text-white drop-shadow-sm" />
-                    </motion.div>
-                    <h3 
-                      id={`benefit-${index}-title`}
-                      className={cn(
-                        "font-bold mb-2 text-base sm:text-lg transition-colors",
-                        "group-hover:text-blue-600 dark:group-hover:text-blue-400",
-                        theme === 'dark' ? "text-white" : "text-slate-900"
-                      )}
-                    >
-                      {benefit.title}
-                    </h3>
-                    <p className={cn(
-                      "text-sm leading-relaxed",
-                      theme === 'dark' ? "text-slate-400" : "text-slate-600"
-                    )}>
-                      {benefit.description}
-                    </p>
+                    <benefit.icon className="w-5 h-5 text-white drop-shadow-sm" />
                   </motion.div>
-                ))}
-              </motion.div>
+                  
+                  <h3 
+                    id={`benefit-${index}-title`}
+                    className={cn(
+                      "font-bold mb-2 text-base sm:text-lg relative z-10 transition-colors duration-300",
+                      // Color-specific text on hover - DARKER in light mode, keep light in dark mode
+                      theme === 'dark'
+                        ? cn(
+                            // Dark mode: text goes lighter (previous behavior)
+                            benefit.color === 'blue' && "group-hover:text-blue-300",
+                            benefit.color === 'emerald' && "group-hover:text-emerald-300",
+                            benefit.color === 'purple' && "group-hover:text-purple-300",
+                            "text-white"
+                          )
+                        : cn(
+                            // Light mode: text goes DARKER (your request)
+                            benefit.color === 'blue' && "group-hover:text-blue-800",
+                            benefit.color === 'emerald' && "group-hover:text-emerald-800", 
+                            benefit.color === 'purple' && "group-hover:text-purple-800",
+                            "text-slate-900"
+                          )
+                    )}
+                  >
+                    {benefit.title}
+                  </h3>
+                  
+                  <p className={cn(
+                    "text-sm leading-relaxed relative z-10 transition-colors duration-300",
+                    theme === 'dark' 
+                      ? "text-slate-400 group-hover:text-slate-300" 
+                      : "text-slate-600 group-hover:text-slate-700"
+                  )}>
+                    {benefit.description}
+                  </p>
+                </motion.div>
+              ))}
+            </motion.div>
 
               {/* Trust Badges - Hidden on Mobile */}
               <div className="hidden lg:block pt-2">
@@ -405,67 +463,67 @@ export const Landing: React.FC = () => {
               </div>
 
               {/* Social Proof - Hidden on Mobile */}
-              <motion.div
-        variants={itemVariants}
-        className="hidden lg:flex flex-wrap items-center justify-center lg:justify-start gap-6 pt-2"
-      >
-        <div className="flex items-center gap-3">
-          {/* Trust indicators */}
-          <div
-            className="flex -space-x-2.5"
-            role="img"
-            aria-label="Platform trust indicators"
-          >
-            {[1, 2, 3, 4].map((i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, scale: 0, x: -20 }}
-                animate={{ opacity: 1, scale: 1, x: 0 }}
-                transition={{ delay: 0.9 + i * 0.08, type: "spring" }}
-                className="w-11 h-11 rounded-full border-[3px] border-white dark:border-slate-900 bg-gradient-to-br from-blue-400 to-emerald-400 shadow-md"
-                aria-hidden="true"
-              />
-            ))}
-          </div>
-
-          {/* Copy */}
-          <div className="text-left">
+                <motion.div
+          variants={itemVariants}
+          className="hidden lg:flex flex-wrap items-center justify-center lg:justify-start gap-6 pt-2"
+        >
+          <div className="flex items-center gap-3">
+            {/* Trust indicators */}
             <div
-              className={cn(
-                "text-sm font-bold tracking-tight",
-                theme === "dark" ? "text-white" : "text-slate-900"
-              )}
+              className="flex -space-x-2.5"
+              role="img"
+              aria-label="Platform trust indicators"
             >
-              Built for Healthcare Teams
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              {[...Array(5)].map((_, i) => (
+              {[1, 2, 3, 4].map((i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 1.1 + i * 0.04, type: "spring" }}
-                >
-                  <CheckCircle2
-                    className="w-3.5 h-3.5 text-emerald-500"
-                    aria-hidden="true"
-                  />
-                </motion.div>
+                  initial={{ opacity: 0, scale: 0, x: -20 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  transition={{ delay: 0.9 + i * 0.08, type: "spring" }}
+                  className="w-11 h-11 rounded-full border-[3px] border-white dark:border-slate-900 bg-gradient-to-br from-blue-400 to-emerald-400 shadow-md"
+                  aria-hidden="true"
+                />
               ))}
+            </div>
 
-              <span
+            {/* Copy */}
+            <div className="text-left">
+              <div
                 className={cn(
-                  "text-xs font-semibold ml-1",
-                  theme === "dark" ? "text-slate-400" : "text-slate-600"
+                  "text-sm font-bold tracking-tight",
+                  theme === "dark" ? "text-white" : "text-slate-900"
                 )}
               >
-                Secure • Intelligent • Scalable
-              </span>
+                Built for Healthcare Teams
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                {[...Array(5)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 1.1 + i * 0.04, type: "spring" }}
+                  >
+                    <CheckCircle2
+                      className="w-3.5 h-3.5 text-emerald-500"
+                      aria-hidden="true"
+                    />
+                  </motion.div>
+                ))}
+
+                <span
+                  className={cn(
+                    "text-xs font-semibold ml-1",
+                    theme === "dark" ? "text-slate-400" : "text-slate-600"
+                  )}
+                >
+                  Secure • Intelligent • Scalable
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-        </motion.div>
+          </motion.div>
       </motion.div>
 
             {/* DESKTOP ONLY: Access Panel */}
