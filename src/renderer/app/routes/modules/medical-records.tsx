@@ -12,8 +12,9 @@ import MRPatientWalkIn from '../../../modules/medical-records/ui/patients/views/
 import Appearance from "../../../modules/account/apearance/Appearance";
 import ForwardPatient from "../../../modules/medical-records/ui/visit-action-center/ForwardPatient";
 import PatientComplaints from "../../../modules/medical-records/ui/visit-action-center/PatientComplaints";
-import PatientHostory from "../../../modules/medical-records/ui/visit-action-center/PatientHostory";
 import VisitStatus from "../../../modules/medical-records/ui/visit-action-center/VisitStatus";
+import ChargeEntry from "../../../modules/medical-records/ui/visit-action-center/ChargeEntry";
+import BillingSummary from "../../../modules/medical-records/ui/visit-action-center/BillingSummary";
 export const medicalRecordsRoutes = [
   <Route
     key="overview"
@@ -79,9 +80,14 @@ export const medicalRecordsRoutes = [
           <WithThemeProp Component={VisitStatus} />
         </SuspenseWrapper>
       } />
-    <Route path={MEDICAL_RECORDS_ROUTES.PATIENT_HISTORY} element={
+    <Route path={MEDICAL_RECORDS_ROUTES.PATIENT_CHARGE_ENTRY} element={
         <SuspenseWrapper variant="table">
-          <WithThemeProp Component={PatientHostory} />
+          <WithThemeProp Component={ChargeEntry} />
+        </SuspenseWrapper>
+      } />
+    <Route path={MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SUMMARY} element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={BillingSummary} />
         </SuspenseWrapper>
       } />
     </Route>,

@@ -15,8 +15,9 @@ import {
   UserPlus,
   Search,
   ArrowLeftRight,
+  ClipboardList,
+  Receipt,
 } from 'lucide-react';
-import { FaNotesMedical } from 'react-icons/fa';
 import { type RootState } from '../../../../app/store/rootReducer';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
@@ -165,32 +166,40 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
               icon={<FileText className="w-6 h-6" />}
               theme={theme}
               defaultActionTo={MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS}
-              actions={[
-                { 
-                  key: 'get-complaints', 
-                  label: 'Get Complaints', 
-                  icon: <MessageSquare className="w-4 h-4" />, 
-                  to: MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS 
-                },
-                { 
-                  key: 'visit-status', 
-                  label: 'Visit Status', 
-                  icon: <Activity className="w-4 h-4" />, 
-                  to: MEDICAL_RECORDS_ROUTES.VISIT_STATUS 
-                },
-                { 
-                  key: 'patient-history', 
-                  label: 'Patient History', 
-                  icon: <FaNotesMedical className="w-4 h-4" />, 
-                  to: MEDICAL_RECORDS_ROUTES.PATIENT_HISTORY 
-                },
-                { 
-                  key: 'forward-patient', 
-                  label: 'Forward Patient', 
-                  icon: <ArrowRight className="w-4 h-4" />, 
-                  to: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT 
-                },
-              ]}
+            actions={[
+                    { 
+                      key: 'get-complaints', 
+                      label: 'Get Complaints', 
+                      icon: <MessageSquare className="w-4 h-4" />, 
+                      to: MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS 
+                    },
+                    { 
+                      key: 'visit-status', 
+                      label: 'Visit Status', 
+                      icon: <Activity className="w-4 h-4" />, 
+                      to: MEDICAL_RECORDS_ROUTES.VISIT_STATUS 
+                    },
+                    { 
+                      key: 'forward-patient', 
+                      label: 'Forward Patient', 
+                      icon: <ArrowRight className="w-4 h-4" />, 
+                      to: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT 
+                    },
+
+                    // 🧾 Billing Flow
+                    { 
+                      key: 'charge-entry', 
+                      label: 'Charge Entry', 
+                      icon: <ClipboardList className="w-4 h-4" />, 
+                      to: MEDICAL_RECORDS_ROUTES.PATIENT_CHARGE_ENTRY 
+                    },
+                    { 
+                      key: 'billing-summary', 
+                      label: 'Billing Summary', 
+                      icon: <Receipt className="w-4 h-4" />, 
+                      to: MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SUMMARY 
+                    },
+                  ]}
             />
           </div>
         </div>
