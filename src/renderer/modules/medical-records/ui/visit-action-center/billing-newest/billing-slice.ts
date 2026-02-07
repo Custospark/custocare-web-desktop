@@ -129,7 +129,28 @@ const billingSlice = createSlice({
       
       updateMetadata(state);
     },
-    
+
+        setQuantity: (state, action: PayloadAction<{ itemId: string; quantity: number }>) => {
+        const { itemId, quantity } = action.payload;
+        const item = state.chargeItems.find((x) => x.id === itemId);
+        if (!item) return;
+
+        // clamp + normalize
+        const q = Math.max(1, Math.min(9999, Math.floor(quantity || 1)));
+
+        item.quantity = q;
+        item.totalAmount = q * item.service.unitPrice;
+
+        // Update status to draft if somehow quantity is invalid and items removed (we clamp so not needed)
+        if (state.chargeItems.length === 0) {
+            state.status = 'draft';
+        } else if (state.status === 'draft') {
+            state.status = 'ready';
+        }
+
+        updateMetadata(state);
+        },
+
     clearCharges: (state) => {
       state.chargeItems = [];
       state.status = 'draft';
@@ -295,6 +316,7 @@ export const {
   saveDraft,
   loadDraft,
   clearDraft,
+  setQuantity,
   setPatientInfo,
 } = billingSlice.actions;
 

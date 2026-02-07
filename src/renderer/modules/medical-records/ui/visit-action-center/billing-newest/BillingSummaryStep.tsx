@@ -1,5 +1,5 @@
 // BillingSummaryStep.tsx
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   CreditCard,
   Wallet,
@@ -10,9 +10,10 @@ import {
   AlertCircle,
   ArrowLeft,
   Shield,
-  X,
   Loader2,
   Receipt,
+  Check,
+  Calculator,
 } from 'lucide-react';
 import { FaCashRegister } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
@@ -31,42 +32,42 @@ import {
   selectBillingData,
   saveDraft,
 } from './billing-slice';
-import { formatCurrency, DEFAULT_TAXES } from './billing-types';
+import { DEFAULT_DISCOUNT, DEFAULT_PAYMENT_METHODS, formatCurrency, DEFAULT_TAXES } from './billing-types';
 
 interface BillingSummaryStepProps {
   theme?: 'light' | 'dark';
 }
 
-export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
-  theme = 'light',
-}) => {
+export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 'light' }) => {
   const isDark = theme === 'dark';
   const dispatch = useDispatch();
-  
-  // Select data from Redux store
+
   const chargeItems = useSelector(selectChargeItems);
   const billingData = useSelector(selectBillingData);
   const status = useSelector(selectBillingStatus);
   const isProcessing = useSelector(selectIsProcessing);
-  
-  // Local state
-  const [discount, setLocalDiscount] = useState({ type: 'percentage' as const, value: 0 });
-  const [paymentMethods, setLocalPaymentMethods] = useState([{ type: 'cash' as const, amount: 0, details: '' }]);
+
+  const [discount, setLocalDiscount] = useState(DEFAULT_DISCOUNT);
+  const [paymentMethods, setLocalPaymentMethods] = useState(DEFAULT_PAYMENT_METHODS);
   const [additionalNotes, setLocalAdditionalNotes] = useState('');
-  const [showReceiptPreview, setShowReceiptPreview] = useState(false);
   const [receiptNumber, setReceiptNumber] = useState('');
 
-  // Colors based on theme
+  // NOTE: cash received is UI-only for now (not in redux). It still updates receipt preview in real-time.
+  const [cashReceived, setCashReceived] = useState<number>(0);
+
   const colors = {
     bg: {
       primary: isDark ? 'bg-gray-900' : 'bg-white',
       secondary: isDark ? 'bg-gray-800' : 'bg-gray-50',
-      hover: isDark ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50',
+      hover: isDark ? 'hover:bg-gray-800/60' : 'hover:bg-gray-50',
       overlay: isDark ? 'bg-black/70' : 'bg-black/50',
+      elevated: isDark ? 'bg-gray-900' : 'bg-white',
+      receipt: 'bg-white',
+      topbar: isDark ? 'bg-gray-900/70' : 'bg-white/70',
     },
     border: {
       primary: isDark ? 'border-gray-800' : 'border-gray-200',
-      secondary: isDark ? 'border-gray-700' : 'border-gray-300',
+      receipt: 'border-gray-300',
     },
     text: {
       primary: isDark ? 'text-gray-100' : 'text-gray-900',
@@ -74,8 +75,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
       tertiary: isDark ? 'text-gray-500' : 'text-gray-500',
     },
     accent: {
-      primary: isDark ? 'bg-blue-600' : 'bg-blue-600',
-      hover: isDark ? 'hover:bg-blue-700' : 'hover:bg-blue-700',
+      primary: 'bg-blue-600',
+      hover: 'hover:bg-blue-700',
       text: 'text-white',
     },
     status: {
@@ -85,52 +86,121 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     },
   };
 
-  const handleDiscountChange = (type: 'percentage' | 'fixed', value: string) => {
-    const numValue = parseFloat(value) || 0;
-    const newDiscount = { ...discount, type, value: numValue };
-    setLocalDiscount(newDiscount);
-    dispatch(setDiscount(newDiscount));
+  const canFinalize =
+    !isProcessing &&
+    chargeItems.length > 0 &&
+    billingData.balance === 0 &&
+    status !== 'settled';
+
+  const canPrint = status === 'settled' && !!receiptNumber && !isProcessing;
+
+  const paidLines = useMemo(
+    () => paymentMethods.filter((m) => (m.amount || 0) > 0),
+    [paymentMethods]
+  );
+
+  const cashMethodIndex = useMemo(
+    () => paymentMethods.findIndex((m) => m.type === 'cash'),
+    [paymentMethods]
+  );
+
+  const cashPayAmount = useMemo(() => {
+    if (cashMethodIndex < 0) return 0;
+    return Number(paymentMethods[cashMethodIndex]?.amount || 0);
+  }, [paymentMethods, cashMethodIndex]);
+
+  // Change logic:
+  // - Cash received is what cashier inputs (notes given by patient)
+  // - Cash due is the cash method amount (what we intend to take as cash)
+  // - Change = received - due (if positive). Never negative.
+  const cashChange = useMemo(() => {
+    const received = Number(cashReceived || 0);
+    const due = Number(cashPayAmount || 0);
+    return Math.max(0, received - due);
+  }, [cashReceived, cashPayAmount]);
+
+  const cashShort = useMemo(() => {
+    const received = Number(cashReceived || 0);
+    const due = Number(cashPayAmount || 0);
+    return Math.max(0, due - received);
+  }, [cashReceived, cashPayAmount]);
+
+  const paymentIcon = (type: string) => {
+    switch (type) {
+      case 'cash':
+        return <FaCashRegister className="w-4 h-4 text-green-500" />;
+      case 'card':
+        return <CreditCard className="w-4 h-4 text-blue-500" />;
+      case 'insurance':
+        return <Shield className="w-4 h-4 text-purple-500" />;
+      case 'mobile':
+        return <Banknote className="w-4 h-4 text-yellow-500" />;
+      default:
+        return <Wallet className="w-4 h-4 text-gray-500" />;
+    }
   };
 
-  const handlePaymentMethodChange = (index: number, field: keyof typeof paymentMethods[0], value: any) => {
-    const updatedMethods = [...paymentMethods];
-    updatedMethods[index] = { ...updatedMethods[index], [field]: value };
-    setLocalPaymentMethods(updatedMethods);
-    
-    // Also update in Redux
+  const handleBackToCharges = () => dispatch(setStep('charge_entry'));
+
+  const handleDiscountChange = (type: 'percentage' | 'fixed', raw: string) => {
+    const value = Number(raw) || 0;
+    const max = type === 'percentage' ? 100 : billingData.subtotal;
+    const clamped = Math.max(0, Math.min(max, value));
+
+    const next = { type, value: clamped };
+    setLocalDiscount(next);
+    dispatch(setDiscount(next));
+  };
+
+  const handlePaymentMethodChange = (
+    index: number,
+    field: 'type' | 'amount' | 'details',
+    value: any
+  ) => {
+    const next = [...paymentMethods];
+    next[index] = { ...next[index], [field]: value };
+    setLocalPaymentMethods(next);
+
     if (field === 'amount') {
-      dispatch(updatePaymentMethod({ index, method: { amount: value } }));
+      dispatch(updatePaymentMethod({ index, method: { amount: Number(value) || 0 } }));
     } else if (field === 'type') {
       dispatch(updatePaymentMethod({ index, method: { type: value } }));
+    } else {
+      dispatch(updatePaymentMethod({ index, method: { details: value } }));
     }
   };
 
   const handleAddPaymentMethod = () => {
-    if (paymentMethods.length < 3) {
-      const newMethods = [...paymentMethods, { type: 'cash', amount: 0, details: '' }];
-      setLocalPaymentMethods(newMethods);
-      dispatch(addPaymentMethod());
-    }
+    if (paymentMethods.length >= 3) return;
+    setLocalPaymentMethods((p) => [...p, { type: 'cash', amount: 0, details: '' }]);
+    dispatch(addPaymentMethod());
   };
 
   const handleRemovePaymentMethod = (index: number) => {
-    if (paymentMethods.length > 1) {
-      const newMethods = paymentMethods.filter((_, i) => i !== index);
-      setLocalPaymentMethods(newMethods);
-      dispatch(removePaymentMethod(index));
-    }
+    if (paymentMethods.length <= 1) return;
+    // If removing cash method, clear cashReceived too (avoid stale change UI)
+    const isRemovingCash = paymentMethods[index]?.type === 'cash';
+    if (isRemovingCash) setCashReceived(0);
+
+    setLocalPaymentMethods((p) => p.filter((_, i) => i !== index));
+    dispatch(removePaymentMethod(index));
   };
 
-  const handleAutoCalculatePayment = (index: number) => {
-    const totalPaid = paymentMethods.reduce((sum, method, i) => 
-      i === index ? sum : sum + method.amount, 0
+  const handleAutoFillRemaining = (index: number) => {
+    const alreadyPaid = paymentMethods.reduce(
+      (sum, m, i) => (i === index ? sum : sum + (m.amount || 0)),
+      0
     );
-    const remaining = Math.max(0, billingData.grandTotal - totalPaid);
-    
-    const updatedMethods = [...paymentMethods];
-    updatedMethods[index].amount = remaining;
-    setLocalPaymentMethods(updatedMethods);
+    const remaining = Math.max(0, billingData.grandTotal - alreadyPaid);
+
+    const next = [...paymentMethods];
+    next[index] = { ...next[index], amount: remaining };
+    setLocalPaymentMethods(next);
+
     dispatch(updatePaymentMethod({ index, method: { amount: remaining } }));
+
+    // If auto-filling cash amount, make cash received default to same amount for quick close-out
+    if (next[index].type === 'cash') setCashReceived(remaining);
   };
 
   const handleAdditionalNotesChange = (notes: string) => {
@@ -139,30 +209,26 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   };
 
   const handleFinalizePayment = async () => {
-    if (billingData.balance > 0) {
-      alert(`Balance of ${formatCurrency(billingData.balance)} still pending. Please adjust payment.`);
+    // Extra guard for cash change workflow:
+    // If cash payment exists and cashier entered a cash received amount that is less than cash due, block finalize.
+    if (cashMethodIndex >= 0 && cashShort > 0) {
+      alert(`Cash received is short by ${formatCurrency(cashShort)}. Adjust cash received or cash amount.`);
       return;
     }
-    
+
+    if (billingData.balance > 0) return;
+
     dispatch(setProcessing(true));
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Generate receipt number
+      await new Promise((r) => setTimeout(r, 1200));
+
       const receiptNum = `REC-${Date.now().toString().slice(-8)}`;
       setReceiptNumber(receiptNum);
-      
-      // Finalize payment in Redux
+
       dispatch(finalizePayment());
-      
-      // Save draft
       dispatch(saveDraft());
-      
-      // Show receipt preview
-      setShowReceiptPreview(true);
-    } catch (error) {
-      console.error('Payment failed:', error);
+    } catch (e) {
+      console.error(e);
       alert('Payment processing failed. Please try again.');
     } finally {
       dispatch(setProcessing(false));
@@ -170,483 +236,557 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   };
 
   const handlePrintReceipt = () => {
+    if (!canPrint) return;
     dispatch(setProcessing(true));
     setTimeout(() => {
       dispatch(setProcessing(false));
       window.print();
-    }, 500);
+    }, 350);
   };
 
-  const handleBackToCharges = () => {
-    dispatch(setStep('charge_entry'));
-  };
+  const ReceiptPreview = () => (
+    <div className={`border ${colors.border.primary} ${colors.bg.primary} overflow-hidden flex flex-col min-h-0`}>
+      <div className={`px-4 py-3 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className={`text-sm sm:text-base font-bold ${colors.text.primary}`}>Receipt preview</h3>
+            <p className={`text-xs ${colors.text.secondary} truncate`}>
+              Live updates • Print enabled after finalization
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div
+              className={`text-xs font-semibold px-2 py-1 border ${colors.border.primary} ${
+                billingData.balance === 0 ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'
+              }`}
+            >
+              {billingData.balance === 0 ? 'PAID' : `BAL: ${formatCurrency(billingData.balance)}`}
+            </div>
+
+            <div className={`text-xs font-semibold px-2 py-1 border ${colors.border.primary} ${colors.bg.secondary}`}>
+              {receiptNumber ? `# ${receiptNumber}` : '# Pending'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Narrower receipt "paper" and centered */}
+      <div className="p-4 flex-1 min-h-0 overflow-y-auto">
+        <div className="mx-auto w-full max-w-[360px] sm:max-w-[420px]">
+          <div className={`border ${colors.border.receipt} ${colors.bg.receipt} text-black p-4`}>
+            {/* Header */}
+            <div className="text-center mb-4">
+              <h2 className="text-lg font-extrabold leading-tight">MEDICAL CLINIC</h2>
+              <p className="text-xs text-gray-600">123 Health Street, Kampala</p>
+              <p className="text-xs text-gray-600">Phone: +256 700 000 000</p>
+            </div>
+
+            <div className="border-t border-b border-gray-300 py-2 my-3 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Receipt:</span>
+                <span className="font-bold">{receiptNumber || 'Pending'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Date:</span>
+                <span>{new Date().toLocaleDateString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Time:</span>
+                <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            </div>
+
+            {/* Items */}
+            <div className="mb-3">
+              <h3 className="text-sm font-extrabold mb-2">Services rendered</h3>
+
+              {chargeItems.length === 0 ? (
+                <div className="text-xs text-gray-600">No items yet.</div>
+              ) : (
+                <div className="space-y-2">
+                  {chargeItems.map((item) => (
+                    <div key={item.id} className="flex justify-between text-xs border-b border-gray-100 pb-1">
+                      <div className="min-w-0 pr-2">
+                        <p className="font-semibold truncate">{item.service.name}</p>
+                        <p className="text-[11px] text-gray-600">
+                          {item.quantity} × {formatCurrency(item.service.unitPrice)}
+                        </p>
+                      </div>
+                      <span className="font-extrabold">{formatCurrency(item.totalAmount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Totals */}
+            <div className="border-t border-gray-300 pt-2 text-xs">
+              <div className="flex justify-between">
+                <span>Subtotal</span>
+                <span className="font-semibold">{formatCurrency(billingData.subtotal)}</span>
+              </div>
+
+              {discount.value > 0 && (
+                <div className="flex justify-between text-green-700">
+                  <span>Discount</span>
+                  <span className="font-semibold">-{formatCurrency(billingData.discountAmount)}</span>
+                </div>
+              )}
+
+              {DEFAULT_TAXES.map((tax, idx) => (
+                <div key={idx} className="flex justify-between">
+                  <span>{tax.name}</span>
+                  <span className="font-semibold">{formatCurrency(billingData.taxes[idx]?.amount || 0)}</span>
+                </div>
+              ))}
+
+              <div className="flex justify-between font-extrabold mt-2 pt-2 border-t border-gray-300">
+                <span>TOTAL</span>
+                <span>{formatCurrency(billingData.grandTotal)}</span>
+              </div>
+            </div>
+
+            {/* Payment + change */}
+            <div className="mt-3 pt-3 border-t border-gray-300 text-xs">
+              <h3 className="text-sm font-extrabold mb-2">Payment</h3>
+
+              {paidLines.length === 0 ? (
+                <div className="text-xs text-gray-600">No payments entered.</div>
+              ) : (
+                <div className="space-y-1">
+                  {paidLines.map((m, idx) => (
+                    <div key={idx} className="flex justify-between">
+                      <span className="capitalize">{m.type}</span>
+                      <span className="font-semibold">{formatCurrency(m.amount)}</span>
+                    </div>
+                  ))}
+
+                  {/* Cash received + change lines */}
+                  {cashMethodIndex >= 0 && cashPayAmount > 0 && (
+                    <>
+                      <div className="flex justify-between pt-2 mt-2 border-t border-gray-200">
+                        <span className="text-gray-600">Cash received</span>
+                        <span className="font-semibold">{formatCurrency(cashReceived || 0)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Change</span>
+                        <span className="font-extrabold">{formatCurrency(cashChange)}</span>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="flex justify-between pt-2 mt-2 border-t border-gray-200">
+                    <span className="text-gray-600">Total paid</span>
+                    <span className="font-extrabold">{formatCurrency(billingData.totalPaid)}</span>
+                  </div>
+                </div>
+              )}
+
+              {billingData.balance === 0 ? (
+                <div className="text-center mt-3 pt-3 border-t border-gray-300">
+                  <p className="text-green-700 font-extrabold">PAID IN FULL</p>
+                  <p className="text-[11px] text-gray-600 mt-1">Thank you for your payment</p>
+                </div>
+              ) : (
+                <div className="text-center mt-3 pt-3 border-t border-gray-300">
+                  <p className="text-yellow-700 font-extrabold">
+                    BALANCE: {formatCurrency(billingData.balance)}
+                  </p>
+                  <p className="text-[11px] text-gray-600 mt-1">Complete payment to enable printing.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="text-center mt-4 pt-3 border-t border-gray-300">
+              <p className="text-[11px] text-gray-600">Computer generated receipt</p>
+              <p className="text-[11px] text-gray-600">Valid without signature</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Receipt actions */}
+      <div className={`px-4 py-3 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Receipt className={`w-4 h-4 ${colors.text.secondary}`} />
+            <span className={`text-xs ${colors.text.secondary}`}>
+              {canPrint ? 'Ready to print' : 'Print enabled after finalization'}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handlePrintReceipt}
+            disabled={!canPrint}
+            className={`inline-flex items-center gap-2 px-4 py-2 font-semibold transition-colors
+              ${
+                !canPrint
+                  ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                  : `${colors.accent.primary} ${colors.accent.hover} ${colors.accent.text} cursor-pointer`
+              }`}
+          >
+            <Printer className="w-4 h-4" />
+            Print
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="p-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Items & Adjustments */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Back Button */}
-          <div className="flex items-center justify-between">
-            <button
-              onClick={handleBackToCharges}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${colors.border.primary} ${colors.bg.hover} ${colors.text.secondary}`}
+    <div className="h-full min-h-0 p-4 sm:p-5 lg:p-6">
+      {/* TOP BAR */}
+      <div className={`sticky top-0 z-20 ${colors.bg.topbar} backdrop-blur border-b ${colors.border.primary}`}>
+        <div className="py-3 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={handleBackToCharges}
+            className={`inline-flex items-center gap-2 px-3.5 py-2 border ${colors.border.primary} ${colors.bg.hover} ${colors.text.secondary}
+            transition-colors cursor-pointer`}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm font-semibold">Back</span>
+          </button>
+
+          <div className="flex items-center gap-2">
+            <div
+              className={`px-3 py-2 border ${colors.border.primary} ${
+                status === 'settled' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'
+              }`}
             >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Charge Entry
-            </button>
-            
-            {receiptNumber && (
-              <div className={`px-4 py-2 rounded-lg ${colors.bg.secondary}`}>
-                <div className="text-sm">
-                  <span className={colors.text.secondary}>Receipt: </span>
-                  <span className={`font-mono font-bold ${colors.text.primary}`}>
-                    {receiptNumber}
+              <span className="text-xs font-semibold">{status === 'settled' ? 'Settled' : 'Billing'}</span>
+            </div>
+
+            <div
+              className={`px-3 py-2 border ${colors.border.primary} ${
+                billingData.balance === 0 ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'
+              }`}
+            >
+              <span className="text-xs font-semibold">
+                {billingData.balance === 0 ? 'Balance: 0' : `Balance: ${formatCurrency(billingData.balance)}`}
+              </span>
+            </div>
+          </div>
+
+          {/* Finalize is NOT hidden: always visible in top bar */}
+          <button
+            type="button"
+            onClick={handleFinalizePayment}
+            disabled={!canFinalize || (cashMethodIndex >= 0 && cashShort > 0)}
+            className={`inline-flex items-center gap-2 px-4 py-2 font-semibold transition-colors
+              ${
+                !canFinalize || (cashMethodIndex >= 0 && cashShort > 0)
+                  ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                  : `${colors.accent.primary} ${colors.accent.hover} ${colors.accent.text} cursor-pointer`
+              }`}
+            title={
+              cashMethodIndex >= 0 && cashShort > 0
+                ? `Cash received is short by ${formatCurrency(cashShort)}`
+                : billingData.balance > 0
+                ? 'Balance must be zero to finalize'
+                : ''
+            }
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-4 h-4" />
+                Finalize
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* MAIN */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 h-full min-h-0 mt-4">
+        {/* LEFT: receipt preview */}
+        <div className="lg:col-span-6 xl:col-span-6 min-h-0">
+          <ReceiptPreview />
+        </div>
+
+        {/* RIGHT: controls */}
+        <div className="lg:col-span-6 xl:col-span-6 min-h-0">
+          <div className="space-y-4">
+            {/* Adjustments */}
+            <div className={`border ${colors.border.primary} ${colors.bg.primary} overflow-hidden`}>
+              <div className={`px-4 py-3 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
+                <h3 className={`text-sm sm:text-base font-bold ${colors.text.primary}`}>Adjustments</h3>
+              </div>
+
+              <div className="p-4 space-y-5">
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${colors.text.secondary}`}>
+                    <span className="inline-flex items-center gap-2">
+                      <Percent className="w-4 h-4" />
+                      Discount
+                    </span>
+                  </label>
+
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      value={discount.value}
+                      onChange={(e) => handleDiscountChange(discount.type, e.target.value)}
+                      min={0}
+                      max={discount.type === 'percentage' ? 100 : billingData.subtotal}
+                      className={`w-full px-3.5 py-2.5 border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
+                      focus:outline-none focus:ring-2 focus:ring-blue-500/40`}
+                    />
+
+                    <div className={`flex border ${colors.border.primary} overflow-hidden`}>
+                      <button
+                        type="button"
+                        onClick={() => handleDiscountChange('percentage', String(discount.value))}
+                        className={`px-3 py-2 text-sm font-semibold transition-colors cursor-pointer
+                        ${
+                          discount.type === 'percentage'
+                            ? `${colors.accent.primary} ${colors.accent.text}`
+                            : `${colors.bg.hover} ${colors.text.secondary}`
+                        }`}
+                      >
+                        %
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDiscountChange('fixed', String(discount.value))}
+                        className={`px-3 py-2 text-sm font-semibold transition-colors cursor-pointer
+                        ${
+                          discount.type === 'fixed'
+                            ? `${colors.accent.primary} ${colors.accent.text}`
+                            : `${colors.bg.hover} ${colors.text.secondary}`
+                        }`}
+                      >
+                        Fixed
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${colors.text.secondary}`}>
+                    Taxes applied
+                  </label>
+
+                  <div className="space-y-2">
+                    {DEFAULT_TAXES.map((tax, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex items-center justify-between p-3 border ${colors.border.primary} ${colors.bg.secondary}`}
+                      >
+                        <div>
+                          <p className={`font-semibold ${colors.text.primary}`}>{tax.name}</p>
+                          <p className={`text-xs ${colors.text.secondary}`}>{tax.rate}% rate</p>
+                        </div>
+                        <p className={`font-extrabold ${colors.text.primary}`}>
+                          {formatCurrency(billingData.taxes[idx]?.amount || 0)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment */}
+            <div className={`border ${colors.border.primary} ${colors.bg.primary} overflow-hidden`}>
+              <div className={`px-4 py-3 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className={`text-sm sm:text-base font-bold ${colors.text.primary}`}>Payment</h3>
+                  <button
+                    type="button"
+                    onClick={handleAddPaymentMethod}
+                    disabled={paymentMethods.length >= 3}
+                    className={`text-xs font-semibold px-2.5 py-1.5 border ${colors.border.primary} ${colors.bg.hover} ${colors.text.secondary}
+                    transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
+                  >
+                    + Add
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4 space-y-3">
+                {paymentMethods.map((method, index) => (
+                  <div key={index} className={`p-3 border ${colors.border.primary} ${colors.bg.secondary}`}>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {paymentIcon(method.type)}
+                        <select
+                          value={method.type}
+                          onChange={(e) => handlePaymentMethodChange(index, 'type', e.target.value)}
+                          className={`text-sm ${colors.text.primary} bg-transparent capitalize outline-none cursor-pointer`}
+                        >
+                          <option value="cash">Cash</option>
+                          <option value="card">Card</option>
+                          <option value="insurance">Insurance</option>
+                          <option value="mobile">Mobile Money</option>
+                          <option value="mixed">Mixed</option>
+                        </select>
+                      </div>
+
+                      {paymentMethods.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePaymentMethod(index)}
+                          className={`p-2 ${colors.bg.hover} ${colors.text.secondary} transition-colors cursor-pointer`}
+                          aria-label="Remove payment method"
+                          title="Remove"
+                        >
+                          {/* simple X with text is ok, but keep icon minimal */}
+                          <span className="text-sm font-bold">×</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <input
+                        type="number"
+                        value={method.amount}
+                        onChange={(e) =>
+                          handlePaymentMethodChange(index, 'amount', Number(e.target.value) || 0)
+                        }
+                        placeholder="Amount"
+                        min={0}
+                        className={`w-full px-3 py-2 border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
+                        focus:outline-none focus:ring-2 focus:ring-blue-500/40`}
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => handleAutoFillRemaining(index)}
+                        className={`w-full text-xs font-semibold px-2 py-2 border ${colors.border.primary} ${colors.bg.hover} ${colors.text.secondary}
+                        transition-colors cursor-pointer`}
+                      >
+                        Fill remaining balance
+                      </button>
+
+                      {/* CASH RECEIVED + CHANGE CALCULATOR (only when this method is cash) */}
+                      {method.type === 'cash' && (
+                        <div className={`mt-2 p-3 border ${colors.border.primary} ${colors.bg.primary}`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Calculator className="w-4 h-4 text-green-500" />
+                            <p className={`text-sm font-semibold ${colors.text.primary}`}>Cash change</p>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <p className={`text-xs ${colors.text.secondary} mb-1`}>Cash due</p>
+                              <div className={`px-3 py-2 border ${colors.border.primary} ${colors.bg.secondary}`}>
+                                <span className={`font-extrabold ${colors.text.primary}`}>
+                                  {formatCurrency(Number(method.amount || 0))}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div>
+                              <p className={`text-xs ${colors.text.secondary} mb-1`}>Cash received</p>
+                              <input
+                                type="number"
+                                value={cashReceived}
+                                onChange={(e) => setCashReceived(Number(e.target.value) || 0)}
+                                min={0}
+                                placeholder="e.g. 50000"
+                                className={`w-full px-3 py-2 border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
+                                focus:outline-none focus:ring-2 focus:ring-blue-500/40`}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className={`p-3 border ${colors.border.primary} ${cashShort > 0 ? 'bg-yellow-500/10' : 'bg-green-500/10'}`}>
+                              <p className={`text-xs ${colors.text.secondary}`}>{cashShort > 0 ? 'Short' : 'Change'}</p>
+                              <p className={`text-lg font-extrabold ${cashShort > 0 ? 'text-yellow-500' : 'text-green-500'}`}>
+                                {cashShort > 0 ? formatCurrency(cashShort) : formatCurrency(cashChange)}
+                              </p>
+                            </div>
+
+                            <div className={`p-3 border ${colors.border.primary} ${colors.bg.secondary}`}>
+                              <p className={`text-xs ${colors.text.secondary}`}>Tip</p>
+                              <p className={`text-xs ${colors.text.secondary}`}>
+                                Enter the note amount the patient gives. The receipt will show cash received and change.
+                              </p>
+                            </div>
+                          </div>
+
+                          {cashShort > 0 && (
+                            <div className={`mt-3 p-3 border ${colors.border.primary} bg-yellow-500/10`}>
+                              <div className="flex items-start gap-2">
+                                <AlertCircle className="w-4 h-4 text-yellow-500 mt-0.5" />
+                                <p className={`text-xs ${colors.text.secondary}`}>
+                                  Cash received is short by <span className="font-bold">{formatCurrency(cashShort)}</span>.
+                                  Finalize will be disabled until cash received covers cash due (or reduce cash due).
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Balance */}
+                <div
+                  className={`p-3 border ${colors.border.primary} ${
+                    billingData.balance === 0 ? 'bg-green-500/10' : 'bg-yellow-500/10'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`text-sm font-semibold ${
+                        billingData.balance === 0 ? 'text-green-500' : 'text-yellow-500'
+                      }`}
+                    >
+                      Balance
+                    </span>
+                    <span
+                      className={`font-extrabold ${
+                        billingData.balance === 0 ? 'text-green-500' : 'text-yellow-500'
+                      }`}
+                    >
+                      {billingData.balance === 0 ? 'Paid' : formatCurrency(billingData.balance)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className={`block text-sm font-semibold mb-2 ${colors.text.secondary}`}>
+                Additional notes
+              </label>
+              <textarea
+                value={additionalNotes}
+                onChange={(e) => handleAdditionalNotesChange(e.target.value)}
+                placeholder="Add any notes about this payment..."
+                rows={3}
+                className={`w-full px-3.5 py-2.5 border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
+                focus:outline-none focus:ring-2 focus:ring-blue-500/40`}
+              />
+            </div>
+
+            {/* After settled badge */}
+            {status === 'settled' && (
+              <div className={`p-3 border ${colors.border.primary} bg-green-500/10`}>
+                <div className="flex items-center gap-2 text-green-500">
+                  <Check className="w-4 h-4" />
+                  <span className="text-xs font-semibold">
+                    Payment settled. Print is available in the receipt panel.
                   </span>
                 </div>
               </div>
             )}
           </div>
-
-          {/* Items List */}
-          <div className={`rounded-lg border ${colors.border.primary}`}>
-            <div className={`p-4 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
-              <h3 className={`font-semibold ${colors.text.primary}`}>
-                Selected Items ({chargeItems.length})
-              </h3>
-            </div>
-            
-            <div className="divide-y divide-gray-200 dark:divide-gray-800">
-              {chargeItems.length === 0 ? (
-                <div className="p-8 text-center">
-                  <AlertCircle className={`w-12 h-12 mx-auto mb-4 ${colors.text.tertiary}`} />
-                  <p className={colors.text.secondary}>No items selected</p>
-                  <p className={`text-sm mt-2 ${colors.text.tertiary}`}>
-                    Go back to Charge Entry to add items
-                  </p>
-                </div>
-              ) : (
-                chargeItems.map((item) => (
-                  <div key={item.id} className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <p className={`font-medium ${colors.text.primary}`}>{item.service.name}</p>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className={`text-xs px-2 py-0.5 rounded ${colors.bg.secondary} ${colors.text.secondary}`}>
-                            {item.service.code}
-                          </span>
-                          <span className={`text-xs ${colors.text.secondary}`}>
-                            {item.quantity} × {formatCurrency(item.service.unitPrice)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`font-bold ${colors.text.primary}`}>
-                          {formatCurrency(item.totalAmount)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Adjustments */}
-          <div className={`rounded-lg border ${colors.border.primary}`}>
-            <div className={`p-4 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
-              <h3 className={`font-semibold ${colors.text.primary}`}>Adjustments</h3>
-            </div>
-            
-            <div className="p-4 space-y-4">
-              {/* Discount */}
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${colors.text.secondary}`}>
-                  <div className="flex items-center gap-2">
-                    <Percent className="w-4 h-4" />
-                    Discount
-                  </div>
-                </label>
-                
-                <div className="flex items-center gap-3">
-                  <div className="flex-1">
-                    <input
-                      type="number"
-                      value={discount.value}
-                      onChange={(e) => handleDiscountChange(discount.type, e.target.value)}
-                      min="0"
-                      max={discount.type === 'percentage' ? 100 : billingData.subtotal}
-                      className={`w-full px-4 py-2 rounded-lg border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}`}
-                    />
-                  </div>
-                  
-                  <div className="flex border rounded-lg overflow-hidden">
-                    <button
-                      onClick={() => handleDiscountChange('percentage', discount.value.toString())}
-                      className={`px-3 py-2 text-sm ${discount.type === 'percentage' ? colors.accent.primary + ' ' + colors.accent.text : colors.bg.hover + ' ' + colors.text.secondary}`}
-                    >
-                      %
-                    </button>
-                    <button
-                      onClick={() => handleDiscountChange('fixed', discount.value.toString())}
-                      className={`px-3 py-2 text-sm ${discount.type === 'fixed' ? colors.accent.primary + ' ' + colors.accent.text : colors.bg.hover + ' ' + colors.text.secondary}`}
-                    >
-                      Fixed
-                    </button>
-                  </div>
-                </div>
-                
-                {discount.value > 0 && (
-                  <p className={`text-sm mt-2 ${colors.status.success}`}>
-                    Discount: {formatCurrency(billingData.discountAmount)}
-                  </p>
-                )}
-              </div>
-
-              {/* Taxes */}
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${colors.text.secondary}`}>
-                  Taxes Applied
-                </label>
-                
-                <div className="space-y-2">
-                  {DEFAULT_TAXES.map((tax, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg border border-gray-700 dark:border-gray-700">
-                      <div>
-                        <p className={`font-medium ${colors.text.primary}`}>{tax.name}</p>
-                        <p className={`text-sm ${colors.text.secondary}`}>{tax.rate}% rate</p>
-                      </div>
-                      <p className={`font-bold ${colors.text.primary}`}>
-                        {formatCurrency(billingData.taxes[index]?.amount || 0)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Right Column - Payment & Totals */}
-        <div className="space-y-6">
-          {/* Payment Methods */}
-          <div className={`rounded-lg border ${colors.border.primary}`}>
-            <div className={`p-4 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
-              <div className="flex items-center justify-between">
-                <h3 className={`font-semibold ${colors.text.primary}`}>Payment Methods</h3>
-                {paymentMethods.length < 3 && (
-                  <button
-                    onClick={handleAddPaymentMethod}
-                    className={`text-xs px-2 py-1 rounded ${colors.bg.hover} ${colors.text.secondary}`}
-                  >
-                    + Add
-                  </button>
-                )}
-              </div>
-            </div>
-            
-            <div className="p-4 space-y-3">
-              {paymentMethods.map((method, index) => (
-                <div key={index} className={`p-3 rounded-lg border ${colors.border.primary}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      {method.type === 'cash' && <FaCashRegister className="w-4 h-4 text-green-500" />}
-                      {method.type === 'card' && <CreditCard className="w-4 h-4 text-blue-500" />}
-                      {method.type === 'insurance' && <Shield className="w-4 h-4 text-purple-500" />}
-                      {method.type === 'mobile' && <Banknote className="w-4 h-4 text-yellow-500" />}
-                      {method.type === 'mixed' && <Wallet className="w-4 h-4 text-gray-500" />}
-                      
-                      <select
-                        value={method.type}
-                        onChange={(e) => handlePaymentMethodChange(index, 'type', e.target.value)}
-                        className={`text-sm bg-transparent ${colors.text.primary} capitalize`}
-                      >
-                        <option value="cash">Cash</option>
-                        <option value="card">Card</option>
-                        <option value="insurance">Insurance</option>
-                        <option value="mobile">Mobile Money</option>
-                        <option value="mixed">Mixed</option>
-                      </select>
-                    </div>
-                    
-                    {paymentMethods.length > 1 && (
-                      <button
-                        onClick={() => handleRemovePaymentMethod(index)}
-                        className={`p-1 rounded ${colors.bg.hover}`}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div>
-                      <input
-                        type="number"
-                        value={method.amount}
-                        onChange={(e) => handlePaymentMethodChange(index, 'amount', parseFloat(e.target.value) || 0)}
-                        placeholder="Amount"
-                        className={`w-full px-3 py-1.5 rounded border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}`}
-                      />
-                    </div>
-                    
-                    <button
-                      onClick={() => handleAutoCalculatePayment(index)}
-                      className={`w-full text-xs px-2 py-1 rounded ${colors.bg.hover} ${colors.text.secondary}`}
-                    >
-                      Fill Remaining Balance
-                    </button>
-                  </div>
-                </div>
-              ))}
-              
-              {/* Balance Indicator */}
-              <div className={`p-3 rounded-lg ${billingData.balance === 0 ? 'bg-green-500/10' : 'bg-yellow-500/10'}`}>
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm font-medium ${billingData.balance === 0 ? 'text-green-500' : 'text-yellow-500'}`}>
-                    Balance
-                  </span>
-                  <span className={`font-bold ${billingData.balance === 0 ? 'text-green-500' : 'text-yellow-500'}`}>
-                    {billingData.balance === 0 ? 'Paid' : formatCurrency(billingData.balance)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Totals Summary */}
-          <div className={`rounded-lg border ${colors.border.primary}`}>
-            <div className={`p-4 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
-              <h3 className={`font-semibold ${colors.text.primary}`}>Bill Summary</h3>
-            </div>
-            
-            <div className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className={colors.text.secondary}>Subtotal</span>
-                <span className={`font-medium ${colors.text.primary}`}>
-                  {formatCurrency(billingData.subtotal)}
-                </span>
-              </div>
-              
-              {discount.value > 0 && (
-                <div className="flex items-center justify-between text-green-500">
-                  <span>Discount</span>
-                  <span className="font-medium">
-                    -{formatCurrency(billingData.discountAmount)}
-                  </span>
-                </div>
-              )}
-              
-              {DEFAULT_TAXES.map((tax, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className={colors.text.secondary}>{tax.name}</span>
-                  <span className={colors.text.secondary}>
-                    {formatCurrency(billingData.taxes[index]?.amount || 0)}
-                  </span>
-                </div>
-              ))}
-              
-              <div className="pt-3 border-t border-gray-700 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-2">
-                  <span className={`text-lg font-semibold ${colors.text.primary}`}>Grand Total</span>
-                  <span className={`text-2xl font-bold ${colors.status.success}`}>
-                    {formatCurrency(billingData.grandTotal)}
-                  </span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm ${colors.text.secondary}`}>Total Paid</span>
-                  <span className={`font-medium ${colors.text.primary}`}>
-                    {formatCurrency(billingData.totalPaid)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Additional Notes */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${colors.text.secondary}`}>
-              Additional Notes
-            </label>
-            <textarea
-              value={additionalNotes}
-              onChange={(e) => handleAdditionalNotesChange(e.target.value)}
-              placeholder="Add any notes about this payment..."
-              rows={3}
-              className={`w-full px-4 py-2 rounded-lg border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}`}
-            />
-          </div>
-          
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            <button
-              onClick={() => setShowReceiptPreview(true)}
-              disabled={chargeItems.length === 0 || status === 'settled'}
-              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium border ${
-                colors.border.primary
-              } ${colors.bg.hover} ${colors.text.secondary} disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              <Receipt className="w-4 h-4" />
-              Preview Receipt
-            </button>
-            
-            <button
-              onClick={handleFinalizePayment}
-              disabled={isProcessing || chargeItems.length === 0 || billingData.balance > 0 || status === 'settled'}
-              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
-                isProcessing || chargeItems.length === 0 || billingData.balance > 0 || status === 'settled'
-                  ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                  : `${colors.accent.primary} ${colors.accent.hover} ${colors.accent.text}`
-              }`}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  {status === 'settled' ? 'Payment Settled' : 'Finalize Payment'}
-                </>
-              )}
-            </button>
-          </div>
         </div>
       </div>
-      
-      {/* Receipt Preview Modal */}
-      {showReceiptPreview && (
-        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${colors.bg.overlay}`}>
-          <div className={`w-full max-w-md max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl ${colors.bg.primary}`}>
-            {/* Receipt Header */}
-            <div className={`p-6 border-b ${colors.border.primary}`}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className={`text-xl font-bold ${colors.text.primary}`}>Receipt Preview</h3>
-                <button
-                  onClick={() => setShowReceiptPreview(false)}
-                  className={`p-2 rounded-lg ${colors.bg.hover}`}
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <p className={colors.text.secondary}>Review before printing</p>
-            </div>
-            
-            {/* Receipt Content */}
-            <div className="p-6">
-              <div className={`p-6 border ${colors.border.primary} rounded-lg bg-white text-black`}>
-                {/* Clinic Header */}
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl font-bold mb-1">MEDICAL CLINIC</h2>
-                  <p className="text-sm text-gray-600">123 Health Street, Nairobi</p>
-                  <p className="text-sm text-gray-600">Phone: (254) 712-345-678</p>
-                </div>
-                
-                <div className="border-t border-b border-gray-300 py-3 my-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Receipt:</span>
-                    <span className="font-bold">{receiptNumber || 'Pending'}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Date:</span>
-                    <span>{new Date().toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Time:</span>
-                    <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  </div>
-                </div>
-                
-                {/* Items */}
-                <div className="mb-4">
-                  <h3 className="font-bold text-lg mb-2">Services Rendered</h3>
-                  <div className="space-y-2">
-                    {chargeItems.map((item) => (
-                      <div key={item.id} className="flex justify-between text-sm border-b border-gray-100 pb-1">
-                        <div>
-                          <p className="font-medium">{item.service.name}</p>
-                          <p className="text-xs text-gray-600">
-                            {item.quantity} × {formatCurrency(item.service.unitPrice)}
-                          </p>
-                        </div>
-                        <span className="font-bold">{formatCurrency(item.totalAmount)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Totals */}
-                <div className="border-t border-gray-300 pt-3">
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal:</span>
-                    <span>{formatCurrency(billingData.subtotal)}</span>
-                  </div>
-                  {discount.value > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span>Discount:</span>
-                      <span>-{formatCurrency(billingData.discountAmount)}</span>
-                    </div>
-                  )}
-                  {DEFAULT_TAXES.map((tax, index) => (
-                    <div key={index} className="flex justify-between text-sm">
-                      <span>{tax.name}:</span>
-                      <span>{formatCurrency(billingData.taxes[index]?.amount || 0)}</span>
-                    </div>
-                  ))}
-                  <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t border-gray-300">
-                    <span>TOTAL:</span>
-                    <span>{formatCurrency(billingData.grandTotal)}</span>
-                  </div>
-                </div>
-                
-                {/* Payment */}
-                <div className="mt-4 pt-4 border-t border-gray-300">
-                  <h3 className="font-bold mb-2">Payment</h3>
-                  {paymentMethods.map((method, index) => (
-                    method.amount > 0 && (
-                      <div key={index} className="flex justify-between text-sm">
-                        <span className="capitalize">{method.type}:</span>
-                        <span>{formatCurrency(method.amount)}</span>
-                      </div>
-                    )
-                  ))}
-                  {billingData.balance === 0 && (
-                    <div className="text-center mt-4 pt-4 border-t border-gray-300">
-                      <p className="text-green-600 font-bold">PAID IN FULL</p>
-                      <p className="text-xs text-gray-600 mt-1">Thank you for your payment</p>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Footer */}
-                <div className="text-center mt-6 pt-4 border-t border-gray-300">
-                  <p className="text-xs text-gray-600">This is a computer generated receipt</p>
-                  <p className="text-xs text-gray-600">Valid without signature</p>
-                </div>
-              </div>
-              
-              {/* Print Actions */}
-              <div className="flex items-center justify-end gap-3 mt-6">
-                <button
-                  onClick={() => setShowReceiptPreview(false)}
-                  className={`px-4 py-2 rounded-lg border ${colors.border.primary} ${colors.bg.hover} ${colors.text.secondary}`}
-                >
-                  Close
-                </button>
-                <button
-                  onClick={handlePrintReceipt}
-                  className={`px-6 py-2 rounded-lg font-medium flex items-center gap-2 ${colors.accent.primary} ${colors.accent.hover} ${colors.accent.text}`}
-                >
-                  <Printer className="w-4 h-4" />
-                  Print Receipt
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 };
