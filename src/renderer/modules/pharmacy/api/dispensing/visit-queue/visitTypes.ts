@@ -221,8 +221,8 @@ export interface AssignStaffToVisitParams {
   };
   allowed_department_ids: number[] | null;
 
-  queue: QueueVisit[];              // legacy
-  queue_visits?: QueueVisitItem[];  // ✅ NEW (visit-centric)
+  queue: QueueVisit[];           
+  queue_visits?: QueueVisitItem[];  
 
   total_visits: number;
   total_patients: number;

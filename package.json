@@ -32,6 +32,7 @@
     "publish:all": "npm run transpile:electron && npm run react:build && npx electron-builder --mac --win --linux --publish always"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@reduxjs/toolkit": "^2.11.2",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-query": "^5.90.12",
