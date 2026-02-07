@@ -1,15 +1,7 @@
-/**
- * Billing Types and Mock Data
- * Centralized type definitions and mock data for billing components
- */
+// billing-types.ts
+// Types and mock data for ChargeEntry and BillingSummary components
 
-// ============================================================================
-// TYPE DEFINITIONS
-// ============================================================================
-
-/**
- * Service/Item that can be charged
- */
+// Service Item Type
 export interface ServiceItem {
   id: number;
   code: string;
@@ -18,36 +10,28 @@ export interface ServiceItem {
   category: string;
 }
 
-/**
- * Charge item with quantity and total
- */
+// Charge Item Type
 export interface ChargeItem {
   service: ServiceItem;
   quantity: number;
   totalAmount: number;
 }
 
-/**
- * Discount configuration
- */
+// Discount Type
 export interface Discount {
   type: 'percentage' | 'fixed';
   value: number;
   reason?: string;
 }
 
-/**
- * Tax configuration
- */
+// Tax Type
 export interface Tax {
   name: string;
   rate: number;
   amount: number;
 }
 
-/**
- * Payment method details
- */
+// Payment Method Type
 export interface PaymentMethod {
   type: 'cash' | 'card' | 'insurance' | 'mobile' | 'mixed';
   amount: number;
@@ -55,10 +39,8 @@ export interface PaymentMethod {
   details?: string;
 }
 
-/**
- * Billing session data shared between components
- */
-export interface BillingSession {
+// Billing Data Type (Shared between components)
+export interface BillingData {
   chargeItems: ChargeItem[];
   subtotal: number;
   discount: Discount;
@@ -68,53 +50,9 @@ export interface BillingSession {
   balance: number;
   receiptNumber: string;
   additionalNotes: string;
-  timestamp: number;
 }
 
-/**
- * Theme type
- */
-export type Theme = 'light' | 'dark';
-
-/**
- * Color configuration
- */
-export interface ColorConfig {
-  bg: {
-    primary: string;
-    secondary: string;
-    elevated: string;
-    hover: string;
-  };
-  border: {
-    primary: string;
-    secondary: string;
-  };
-  text: {
-    primary: string;
-    secondary: string;
-    tertiary: string;
-  };
-  accent: {
-    primary: string;
-    hover: string;
-    text: string;
-  };
-  status: {
-    success: string;
-    warning: string;
-    error: string;
-    info: string;
-  };
-}
-
-// ============================================================================
-// MOCK DATA
-// ============================================================================
-
-/**
- * Mock services/items available for billing
- */
+// Mock Services Data
 export const MOCK_SERVICES: ServiceItem[] = [
   { id: 1, code: 'CONSULT001', name: 'General Consultation', unitPrice: 5000, category: 'Consultation' },
   { id: 2, code: 'LAB001', name: 'Blood Test - Complete', unitPrice: 15000, category: 'Laboratory' },
@@ -126,28 +64,22 @@ export const MOCK_SERVICES: ServiceItem[] = [
   { id: 8, code: 'WARD001', name: 'Ward Admission (per day)', unitPrice: 15000, category: 'Ward' },
   { id: 9, code: 'THE001', name: 'Physiotherapy Session', unitPrice: 7000, category: 'Therapy' },
   { id: 10, code: 'EMER001', name: 'Emergency Care', unitPrice: 20000, category: 'Emergency' },
-  { id: 11, code: 'LAB002', name: 'Urine Analysis', unitPrice: 3500, category: 'Laboratory' },
-  { id: 12, code: 'MED003', name: 'Ibuprofen 400mg', unitPrice: 250, category: 'Medication' },
-  { id: 13, code: 'XRAY002', name: 'Abdominal X-Ray', unitPrice: 9000, category: 'Radiology' },
-  { id: 14, code: 'CONSULT002', name: 'Specialist Consultation', unitPrice: 10000, category: 'Consultation' },
-  { id: 15, code: 'LAB003', name: 'HIV Test', unitPrice: 2500, category: 'Laboratory' },
 ];
 
-/**
- * Default tax rates
- */
+// Default Taxes
 export const DEFAULT_TAXES: Tax[] = [
   { name: 'VAT (16%)', rate: 16, amount: 0 },
   { name: 'Service Charge', rate: 2, amount: 0 },
 ];
 
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
+// Default Discount
+export const DEFAULT_DISCOUNT: Discount = {
+  type: 'percentage',
+  value: 0,
+  reason: ''
+};
 
-/**
- * Format currency amount
- */
+// Helper Functions
 export const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -156,9 +88,6 @@ export const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-/**
- * Generate unique receipt number
- */
 export const generateReceiptNumber = (): string => {
   const date = new Date();
   const year = date.getFullYear();
@@ -168,126 +97,52 @@ export const generateReceiptNumber = (): string => {
   return `REC-${year}${month}${day}-${random}`;
 };
 
-/**
- * Calculate discount amount
- */
-export const calculateDiscountAmount = (subtotal: number, discount: Discount): number => {
+export const calculateBillingData = (
+  chargeItems: ChargeItem[],
+  discount: Discount,
+  taxes: Tax[],
+  paymentMethods: PaymentMethod[]
+): Omit<BillingData, 'receiptNumber' | 'additionalNotes'> => {
+  // Calculate subtotal
+  const subtotal = chargeItems.reduce((sum, item) => sum + item.totalAmount, 0);
+  
+  // Calculate discount amount
+  let discountAmount = 0;
   if (discount.type === 'percentage') {
-    return subtotal * (discount.value / 100);
+    discountAmount = subtotal * (discount.value / 100);
+  } else {
+    discountAmount = discount.value;
   }
-  return Math.min(discount.value, subtotal);
-};
-
-/**
- * Calculate taxes on taxable amount
- */
-export const calculateTaxes = (taxableAmount: number, taxes: Tax[]): Tax[] => {
-  return taxes.map(tax => ({
+  
+  // Ensure discount doesn't exceed subtotal
+  discountAmount = Math.min(discountAmount, subtotal);
+  
+  // Calculate taxable amount
+  const taxableAmount = subtotal - discountAmount;
+  
+  // Calculate taxes
+  const updatedTaxes = taxes.map(tax => ({
     ...tax,
     amount: taxableAmount * (tax.rate / 100),
   }));
-};
-
-/**
- * Calculate grand total from components
- */
-export const calculateGrandTotal = (
-  subtotal: number,
-  discount: Discount,
-  taxes: Tax[]
-): number => {
-  const discountAmount = calculateDiscountAmount(subtotal, discount);
-  const taxableAmount = subtotal - discountAmount;
-  const taxTotal = taxes.reduce((sum, tax) => sum + tax.amount, 0);
-  return taxableAmount + taxTotal;
-};
-
-/**
- * Calculate balance
- */
-export const calculateBalance = (
-  grandTotal: number,
-  paymentMethods: PaymentMethod[]
-): number => {
+  
+  // Calculate tax total
+  const taxTotal = updatedTaxes.reduce((sum, tax) => sum + tax.amount, 0);
+  
+  // Calculate grand total
+  const grandTotal = taxableAmount + taxTotal;
+  
+  // Calculate total paid and balance
   const totalPaid = paymentMethods.reduce((sum, method) => sum + method.amount, 0);
-  return grandTotal - totalPaid;
-};
-
-/**
- * Get theme-based color configuration
- */
-export const getColorConfig = (theme: Theme): ColorConfig => {
-  const isDark = theme === 'dark';
+  const balance = Math.max(0, grandTotal - totalPaid);
   
   return {
-    bg: {
-      primary: isDark ? 'bg-gray-900' : 'bg-white',
-      secondary: isDark ? 'bg-gray-800' : 'bg-gray-50',
-      elevated: isDark ? 'bg-gray-800' : 'bg-white',
-      hover: isDark ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50',
-    },
-    border: {
-      primary: isDark ? 'border-gray-800' : 'border-gray-200',
-      secondary: isDark ? 'border-gray-700' : 'border-gray-300',
-    },
-    text: {
-      primary: isDark ? 'text-gray-100' : 'text-gray-900',
-      secondary: isDark ? 'text-gray-400' : 'text-gray-600',
-      tertiary: isDark ? 'text-gray-500' : 'text-gray-500',
-    },
-    accent: {
-      primary: isDark ? 'bg-blue-600' : 'bg-blue-600',
-      hover: isDark ? 'hover:bg-blue-700' : 'hover:bg-blue-700',
-      text: 'text-white',
-    },
-    status: {
-      success: isDark ? 'text-green-400' : 'text-green-600',
-      warning: isDark ? 'text-yellow-400' : 'text-yellow-600',
-      error: isDark ? 'text-red-400' : 'text-red-600',
-      info: isDark ? 'text-blue-400' : 'text-blue-600',
-    },
+    chargeItems,
+    subtotal,
+    discount,
+    taxes: updatedTaxes,
+    grandTotal,
+    paymentMethods,
+    balance,
   };
-};
-
-/**
- * Create initial billing session
- */
-export const createInitialBillingSession = (): BillingSession => {
-  return {
-    chargeItems: [],
-    subtotal: 0,
-    discount: { type: 'percentage', value: 0 },
-    taxes: DEFAULT_TAXES,
-    grandTotal: 0,
-    paymentMethods: [{ type: 'cash', amount: 0, details: '' }],
-    balance: 0,
-    receiptNumber: generateReceiptNumber(),
-    additionalNotes: '',
-    timestamp: Date.now(),
-  };
-};
-
-/**
- * Validate billing session
- */
-export const validateBillingSession = (session: BillingSession): boolean => {
-  return (
-    session.chargeItems.length > 0 &&
-    session.grandTotal > 0 &&
-    session.balance === 0
-  );
-};
-
-/**
- * Search services by term
- */
-export const searchServices = (term: string, limit: number = 8): ServiceItem[] => {
-  if (term.trim() === '') return [];
-  
-  const searchTerm = term.toLowerCase();
-  return MOCK_SERVICES.filter(service =>
-    service.name.toLowerCase().includes(searchTerm) ||
-    service.code.toLowerCase().includes(searchTerm) ||
-    service.category.toLowerCase().includes(searchTerm)
-  ).slice(0, limit);
 };
