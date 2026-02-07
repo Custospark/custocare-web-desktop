@@ -164,6 +164,19 @@ export enum PaymentStatus {
   CHARITY_CARE = 'charity_care',
 }
 
+
+export interface AssignStaffToVisitRequest {
+  visit_id: number;
+  assigned_staff_id: number;
+}
+
+export type AssignStaffToVisitResponse = VisitResponse;
+
+export interface AssignStaffToVisitParams {
+  data: AssignStaffToVisitRequest;
+}
+
+
 /* -------------------------------------------------------------------------- */
 /*                              CORE DATA TYPES                               */
 /* -------------------------------------------------------------------------- */

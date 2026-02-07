@@ -39,6 +39,8 @@ import type {
   MutationCallbacks,
   UpdateVisitPhaseMutationContext,
   CreateVisitMutationContext,
+  AssignStaffToVisitParams,
+  AssignStaffToVisitResponse,
 } from './visitTypes';
 import  {
   VisitPhase,
@@ -78,6 +80,7 @@ export const visitKeys = {
     [...visitKeys.all, 'statistics', facilityId, dateRange] as const,
   longWaiting: (minutesThreshold: number, facilityId?: number) => 
     [...visitKeys.all, 'long-waiting', minutesThreshold, facilityId] as const,
+  assignStaff: () => [...visitKeys.all, 'assign-staff'] as const,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -152,6 +155,70 @@ export const useGetMyQueue = (
     ...options,
   });
 };
+
+// ✅ Add new hook near other mutation hooks
+
+export const useAssignStaffToVisit = (
+  callbacks: MutationCallbacks<AssignStaffToVisitResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
+
+  return useMutation<AssignStaffToVisitResponse, AxiosError<ApiErrorResponse>, AssignStaffToVisitParams>({
+    mutationFn: async ({ data }: AssignStaffToVisitParams) => {
+      if (!facilityId) throw new Error('No active facility selected');
+
+      const response = await axiosInstance.post<AssignStaffToVisitResponse>(
+        '/visits/assign-staff',
+        data,
+        {
+          headers: {
+            'X-Facility-Id': facilityId.toString(),
+          },
+        }
+      );
+
+      return response.data;
+    },
+
+    onSuccess: (data) => {
+      showToast('success', data.message || 'Visit assigned successfully!', 5000);
+
+      // ✅ Most important invalidations
+      queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
+      queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
+
+      // ✅ If you have visit uuid on response, invalidate its details too
+      if (data?.data?.visit_uuid) {
+        queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
+      }
+
+      callbacks.onSuccess?.(data);
+    },
+
+    onError: (error) => {
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to assign staff.';
+      let errorDetails = '';
+
+      if (error.response?.data?.errors) {
+        errorDetails = Object.entries(error.response.data.errors)
+          .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
+          .join(' | ');
+      }
+
+      const displayMessage = errorDetails ? `${apiMessage} (${errorDetails})` : apiMessage;
+      showToast('error', displayMessage, 8000);
+
+      callbacks.onError?.(error);
+    },
+
+    onSettled: () => {
+      callbacks.onSettled?.();
+    },
+  });
+};
+
 
 /**
  * Fetches visits by facility ID
