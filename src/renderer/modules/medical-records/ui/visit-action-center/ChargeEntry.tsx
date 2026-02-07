@@ -7,7 +7,7 @@ import {
   ChargeItem,
   MOCK_SERVICES,
   formatCurrency
-} from './billing-types';
+} from './billing-new/billing.types';
 
 interface ChargeEntryProps {
   theme?: 'light' | 'dark';

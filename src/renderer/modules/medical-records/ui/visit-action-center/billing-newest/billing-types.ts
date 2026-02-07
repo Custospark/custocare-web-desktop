@@ -1,5 +1,5 @@
 // billing-types.ts
-// Types and mock data for ChargeEntry and BillingSummary components
+// Types and shared data for hospital billing workflow
 
 // Service Item Type
 export interface ServiceItem {
@@ -12,6 +12,7 @@ export interface ServiceItem {
 
 // Charge Item Type
 export interface ChargeItem {
+  id: string;
   service: ServiceItem;
   quantity: number;
   totalAmount: number;
@@ -39,17 +40,36 @@ export interface PaymentMethod {
   details?: string;
 }
 
-// Billing Data Type (Shared between components)
-export interface BillingData {
+// Billing Status
+export type BillingStatus = 'draft' | 'ready' | 'settled';
+
+// Billing Step
+export type BillingStep = 'charge_entry' | 'billing_summary';
+
+// Billing State
+export interface BillingState {
+  // Core state
   chargeItems: ChargeItem[];
-  subtotal: number;
   discount: Discount;
   taxes: Tax[];
-  grandTotal: number;
   paymentMethods: PaymentMethod[];
-  balance: number;
-  receiptNumber: string;
   additionalNotes: string;
+  status: BillingStatus;
+  receiptNumber?: string;
+  
+  // UI state
+  trayOpen: boolean;
+  currentStep: BillingStep;
+  
+  // Patient context
+  visitId?: string;
+  patientId?: string;
+  patientName?: string;
+  
+  // Metadata
+  lastUpdated: number;
+  isDirty: boolean;
+  isProcessing: boolean;
 }
 
 // Mock Services Data
@@ -79,11 +99,31 @@ export const DEFAULT_DISCOUNT: Discount = {
   reason: ''
 };
 
+// Default Payment Method
+export const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
+  { type: 'cash', amount: 0, details: '' },
+];
+
+// Initial Billing State
+export const INITIAL_BILLING_STATE: BillingState = {
+  chargeItems: [],
+  discount: DEFAULT_DISCOUNT,
+  taxes: DEFAULT_TAXES,
+  paymentMethods: DEFAULT_PAYMENT_METHODS,
+  additionalNotes: '',
+  status: 'draft',
+  trayOpen: false,
+  currentStep: 'charge_entry',
+  lastUpdated: Date.now(),
+  isDirty: false,
+  isProcessing: false,
+};
+
 // Helper Functions
 export const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'KES',
+    currency: 'UGX',
     minimumFractionDigits: 0,
   }).format(amount);
 };
@@ -102,7 +142,7 @@ export const calculateBillingData = (
   discount: Discount,
   taxes: Tax[],
   paymentMethods: PaymentMethod[]
-): Omit<BillingData, 'receiptNumber' | 'additionalNotes'> => {
+) => {
   // Calculate subtotal
   const subtotal = chargeItems.reduce((sum, item) => sum + item.totalAmount, 0);
   
@@ -137,12 +177,23 @@ export const calculateBillingData = (
   const balance = Math.max(0, grandTotal - totalPaid);
   
   return {
-    chargeItems,
     subtotal,
-    discount,
+    discountAmount,
+    taxableAmount,
     taxes: updatedTaxes,
+    taxTotal,
     grandTotal,
-    paymentMethods,
+    totalPaid,
     balance,
+    isPaid: balance === 0,
   };
+};
+
+export const generateChargeItemId = (serviceId: number): string => {
+  return `charge-${serviceId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+};
+
+// Storage key for drafts
+export const getDraftStorageKey = (visitId?: string) => {
+  return `billing_draft_${visitId || 'global'}`;
 };

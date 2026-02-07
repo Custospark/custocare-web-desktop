@@ -15,6 +15,8 @@ import PatientComplaints from "../../../modules/medical-records/ui/visit-action-
 import VisitStatus from "../../../modules/medical-records/ui/visit-action-center/VisitStatus";
 import ChargeEntry from "../../../modules/medical-records/ui/visit-action-center/ChargeEntry";
 import BillingSummary from "../../../modules/medical-records/ui/visit-action-center/BillingSummary";
+import { BillingSpace } from "../../../modules/medical-records/ui/visit-action-center/billing-new";
+import MRBilling from "../../../modules/medical-records/ui/visit-action-center/billing-newest/MRBilling";
 export const medicalRecordsRoutes = [
   <Route
     key="overview"
@@ -87,7 +89,7 @@ export const medicalRecordsRoutes = [
       } />
     <Route path={MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SUMMARY} element={
         <SuspenseWrapper variant="table">
-          <WithThemeProp Component={BillingSummary} />
+          <WithThemeProp Component={MRBilling} />
         </SuspenseWrapper>
       } />
     </Route>,

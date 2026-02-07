@@ -26,7 +26,7 @@ import {
   formatCurrency,
   generateReceiptNumber,
   calculateBillingData
-} from './billing-types';
+} from './billing/billing-types';
 
 interface BillingSummaryProps {
   theme?: 'light' | 'dark';
