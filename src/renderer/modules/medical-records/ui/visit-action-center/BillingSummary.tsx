@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   CreditCard,
   Wallet,
@@ -16,280 +16,222 @@ import {
 import { FaCashRegister } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
+import {
+  ChargeItem,
+  Discount,
+  Tax,
+  PaymentMethod,
+  Theme,
+  getColorConfig,
+  formatCurrency,
+  generateReceiptNumber,
+  calculateDiscountAmount,
+  calculateTaxes,
+  calculateGrandTotal,
+  calculateBalance,
+  DEFAULT_TAXES,
+} from './billing-types';
 
-// Mock data types
-interface ChargeItem {
-  service: {
-    id: number;
-    code: string;
-    name: string;
-    unitPrice: number;
-    category: string;
-  };
-  quantity: number;
-  totalAmount: number;
-}
-
-interface Discount {
-  type: 'percentage' | 'fixed';
-  value: number;
-  reason?: string;
-}
-
-interface Tax {
-  name: string;
-  rate: number;
-  amount: number;
-}
-
-interface PaymentMethod {
-  type: 'cash' | 'card' | 'insurance' | 'mobile' | 'mixed';
-  amount: number;
-  reference?: string;
-  details?: string;
-}
-
+/**
+ * Props for BillingSummary component
+ */
 interface BillingSummaryProps {
-  chargeItems?: ChargeItem[];
-  initialTotal?: number;
-  patientName?: string;
-  patientId?: string;
   visitId?: string;
   onBack?: () => void;
-  theme?: 'light' | 'dark';
+  theme?: Theme;
 }
 
+/**
+ * BillingSummary Component
+ * Handles discounts, taxes, and payment processing
+ */
 export const BillingSummary: React.FC<BillingSummaryProps> = ({
-  chargeItems = [],
-  initialTotal = 0,
-  patientName = 'John Doe',
-  patientId = 'PT-2024-001',
   visitId = 'VIS-2024-001',
   onBack,
   theme = 'light',
 }) => {
-  const isDark = theme === 'dark';
-  
-  // State
-  const [subtotal, setSubtotal] = useState(initialTotal);
+  const navigate = useNavigate();
+  const colors = getColorConfig(theme);
+
+  // State management
+  const [chargeItems, setChargeItems] = useState<ChargeItem[]>([]);
+  const [subtotal, setSubtotal] = useState(0);
   const [discount, setDiscount] = useState<Discount>({ type: 'percentage', value: 0 });
-  const [taxes, setTaxes] = useState<Tax[]>([
-    { name: 'VAT (16%)', rate: 16, amount: 0 },
-    { name: 'Service Charge', rate: 2, amount: 0 },
-  ]);
-  const [grandTotal, setGrandTotal] = useState(initialTotal);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod[]>([
-    { type: 'cash', amount: 0, details: '' },
-  ]);
+  const [taxes, setTaxes] = useState<Tax[]>(DEFAULT_TAXES);
+  const [grandTotal, setGrandTotal] = useState(0);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([{ type: 'cash', amount: 0, details: '' }]);
   const [balance, setBalance] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [, setIsPrinted] = useState(false);
   const [receiptNumber, setReceiptNumber] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
   const [showReceiptPreview, setShowReceiptPreview] = useState(false);
-  
-  // Colors based on theme
-  const colors = {
-    bg: {
-      primary: isDark ? 'bg-gray-900' : 'bg-white',
-      secondary: isDark ? 'bg-gray-800' : 'bg-gray-50',
-      elevated: isDark ? 'bg-gray-800' : 'bg-white',
-      hover: isDark ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50',
-    },
-    border: {
-      primary: isDark ? 'border-gray-800' : 'border-gray-200',
-      secondary: isDark ? 'border-gray-700' : 'border-gray-300',
-    },
-    text: {
-      primary: isDark ? 'text-gray-100' : 'text-gray-900',
-      secondary: isDark ? 'text-gray-400' : 'text-gray-600',
-      tertiary: isDark ? 'text-gray-500' : 'text-gray-500',
-    },
-    accent: {
-      primary: isDark ? 'bg-blue-600' : 'bg-blue-600',
-      hover: isDark ? 'hover:bg-blue-700' : 'hover:bg-blue-700',
-      text: 'text-white',
-    },
-    status: {
-      success: isDark ? 'text-green-400' : 'text-green-600',
-      warning: isDark ? 'text-yellow-400' : 'text-yellow-600',
-      error: isDark ? 'text-red-400' : 'text-red-600',
-      info: isDark ? 'text-blue-400' : 'text-blue-600',
-    },
-  };
-  
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-      const navigate = useNavigate();
-  
-      /**
-       * 
-       * Note: On back,navigate to this route: "MEDICAL_RECORDS_ROUTES.ENTRY_CHAGRES."
-       */
-  // Generate receipt number
-  const generateReceiptNumber = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `REC-${year}${month}${day}-${random}`;
-  };
-  
-  // Calculate totals
+
+  // Load charge items from sessionStorage on mount
   useEffect(() => {
-    // Calculate discount amount
-    let discountAmount = 0;
-    if (discount.type === 'percentage') {
-      discountAmount = subtotal * (discount.value / 100);
-    } else {
-      discountAmount = discount.value;
+    const storedData = sessionStorage.getItem('billingChargeItems');
+    if (storedData) {
+      try {
+        const { items, subtotal } = JSON.parse(storedData);
+        setChargeItems(items);
+        setSubtotal(subtotal);
+      } catch (error) {
+        console.error('Failed to load billing data:', error);
+      }
     }
-    
-    // Ensure discount doesn't exceed subtotal
-    discountAmount = Math.min(discountAmount, subtotal);
-    
-    // Calculate taxable amount
-    const taxableAmount = subtotal - discountAmount;
-    
-    // Calculate taxes
-    const updatedTaxes = taxes.map(tax => ({
-      ...tax,
-      amount: taxableAmount * (tax.rate / 100),
-    }));
-    setTaxes(updatedTaxes);
-    
-    // Calculate tax total
-    const taxTotal = updatedTaxes.reduce((sum, tax) => sum + tax.amount, 0);
-    
-    // Calculate grand total
-    const newGrandTotal = taxableAmount + taxTotal;
-    setGrandTotal(newGrandTotal);
-    
-    // Calculate balance
-    const totalPaid = paymentMethod.reduce((sum, method) => sum + method.amount, 0);
-    setBalance(newGrandTotal - totalPaid);
-  }, [subtotal, discount, paymentMethod, taxes]);
-  
-  // Initialize with charge items
-  useEffect(() => {
-    if (chargeItems.length > 0) {
-      const total = chargeItems.reduce((sum, item) => sum + item.totalAmount, 0);
-      setSubtotal(total);
-    }
-  }, [chargeItems]);
-  
-  // Initialize receipt number
+  }, []);
+
+  // Generate receipt number on mount
   useEffect(() => {
     setReceiptNumber(generateReceiptNumber());
   }, []);
-  
-  // Handle discount change
-  const handleDiscountChange = (type: 'percentage' | 'fixed', value: string) => {
+
+  // Calculate totals whenever dependencies change
+  useEffect(() => {
+    const discountAmount = calculateDiscountAmount(subtotal, discount);
+    const taxableAmount = subtotal - discountAmount;
+    const updatedTaxes = calculateTaxes(taxableAmount, taxes);
+    setTaxes(updatedTaxes);
+
+    const newGrandTotal = calculateGrandTotal(subtotal, discount, updatedTaxes);
+    setGrandTotal(newGrandTotal);
+
+    const newBalance = calculateBalance(newGrandTotal, paymentMethods);
+    setBalance(newBalance);
+  }, [subtotal, discount, paymentMethods]);
+
+  /**
+   * Handle discount change
+   */
+  const handleDiscountChange = useCallback((type: 'percentage' | 'fixed', value: string) => {
     const numValue = parseFloat(value) || 0;
     setDiscount({ type, value: numValue });
-  };
-  
-  // Handle payment method change
-  const handlePaymentMethodChange = (index: number, field: keyof PaymentMethod, value: any) => {
-    const updatedMethods = [...paymentMethod];
-    updatedMethods[index] = {
-      ...updatedMethods[index],
-      [field]: value,
-    };
-    setPaymentMethod(updatedMethods);
-  };
-  
-  // Add payment method
-  const addPaymentMethod = () => {
-    if (paymentMethod.length >= 3) return;
-    setPaymentMethod([...paymentMethod, { type: 'cash', amount: 0, details: '' }]);
-  };
-  
-  // Remove payment method
-  const removePaymentMethod = (index: number) => {
-    if (paymentMethod.length <= 1) return;
-    setPaymentMethod(paymentMethod.filter((_, i) => i !== index));
-  };
-  
-  // Auto-calculate remaining payment
-  const autoCalculatePayment = (index: number) => {
-    const totalPaid = paymentMethod.reduce((sum, method, i) => 
-      i === index ? sum : sum + method.amount, 0
-    );
-    const remaining = Math.max(0, grandTotal - totalPaid);
-    
-    const updatedMethods = [...paymentMethod];
-    updatedMethods[index].amount = remaining;
-    setPaymentMethod(updatedMethods);
-  };
-  
-  // Handle print receipt
-  const handlePrintReceipt = () => {
+  }, []);
+
+  /**
+   * Handle payment method change
+   */
+  const handlePaymentMethodChange = useCallback((index: number, field: keyof PaymentMethod, value: any) => {
+    setPaymentMethods(prev => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        [field]: value,
+      };
+      return updated;
+    });
+  }, []);
+
+  /**
+   * Add payment method
+   */
+  const addPaymentMethod = useCallback(() => {
+    if (paymentMethods.length >= 3) return;
+    setPaymentMethods(prev => [...prev, { type: 'cash', amount: 0, details: '' }]);
+  }, [paymentMethods.length]);
+
+  /**
+   * Remove payment method
+   */
+  const removePaymentMethod = useCallback(
+    (index: number) => {
+      if (paymentMethods.length <= 1) return;
+      setPaymentMethods(prev => prev.filter((_, i) => i !== index));
+    },
+    [paymentMethods.length]
+  );
+
+  /**
+   * Auto-calculate remaining payment
+   */
+  const autoCalculatePayment = useCallback(
+    (index: number) => {
+      const totalPaid = paymentMethods.reduce((sum, method, i) => (i === index ? sum : sum + method.amount), 0);
+      const remaining = Math.max(0, grandTotal - totalPaid);
+
+      setPaymentMethods(prev => {
+        const updated = [...prev];
+        updated[index].amount = remaining;
+        return updated;
+      });
+    },
+    [paymentMethods, grandTotal]
+  );
+
+  /**
+   * Handle print receipt
+   */
+  const handlePrintReceipt = useCallback(() => {
     setIsProcessing(true);
-    
-    // Simulate API call
+
     setTimeout(() => {
       setIsProcessing(false);
-      setIsPrinted(true);
       setShowReceiptPreview(true);
-      
-      // In real app, this would trigger actual print
       window.print();
     }, 1000);
-  };
-  
-  // Handle finalize payment
-  const handleFinalizePayment = () => {
+  }, []);
+
+  /**
+   * Handle finalize payment
+   */
+  const handleFinalizePayment = useCallback(() => {
     if (balance > 0) {
       alert(`Balance of ${formatCurrency(balance)} still pending. Please adjust payment.`);
       return;
     }
-    
+
+    if (chargeItems.length === 0) {
+      alert('No items to process.');
+      return;
+    }
+
     setIsProcessing(true);
-    
-    // Simulate API call
+
     setTimeout(() => {
       setIsProcessing(false);
       alert('Payment processed successfully!');
-      // In real app, navigate to success page or clear form
+      sessionStorage.removeItem('billingChargeItems');
+      // Navigate or clear form as needed
     }, 1500);
-  };
-  
-  // Render receipt preview
+  }, [balance, chargeItems.length]);
+
+  /**
+   * Handle back navigation
+   */
+  const handleBack = useCallback(() => {
+    if (onBack) {
+      onBack();
+    } else {
+      navigate(MEDICAL_RECORDS_ROUTES.ENTRY_CHARGES);
+    }
+  }, [onBack, navigate]);
+
+  /**
+   * Render receipt preview modal
+   */
   const renderReceiptPreview = () => (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <div className={`w-full max-w-md max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl ${colors.bg.elevated}`}>
         {/* Receipt Header */}
         <div className={`p-6 border-b ${colors.border.primary}`}>
           <div className="flex items-center justify-between mb-4">
             <h3 className={`text-xl font-bold ${colors.text.primary}`}>Receipt Preview</h3>
-            <button
-              onClick={() => setShowReceiptPreview(false)}
-              className={`p-2 rounded-lg ${colors.bg.hover}`}
-            >
+            <button onClick={() => setShowReceiptPreview(false)} className={`p-2 rounded-lg ${colors.bg.hover}`}>
               <X className="w-5 h-5" />
             </button>
           </div>
           <p className={colors.text.secondary}>Review before printing</p>
         </div>
-        
+
         {/* Receipt Content */}
         <div className="p-6">
-          <div className={`p-6 border ${colors.border.primary} rounded-lg bg-white text-black`}>
+          <div className="p-6 border border-gray-300 rounded-lg bg-white text-black">
             {/* Clinic Header */}
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold mb-1">MEDICAL CLINIC</h2>
               <p className="text-sm text-gray-600">123 Health Street, Nairobi</p>
               <p className="text-sm text-gray-600">Phone: (254) 712-345-678</p>
             </div>
-            
+
             <div className="border-t border-b border-gray-300 py-3 my-3">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Receipt:</span>
@@ -304,17 +246,16 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                 <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
             </div>
-            
-            {/* Patient Info */}
+
+            {/* Visit Info */}
             <div className="mb-4">
-              <h3 className="font-bold text-lg mb-2">Patient Information</h3>
               <div className="text-sm">
-                <p><span className="font-medium">Name:</span> {patientName}</p>
-                <p><span className="font-medium">ID:</span> {patientId}</p>
-                <p><span className="font-medium">Visit:</span> {visitId}</p>
+                <p>
+                  <span className="font-medium">Visit:</span> {visitId}
+                </p>
               </div>
             </div>
-            
+
             {/* Items */}
             <div className="mb-4">
               <h3 className="font-bold text-lg mb-2">Services Rendered</h3>
@@ -332,7 +273,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                 ))}
               </div>
             </div>
-            
+
             {/* Totals */}
             <div className="border-t border-gray-300 pt-3">
               <div className="flex justify-between text-sm">
@@ -342,7 +283,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
               {discount.value > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
                   <span>Discount:</span>
-                  <span>-{formatCurrency(discount.type === 'percentage' ? subtotal * (discount.value / 100) : discount.value)}</span>
+                  <span>-{formatCurrency(calculateDiscountAmount(subtotal, discount))}</span>
                 </div>
               )}
               {taxes.map((tax, index) => (
@@ -356,11 +297,11 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                 <span>{formatCurrency(grandTotal)}</span>
               </div>
             </div>
-            
+
             {/* Payment */}
             <div className="mt-4 pt-4 border-t border-gray-300">
               <h3 className="font-bold mb-2">Payment</h3>
-              {paymentMethod.map((method, index) => (
+              {paymentMethods.map((method, index) => (
                 <div key={index} className="flex justify-between text-sm">
                   <span className="capitalize">{method.type}:</span>
                   <span>{formatCurrency(method.amount)}</span>
@@ -373,14 +314,14 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                 </div>
               )}
             </div>
-            
+
             {/* Footer */}
             <div className="text-center mt-6 pt-4 border-t border-gray-300">
               <p className="text-xs text-gray-600">This is a computer generated receipt</p>
               <p className="text-xs text-gray-600">Valid without signature</p>
             </div>
           </div>
-          
+
           {/* Print Actions */}
           <div className="flex items-center justify-end gap-3 mt-6">
             <button
@@ -401,20 +342,20 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
       </div>
     </div>
   );
-  
+
   return (
     <div className={`rounded-xl border ${colors.border.primary} ${colors.bg.primary} overflow-hidden`}>
       {/* Header */}
       <div className={`p-6 border-b ${colors.border.primary}`}>
         <div className="flex items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
-            <Receipt className={`w-6 h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+            <Receipt className={`w-6 h-6 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
             <div>
               <h2 className={`text-xl font-bold ${colors.text.primary}`}>Billing Summary</h2>
               <p className={colors.text.secondary}>Apply discounts, taxes, and process payment</p>
             </div>
           </div>
-          
+
           <div className={`px-4 py-2 rounded-lg ${colors.bg.secondary}`}>
             <div className="text-sm">
               <span className={colors.text.secondary}>Receipt: </span>
@@ -422,26 +363,16 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
             </div>
           </div>
         </div>
-        
-        {/* Patient Info and Navigation */}
+
+        {/* Navigation */}
         <div className="flex items-center justify-between gap-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-            <div className={`p-3 rounded-lg ${colors.bg.secondary}`}>
-              <p className={`text-xs ${colors.text.secondary}`}>Patient</p>
-              <p className={`font-medium ${colors.text.primary}`}>{patientName}</p>
-            </div>
-            <div className={`p-3 rounded-lg ${colors.bg.secondary}`}>
-              <p className={`text-xs ${colors.text.secondary}`}>Patient ID</p>
-              <p className={`font-medium ${colors.text.primary}`}>{patientId}</p>
-            </div>
-            <div className={`p-3 rounded-lg ${colors.bg.secondary}`}>
-              <p className={`text-xs ${colors.text.secondary}`}>Visit ID</p>
-              <p className={`font-medium ${colors.text.primary}`}>{visitId}</p>
-            </div>
+          <div className={`p-3 rounded-lg ${colors.bg.secondary} flex-1`}>
+            <p className={`text-xs ${colors.text.secondary}`}>Visit ID</p>
+            <p className={`font-medium ${colors.text.primary}`}>{visitId}</p>
           </div>
-          
+
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${colors.border.primary} ${colors.bg.hover} ${colors.text.secondary} whitespace-nowrap`}
           >
             <ArrowLeft className="w-4 h-4" />
@@ -449,7 +380,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
           </button>
         </div>
       </div>
-      
+
       {/* Main Content */}
       <div className="p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -458,11 +389,9 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
             {/* Items List */}
             <div className={`rounded-lg border ${colors.border.primary}`}>
               <div className={`p-4 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
-                <h3 className={`font-semibold ${colors.text.primary}`}>
-                  Selected Items ({chargeItems.length})
-                </h3>
+                <h3 className={`font-semibold ${colors.text.primary}`}>Selected Items ({chargeItems.length})</h3>
               </div>
-              
+
               <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {chargeItems.length === 0 ? (
                   <div className="p-8 text-center">
@@ -476,7 +405,9 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                         <div className="flex-1">
                           <p className={`font-medium ${colors.text.primary}`}>{item.service.name}</p>
                           <div className="flex items-center gap-3 mt-1">
-                            <span className={`text-xs px-2 py-0.5 rounded ${colors.bg.secondary} ${colors.text.secondary}`}>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded ${colors.bg.secondary} ${colors.text.secondary}`}
+                            >
                               {item.service.code}
                             </span>
                             <span className={`text-xs ${colors.text.secondary}`}>
@@ -485,9 +416,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className={`font-bold ${colors.text.primary}`}>
-                            {formatCurrency(item.totalAmount)}
-                          </p>
+                          <p className={`font-bold ${colors.text.primary}`}>{formatCurrency(item.totalAmount)}</p>
                         </div>
                       </div>
                     </div>
@@ -495,13 +424,13 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                 )}
               </div>
             </div>
-            
+
             {/* Discount & Tax Configuration */}
             <div className={`rounded-lg border ${colors.border.primary}`}>
               <div className={`p-4 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
                 <h3 className={`font-semibold ${colors.text.primary}`}>Adjustments</h3>
               </div>
-              
+
               <div className="p-4 space-y-4">
                 {/* Discount */}
                 <div>
@@ -511,62 +440,65 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                       Discount
                     </div>
                   </label>
-                  
+
                   <div className="flex items-center gap-3">
                     <div className="flex-1">
                       <input
                         type="number"
                         value={discount.value}
-                        onChange={(e) => handleDiscountChange(discount.type, e.target.value)}
+                        onChange={e => handleDiscountChange(discount.type, e.target.value)}
                         min="0"
                         max={discount.type === 'percentage' ? 100 : subtotal}
                         className={`w-full px-4 py-2 rounded-lg border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}`}
                       />
                     </div>
-                    
+
                     <div className="flex border rounded-lg overflow-hidden">
                       <button
                         onClick={() => handleDiscountChange('percentage', discount.value.toString())}
-                        className={`px-3 py-2 text-sm ${discount.type === 'percentage' ? colors.accent.primary + ' ' + colors.accent.text : colors.bg.hover + ' ' + colors.text.secondary}`}
+                        className={`px-3 py-2 text-sm ${
+                          discount.type === 'percentage'
+                            ? colors.accent.primary + ' ' + colors.accent.text
+                            : colors.bg.hover + ' ' + colors.text.secondary
+                        }`}
                       >
                         %
                       </button>
                       <button
                         onClick={() => handleDiscountChange('fixed', discount.value.toString())}
-                        className={`px-3 py-2 text-sm ${discount.type === 'fixed' ? colors.accent.primary + ' ' + colors.accent.text : colors.bg.hover + ' ' + colors.text.secondary}`}
+                        className={`px-3 py-2 text-sm ${
+                          discount.type === 'fixed'
+                            ? colors.accent.primary + ' ' + colors.accent.text
+                            : colors.bg.hover + ' ' + colors.text.secondary
+                        }`}
                       >
                         Fixed
                       </button>
                     </div>
                   </div>
-                  
+
                   {discount.value > 0 && (
                     <p className={`text-sm mt-2 ${colors.status.success}`}>
-                      Discount: {formatCurrency(
-                        discount.type === 'percentage' 
-                          ? subtotal * (discount.value / 100)
-                          : discount.value
-                      )}
+                      Discount: {formatCurrency(calculateDiscountAmount(subtotal, discount))}
                     </p>
                   )}
                 </div>
-                
+
                 {/* Taxes */}
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${colors.text.secondary}`}>
-                    Taxes Applied
-                  </label>
-                  
+                  <label className={`block text-sm font-medium mb-2 ${colors.text.secondary}`}>Taxes Applied</label>
+
                   <div className="space-y-2">
                     {taxes.map((tax, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 rounded-lg border border-gray-700 dark:border-gray-700">
+                      <div
+                        key={index}
+                        className={`flex items-center justify-between p-3 rounded-lg border ${colors.border.primary}`}
+                      >
                         <div>
                           <p className={`font-medium ${colors.text.primary}`}>{tax.name}</p>
                           <p className={`text-sm ${colors.text.secondary}`}>{tax.rate}% rate</p>
                         </div>
-                        <p className={`font-bold ${colors.text.primary}`}>
-                          {formatCurrency(tax.amount)}
-                        </p>
+                        <p className={`font-bold ${colors.text.primary}`}>{formatCurrency(tax.amount)}</p>
                       </div>
                     ))}
                   </div>
@@ -574,7 +506,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
               </div>
             </div>
           </div>
-          
+
           {/* Right Column - Payment & Totals */}
           <div className="space-y-6">
             {/* Payment Methods */}
@@ -582,7 +514,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
               <div className={`p-4 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
                 <div className="flex items-center justify-between">
                   <h3 className={`font-semibold ${colors.text.primary}`}>Payment Methods</h3>
-                  {paymentMethod.length < 3 && (
+                  {paymentMethods.length < 3 && (
                     <button
                       onClick={addPaymentMethod}
                       className={`text-xs px-2 py-1 rounded ${colors.bg.hover} ${colors.text.secondary}`}
@@ -592,9 +524,9 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                   )}
                 </div>
               </div>
-              
+
               <div className="p-4 space-y-3">
-                {paymentMethod.map((method, index) => (
+                {paymentMethods.map((method, index) => (
                   <div key={index} className={`p-3 rounded-lg border ${colors.border.primary}`}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -603,10 +535,10 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                         {method.type === 'insurance' && <Shield className="w-4 h-4 text-purple-500" />}
                         {method.type === 'mobile' && <Banknote className="w-4 h-4 text-yellow-500" />}
                         {method.type === 'mixed' && <Wallet className="w-4 h-4 text-gray-500" />}
-                        
+
                         <select
                           value={method.type}
-                          onChange={(e) => handlePaymentMethodChange(index, 'type', e.target.value)}
+                          onChange={e => handlePaymentMethodChange(index, 'type', e.target.value)}
                           className={`text-sm bg-transparent ${colors.text.primary} capitalize`}
                         >
                           <option value="cash">Cash</option>
@@ -616,28 +548,27 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                           <option value="mixed">Mixed</option>
                         </select>
                       </div>
-                      
-                      {paymentMethod.length > 1 && (
-                        <button
-                          onClick={() => removePaymentMethod(index)}
-                          className={`p-1 rounded ${colors.bg.hover}`}
-                        >
+
+                      {paymentMethods.length > 1 && (
+                        <button onClick={() => removePaymentMethod(index)} className={`p-1 rounded ${colors.bg.hover}`}>
                           <X className="w-3 h-3" />
                         </button>
                       )}
                     </div>
-                    
+
                     <div className="space-y-2">
                       <div>
                         <input
                           type="number"
                           value={method.amount}
-                          onChange={(e) => handlePaymentMethodChange(index, 'amount', parseFloat(e.target.value) || 0)}
+                          onChange={e =>
+                            handlePaymentMethodChange(index, 'amount', parseFloat(e.target.value) || 0)
+                          }
                           placeholder="Amount"
                           className={`w-full px-3 py-1.5 rounded border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}`}
                         />
                       </div>
-                      
+
                       <button
                         onClick={() => autoCalculatePayment(index)}
                         className={`w-full text-xs px-2 py-1 rounded ${colors.bg.hover} ${colors.text.secondary}`}
@@ -647,7 +578,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                     </div>
                   </div>
                 ))}
-                
+
                 <div className={`p-3 rounded-lg ${balance === 0 ? 'bg-green-500/10' : 'bg-yellow-500/10'}`}>
                   <div className="flex items-center justify-between">
                     <span className={`text-sm font-medium ${balance === 0 ? 'text-green-500' : 'text-yellow-500'}`}>
@@ -660,73 +591,61 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                 </div>
               </div>
             </div>
-            
+
             {/* Totals Summary */}
             <div className={`rounded-lg border ${colors.border.primary}`}>
               <div className={`p-4 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
                 <h3 className={`font-semibold ${colors.text.primary}`}>Bill Summary</h3>
               </div>
-              
+
               <div className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className={colors.text.secondary}>Subtotal</span>
-                  <span className={`font-medium ${colors.text.primary}`}>
-                    {formatCurrency(subtotal)}
-                  </span>
+                  <span className={`font-medium ${colors.text.primary}`}>{formatCurrency(subtotal)}</span>
                 </div>
-                
+
                 {discount.value > 0 && (
                   <div className="flex items-center justify-between text-green-500">
                     <span>Discount</span>
-                    <span className="font-medium">
-                      -{formatCurrency(
-                        discount.type === 'percentage'
-                          ? subtotal * (discount.value / 100)
-                          : discount.value
-                      )}
-                    </span>
+                    <span className="font-medium">-{formatCurrency(calculateDiscountAmount(subtotal, discount))}</span>
                   </div>
                 )}
-                
+
                 {taxes.map((tax, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <span className={colors.text.secondary}>{tax.name}</span>
                     <span className={colors.text.secondary}>{formatCurrency(tax.amount)}</span>
                   </div>
                 ))}
-                
+
                 <div className="pt-3 border-t border-gray-700 dark:border-gray-700">
                   <div className="flex items-center justify-between mb-2">
                     <span className={`text-lg font-semibold ${colors.text.primary}`}>Grand Total</span>
-                    <span className={`text-2xl font-bold ${colors.status.success}`}>
-                      {formatCurrency(grandTotal)}
-                    </span>
+                    <span className={`text-2xl font-bold ${colors.status.success}`}>{formatCurrency(grandTotal)}</span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span className={`text-sm ${colors.text.secondary}`}>Total Paid</span>
                     <span className={`font-medium ${colors.text.primary}`}>
-                      {formatCurrency(paymentMethod.reduce((sum, method) => sum + method.amount, 0))}
+                      {formatCurrency(paymentMethods.reduce((sum, method) => sum + method.amount, 0))}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
-            
+
             {/* Additional Notes */}
             <div>
-              <label className={`block text-sm font-medium mb-2 ${colors.text.secondary}`}>
-                Additional Notes
-              </label>
+              <label className={`block text-sm font-medium mb-2 ${colors.text.secondary}`}>Additional Notes</label>
               <textarea
                 value={additionalNotes}
-                onChange={(e) => setAdditionalNotes(e.target.value)}
+                onChange={e => setAdditionalNotes(e.target.value)}
                 placeholder="Add any notes about this payment..."
                 rows={2}
                 className={`w-full px-4 py-2 rounded-lg border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}`}
               />
             </div>
-            
+
             {/* Action Buttons */}
             <div className="space-y-3">
               <button
@@ -737,7 +656,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                 <Receipt className="w-4 h-4" />
                 Preview Receipt
               </button>
-              
+
               <button
                 onClick={handleFinalizePayment}
                 disabled={isProcessing || chargeItems.length === 0 || balance > 0}
@@ -763,7 +682,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
           </div>
         </div>
       </div>
-      
+
       {/* Receipt Preview Modal */}
       {showReceiptPreview && renderReceiptPreview()}
     </div>

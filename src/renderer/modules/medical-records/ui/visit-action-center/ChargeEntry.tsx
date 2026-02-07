@@ -1,127 +1,77 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, Calculator, X, Loader2, AlertCircle } from 'lucide-react';
+import {
+  Search,
+  Plus,
+  Minus,
+  Trash2,
+  ShoppingCart,
+  Calculator,
+  X,
+  Loader2,
+  AlertCircle,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
+import {
+  ServiceItem,
+  ChargeItem,
+  Theme,
+  getColorConfig,
+  formatCurrency,
+  searchServices,
+} from './billing-types';
 
-
-// Mock data for services/items
-const MOCK_SERVICES = [
-  { id: 1, code: 'CONSULT001', name: 'General Consultation', unitPrice: 5000, category: 'Consultation' },
-  { id: 2, code: 'LAB001', name: 'Blood Test - Complete', unitPrice: 15000, category: 'Laboratory' },
-  { id: 3, code: 'MED001', name: 'Paracetamol 500mg', unitPrice: 200, category: 'Medication' },
-  { id: 4, code: 'MED002', name: 'Amoxicillin 500mg', unitPrice: 450, category: 'Medication' },
-  { id: 5, code: 'PROC001', name: 'Minor Procedure', unitPrice: 25000, category: 'Procedure' },
-  { id: 6, code: 'XRAY001', name: 'Chest X-Ray', unitPrice: 8000, category: 'Radiology' },
-  { id: 7, code: 'ECG001', name: 'ECG Test', unitPrice: 12000, category: 'Cardiology' },
-  { id: 8, code: 'WARD001', name: 'Ward Admission (per day)', unitPrice: 15000, category: 'Ward' },
-  { id: 9, code: 'THE001', name: 'Physiotherapy Session', unitPrice: 7000, category: 'Therapy' },
-  { id: 10, code: 'EMER001', name: 'Emergency Care', unitPrice: 20000, category: 'Emergency' },
-];
-
-interface ServiceItem {
-  id: number;
-  code: string;
-  name: string;
-  unitPrice: number;
-  category: string;
-}
-
-interface ChargeItem {
-  service: ServiceItem;
-  quantity: number;
-  totalAmount: number;
-}
-
+/**
+ * Props for ChargeEntry component
+ */
 interface ChargeEntryProps {
-  patientName?: string;
-  patientId?: string;
   visitId?: string;
   onProceedToBilling?: (items: ChargeItem[], totalAmount: number) => void;
-  theme?: 'light' | 'dark';
+  theme?: Theme;
 }
 
+/**
+ * ChargeEntry Component
+ * Allows users to search and add services/items to a patient bill
+ */
 export const ChargeEntry: React.FC<ChargeEntryProps> = ({
-  patientName = 'John Doe',
-  patientId = 'PT-2024-001',
   visitId = 'VIS-2024-001',
   onProceedToBilling,
   theme = 'light',
 }) => {
-  const isDark = theme === 'dark';
-  
-  // State
+  const navigate = useNavigate();
+  const colors = getColorConfig(theme);
+
+  // State management
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState<ChargeItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<ServiceItem[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  
-  // Colors based on theme
-  const colors = {
-    bg: {
-      primary: isDark ? 'bg-gray-900' : 'bg-white',
-      secondary: isDark ? 'bg-gray-800' : 'bg-gray-50',
-      elevated: isDark ? 'bg-gray-800' : 'bg-white',
-      hover: isDark ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50',
-    },
-    border: {
-      primary: isDark ? 'border-gray-800' : 'border-gray-200',
-      secondary: isDark ? 'border-gray-700' : 'border-gray-300',
-    },
-    text: {
-      primary: isDark ? 'text-gray-100' : 'text-gray-900',
-      secondary: isDark ? 'text-gray-400' : 'text-gray-600',
-      tertiary: isDark ? 'text-gray-500' : 'text-gray-500',
-    },
-    accent: {
-      primary: isDark ? 'bg-blue-600' : 'bg-blue-600',
-      hover: isDark ? 'hover:bg-blue-700' : 'hover:bg-blue-700',
-      text: 'text-white',
-    },
-    status: {
-      success: isDark ? 'text-green-400' : 'text-green-600',
-      warning: isDark ? 'text-yellow-400' : 'text-yellow-600',
-      error: isDark ? 'text-red-400' : 'text-red-600',
-    },
-  };
-  
-    const navigate = useNavigate();
-  
+
   // Filter services based on search term
   useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setSearchResults([]);
-      return;
-    }
-    
-    const term = searchTerm.toLowerCase();
-    const results = MOCK_SERVICES.filter(service =>
-      service.name.toLowerCase().includes(term) ||
-      service.code.toLowerCase().includes(term) ||
-      service.category.toLowerCase().includes(term)
-    ).slice(0, 8); // Limit results
-    
+    const results = searchServices(searchTerm);
     setSearchResults(results);
     setShowSearchResults(results.length > 0);
   }, [searchTerm]);
-  
+
   // Calculate totals
   const { subtotal, grandTotal } = useMemo(() => {
     const subtotal = selectedItems.reduce((sum, item) => sum + item.totalAmount, 0);
-    // For now, no tax/discounts - these will be handled in billing page
-    const grandTotal = subtotal;
-    
+    const grandTotal = subtotal; // Taxes/discounts handled in billing summary
     return { subtotal, grandTotal };
   }, [selectedItems]);
-  
-  // Add item to selected items
+
+  /**
+   * Add item to selected items or increase quantity if exists
+   */
   const addItem = useCallback((service: ServiceItem) => {
-    const existingItem = selectedItems.find(item => item.service.id === service.id);
-    
-    if (existingItem) {
-      // If item exists, increase quantity
-      setSelectedItems(prev =>
-        prev.map(item =>
+    setSelectedItems(prev => {
+      const existingItem = prev.find(item => item.service.id === service.id);
+
+      if (existingItem) {
+        return prev.map(item =>
           item.service.id === service.id
             ? {
                 ...item,
@@ -129,32 +79,32 @@ export const ChargeEntry: React.FC<ChargeEntryProps> = ({
                 totalAmount: (item.quantity + 1) * service.unitPrice,
               }
             : item
-        )
-      );
-    } else {
-      // Add new item with quantity 1
-      setSelectedItems(prev => [
+        );
+      }
+
+      return [
         ...prev,
         {
           service,
           quantity: 1,
           totalAmount: service.unitPrice,
         },
-      ]);
-    }
-    
-    // Clear search
+      ];
+    });
+
     setSearchTerm('');
     setShowSearchResults(false);
-  }, [selectedItems]);
-  
-  // Update quantity
+  }, []);
+
+  /**
+   * Update quantity of an item
+   */
   const updateQuantity = useCallback((itemId: number, newQuantity: number) => {
     if (newQuantity < 1) {
       removeItem(itemId);
       return;
     }
-    
+
     setSelectedItems(prev =>
       prev.map(item => {
         if (item.service.id === itemId) {
@@ -168,67 +118,90 @@ export const ChargeEntry: React.FC<ChargeEntryProps> = ({
       })
     );
   }, []);
-  
-  // Remove item
+
+  /**
+   * Remove item from selected items
+   */
   const removeItem = useCallback((itemId: number) => {
     setSelectedItems(prev => prev.filter(item => item.service.id !== itemId));
   }, []);
-  
-  // Increase quantity
-  const increaseQuantity = useCallback((itemId: number) => {
-    const item = selectedItems.find(item => item.service.id === itemId);
-    if (item) {
-      updateQuantity(itemId, item.quantity + 1);
+
+  /**
+   * Increase quantity of an item
+   */
+  const increaseQuantity = useCallback(
+    (itemId: number) => {
+      const item = selectedItems.find(item => item.service.id === itemId);
+      if (item) {
+        updateQuantity(itemId, item.quantity + 1);
+      }
+    },
+    [selectedItems, updateQuantity]
+  );
+
+  /**
+   * Decrease quantity of an item
+   */
+  const decreaseQuantity = useCallback(
+    (itemId: number) => {
+      const item = selectedItems.find(item => item.service.id === itemId);
+      if (item) {
+        updateQuantity(itemId, item.quantity - 1);
+      }
+    },
+    [selectedItems, updateQuantity]
+  );
+
+  /**
+   * Clear all selected items
+   */
+  const clearAllItems = useCallback(() => {
+    if (window.confirm('Are you sure you want to clear all items?')) {
+      setSelectedItems([]);
     }
-  }, [selectedItems, updateQuantity]);
-  
-  // Decrease quantity
-  const decreaseQuantity = useCallback((itemId: number) => {
-    const item = selectedItems.find(item => item.service.id === itemId);
-    if (item) {
-      updateQuantity(itemId, item.quantity - 1);
-    }
-  }, [selectedItems, updateQuantity]);
-  
-  // Handle proceed to billing
-  const handleProceedToBilling = () => {
+  }, []);
+
+  /**
+   * Handle proceed to billing
+   */
+  const handleProceedToBilling = useCallback(() => {
     if (selectedItems.length === 0) {
       alert('Please add at least one item before proceeding to billing.');
       return;
     }
-    
+
     setIsLoading(true);
-    
-    // Simulate API call
+
+    // Store billing data in sessionStorage for sharing with BillingSummary
+    sessionStorage.setItem(
+      'billingChargeItems',
+      JSON.stringify({
+        items: selectedItems,
+        subtotal: grandTotal,
+        timestamp: Date.now(),
+      })
+    );
+
     setTimeout(() => {
       setIsLoading(false);
       onProceedToBilling?.(selectedItems, grandTotal);
+      navigate(MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SUMMARY);
     }, 500);
-    navigate(MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SUMMARY);
-  };
-  
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'KES', // Kenyan Shilling - change as needed
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-  
+  }, [selectedItems, grandTotal, onProceedToBilling, navigate]);
+
   return (
     <div className={`rounded-xl border ${colors.border.primary} ${colors.bg.primary} overflow-hidden`}>
       {/* Header */}
       <div className={`p-6 border-b ${colors.border.primary}`}>
         <div className="flex items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
-            <ShoppingCart className={`w-6 h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+            <ShoppingCart className={`w-6 h-6 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
             <div>
               <h2 className={`text-xl font-bold ${colors.text.primary}`}>Charge Entry</h2>
               <p className={colors.text.secondary}>Add services and items to patient bill</p>
             </div>
           </div>
-          
+
           <div className={`px-4 py-2 rounded-lg ${colors.bg.secondary}`}>
             <div className="text-sm">
               <span className={colors.text.secondary}>Total: </span>
@@ -238,24 +211,14 @@ export const ChargeEntry: React.FC<ChargeEntryProps> = ({
             </div>
           </div>
         </div>
-        
-        {/* Patient Info */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className={`p-3 rounded-lg ${colors.bg.secondary}`}>
-            <p className={`text-xs ${colors.text.secondary}`}>Patient Name</p>
-            <p className={`font-medium ${colors.text.primary}`}>{patientName}</p>
-          </div>
-          <div className={`p-3 rounded-lg ${colors.bg.secondary}`}>
-            <p className={`text-xs ${colors.text.secondary}`}>Patient ID</p>
-            <p className={`font-medium ${colors.text.primary}`}>{patientId}</p>
-          </div>
-          <div className={`p-3 rounded-lg ${colors.bg.secondary}`}>
-            <p className={`text-xs ${colors.text.secondary}`}>Visit ID</p>
-            <p className={`font-medium ${colors.text.primary}`}>{visitId}</p>
-          </div>
+
+        {/* Visit ID */}
+        <div className={`p-3 rounded-lg ${colors.bg.secondary}`}>
+          <p className={`text-xs ${colors.text.secondary}`}>Visit ID</p>
+          <p className={`font-medium ${colors.text.primary}`}>{visitId}</p>
         </div>
       </div>
-      
+
       {/* Main Content */}
       <div className="p-6">
         {/* Search Section */}
@@ -267,18 +230,18 @@ export const ChargeEntry: React.FC<ChargeEntryProps> = ({
                 Search Services/Items by Name or Code
               </label>
             </div>
-            
+
             <div className="relative">
               <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${colors.text.tertiary}`} />
               <input
                 type="text"
                 placeholder="Type service name or code (e.g., 'Consultation', 'LAB001')..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={e => setSearchTerm(e.target.value)}
                 onFocus={() => searchTerm.trim() && setShowSearchResults(true)}
                 className={`w-full pl-10 pr-4 py-3 rounded-lg border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-2 focus:ring-blue-500`}
               />
-              
+
               {searchTerm && (
                 <button
                   onClick={() => {
@@ -291,11 +254,13 @@ export const ChargeEntry: React.FC<ChargeEntryProps> = ({
                 </button>
               )}
             </div>
-            
+
             {/* Search Results Dropdown */}
             {showSearchResults && searchResults.length > 0 && (
-              <div className={`absolute z-10 w-full mt-1 rounded-lg border shadow-xl ${colors.border.primary} ${colors.bg.elevated} max-h-64 overflow-y-auto`}>
-                {searchResults.map((service) => (
+              <div
+                className={`absolute z-10 w-full mt-1 rounded-lg border shadow-xl ${colors.border.primary} ${colors.bg.elevated} max-h-64 overflow-y-auto`}
+              >
+                {searchResults.map(service => (
                   <div
                     key={service.id}
                     className={`p-3 border-b last:border-b-0 ${colors.border.primary} ${colors.bg.hover} cursor-pointer transition-colors`}
@@ -305,7 +270,9 @@ export const ChargeEntry: React.FC<ChargeEntryProps> = ({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`font-medium ${colors.text.primary}`}>{service.name}</span>
-                          <span className={`text-xs px-1.5 py-0.5 rounded ${colors.bg.secondary} ${colors.text.secondary}`}>
+                          <span
+                            className={`text-xs px-1.5 py-0.5 rounded ${colors.bg.secondary} ${colors.text.secondary}`}
+                          >
                             {service.code}
                           </span>
                         </div>
@@ -316,16 +283,18 @@ export const ChargeEntry: React.FC<ChargeEntryProps> = ({
                           </span>
                         </div>
                       </div>
-                      <Plus className={`w-4 h-4 ml-2 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                      <Plus className={`w-4 h-4 ml-2 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
                     </div>
                   </div>
                 ))}
               </div>
             )}
-            
+
             {/* No Results Message */}
             {showSearchResults && searchResults.length === 0 && searchTerm.trim() && (
-              <div className={`absolute z-10 w-full mt-1 p-4 rounded-lg border ${colors.border.primary} ${colors.bg.elevated}`}>
+              <div
+                className={`absolute z-10 w-full mt-1 p-4 rounded-lg border ${colors.border.primary} ${colors.bg.elevated}`}
+              >
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-yellow-500" />
                   <span className={colors.text.secondary}>No services found matching "{searchTerm}"</span>
@@ -334,7 +303,7 @@ export const ChargeEntry: React.FC<ChargeEntryProps> = ({
             )}
           </div>
         </div>
-        
+
         {/* Selected Items Table */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -343,11 +312,7 @@ export const ChargeEntry: React.FC<ChargeEntryProps> = ({
             </h3>
             {selectedItems.length > 0 && (
               <button
-                onClick={() => {
-                  if (confirm('Are you sure you want to clear all items?')) {
-                    setSelectedItems([]);
-                  }
-                }}
+                onClick={clearAllItems}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm ${colors.bg.hover} ${colors.text.secondary}`}
               >
                 <Trash2 className="w-4 h-4" />
@@ -355,50 +320,50 @@ export const ChargeEntry: React.FC<ChargeEntryProps> = ({
               </button>
             )}
           </div>
-          
+
           {selectedItems.length === 0 ? (
             <div className={`py-12 text-center rounded-lg border ${colors.border.primary}`}>
               <Calculator className={`w-12 h-12 mx-auto mb-4 ${colors.text.tertiary}`} />
               <h3 className={`text-lg font-medium mb-2 ${colors.text.primary}`}>No Items Added</h3>
-              <p className={colors.text.secondary}>
-                Search and add services or items to create a bill
-              </p>
+              <p className={colors.text.secondary}>Search and add services or items to create a bill</p>
             </div>
           ) : (
             <div className={`rounded-lg border overflow-hidden ${colors.border.primary}`}>
               {/* Table Header */}
-              <div className={`grid grid-cols-12 gap-4 p-4 font-medium border-b ${colors.bg.secondary} ${colors.border.primary}`}>
+              <div
+                className={`grid grid-cols-12 gap-4 p-4 font-medium border-b ${colors.bg.secondary} ${colors.border.primary}`}
+              >
                 <div className="col-span-4">Item/Service</div>
                 <div className="col-span-2">Unit Price</div>
                 <div className="col-span-3">Quantity</div>
                 <div className="col-span-2">Total Amount</div>
                 <div className="col-span-1 text-right">Actions</div>
               </div>
-              
+
               {/* Table Rows */}
               <div className="divide-y divide-gray-200 dark:divide-gray-800">
-                {selectedItems.map((item) => (
+                {selectedItems.map(item => (
                   <div key={item.service.id} className="grid grid-cols-12 gap-4 p-4 items-center">
                     {/* Item Details */}
                     <div className="col-span-4">
                       <div>
                         <p className={`font-medium ${colors.text.primary}`}>{item.service.name}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-xs px-1.5 py-0.5 rounded ${colors.bg.secondary} ${colors.text.secondary}`}>
+                          <span
+                            className={`text-xs px-1.5 py-0.5 rounded ${colors.bg.secondary} ${colors.text.secondary}`}
+                          >
                             {item.service.code}
                           </span>
                           <span className={`text-xs ${colors.text.secondary}`}>{item.service.category}</span>
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Unit Price */}
                     <div className="col-span-2">
-                      <p className={`font-medium ${colors.text.primary}`}>
-                        {formatCurrency(item.service.unitPrice)}
-                      </p>
+                      <p className={`font-medium ${colors.text.primary}`}>{formatCurrency(item.service.unitPrice)}</p>
                     </div>
-                    
+
                     {/* Quantity Controls */}
                     <div className="col-span-3">
                       <div className="flex items-center gap-3">
@@ -409,11 +374,13 @@ export const ChargeEntry: React.FC<ChargeEntryProps> = ({
                         >
                           <Minus className="w-4 h-4" />
                         </button>
-                        
-                        <div className={`min-w-[60px] text-center px-3 py-1.5 rounded-lg border ${colors.border.primary} ${colors.bg.secondary}`}>
+
+                        <div
+                          className={`min-w-[60px] text-center px-3 py-1.5 rounded-lg border ${colors.border.primary} ${colors.bg.secondary}`}
+                        >
                           <span className={`font-medium ${colors.text.primary}`}>{item.quantity}</span>
                         </div>
-                        
+
                         <button
                           onClick={() => increaseQuantity(item.service.id)}
                           className={`p-1.5 rounded-lg border ${colors.border.primary} ${colors.bg.hover}`}
@@ -422,14 +389,12 @@ export const ChargeEntry: React.FC<ChargeEntryProps> = ({
                         </button>
                       </div>
                     </div>
-                    
+
                     {/* Total Amount */}
                     <div className="col-span-2">
-                      <p className={`font-bold ${colors.text.primary}`}>
-                        {formatCurrency(item.totalAmount)}
-                      </p>
+                      <p className={`font-bold ${colors.text.primary}`}>{formatCurrency(item.totalAmount)}</p>
                     </div>
-                    
+
                     {/* Actions */}
                     <div className="col-span-1 flex justify-end">
                       <button
@@ -446,52 +411,48 @@ export const ChargeEntry: React.FC<ChargeEntryProps> = ({
             </div>
           )}
         </div>
-        
+
         {/* Summary Section */}
         <div className={`p-6 rounded-lg border ${colors.border.primary} ${colors.bg.secondary}`}>
           <h3 className={`text-lg font-semibold mb-4 ${colors.text.primary}`}>Bill Summary</h3>
-          
+
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className={colors.text.secondary}>Subtotal</span>
-              <span className={`font-medium ${colors.text.primary}`}>
-                {formatCurrency(subtotal)}
-              </span>
+              <span className={`font-medium ${colors.text.primary}`}>{formatCurrency(subtotal)}</span>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <span className={colors.text.secondary}>Tax (0%)</span>
               <span className={colors.text.secondary}>-</span>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <span className={colors.text.secondary}>Discount (0%)</span>
               <span className={colors.text.secondary}>-</span>
             </div>
-            
+
             <div className="pt-3 border-t border-gray-700 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <span className={`text-lg font-semibold ${colors.text.primary}`}>Grand Total</span>
-                <span className={`text-2xl font-bold ${colors.status.success}`}>
-                  {formatCurrency(grandTotal)}
-                </span>
+                <span className={`text-2xl font-bold ${colors.status.success}`}>{formatCurrency(grandTotal)}</span>
               </div>
               <p className={`text-xs mt-1 ${colors.text.tertiary}`}>
                 Taxes and discounts will be applied in the billing summary page
               </p>
             </div>
           </div>
-          
+
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-gray-700 dark:border-gray-700">
             <button
-              onClick={() => setSelectedItems([])}
+              onClick={clearAllItems}
               disabled={selectedItems.length === 0 || isLoading}
               className={`px-6 py-2.5 rounded-lg font-medium transition-colors border ${colors.border.primary} ${colors.bg.hover} ${colors.text.secondary} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               Clear All
             </button>
-            
+
             <button
               onClick={handleProceedToBilling}
               disabled={selectedItems.length === 0 || isLoading}
@@ -513,16 +474,16 @@ export const ChargeEntry: React.FC<ChargeEntryProps> = ({
           </div>
         </div>
       </div>
-      
+
       {/* Quick Tips */}
       <div className={`p-4 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
         <div className="flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
           <div>
             <p className={`text-xs ${colors.text.secondary}`}>
-              <span className="font-medium">Tip:</span> Search by service name, code, or category. 
-              You can adjust quantities after adding items. 
-              All taxes, discounts, and payment methods will be handled in the billing summary page.
+              <span className="font-medium">Tip:</span> Search by service name, code, or category. You can adjust
+              quantities after adding items. All taxes, discounts, and payment methods will be handled in the billing
+              summary page.
             </p>
           </div>
         </div>
