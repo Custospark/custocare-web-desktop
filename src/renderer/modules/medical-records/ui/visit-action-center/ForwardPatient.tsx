@@ -17,7 +17,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 
-import { RootState } from '../../../../app/store/rootReducer';
+import { type RootState } from '../../../../app/store/rootReducer';
 import { selectActiveVisitId, selectActiveVisit } from '../../../../app/store/slices/visitSlice';
 import { useAssignStaffToVisit } from '../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
 import { type AssignStaffToVisitRequest } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
