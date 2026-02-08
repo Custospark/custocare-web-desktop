@@ -1,6 +1,6 @@
 // BillingTray.tsx
 import React, { useEffect, useCallback } from 'react';
-import { X, AlertTriangle, FileText, CreditCard } from 'lucide-react';
+import { X, AlertTriangle, FileText, CreditCard, CheckCircle2, User } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   closeTray,
@@ -88,15 +88,10 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
     dispatch(saveDraft());
   };
 
-  const stepLabels = {
-    charge_entry: 'Charge Entry',
-    billing_summary: 'Billing Summary',
-  } as const;
-
-  const stepIcons = {
-    charge_entry: <FileText className="w-5 h-5" />,
-    billing_summary: <CreditCard className="w-5 h-5" />,
-  } as const;
+  const steps = [
+    { key: 'charge_entry', label: 'Charges', icon: FileText },
+    { key: 'billing_summary', label: 'Payment', icon: CreditCard },
+  ] as const;
 
   if (!isTrayOpen) return null;
 
@@ -111,74 +106,89 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
       {/* Tray */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 pointer-events-none">
         <div
-          className={`w-full max-w-7xl min-h-[70vh] sm:min-h-[75vh] max-h-[94vh]
-            rounded-2xl shadow-2xl pointer-events-auto flex flex-col ${colors.bg.primary}`}
+          className={`w-full max-w-[95vw] xl:max-w-[90vw] 2xl:max-w-[85vw] min-h-[70vh] sm:min-h-[75vh] max-h-[94vh]
+            rounded-lg shadow-2xl pointer-events-auto flex flex-col ${colors.bg.primary}`}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className={`flex items-center justify-between p-6 border-b ${colors.border.primary}`}>
-            <div>
-              <h2 className={`text-xl font-bold ${colors.text.primary}`}>
-                {stepLabels[currentStep]}
-              </h2>
-
-              <div className="flex items-center gap-4 mt-1 flex-wrap">
-                {patientInfo.patientName && (
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm ${colors.text.secondary}`}>Patient:</span>
-                    <span className={`font-medium ${colors.text.primary}`}>
-                      {patientInfo.patientName}
-                    </span>
-                    {patientInfo.patientId && (
-                      <span className={`text-xs ${colors.text.secondary}`}>
-                        ({patientInfo.patientId})
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                <div
-                  className={`px-2 py-1 rounded-full text-xs font-medium select-none ${
-                    status === 'draft'
-                      ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                      : status === 'ready'
-                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                      : 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  }`}
-                >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </div>
+          {/* Super Compact Single Row Header */}
+          <div className={`flex items-center justify-between px-4 py-3 border-b ${colors.border.primary} gap-3`}>
+            
+            {/* Left: Patient Info */}
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className={`p-1.5 rounded-md ${colors.bg.secondary}`}>
+                <User className="w-4 h-4 text-gray-500" />
+              </div>
+              <div className="min-w-0">
+                <p className={`text-sm font-medium ${colors.text.primary} truncate`}>
+                  {patientInfo.patientName || 'New Patient'}
+                </p>
+                <p className={`text-xs ${colors.text.secondary} truncate`}>
+                  {patientInfo.patientId ? `ID: ${patientInfo.patientId}` : 'No ID assigned'}
+                </p>
               </div>
             </div>
 
-            {/* Step Navigation */}
-            <div className="flex items-center gap-2">
-              {(['charge_entry', 'billing_summary'] as const).map((step) => (
-                <button
-                  key={step}
-                  onClick={() => handleSetStep(step)}
-                  type="button"
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                    currentStep === step
-                      ? `${colors.accent.primary} ${colors.accent.text}`
-                      : `${colors.bg.hover} ${colors.text.secondary}`
-                  }`}
-                >
-                  {stepIcons[step]}
-                  <span className="text-sm font-medium">{stepLabels[step]}</span>
-                </button>
-              ))}
+            {/* Center: Progress Steps */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {steps.map((step, index) => {
+                const isActive = currentStep === step.key;
+                const isCompleted = index === 0 || currentStep === 'billing_summary';
+                const StepIcon = step.icon;
+                
+                return (
+                  <React.Fragment key={step.key}>
+                    <button
+                      onClick={() => handleSetStep(step.key)}
+                      type="button"
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors cursor-pointer whitespace-nowrap ${
+                        isActive
+                          ? `${colors.accent.primary} ${colors.accent.text}`
+                          : isCompleted
+                          ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : `${colors.bg.hover} ${colors.text.secondary}`
+                      }`}
+                    >
+                      {isCompleted && !isActive ? (
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      ) : (
+                        <StepIcon className="w-3.5 h-3.5" />
+                      )}
+                      <span className="text-xs font-medium">{step.label}</span>
+                      <span className="text-xs opacity-80">({index + 1})</span>
+                    </button>
+                    
+                    {/* Separator (not after last step) */}
+                    {index < steps.length - 1 && (
+                      <div className="w-3 h-px bg-gray-300 dark:bg-gray-700 mx-0.5" />
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
 
-            {/* Close */}
-            <button
-              onClick={() => void handleClose()}
-              type="button"
-              className={`p-2 rounded-lg ${colors.bg.hover} ${colors.text.secondary} cursor-pointer`}
-              aria-label="Close billing tray"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {/* Right: Status & Close */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div
+                className={`px-2 py-1 rounded-md text-xs font-medium select-none whitespace-nowrap ${
+                  status === 'draft'
+                    ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                    : status === 'ready'
+                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                    : 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                }`}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </div>
+              
+              <button
+                onClick={() => void handleClose()}
+                type="button"
+                className={`p-1.5 rounded-md ${colors.bg.hover} ${colors.text.secondary} cursor-pointer flex-shrink-0`}
+                aria-label="Close billing tray"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Content */}
@@ -190,13 +200,13 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
             )}
           </div>
 
-          {/* Dirty Warning (non-interactive on purpose) */}
+          {/* Dirty Warning */}
           {isDirty && (
-            <div className={`p-3 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
+            <div className={`p-2 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-500" />
-                <span className={`text-sm ${colors.text.secondary}`}>
-                  You have unsaved changes. Closing this window will discard them.
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                <span className={`text-xs ${colors.text.secondary}`}>
+                  Unsaved changes - closing will discard them
                 </span>
               </div>
             </div>
