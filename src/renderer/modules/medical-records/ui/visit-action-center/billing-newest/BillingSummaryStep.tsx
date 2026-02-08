@@ -506,7 +506,6 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
             {/* NEW: Taxes where Discount used to be (static) */}
             <div className={`flex-shrink-0 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
                 {/* Additional Notes (optional) – below receipt */}
-                <div className={`flex-shrink-0 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
                 <div className="px-4 py-3">
                     <label className={`block text-sm font-bold mb-1 ${colors.text.primary}`}>
                     Additional Notes <span className={`text-xs font-normal ${colors.text.secondary}`}>(optional)</span>
@@ -520,7 +519,6 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                     className={`w-full px-3 py-2 text-sm border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
                     focus:outline-none focus:ring-2 ${colors.accent.ring} rounded-lg transition-shadow resize-none`}
                     />
-                </div>
                 </div>
 
               <div className="px-4 py-3">
