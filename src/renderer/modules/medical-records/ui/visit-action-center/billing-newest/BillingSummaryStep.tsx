@@ -84,7 +84,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
       primary: 'bg-blue-600',
       hover: 'hover:bg-blue-700',
       text: 'text-white',
-      ring: 'focus:ring-blue-500/40',
+      ring: 'focus:ring-blue-500',
     },
     select: {
       wrap: isDark ? 'bg-gray-950/40' : 'bg-white',

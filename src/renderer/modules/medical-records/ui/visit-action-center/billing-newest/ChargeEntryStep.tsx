@@ -158,7 +158,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onFocus={() => searchTerm.trim() && setShowSearchResults(true)}
                 className={`w-full pl-9 pr-10 py-2.5 sm:py-3 border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
-                focus:outline-none focus:ring-2 focus:ring-blue-500/40`}
+                focus:outline-none focus:ring-2 focus:ring-blue-500`}
               />
 
               {searchTerm && (
