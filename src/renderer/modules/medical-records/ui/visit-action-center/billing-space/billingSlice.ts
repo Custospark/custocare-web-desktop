@@ -1,13 +1,13 @@
 // billing-slice.ts
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import {
-  BillingState,
+  type BillingState,
   INITIAL_BILLING_STATE,
-  ServiceItem,
-  ChargeItem,
-  Discount,
-  PaymentMethod,
-  BillingStep,
+  type ServiceItem,
+  type ChargeItem,
+  type Discount,
+  type PaymentMethod,
+  type BillingStep,
   generateChargeItemId,
   generateReceiptNumber,
   getDraftStorageKey,
@@ -331,11 +331,16 @@ export const selectChargeItems = (state: { billing: BillingState }) => state.bil
 export const selectBillingStatus = (state: { billing: BillingState }) => state.billing.status;
 export const selectIsDirty = (state: { billing: BillingState }) => state.billing.isDirty;
 export const selectIsProcessing = (state: { billing: BillingState }) => state.billing.isProcessing;
+export const selectBillingState = (state: { billing: BillingState }) => state.billing;
 export const selectPatientInfo = (state: { billing: BillingState }) => ({
   visitId: state.billing.visitId,
   patientId: state.billing.patientId,
   patientName: state.billing.patientName,
 });
+export const selectCanProceed = (state: { billing: BillingState }) => {
+  const { chargeItems, status } = state.billing;
+  return chargeItems.length > 0 && status !== 'settled';
+};
 export const selectBillingData = (state: { billing: BillingState }) => {
   const { chargeItems, discount, taxes, paymentMethods } = state.billing;
   

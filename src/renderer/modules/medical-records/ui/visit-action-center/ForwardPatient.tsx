@@ -20,7 +20,7 @@ import {
 import { RootState } from '../../../../app/store/rootReducer';
 import { selectActiveVisitId, selectActiveVisit } from '../../../../app/store/slices/visitSlice';
 import { useAssignStaffToVisit } from '../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
-import { AssignStaffToVisitRequest } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import { type AssignStaffToVisitRequest } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 // Import or define these types based on your project structure
 interface StaffMember {
   id: number;

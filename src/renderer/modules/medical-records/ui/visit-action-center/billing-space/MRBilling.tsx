@@ -1,5 +1,3 @@
-// MRBilling.tsx
-// Medical Records Billing Component
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { 
@@ -8,10 +6,11 @@ import {
   selectActiveVisitUuid,
 } from '../../../../../app/store/slices/visitSlice';
 
-import BillingSpace from '../billing-new/BillingSpace';
 import { BillingTray } from './BillingTray';
-import { loadDraft } from './billing-slice';
-import { setPatientInfo } from './billing-slice';
+import { loadDraft } from './billingSlice';
+import { setPatientInfo } from './billingSlice';
+import { BillingSpace } from './BillingSpace';
+import {BillingBottomDisplay} from './BillingBottomDisplay'
 
 interface MRBillingProps {
   theme?: 'light' | 'dark';
@@ -41,7 +40,6 @@ const MRBilling: React.FC<MRBillingProps> = ({
         dispatch(setPatientInfo({
           visitId: visitUuid,
           patientId: activePatient.patient_number,
-          patientName: activePatient.name,
         }));
       }
     }
@@ -68,42 +66,14 @@ const MRBilling: React.FC<MRBillingProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Visit Header */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-              <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="font-semibold text-gray-900 dark:text-gray-100">
-                {activePatient.name}
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {activePatient.patient_number} • {activeVisit.visit_type || 'Consultation'}
-              </p>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Visit ID</div>
-            <div className="font-mono text-sm text-gray-700 dark:text-gray-300">
-              {visitUuid?.slice(0, 8)}...
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Billing Space Component */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Billing Controls
-        </h3>
+      
+      {/* Billing Space Component */}       
         <BillingSpace 
           theme={theme}
         />
-      </div>
+        <BillingBottomDisplay 
+          theme={theme}
+        />
 
       {/* Billing Tray Overlay */}
       <BillingTray theme={theme} />

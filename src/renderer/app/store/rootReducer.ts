@@ -16,7 +16,7 @@ import notificationReducer from './slices/notificationSlice';
 import facilityReducer from './slices/facilitySlice';
 import clinicalEncounterReducer from './slices/clinicalEncounterSlice';
 import queueReducer from './slices/queueSlice';
-import billingReducer from '../../modules/medical-records/ui/visit-action-center/billing-newest/billing-slice';
+import billingReducer from '../../modules/medical-records/ui/visit-action-center/billing-space/billingSlice';
 import roleReducer from './slices/roleSlice';
 import auditReducer from './slices/auditSlice';
 import visitReducer from './slices/visitSlice';

@@ -4,7 +4,6 @@ import {
   CreditCard,
   Wallet,
   Banknote,
-  Percent,
   Printer,
   CheckCircle2,
   AlertCircle,
@@ -28,7 +27,7 @@ import {
   selectIsProcessing,
   selectBillingData,
   saveDraft,
-} from './billing-slice';
+} from './billingSlice';
 import {
   DEFAULT_DISCOUNT,
   DEFAULT_PAYMENT_METHODS,
@@ -231,13 +230,18 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
   };
 
   const handleAddPaymentMethod = () => {
-    if (paymentMethods.length >= 3) return;
+  if (paymentMethods.length >= 3) return;
 
-    const updatedMethods = [...paymentMethods, { type: 'cash', amount: 0, details: '' }];
-    setFocusedAmountInputs((prev) => ({ ...prev, [updatedMethods.length - 1]: false }));
-    syncPaymentMethodsToRedux(updatedMethods);
-    dispatch(addPaymentMethod());
-  };
+  const updatedMethods = [...paymentMethods, { 
+    type: 'cash' as const, 
+    amount: 0, 
+    details: '' 
+  }];
+  
+  setFocusedAmountInputs((prev) => ({ ...prev, [updatedMethods.length - 1]: false }));
+  syncPaymentMethodsToRedux(updatedMethods);
+  dispatch(addPaymentMethod());
+};
 
   const handleRemovePaymentMethod = (index: number) => {
     if (paymentMethods.length <= 1) return;

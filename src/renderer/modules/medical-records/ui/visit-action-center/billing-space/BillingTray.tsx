@@ -11,7 +11,7 @@ import {
   selectIsDirty,
   saveDraft,
   selectPatientInfo,
-} from './billing-slice';
+} from './billingSlice';
 import { ChargeEntryStep } from './ChargeEntryStep';
 import { BillingSummaryStep } from './BillingSummaryStep';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';

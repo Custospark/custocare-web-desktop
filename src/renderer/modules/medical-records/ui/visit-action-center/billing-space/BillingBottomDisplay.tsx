@@ -1,72 +1,64 @@
 // BillingSpace.tsx
-// Compact always-visible billing launcher component with comprehensive safety checks
-
 import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Receipt, ShoppingCart } from 'lucide-react';
-import { openTray, selectBillingState, selectCharges, selectSubtotal, selectCanProceed } from './billingSlice';
-import { formatCurrency } from '../billing/billing-types';
+import { 
+  openTray, 
+  selectBillingState,
+  selectChargeItems,
+  selectBillingData,
+  selectBillingStatus,
+  selectPatientInfo,
+  selectCanProceed  // Import the new selector
+} from './billingSlice';
+import { formatCurrency } from './billing-types';
 
 interface BillingSpaceProps {
   theme?: 'light' | 'dark';
 }
 
-export const BillingSpace: React.FC<BillingSpaceProps> = ({ theme = 'light' }) => {
+export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'light' }) => {
   const dispatch = useDispatch();
   
   // Safely select from Redux store with defensive programming
   const billingState = useSelector(selectBillingState);
-  const charges = useSelector(selectCharges);
-  const subtotal = useSelector(selectSubtotal);
-  const canProceed = useSelector(selectCanProceed);
+  const chargeItems = useSelector(selectChargeItems);
+  const billingData = useSelector(selectBillingData);
+  const billingStatus = useSelector(selectBillingStatus);
+  const patientInfo = useSelector(selectPatientInfo);
+  const canProceed = useSelector(selectCanProceed);  // Use the new selector
   
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark';  // Fixed theme logic
   
   // Validate billing state exists
   if (!billingState) {
     return null;
   }
   
-  // Safely extract properties from billing state
-  const visitId = billingState?.visitId;
-  const patientName = billingState?.patientName;
-  const patientNumber = billingState?.patientNumber;
+  // Safely extract properties
+  const visitId = patientInfo?.visitId || billingState?.visitId;
+  const patientName = patientInfo?.patientName || billingState?.patientName;
   
   // If no visitId, don't render
   if (!visitId || typeof visitId !== 'string' || visitId.trim() === '') {
     return null;
   }
   
-  // Safely calculate status with comprehensive error handling
+  // Safely calculate status using billingStatus from selector
   const status = (() => {
     try {
-      // Step 1: Validate charges
-      const chargesExists = typeof charges !== 'undefined' && charges !== null;
-      const chargesIsValidArray = chargesExists && 
-                                 typeof charges === 'object' && 
-                                 Array.isArray(charges);
+      if (!billingStatus) return 'Draft';
       
-      // Step 2: Get safe charges array
-      const safeChargesArray = chargesIsValidArray ? charges : [];
-      
-      // Step 3: Validate array length
-      const arrayLength = safeChargesArray.length;
-      const hasValidLength = typeof arrayLength === 'number' && 
-                            !isNaN(arrayLength) && 
-                            isFinite(arrayLength) && 
-                            arrayLength >= 0;
-      
-      const hasCharges = hasValidLength && arrayLength > 0;
-      
-      // Step 4: Validate canProceed - strict boolean check
-      const canProceedExists = typeof canProceed !== 'undefined' && canProceed !== null;
-      const isReadyStatus = canProceedExists && canProceed === true;
-      
-      // Step 5: Determine status
-      return hasCharges && isReadyStatus ? 'Ready' : 'Draft';
-      
+      switch (billingStatus) {
+        case 'ready':
+          return 'Ready';
+        case 'settled':
+          return 'Settled';
+        case 'draft':
+        default:
+          return 'Draft';
+      }
     } catch (error) {
-      // Fallback to 'Draft' if any error occurs
       console.warn('Error calculating billing status:', error);
       return 'Draft';
     }
@@ -75,14 +67,26 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({ theme = 'light' }) =
   // Safely calculate charges length
   const safeChargesLength = (() => {
     try {
-      if (!charges || typeof charges !== 'object' || !Array.isArray(charges)) {
+      if (!chargeItems || typeof chargeItems !== 'object' || !Array.isArray(chargeItems)) {
         return 0;
       }
       
-      const length = charges.length;
+      const length = chargeItems.length;
       return typeof length === 'number' && !isNaN(length) && isFinite(length) && length >= 0 
         ? length 
         : 0;
+    } catch {
+      return 0;
+    }
+  })();
+  
+  // Safely get subtotal from billingData
+  const subtotal = (() => {
+    try {
+      if (!billingData || typeof billingData !== 'object') {
+        return 0;
+      }
+      return billingData.subtotal || 0;
     } catch {
       return 0;
     }
@@ -148,7 +152,7 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({ theme = 'light' }) =
               {patientName || 'Unknown Patient'}
             </p>
             <p className={`text-xs ${colors.text.secondary}`}>
-              {patientNumber || 'No number'}
+              {patientInfo.patientId}
             </p>
           </div>
         </div>
@@ -182,6 +186,8 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({ theme = 'light' }) =
             className={`inline-block px-2 py-0.5 rounded text-xs font-medium truncate max-w-full ${
               status === 'Ready' 
                 ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                : status === 'Settled'
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
                 : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
             }`}
             title={status}
@@ -197,7 +203,7 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({ theme = 'light' }) =
         <button
           onClick={() => {
             try {
-              dispatch(openTray('charge_entry'));
+              dispatch(openTray({ step: 'charge_entry' }));
             } catch (error) {
               console.error('Failed to open charge entry tray:', error);
             }
@@ -215,7 +221,7 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({ theme = 'light' }) =
             if (!isSummaryEnabled) return;
             
             try {
-              dispatch(openTray('billing_summary'));
+              dispatch(openTray({ step: 'billing_summary' }));
             } catch (error) {
               console.error('Failed to open billing summary tray:', error);
             }
@@ -241,4 +247,4 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({ theme = 'light' }) =
   );
 };
 
-export default BillingSpace;
+export default BillingBottomDisplay;

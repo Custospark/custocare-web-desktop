@@ -13,10 +13,7 @@ import Appearance from "../../../modules/account/apearance/Appearance";
 import ForwardPatient from "../../../modules/medical-records/ui/visit-action-center/ForwardPatient";
 import PatientComplaints from "../../../modules/medical-records/ui/visit-action-center/PatientComplaints";
 import VisitStatus from "../../../modules/medical-records/ui/visit-action-center/VisitStatus";
-import ChargeEntry from "../../../modules/medical-records/ui/visit-action-center/ChargeEntry";
-import BillingSummary from "../../../modules/medical-records/ui/visit-action-center/BillingSummary";
-import { BillingSpace } from "../../../modules/medical-records/ui/visit-action-center/billing-new";
-import MRBilling from "../../../modules/medical-records/ui/visit-action-center/billing-newest/MRBilling";
+import MRBilling from "../../../modules/medical-records/ui/visit-action-center/billing-space/MRBilling";
 export const medicalRecordsRoutes = [
   <Route
     key="overview"
@@ -82,12 +79,7 @@ export const medicalRecordsRoutes = [
           <WithThemeProp Component={VisitStatus} />
         </SuspenseWrapper>
       } />
-    <Route path={MEDICAL_RECORDS_ROUTES.PATIENT_CHARGE_ENTRY} element={
-        <SuspenseWrapper variant="table">
-          <WithThemeProp Component={ChargeEntry} />
-        </SuspenseWrapper>
-      } />
-    <Route path={MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SUMMARY} element={
+    <Route path={MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SPACE} element={
         <SuspenseWrapper variant="table">
           <WithThemeProp Component={MRBilling} />
         </SuspenseWrapper>
