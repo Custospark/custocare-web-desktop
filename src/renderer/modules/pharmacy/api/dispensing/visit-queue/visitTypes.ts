@@ -672,6 +672,145 @@ export interface VisitStatisticsResponse {
 }
 
 /* -------------------------------------------------------------------------- */
+/*                    Staff Forwarding Related Types                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Staff presence status enumeration
+ */
+export enum StaffPresenceStatus {
+  OFF_DUTY = 'off_duty',
+  ON_DUTY = 'on_duty',
+  ON_BREAK = 'on_break',
+  BUSY = 'busy',
+  UNAVAILABLE = 'unavailable',
+}
+
+/**
+ * Facility space type enumeration
+ */
+export enum FacilitySpaceType {
+  CONSULTATION = 'consultation',
+  TRIAGE = 'triage',
+  LAB = 'lab',
+  THEATRE = 'theatre',
+  WARD = 'ward',
+  PHARMACY = 'pharmacy',
+}
+
+/**
+ * Staff assignment filters for forwarding
+ */
+export interface StaffForwardingFilters {
+  role_code?: string;
+  department_id?: number;
+  presence_status?: StaffPresenceStatus;
+  search?: string;
+  limit?: number;
+  exclude_current_staff?: boolean;
+}
+
+/**
+ * Staff space information
+ */
+export interface StaffSpaceInfo {
+  name: string;
+  type: FacilitySpaceType;
+  floor: string | null;
+}
+
+/**
+ * Staff availability information
+ */
+export interface StaffAvailability {
+  is_available: boolean;
+  reason: string;
+}
+
+/**
+ * Individual staff member for forwarding
+ */
+export interface ForwardingStaff {
+  staff_id: number;
+  staff_uuid: string;
+  employee_id: string;
+  professional_title: string | null;
+  global_role_level: string;
+  
+  // User information
+  first_name: string;
+  last_name: string;
+  display_name: string | null;
+  full_name: string;
+  
+  // Facility role information
+  role_code: string;
+  module_code: string[] | null;
+  department_ids: number[] | null;
+  
+  // Presence information
+  presence_status: StaffPresenceStatus;
+  presence_started_at: string;
+  is_available: boolean;
+  availability_reason: string;
+  
+  // Space information
+  current_space: StaffSpaceInfo | null;
+  
+  // Workload metrics
+  max_concurrent_patients: number;
+  current_patient_count: number;
+  total_patients_treated: number;
+  workload_percentage: number;
+}
+
+/**
+ * Grouped staff lists
+ */
+export interface GroupedStaff {
+  available: ForwardingStaff[];
+  busy: ForwardingStaff[];
+  other: ForwardingStaff[];
+}
+
+/**
+ * Staff forwarding summary
+ */
+export interface StaffForwardingSummary {
+  total: number;
+  available: number;
+  busy: number;
+  other: number;
+}
+
+/**
+ * Staff forwarding response data
+ */
+export interface StaffForwardingData {
+  staff: ForwardingStaff[];
+  grouped: GroupedStaff;
+  summary: StaffForwardingSummary;
+}
+
+/**
+ * Staff forwarding response metadata
+ */
+export interface StaffForwardingMeta {
+  facility_id: number;
+  filters_applied: Partial<StaffForwardingFilters>;
+  excluded_current_staff: number | null;
+}
+
+/**
+ * Complete staff forwarding API response
+ */
+export interface StaffForwardingResponse {
+  success: boolean;
+  data: StaffForwardingData;
+  meta: StaffForwardingMeta;
+  message: string;
+}
+/* -------------------------------------------------------------------------- */
 /*                              UTILITY TYPES                                 */
 /* -------------------------------------------------------------------------- */
 

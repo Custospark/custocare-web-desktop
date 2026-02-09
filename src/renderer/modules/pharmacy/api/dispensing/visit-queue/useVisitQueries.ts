@@ -6,6 +6,13 @@
  * React Query hooks for visit management operations in the healthcare
  * facility management system. These hooks provide type-safe access to
  * visit APIs with proper error handling, caching, and optimistic updates.
+ * 
+ * @module useVisitQueries
+ * @description Provides type-safe, reusable hooks for all visit CRUD
+ * operations and custom queries. Component redirects are handled externally.
+ * 
+ * @requires @tanstack/react-query
+ * @requires axios
  */
 
 import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
@@ -41,12 +48,20 @@ import type {
   CreateVisitMutationContext,
   AssignStaffToVisitParams,
   AssignStaffToVisitResponse,
+  StaffForwardingFilters,
+  StaffForwardingResponse,
+  ForwardingStaff,
 } from './visitTypes';
-import  {
+import {
   VisitPhase,
   VisitStatus,
   PaymentStatus,
-  InsuranceVerificationStatus,DischargeDisposition,ModeOfArrival,VisitType
+  InsuranceVerificationStatus,
+  DischargeDisposition,
+  ModeOfArrival,
+  VisitType,
+  StaffPresenceStatus,
+  FacilitySpaceType
 } from './visitTypes';
 
 export type MyQueueQueryKey = ReturnType<typeof visitKeys.queue>;
@@ -56,14 +71,20 @@ export type MyQueueQueryOptions = Omit<
   'queryKey' | 'queryFn'
 >;
 
-
 /* -------------------------------------------------------------------------- */
 /*                               QUERY KEYS                                   */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Query key factory for visit-related queries
- * Ensures proper cache invalidation and data synchronization
+ * Centralized query keys for React Query caching and invalidation.
+ * Hierarchical structure enables precise cache management.
+ * 
+ * @example
+ * // Invalidate all visit queries
+ * queryClient.invalidateQueries({ queryKey: visitKeys.all });
+ * 
+ * // Invalidate specific visit
+ * queryClient.invalidateQueries({ queryKey: visitKeys.detail(uuid) });
  */
 export const visitKeys = {
   all: ['visits'] as const,
@@ -81,6 +102,8 @@ export const visitKeys = {
   longWaiting: (minutesThreshold: number, facilityId?: number) => 
     [...visitKeys.all, 'long-waiting', minutesThreshold, facilityId] as const,
   assignStaff: () => [...visitKeys.all, 'assign-staff'] as const,
+  staffForwarding: (filters: StaffForwardingFilters) => 
+    [...visitKeys.all, 'staff-forwarding', filters] as const,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -88,7 +111,18 @@ export const visitKeys = {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Fetches paginated visits with optional filters
+ * Fetches a paginated list of visits with optional filtering.
+ * 
+ * @param filters - Query parameters for filtering and pagination
+ * @param options - React Query options for customizing behavior
+ * @returns Query result with visits list and pagination metadata
+ * 
+ * @example
+ * const { data, isLoading, error } = useGetVisits({
+ *   facility_id: 1,
+ *   status: 'active',
+ *   per_page: 20
+ * });
  */
 export const useGetVisits = (
   filters: VisitFilters = {},
@@ -107,7 +141,14 @@ export const useGetVisits = (
 };
 
 /**
- * Fetches a single visit by UUID
+ * Fetches a single visit by UUID with full details.
+ * 
+ * @param uuid - Visit UUID to fetch
+ * @param options - React Query options for customizing behavior
+ * @returns Query result with complete visit details
+ * 
+ * @example
+ * const { data, isLoading } = useGetVisitByUUID('abc-123-def');
  */
 export const useGetVisitByUUID = (
   uuid: VisitUUID,
@@ -125,7 +166,14 @@ export const useGetVisitByUUID = (
 };
 
 /**
- * Fetches staff-specific queue visits
+ * Fetches staff-specific queue visits.
+ * 
+ * @param filters - Queue filtering parameters
+ * @param options - React Query options for customizing behavior
+ * @returns Query result with queue data
+ * 
+ * @example
+ * const { data } = useGetMyQueue({ current_phase: 'waiting_provider' });
  */
 export const useGetMyQueue = (
   filters: QueueFilters = {},
@@ -156,72 +204,57 @@ export const useGetMyQueue = (
   });
 };
 
-// ✅ Add new hook near other mutation hooks
-
-export const useAssignStaffToVisit = (
-  callbacks: MutationCallbacks<AssignStaffToVisitResponse, AxiosError<ApiErrorResponse>> = {}
+/**
+ * Fetches staff available for patient forwarding within the facility.
+ * 
+ * @param filters - Staff filtering parameters
+ * @param options - React Query options for customizing behavior
+ * @returns Query result with available staff list
+ * 
+ * @example
+ * const { data } = useGetStaffForForwarding({ 
+ *   role_code: 'doctor',
+ *   exclude_current_staff: true 
+ * });
+ */
+export const useGetStaffForForwarding = (
+  filters: StaffForwardingFilters = {},
+  options?: Omit<UseQueryOptions<StaffForwardingResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
 ) => {
-  const queryClient = useQueryClient();
-  const { showToast } = useToast();
   const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
 
-  return useMutation<AssignStaffToVisitResponse, AxiosError<ApiErrorResponse>, AssignStaffToVisitParams>({
-    mutationFn: async ({ data }: AssignStaffToVisitParams) => {
-      if (!facilityId) throw new Error('No active facility selected');
+  return useQuery<StaffForwardingResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: visitKeys.staffForwarding(filters),
+    queryFn: async () => {
+      if (!facilityId) {
+        throw new Error('No active facility selected');
+      }
 
-      const response = await axiosInstance.post<AssignStaffToVisitResponse>(
-        '/visits/assign-staff',
-        data,
-        {
-          headers: {
-            'X-Facility-Id': facilityId.toString(),
-          },
-        }
-      );
-
+      const response = await axiosInstance.get<StaffForwardingResponse>('/visits/staff/forwarding', {
+        params: filters,
+        headers: {
+          'X-Facility-Id': facilityId.toString(),
+        },
+      });
       return response.data;
     },
-
-    onSuccess: (data) => {
-      showToast('success', data.message || 'Visit assigned successfully!', 5000);
-
-      // ✅ Most important invalidations
-      queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
-      queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
-
-      // ✅ If you have visit uuid on response, invalidate its details too
-      if (data?.data?.visit_uuid) {
-        queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
-      }
-
-      callbacks.onSuccess?.(data);
-    },
-
-    onError: (error) => {
-      const apiMessage = error.response?.data?.message || error.message || 'Failed to assign staff.';
-      let errorDetails = '';
-
-      if (error.response?.data?.errors) {
-        errorDetails = Object.entries(error.response.data.errors)
-          .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
-          .join(' | ');
-      }
-
-      const displayMessage = errorDetails ? `${apiMessage} (${errorDetails})` : apiMessage;
-      showToast('error', displayMessage, 8000);
-
-      callbacks.onError?.(error);
-    },
-
-    onSettled: () => {
-      callbacks.onSettled?.();
-    },
+    enabled: !!facilityId,
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
+    ...options,
   });
 };
 
-
 /**
- * Fetches visits by facility ID
+ * Fetches all visits for a specific facility.
+ * 
+ * @param facilityId - Facility ID to filter visits
+ * @param filters - Additional filters (status, visit_type, etc.)
+ * @param options - React Query options for customizing behavior
+ * @returns Query result with facility-specific visits
+ * 
+ * @example
+ * const { data } = useGetVisitsByFacility(5, { status: 'active' });
  */
 export const useGetVisitsByFacility = (
   facilityId: number,
@@ -242,7 +275,15 @@ export const useGetVisitsByFacility = (
 };
 
 /**
- * Fetches visits by patient ID
+ * Fetches all visits for a specific patient.
+ * 
+ * @param patientId - Patient ID to filter visits
+ * @param filters - Additional filters (status, visit_type, etc.)
+ * @param options - React Query options for customizing behavior
+ * @returns Query result with patient-specific visits
+ * 
+ * @example
+ * const { data } = useGetVisitsByPatient(123, { status: 'completed' });
  */
 export const useGetVisitsByPatient = (
   patientId: number,
@@ -263,8 +304,15 @@ export const useGetVisitsByPatient = (
 };
 
 /**
- * Fetches visit statistics
- * Note: The backend returns VisitStatisticsResponse, not VisitListResponse
+ * Fetches visit statistics for reporting and dashboards.
+ * 
+ * @param facilityId - Optional facility ID to scope statistics
+ * @param dateRange - Optional date range for statistics
+ * @param options - React Query options for customizing behavior
+ * @returns Query result with visit statistics
+ * 
+ * @example
+ * const { data } = useGetVisitStatistics(1, 'today');
  */
 export const useGetVisitStatistics = (
   facilityId?: number,
@@ -274,7 +322,6 @@ export const useGetVisitStatistics = (
   return useQuery<VisitStatisticsResponse, AxiosError<ApiErrorResponse>>({
     queryKey: visitKeys.statistics(facilityId, dateRange),
     queryFn: async () => {
-      // Note: The endpoint returns VisitStatisticsResponse, not VisitListResponse
       const response = await axiosInstance.get<{ success: boolean; message: string; data: VisitStatisticsResponse }>(
         '/visits/reports/statistics',
         { params: { facility_id: facilityId, date_range: dateRange } }
@@ -286,8 +333,15 @@ export const useGetVisitStatistics = (
 };
 
 /**
- * Fetches visits with excessive waiting times
- * Note: Based on backend spec, this returns a different response structure
+ * Fetches visits with excessive waiting times.
+ * 
+ * @param minutesThreshold - Minimum waiting time in minutes
+ * @param facilityId - Optional facility ID to scope the search
+ * @param options - React Query options for customizing behavior
+ * @returns Query result with long-waiting visits
+ * 
+ * @example
+ * const { data } = useGetLongWaitingVisits(30, 1);
  */
 export const useGetLongWaitingVisits = (
   minutesThreshold: number,
@@ -297,7 +351,6 @@ export const useGetLongWaitingVisits = (
   return useQuery<VisitListResponse, AxiosError<ApiErrorResponse>>({
     queryKey: visitKeys.longWaiting(minutesThreshold, facilityId),
     queryFn: async () => {
-      // Based on backend spec, this endpoint returns VisitListResponse
       const response = await axiosInstance.get<VisitListResponse>('/visits/reports/long-waiting', {
         params: { minutes_threshold: minutesThreshold, facility_id: facilityId },
       });
@@ -313,7 +366,15 @@ export const useGetLongWaitingVisits = (
 /* -------------------------------------------------------------------------- */
 
 /**
- * Creates a new visit
+ * Creates a new visit in the system.
+ * 
+ * @param callbacks - Optional onSuccess and onError callbacks
+ * @returns Mutation object with mutate function and state
+ * 
+ * @example
+ * const { mutate, isPending } = useCreateVisit({
+ *   onSuccess: (data) => console.log('Created visit:', data.data.visit_uuid),
+ * });
  */
 export const useCreateVisit = (
   callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
@@ -333,20 +394,17 @@ export const useCreateVisit = (
       return response.data;
     },
     onMutate: async (newVisit) => {
-      // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: visitKeys.lists() });
       await queryClient.cancelQueries({ queryKey: visitKeys.queue({}) });
 
-      // Optimistically update the visit list
       const previousVisits = queryClient.getQueryData<VisitListResponse>(visitKeys.lists());
 
       if (previousVisits) {
         queryClient.setQueryData<VisitListResponse>(visitKeys.lists(), (old) => {
           if (!old) return old;
           
-          // Create optimistic visit with correct types
           const optimisticVisit: Visit = {
-            id: Date.now(), // Temporary ID
+            id: Date.now(),
             visit_uuid: `temp-${Date.now()}`,
             facility_id: newVisit.facility_id,
             patient_id: newVisit.patient_id,
@@ -414,7 +472,7 @@ export const useCreateVisit = (
             ...old,
             data: {
               ...old.data,
-              data: [optimisticVisit, ...old.data], // Fixed: old.data.data instead of old.data
+              data: [optimisticVisit, ...old.data],
             },
           };
         });
@@ -423,10 +481,9 @@ export const useCreateVisit = (
       return { previousVisits };
     },
     onSuccess: (data) => {
-      const message = data.message || 'Visit created successfully!';
-      showToast('success', message, 5000);
+      const successMessage = data.message || 'Visit created successfully!';
+      showToast('success', successMessage, 8000);
       
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
       queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
       if (facilityId) {
@@ -435,15 +492,10 @@ export const useCreateVisit = (
       
       callbacks.onSuccess?.(data);
     },
-    onError: (error) => {
-      // Rollback optimistic update
-      // if (context?.previousVisits) {
-      //   queryClient.setQueryData(visitKeys.lists(), context.previousVisits);
-      // }
-
+    onError: (error: AxiosError<ApiErrorResponse>) => {
       const apiMessage = error.response?.data?.message || error.message || 'Failed to create visit.';
+
       let errorDetails = '';
-      
       if (error.response?.data?.errors) {
         errorDetails = Object.entries(error.response.data.errors)
           .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
@@ -452,6 +504,7 @@ export const useCreateVisit = (
 
       const displayMessage = errorDetails ? `${apiMessage} (${errorDetails})` : apiMessage;
       showToast('error', displayMessage, 8000);
+      
       callbacks.onError?.(error);
     },
     onSettled: () => {
@@ -461,7 +514,13 @@ export const useCreateVisit = (
 };
 
 /**
- * Updates an existing visit
+ * Updates an existing visit by UUID.
+ * 
+ * @param callbacks - Optional onSuccess and onError callbacks
+ * @returns Mutation object with mutate function and state
+ * 
+ * @example
+ * const { mutate } = useUpdateVisit();
  */
 export const useUpdateVisit = (
   callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
@@ -480,11 +539,9 @@ export const useUpdateVisit = (
       return response.data;
     },
     onMutate: async ({ uuid, data }) => {
-      // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: visitKeys.detail(uuid) });
       await queryClient.cancelQueries({ queryKey: visitKeys.lists() });
 
-      // Optimistically update the visit
       const previousVisit = queryClient.getQueryData<VisitResponse>(visitKeys.detail(uuid));
 
       if (previousVisit) {
@@ -504,25 +561,23 @@ export const useUpdateVisit = (
       return { previousVisit };
     },
     onSuccess: (data) => {
-      const message = data.message || 'Visit updated successfully!';
-      showToast('success', message, 5000);
+      const successMessage = data.message || 'Visit updated successfully!';
+      showToast('success', successMessage, 8000);
       
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
       queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
       queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
       
       callbacks.onSuccess?.(data);
     },
-    onError: (error, { uuid }, context) => {
-      // Rollback optimistic update
+    onError: (error: AxiosError<ApiErrorResponse>, { uuid }, context) => {
       if (context?.previousVisit) {
         queryClient.setQueryData(visitKeys.detail(uuid), context.previousVisit);
       }
 
       const apiMessage = error.response?.data?.message || error.message || 'Failed to update visit.';
+
       let errorDetails = '';
-      
       if (error.response?.data?.errors) {
         errorDetails = Object.entries(error.response.data.errors)
           .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
@@ -531,6 +586,7 @@ export const useUpdateVisit = (
 
       const displayMessage = errorDetails ? `${apiMessage} (${errorDetails})` : apiMessage;
       showToast('error', displayMessage, 8000);
+      
       callbacks.onError?.(error);
     },
     onSettled: () => {
@@ -540,7 +596,13 @@ export const useUpdateVisit = (
 };
 
 /**
- * Updates the phase of a visit
+ * Updates the phase of a visit.
+ * 
+ * @param callbacks - Optional onSuccess and onError callbacks
+ * @returns Mutation object with mutate function and state
+ * 
+ * @example
+ * const { mutate } = useUpdateVisitPhase();
  */
 export const useUpdateVisitPhase = (
   callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
@@ -560,16 +622,13 @@ export const useUpdateVisitPhase = (
       return response.data;
     },
     onMutate: async ({ uuid, data }) => {
-      // Validate role permissions if roleCode is available
       if (roleCode && data.phase) {
-        // You could add role-based validation logic here
+        // Role-based validation logic can be added here
       }
 
-      // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: visitKeys.detail(uuid) });
       await queryClient.cancelQueries({ queryKey: visitKeys.queue({}) });
 
-      // Optimistically update the visit
       const previousVisit = queryClient.getQueryData<VisitResponse>(visitKeys.detail(uuid));
 
       if (previousVisit) {
@@ -589,24 +648,23 @@ export const useUpdateVisitPhase = (
       return { previousVisit };
     },
     onSuccess: (data) => {
-      const message = `Visit phase updated to ${data.data.current_phase}`;
-      showToast('success', message, 5000);
+      const successMessage = `Visit phase updated to ${data.data.current_phase}`;
+      showToast('success', successMessage, 8000);
       
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
       queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
       queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
       
       callbacks.onSuccess?.(data);
     },
-    onError: (error, { uuid }, context) => {
-      // Rollback optimistic update
+    onError: (error: AxiosError<ApiErrorResponse>, { uuid }, context) => {
       if (context?.previousVisit) {
         queryClient.setQueryData(visitKeys.detail(uuid), context.previousVisit);
       }
 
       const apiMessage = error.response?.data?.message || error.message || 'Failed to update visit phase.';
       showToast('error', apiMessage, 8000);
+      
       callbacks.onError?.(error);
     },
     onSettled: () => {
@@ -616,7 +674,13 @@ export const useUpdateVisitPhase = (
 };
 
 /**
- * Updates the status of a visit
+ * Updates the status of a visit.
+ * 
+ * @param callbacks - Optional onSuccess and onError callbacks
+ * @returns Mutation object with mutate function and state
+ * 
+ * @example
+ * const { mutate } = useUpdateVisitStatus();
  */
 export const useUpdateVisitStatus = (
   callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
@@ -630,10 +694,9 @@ export const useUpdateVisitStatus = (
       return response.data;
     },
     onSuccess: (data) => {
-      const message = `Visit status updated to ${data.data.status}`;
-      showToast('success', message, 5000);
+      const successMessage = `Visit status updated to ${data.data.status}`;
+      showToast('success', successMessage, 8000);
       
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
       queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
       queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
@@ -643,6 +706,70 @@ export const useUpdateVisitStatus = (
     onError: (error: AxiosError<ApiErrorResponse>) => {
       const apiMessage = error.response?.data?.message || error.message || 'Failed to update visit status.';
       showToast('error', apiMessage, 8000);
+      
+      callbacks.onError?.(error);
+    },
+  });
+};
+
+/**
+ * Assigns staff to a visit for patient forwarding.
+ * 
+ * @param callbacks - Optional onSuccess and onError callbacks
+ * @returns Mutation object with mutate function and state
+ * 
+ * @example
+ * const { mutate } = useAssignStaffToVisit();
+ */
+export const useAssignStaffToVisit = (
+  callbacks: MutationCallbacks<AssignStaffToVisitResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
+
+  return useMutation<AssignStaffToVisitResponse, AxiosError<ApiErrorResponse>, AssignStaffToVisitParams>({
+    mutationFn: async ({ data }: AssignStaffToVisitParams) => {
+      if (!facilityId) throw new Error('No active facility selected');
+
+      const response = await axiosInstance.post<AssignStaffToVisitResponse>(
+        '/visits/assign-staff',
+        data,
+        {
+          headers: {
+            'X-Facility-Id': facilityId.toString(),
+          },
+        }
+      );
+
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const successMessage = data.message || 'Patient forwarded successfully!';
+      showToast('success', successMessage, 8000);
+
+      queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
+      queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
+
+      if (data?.data?.visit_uuid) {
+        queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
+      }
+
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to forward patient.';
+
+      let errorDetails = '';
+      if (error.response?.data?.errors) {
+        errorDetails = Object.entries(error.response.data.errors)
+          .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
+          .join(' | ');
+      }
+
+      const displayMessage = errorDetails ? `${apiMessage} (${errorDetails})` : apiMessage;
+      showToast('error', displayMessage, 8000);
+
       callbacks.onError?.(error);
     },
     onSettled: () => {
@@ -652,7 +779,13 @@ export const useUpdateVisitStatus = (
 };
 
 /**
- * Discharges a visit
+ * Discharges a visit.
+ * 
+ * @param callbacks - Optional onSuccess and onError callbacks
+ * @returns Mutation object with mutate function and state
+ * 
+ * @example
+ * const { mutate } = useDischargeVisit();
  */
 export const useDischargeVisit = (
   callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
@@ -666,10 +799,9 @@ export const useDischargeVisit = (
       return response.data;
     },
     onSuccess: (data) => {
-      const message = `Patient discharged with ${data.data.discharge_disposition} disposition`;
-      showToast('success', message, 5000);
+      const successMessage = `Patient discharged with ${data.data.discharge_disposition} disposition`;
+      showToast('success', successMessage, 8000);
       
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
       queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
       queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
@@ -679,16 +811,20 @@ export const useDischargeVisit = (
     onError: (error: AxiosError<ApiErrorResponse>) => {
       const apiMessage = error.response?.data?.message || error.message || 'Failed to discharge visit.';
       showToast('error', apiMessage, 8000);
+      
       callbacks.onError?.(error);
-    },
-    onSettled: () => {
-      callbacks.onSettled?.();
     },
   });
 };
 
 /**
- * Registers a visit (post-arrival processing)
+ * Registers a visit (post-arrival processing).
+ * 
+ * @param callbacks - Optional onSuccess and onError callbacks
+ * @returns Mutation object with mutate function and state
+ * 
+ * @example
+ * const { mutate } = useRegisterVisit();
  */
 export const useRegisterVisit = (
   callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
@@ -702,10 +838,9 @@ export const useRegisterVisit = (
       return response.data;
     },
     onSuccess: (data) => {
-      const message = 'Visit registered successfully!';
-      showToast('success', message, 5000);
+      const successMessage = 'Visit registered successfully!';
+      showToast('success', successMessage, 8000);
       
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
       queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
       
@@ -714,16 +849,20 @@ export const useRegisterVisit = (
     onError: (error: AxiosError<ApiErrorResponse>) => {
       const apiMessage = error.response?.data?.message || error.message || 'Failed to register visit.';
       showToast('error', apiMessage, 8000);
+      
       callbacks.onError?.(error);
-    },
-    onSettled: () => {
-      callbacks.onSettled?.();
     },
   });
 };
 
 /**
- * Starts clinical care for a visit
+ * Starts clinical care for a visit.
+ * 
+ * @param callbacks - Optional onSuccess and onError callbacks
+ * @returns Mutation object with mutate function and state
+ * 
+ * @example
+ * const { mutate } = useStartClinicalCare();
  */
 export const useStartClinicalCare = (
   callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
@@ -737,10 +876,9 @@ export const useStartClinicalCare = (
       return response.data;
     },
     onSuccess: (data) => {
-      const message = 'Clinical care started!';
-      showToast('success', message, 5000);
+      const successMessage = 'Clinical care started!';
+      showToast('success', successMessage, 8000);
       
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
       queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
       
@@ -749,16 +887,20 @@ export const useStartClinicalCare = (
     onError: (error: AxiosError<ApiErrorResponse>) => {
       const apiMessage = error.response?.data?.message || error.message || 'Failed to start clinical care.';
       showToast('error', apiMessage, 8000);
+      
       callbacks.onError?.(error);
-    },
-    onSettled: () => {
-      callbacks.onSettled?.();
     },
   });
 };
 
 /**
- * Ends clinical care for a visit
+ * Ends clinical care for a visit.
+ * 
+ * @param callbacks - Optional onSuccess and onError callbacks
+ * @returns Mutation object with mutate function and state
+ * 
+ * @example
+ * const { mutate } = useEndClinicalCare();
  */
 export const useEndClinicalCare = (
   callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
@@ -772,10 +914,9 @@ export const useEndClinicalCare = (
       return response.data;
     },
     onSuccess: (data) => {
-      const message = 'Clinical care ended!';
-      showToast('success', message, 5000);
+      const successMessage = 'Clinical care ended!';
+      showToast('success', successMessage, 8000);
       
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
       queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
       
@@ -784,16 +925,20 @@ export const useEndClinicalCare = (
     onError: (error: AxiosError<ApiErrorResponse>) => {
       const apiMessage = error.response?.data?.message || error.message || 'Failed to end clinical care.';
       showToast('error', apiMessage, 8000);
+      
       callbacks.onError?.(error);
-    },
-    onSettled: () => {
-      callbacks.onSettled?.();
     },
   });
 };
 
 /**
- * Cancels a visit
+ * Cancels a visit.
+ * 
+ * @param callbacks - Optional onSuccess and onError callbacks
+ * @returns Mutation object with mutate function and state
+ * 
+ * @example
+ * const { mutate } = useCancelVisit();
  */
 export const useCancelVisit = (
   callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
@@ -807,10 +952,9 @@ export const useCancelVisit = (
       return response.data;
     },
     onSuccess: (data) => {
-      const message = 'Visit cancelled successfully!';
-      showToast('success', message, 5000);
+      const successMessage = 'Visit cancelled successfully!';
+      showToast('success', successMessage, 8000);
       
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
       queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
       queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
@@ -820,16 +964,20 @@ export const useCancelVisit = (
     onError: (error: AxiosError<ApiErrorResponse>) => {
       const apiMessage = error.response?.data?.message || error.message || 'Failed to cancel visit.';
       showToast('error', apiMessage, 8000);
+      
       callbacks.onError?.(error);
-    },
-    onSettled: () => {
-      callbacks.onSettled?.();
     },
   });
 };
 
 /**
- * Deletes a visit (soft delete)
+ * Deletes a visit (soft delete).
+ * 
+ * @param callbacks - Optional onSuccess and onError callbacks
+ * @returns Mutation object with mutate function and state
+ * 
+ * @example
+ * const { mutate } = useDeleteVisit();
  */
 export const useDeleteVisit = (
   callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
@@ -843,10 +991,9 @@ export const useDeleteVisit = (
       return response.data;
     },
     onSuccess: (data) => {
-      const message = 'Visit deleted successfully!';
-      showToast('success', message, 5000);
+      const successMessage = 'Visit deleted successfully!';
+      showToast('success', successMessage, 8000);
       
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
       queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
       
@@ -855,16 +1002,20 @@ export const useDeleteVisit = (
     onError: (error: AxiosError<ApiErrorResponse>) => {
       const apiMessage = error.response?.data?.message || error.message || 'Failed to delete visit.';
       showToast('error', apiMessage, 8000);
+      
       callbacks.onError?.(error);
-    },
-    onSettled: () => {
-      callbacks.onSettled?.();
     },
   });
 };
 
 /**
- * Restores a soft-deleted visit
+ * Restores a previously soft-deleted visit.
+ * 
+ * @param callbacks - Optional onSuccess and onError callbacks
+ * @returns Mutation object with mutate function and state
+ * 
+ * @example
+ * const { mutate } = useRestoreVisit();
  */
 export const useRestoreVisit = (
   callbacks: MutationCallbacks<VisitResponse, AxiosError<ApiErrorResponse>> = {}
@@ -878,10 +1029,9 @@ export const useRestoreVisit = (
       return response.data;
     },
     onSuccess: (data) => {
-      const message = 'Visit restored successfully!';
-      showToast('success', message, 5000);
+      const successMessage = 'Visit restored successfully!';
+      showToast('success', successMessage, 8000);
       
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
       queryClient.invalidateQueries({ queryKey: visitKeys.detail(data.data.visit_uuid) });
       
@@ -890,20 +1040,24 @@ export const useRestoreVisit = (
     onError: (error: AxiosError<ApiErrorResponse>) => {
       const apiMessage = error.response?.data?.message || error.message || 'Failed to restore visit.';
       showToast('error', apiMessage, 8000);
+      
       callbacks.onError?.(error);
-    },
-    onSettled: () => {
-      callbacks.onSettled?.();
     },
   });
 };
 
 /* -------------------------------------------------------------------------- */
-/*                              UTILITY FUNCTIONS                             */
+/*                           UTILITY FUNCTIONS                                */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Extracts error message from API error
+ * Helper function to extract error message from Axios error.
+ * 
+ * @param error - Axios error from failed request
+ * @param fallbackMessage - Default message if API message unavailable
+ * @returns Human-readable error message
+ * 
+ * @internal
  */
 export const extractErrorMessage = (
   error: AxiosError<ApiErrorResponse>,
@@ -913,7 +1067,12 @@ export const extractErrorMessage = (
 };
 
 /**
- * Formats validation errors for display
+ * Helper function to format validation errors into readable string.
+ * 
+ * @param errors - Validation errors object from API
+ * @returns Formatted error string or empty string if no errors
+ * 
+ * @internal
  */
 export const formatValidationErrors = (errors?: Record<string, string[]>): string => {
   if (!errors || Object.keys(errors).length === 0) {
@@ -929,7 +1088,10 @@ export const formatValidationErrors = (errors?: Record<string, string[]>): strin
 };
 
 /**
- * Calculates wait time in minutes
+ * Calculates wait time in minutes.
+ * 
+ * @param waitingSince - ISO string timestamp when waiting started
+ * @returns Wait time in minutes or null if invalid
  */
 export const calculateWaitTime = (waitingSince: string | null): number | null => {
   if (!waitingSince) return null;
@@ -943,13 +1105,16 @@ export const calculateWaitTime = (waitingSince: string | null): number | null =>
 };
 
 /**
- * Determines if a visit is overdue based on acuity score
+ * Determines if a visit is overdue based on acuity score.
+ * 
+ * @param acuityScore - Visit acuity score (1-5)
+ * @param waitingSince - ISO string timestamp when waiting started
+ * @returns True if visit is overdue based on acuity-based thresholds
  */
 export const isVisitOverdue = (acuityScore: number, waitingSince: string | null): boolean => {
   const waitTime = calculateWaitTime(waitingSince);
   if (waitTime === null) return false;
   
-  // Max wait times based on acuity score
   const maxWaitTimes: Record<number, number> = {
     1: 0,   // Resuscitation - immediate
     2: 15,  // Emergent - 15 minutes
@@ -963,7 +1128,10 @@ export const isVisitOverdue = (acuityScore: number, waitingSince: string | null)
 };
 
 /**
- * Gets phase display name
+ * Gets phase display name for UI.
+ * 
+ * @param phase - Visit phase enum value
+ * @returns Human-readable phase name
  */
 export const getPhaseDisplayName = (phase: VisitPhase): string => {
   const phaseMap: Record<VisitPhase, string> = {
@@ -992,7 +1160,10 @@ export const getPhaseDisplayName = (phase: VisitPhase): string => {
 };
 
 /**
- * Gets status color for UI display
+ * Gets status color for UI display.
+ * 
+ * @param status - Visit status enum value
+ * @returns Tailwind CSS classes for status badge
  */
 export const getStatusColor = (status: VisitStatus): string => {
   const colorMap: Record<VisitStatus, string> = {
@@ -1007,7 +1178,10 @@ export const getStatusColor = (status: VisitStatus): string => {
 };
 
 /**
- * Gets type display name
+ * Gets type display name for UI.
+ * 
+ * @param type - Visit type enum value
+ * @returns Human-readable type name
  */
 export const getTypeDisplayName = (type: VisitType): string => {
   const typeMap: Record<VisitType, string> = {
@@ -1028,7 +1202,10 @@ export const getTypeDisplayName = (type: VisitType): string => {
 };
 
 /**
- * Gets mode of arrival display name
+ * Gets mode of arrival display name for UI.
+ * 
+ * @param mode - Mode of arrival enum value or null
+ * @returns Human-readable arrival mode
  */
 export const getModeOfArrivalDisplayName = (mode: ModeOfArrival | null): string => {
   if (!mode) return 'Unknown';
@@ -1047,7 +1224,10 @@ export const getModeOfArrivalDisplayName = (mode: ModeOfArrival | null): string 
 };
 
 /**
- * Gets discharge disposition display name
+ * Gets discharge disposition display name for UI.
+ * 
+ * @param disposition - Discharge disposition enum value or null
+ * @returns Human-readable discharge disposition
  */
 export const getDischargeDispositionDisplayName = (disposition: DischargeDisposition | null): string => {
   if (!disposition) return 'Not Discharged';
@@ -1069,12 +1249,118 @@ export const getDischargeDispositionDisplayName = (disposition: DischargeDisposi
   return dispositionMap[disposition] || disposition.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 };
 
+/**
+ * Gets presence status display name for UI.
+ * 
+ * @param status - Staff presence status enum value
+ * @returns Human-readable presence status
+ */
+export const getPresenceStatusDisplayName = (status: StaffPresenceStatus): string => {
+  const statusMap: Record<StaffPresenceStatus, string> = {
+    [StaffPresenceStatus.OFF_DUTY]: 'Off Duty',
+    [StaffPresenceStatus.ON_DUTY]: 'On Duty',
+    [StaffPresenceStatus.ON_BREAK]: 'On Break',
+    [StaffPresenceStatus.BUSY]: 'Busy',
+    [StaffPresenceStatus.UNAVAILABLE]: 'Unavailable',
+  };
+  
+  return statusMap[status] || status.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+};
+
+/**
+ * Gets space type display name for UI.
+ * 
+ * @param type - Facility space type enum value
+ * @returns Human-readable space type
+ */
+export const getSpaceTypeDisplayName = (type: FacilitySpaceType): string => {
+  const typeMap: Record<FacilitySpaceType, string> = {
+    [FacilitySpaceType.CONSULTATION]: 'Consultation',
+    [FacilitySpaceType.TRIAGE]: 'Triage',
+    [FacilitySpaceType.LAB]: 'Lab',
+    [FacilitySpaceType.THEATRE]: 'Theatre',
+    [FacilitySpaceType.WARD]: 'Ward',
+    [FacilitySpaceType.PHARMACY]: 'Pharmacy',
+  };
+  
+  return typeMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+};
+
+/**
+ * Gets availability color based on staff status.
+ * 
+ * @param staff - Forwarding staff object
+ * @returns Tailwind CSS classes for availability badge
+ */
+export const getAvailabilityColor = (staff: ForwardingStaff): string => {
+  if (!staff.is_available) return 'bg-red-100 text-red-800';
+  if (staff.presence_status === StaffPresenceStatus.BUSY) return 'bg-yellow-100 text-yellow-800';
+  if (staff.workload_percentage > 80) return 'bg-orange-100 text-orange-800';
+  return 'bg-green-100 text-green-800';
+};
+
+/**
+ * Gets availability badge text.
+ * 
+ * @param staff - Forwarding staff object
+ * @returns Text for availability badge
+ */
+export const getAvailabilityBadge = (staff: ForwardingStaff): string => {
+  if (!staff.is_available) return 'Unavailable';
+  if (staff.presence_status === StaffPresenceStatus.BUSY) return 'Busy';
+  if (staff.workload_percentage > 80) return 'High Workload';
+  return 'Available';
+};
+
+/**
+ * Filters staff list by various criteria.
+ * 
+ * @param staff - Array of forwarding staff
+ * @param filters - Filter criteria
+ * @returns Filtered staff array
+ */
+export const filterStaffList = (
+  staff: ForwardingStaff[],
+  filters: StaffForwardingFilters
+): ForwardingStaff[] => {
+  return staff.filter(staffMember => {
+    if (filters.role_code && staffMember.role_code !== filters.role_code) {
+      return false;
+    }
+    
+    if (filters.department_id && staffMember.department_ids) {
+      if (!staffMember.department_ids.includes(filters.department_id)) {
+        return false;
+      }
+    }
+    
+    if (filters.presence_status && staffMember.presence_status !== filters.presence_status) {
+      return false;
+    }
+    
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      const matchesSearch = 
+        staffMember.first_name.toLowerCase().includes(searchTerm) ||
+        staffMember.last_name.toLowerCase().includes(searchTerm) ||
+        staffMember.full_name.toLowerCase().includes(searchTerm) ||
+        staffMember.employee_id.toLowerCase().includes(searchTerm) ||
+        staffMember.professional_title?.toLowerCase().includes(searchTerm) ||
+        false;
+      
+      if (!matchesSearch) return false;
+    }
+    
+    return true;
+  });
+};
+
 /* -------------------------------------------------------------------------- */
 /*                            EXPORT ALL HOOKS                                */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Main export object containing all visit-related hooks and utilities
+ * Main export object containing all visit-related hooks and utilities.
  */
 const visitQueries = {
   // Query keys
@@ -1088,12 +1374,14 @@ const visitQueries = {
   useGetVisitsByPatient,
   useGetVisitStatistics,
   useGetLongWaitingVisits,
+  useGetStaffForForwarding,
   
   // Mutation hooks
   useCreateVisit,
   useUpdateVisit,
   useUpdateVisitPhase,
   useUpdateVisitStatus,
+  useAssignStaffToVisit,
   useDischargeVisit,
   useRegisterVisit,
   useStartClinicalCare,
@@ -1112,6 +1400,11 @@ const visitQueries = {
   getTypeDisplayName,
   getModeOfArrivalDisplayName,
   getDischargeDispositionDisplayName,
+  getPresenceStatusDisplayName,
+  getSpaceTypeDisplayName,
+  getAvailabilityColor,
+  getAvailabilityBadge,
+  filterStaffList,
 };
 
 export default visitQueries;
