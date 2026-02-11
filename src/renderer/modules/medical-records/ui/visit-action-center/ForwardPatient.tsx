@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux'; // Add useDispatch
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { useNavigate } from 'react-router-dom';
+import { MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
 import {
   Users,
   Activity,
@@ -18,7 +20,11 @@ import {
   UserPlus,
 } from 'lucide-react';
 
-import { selectActiveVisitId, selectActiveVisit } from '../../../../app/store/slices/visitSlice';
+import { 
+  selectActiveVisitId, 
+  selectActiveVisit,
+  clearActiveVisit // Import the action
+} from '../../../../app/store/slices/visitSlice';
 import { useAssignStaffToVisit, useGetStaffForForwarding } from '../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
 import { 
   type AssignStaffToVisitRequest,
@@ -27,6 +33,7 @@ import {
   StaffPresenceStatus
 } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { getRoleDisplayName as formatRole } from '../../../../shared/utils/facilityRoleFormator';
+
 // Form validation schema
 const forwardPatientSchema = z.object({
   assigned_staff_id: z.number().min(1, 'Please select a staff member'),
@@ -49,6 +56,8 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   currentStaffId,
 }) => {
   const isDark = theme === 'dark';
+  const dispatch = useDispatch(); // Initialize dispatch
+  const navigate=useNavigate();
   
   // Get current visit from Redux
   const visitId = useSelector(selectActiveVisitId);
@@ -65,9 +74,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   // Minimal filters for initial load - only essential backend filters
   const initialFilters: StaffForwardingFilters = useMemo(() => ({
     exclude_current_staff: !!currentStaffId,
-    limit: 100, // Increased limit to fetch all possible staff for client-side filtering
-    // Note: We're not including search or status filters here
-    // They will be handled client-side after initial load
+    limit: 100,
   }), [currentStaffId]);
   
   // Fetch staff members once on component mount
@@ -79,10 +86,16 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     refetch: refetchStaff 
   } = useGetStaffForForwarding(initialFilters);
   
-  // Mutation for assigning staff to visit
+  // Mutation for assigning staff to visit - UPDATED
   const assignMutation = useAssignStaffToVisit({
     onSuccess: (data) => {
       console.log('Staff assigned successfully:', data);
+      
+      // Clear the visit from Redux store
+      dispatch(clearActiveVisit());
+      navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE)
+      
+      // Call the success callback if provided
       onSuccess?.();
     },
     onError: (error) => {
@@ -126,7 +139,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       setClientSideSearchTerm(searchTerm);
-    }, 300); // 300ms debounce for smoother UX
+    }, 300);
     
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -145,7 +158,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
       );
     }
     
-    // Client-side filtering for "available" status
+    // Client-side filtering for status
     if (filterStatus === 'available') {
       staff = staff.filter(staff => staff.is_available);
     } else if (filterStatus === 'on_duty') {
@@ -153,16 +166,13 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     } else if (filterStatus === 'busy') {
       staff = staff.filter(staff => staff.presence_status === StaffPresenceStatus.BUSY);
     }
-    // For 'all' status, we don't filter by presence status
     
     // Sort by availability and workload
     return staff.sort((a, b) => {
-      // Sort by availability first
       if (a.is_available !== b.is_available) {
         return a.is_available ? -1 : 1;
       }
       
-      // Then by presence status: on_duty -> busy -> others
       const statusOrder = { 
         [StaffPresenceStatus.ON_DUTY]: 0, 
         [StaffPresenceStatus.BUSY]: 1, 
@@ -175,7 +185,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
       
       if (aOrder !== bOrder) return aOrder - bOrder;
       
-      // Then by workload percentage (lower is better)
       return a.workload_percentage - b.workload_percentage;
     });
   }, [staffMembers, clientSideSearchTerm, filterStatus]);
@@ -196,7 +205,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     return { available, busy, total };
   }, [staffMembers]);
   
-  // Handle form submission
+  // Handle form submission - NO CHANGE NEEDED HERE
   const onSubmit = async (data: ForwardPatientFormData) => {
     if (!visitId) {
       console.error('No visit selected');
@@ -213,7 +222,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
         data: request,
       });
     } catch (error) {
-      // Error is handled by the mutation
       console.error('Failed to assign staff:', error);
     }
   };
@@ -272,7 +280,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   // Handle filter change
   const handleFilterChange = (status: typeof filterStatus) => {
     setFilterStatus(status);
-    // Reset selection when filter changes
     setValue('assigned_staff_id', 0, { shouldValidate: true });
   };
   
@@ -307,7 +314,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
               Assign patient to another staff member
             </p>
           </div>
-          {/* Data status indicator */}
           {hasLoadedInitialData && (
             <div className={`text-xs px-2 py-1 rounded ${isDark ? 'bg-green-900/50 text-green-400' : 'bg-green-100 text-green-800'}`}>
               ✓ {staffMembers.length} staff loaded
@@ -491,7 +497,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          {/* Staff Name and Role */}
                           <div className="flex items-center gap-2 mb-2">
                             <User className={`w-4 h-4 ${colors.text.tertiary}`} />
                             <h4 className={`font-semibold truncate ${colors.text.primary}`}>
@@ -502,14 +507,12 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
                             </span>
                           </div>
                           
-                          {/* Staff Details */}
                           <div className="space-y-2">
                             <div className="flex items-center gap-4 text-sm">
                               <span className={colors.text.secondary}>Staff Number: {staff.staff_uuid}</span>
                               <span className={colors.text.secondary}>Role: {formatRole(staff.role_code)}</span>
                             </div>
                             
-                            {/* Space Information */}
                             {staff.current_space && (
                               <div className="flex items-center gap-3 text-sm">
                                 <div className="flex items-center gap-1">
@@ -528,7 +531,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
                               </div>
                             )}
                             
-                            {/* Workload Information */}
                             <div className="flex items-center gap-4 text-sm">
                               <div className="flex items-center gap-1">
                                 <Activity className={`w-4 h-4 ${colors.text.tertiary}`} />
@@ -543,7 +545,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
                           </div>
                         </div>
                         
-                        {/* Selection Indicator */}
                         <div className="flex-shrink-0">
                           {isSelected ? (
                             <CheckCircle2 className={`w-6 h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
@@ -553,7 +554,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
                         </div>
                       </div>
                       
-                      {/* Availability status */}
                       {!canReceive && (
                         <div className="mt-3 p-2 rounded bg-amber-500/10 border border-amber-500/20">
                           <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
@@ -568,7 +568,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
               </div>
             )}
             
-            {/* Summary - using client-side calculated data */}
             {summaryData && (
               <div className="mt-4 flex gap-3 text-sm">
                 <span className="px-2 py-1 bg-green-100 text-green-800 rounded">
@@ -596,7 +595,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
             )}
           </div>
           
-          {/* Selected Staff Preview */}
           {selectedStaff && (
             <div className={`p-4 rounded-lg border ${colors.border.primary} ${colors.bg.secondary}`}>
               <h4 className={`text-sm font-medium mb-3 ${colors.text.secondary}`}>
@@ -632,7 +630,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
             </div>
           )}
           
-          {/* Additional Notes */}
           <div>
             <label className={`block text-sm font-medium mb-2 ${colors.text.secondary}`}>
               Forwarding Notes (Optional)
@@ -648,7 +645,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
             )}
           </div>
           
-          {/* Form Actions */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
             <button
               type="button"
@@ -672,7 +668,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
               }`}
             >
               {assignMutation.isPending || isSubmitting ? (
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-2 cursor-pointer">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Forwarding...
                 </span>
