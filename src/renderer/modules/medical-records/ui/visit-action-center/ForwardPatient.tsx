@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux'; // Add useDispatch
+import { useSelector, useDispatch } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,12 +18,13 @@ import {
   Search,
   AlertCircle,
   UserPlus,
+  X,
 } from 'lucide-react';
 
 import { 
   selectActiveVisitId, 
   selectActiveVisit,
-  clearActiveVisit // Import the action
+  clearActiveVisit
 } from '../../../../app/store/slices/visitSlice';
 import { useAssignStaffToVisit, useGetStaffForForwarding } from '../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
 import { 
@@ -34,7 +35,6 @@ import {
 } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { getRoleDisplayName as formatRole } from '../../../../shared/utils/facilityRoleFormator';
 
-// Form validation schema
 const forwardPatientSchema = z.object({
   assigned_staff_id: z.number().min(1, 'Please select a staff member'),
   note: z.string().max(500).optional(),
@@ -46,7 +46,7 @@ interface ForwardPatientProps {
   onSuccess?: () => void;
   onCancel?: () => void;
   theme?: 'light' | 'dark';
-  currentStaffId?: number; // Optional: current staff ID to exclude from list
+  currentStaffId?: number;
 }
 
 export const ForwardPatient: React.FC<ForwardPatientProps> = ({
@@ -56,28 +56,22 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   currentStaffId,
 }) => {
   const isDark = theme === 'dark';
-  const dispatch = useDispatch(); // Initialize dispatch
-  const navigate=useNavigate();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   
-  // Get current visit from Redux
   const visitId = useSelector(selectActiveVisitId);
   const activeVisit = useSelector(selectActiveVisit);
   
-  // State for filters and search
   const [searchTerm, setSearchTerm] = useState('');
   const [clientSideSearchTerm, setClientSideSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'busy' | 'on_duty' | 'available'>('available');
-  
-  // Track if we've already loaded data
   const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false);
   
-  // Minimal filters for initial load - only essential backend filters
   const initialFilters: StaffForwardingFilters = useMemo(() => ({
     exclude_current_staff: !!currentStaffId,
     limit: 100,
   }), [currentStaffId]);
   
-  // Fetch staff members once on component mount
   const { 
     data: staffData, 
     isLoading: isLoadingStaff, 
@@ -86,16 +80,11 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     refetch: refetchStaff 
   } = useGetStaffForForwarding(initialFilters);
   
-  // Mutation for assigning staff to visit - UPDATED
   const assignMutation = useAssignStaffToVisit({
     onSuccess: (data) => {
       console.log('Staff assigned successfully:', data);
-      
-      // Clear the visit from Redux store
       dispatch(clearActiveVisit());
-      navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE)
-      
-      // Call the success callback if provided
+      navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE);
       onSuccess?.();
     },
     onError: (error) => {
@@ -103,7 +92,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     },
   });
   
-  // Form setup
   const {
     register,
     handleSubmit,
@@ -122,20 +110,17 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   
   const selectedStaffId = watch('assigned_staff_id');
   
-  // Get staff list from response
   const staffMembers: ForwardingStaff[] = useMemo(() => {
     if (!staffData?.data?.staff || !Array.isArray(staffData.data.staff)) return [];
     return staffData.data.staff;
   }, [staffData]);
   
-  // Mark initial data as loaded when we have staff members
   useEffect(() => {
     if (staffMembers.length > 0 && !hasLoadedInitialData) {
       setHasLoadedInitialData(true);
     }
   }, [staffMembers, hasLoadedInitialData]);
   
-  // Debounced client-side search
   useEffect(() => {
     const timer = setTimeout(() => {
       setClientSideSearchTerm(searchTerm);
@@ -144,11 +129,14 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     return () => clearTimeout(timer);
   }, [searchTerm]);
   
-  // Filter staff based on client-side search and filters
+  const clearSearch = () => {
+    setSearchTerm('');
+    setClientSideSearchTerm('');
+  };
+  
   const filteredStaff = useMemo(() => {
     let staff = staffMembers;
     
-    // Client-side search
     if (clientSideSearchTerm.trim()) {
       const searchLower = clientSideSearchTerm.toLowerCase().trim();
       staff = staff.filter(staff => 
@@ -158,7 +146,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
       );
     }
     
-    // Client-side filtering for status
     if (filterStatus === 'available') {
       staff = staff.filter(staff => staff.is_available);
     } else if (filterStatus === 'on_duty') {
@@ -167,7 +154,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
       staff = staff.filter(staff => staff.presence_status === StaffPresenceStatus.BUSY);
     }
     
-    // Sort by availability and workload
     return staff.sort((a, b) => {
       if (a.is_available !== b.is_available) {
         return a.is_available ? -1 : 1;
@@ -189,12 +175,10 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     });
   }, [staffMembers, clientSideSearchTerm, filterStatus]);
   
-  // Get selected staff details
   const selectedStaff = useMemo(() => {
     return filteredStaff.find(staff => staff.staff_id === selectedStaffId);
   }, [filteredStaff, selectedStaffId]);
   
-  // Calculate summary data client-side
   const summaryData = useMemo(() => {
     if (staffMembers.length === 0) return null;
     
@@ -205,7 +189,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     return { available, busy, total };
   }, [staffMembers]);
   
-  // Handle form submission - NO CHANGE NEEDED HERE
   const onSubmit = async (data: ForwardPatientFormData) => {
     if (!visitId) {
       console.error('No visit selected');
@@ -226,7 +209,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     }
   };
   
-  // Reset form when component mounts or visit changes
   useEffect(() => {
     reset({
       assigned_staff_id: 0,
@@ -234,7 +216,17 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     });
   }, [visitId, reset]);
   
-  // Color tokens based on theme
+  const handleFilterChange = (status: typeof filterStatus) => {
+    setFilterStatus(status);
+    setValue('assigned_staff_id', 0, { shouldValidate: true });
+  };
+  
+  const handleStaffSelect = (staffId: number, canReceive: boolean) => {
+    if (canReceive) {
+      setValue('assigned_staff_id', staffId, { shouldValidate: true });
+    }
+  };
+  
   const colors = {
     bg: {
       primary: isDark ? 'bg-gray-900' : 'bg-white',
@@ -263,7 +255,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     },
   };
   
-  // Get status display and color
   const getStatusInfo = (status: StaffPresenceStatus) => {
     const statusInfo = colors.status[status] || colors.status.off_duty;
     const icon = {
@@ -275,19 +266,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     }[status] || <XCircle className="w-4 h-4" />;
     
     return { ...statusInfo, icon };
-  };
-  
-  // Handle filter change
-  const handleFilterChange = (status: typeof filterStatus) => {
-    setFilterStatus(status);
-    setValue('assigned_staff_id', 0, { shouldValidate: true });
-  };
-  
-  // Handle staff selection
-  const handleStaffSelect = (staffId: number, canReceive: boolean) => {
-    if (canReceive) {
-      setValue('assigned_staff_id', staffId, { shouldValidate: true });
-    }
   };
   
   if (!visitId || !activeVisit) {
@@ -315,7 +293,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
             </p>
           </div>
           {hasLoadedInitialData && (
-            <div className={`text-xs px-2 py-1 rounded ${isDark ? 'bg-green-900/50 text-green-400' : 'bg-green-100 text-green-800'}`}>
+            <div className={`text-xs px-2 py-1 rounded cursor-default ${isDark ? 'bg-green-900/50 text-green-400' : 'bg-green-100 text-green-800'}`}>
               ✓ {staffMembers.length} staff loaded
             </div>
           )}
@@ -336,18 +314,29 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
                   : "Search staff by name, ID, or role..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full pl-10 pr-4 py-3 rounded-lg border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                className={`w-full pl-10 pr-10 py-3 rounded-lg border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-text`}
               />
               {hasLoadedInitialData && clientSideSearchTerm && (
-                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs ${colors.text.tertiary}`}>
-                  {filteredStaff.length} results
-                </div>
+                <>
+                  <div className={`absolute right-12 top-1/2 -translate-y-1/2 text-xs ${colors.text.tertiary} cursor-default`}>
+                    {filteredStaff.length} results
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearSearch}
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full ${colors.bg.hover} transition-colors cursor-pointer`}
+                    title="Clear search"
+                    aria-label="Clear search results"
+                  >
+                    <X className={`w-4 h-4 ${colors.text.tertiary} hover:${colors.text.primary}`} />
+                  </button>
+                </>
               )}
             </div>
             
             {/* Status Filter */}
             <div className="flex items-center gap-2">
-              <span className={`text-sm ${colors.text.secondary}`}>Filter by status:</span>
+              <span className={`text-sm ${colors.text.secondary} cursor-default`}>Filter by status:</span>
               <div className="flex flex-wrap gap-2">
                 {[
                   { value: 'available' as const, label: 'Available' },
@@ -363,7 +352,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
                       type="button"
                       onClick={() => handleFilterChange(value)}
                       disabled={!hasLoadedInitialData}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
                         isActive
                           ? `${
                               value === 'available' ? 'bg-green-500/10 text-green-600' :
@@ -390,49 +379,45 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
           
           {/* Staff Selection */}
           <div>
-            <label className={`block text-sm font-medium mb-3 ${colors.text.secondary}`}>
+            <label className={`block text-sm font-medium mb-3 ${colors.text.secondary} cursor-default`}>
               Select Staff Member to Forward To <span className="text-red-500">*</span>
-              <span className={`block text-xs mt-1 ${colors.text.tertiary}`}>
+              <span className={`block text-xs mt-1 ${colors.text.tertiary} cursor-default`}>
                 Staff must be available to receive patients (On Duty or Busy with capacity)
-                {hasLoadedInitialData && (
-                  <span className="ml-1">• Client-side filtering active</span>
-                )}
               </span>
             </label>
             
             {isLoadingStaff ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
-                <span className="ml-3 text-gray-500">Loading staff...</span>
+                <span className="ml-3 text-gray-500 cursor-default">Loading staff...</span>
               </div>
             ) : isStaffError ? (
               <div className={`py-8 text-center rounded-lg border ${colors.border.primary}`}>
                 <AlertCircle className={`w-12 h-12 mx-auto mb-4 text-red-500`} />
-                <h3 className={`text-lg font-medium mb-2 ${colors.text.primary}`}>
+                <h3 className={`text-lg font-medium mb-2 ${colors.text.primary} cursor-default`}>
                   Failed to Load Staff
                 </h3>
                 <p className={colors.text.secondary}>
                   Unable to load staff list. Please try again.
                 </p>
                 
-                {/* Debug information - only shown in development */}
                 {process.env.NODE_ENV === 'development' && staffError && (
                   <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-left">
-                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 cursor-default">
                       Debug Information (Development Only):
                     </p>
                     <div className="text-xs text-red-600 dark:text-red-400 space-y-1">
                       {staffError.response?.data?.message && (
-                        <p className="break-words">
+                        <p className="break-words cursor-default">
                           <span className="font-medium">Message:</span> {staffError.response.data.message}
                         </p>
                       )}
                       {staffError.response?.data?.errors && (
                         <div>
-                          <p className="font-medium mt-1">Validation Errors:</p>
+                          <p className="font-medium mt-1 cursor-default">Validation Errors:</p>
                           <ul className="list-disc list-inside ml-2">
                             {Object.entries(staffError.response.data.errors).map(([field, messages]) => (
-                              <li key={field} className="break-words">
+                              <li key={field} className="break-words cursor-default">
                                 <span className="font-medium">{field}:</span>{" "}
                                 {Array.isArray(messages) ? messages.join(', ') : messages}
                               </li>
@@ -441,12 +426,12 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
                         </div>
                       )}
                       {!staffError.response?.data?.message && !staffError.response?.data?.errors && staffError.message && (
-                        <p className="break-words">
+                        <p className="break-words cursor-default">
                           <span className="font-medium">Error:</span> {staffError.message}
                         </p>
                       )}
                       {staffError.response?.status && (
-                        <p className="text-gray-600 dark:text-gray-400">
+                        <p className="text-gray-600 dark:text-gray-400 cursor-default">
                           Status: {staffError.response.status}
                         </p>
                       )}
@@ -456,7 +441,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
                 
                 <button
                   onClick={() => refetchStaff()}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
                 >
                   Retry
                 </button>
@@ -464,7 +449,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
             ) : filteredStaff.length === 0 ? (
               <div className={`py-12 text-center rounded-lg border ${colors.border.primary}`}>
                 <Users className={`w-12 h-12 mx-auto mb-4 ${colors.text.tertiary}`} />
-                <h3 className={`text-lg font-medium mb-2 ${colors.text.primary}`}>
+                <h3 className={`text-lg font-medium mb-2 ${colors.text.primary} cursor-default`}>
                   {searchTerm ? 'No Matching Staff Found' : 'No Staff Available'}
                 </h3>
                 <p className={colors.text.secondary}>
@@ -473,9 +458,18 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
                     : 'No staff are available to receive patients'}
                 </p>
                 {searchTerm && hasLoadedInitialData && (
-                  <p className={`mt-2 text-sm ${colors.text.tertiary}`}>
-                    Showing {filteredStaff.length} of {staffMembers.length} loaded staff members
-                  </p>
+                  <>
+                    <p className={`mt-2 text-sm ${colors.text.tertiary} cursor-default`}>
+                      Showing {filteredStaff.length} of {staffMembers.length} loaded staff members
+                    </p>
+                    <button
+                      type="button"
+                      onClick={clearSearch}
+                      className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+                    >
+                      Clear Search
+                    </button>
+                  </>
                 )}
               </div>
             ) : (
@@ -488,42 +482,50 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
                   return (
                     <div
                       key={staff.staff_id}
-                      className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                      className={`p-4 rounded-lg border transition-all ${
                         isSelected
                           ? `${isDark ? 'border-blue-500 bg-blue-500/10' : 'border-blue-500 bg-blue-50'}`
                           : `${colors.border.primary} ${colors.bg.hover}`
-                      } ${!canReceive ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      } ${!canReceive ? 'opacity-50' : 'cursor-pointer'}`}
                       onClick={() => handleStaffSelect(staff.staff_id, canReceive)}
+                      role="button"
+                      tabIndex={canReceive ? 0 : -1}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleStaffSelect(staff.staff_id, canReceive);
+                        }
+                      }}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
                             <User className={`w-4 h-4 ${colors.text.tertiary}`} />
-                            <h4 className={`font-semibold truncate ${colors.text.primary}`}>
+                            <h4 className={`font-semibold truncate ${colors.text.primary} cursor-pointer`}>
                               {staff.full_name}
                             </h4>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${statusInfo.bg} ${statusInfo.text}`}>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${statusInfo.bg} ${statusInfo.text} cursor-default`}>
                               {statusInfo.label}
                             </span>
                           </div>
                           
                           <div className="space-y-2">
                             <div className="flex items-center gap-4 text-sm">
-                              <span className={colors.text.secondary}>Staff Number: {staff.staff_uuid}</span>
-                              <span className={colors.text.secondary}>Role: {formatRole(staff.role_code)}</span>
+                              <span className={`${colors.text.secondary} cursor-default`}>Staff Number: {staff.staff_uuid}</span>
+                              <span className={`${colors.text.secondary} cursor-default`}>Role: {formatRole(staff.role_code)}</span>
                             </div>
                             
                             {staff.current_space && (
                               <div className="flex items-center gap-3 text-sm">
                                 <div className="flex items-center gap-1">
                                   <DoorClosed className={`w-4 h-4 ${colors.text.tertiary}`} />
-                                  <span className={colors.text.secondary}>
+                                  <span className={`${colors.text.secondary} cursor-default`}>
                                     {staff.current_space.name}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <Building className={`w-4 h-4 ${colors.text.tertiary}`} />
-                                  <span className={colors.text.secondary}>
+                                  <span className={`${colors.text.secondary} cursor-default`}>
                                     {staff.current_space.type}
                                     {staff.current_space.floor && `, Floor ${staff.current_space.floor}`}
                                   </span>
@@ -534,11 +536,11 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
                             <div className="flex items-center gap-4 text-sm">
                               <div className="flex items-center gap-1">
                                 <Activity className={`w-4 h-4 ${colors.text.tertiary}`} />
-                                <span className={colors.text.secondary}>
+                                <span className={`${colors.text.secondary} cursor-default`}>
                                   Workload: {staff.current_patient_count}/{staff.max_concurrent_patients}
                                 </span>
                               </div>
-                              <div className={colors.text.secondary}>
+                              <div className={`${colors.text.secondary} cursor-default`}>
                                 Capacity: {staff.workload_percentage}%
                               </div>
                             </div>
@@ -549,14 +551,14 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
                           {isSelected ? (
                             <CheckCircle2 className={`w-6 h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
                           ) : (
-                            <div className={`w-6 h-6 rounded-full border ${colors.border.primary}`} />
+                            <div className={`w-6 h-6 rounded-full border ${colors.border.primary} cursor-pointer`} />
                           )}
                         </div>
                       </div>
                       
                       {!canReceive && (
                         <div className="mt-3 p-2 rounded bg-amber-500/10 border border-amber-500/20">
-                          <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                          <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 cursor-default">
                             <AlertCircle className="w-3 h-3" />
                             {staff.availability_reason}
                           </p>
@@ -570,17 +572,17 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
             
             {summaryData && (
               <div className="mt-4 flex gap-3 text-sm">
-                <span className="px-2 py-1 bg-green-100 text-green-800 rounded">
+                <span className="px-2 py-1 bg-green-100 text-green-800 rounded cursor-default">
                   Available: {summaryData.available}
                 </span>
-                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded">
+                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded cursor-default">
                   Busy: {summaryData.busy}
                 </span>
-                <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded">
+                <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded cursor-default">
                   Total: {summaryData.total}
                 </span>
                 {clientSideSearchTerm && filteredStaff.length !== summaryData.total && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded cursor-default">
                     Filtered: {filteredStaff.length}
                   </span>
                 )}
@@ -588,7 +590,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
             )}
             
             {errors.assigned_staff_id && (
-              <p className="mt-2 text-sm text-red-500 flex items-center gap-1">
+              <p className="mt-2 text-sm text-red-500 flex items-center gap-1 cursor-default">
                 <AlertCircle className="w-4 h-4" />
                 {errors.assigned_staff_id.message}
               </p>
@@ -597,32 +599,32 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
           
           {selectedStaff && (
             <div className={`p-4 rounded-lg border ${colors.border.primary} ${colors.bg.secondary}`}>
-              <h4 className={`text-sm font-medium mb-3 ${colors.text.secondary}`}>
+              <h4 className={`text-sm font-medium mb-3 ${colors.text.secondary} cursor-default`}>
                 Forwarding to:
               </h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className={`text-xs ${colors.text.tertiary}`}>Staff Member</p>
-                  <p className={`font-medium ${colors.text.primary}`}>{selectedStaff.full_name}</p>
+                  <p className={`text-xs ${colors.text.tertiary} cursor-default`}>Staff Member</p>
+                  <p className={`font-medium ${colors.text.primary} cursor-default`}>{selectedStaff.full_name}</p>
                 </div>
                 <div>
-                  <p className={`text-xs ${colors.text.tertiary}`}>Status</p>
+                  <p className={`text-xs ${colors.text.tertiary} cursor-default`}>Status</p>
                   <div className="flex items-center gap-2">
                     {getStatusInfo(selectedStaff.presence_status).icon}
-                    <span className={`font-medium ${colors.text.primary}`}>
+                    <span className={`font-medium ${colors.text.primary} cursor-default`}>
                       {getStatusInfo(selectedStaff.presence_status).label}
                     </span>
                   </div>
                 </div>
                 <div>
-                  <p className={`text-xs ${colors.text.tertiary}`}>Location</p>
-                  <p className={`font-medium ${colors.text.primary}`}>
+                  <p className={`text-xs ${colors.text.tertiary} cursor-default`}>Location</p>
+                  <p className={`font-medium ${colors.text.primary} cursor-default`}>
                     {selectedStaff.current_space?.name || 'No room assigned'}
                   </p>
                 </div>
                 <div>
-                  <p className={`text-xs ${colors.text.tertiary}`}>Workload</p>
-                  <p className={`font-medium ${colors.text.primary}`}>
+                  <p className={`text-xs ${colors.text.tertiary} cursor-default`}>Workload</p>
+                  <p className={`font-medium ${colors.text.primary} cursor-default`}>
                     {selectedStaff.current_patient_count}/{selectedStaff.max_concurrent_patients} patients
                   </p>
                 </div>
@@ -631,17 +633,17 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
           )}
           
           <div>
-            <label className={`block text-sm font-medium mb-2 ${colors.text.secondary}`}>
+            <label className={`block text-sm font-medium mb-2 ${colors.text.secondary} cursor-default`}>
               Forwarding Notes (Optional)
             </label>
             <textarea
               {...register('note')}
               placeholder="Add any notes about why you're forwarding this patient..."
               rows={3}
-              className={`w-full px-4 py-2 rounded-lg border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              className={`w-full px-4 py-2 rounded-lg border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-text`}
             />
             {errors.note && (
-              <p className="mt-2 text-sm text-red-500">{errors.note.message}</p>
+              <p className="mt-2 text-sm text-red-500 cursor-default">{errors.note.message}</p>
             )}
           </div>
           
@@ -654,7 +656,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
                 colors.border.primary
               } ${colors.bg.hover} ${
                 colors.text.secondary
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              } disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
             >
               Cancel
             </button>
@@ -664,11 +666,11 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
               className={`px-6 py-2.5 rounded-lg font-medium transition-colors ${
                 !isValid || assignMutation.isPending || !selectedStaffId || isSubmitting
                   ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                  : `${colors.bg.accent} ${colors.bg.accentHover} ${colors.text.accent}`
+                  : `${colors.bg.accent} ${colors.bg.accentHover} ${colors.text.accent} cursor-pointer`
               }`}
             >
               {assignMutation.isPending || isSubmitting ? (
-                <span className="flex items-center gap-2 cursor-pointer">
+                <span className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Forwarding...
                 </span>

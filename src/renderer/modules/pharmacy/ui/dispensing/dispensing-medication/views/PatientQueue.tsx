@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import {
   Users,
   Clock,
@@ -11,7 +11,6 @@ import {
   Search,
   UserPlus,
   X,
-  // ClipboardList,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -90,6 +89,8 @@ export interface PatientQueueProps {
   showNewPatientRegistration?: boolean;
 
   refreshInterval?: number;
+  /** Enable auto-refresh when window gains focus */
+  refetchOnWindowFocus?: boolean;
   theme?: 'light' | 'dark';
 
   isLoading?: boolean;
@@ -194,6 +195,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   showSearch = true,
   showNewPatientRegistration = true,
   refreshInterval = 30000,
+  refetchOnWindowFocus = true,
   theme = 'light',
   isLoading: externalLoading,
   error: externalError,
@@ -209,6 +211,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVisitUuid, setSelectedVisitUuid] = useState<string | null>(null);
+  const [lastRefetchTime, setLastRefetchTime] = useState<Date>(new Date());
 
   const {
     data: queueData,
@@ -216,9 +219,18 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     error: queryError,
     refetch,
     isRefetching,
+    dataUpdatedAt,
   } = useGetMyQueue(filters, {
     refetchInterval: refreshInterval > 0 ? refreshInterval : false,
+    refetchOnWindowFocus: refetchOnWindowFocus,
   });
+
+  // Update last refetch time when data is updated
+  useEffect(() => {
+    if (dataUpdatedAt) {
+      setLastRefetchTime(new Date(dataUpdatedAt));
+    }
+  }, [dataUpdatedAt]);
 
   const isLoading = (externalLoading ?? queryLoading) || isManualRefreshing;
   const error = externalError ?? (queryError instanceof Error ? queryError : null);
@@ -226,8 +238,6 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
 
   const queueVisits = useMemo(() => normalizeQueueVisits(queueData), [queueData]);
   const filteredVisits = useMemo(() => searchVisits(queueVisits, searchQuery), [queueVisits, searchQuery]);
-
-
 
   const queueStats = useMemo(() => {
     if (queueVisits.length === 0) return null;
@@ -254,8 +264,6 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     };
   }, [queueVisits, queueData]);
 
-
-
   const handleClearSearch = () => setSearchQuery('');
 
   const handleVisitSelect = (visit: QueueVisitItem) => {
@@ -279,6 +287,17 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     }
   };
 
+  // Format last refresh time for display
+  const getLastRefreshDisplay = (): string => {
+    const now = new Date();
+    const diffSeconds = Math.floor((now.getTime() - lastRefetchTime.getTime()) / 1000);
+    
+    if (diffSeconds < 10) return 'Just now';
+    if (diffSeconds < 60) return `${diffSeconds} seconds ago`;
+    if (diffSeconds < 3600) return `${Math.floor(diffSeconds / 60)} minutes ago`;
+    return lastRefetchTime.toLocaleTimeString();
+  };
+
   const renderVisitRow = (visit: QueueVisitItem) => {
     const p = visit.patient;
     const isSelected = selectedVisitUuid === visit.visit_uuid;
@@ -299,6 +318,14 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
             : 'bg-white border-gray-200 hover:bg-gray-50'
         }`}
         onClick={() => handleVisitSelect(visit)}
+        role="button"
+        tabIndex={0}
+        onKeyPress={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleVisitSelect(visit);
+          }
+        }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -312,7 +339,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 min-w-0">
-                <h3 className="font-semibold truncate">{p?.name || 'Unknown Patient'}</h3>
+                <h3 className="font-semibold truncate cursor-pointer">{p?.name || 'Unknown Patient'}</h3>
 
                 {p?.requires_isolation && (
                   <span
@@ -336,11 +363,6 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
 
                 {p?.date_of_birth ? <span>DOB: {new Date(p.date_of_birth).toLocaleDateString()}</span> : null}
                 {p?.biological_sex ? <span>Sex: {p.biological_sex}</span> : null}
-
-                {/* <span className="flex items-center gap-1" title="Visit UUID">
-                  <ClipboardList className="w-3 h-3" />
-                 Visit Number: {visit.visit_uuid}
-                </span> */}
               </div>
             </div>
 
@@ -442,7 +464,27 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                 >
                   <RefreshCw className={`w-5 h-5 transition-transform duration-300 ${isActuallyRefreshing ? 'animate-spin' : ''}`} />
                 </button>
-                {isActuallyRefreshing && <span className={`text-xs ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>Refreshing...</span>}
+                
+                {/* Last refresh indicator */}
+                <div className={`flex items-center gap-1 px-2 py-1.5 rounded-lg cursor-default ${
+                  isDark ? 'bg-gray-800/50 text-gray-400' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  <Clock className="w-3.5 h-3.5" />
+                  <span className="text-xs whitespace-nowrap">
+                    {getLastRefreshDisplay()}
+                  </span>
+                </div>
+
+                {/* Window focus indicator */}
+                {refetchOnWindowFocus && (
+                  <div 
+                    className={`hidden sm:flex items-center gap-1 px-2 py-1.5 rounded-lg cursor-default ${
+                      isDark ? 'bg-blue-900/20 text-blue-400' : 'bg-blue-50 text-blue-600'
+                    }`}
+                    title="Auto-refreshes when window regains focus"
+                  >
+                  </div>
+                )}
               </div>
 
               {showStats && queueStats && (
@@ -471,10 +513,10 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                   <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
                   <input
                     type="text"
-                    placeholder="Search Patients in the queue by patient number, name,DOB, phase, or type..."
+                    placeholder="Search Patients in the queue by patient number, name, DOB, phase, or type..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className={`w-full pl-10 pr-10 py-3 lg:py-2.5 rounded-lg border-2 transition-all duration-200 outline-none ${
+                    className={`w-full pl-10 pr-10 py-3 lg:py-2.5 rounded-lg border-2 transition-all duration-200 outline-none cursor-text ${
                       isDark
                         ? 'bg-gray-800 border-gray-600 text-gray-100 placeholder-gray-400 hover:border-gray-500 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10'
                         : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10'
@@ -500,8 +542,6 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                 )}
               </div>
             )}
-
-         
           </div>
 
           {showStats && queueStats && (
