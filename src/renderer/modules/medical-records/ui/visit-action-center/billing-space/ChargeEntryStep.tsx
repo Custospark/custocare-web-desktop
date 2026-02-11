@@ -352,7 +352,7 @@ useEffect(() => {
 
                         {/* Item */}
                         <div className="col-span-4 min-w-0">
-                          <p className={`font-semibold truncate ${colors.text.primary}`}>{item.service.name}</p>
+                          <p className={`font-semibold truncate ${colors.text.primary}`}>{item.service.name ?? "NA"}</p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className={`text-xs px-1.5 py-0.5 ${colors.bg.secondary} ${colors.text.secondary} rounded`}>
                               {item.service.code}

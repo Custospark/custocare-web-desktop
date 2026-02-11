@@ -1,4 +1,3 @@
-// BillingTray.tsx
 import React, { useEffect, useCallback } from 'react';
 import { X, AlertTriangle, FileText, CreditCard, CheckCircle2, User } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -36,7 +35,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
       primary: isDark ? 'bg-gray-900' : 'bg-white',
       secondary: isDark ? 'bg-gray-800' : 'bg-gray-50',
       overlay: isDark ? 'bg-black/70' : 'bg-black/50',
-      hover: isDark ? 'hover:bg-gray-800/70' : 'hover:bg-gray-50',
+      hover: isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100',
     },
     border: {
       primary: isDark ? 'border-gray-800' : 'border-gray-200',
@@ -110,7 +109,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
             rounded-lg shadow-2xl pointer-events-auto flex flex-col ${colors.bg.primary}`}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Super Compact Single Row Header */}
+          {/* Header */}
           <div className={`flex items-center justify-between px-4 py-3 border-b ${colors.border.primary} gap-3`}>
             
             {/* Left: Patient Info */}
@@ -128,11 +127,13 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
               </div>
             </div>
 
-            {/* Center: Progress Steps */}
+            {/* Center: Steps */}
             <div className="flex items-center gap-2 flex-shrink-0">
               {steps.map((step, index) => {
                 const isActive = currentStep === step.key;
-                const isCompleted = index === 0 || currentStep === 'billing_summary';
+                const isCompleted = 
+                  (step.key === 'charge_entry' && currentStep === 'billing_summary') ||
+                  (step.key === 'billing_summary' && currentStep === 'billing_summary');
                 const StepIcon = step.icon;
                 
                 return (
@@ -140,24 +141,23 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
                     <button
                       onClick={() => handleSetStep(step.key)}
                       type="button"
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors cursor-pointer whitespace-nowrap ${
-                        isActive
-                          ? `${colors.accent.primary} ${colors.accent.text}`
-                          : isCompleted
-                          ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : `${colors.bg.hover} ${colors.text.secondary}`
-                      }`}
+                      className={`
+                        flex items-center gap-1.5 px-2.5 py-1.5 rounded-md 
+                        transition-colors cursor-pointer whitespace-nowrap
+                        ${isActive 
+                          ? `${colors.accent.primary} ${colors.accent.text}` 
+                          : `bg-transparent ${colors.text.secondary} ${colors.bg.hover}`
+                        }
+                      `}
                     >
-                      {isCompleted && !isActive ? (
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                      ) : (
-                        <StepIcon className="w-3.5 h-3.5" />
-                      )}
+                      <StepIcon className="w-3.5 h-3.5" />
                       <span className="text-xs font-medium">{step.label}</span>
                       <span className="text-xs opacity-80">({index + 1})</span>
+                      {isCompleted && !isActive && (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-500 ml-0.5" />
+                      )}
                     </button>
                     
-                    {/* Separator (not after last step) */}
                     {index < steps.length - 1 && (
                       <div className="w-3 h-px bg-gray-300 dark:bg-gray-700 mx-0.5" />
                     )}
@@ -173,8 +173,8 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
                   status === 'draft'
                     ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
                     : status === 'ready'
-                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                    : 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-600/30 dark:text-blue-400'
+                    : 'bg-green-50 text-green-700 dark:bg-green-600/30 dark:text-green-400'
                 }`}
               >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
