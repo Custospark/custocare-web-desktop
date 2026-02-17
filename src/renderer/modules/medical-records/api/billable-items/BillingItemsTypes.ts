@@ -115,6 +115,94 @@ export interface GroupedCategoryItems {
 
 export type LowStockItem = InventoryItem;
 
+
+
+/* -------------------------------------------------------------------------- */
+/*                        BILLING SUBMISSION TYPES                            */
+/* -------------------------------------------------------------------------- */
+
+export interface BillingSubmissionPayload {
+  visit_id: number;
+  patient_id: number;
+  charge_items: Array<{
+    service_key: string;
+    service: ServiceItemCore;
+    quantity: number;
+    totalAmount: number;
+  }>;
+  discount: {
+    type: 'percentage' | 'fixed';
+    value: number;
+    reason?: string;
+  };
+  taxes: Array<{
+    name: string;
+    rate: number;
+    amount: number;
+  }>;
+  payment_methods: Array<{
+    type: 'cash' | 'card' | 'insurance' | 'mobile' | 'mixed';
+    amount: number;
+    reference?: string;
+    details?: string;
+  }>;
+  billing_data: {
+    subtotal: number;
+    discountAmount: number;
+    taxableAmount: number;
+    taxTotal: number;
+    grandTotal: number;
+    totalPaid: number;
+    balance: number;
+  };
+  additional_notes?: string;
+  status: 'draft' | 'ready' | 'settled';
+}
+
+export interface BillingSubmissionResponse {
+  success: boolean;
+  message: string;
+  data: {
+    billing_cycle_id: number;
+    billing_cycle_uuid: string;
+    receipt_number: string;
+    billing_status: string;
+    net_amount: number;
+    created_at: string;
+    line_items_count: number;
+  };
+}
+
+export interface BillingRetrievalResponse {
+  success: boolean;
+  message: string;
+  data: {
+    has_billing: boolean;
+    visit_id: number;
+    visit_uuid?: string;
+    patient_id: number;
+    patient_name: string;
+    billing_cycle_id?: number;
+    billing_cycle_uuid?: string;
+    receipt_number?: string;
+    charge_items?: Array<any>;
+    discount?: any;
+    taxes?: Array<any>;
+    payment_methods?: Array<any>;
+    additional_notes?: string;
+    status?: 'draft' | 'ready' | 'settled';
+    billing_status?: string;
+    billing_data?: any;
+    billed_at?: string;
+    created_at?: string;
+    updated_at?: string;
+    last_updated?: number;
+    is_dirty?: boolean;
+    is_processing?: boolean;
+  };
+}
+
+
 /* -------------------------------------------------------------------------- */
 /*                          REQUEST/RESPONSE TYPES                            */
 /* -------------------------------------------------------------------------- */
@@ -156,7 +244,12 @@ export interface BillableItemsResponse {
   summary: BillableItemsSummary;
   meta: BillableItemsMeta;
 }
-
+export interface ApiErrorResponse {
+  success: false;
+  message: string;
+  errors?: Record<string, string[]>;
+  error?: string; // Debug error message (only in development)
+}
 /* -------------------------------------------------------------------------- */
 /*                              UTILITY TYPES                                 */
 /* -------------------------------------------------------------------------- */
