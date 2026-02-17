@@ -19,7 +19,7 @@ export default function LogoImage({
   const sizeClasses = {
     sm: 'h-8',
     md: 'h-10',
-    lg: 'h-16'
+    lg: 'h-18'
   };
 
   return (

@@ -29,7 +29,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
           'p-2 rounded-lg transition-all duration-300 hover:scale-105 relative cursor-pointer',
           isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
         )}
-        title="Notifications"
+        title="Messages"
       >
         <Bell className={cn(
           'w-5 h-5 transition-colors',

@@ -387,7 +387,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
 
   {/* Notifications */}
-  <div className="cursor-pointer" title="Notifications">
+  <div className="cursor-pointer" title="Messages">
     <NotificationCenter
       unreadCount={unreadCount}
       isOpen={isNotificationsOpen}

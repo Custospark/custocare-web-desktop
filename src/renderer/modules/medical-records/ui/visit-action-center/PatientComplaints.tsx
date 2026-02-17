@@ -224,44 +224,47 @@ useEffect(() => {
           </div> */}
           <p className={cn('text-sm leading-relaxed', colors.text)}>{complaint}</p>
         </div>
-        {!readOnly && (
-          <div className="flex gap-2 ml-4">
-            <button
-              type="button"
-              onClick={onEdit}
-              disabled={isSaving}
-              className={cn(
-                'p-2 rounded-lg transition-colors cursor-pointer',
-                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
-                isDark ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white',
-                isDark 
-                  ? 'hover:bg-gray-700 text-gray-400 hover:text-white' 
-                  : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700',
-                isSaving && 'opacity-50 cursor-not-allowed'
-              )}
-              aria-label="Edit complaint"
-            >
-              <Edit2 className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={onDelete}
-              disabled={isSaving}
-              className={cn(
-                'p-2 rounded-lg transition-colors cursor-pointer',
-                'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1',
-                isDark ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white',
-                isDark 
-                  ? 'hover:bg-red-900/30 text-gray-400 hover:text-red-300' 
-                  : 'hover:bg-red-100 text-gray-500 hover:text-red-600',
-                isSaving && 'opacity-50 cursor-not-allowed'
-              )}
-              aria-label="Delete complaint"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+     {!readOnly && (
+      <div className="flex gap-2 ml-4">
+        <button
+          type="button"
+          onClick={onEdit}
+          disabled={isSaving}
+          className={cn(
+            'p-2 rounded-lg transition-all duration-200 cursor-pointer group',
+            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
+            isDark ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white',
+            isDark 
+              ? 'bg-gray-800 hover:bg-blue-600 text-gray-400 hover:text-white' 
+              : 'bg-white hover:bg-blue-600 text-gray-600 hover:text-white shadow-sm hover:shadow-md',
+            isSaving && 'opacity-50 cursor-not-allowed pointer-events-none'
+          )}
+          aria-label="Edit complaint"
+          title="Edit complaint"
+        >
+          <Edit2 className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
+        </button>
+        
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={isSaving}
+          className={cn(
+            'p-2 rounded-lg transition-all duration-200 cursor-pointer group',
+            'focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1',
+            isDark ? 'focus:ring-offset-gray-800' : 'focus:ring-offset-white',
+            isDark 
+              ? 'bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white' 
+              : 'bg-white hover:bg-red-600 text-gray-600 hover:text-white shadow-sm hover:shadow-md',
+            isSaving && 'opacity-50 cursor-not-allowed pointer-events-none'
+          )}
+          aria-label="Delete complaint"
+          title="Delete complaint"
+        >
+          <Trash2 className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
+        </button>
+      </div>
+    )}
       </div>
     </div>
   );
