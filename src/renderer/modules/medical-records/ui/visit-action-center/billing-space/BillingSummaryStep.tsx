@@ -1,5 +1,5 @@
 // BillingSummaryStep.tsx
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   CreditCard,
   Wallet,
@@ -11,6 +11,7 @@ import {
   Loader2,
   Phone,
   Zap,
+  Lock,
 } from 'lucide-react';
 import { FaCashRegister } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
@@ -53,11 +54,22 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
   const status = useSelector(selectBillingStatus);
   const isProcessing = useSelector(selectIsProcessing);
 
+  // Determine if we're in read-only mode (settled status)
+  const isReadOnly = status === 'settled';
+
   // Local UI state
   const [discount, setLocalDiscount] = useState(DEFAULT_DISCOUNT);
   const [paymentMethods, setLocalPaymentMethods] = useState(DEFAULT_PAYMENT_METHODS);
   const [additionalNotes, setLocalAdditionalNotes] = useState('');
   const [receiptNumber, setReceiptNumber] = useState('');
+
+  // Load receipt number from state or generate on settlement
+  useEffect(() => {
+    if (status === 'settled' && !receiptNumber) {
+      const generatedReceiptNumber = `REC-${Date.now().toString().slice(-8)}`;
+      setReceiptNumber(generatedReceiptNumber);
+    }
+  }, [status, receiptNumber]);
 
   // Track focused amount inputs to clear default zero values
   const [focusedAmountInputs, setFocusedAmountInputs] = useState<Record<number, boolean>>({});
@@ -69,15 +81,18 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
       elevated: isDark ? 'bg-gray-900' : 'bg-white',
       hover: isDark ? 'hover:bg-gray-800/70' : 'hover:bg-gray-50',
       receipt: 'bg-white',
+      disabled: isDark ? 'bg-gray-800/50' : 'bg-gray-100',
     },
     border: {
       primary: isDark ? 'border-gray-800' : 'border-gray-200',
       receipt: 'border-gray-300',
+      disabled: isDark ? 'border-gray-700' : 'border-gray-200',
     },
     text: {
       primary: isDark ? 'text-gray-100' : 'text-gray-900',
       secondary: isDark ? 'text-gray-400' : 'text-gray-600',
       tertiary: isDark ? 'text-gray-500' : 'text-gray-500',
+      disabled: isDark ? 'text-gray-500' : 'text-gray-400',
     },
     accent: {
       primary: 'bg-blue-600',
@@ -90,20 +105,18 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
       border: isDark ? 'border-gray-700' : 'border-gray-300',
       text: isDark ? 'text-gray-100' : 'text-gray-900',
       option: isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
+      disabled: isDark ? 'text-gray-500' : 'text-gray-400',
     },
     status: {
-      paidBadge: isDark ? 'bg-green-500/15 text-green-300' : 'bg-green-50 text-green-700',
-      balBadge: isDark ? 'bg-yellow-500/15 text-yellow-300' : 'bg-yellow-50 text-yellow-700',
+      draft: 'bg-gray-600 text-white dark:bg-gray-500 dark:text-white',
+      ready: 'bg-blue-600 text-white dark:bg-blue-500 dark:text-white',
+      settled: 'bg-green-600 text-white dark:bg-green-500 dark:text-white',
     },
   };
 
-  const canFinalize =
-    !isProcessing &&
-    chargeItems.length > 0 &&
-    billingData.balance === 0 &&
-    status !== 'settled';
+  const canFinalize = !isProcessing && !isReadOnly && chargeItems.length > 0 && billingData.balance === 0;
 
-  const canPrint = status === 'settled' && !!receiptNumber && !isProcessing;
+  const canPrint = (status === 'settled' || status === 'ready') && !!receiptNumber && !isProcessing;
 
   const paymentIcon = (type: string) => {
     switch (type) {
@@ -149,6 +162,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
   );
 
   const handleDiscountChange = (type: 'percentage' | 'fixed', rawValue: string) => {
+    if (isReadOnly) return;
+
     const numericValue = Number(rawValue) || 0;
     const maxValue = type === 'percentage' ? 100 : billingData.subtotal;
     const clampedValue = clamp(numericValue, 0, maxValue);
@@ -159,6 +174,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
   };
 
   const syncPaymentMethodsToRedux = (updatedMethods: typeof paymentMethods) => {
+    if (isReadOnly) return;
+
     setLocalPaymentMethods(updatedMethods);
     updatedMethods.forEach((method, index) => {
       dispatch(
@@ -175,6 +192,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
   };
 
   const handlePaymentTypeChange = (index: number, newType: string) => {
+    if (isReadOnly) return;
+
     const updatedMethods = [...paymentMethods];
     const currentMethod = updatedMethods[index];
 
@@ -204,6 +223,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
   };
 
   const handlePaymentAmountChange = (index: number, rawValue: string) => {
+    if (isReadOnly) return;
+
     const numericValue = Number(rawValue);
     const updatedMethods = [...paymentMethods];
 
@@ -216,6 +237,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
   };
 
   const handleAutoFillRemaining = (index: number) => {
+    if (isReadOnly) return;
+
     const otherPaymentsTotal = paymentMethods.reduce(
       (sum, method, i) => (i === index ? sum : sum + (Number(method.amount) || 0)),
       0
@@ -230,21 +253,24 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
   };
 
   const handleAddPaymentMethod = () => {
-  if (paymentMethods.length >= 3) return;
+    if (isReadOnly || paymentMethods.length >= 3) return;
 
-  const updatedMethods = [...paymentMethods, { 
-    type: 'cash' as const, 
-    amount: 0, 
-    details: '' 
-  }];
-  
-  setFocusedAmountInputs((prev) => ({ ...prev, [updatedMethods.length - 1]: false }));
-  syncPaymentMethodsToRedux(updatedMethods);
-  dispatch(addPaymentMethod());
-};
+    const updatedMethods = [
+      ...paymentMethods,
+      {
+        type: 'cash' as const,
+        amount: 0,
+        details: '',
+      },
+    ];
+
+    setFocusedAmountInputs((prev) => ({ ...prev, [updatedMethods.length - 1]: false }));
+    syncPaymentMethodsToRedux(updatedMethods);
+    dispatch(addPaymentMethod());
+  };
 
   const handleRemovePaymentMethod = (index: number) => {
-    if (paymentMethods.length <= 1) return;
+    if (isReadOnly || paymentMethods.length <= 1) return;
 
     const updatedMethods = paymentMethods.filter((_, i) => i !== index);
     const updatedFocusState: Record<number, boolean> = {};
@@ -259,6 +285,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
   };
 
   const handleMobilePhoneChange = (index: number, rawValue: string) => {
+    if (isReadOnly) return;
+
     const phoneNumber = onlyDigits(rawValue);
     const updatedMethods = [...paymentMethods];
 
@@ -271,6 +299,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
   };
 
   const handleInitiateMobilePayment = async (index: number) => {
+    if (isReadOnly) return;
+
     const method = paymentMethods[index];
     if (method.type !== 'mobile') return;
 
@@ -290,6 +320,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
   };
 
   const handleAdditionalNotesChange = (notes: string) => {
+    if (isReadOnly) return;
+
     setLocalAdditionalNotes(notes);
     dispatch(setAdditionalNotes(notes));
   };
@@ -330,12 +362,22 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
   };
 
   return (
-    <div className="h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6">
+    <div className="h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6 relative">
+      {/* Read-only indicator */}
+      {isReadOnly && (
+        <div className="absolute top-20 right-8 z-10 flex items-center gap-2 px-3 py-1.5 bg-blue-700 text-white dark:bg-blue-600 dark:text-white rounded-full shadow-md border border-blue-500 dark:border-blue-400">
+          <Lock className="w-3.5 h-3.5" />
+          <span className="text-xs font-semibold">Read-only mode - Payment settled</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 h-full min-h-0">
         {/* LEFT: Receipt (scroll) + Taxes (static) */}
         <div className="flex flex-col h-full min-h-0">
           <div
-            className={`flex flex-col h-full border ${colors.border.primary} ${colors.bg.primary} rounded-lg shadow-sm overflow-hidden`}
+            className={`flex flex-col h-full border ${colors.border.primary} ${colors.bg.primary} rounded-lg shadow-sm overflow-hidden ${
+              isReadOnly ? 'opacity-90' : ''
+            }`}
           >
             {/* Fixed header */}
             <div className={`flex-shrink-0 px-4 py-3 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
@@ -343,17 +385,23 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                 <div className="min-w-0 flex-1">
                   <h3 className={`text-sm sm:text-base font-bold ${colors.text.primary}`}>Receipt Preview</h3>
                   <p className={`text-xs ${colors.text.secondary} truncate`}>
-                    Live updates as you adjust discount, taxes, and payment
+                    {isReadOnly
+                      ? 'Payment completed - receipt finalized'
+                      : 'Live updates as you adjust discount, taxes, and payment'}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <div
-                    className={`text-xs font-semibold px-2.5 py-1 rounded border ${colors.border.primary} ${
-                      billingData.balance === 0 ? colors.status.paidBadge : colors.status.balBadge
+                    className={`px-2 py-1 rounded-md text-xs font-medium select-none whitespace-nowrap ${
+                      status === 'draft'
+                        ? colors.status.draft
+                        : status === 'ready'
+                        ? colors.status.ready
+                        : colors.status.settled
                     }`}
                   >
-                    {billingData.balance === 0 ? 'PAID' : `DUE ${formatCurrency(billingData.balance)}`}
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
                   </div>
                   <div
                     className={`text-xs font-semibold px-2.5 py-1 rounded border ${colors.border.primary} ${colors.bg.secondary} ${colors.text.primary}`}
@@ -364,7 +412,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
               </div>
             </div>
 
-            {/* Scrollable receipt ONLY */}
+            {/* Scrollable receipt */}
             <div
               className="flex-1 overflow-y-auto overflow-x-hidden p-4 min-h-0"
               style={{ scrollbarGutter: 'stable' }}
@@ -447,9 +495,15 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                     <div className="flex justify-between mt-2">
                       <span className="text-gray-600">Status</span>
                       <span
-                        className={`font-extrabold ${billingData.balance === 0 ? 'text-green-700' : 'text-yellow-700'}`}
+                        className={`font-extrabold ${
+                          isReadOnly
+                            ? 'text-blue-700'
+                            : billingData.balance === 0
+                            ? 'text-green-700'
+                            : 'text-yellow-700'
+                        }`}
                       >
-                        {billingData.balance === 0 ? 'PAID' : `DUE ${formatCurrency(billingData.balance)}`}
+                        {isReadOnly ? 'SETTLED' : billingData.balance === 0 ? 'PAID' : `DUE ${formatCurrency(billingData.balance)}`}
                       </span>
                     </div>
                   </div>
@@ -507,23 +561,28 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
               </div>
             </div>
 
-            {/* NEW: Taxes where Discount used to be (static) */}
+            {/* Taxes and Additional Notes section */}
             <div className={`flex-shrink-0 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
-                {/* Additional Notes (optional) – below receipt */}
-                <div className="px-4 py-3">
-                    <label className={`block text-sm font-bold mb-1 ${colors.text.primary}`}>
-                    Additional Notes <span className={`text-xs font-normal ${colors.text.secondary}`}>(optional)</span>
-                    </label>
+              {/* Additional Notes */}
+              <div className="px-4 py-3">
+                <label className={`block text-sm font-bold mb-1 ${colors.text.primary}`}>
+                  Additional Notes <span className={`text-xs font-normal ${colors.text.secondary}`}>(optional)</span>
+                </label>
 
-                    <textarea
-                    value={additionalNotes}
-                    onChange={(e) => handleAdditionalNotesChange(e.target.value)}
-                    placeholder="E.g. patient paid in two installments, waived consultation fee…"
-                    rows={2}
-                    className={`w-full px-3 py-2 text-sm border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
-                    focus:outline-none focus:ring-2 ${colors.accent.ring} rounded-lg transition-shadow resize-none`}
-                    />
-                </div>
+                <textarea
+                  value={additionalNotes}
+                  onChange={(e) => handleAdditionalNotesChange(e.target.value)}
+                  placeholder="E.g. patient paid in two installments, waived consultation fee…"
+                  rows={2}
+                  readOnly={isReadOnly}
+                  disabled={isReadOnly}
+                  className={`w-full px-3 py-2 text-sm border ${
+                    isReadOnly
+                      ? `${colors.border.disabled} ${colors.bg.disabled} ${colors.text.disabled} cursor-not-allowed`
+                      : `${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-2 ${colors.accent.ring}`
+                  } rounded-lg transition-shadow resize-none`}
+                />
+              </div>
 
               <div className="px-4 py-3">
                 <div className="flex items-center justify-between mb-2">
@@ -535,7 +594,9 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                   {DEFAULT_TAXES.map((tax, idx) => (
                     <div
                       key={idx}
-                      className={`flex items-center justify-between p-3 border ${colors.border.primary} ${colors.bg.primary} rounded-lg`}
+                      className={`flex items-center justify-between p-3 border ${colors.border.primary} ${colors.bg.primary} rounded-lg ${
+                        isReadOnly ? 'opacity-75' : ''
+                      }`}
                     >
                       <div className="min-w-0">
                         <p className={`text-sm font-semibold ${colors.text.primary}`}>{tax.name}</p>
@@ -550,28 +611,36 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
               </div>
             </div>
 
-            {/* Left footer info (static) */}
+            {/* Left footer info */}
             <div className={`flex-shrink-0 px-4 py-3 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
               <div className="flex items-start gap-2">
                 <AlertCircle className={`w-4 h-4 ${colors.text.tertiary} flex-shrink-0 mt-0.5`} />
                 <p className={`text-xs ${colors.text.secondary} leading-relaxed`}>
-                  Receipt preview updates in real-time. Final totals include taxes and discount.
+                  {isReadOnly
+                    ? 'Payment completed. Receipt is finalized and ready for printing.'
+                    : 'Receipt preview updates in real-time. Final totals include taxes and discount.'}
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* RIGHT: Billing controls (independent scroll) */}
+        {/* RIGHT: Billing controls */}
         <div className="flex flex-col h-full min-h-0">
           <div
-            className={`flex flex-col h-full border ${colors.border.primary} ${colors.bg.primary} rounded-lg shadow-sm overflow-hidden`}
+            className={`flex flex-col h-full border ${colors.border.primary} ${colors.bg.primary} rounded-lg shadow-sm overflow-hidden ${
+              isReadOnly ? 'opacity-90' : ''
+            }`}
           >
             {/* Fixed header */}
             <div className={`flex-shrink-0 px-4 py-3 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
-              <h3 className={`text-sm sm:text-base font-bold ${colors.text.primary}`}>Billing Controls</h3>
+              <h3 className={`text-sm sm:text-base font-bold ${colors.text.primary}`}>
+                {isReadOnly ? 'Payment Details (Read-only)' : 'Billing Controls'}
+              </h3>
               <p className={`text-xs ${colors.text.secondary} mt-0.5`}>
-                Enter cash tendered amount → system automatically calculates change
+                {isReadOnly
+                  ? 'Payment has been finalized. Only receipt printing is available.'
+                  : 'Enter cash tendered amount → system automatically calculates change'}
               </p>
             </div>
 
@@ -585,15 +654,17 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                 <div className={`px-4 py-3 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <h4 className={`text-sm font-bold ${colors.text.primary}`}>Payment Methods</h4>
-                    <button
-                      type="button"
-                      onClick={handleAddPaymentMethod}
-                      disabled={paymentMethods.length >= 3}
-                      className={`text-xs font-semibold px-3 py-1.5 border ${colors.border.primary} ${colors.bg.hover} ${colors.text.secondary}
-                      transition-all duration-200 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-sm active:scale-95`}
-                    >
-                      + Add Method
-                    </button>
+                    {!isReadOnly && (
+                      <button
+                        type="button"
+                        onClick={handleAddPaymentMethod}
+                        disabled={paymentMethods.length >= 3}
+                        className={`text-xs font-semibold px-3 py-1.5 border ${colors.border.primary} ${colors.bg.hover} ${colors.text.secondary}
+                        transition-all duration-200 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-sm active:scale-95`}
+                      >
+                        + Add Method
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -608,27 +679,48 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                     return (
                       <div
                         key={index}
-                        className={`p-3 sm:p-4 border ${colors.border.primary} ${colors.bg.primary} rounded-lg shadow-sm`}
+                        className={`p-3 sm:p-4 border ${colors.border.primary} ${colors.bg.primary} rounded-lg shadow-sm ${
+                          isReadOnly ? 'bg-opacity-50' : ''
+                        }`}
                       >
                         <div className="flex items-center justify-between gap-2 mb-3">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
                             {paymentIcon(method.type)}
-                            <div className={`border ${colors.select.border} ${colors.select.wrap} px-2.5 py-1.5 rounded`}>
+                            <div
+                              className={`border ${
+                                isReadOnly ? colors.border.disabled : colors.select.border
+                              } ${colors.select.wrap} px-2.5 py-1.5 rounded`}
+                            >
                               <select
                                 value={method.type}
                                 onChange={(e) => handlePaymentTypeChange(index, e.target.value)}
-                                className={`text-sm ${colors.select.text} bg-transparent capitalize outline-none cursor-pointer`}
+                                disabled={isReadOnly}
+                                className={`text-sm ${
+                                  isReadOnly
+                                    ? `${colors.select.disabled} cursor-not-allowed`
+                                    : `${colors.select.text} cursor-pointer`
+                                } bg-transparent capitalize outline-none`}
                               >
-                                <option className={colors.select.option} value="cash">Cash</option>
-                                <option className={colors.select.option} value="card">Card</option>
-                                <option className={colors.select.option} value="insurance">Insurance</option>
-                                <option className={colors.select.option} value="mobile">Mobile Money</option>
-                                <option className={colors.select.option} value="mixed">Mixed</option>
+                                <option className={colors.select.option} value="cash">
+                                  Cash
+                                </option>
+                                <option className={colors.select.option} value="card">
+                                  Card
+                                </option>
+                                <option className={colors.select.option} value="insurance">
+                                  Insurance
+                                </option>
+                                <option className={colors.select.option} value="mobile">
+                                  Mobile Money
+                                </option>
+                                <option className={colors.select.option} value="mixed">
+                                  Mixed
+                                </option>
                               </select>
                             </div>
                           </div>
 
-                          {paymentMethods.length > 1 && (
+                          {!isReadOnly && paymentMethods.length > 1 && (
                             <button
                               type="button"
                               onClick={() => handleRemovePaymentMethod(index)}
@@ -647,7 +739,9 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                             <div className="sm:col-span-8">
                               <div className="relative">
                                 <Phone
-                                  className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${colors.text.tertiary} pointer-events-none`}
+                                  className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
+                                    isReadOnly ? colors.text.disabled : colors.text.tertiary
+                                  } pointer-events-none`}
                                 />
                                 <input
                                   type="tel"
@@ -655,8 +749,13 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                                   onChange={(e) => handleMobilePhoneChange(index, e.target.value)}
                                   placeholder="Phone number (e.g. 2567xxxxxxx)"
                                   inputMode="numeric"
-                                  className={`w-full pl-10 pr-3 py-2.5 text-sm border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
-                                  focus:outline-none focus:ring-2 ${colors.accent.ring} rounded-lg transition-shadow`}
+                                  readOnly={isReadOnly}
+                                  disabled={isReadOnly}
+                                  className={`w-full pl-10 pr-3 py-2.5 text-sm border ${
+                                    isReadOnly
+                                      ? `${colors.border.disabled} ${colors.bg.disabled} ${colors.text.disabled} cursor-not-allowed`
+                                      : `${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-2 ${colors.accent.ring}`
+                                  } rounded-lg transition-shadow`}
                                 />
                               </div>
                             </div>
@@ -665,10 +764,10 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                               <button
                                 type="button"
                                 onClick={() => handleInitiateMobilePayment(index)}
-                                disabled={isProcessing}
+                                disabled={isProcessing || isReadOnly}
                                 className={`w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold transition-all duration-200 rounded-lg
                                 ${
-                                  isProcessing
+                                  isProcessing || isReadOnly
                                     ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                                     : `${colors.accent.primary} ${colors.accent.hover} ${colors.accent.text} cursor-pointer hover:shadow-md active:scale-95`
                                 }`}
@@ -686,16 +785,19 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                             type="number"
                             value={getDisplayAmount(index, method.amount)}
                             onFocus={() => {
+                              if (isReadOnly) return;
                               if (!focusedAmountInputs[index]) {
                                 setFocusedAmountInputs((prev) => ({ ...prev, [index]: true }));
                               }
                             }}
                             onBlur={() => {
+                              if (isReadOnly) return;
                               if (method.amount === 0) {
                                 setFocusedAmountInputs((prev) => ({ ...prev, [index]: false }));
                               }
                             }}
                             onChange={(e) => {
+                              if (isReadOnly) return;
                               if (!focusedAmountInputs[index]) {
                                 setFocusedAmountInputs((prev) => ({ ...prev, [index]: true }));
                               }
@@ -704,18 +806,25 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                             placeholder={isCash ? 'Enter cash amount' : 'Enter amount'}
                             min={0}
                             step="0.01"
-                            className={`w-full px-3.5 py-2.5 text-sm border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
-                            focus:outline-none focus:ring-2 ${colors.accent.ring} rounded-lg transition-shadow`}
+                            readOnly={isReadOnly}
+                            disabled={isReadOnly}
+                            className={`w-full px-3.5 py-2.5 text-sm border ${
+                              isReadOnly
+                                ? `${colors.border.disabled} ${colors.bg.disabled} ${colors.text.disabled} cursor-not-allowed`
+                                : `${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-2 ${colors.accent.ring}`
+                            } rounded-lg transition-shadow`}
                           />
 
-                          <button
-                            type="button"
-                            onClick={() => handleAutoFillRemaining(index)}
-                            className={`w-full text-xs font-semibold px-3 py-2 border ${colors.border.primary} ${colors.bg.hover} ${colors.text.secondary}
-                            transition-all duration-200 rounded-lg cursor-pointer hover:shadow-sm active:scale-98`}
-                          >
-                            Fill Remaining Balance
-                          </button>
+                          {!isReadOnly && (
+                            <button
+                              type="button"
+                              onClick={() => handleAutoFillRemaining(index)}
+                              className={`w-full text-xs font-semibold px-3 py-2 border ${colors.border.primary} ${colors.bg.hover} ${colors.text.secondary}
+                              transition-all duration-200 rounded-lg cursor-pointer hover:shadow-sm active:scale-98`}
+                            >
+                              Fill Remaining Balance
+                            </button>
+                          )}
 
                           {/* Cash calculation */}
                           {showCashCalculation && cashCalculation && (
@@ -741,12 +850,12 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                                 </div>
                               </div>
 
-                              {tendered < cashCalculation.dueBefore && (
-                                <div className="mt-3 flex items-start gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded">
-                                  <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-                                  <p className={`text-xs ${colors.text.secondary}`}>
+                              {!isReadOnly && tendered < cashCalculation.dueBefore && (
+                                <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-yellow-600 text-white dark:bg-yellow-500 dark:text-white">
+                                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-white" />
+                                  <p className="text-sm font-medium">
                                     Insufficient cash by{' '}
-                                    <span className="font-extrabold text-yellow-700 dark:text-yellow-300">
+                                    <span className="font-bold underline decoration-white/60">
                                       {formatCurrency(cashCalculation.dueBefore - tendered)}
                                     </span>
                                   </p>
@@ -755,7 +864,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                             </div>
                           )}
 
-                          {/* NEW: Discount just above Finalize/Print (only once) */}
+                          {/* Discount section - only show on last payment method */}
                           {index === paymentMethods.length - 1 && (
                             <div className={`mt-3 pt-3 border-t ${colors.border.primary}`}>
                               <div className="flex items-center justify-between mb-2">
@@ -765,75 +874,85 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                                 </div>
                               </div>
 
-                              <div className="flex items-stretch gap-2">
-                                <input
-                                  type="number"
-                                  value={discount.value === 0 ? '' : String(discount.value)}
-                                  onFocus={() => {
-                                    if (discount.value === 0) setLocalDiscount((p) => ({ ...p, value: 0 }));
-                                  }}
-                                  onChange={(e) => handleDiscountChange(discount.type, e.target.value)}
-                                  placeholder="0"
-                                  min={0}
-                                  max={discount.type === 'percentage' ? 100 : billingData.subtotal}
-                                  step="0.01"
-                                  className={`flex-1 px-3.5 py-2.5 text-sm border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
-                                  focus:outline-none focus:ring-2 ${colors.accent.ring} rounded-lg transition-shadow`}
-                                />
+                              {!isReadOnly ? (
+                                <div className="flex items-stretch gap-2">
+                                  <input
+                                    type="number"
+                                    value={discount.value === 0 ? '' : String(discount.value)}
+                                    onFocus={() => {
+                                      if (discount.value === 0) setLocalDiscount((p) => ({ ...p, value: 0 }));
+                                    }}
+                                    onChange={(e) => handleDiscountChange(discount.type, e.target.value)}
+                                    placeholder="0"
+                                    min={0}
+                                    max={discount.type === 'percentage' ? 100 : billingData.subtotal}
+                                    step="0.01"
+                                    className={`flex-1 px-3.5 py-2.5 text-sm border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
+                                    focus:outline-none focus:ring-2 ${colors.accent.ring} rounded-lg transition-shadow`}
+                                  />
 
-                                <div className={`flex border ${colors.border.primary} overflow-hidden rounded-lg`}>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDiscountChange('percentage', String(discount.value))}
-                                    className={`px-3 sm:px-4 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer
-                                      ${
-                                        discount.type === 'percentage'
-                                          ? `${colors.accent.primary} ${colors.accent.text}`
-                                          : `${colors.bg.hover} ${colors.text.secondary}`
-                                      }`}
-                                  >
-                                    %
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDiscountChange('fixed', String(discount.value))}
-                                    className={`px-3 sm:px-4 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer border-l ${colors.border.primary}
-                                      ${
-                                        discount.type === 'fixed'
-                                          ? `${colors.accent.primary} ${colors.accent.text}`
-                                          : `${colors.bg.hover} ${colors.text.secondary}`
-                                      }`}
-                                  >
-                                    Fixed
-                                  </button>
+                                  <div className={`flex border ${colors.border.primary} overflow-hidden rounded-lg`}>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDiscountChange('percentage', String(discount.value))}
+                                      className={`px-3 sm:px-4 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer
+                                        ${
+                                          discount.type === 'percentage'
+                                            ? `${colors.accent.primary} ${colors.accent.text}`
+                                            : `${colors.bg.hover} ${colors.text.secondary}`
+                                        }`}
+                                    >
+                                      %
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDiscountChange('fixed', String(discount.value))}
+                                      className={`px-3 sm:px-4 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer border-l ${colors.border.primary}
+                                        ${
+                                          discount.type === 'fixed'
+                                            ? `${colors.accent.primary} ${colors.accent.text}`
+                                            : `${colors.bg.hover} ${colors.text.secondary}`
+                                        }`}
+                                    >
+                                      Fixed
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
+                              ) : (
+                                <div className={`p-3 ${colors.bg.secondary} rounded-lg text-sm ${colors.text.secondary}`}>
+                                  {discount.value > 0
+                                    ? `${discount.type === 'percentage' ? `${discount.value}%` : formatCurrency(discount.value)} discount applied`
+                                    : 'No discount applied'}
+                                </div>
+                              )}
 
-                              {/* Finalize/Print under payments (only once) */}
+                              {/* Action buttons */}
                               <div className="mt-3 flex items-center justify-end gap-2 flex-wrap">
-                                <button
-                                  type="button"
-                                  onClick={handleFinalizePayment}
-                                  disabled={!canFinalize}
-                                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold transition-all duration-200 rounded-lg shadow-sm
-                                    ${
-                                      !canFinalize
-                                        ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-60'
-                                        : `${colors.accent.primary} ${colors.accent.hover} ${colors.accent.text} cursor-pointer hover:shadow-md active:scale-95`
-                                    }`}
-                                >
-                                  {isProcessing ? (
-                                    <>
-                                      <Loader2 className="w-4 h-4 animate-spin" />
-                                      <span>Processing...</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <CheckCircle2 className="w-4 h-4" />
-                                      <span>Finalize Payment</span>
-                                    </>
-                                  )}
-                                </button>
+                                {!isReadOnly && (
+                                  <button
+                                    type="button"
+                                    onClick={handleFinalizePayment}
+                                    disabled={!canFinalize}
+                                    className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold transition-all duration-200 rounded-lg shadow-sm
+                                      ${
+                                        !canFinalize
+                                          ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-60'
+                                          : `${colors.accent.primary} ${colors.accent.hover} ${colors.accent.text} cursor-pointer hover:shadow-md active:scale-95`
+                                      }`}
+                                  >
+                                    {isProcessing ? (
+                                      <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span>Processing...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        <span>Finalize Payment</span>
+                                      </>
+                                    )}
+                                  </button>
+                                )}
 
                                 <button
                                   type="button"
@@ -854,7 +973,9 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                               <div className="mt-2 flex items-start gap-2">
                                 <AlertCircle className={`w-4 h-4 ${colors.text.tertiary} flex-shrink-0 mt-0.5`} />
                                 <p className={`text-xs ${colors.text.secondary} leading-relaxed`}>
-                                  Print receipt is only available after finalizing payment.
+                                  {isReadOnly
+                                    ? 'Print receipt is available. Payment has been finalized.'
+                                    : 'Print receipt is only available after finalizing payment.'}
                                 </p>
                               </div>
                             </div>
@@ -865,8 +986,6 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
                   })}
                 </div>
               </div>
-
-            
             </div>
 
             {/* Fixed footer info */}
@@ -874,7 +993,9 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ theme = 
               <div className="flex items-start gap-2">
                 <AlertCircle className={`w-4 h-4 ${colors.text.tertiary} flex-shrink-0 mt-0.5`} />
                 <p className={`text-xs ${colors.text.secondary} leading-relaxed`}>
-                  Receipt preview updates in real-time. Finalize when balance is fully covered.
+                  {isReadOnly
+                    ? 'Payment completed. You can still print the receipt.'
+                    : 'Receipt preview updates in real-time. Finalize when balance is fully covered.'}
                 </p>
               </div>
             </div>

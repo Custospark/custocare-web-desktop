@@ -1,6 +1,6 @@
 // ChargeEntryStep.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, Plus, Minus, Trash2, Calculator, X, AlertCircle, ArrowRight, Filter, Hash } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, Calculator, X, AlertCircle, ArrowRight, Filter, Hash, Lock } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   addChargeItem,
@@ -11,11 +11,13 @@ import {
   setStep,
   selectChargeItems,
   setQuantity,
+  selectBillingStatus,
 } from './billingSlice';
 
 import { type ServiceItem, formatCurrency, makeBillableKey } from './billing-types';
 import { useGetBillableItems } from '../../../api/billable-items/BillableItemsQueries';
 import { BillableItemType } from '../../../api/billable-items/BillingItemsTypes';
+import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 
 interface ChargeEntryStepProps {
   theme?: 'light' | 'dark';
@@ -26,8 +28,13 @@ const safeLower = (v: string) => (v || '').toLowerCase();
 export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light' }) => {
   const isDark = theme === 'dark';
   const dispatch = useDispatch();
+  const { confirm } = useConfirm();
 
   const chargeItems = useSelector(selectChargeItems);
+  const billingStatus = useSelector(selectBillingStatus);
+
+  // Determine if we're in read-only mode (settled status)
+  const isReadOnly = billingStatus === 'settled';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<ServiceItem[]>([]);
@@ -88,21 +95,27 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
       overlay: isDark ? 'bg-gray-900/95' : 'bg-white/95',
       stripe: isDark ? 'bg-gray-800/30' : 'bg-gray-50/50',
       stripeAlt: isDark ? 'bg-gray-900/50' : 'bg-white/50',
+      disabled: isDark ? 'bg-gray-800/50' : 'bg-gray-100',
     },
     border: {
       primary: isDark ? 'border-gray-800' : 'border-gray-200',
       subtle: isDark ? 'border-gray-700' : 'border-gray-100',
+      disabled: isDark ? 'border-gray-700' : 'border-gray-200',
     },
     text: {
       primary: isDark ? 'text-gray-100' : 'text-gray-900',
       secondary: isDark ? 'text-gray-400' : 'text-gray-600',
       tertiary: isDark ? 'text-gray-500' : 'text-gray-500',
       muted: isDark ? 'text-gray-500' : 'text-gray-400',
+      disabled: isDark ? 'text-gray-500' : 'text-gray-400',
     },
     accent: {
       primary: 'bg-blue-600',
       hover: 'hover:bg-blue-700',
       text: 'text-white',
+    },
+    status: {
+      settledBadge: isDark ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-50 text-blue-700',
     },
   };
 
@@ -180,20 +193,36 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   }, []);
 
   const handleAddItem = (service: ServiceItem) => {
+    if (isReadOnly) return;
     dispatch(addChargeItem(service));
     setSearchTerm('');
     setShowSearchResults(false);
     inputRef.current?.focus();
   };
 
-  const handleClearAll = () => {
-    if (chargeItems.length === 0) return;
-    if (confirm('Clear all selected charge items?')) dispatch(clearCharges());
+  const handleClearAll = async () => {
+    if (isReadOnly || chargeItems.length === 0) return;
+
+    const confirmed = await confirm({
+      title: 'Clear all items?',
+      message: `You are about to remove all ${chargeItems.length} selected ${chargeItems.length === 1 ? 'item' : 'items'} from the billing list.`,
+      confirmText: 'Clear all',
+      cancelText: 'Cancel',
+      variant: 'warning',
+      theme,
+    });
+
+    if (confirmed) {
+      dispatch(clearCharges());
+    }
   };
 
-  const handleProceedToBilling = () => dispatch(setStep('billing_summary'));
+  const handleProceedToBilling = () => {
+    if (isReadOnly) return;
+    dispatch(setStep('billing_summary'));
+  };
 
-  const isDisabledProceed = chargeItems.length === 0;
+  const isDisabledProceed = chargeItems.length === 0 || isReadOnly;
 
   // normalize quantity input
   const clampQty = (val: number) => {
@@ -205,6 +234,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   };
 
   const handleQtyChange = (itemId: string, raw: string) => {
+    if (isReadOnly) return;
     if (raw.trim() === '') {
       dispatch(setQuantity({ itemId, quantity: 1 }));
       return;
@@ -213,6 +243,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   };
 
   const handleQtyBlur = (itemId: string, raw: string) => {
+    if (isReadOnly) return;
     dispatch(setQuantity({ itemId, quantity: clampQty(Number(raw)) }));
   };
 
@@ -224,7 +255,15 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   }, [isError, error]);
 
   return (
-    <div className="p-4 sm:p-5 lg:p-6 h-full">
+    <div className="p-4 sm:p-5 lg:p-6 h-full relative">
+      {/* Read-only overlay indicator (subtle) */}
+          {isReadOnly && (
+        <div className="absolute top-4 right-8 z-20 flex items-center gap-2 px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-full shadow-sm border border-blue-400 dark:border-blue-400">
+          <Lock className="w-3.5 h-3.5" />
+          <span className="text-xs font-semibold">Payment settled - View only</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 h-full">
         {/* Left: Search + Items */}
         <div className="lg:col-span-8 xl:col-span-9 flex flex-col min-h-0" ref={containerRef}>
@@ -241,24 +280,31 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                   ref={inputRef}
                   type="text"
                   placeholder={
-                    isLoading 
-                      ? 'Loading billable items...' 
-                      : 'Search by service/item name, code, or category...'
+                    isReadOnly
+                      ? 'Payment completed - browsing disabled'
+                      : isLoading 
+                        ? 'Loading billable items...' 
+                        : 'Search by service/item name, code, or category...'
                   }
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => !isReadOnly && setSearchTerm(e.target.value)}
                   onFocus={() => {
+                    if (isReadOnly) return;
                     if (searchTerm.trim() || isLoading) {
                       setShowSearchResults(true);
                     }
                   }}
-                  disabled={isLoading}
-                  className={`w-full pl-9 pr-10 py-2.5 sm:py-3 border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg transition-all duration-200
+                  disabled={isLoading || isReadOnly}
+                  readOnly={isReadOnly}
+                  className={`w-full pl-9 pr-10 py-2.5 sm:py-3 border ${
+                    isReadOnly 
+                      ? `${colors.border.disabled} ${colors.bg.disabled} ${colors.text.disabled} cursor-not-allowed` 
+                      : `${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}`
+                  } focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg transition-all duration-200
                   placeholder:${colors.text.muted} shadow-sm disabled:opacity-75 disabled:cursor-not-allowed`}
                 />
 
-                {searchTerm && (
+                {searchTerm && !isReadOnly && (
                   <button
                     type="button"
                     onClick={() => {
@@ -275,8 +321,8 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                 )}
               </div>
 
-              {/* Search Results Dropdown */}
-              {showSearchResults && (
+              {/* Search Results Dropdown - only show when not read-only */}
+              {!isReadOnly && showSearchResults && (
                 <div
                   className={`absolute z-20 w-full mt-1.5 border shadow-2xl ${colors.border.primary} ${colors.bg.elevated}
                   rounded-lg overflow-hidden backdrop-blur-sm ${colors.bg.overlay}`}
@@ -351,6 +397,17 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                   )}
                 </div>
               )}
+
+              {/* Read-only message when search is attempted */}
+              {isReadOnly && searchTerm && (
+                <div className={`absolute z-20 w-full mt-1.5 border ${colors.border.primary} ${colors.bg.elevated} rounded-lg p-4 text-center`}>
+                  <Lock className={`w-5 h-5 ${colors.text.tertiary} mx-auto mb-2`} />
+                  <p className={`text-sm font-medium ${colors.text.primary}`}>Payment已完成</p>
+                  <p className={`text-xs ${colors.text.secondary} mt-1`}>
+                    This billing session is settled. No further changes can be made.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -363,9 +420,14 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
             <div className="flex items-center justify-between gap-3">
               <h3 className={`text-base sm:text-lg font-bold ${colors.text.primary}`}>
                 Selected items <span className={`${colors.text.secondary} font-semibold`}>({chargeItems.length})</span>
+                {isReadOnly && (
+                  <span className={`ml-2 text-xs font-normal ${colors.status.settledBadge} px-2 py-0.5 rounded-full`}>
+                    View only
+                  </span>
+                )}
               </h3>
 
-              {chargeItems.length > 0 && (
+              {!isReadOnly && chargeItems.length > 0 && (
                 <button
                   type="button"
                   onClick={handleClearAll}
@@ -390,12 +452,16 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                   <Calculator className={`w-10 h-10 sm:w-12 sm:h-12 ${colors.text.tertiary}`} />
                 </div>
                 <p className={`text-base font-semibold ${colors.text.primary}`}>No items added</p>
-                <p className={`text-sm mt-1 ${colors.text.secondary}`}>Search and add services/items to start billing</p>
+                <p className={`text-sm mt-1 ${colors.text.secondary}`}>
+                  {isReadOnly 
+                    ? 'This settled billing session has no items.'
+                    : 'Search and add services/items to start billing'}
+                </p>
               </div>
             ) : (
               <div
                 className={`h-full border ${colors.border.primary} rounded-xl overflow-hidden flex flex-col min-h-0
-                shadow-sm`}
+                shadow-sm ${isReadOnly ? 'opacity-90' : ''}`}
               >
                 {/* Desktop table header */}
                 <div
@@ -426,8 +492,9 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                       <div
                         key={item.id}
                         className={`grid grid-cols-12 gap-3 px-4 py-3 items-center border-b last:border-b-0 
-                        ${colors.border.primary} transition-all duration-150 hover:${colors.bg.hover}
-                        ${index % 2 === 0 ? colors.bg.stripe : colors.bg.stripeAlt}`}
+                        ${colors.border.primary} transition-all duration-150 ${!isReadOnly && `hover:${colors.bg.hover}`}
+                        ${index % 2 === 0 ? colors.bg.stripe : colors.bg.stripeAlt}
+                        ${isReadOnly ? 'cursor-default' : ''}`}
                       >
                         <div className="col-span-1">
                           <div
@@ -456,49 +523,63 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
 
                         <div className="col-span-3">
                           <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => dispatch(decreaseQuantity(item.id))}
-                              className={`p-2 border ${colors.border.primary} ${colors.bg.hover} transition-colors 
-                              cursor-pointer rounded hover:${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
-                              aria-label="Decrease quantity"
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
+                            {!isReadOnly ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => dispatch(decreaseQuantity(item.id))}
+                                  className={`p-2 border ${colors.border.primary} ${colors.bg.hover} transition-colors 
+                                  cursor-pointer rounded hover:${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
+                                  aria-label="Decrease quantity"
+                                >
+                                  <Minus className="w-4 h-4" />
+                                </button>
 
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              min={1}
-                              max={9999}
-                              value={item.quantity}
-                              onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                              onBlur={(e) => handleQtyBlur(item.id, e.target.value)}
-                              className={`w-20 px-2 py-2 text-center border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
-                              focus:outline-none focus:ring-2 focus:ring-blue-500/30 rounded`}
-                            />
+                                <input
+                                  type="number"
+                                  inputMode="numeric"
+                                  min={1}
+                                  max={9999}
+                                  value={item.quantity}
+                                  onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                                  onBlur={(e) => handleQtyBlur(item.id, e.target.value)}
+                                  className={`w-20 px-2 py-2 text-center border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
+                                  focus:outline-none focus:ring-2 focus:ring-blue-500/30 rounded`}
+                                />
 
-                            <button
-                              type="button"
-                              onClick={() => dispatch(increaseQuantity(item.id))}
-                              className={`p-2 border ${colors.border.primary} ${colors.bg.hover} transition-colors 
-                              cursor-pointer rounded hover:${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
-                              aria-label="Increase quantity"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
+                                <button
+                                  type="button"
+                                  onClick={() => dispatch(increaseQuantity(item.id))}
+                                  className={`p-2 border ${colors.border.primary} ${colors.bg.hover} transition-colors 
+                                  cursor-pointer rounded hover:${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
+                                  aria-label="Increase quantity"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                </button>
 
-                            <button
-                              type="button"
-                              onClick={() => dispatch(removeChargeItem(item.id))}
-                              className={`ml-1 p-2 ${colors.bg.hover} ${colors.text.secondary} transition-colors 
-                              cursor-pointer rounded-full hover:${isDark ? 'bg-red-900/20' : 'bg-red-50'} 
-                              hover:text-red-500`}
-                              title="Remove item"
-                              aria-label="Remove item"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                                <button
+                                  type="button"
+                                  onClick={() => dispatch(removeChargeItem(item.id))}
+                                  className={`ml-1 p-2 ${colors.bg.hover} ${colors.text.secondary} transition-colors 
+                                  cursor-pointer rounded-full hover:${isDark ? 'bg-red-900/20' : 'bg-red-50'} 
+                                  hover:text-red-500`}
+                                  title="Remove item"
+                                  aria-label="Remove item"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            ) : (
+                              // Read-only quantity display
+                              <div className="flex items-center gap-2">
+                                <span className={`px-3 py-2 border ${colors.border.primary} ${colors.bg.secondary} rounded text-center w-20`}>
+                                  {item.quantity}
+                                </span>
+                                <span className={`text-xs ${colors.text.secondary} ml-2`}>
+                                  × {formatCurrency(item.service.unitPrice)}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -536,15 +617,17 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                             </div>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => dispatch(removeChargeItem(item.id))}
-                            className={`p-2 ${colors.bg.hover} ${colors.text.secondary} cursor-pointer rounded-full
-                            hover:${isDark ? 'bg-red-900/20' : 'bg-red-50'} hover:text-red-500 flex-shrink-0`}
-                            aria-label="Remove item"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {!isReadOnly && (
+                            <button
+                              type="button"
+                              onClick={() => dispatch(removeChargeItem(item.id))}
+                              className={`p-2 ${colors.bg.hover} ${colors.text.secondary} cursor-pointer rounded-full
+                              hover:${isDark ? 'bg-red-900/20' : 'bg-red-50'} hover:text-red-500 flex-shrink-0`}
+                              aria-label="Remove item"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
 
                         <div className="mt-4 grid grid-cols-2 gap-4 items-center">
@@ -560,37 +643,43 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
 
                           <div className="col-span-2">
                             <p className={`text-xs ${colors.text.secondary} mb-2`}>Quantity</p>
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => dispatch(decreaseQuantity(item.id))}
-                                className={`flex-1 p-2 border ${colors.border.primary} ${colors.bg.hover} 
-                                transition-colors cursor-pointer rounded-lg hover:${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
-                              >
-                                <Minus className="w-4 h-4 mx-auto" />
-                              </button>
+                            {!isReadOnly ? (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => dispatch(decreaseQuantity(item.id))}
+                                  className={`flex-1 p-2 border ${colors.border.primary} ${colors.bg.hover} 
+                                  transition-colors cursor-pointer rounded-lg hover:${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
+                                >
+                                  <Minus className="w-4 h-4 mx-auto" />
+                                </button>
 
-                              <input
-                                type="number"
-                                inputMode="numeric"
-                                min={1}
-                                max={9999}
-                                value={item.quantity}
-                                onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                                onBlur={(e) => handleQtyBlur(item.id, e.target.value)}
-                                className={`w-20 px-2 py-2 text-center border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
-                                focus:outline-none focus:ring-2 focus:ring-blue-500/30 rounded`}
-                              />
+                                <input
+                                  type="number"
+                                  inputMode="numeric"
+                                  min={1}
+                                  max={9999}
+                                  value={item.quantity}
+                                  onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                                  onBlur={(e) => handleQtyBlur(item.id, e.target.value)}
+                                  className={`w-20 px-2 py-2 text-center border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
+                                  focus:outline-none focus:ring-2 focus:ring-blue-500/30 rounded`}
+                                />
 
-                              <button
-                                type="button"
-                                onClick={() => dispatch(increaseQuantity(item.id))}
-                                className={`flex-1 p-2 border ${colors.border.primary} ${colors.bg.hover} 
-                                transition-colors cursor-pointer rounded-lg hover:${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
-                              >
-                                <Plus className="w-4 h-4 mx-auto" />
-                              </button>
-                            </div>
+                                <button
+                                  type="button"
+                                  onClick={() => dispatch(increaseQuantity(item.id))}
+                                  className={`flex-1 p-2 border ${colors.border.primary} ${colors.bg.hover} 
+                                  transition-colors cursor-pointer rounded-lg hover:${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
+                                >
+                                  <Plus className="w-4 h-4 mx-auto" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className={`p-3 ${colors.bg.primary} border ${colors.border.primary} rounded-lg text-center`}>
+                                <span className={`font-semibold ${colors.text.primary}`}>Quantity: {item.quantity}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -653,22 +742,26 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                     hover:shadow-lg active:scale-[0.98]`
                 }`}
               >
-                <span>Proceed to billing</span>
+                <span>{isReadOnly ? 'View Billing Summary' : 'Proceed to billing'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
               <div className="mt-3 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
                 <p className={`text-xs leading-relaxed ${colors.text.secondary}`}>
-                  Taxes, discounts, payment methods, and receipt printing are handled in Billing Summary.
+                  {isReadOnly 
+                    ? 'This billing session is settled. You can view the items but cannot make changes.'
+                    : 'Taxes, discounts, payment methods, and receipt printing are handled in Billing Summary.'}
                 </p>
               </div>
             </div>
 
             <div className={`p-4 border ${colors.border.primary} ${colors.bg.secondary} rounded-xl`}>
               <p className={`text-xs ${colors.text.secondary}`}>
-                <span className="font-semibold">Workflow tip:</span> keep the cursor in the search box and keep selecting
-                items.
+                <span className="font-semibold">Workflow tip:</span>{' '}
+                {isReadOnly 
+                  ? 'Settled billing sessions are locked. Use the print option in Billing Summary to reprint receipts.'
+                  : 'keep the cursor in the search box and keep selecting items.'}
               </p>
             </div>
           </div>

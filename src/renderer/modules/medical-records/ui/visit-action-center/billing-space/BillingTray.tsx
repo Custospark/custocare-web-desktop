@@ -168,17 +168,17 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
 
             {/* Right: Status & Close */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              <div
-                className={`px-2 py-1 rounded-md text-xs font-medium select-none whitespace-nowrap ${
-                  status === 'draft'
-                    ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                    : status === 'ready'
-                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-600/30 dark:text-blue-400'
-                    : 'bg-green-50 text-green-700 dark:bg-green-600/30 dark:text-green-400'
-                }`}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </div>
+             <div
+              className={`px-2 py-1 rounded-md text-xs font-medium select-none whitespace-nowrap ${
+                status === 'draft'
+                  ? 'bg-gray-600 text-white dark:bg-gray-500 dark:text-white'
+                  : status === 'ready'
+                  ? 'bg-blue-600 text-white dark:bg-blue-500 dark:text-white'
+                  : 'bg-green-600 text-white dark:bg-green-500 dark:text-white'
+              }`}
+            >
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </div>
               
               <button
                 onClick={() => void handleClose()}
