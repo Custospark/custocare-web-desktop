@@ -17,6 +17,7 @@ import { FaCashRegister } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   setDiscount,
+  updatePaymentMethod,
   addPaymentMethod,
   removePaymentMethod,
   setAdditionalNotes,
@@ -27,8 +28,6 @@ import {
   selectIsProcessing,
   selectBillingData,
   saveDraft,
-  loadDraft,
-  setPatientInfo,
 } from './billingSlice';
 import {
   DEFAULT_DISCOUNT,
@@ -36,22 +35,18 @@ import {
   formatCurrency,
   DEFAULT_TAXES,
 } from './billing-types';
-import { useGetBillingByVisit, useFinalizeBilling } from '../../../api/billable-items/BillableItemsQueries';
-import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
-
-// ✅ Import visit selectors
 import {
-  selectActiveVisit,
   selectActiveVisitId,
   selectActivePatient,
+  selectActiveVisit,
 } from '../../../../../app/store/slices/visitSlice';
+import { useFinalizeBilling } from '../../../api/billable-items/BillableItemsQueries';
+import type { BillingSubmissionPayload } from '../../../api/billable-items/BillingItemsTypes';
 
 interface BillingSummaryStepProps {
   theme?: 'light' | 'dark';
-  // ✅ Props are now optional - we'll prioritize Redux state
-  visitId?: number;
-  patientId?: number;
-  patientName?: string;
+  visitId?: number; // Optional - falls back to Redux store
+  patientId?: number; // Optional - falls back to Redux store
 }
 
 const clamp = (n: number, min = 0, max = Number.POSITIVE_INFINITY) =>
@@ -60,133 +55,63 @@ const clamp = (n: number, min = 0, max = Number.POSITIVE_INFINITY) =>
 const onlyDigits = (v: string) => v.replace(/[^\d]/g, '');
 
 export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ 
-  theme = 'light', 
-  visitId: propsVisitId,
-  patientId: propsPatientId,
-  patientName: propsPatientName 
+  theme = 'light',
+  visitId: propVisitId,
+  patientId: propPatientId,
 }) => {
   const isDark = theme === 'dark';
   const dispatch = useDispatch();
 
-  // ✅ Get active visit from Redux
+  // Retrieve from Redux store
   const activeVisit = useSelector(selectActiveVisit);
   const activeVisitId = useSelector(selectActiveVisitId);
   const activePatient = useSelector(selectActivePatient);
+  
+  // Use props if provided, otherwise fall back to Redux store
+  // For visitId: use visit_id from activeVisit
+  const visitId = propVisitId ?? activeVisitId ?? activeVisit?.visit_id;
+  
+  // For patientId: use patient_id from activeVisit (NOT patient_number)
+  // patient_number is a string identifier, patient_id is the numeric database ID
+  const patientId = propPatientId ?? activeVisit?.patient_id;
 
-  // ✅ Prioritize Redux state over props
-  const visitId = activeVisitId || propsVisitId;
-  const patientId = activeVisit?.patient_id || propsPatientId;
-  const patientName = activePatient?.name || propsPatientName || 'Unknown Patient';
-  const patientNumber = activePatient?.patient_number;
-
-  // Redux billing state
   const chargeItems = useSelector(selectChargeItems);
   const billingData = useSelector(selectBillingData);
   const status = useSelector(selectBillingStatus);
   const isProcessing = useSelector(selectIsProcessing);
+
+  // Determine if we're in read-only mode (settled status)
+  const isReadOnly = status === 'settled';
 
   // Local UI state
   const [discount, setLocalDiscount] = useState(DEFAULT_DISCOUNT);
   const [paymentMethods, setLocalPaymentMethods] = useState(DEFAULT_PAYMENT_METHODS);
   const [additionalNotes, setLocalAdditionalNotes] = useState('');
   const [receiptNumber, setReceiptNumber] = useState('');
-  const [focusedAmountInputs, setFocusedAmountInputs] = useState<Record<number, boolean>>({});
-  const [hasLoadedFromBackend, setHasLoadedFromBackend] = useState(false);
 
-  // ✅ Set patient info from Redux active visit
-  useEffect(() => {
-    if (activeVisit) {
-      dispatch(setPatientInfo({ 
-        visitId: activeVisit.visit_id.toString(), 
-        patientId: activeVisit.patient_id.toString(), 
-        patientName: activePatient?.name || 'Unknown Patient'
-      }));
-    } else if (propsVisitId || propsPatientId || propsPatientName) {
-      // Fallback to props if no active visit in Redux
-      dispatch(setPatientInfo({ 
-        visitId: propsVisitId?.toString(), 
-        patientId: propsPatientId?.toString(), 
-        patientName: propsPatientName 
-      }));
-    }
-  }, [activeVisit, activePatient, propsVisitId, propsPatientId, propsPatientName, dispatch]);
+  // Validation: Check if required IDs are available
+  const hasRequiredIds = visitId != null && patientId != null;
 
-  // ✅ Fetch billing data from backend if visitId is available
-  const { 
-    data: billingDataResponse, 
-    isLoading: isLoadingBilling,
-    error: billingError,
-    refetch: refetchBilling
-  } = useGetBillingByVisit(visitId || 0, {
-    enabled: !!visitId && !hasLoadedFromBackend,
-  });
-
-  // Load backend data into local state
-  useEffect(() => {
-    if (billingDataResponse?.success && billingDataResponse.data.has_billing) {
-      const billing = billingDataResponse.data;
+  // Initialize the finalize billing mutation
+  const { mutate: submitBilling, isPending: isSubmitting } = useFinalizeBilling({
+    onSuccess: (response) => {
+      // Extract receipt number from backend response
+      const generatedReceiptNumber = response.data.receipt_number;
+      setReceiptNumber(generatedReceiptNumber);
       
-      // Set discount if exists
-      if (billing.discount) {
-        setLocalDiscount(billing.discount);
-        dispatch(setDiscount(billing.discount));
-      }
-      
-      // Set payment methods if exists
-      if (billing.payment_methods && billing.payment_methods.length > 0) {
-        setLocalPaymentMethods(billing.payment_methods);
-      }
-      
-      // Set additional notes
-      if (billing.additional_notes) {
-        setLocalAdditionalNotes(billing.additional_notes);
-        dispatch(setAdditionalNotes(billing.additional_notes));
-      }
-      
-      // Set receipt number if exists
-      if (billing.receipt_number) {
-        setReceiptNumber(billing.receipt_number);
-      }
-      
-      setHasLoadedFromBackend(true);
-    } else if (billingDataResponse && !billingDataResponse.data.has_billing) {
-      // No existing billing, try to load draft
-      if (visitId) {
-        dispatch(loadDraft(visitId.toString()));
-      }
-      setHasLoadedFromBackend(true);
-    }
-  }, [billingDataResponse, visitId, dispatch]);
-
-  // ✅ Finalize billing mutation with proper visit context
-  const { mutate: finalizeBilling, isPending: isFinalizing } = useFinalizeBilling({
-    onSuccess: (data) => {
-      console.log('✅ Billing finalized successfully:', data);
-      
-      // Update receipt number from backend response
-      setReceiptNumber(data.data.receipt_number);
-      
-      // Update Redux state to settled
+      // Update Redux state to mark as finalized
       dispatch(finalizePayment());
-      
-      // Save the finalized state
       dispatch(saveDraft());
       
-      // Refresh billing data from backend
-      if (visitId) {
-        refetchBilling();
-      }
+      console.log('Billing finalized successfully:', response);
     },
     onError: (error) => {
-      console.error('❌ Failed to finalize billing:', error);
-      // Error handling is done in the mutation hook with toast notifications
-    }
+      console.error('Failed to finalize billing:', error);
+      // Error toast is already handled by the hook
+    },
   });
 
-  // Determine if we're in read-only mode (settled status)
-  const isReadOnly = status === 'settled';
-
-  // Generate receipt number on settlement (fallback if not provided by backend)
+  // Load receipt number from state or generate on settlement
   useEffect(() => {
     if (status === 'settled' && !receiptNumber) {
       const generatedReceiptNumber = `REC-${Date.now().toString().slice(-8)}`;
@@ -194,17 +119,9 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     }
   }, [status, receiptNumber]);
 
-  // Sync local state with Redux on mount
-  useEffect(() => {
-    if (!hasLoadedFromBackend && !isLoadingBilling) {
-      // Try to load from sessionStorage
-      if (visitId) {
-        dispatch(loadDraft(visitId.toString()));
-      }
-    }
-  }, [dispatch, visitId, hasLoadedFromBackend, isLoadingBilling]);
+  // Track focused amount inputs to clear default zero values
+  const [focusedAmountInputs, setFocusedAmountInputs] = useState<Record<number, boolean>>({});
 
-  // Colors based on theme
   const colors = {
     bg: {
       primary: isDark ? 'bg-gray-900' : 'bg-white',
@@ -245,18 +162,10 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     },
   };
 
-  // ✅ Enhanced validation for finalization
-  const canFinalize = !isProcessing && 
-    !isFinalizing && 
-    !isReadOnly && 
-    chargeItems.length > 0 && 
-    billingData.balance === 0 &&
-    !!visitId &&
-    !!patientId;
+  const canFinalize = !isProcessing && !isSubmitting && !isReadOnly && chargeItems.length > 0 && billingData.balance === 0 && hasRequiredIds;
 
-  const canPrint = (status === 'settled' || status === 'ready') && !!receiptNumber && !isProcessing;
+  const canPrint = (status === 'settled' || status === 'ready') && !!receiptNumber && !isProcessing && !isSubmitting;
 
-  // Payment icon helper
   const paymentIcon = (type: string) => {
     switch (type) {
       case 'cash':
@@ -300,7 +209,6 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     [paymentMethods]
   );
 
-  // Handlers
   const handleDiscountChange = (type: 'percentage' | 'fixed', rawValue: string) => {
     if (isReadOnly) return;
 
@@ -311,14 +219,24 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
     setLocalDiscount(updatedDiscount);
     dispatch(setDiscount(updatedDiscount));
-    dispatch(saveDraft());
   };
 
   const syncPaymentMethodsToRedux = (updatedMethods: typeof paymentMethods) => {
     if (isReadOnly) return;
 
     setLocalPaymentMethods(updatedMethods);
-    dispatch(saveDraft());
+    updatedMethods.forEach((method, index) => {
+      dispatch(
+        updatePaymentMethod({
+          index,
+          method: {
+            type: method.type,
+            amount: Number(method.amount) || 0,
+            details: method.details,
+          },
+        })
+      );
+    });
   };
 
   const handlePaymentTypeChange = (index: number, newType: string) => {
@@ -397,7 +315,6 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     setFocusedAmountInputs((prev) => ({ ...prev, [updatedMethods.length - 1]: false }));
     syncPaymentMethodsToRedux(updatedMethods);
     dispatch(addPaymentMethod());
-    dispatch(saveDraft());
   };
 
   const handleRemovePaymentMethod = (index: number) => {
@@ -413,7 +330,6 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     setFocusedAmountInputs(updatedFocusState);
     syncPaymentMethodsToRedux(updatedMethods);
     dispatch(removePaymentMethod(index));
-    dispatch(saveDraft());
   };
 
   const handleMobilePhoneChange = (index: number, rawValue: string) => {
@@ -428,7 +344,6 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     };
 
     syncPaymentMethodsToRedux(updatedMethods);
-    dispatch(saveDraft());
   };
 
   const handleInitiateMobilePayment = async (index: number) => {
@@ -457,108 +372,87 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
     setLocalAdditionalNotes(notes);
     dispatch(setAdditionalNotes(notes));
-    dispatch(saveDraft());
   };
 
   /**
-   * ✅ Handle finalize payment button click
-   * Prepares payload with visit context and calls the useFinalizeBilling mutation
+   * Handle finalizing payment by submitting to backend
+   * Constructs payload matching BillingSubmissionPayload type
    */
-  const handleFinalizePayment = () => {
-    // Validation checks with detailed logging
-    if (!visitId) {
-      console.error('❌ Cannot finalize: visitId is missing', { visitId, activeVisit });
-      alert('Visit ID is missing. Cannot finalize billing.');
-      return;
-    }
-
-    if (!patientId) {
-      console.error('❌ Cannot finalize: patientId is missing', { patientId, activeVisit });
-      alert('Patient ID is missing. Cannot finalize billing.');
-      return;
-    }
-
-    if (chargeItems.length === 0) {
-      console.warn('⚠️ Cannot finalize: no charge items');
-      alert('Please add at least one charge item before finalizing.');
-      return;
-    }
-
-    if (billingData.balance !== 0) {
-      console.warn('⚠️ Cannot finalize: balance not fully paid', { balance: billingData.balance });
-      alert(`Balance of ${formatCurrency(billingData.balance)} must be paid before finalizing.`);
-      return;
-    }
-
+  const handleFinalizePayment = async () => {
     if (!canFinalize) {
-      console.warn('⚠️ Cannot finalize: conditions not met', {
-        isProcessing,
-        isFinalizing,
-        isReadOnly,
-        chargeItemsLength: chargeItems.length,
-        balance: billingData.balance,
-        visitId,
-        patientId
-      });
+      if (!hasRequiredIds) {
+        console.error('Cannot finalize: Missing visit ID or patient ID');
+        alert('Unable to finalize billing. Visit or patient information is missing.');
+      }
       return;
     }
 
-    console.log('✅ Finalizing billing with context:', {
-      visitId,
-      patientId,
-      patientName,
-      chargeItemsCount: chargeItems.length,
-      grandTotal: billingData.grandTotal,
-      balance: billingData.balance
-    });
+    // Type guard to ensure visitId and patientId are numbers
+    if (visitId == null || patientId == null) {
+      console.error('Cannot finalize: Invalid visit ID or patient ID');
+      return;
+    }
 
-    // ✅ Prepare payload matching BillingSubmissionPayload interface
-    const payload = {
-      visit_id: visitId,
-      patient_id: patientId,
-      charge_items: chargeItems.map(item => ({
-        service_key: item.serviceKey,
-        service: item.service,
-        quantity: item.quantity,
-        totalAmount: item.totalAmount
-      })),
-      discount: {
-        type: discount.type,
-        value: discount.value,
-        reason: additionalNotes || undefined
-      },
-      taxes: billingData.taxes && billingData.taxes.length > 0 
-        ? billingData.taxes 
-        : DEFAULT_TAXES.map(tax => ({
-            name: tax.name,
-            rate: tax.rate,
-            amount: 0
-          })),
-      payment_methods: paymentMethods
-        .filter(method => method.amount > 0) // Only send methods with amounts
-        .map(method => ({
-          type: method.type,
-          amount: method.amount,
-          reference: method.reference,
-          details: method.details
+    // Set processing state
+    dispatch(setProcessing(true));
+
+    try {
+      // Construct the payload matching the backend expected format
+      const payload: BillingSubmissionPayload = {
+        visit_id: visitId,
+        patient_id: patientId,
+        charge_items: chargeItems.map(item => ({
+          service_key: item.service.code || `item_${item.id}`,
+          service: {
+            id: item.service.id,
+            code: item.service.code,
+            name: item.service.name.toLowerCase(), // Convert to lowercase as requested
+            unitPrice: item.service.unitPrice,
+            category: item.service.category,
+          },
+          quantity: item.quantity,
+          totalAmount: item.totalAmount,
         })),
-      billing_data: {
-        subtotal: billingData.subtotal,
-        discountAmount: billingData.discountAmount,
-        taxableAmount: billingData.taxableAmount,
-        taxTotal: billingData.taxTotal,
-        grandTotal: billingData.grandTotal,
-        totalPaid: billingData.totalPaid,
-        balance: billingData.balance
-      },
-      additional_notes: additionalNotes || undefined,
-      status: 'settled' as const
-    };
+        discount: {
+          type: discount.type,
+          value: discount.value,
+          reason: additionalNotes || undefined,
+        },
+        taxes: DEFAULT_TAXES.map((tax, index) => ({
+          name: tax.name,
+          rate: tax.rate,
+          amount: billingData.taxes[index]?.amount || 0,
+        })),
+        payment_methods: paymentMethods
+          .filter(method => (Number(method.amount) || 0) > 0) // Only include methods with amounts
+          .map(method => ({
+            type: method.type,
+            amount: Number(method.amount),
+            reference: method.details || undefined,
+            details: method.details || undefined,
+          })),
+        billing_data: {
+          subtotal: billingData.subtotal,
+          discountAmount: billingData.discountAmount,
+          taxableAmount: billingData.taxableAmount,
+          taxTotal: billingData.taxTotal,
+          grandTotal: billingData.grandTotal,
+          totalPaid: billingData.totalPaid,
+          balance: billingData.balance,
+        },
+        additional_notes: additionalNotes || undefined,
+        status: status,
+      };
 
-    console.log('📤 Sending billing finalization payload:', payload);
-
-    // Call the mutation
-    finalizeBilling(payload);
+      // Submit to backend using the React Query mutation
+      submitBilling(payload);
+    } catch (error) {
+      console.error('Payment processing failed:', error);
+      dispatch(setProcessing(false));
+    } finally {
+      // Processing state will be cleared by mutation callbacks
+      dispatch(setProcessing(false));
+    }
   };
 
   const handlePrintReceipt = () => {
@@ -578,49 +472,24 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     return !isFocused && isZero ? '' : String(amount);
   };
 
-  // ✅ Show warning if no active visit
-  if (!visitId && !propsVisitId) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
-        <AlertCircle className="w-12 h-12 text-yellow-500 mb-4" />
-        <h3 className="text-lg font-semibold text-yellow-600 dark:text-yellow-400 mb-2">
-          No Active Visit
-        </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-          Please select a visit from the queue to proceed with billing.
-        </p>
-      </div>
-    );
-  }
-
-  // Loading state
-  if (isLoadingBilling) {
-    return <LoadingSkeleton variant="form" message="Loading billing data..." theme={theme} />;
-  }
-
-  // Error state
-  if (billingError) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
-        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">
-          Error Loading Billing Data
-        </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-          {billingError.response?.data?.message || 'Failed to load billing information. Please try again.'}
-        </p>
-        <button
-          onClick={() => refetchBilling()}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
+  // Display patient information from active visit
+  // QueuePatient.name is the patient's full name
+  // QueuePatient.patient_number is the patient identifier (string)
+  const patientDisplayName = activeVisit?.patient?.name || activePatient?.name || 'Unknown Patient';
+  const patientNumber = activeVisit?.patient?.patient_number || activePatient?.patient_number || 'N/A';
 
   return (
     <div className="h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6 relative">
+      {/* Missing data warning */}
+      {!hasRequiredIds && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg shadow-lg border border-red-500">
+          <AlertCircle className="w-5 h-5" />
+          <span className="text-sm font-semibold">
+            Unable to finalize billing: {!visitId ? 'Visit ID missing' : 'Patient ID missing'}
+          </span>
+        </div>
+      )}
+
       {/* Read-only indicator */}
       {isReadOnly && (
         <div className="absolute top-20 right-8 z-10 flex items-center gap-2 px-3 py-1.5 bg-blue-700 text-white dark:bg-blue-600 dark:text-white rounded-full shadow-md border border-blue-500 dark:border-blue-400">
@@ -686,45 +555,19 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
                     <p className="text-xs text-gray-600">Phone: +256 700 000 000</p>
                   </div>
 
-                  {/* ✅ Patient Info - Enhanced with visit context */}
-                  {patientName && (
-                    <div className="border-t border-b border-gray-300 py-2 my-3 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Patient:</span>
-                        <span className="font-bold">{patientName}</span>
-                      </div>
-                      {patientNumber && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Patient #:</span>
-                          <span className="font-bold">{patientNumber}</span>
-                        </div>
-                      )}
-                      {patientId && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Patient ID:</span>
-                          <span className="font-bold">{patientId}</span>
-                        </div>
-                      )}
-                      {visitId && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Visit ID:</span>
-                          <span className="font-bold">{visitId}</span>
-                        </div>
-                      )}
-                      {activeVisit?.visit_uuid && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Visit UUID:</span>
-                          <span className="font-mono text-[10px]">{activeVisit.visit_uuid.slice(0, 8)}...</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   {/* Receipt Meta */}
                   <div className="border-t border-b border-gray-300 py-2 my-3 text-xs space-y-1">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Receipt:</span>
                       <span className="font-bold">{receiptNumber || 'Pending'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Patient:</span>
+                      <span className="font-semibold">{patientDisplayName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Patient #:</span>
+                      <span>{patientNumber}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Date:</span>
@@ -738,7 +581,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
                   {/* Services */}
                   <div className="mb-3">
-                    <h3 className="text-sm font-extrabold mb-2">Services Rendered</h3>
+                    <h3 className="text-sm font-extrabold mb-2">services rendered</h3>
                     {chargeItems.length === 0 ? (
                       <div className="text-xs text-gray-600 italic py-2">No items added yet</div>
                     ) : (
@@ -746,7 +589,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
                         {chargeItems.map((item) => (
                           <div key={item.id} className="flex justify-between text-xs border-b border-gray-100 pb-1.5">
                             <div className="min-w-0 pr-2 flex-1">
-                              <p className="font-semibold truncate">{item.service.name}</p>
+                              <p className="font-semibold truncate lowercase">{item.service.name}</p>
                               <p className="text-[11px] text-gray-600">
                                 {item.quantity} × {formatCurrency(item.service.unitPrice)}
                               </p>
@@ -844,14 +687,6 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
                     )}
                   </div>
 
-                  {/* Additional Notes in Receipt */}
-                  {additionalNotes && (
-                    <div className="mt-3 pt-3 border-t border-gray-300 text-xs">
-                      <h3 className="text-sm font-extrabold mb-2">Notes</h3>
-                      <p className="text-gray-600">{additionalNotes}</p>
-                    </div>
-                  )}
-
                   {/* Footer */}
                   <div className="text-center mt-4 pt-3 border-t border-gray-300">
                     <p className="text-[11px] text-gray-600">Computer generated receipt</p>
@@ -925,7 +760,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
           </div>
         </div>
 
-      <div className="flex flex-col h-full min-h-0">
+        {/* RIGHT: Billing controls - Similar structure continues... */}
+         <div className="flex flex-col h-full min-h-0">
           <div
             className={`flex flex-col h-full border ${colors.border.primary} ${colors.bg.primary} rounded-lg shadow-sm overflow-hidden ${
               isReadOnly ? 'opacity-90' : ''
@@ -1239,7 +1075,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
                                           : `${colors.accent.primary} ${colors.accent.hover} ${colors.accent.text} cursor-pointer hover:shadow-md active:scale-95`
                                       }`}
                                   >
-                                    {isProcessing || isFinalizing ? (
+                                    {isProcessing || isSubmitting ? (
                                       <>
                                         <Loader2 className="w-4 h-4 animate-spin" />
                                         <span>Processing...</span>
@@ -1274,9 +1110,9 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
                                 <p className={`text-xs ${colors.text.secondary} leading-relaxed`}>
                                   {isReadOnly
                                     ? 'Print receipt is available. Payment has been finalized.'
-                                    : canFinalize 
-                                    ? 'Balance is covered. Click "Finalize Payment" to complete the transaction.'
-                                    : 'Finalize payment is only available when balance is fully covered.'}
+                                    : !hasRequiredIds
+                                    ? 'Cannot finalize payment: Missing visit or patient information.'
+                                    : 'Print receipt is only available after finalizing payment.'}
                                 </p>
                               </div>
                             </div>
@@ -1306,5 +1142,3 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     </div>
   );
 };
-
-export default BillingSummaryStep;
