@@ -10,15 +10,18 @@ import {
   clearCharges,
   setStep,
   selectChargeItems,
-  setQuantity, 
+  setQuantity,
 } from './billingSlice';
-import { MOCK_SERVICES, type ServiceItem, formatCurrency } from './billing-types';
+
+import { type ServiceItem, formatCurrency, makeBillableKey } from './billing-types';
+import { useGetBillableItems } from '../../../api/billable-items/BillableItemsQueries';
+import { BillableItemType } from '../../../api/billable-items/BillingItemsTypes';
 
 interface ChargeEntryStepProps {
   theme?: 'light' | 'dark';
 }
 
-const safeLower = (v: string) => v.toLowerCase();
+const safeLower = (v: string) => (v || '').toLowerCase();
 
 export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light' }) => {
   const isDark = theme === 'dark';
@@ -34,6 +37,47 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   const searchWrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Fetch billable items with loading and error states
+  const { data, isLoading, isError, error } = useGetBillableItems(
+    {
+      limit: 500,
+      include_inactive: false,
+      type: BillableItemType.ALL,
+    },
+    {
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  // Prefer API-provided `services` list; fallback to items_full mapped to ServiceItemCore fields
+  const allServices: ServiceItem[] = useMemo(() => {
+    const services = data?.data?.services ?? [];
+    if (services.length > 0) return services;
+
+    const itemsFull = data?.data?.items_full ?? [];
+    return itemsFull.map((x) => ({
+      id: x.id,
+      code: x.code,
+      name: x.name,
+      unitPrice: x.unitPrice,
+      category: x.category,
+    }));
+  }, [data]);
+
+  // Optional: de-dupe list by composite key to avoid duplicated dropdown entries
+  const dedupedServices: ServiceItem[] = useMemo(() => {
+    const seen = new Set<string>();
+    const out: ServiceItem[] = [];
+    for (const s of allServices) {
+      const k = makeBillableKey(s);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(s);
+    }
+    return out;
+  }, [allServices]);
 
   const colors = {
     bg: {
@@ -62,37 +106,43 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     },
   };
 
-  const subtotal = useMemo(
-    () => chargeItems.reduce((sum, item) => sum + item.totalAmount, 0),
-    [chargeItems]
-  );
+  const subtotal = useMemo(() => chargeItems.reduce((sum, item) => sum + item.totalAmount, 0), [chargeItems]);
 
-  // Search filter
-useEffect(() => {
-  // Defer the entire effect to next tick
-  const timeoutId = setTimeout(() => {
-    const term = searchTerm.trim();
-    if (!term) {
-      setSearchResults([]);
-      setShowSearchResults(false);
-      return;
-    }
+  // Client-side search filter with loading state awareness
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      const term = searchTerm.trim();
+      
+      // Always show dropdown when searching or when loading
+      if (isLoading) {
+        setShowSearchResults(true);
+        setSearchResults([]);
+        return;
+      }
 
-    const t = safeLower(term);
-    const results = MOCK_SERVICES.filter((s) => {
-      return (
-        safeLower(s.name).includes(t) ||
-        safeLower(s.code).includes(t) ||
-        safeLower(s.category).includes(t)
-      );
-    }).slice(0, 8);
+      if (!term) {
+        setSearchResults([]);
+        setShowSearchResults(false);
+        return;
+      }
 
-    setSearchResults(results);
-    setShowSearchResults(results.length > 0);
-  }, 0);
+      const t = safeLower(term);
+      const results = dedupedServices
+        .filter((s) => {
+          return (
+            safeLower(s.name).includes(t) ||
+            safeLower(s.code).includes(t) ||
+            safeLower(s.category).includes(t)
+          );
+        })
+        .slice(0, 8);
 
-  return () => clearTimeout(timeoutId);
-}, [searchTerm]);
+      setSearchResults(results);
+      setShowSearchResults(true);
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, dedupedServices, isLoading]);
 
   // Sticky search bar effect
   useEffect(() => {
@@ -145,7 +195,7 @@ useEffect(() => {
 
   const isDisabledProceed = chargeItems.length === 0;
 
-  // ✅ normalize quantity input
+  // normalize quantity input
   const clampQty = (val: number) => {
     if (!Number.isFinite(val)) return 1;
     const n = Math.floor(val);
@@ -155,19 +205,23 @@ useEffect(() => {
   };
 
   const handleQtyChange = (itemId: string, raw: string) => {
-    // allow empty while typing
     if (raw.trim() === '') {
       dispatch(setQuantity({ itemId, quantity: 1 }));
       return;
     }
-    const parsed = Number(raw);
-    dispatch(setQuantity({ itemId, quantity: clampQty(parsed) }));
+    dispatch(setQuantity({ itemId, quantity: clampQty(Number(raw)) }));
   };
 
   const handleQtyBlur = (itemId: string, raw: string) => {
-    const parsed = Number(raw);
-    dispatch(setQuantity({ itemId, quantity: clampQty(parsed) }));
+    dispatch(setQuantity({ itemId, quantity: clampQty(Number(raw)) }));
   };
+
+  // Log errors in dev mode only
+  useEffect(() => {
+    if (isError && process.env.NODE_ENV === 'development') {
+      console.error('Billable items fetch error:', error);
+    }
+  }, [isError, error]);
 
   return (
     <div className="p-4 sm:p-5 lg:p-6 h-full">
@@ -175,22 +229,33 @@ useEffect(() => {
         {/* Left: Search + Items */}
         <div className="lg:col-span-8 xl:col-span-9 flex flex-col min-h-0" ref={containerRef}>
           {/* Sticky Search Section */}
-          <div className={`sticky top-0 z-30 pb-3 ${colors.bg.primary} transition-all duration-200 ${
-            isSearchSticky ? 'pt-1 bg-opacity-95 backdrop-blur-sm' : ''
-          }`}>
+          <div
+            className={`sticky top-0 z-30 pb-3 ${colors.bg.primary} transition-all duration-200 ${
+              isSearchSticky ? 'pt-1 bg-opacity-95 backdrop-blur-sm' : ''
+            }`}
+          >
             <div ref={searchWrapRef} className="relative">
               <div className="relative">
                 <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${colors.text.tertiary}`} />
                 <input
                   ref={inputRef}
                   type="text"
-                  placeholder="Search by service/item name, code, or category..."
+                  placeholder={
+                    isLoading 
+                      ? 'Loading billable items...' 
+                      : 'Search by service/item name, code, or category...'
+                  }
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  onFocus={() => searchTerm.trim() && setShowSearchResults(true)}
+                  onFocus={() => {
+                    if (searchTerm.trim() || isLoading) {
+                      setShowSearchResults(true);
+                    }
+                  }}
+                  disabled={isLoading}
                   className={`w-full pl-9 pr-10 py-2.5 sm:py-3 border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
                   focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg transition-all duration-200
-                  placeholder:${colors.text.muted} shadow-sm`}
+                  placeholder:${colors.text.muted} shadow-sm disabled:opacity-75 disabled:cursor-not-allowed`}
                 />
 
                 {searchTerm && (
@@ -216,23 +281,43 @@ useEffect(() => {
                   className={`absolute z-20 w-full mt-1.5 border shadow-2xl ${colors.border.primary} ${colors.bg.elevated}
                   rounded-lg overflow-hidden backdrop-blur-sm ${colors.bg.overlay}`}
                 >
-                  {searchResults.length > 0 ? (
+                  {isLoading ? (
+                    <div className="p-6 text-center">
+                      <div className="animate-pulse">
+                        <div className={`h-4 ${colors.bg.secondary} rounded w-3/4 mx-auto mb-3`}></div>
+                        <div className={`h-3 ${colors.bg.secondary} rounded w-1/2 mx-auto`}></div>
+                      </div>
+                      <p className={`text-sm ${colors.text.secondary} mt-2`}>Loading billable items…</p>
+                    </div>
+                  ) : isError ? (
+                    <div className="p-6 text-center">
+                      <div className={`inline-flex p-3 ${colors.bg.secondary} rounded-full mb-3`}>
+                        <AlertCircle className={`w-5 h-5 text-red-500`} />
+                      </div>
+                      <p className={`font-medium ${colors.text.primary} mb-1`}>Unable to load items</p>
+                      <p className={`text-sm ${colors.text.secondary}`}>
+                        {process.env.NODE_ENV === 'development' && error
+                          ? `Error: ${error.message}`
+                          : 'Check your connection or facility context.'}
+                      </p>
+                    </div>
+                  ) : searchResults.length > 0 ? (
                     <div className="max-h-72 overflow-y-auto">
                       {searchResults.map((service) => (
                         <button
-                          key={service.id}
+                          key={makeBillableKey(service)}
                           type="button"
                           onClick={() => handleAddItem(service)}
                           className={`w-full text-left p-3 border-b last:border-b-0 ${colors.border.subtle}
-                          ${colors.bg.hover} transition-all duration-150 cursor-pointer hover:${isDark ? 'bg-gray-800' : 'bg-gray-50'}
+                          ${colors.bg.hover} transition-all duration-150 cursor-pointer hover:${
+                            isDark ? 'bg-gray-800' : 'bg-gray-50'
+                          }
                           active:scale-[0.995]`}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
-                                <span className={`font-semibold truncate ${colors.text.primary}`}>
-                                  {service.name}
-                                </span>
+                                <span className={`font-semibold truncate ${colors.text.primary}`}>{service.name}</span>
                                 <span
                                   className={`text-xs px-1.5 py-0.5 ${colors.bg.secondary} ${colors.text.secondary} 
                                   flex-shrink-0 rounded`}
@@ -255,18 +340,13 @@ useEffect(() => {
                       ))}
                     </div>
                   ) : (
-                    // No results state
                     <div className="p-6 text-center">
                       <div className={`inline-flex p-3 ${colors.bg.secondary} rounded-full mb-3`}>
                         <Filter className={`w-5 h-5 ${colors.text.tertiary}`} />
                       </div>
                       <p className={`font-medium ${colors.text.primary} mb-1`}>No results found</p>
-                      <p className={`text-sm ${colors.text.secondary}`}>
-                        Try adjusting your search or filters
-                      </p>
-                      <p className={`text-xs mt-2 ${colors.text.muted}`}>
-                        Search by service name, code, or category
-                      </p>
+                      <p className={`text-sm ${colors.text.secondary}`}>Try adjusting your search or filters</p>
+                      <p className={`text-xs mt-2 ${colors.text.muted}`}>Search by service name, code, or category</p>
                     </div>
                   )}
                 </div>
@@ -275,9 +355,11 @@ useEffect(() => {
           </div>
 
           {/* Items header */}
-          <div className={`sticky top-12 z-20 ${colors.bg.primary} pb-2 transition-all duration-200 ${
-            isSearchSticky ? 'pt-2 bg-opacity-95 backdrop-blur-sm' : ''
-          }`}>
+          <div
+            className={`sticky top-12 z-20 ${colors.bg.primary} pb-2 transition-all duration-200 ${
+              isSearchSticky ? 'pt-2 bg-opacity-95 backdrop-blur-sm' : ''
+            }`}
+          >
             <div className="flex items-center justify-between gap-3">
               <h3 className={`text-base sm:text-lg font-bold ${colors.text.primary}`}>
                 Selected items <span className={`${colors.text.secondary} font-semibold`}>({chargeItems.length})</span>
@@ -297,29 +379,32 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* Items list area - Now with smooth scrolling */}
+          {/* Items list area */}
           <div className="flex-1 min-h-0">
             {chargeItems.length === 0 ? (
-              <div className={`h-full min-h-[260px] flex flex-col items-center justify-center text-center 
-                border ${colors.border.primary} rounded-xl ${colors.bg.secondary}`}>
+              <div
+                className={`h-full min-h-[260px] flex flex-col items-center justify-center text-center 
+                border ${colors.border.primary} rounded-xl ${colors.bg.secondary}`}
+              >
                 <div className={`p-4 ${colors.bg.primary} rounded-full mb-4`}>
                   <Calculator className={`w-10 h-10 sm:w-12 sm:h-12 ${colors.text.tertiary}`} />
                 </div>
                 <p className={`text-base font-semibold ${colors.text.primary}`}>No items added</p>
-                <p className={`text-sm mt-1 ${colors.text.secondary}`}>
-                  Search and add services/items to start billing
-                </p>
+                <p className={`text-sm mt-1 ${colors.text.secondary}`}>Search and add services/items to start billing</p>
               </div>
             ) : (
-              // ✅ Enhanced scrollable container with smooth scrolling
-              <div className={`h-full border ${colors.border.primary} rounded-xl overflow-hidden flex flex-col min-h-0
-                shadow-sm`}>
-                {/* Desktop table header - Sticky */}
-                <div className={`hidden md:grid grid-cols-12 gap-3 px-4 py-3 text-sm font-semibold border-b 
-                  ${colors.bg.secondary} ${colors.border.primary} sticky top-0 z-10 rounded-t-xl`}>
+              <div
+                className={`h-full border ${colors.border.primary} rounded-xl overflow-hidden flex flex-col min-h-0
+                shadow-sm`}
+              >
+                {/* Desktop table header */}
+                <div
+                  className={`hidden md:grid grid-cols-12 gap-3 px-4 py-3 text-sm font-semibold border-b 
+                  ${colors.bg.secondary} ${colors.border.primary} sticky top-0 z-10 rounded-t-xl`}
+                >
                   <div className="col-span-1 flex items-center gap-1">
                     <Hash className="w-3 h-3" />
-                    <span className='text-center'></span>
+                    <span className="text-center"></span>
                   </div>
                   <div className="col-span-4">Item</div>
                   <div className="col-span-2">Unit</div>
@@ -327,13 +412,15 @@ useEffect(() => {
                   <div className="col-span-2 text-right">Total</div>
                 </div>
 
-                {/* Scrollable list container with smooth scrolling */}
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scroll-smooth
+                {/* Scrollable list */}
+                <div
+                  className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scroll-smooth
                   [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-300 
                   [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 
                   dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 dark:[&::-webkit-scrollbar-track]:bg-gray-800
-                  hover:[&::-webkit-scrollbar-thumb]:bg-gray-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-gray-600">
-                  {/* Desktop rows with striping */}
+                  hover:[&::-webkit-scrollbar-thumb]:bg-gray-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-gray-600"
+                >
+                  {/* Desktop rows */}
                   <div className="hidden md:block">
                     {chargeItems.map((item, index) => (
                       <div
@@ -342,17 +429,17 @@ useEffect(() => {
                         ${colors.border.primary} transition-all duration-150 hover:${colors.bg.hover}
                         ${index % 2 === 0 ? colors.bg.stripe : colors.bg.stripeAlt}`}
                       >
-                        {/* Serial Number */}
                         <div className="col-span-1">
-                          <div className={`flex items-center justify-center w-7 h-7 rounded-full 
-                            ${isDark ? 'bg-gray-800' : 'bg-gray-100'} ${colors.text.secondary} text-sm font-medium`}>
+                          <div
+                            className={`flex items-center justify-center w-7 h-7 rounded-full 
+                            ${isDark ? 'bg-gray-800' : 'bg-gray-100'} ${colors.text.secondary} text-sm font-medium`}
+                          >
                             {index + 1}
                           </div>
                         </div>
 
-                        {/* Item */}
                         <div className="col-span-4 min-w-0">
-                          <p className={`font-semibold truncate ${colors.text.primary}`}>{item.service.name ?? "NA"}</p>
+                          <p className={`font-semibold truncate ${colors.text.primary}`}>{item.service.name ?? 'NA'}</p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className={`text-xs px-1.5 py-0.5 ${colors.bg.secondary} ${colors.text.secondary} rounded`}>
                               {item.service.code}
@@ -361,14 +448,12 @@ useEffect(() => {
                           </div>
                         </div>
 
-                        {/* Unit */}
                         <div className="col-span-2">
                           <span className={`font-semibold ${colors.text.primary}`}>
                             {formatCurrency(item.service.unitPrice)}
                           </span>
                         </div>
 
-                        {/* Qty (buttons + input) */}
                         <div className="col-span-3">
                           <div className="flex items-center gap-2">
                             <button
@@ -417,25 +502,27 @@ useEffect(() => {
                           </div>
                         </div>
 
-                        {/* Total */}
                         <div className="col-span-2 text-right">
-                          <span className={`font-extrabold ${colors.text.primary}`}>
-                            {formatCurrency(item.totalAmount)}
-                          </span>
+                          <span className={`font-extrabold ${colors.text.primary}`}>{formatCurrency(item.totalAmount)}</span>
                         </div>
                       </div>
                     ))}
                   </div>
 
-                  {/* Mobile cards with numbering */}
+                  {/* Mobile cards */}
                   <div className="md:hidden p-3 space-y-3">
                     {chargeItems.map((item, index) => (
-                      <div key={item.id} className={`border ${colors.border.primary} ${colors.bg.secondary} p-4 rounded-xl
-                        ${index % 2 === 0 ? colors.bg.stripe : colors.bg.stripeAlt}`}>
+                      <div
+                        key={item.id}
+                        className={`border ${colors.border.primary} ${colors.bg.secondary} p-4 rounded-xl
+                        ${index % 2 === 0 ? colors.bg.stripe : colors.bg.stripeAlt}`}
+                      >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-start gap-3 min-w-0">
-                            <div className={`flex items-center justify-center w-6 h-6 rounded-full 
-                              ${isDark ? 'bg-gray-800' : 'bg-gray-100'} ${colors.text.secondary} text-xs font-medium flex-shrink-0`}>
+                            <div
+                              className={`flex items-center justify-center w-6 h-6 rounded-full 
+                              ${isDark ? 'bg-gray-800' : 'bg-gray-100'} ${colors.text.secondary} text-xs font-medium flex-shrink-0`}
+                            >
                               {index + 1}
                             </div>
                             <div className="min-w-0">
@@ -463,16 +550,12 @@ useEffect(() => {
                         <div className="mt-4 grid grid-cols-2 gap-4 items-center">
                           <div>
                             <p className={`text-xs ${colors.text.secondary}`}>Unit price</p>
-                            <p className={`font-bold ${colors.text.primary}`}>
-                              {formatCurrency(item.service.unitPrice)}
-                            </p>
+                            <p className={`font-bold ${colors.text.primary}`}>{formatCurrency(item.service.unitPrice)}</p>
                           </div>
 
                           <div className="text-right">
                             <p className={`text-xs ${colors.text.secondary}`}>Total</p>
-                            <p className={`font-extrabold ${colors.text.primary}`}>
-                              {formatCurrency(item.totalAmount)}
-                            </p>
+                            <p className={`font-extrabold ${colors.text.primary}`}>{formatCurrency(item.totalAmount)}</p>
                           </div>
 
                           <div className="col-span-2">
@@ -515,13 +598,13 @@ useEffect(() => {
                   </div>
                 </div>
 
-                {/* Bottom mini footer - Sticky */}
-                <div className={`px-4 py-3 border-t ${colors.border.primary} ${colors.bg.secondary} 
-                  flex items-center justify-between sticky bottom-0 z-10 rounded-b-xl`}>
+                {/* Bottom mini footer */}
+                <div
+                  className={`px-4 py-3 border-t ${colors.border.primary} ${colors.bg.secondary} 
+                  flex items-center justify-between sticky bottom-0 z-10 rounded-b-xl`}
+                >
                   <span className={`text-sm ${colors.text.secondary}`}>Subtotal</span>
-                  <span className={`text-lg font-extrabold text-green-500`}>
-                    {formatCurrency(subtotal)}
-                  </span>
+                  <span className={`text-lg font-extrabold text-green-500`}>{formatCurrency(subtotal)}</span>
                 </div>
               </div>
             )}
