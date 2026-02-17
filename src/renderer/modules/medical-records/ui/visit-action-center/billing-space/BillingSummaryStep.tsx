@@ -29,6 +29,7 @@ import {
   selectBillingData,
   saveDraft,
 } from './billingSlice';
+import { capitalizeFirstLetters } from '../../../../../shared/utils/facilityRoleFormator';
 import {
   DEFAULT_DISCOUNT,
   DEFAULT_PAYMENT_METHODS,
@@ -374,6 +375,13 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     dispatch(setAdditionalNotes(notes));
   };
 
+
+  /**
+ * Capitalizes the first letter of each word in a string
+ * @param str - The input string to capitalize
+ * @returns The capitalized string
+ */
+
   /**
    * Handle finalizing payment by submitting to backend
    * Constructs payload matching BillingSubmissionPayload type
@@ -406,7 +414,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
           service: {
             id: item.service.id,
             code: item.service.code,
-            name: item.service.name.toLowerCase(), // Convert to lowercase as requested
+            name: item.service.name.toUpperCase(), // Convert to lowercase as requested
             unitPrice: item.service.unitPrice,
             category: item.service.category,
           },
@@ -581,7 +589,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
                   {/* Services */}
                   <div className="mb-3">
-                    <h3 className="text-sm font-extrabold mb-2">services rendered</h3>
+                    <h3 className="text-sm font-extrabold mb-2">Services rendered</h3>
                     {chargeItems.length === 0 ? (
                       <div className="text-xs text-gray-600 italic py-2">No items added yet</div>
                     ) : (
@@ -589,7 +597,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
                         {chargeItems.map((item) => (
                           <div key={item.id} className="flex justify-between text-xs border-b border-gray-100 pb-1.5">
                             <div className="min-w-0 pr-2 flex-1">
-                              <p className="font-semibold truncate lowercase">{item.service.name}</p>
+                              <p className="font-semibold truncate">{capitalizeFirstLetters(item.service.name)}</p>
                               <p className="text-[11px] text-gray-600">
                                 {item.quantity} × {formatCurrency(item.service.unitPrice)}
                               </p>
