@@ -220,16 +220,16 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
             {activeContextOption.icon}
           </div>
         </div>
-        <div className="hidden lg:block text-left">
+       <div className="hidden lg:block text-left max-w-30">
           <p className={cn(
-            'text-xs font-semibold leading-tight',
+            'text-xs font-semibold leading-tight truncate',
             isDark ? 'text-gray-100' : 'text-gray-900'
           )}>
             {formatName(activeContextOption.title)}
           </p>
           <p className={cn(
-            'text-xs leading-tight text-center',
-            isDark ? 'text-gray-100' : 'text-gray-900'
+            'text-xs leading-tight truncate',
+            isDark ? 'text-gray-500' : 'text-gray-500'
           )}>
             {activeContextOption.subtitle}
           </p>

@@ -465,7 +465,8 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
   // Get context subtitle for header
   const getContextSubtitle = useCallback(() => {
     if (activeFacilityName && activeRoleCode) {
-      return `${activeFacilityName} • ${getRoleDisplayName(activeRoleCode)}`;
+      // return `${activeFacilityName} • ${getRoleDisplayName(activeRoleCode)}`;
+      return `${activeFacilityName}`;
     }
     return currentCapabilityName;
   }, [activeFacilityName, activeRoleCode, currentCapabilityName]);
