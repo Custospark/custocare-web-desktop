@@ -148,12 +148,6 @@ export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'lig
             </p>
           </div>
         </div>
-        {/* Optional: Show visit phase if available */}
-        {visitInfo?.phase && (
-          <div className={`text-xs ${colors.text.secondary} mt-1 ml-10`}>
-            Phase: {visitInfo.phase.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-          </div>
-        )}
       </div>
       
       {/* Indicators */}
