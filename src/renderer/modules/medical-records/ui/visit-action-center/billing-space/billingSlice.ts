@@ -273,6 +273,17 @@ const billingSlice = createSlice({
         console.error('Error clearing billing draft:', error);
       }
     },
+  //     clearAll: () => {
+  //   return { ...INITIAL_BILLING_STATE };
+  // },
+    clearAll: (state) => {
+    try {
+      if (state.visitId) sessionStorage.removeItem(getDraftStorageKey(state.visitId));
+    } catch (error) {
+      console.error('Error clearing draft on clearAll:', error);
+    }
+    return { ...INITIAL_BILLING_STATE };
+  },
 
     // Patient Info Actions
     setPatientInfo: (state, action: PayloadAction<{ visitId?: string; patientId?: string; patientName?: string }>) => {
@@ -309,6 +320,7 @@ export const {
   clearDraft,
   setQuantity,
   setPatientInfo,
+  clearAll,
 } = billingSlice.actions;
 
 export default billingSlice.reducer;

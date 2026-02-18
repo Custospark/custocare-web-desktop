@@ -1,6 +1,9 @@
 import React, { useEffect, useCallback, useRef } from 'react';
 import { X, AlertTriangle, FileText, CreditCard, CheckCircle2, User, Info } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom'; // or your router's hook
+import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
+import { clearActiveVisit } from '../../../../../app/store/slices/visitSlice';
 import {
   closeTray,
   setStep,
@@ -10,7 +13,7 @@ import {
   selectIsDirty,
   saveDraft,
   selectPatientInfo,
-  resetBilling,
+  clearAll, 
 } from './billingSlice';
 import { ChargeEntryStep } from './ChargeEntryStep';
 import { BillingSummaryStep } from './BillingSummaryStep';
@@ -23,6 +26,7 @@ interface BillingTrayProps {
 export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => {
   const isDark = theme === 'dark';
   const dispatch = useDispatch();
+
   const { confirm } = useConfirm();
 
   const isTrayOpen = useSelector(selectIsTrayOpen);
@@ -30,6 +34,8 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
   const isDirty = useSelector(selectIsDirty);
   const status = useSelector(selectBillingStatus);
   const patientInfo = useSelector(selectPatientInfo);
+  const QUEUE_ROUTE = MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE;
+
 
   // Use refs to track if we've shown the status messages without causing re-renders
   const hasShownSettledRef = useRef(false);
@@ -73,47 +79,45 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
     }
   }, [isTrayOpen]); // Only depend on isTrayOpen
 
-  const handleClose = useCallback(async () => {
-    if (!isDirty) {
-      // Show confirmation before closing if payment was just settled
-      if (status === 'settled') {
-        const confirmed = await confirm({
-          title: 'Close billing tray?',
-          message: 'Payment has been settled. You can view the receipt in the billing history.',
-          confirmText: 'Close',
-          cancelText: 'Stay',
-          variant: 'info',
-          theme,
-        });
+const navigate = useNavigate();
 
-        if (confirmed) {
-          dispatch(closeTray());
-          dispatch(resetBilling());
-        }
-      } else {
-        dispatch(closeTray());
-      }
-      return;
-    }
-
-   const confirmed = await confirm({
-      title: status === 'settled' ? 'Close billing window?' : 'Discard billing changes?',
-      message: status === 'settled' 
-        ? 'Payment has been successfully completed. All records are saved and the receipt has been generated. You can close this window.'
-        : 'You have unsaved billing changes. Closing will discard them.',
-      confirmText: status === 'settled' ? 'Close' : 'Discard',
+const handleClose = useCallback(async () => {
+  if (status === 'settled') {
+    const confirmed = await confirm({
+      title: 'Close billing window?',
+      message: 'Payment has been successfully completed. All records are saved and the receipt has been generated.',
+      confirmText: 'Close',
       cancelText: 'Stay',
-      variant: status === 'settled' ? 'info' : 'warning',
+      variant: 'info',
       theme,
     });
 
     if (confirmed) {
-      dispatch(closeTray());
-      if (status === 'settled') {
-        dispatch(resetBilling());
-      }
+      dispatch(clearAll());        // reset billing state + clear sessionStorage draft
+      dispatch(clearActiveVisit()); // store current as previous, clear active visit
+      navigate(QUEUE_ROUTE);       // redirect to queue
     }
-  }, [confirm, dispatch, isDirty, theme, status]);
+    return;
+  }
+
+  if (isDirty) {
+    const confirmed = await confirm({
+      title: 'Discard billing changes?',
+      message: 'You have unsaved billing changes. Closing will discard them.',
+      confirmText: 'Discard',
+      cancelText: 'Stay',
+      variant: 'warning',
+      theme,
+    });
+
+    if (confirmed) {
+      dispatch(clearAll());
+    }
+    return;
+  }
+
+  dispatch(closeTray());
+}, [confirm, dispatch, isDirty, navigate, theme, status]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
