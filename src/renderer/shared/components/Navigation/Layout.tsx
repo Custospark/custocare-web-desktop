@@ -1,3 +1,4 @@
+// Layout.tsx
 import React, { useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import {
   PanelLeftClose,
@@ -17,8 +18,8 @@ import { cn } from '../../types/cn';
 
 import LayoutTopBars from './LayoutTopBars';
 import DecorativeBackground from './DecorativeBackground';
-import type { SidebarPosition, SystemStatus, ThemeMode } from './StatusBar';
-
+import type { SidebarPosition, ThemeMode } from './StatusBar';
+import { useNetworkStatus } from '../../../app/store/hooks/seNetworkStatus';
 /**
  * ============================================================================
  * CONSTANTS
@@ -43,7 +44,6 @@ interface LocalLayoutState {
   mobileSidebarOpen: boolean;
   searchQuery: string;
   isSearchFocused: boolean;
-  systemStatus: SystemStatus;
   sidebarPosition: SidebarPosition;
   isTransitioning: boolean;
   topBarsVisible: boolean; // statusbar + navbar together
@@ -84,6 +84,15 @@ export const Layout: React.FC = () => {
     sidebarOpen: state.ui.sidebarOpen as boolean,
   }));
 
+  // Real network status hook
+  const { 
+    systemStatus, 
+    isOnline, 
+    latency, 
+    lastChecked,
+    retryConnection 
+  } = useNetworkStatus();
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -91,7 +100,6 @@ export const Layout: React.FC = () => {
     mobileSidebarOpen: false,
     searchQuery: '',
     isSearchFocused: false,
-    systemStatus: 'online',
     sidebarPosition: loadSidebarPosition(),
     isTransitioning: false,
     topBarsVisible: loadTopBarsVisible(),
@@ -257,29 +265,6 @@ export const Layout: React.FC = () => {
   }, [theme]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const statuses: SystemStatus[] = ['online', 'warning', 'error'];
-      const weights = [0.8, 0.15, 0.05];
-
-      const r = Math.random();
-      let acc = 0;
-      let next: SystemStatus = 'online';
-
-      for (let i = 0; i < statuses.length; i++) {
-        acc += weights[i];
-        if (r < acc) {
-          next = statuses[i];
-          break;
-        }
-      }
-
-      setLocalState(prev => ({ ...prev, systemStatus: next }));
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
     const savedSidebarState = localStorage.getItem(STORAGE_KEYS.SIDEBAR_OPEN);
     if (savedSidebarState !== null) {
       dispatch(setSidebarOpen(savedSidebarState === 'true'));
@@ -309,7 +294,11 @@ export const Layout: React.FC = () => {
         themeClasses={{ backdrop: themeClasses.backdrop, glass: themeClasses.glass, accent: themeClasses.accent }}
         topBarsVisible={localState.topBarsVisible}
         onToggleTopBarsVisible={handleToggleTopBarsVisible}
-        systemStatus={localState.systemStatus}
+        systemStatus={systemStatus}
+        isOnline={isOnline}
+        latency={latency}
+        lastChecked={lastChecked}
+        onRetryConnection={retryConnection}
         searchQuery={localState.searchQuery}
         isSearchFocused={localState.isSearchFocused}
         onSearchChange={handleSearchChange}

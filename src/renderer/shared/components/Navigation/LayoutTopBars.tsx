@@ -1,16 +1,15 @@
+// LayoutTopBars.tsx
 import React, { useMemo } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '../../types/cn';
 import Navbar from './Navbar/Navbar';
-import StatusBar, { type SidebarPosition,type  SystemStatus, type ThemeMode } from './StatusBar';
+import StatusBar, { type SidebarPosition, type SystemStatus, type ThemeMode } from './StatusBar';
 
 export interface LayoutTopBarsThemeClasses {
   backdrop: string;
   glass: string;
   accent: string;
 }
-
-
 
 export interface LayoutTopBarsProps {
   theme: ThemeMode;
@@ -20,6 +19,10 @@ export interface LayoutTopBarsProps {
   onToggleTopBarsVisible: () => void;
 
   systemStatus: SystemStatus;
+  isOnline: boolean;
+  latency: number | null;
+  lastChecked: Date | null;
+  onRetryConnection: () => void;
 
   searchQuery: string;
   isSearchFocused: boolean;
@@ -54,6 +57,10 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
   topBarsVisible,
   onToggleTopBarsVisible,
   systemStatus,
+  isOnline,
+  latency,
+  lastChecked,
+  onRetryConnection,
   searchQuery,
   isSearchFocused,
   onSearchChange,
@@ -82,6 +89,10 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
           theme={theme}
           themeClasses={{ backdrop: themeClasses.backdrop }}
           systemStatus={systemStatus}
+          isOnline={isOnline}
+          latency={latency}
+          lastChecked={lastChecked}
+          onRetryConnection={onRetryConnection}
           searchQuery={searchQuery}
           isSearchFocused={isSearchFocused}
           onSearchChange={onSearchChange}

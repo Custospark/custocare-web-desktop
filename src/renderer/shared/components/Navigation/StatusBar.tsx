@@ -1,7 +1,9 @@
+// StatusBar.tsx
 import React, { useMemo } from 'react';
 import {
   Activity,
-  Bell,
+  AlertTriangle,
+  WifiOff,
   Command,
   Search,
   Settings,
@@ -9,11 +11,13 @@ import {
   Moon,
   X,
   PanelRight,
+  RefreshCw,
+  Zap,
 } from 'lucide-react';
 import { cn } from '../../types/cn';
 
 export type SidebarPosition = 'left' | 'right';
-export type SystemStatus = 'online' | 'warning' | 'error';
+export type SystemStatus = 'online' | 'slow' | 'offline';
 export type ThemeMode = 'light' | 'dark';
 
 export interface StatusBarThemeClasses {
@@ -25,6 +29,10 @@ export interface StatusBarProps {
   themeClasses: StatusBarThemeClasses;
 
   systemStatus: SystemStatus;
+  isOnline: boolean;
+  latency: number | null;
+  lastChecked: Date | null;
+  onRetryConnection: () => void;
 
   searchQuery: string;
   isSearchFocused: boolean;
@@ -44,8 +52,7 @@ export interface StatusBarProps {
 }
 
 /**
- * Avoid dynamic Tailwind class generation.
- * We define explicit, build-safe class maps.
+ * Real status configurations based on actual connectivity
  */
 const STATUS_STYLES: Record<
   SystemStatus,
@@ -60,7 +67,7 @@ const STATUS_STYLES: Record<
   }
 > = {
   online: {
-    label: 'System Online',
+    label: 'Connected',
     icon: <Activity className="w-3 h-3" />,
     pulse: true,
     textClass: 'text-emerald-400',
@@ -68,19 +75,19 @@ const STATUS_STYLES: Record<
     borderClassDark: 'border-emerald-500/20',
     borderClassLight: 'border-emerald-200',
   },
-  warning: {
-    label: 'System Warning',
-    icon: <Bell className="w-3 h-3" />,
+  slow: {
+    label: 'Slow Connection',
+    icon: <AlertTriangle className="w-3 h-3" />,
     pulse: true,
     textClass: 'text-amber-400',
     bgClass: 'bg-amber-500/10',
     borderClassDark: 'border-amber-500/20',
     borderClassLight: 'border-amber-200',
   },
-  error: {
-    label: 'System Error',
-    icon: <Bell className="w-3 h-3" />,
-    pulse: true,
+  offline: {
+    label: 'Offline',
+    icon: <WifiOff className="w-3 h-3" />,
+    pulse: false,
     textClass: 'text-red-400',
     bgClass: 'bg-red-500/10',
     borderClassDark: 'border-red-500/20',
@@ -92,6 +99,10 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   theme,
   themeClasses,
   systemStatus,
+  isOnline,
+  latency,
+  lastChecked,
+  onRetryConnection,
   searchQuery,
   isSearchFocused,
   onSearchChange,
@@ -134,6 +145,27 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     );
   }, [sidebarPosition, theme]);
 
+  const formatLatency = (ms: number | null): string => {
+    if (ms === null) return 'N/A';
+    if (ms < 100) return `${ms}ms`;
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
+  };
+
+  const formatLastChecked = (date: Date | null): string => {
+    if (!date) return 'Never';
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    
+    if (diffSec < 10) return 'Just now';
+    if (diffSec < 60) return `${diffSec}s ago`;
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHour = Math.floor(diffMin / 60);
+    return `${diffHour}h ago`;
+  };
+
   return (
     <div
       className={cn(
@@ -145,7 +177,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       )}
     >
       <div className="flex items-center justify-between gap-4">
-        {/* System Status */}
+        {/* System Status - Real connectivity info */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <div
             className={cn(
@@ -162,7 +194,48 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             <span className="text-xs font-medium truncate max-w-[120px] sm:max-w-none">
               {status.label}
             </span>
+            
+            {/* Latency indicator */}
+            {isOnline && latency !== null && (
+              <div className="flex items-center gap-1 ml-1">
+                <Zap className="w-2.5 h-2.5" />
+                <span className="text-xs font-mono">{formatLatency(latency)}</span>
+              </div>
+            )}
           </div>
+
+          {/* Retry button when offline/slow */}
+          {(systemStatus === 'offline' || systemStatus === 'slow') && (
+            <button
+              onClick={onRetryConnection}
+              aria-label="Retry connection"
+              title="Check connection now"
+              className={cn(
+                'p-1.5 rounded-lg transition-all duration-200',
+                'hover:scale-110 active:scale-95',
+                'focus:outline-none focus:ring-2 focus:ring-offset-1',
+                theme === 'dark'
+                  ? 'bg-gray-800/40 text-gray-400 hover:text-cyan-400 hover:bg-gray-800/60 focus:ring-cyan-500/50'
+                  : 'bg-gray-100/60 text-gray-600 hover:text-blue-600 hover:bg-gray-100/80 focus:ring-blue-500/50'
+              )}
+            >
+              <RefreshCw className="w-3 h-3" />
+            </button>
+          )}
+
+          {/* Last checked timestamp */}
+          <span
+            className={cn(
+              'hidden md:inline px-2 py-0.5 rounded text-xs border',
+              'transition-all duration-200',
+              theme === 'dark'
+                ? 'bg-gray-800/40 text-gray-400 border-gray-700/40'
+                : 'bg-gray-100/60 text-gray-600 border-gray-200'
+            )}
+            title={lastChecked ? `Last checked: ${lastChecked.toLocaleTimeString()}` : 'Never checked'}
+          >
+            {formatLastChecked(lastChecked)}
+          </span>
 
           <span
             className={cn(
