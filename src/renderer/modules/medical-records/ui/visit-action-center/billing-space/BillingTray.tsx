@@ -1,5 +1,5 @@
-import React, { useEffect, useCallback } from 'react';
-import { X, AlertTriangle, FileText, CreditCard, CheckCircle2, User } from 'lucide-react';
+import React, { useEffect, useCallback, useRef } from 'react';
+import { X, AlertTriangle, FileText, CreditCard, CheckCircle2, User, Info } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   closeTray,
@@ -10,6 +10,7 @@ import {
   selectIsDirty,
   saveDraft,
   selectPatientInfo,
+  resetBilling,
 } from './billingSlice';
 import { ChargeEntryStep } from './ChargeEntryStep';
 import { BillingSummaryStep } from './BillingSummaryStep';
@@ -29,6 +30,10 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
   const isDirty = useSelector(selectIsDirty);
   const status = useSelector(selectBillingStatus);
   const patientInfo = useSelector(selectPatientInfo);
+
+  // Use refs to track if we've shown the status messages without causing re-renders
+  const hasShownSettledRef = useRef(false);
+  const hasShownReadyRef = useRef(false);
 
   const colors = {
     bg: {
@@ -51,25 +56,64 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
     },
   };
 
+  // Show status banners based on billing status - using refs instead of state
+  useEffect(() => {
+    if (status === 'settled' && !hasShownSettledRef.current) {
+      hasShownSettledRef.current = true;
+    } else if (status === 'ready' && !hasShownReadyRef.current) {
+      hasShownReadyRef.current = true;
+    }
+  }, [status]); // Only depend on status, not refs
+
+  // Reset status message refs when tray is closed
+  useEffect(() => {
+    if (!isTrayOpen) {
+      hasShownSettledRef.current = false;
+      hasShownReadyRef.current = false;
+    }
+  }, [isTrayOpen]); // Only depend on isTrayOpen
+
   const handleClose = useCallback(async () => {
     if (!isDirty) {
-      dispatch(closeTray());
+      // Show confirmation before closing if payment was just settled
+      if (status === 'settled') {
+        const confirmed = await confirm({
+          title: 'Close billing tray?',
+          message: 'Payment has been settled. You can view the receipt in the billing history.',
+          confirmText: 'Close',
+          cancelText: 'Stay',
+          variant: 'info',
+          theme,
+        });
+
+        if (confirmed) {
+          dispatch(closeTray());
+          dispatch(resetBilling());
+        }
+      } else {
+        dispatch(closeTray());
+      }
       return;
     }
 
-    const confirmed = await confirm({
-      title: 'Discard billing changes?',
-      message: 'You have unsaved billing changes. Closing will discard them.',
-      confirmText: 'Discard',
-      cancelText: 'Cancel',
-      variant: 'warning',
+   const confirmed = await confirm({
+      title: status === 'settled' ? 'Close billing window?' : 'Discard billing changes?',
+      message: status === 'settled' 
+        ? 'Payment has been successfully completed. All records are saved and the receipt has been generated. You can close this window.'
+        : 'You have unsaved billing changes. Closing will discard them.',
+      confirmText: status === 'settled' ? 'Close' : 'Discard',
+      cancelText: 'Stay',
+      variant: status === 'settled' ? 'info' : 'warning',
       theme,
     });
 
     if (confirmed) {
       dispatch(closeTray());
+      if (status === 'settled') {
+        dispatch(resetBilling());
+      }
     }
-  }, [confirm, dispatch, isDirty, theme]);
+  }, [confirm, dispatch, isDirty, theme, status]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -91,6 +135,33 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
     { key: 'charge_entry', label: 'Charges', icon: FileText },
     { key: 'billing_summary', label: 'Payment', icon: CreditCard },
   ] as const;
+
+  // Get status display config using same approach as BillingSummary
+  const getStatusConfig = (billingStatus: typeof status) => {
+    switch (billingStatus) {
+      case 'settled':
+        return {
+          bg: 'bg-green-600 text-white dark:bg-green-500 dark:text-white',
+          icon: CheckCircle2,
+          message: 'Payment settled - Records saved successfully',
+        };
+      case 'ready':
+        return {
+          bg: 'bg-blue-600 text-white dark:bg-blue-500 dark:text-white',
+          icon: CreditCard,
+          message: 'Payment records saved - Ready to finalize',
+        };
+      default:
+        return {
+          bg: 'bg-gray-600 text-white dark:bg-gray-500 dark:text-white',
+          icon: FileText,
+          message: 'Draft - Unsaved changes',
+        };
+    }
+  };
+
+  const statusConfig = getStatusConfig(status);
+  const StatusIcon = statusConfig.icon;
 
   if (!isTrayOpen) return null;
 
@@ -140,10 +211,15 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
                   <React.Fragment key={step.key}>
                     <button
                       onClick={() => handleSetStep(step.key)}
+                      disabled={status === 'settled' && step.key === 'charge_entry'}
                       type="button"
                       className={`
                         flex items-center gap-1.5 px-2.5 py-1.5 rounded-md 
                         transition-colors cursor-pointer whitespace-nowrap
+                        ${status === 'settled' && step.key === 'charge_entry' 
+                          ? 'opacity-50 cursor-not-allowed' 
+                          : ''
+                        }
                         ${isActive 
                           ? `${colors.accent.primary} ${colors.accent.text}` 
                           : `bg-transparent ${colors.text.secondary} ${colors.bg.hover}`
@@ -168,17 +244,24 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
 
             {/* Right: Status & Close */}
             <div className="flex items-center gap-2 flex-shrink-0">
-             <div
-              className={`px-2 py-1 rounded-md text-xs font-medium select-none whitespace-nowrap ${
-                status === 'draft'
-                  ? 'bg-gray-600 text-white dark:bg-gray-500 dark:text-white'
-                  : status === 'ready'
-                  ? 'bg-blue-600 text-white dark:bg-blue-500 dark:text-white'
-                  : 'bg-green-600 text-white dark:bg-green-500 dark:text-white'
-              }`}
-            >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </div>
+              <div className="relative group">
+                <div
+                  className={`px-2 py-1 rounded-md text-xs font-medium select-none whitespace-nowrap flex items-center gap-1.5 ${statusConfig.bg}`}
+                >
+                  <StatusIcon className="w-3 h-3" />
+                  <span>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
+                </div>
+                
+                {/* Tooltip with status message */}
+                <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-50">
+                  <div className={`px-3 py-2 rounded-lg shadow-lg ${colors.bg.secondary} border ${colors.border.primary} max-w-xs`}>
+                    <div className="flex items-start gap-2">
+                      <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                      <p className={`text-xs ${colors.text.secondary}`}>{statusConfig.message}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
               
               <button
                 onClick={() => void handleClose()}
@@ -200,13 +283,25 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
             )}
           </div>
 
-          {/* Dirty Warning */}
-          {isDirty && (
+          {/* Dirty Warning - Only show if not settled */}
+          {isDirty && status !== 'settled' && (
             <div className={`p-2 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                 <span className={`text-xs ${colors.text.secondary}`}>
                   Unsaved changes - closing will discard them
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Settled Status Footer */}
+          {status === 'settled' && (
+            <div className={`p-2 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                <span className={`text-xs ${colors.text.secondary}`}>
+                  Payment finalized. You can print the receipt from the Payment step.
                 </span>
               </div>
             </div>
