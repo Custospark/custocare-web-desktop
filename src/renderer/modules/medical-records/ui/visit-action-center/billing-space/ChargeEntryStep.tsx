@@ -13,6 +13,7 @@ import {
   setQuantity,
   selectBillingStatus,
 } from './billingSlice';
+import { isInventoryItem } from '../../../api/billable-items/BillingItemsTypes';
 
 import { type ServiceItem, formatCurrency, makeBillableKey } from './billing-types';
 import { useGetBillableItems } from '../../../api/billable-items/BillableItemsQueries';
@@ -119,6 +120,67 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     },
   };
 
+    const getStockBadge = (service: ServiceItem) => {
+  const fullItem = data?.data?.items_full?.find(
+    (x) => x.id === service.id && x.code === service.code && x.category === service.category
+  );
+
+  // No full item found — treat as service fallback
+  if (!fullItem) {
+    return (
+      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+        isDark ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-50 text-purple-700'
+      }`}>
+        Service
+      </span>
+    );
+  }
+
+  if (isInventoryItem(fullItem)) {
+      const units = fullItem.package_quantity;
+      const isLow = fullItem.stock.is_low_stock;
+      const isOut = units <= 0;
+      
+      // Get the base unit name and handle pluralization
+      const unitName = fullItem.unit_of_measure ?? 'unit';
+      const pluralUnit = unitName.endsWith('y') 
+        ? unitName.slice(0, -1) + 'ies' 
+        : unitName.endsWith('s') 
+          ? unitName 
+          : unitName + 's';
+      
+      const displayUnit = units === 1 ? unitName : pluralUnit;
+
+      return (
+        <span className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap ${
+          isOut
+            ? isDark ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700'
+            : isLow
+            ? isDark ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-700'
+            : isDark ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'
+        }`}>
+          {isOut ? 'Out of stock' : `${units} ${displayUnit}`}
+        </span>
+      );
+  }
+
+  // It's a service type from items_full
+  return (
+    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+      isDark ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-50 text-purple-700'
+    }`}>
+      Service
+    </span>
+  );
+};
+
+    const isOutOfStock = (service: ServiceItem): boolean => {
+      const fullItem = data?.data?.items_full?.find(
+        (x) => x.id === service.id && x.code === service.code && x.category === service.category
+      );
+      if (!fullItem || !isInventoryItem(fullItem)) return false;
+      return fullItem.stock.units_per_package <= 0;
+    };
   const subtotal = useMemo(() => chargeItems.reduce((sum, item) => sum + item.totalAmount, 0), [chargeItems]);
 
   // Client-side search filter with loading state awareness
@@ -349,41 +411,61 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                     </div>
                   ) : searchResults.length > 0 ? (
                     <div className="max-h-72 overflow-y-auto">
-                      {searchResults.map((service) => (
-                        <button
-                          key={makeBillableKey(service)}
-                          type="button"
-                          onClick={() => handleAddItem(service)}
-                          className={`w-full text-left p-3 border-b last:border-b-0 ${colors.border.subtle}
-                          ${colors.bg.hover} transition-all duration-150 cursor-pointer hover:${
-                            isDark ? 'bg-gray-800' : 'bg-gray-50'
-                          }
-                          active:scale-[0.995]`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className={`font-semibold truncate ${colors.text.primary}`}>{service.name}</span>
-                                <span
-                                  className={`text-xs px-1.5 py-0.5 ${colors.bg.secondary} ${colors.text.secondary} 
-                                  flex-shrink-0 rounded`}
-                                >
-                                  {service.code}
-                                </span>
+                   {searchResults.map((service) => {
+                        const outOfStock = isOutOfStock(service);
+                        return (
+                          <button
+                            key={makeBillableKey(service)}
+                            type="button"
+                            onClick={() => !outOfStock && handleAddItem(service)}
+                            disabled={outOfStock}
+                            className={`w-full text-left p-3 border-b last:border-b-0 ${colors.border.subtle}
+                              transition-all duration-150
+                              ${outOfStock
+                                ? `cursor-not-allowed ${isDark ? 'opacity-50' : 'opacity-60'}`
+                                : `${colors.bg.hover} cursor-pointer hover:${isDark ? 'bg-gray-800' : 'bg-gray-50'} active:scale-[0.995]`
+                              }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`font-semibold truncate ${
+                                    outOfStock ? colors.text.disabled : colors.text.primary
+                                  }`}>
+                                    {service.name}
+                                  </span>
+                                  <span className={`text-xs px-1.5 py-0.5 ${colors.bg.secondary} ${colors.text.secondary} flex-shrink-0 rounded`}>
+                                    {service.code}
+                                  </span>
+                                  {getStockBadge(service)}
+                                </div>
+                                <div className="flex items-center justify-between mt-1 text-sm">
+                                  <span className={`truncate ${colors.text.secondary}`}>{service.category}</span>
+                                  <span className={`font-semibold ${outOfStock ? colors.text.disabled : colors.text.primary}`}>
+                                    {formatCurrency(service.unitPrice)}
+                                  </span>
+                                </div>
+                                {outOfStock && (
+                                  <p className={`text-xs mt-1 ${isDark ? 'text-red-400' : 'text-red-600'}`}>
+                                    Cannot add — no stock available
+                                  </p>
+                                )}
                               </div>
-                              <div className="flex items-center justify-between mt-1 text-sm">
-                                <span className={`truncate ${colors.text.secondary}`}>{service.category}</span>
-                                <span className={`font-semibold ${colors.text.primary}`}>
-                                  {formatCurrency(service.unitPrice)}
-                                </span>
+                              <div className={`p-1.5 rounded-full flex-shrink-0 ${
+                                outOfStock
+                                  ? isDark ? 'bg-gray-800' : 'bg-gray-100'
+                                  : isDark ? 'bg-blue-900/30' : 'bg-blue-50'
+                              }`}>
+                                <Plus className={`w-4 h-4 ${
+                                  outOfStock
+                                    ? colors.text.disabled
+                                    : isDark ? 'text-blue-400' : 'text-blue-600'
+                                }`} />
                               </div>
                             </div>
-                            <div className={`p-1.5 ${isDark ? 'bg-blue-900/30' : 'bg-blue-50'} rounded-full`}>
-                              <Plus className={`${isDark ? 'text-blue-400' : 'text-blue-600'} w-4 h-4 flex-shrink-0`} />
-                            </div>
-                          </div>
-                        </button>
-                      ))}
+                          </button>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="p-6 text-center">
@@ -512,6 +594,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                               {item.service.code}
                             </span>
                             <span className={`text-xs truncate ${colors.text.secondary}`}>{item.service.category}</span>
+                            {getStockBadge(item.service)}
                           </div>
                         </div>
 
@@ -613,6 +696,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                                   {item.service.code}
                                 </span>
                                 <span className={`text-xs ${colors.text.secondary} truncate`}>{item.service.category}</span>
+                                
                               </div>
                             </div>
                           </div>

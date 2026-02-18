@@ -573,7 +573,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
 
         {isLoading && !queueData && (
           <div className="py-12">
-            <LoadingSkeleton theme={theme} variant="default" message="Loading queue data..." />
+            <LoadingSkeleton theme={theme} variant="default" message="Updating the queue..." />
           </div>
         )}
 
@@ -617,7 +617,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                   <>
                     <Users className={`w-16 h-16 mx-auto mb-4 cursor-default ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
                     <h3 className="text-lg font-semibold mb-2">Queue is Empty</h3>
-                    <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>No visits in the queue matching current filters</p>
+                    <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>No Patients in the queue matching current filters</p>
                     {showNewPatientRegistration && onNewPatientRegistration && (
                       <button
                         onClick={onNewPatientRegistration}
