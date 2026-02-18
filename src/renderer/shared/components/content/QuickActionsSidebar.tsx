@@ -4,7 +4,6 @@ import type { RootState } from '../../../app/store/store';
 import {
   ChevronLeft,
   ChevronRight,
-  LayoutPanelLeft,
   PanelRight,
   Sparkles,
   Maximize2,
@@ -15,6 +14,7 @@ import {
   Minimize2,
   ChevronsLeft,
   ChevronsRight,
+  PanelLeft,
 } from 'lucide-react';
 import { cn } from '../../utils/classNameUtils';
 
@@ -326,38 +326,48 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
             {!collapsedSide && (
               <div className="flex items-center gap-1.5">
                 {/* Dock left */}
-                <button
-                  type="button"
-                  onClick={() => onDockChange('left')}
-                  aria-label="Dock left"
-                  title="Dock left"
-                  className={cn(
-                    'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 cursor-pointer',
-                    theme === 'dark'
-                      ? 'hover:bg-gray-800/60 text-gray-400 hover:text-cyan-300 focus:ring-cyan-500/40'
-                      : 'hover:bg-gray-100/70 text-gray-600 hover:text-blue-700 focus:ring-blue-500/40',
-                    dockSide === 'left' && (theme === 'dark' ? 'bg-gray-800/70 text-cyan-300' : 'bg-gray-100 text-blue-700')
-                  )}
-                >
-                  <LayoutPanelLeft className="w-4 h-4" />
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => onDockChange('left')}
+                    aria-label="Dock left"
+                    title="Dock left"
+                    className={cn(
+                      'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 cursor-pointer',
+                      theme === 'dark'
+                        ? 'hover:bg-gray-800/60 focus:ring-cyan-500/40'
+                        : 'hover:bg-gray-100/70 focus:ring-blue-500/40',
+                      // Default blue icon
+                      theme === 'dark' ? 'text-cyan-400' : 'text-blue-600',
+                      // Active highlighting (on top of blue icon)
+                      dockSide === 'left' && (theme === 'dark' 
+                        ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 shadow-lg shadow-cyan-500/30' 
+                        : 'bg-blue-500/20 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/30')
+                    )}
+                  >
+                    <PanelLeft className="w-4 h-4" />
+                  </button>
 
-                {/* Dock right */}
-                <button
-                  type="button"
-                  onClick={() => onDockChange('right')}
-                  aria-label="Dock right"
-                  title="Dock right"
-                  className={cn(
-                    'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 cursor-pointer',
-                    theme === 'dark'
-                      ? 'hover:bg-gray-800/60 text-gray-400 hover:text-cyan-300 focus:ring-cyan-500/40'
-                      : 'hover:bg-gray-100/70 text-gray-600 hover:text-blue-700 focus:ring-blue-500/40',
-                    dockSide === 'right' && (theme === 'dark' ? 'bg-gray-800/70 text-cyan-300' : 'bg-gray-100 text-blue-700')
-                  )}
-                >
-                  <PanelRight className="w-4 h-4" />
-                </button>
+                  {/* Dock right */}
+                  <button
+                    type="button"
+                    onClick={() => onDockChange('right')}
+                    aria-label="Dock right"
+                    title="Dock right"
+                    className={cn(
+                      'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 cursor-pointer',
+                      theme === 'dark'
+                        ? 'hover:bg-gray-800/60 focus:ring-cyan-500/40'
+                        : 'hover:bg-gray-100/70 focus:ring-blue-500/40',
+                      // Default blue icon
+                      theme === 'dark' ? 'text-cyan-400' : 'text-blue-600',
+                      // Active highlighting (on top of blue icon)
+                      dockSide === 'right' && (theme === 'dark' 
+                        ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 shadow-lg shadow-cyan-500/30' 
+                        : 'bg-blue-500/20 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/30')
+                    )}
+                  >
+                    <PanelRight className="w-4 h-4" />
+                  </button>
 
                 {/* Master menu toggle */}
                 <div className="relative">
