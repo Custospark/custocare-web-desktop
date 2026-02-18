@@ -298,14 +298,7 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({
             </div>
           </div>
           <div>
-            {/* <div className={`text-xs font-medium mb-1 ${
-              isDark ? 'text-gray-400' : 'text-gray-500'
-            }`}>
-              Visit No.
-            </div>
-            <div className="font-mono text-xs">
-              {visitUuid || 'N/A'}
-            </div> */}
+        
           </div>
         </div>
 

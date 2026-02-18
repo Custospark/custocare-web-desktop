@@ -18,9 +18,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   containerVariants,
   itemVariants,
-  scaleIn,
   fadeInUp,
 } from  '../../../../../shared/components/animations/motionVariants';
+import { getRoleDisplayName as formatName } from '../../../../../shared/utils/facilityRoleFormator';
 
 import { type ServiceItem, formatCurrency, makeBillableKey } from './billing-types';
 import { useGetBillableItems } from '../../../api/billable-items/BillableItemsQueries';
@@ -164,7 +164,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
           isOut
             ? isDark ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700'
             : isLow
-            ? isDark ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-700'
+            ? isDark ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'
             : isDark ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'
         }`}>
           {isOut ? 'Out of stock' : `${units} ${displayUnit}`}
@@ -350,266 +350,264 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
               isSearchSticky ? 'pt-1 bg-opacity-95 backdrop-blur-sm' : ''
             }`}
           >
-            <motion.div variants={itemVariants} ref={searchWrapRef} className="relative">
-              {/* Sparkling animated border wrapper — always visible, speeds up on focus */}
-              <div className={`relative rounded-lg ${!isReadOnly ? 'p-[2px]' : ''}`}>
-                {/* Gradient border track — always rendered when not read-only */}
-                {!isReadOnly && (
-                  <motion.div
-                    className="absolute inset-0 rounded-lg z-0"
-                    style={{
-                      background:
-                        'linear-gradient(90deg, #3b82f6, #10b981, #6366f1, #3b82f6)',
-                      backgroundSize: '300% 100%',
-                    }}
-                    animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-                    transition={{
-                      duration: isSearchFocused ? 2 : 6, // fast when focused, slow ambient when not
-                      repeat: Infinity,
-                      ease: 'linear',
-                    }}
-                  />
-                )}
+            <div ref={searchWrapRef} className="relative">
+      {/* Sparkling animated border wrapper — always visible, speeds up on focus */}
+      <div className={`relative rounded-lg ${!isReadOnly ? 'p-[2px]' : ''}`}>
+        {/* Gradient border track — always rendered when not read-only */}
+        {!isReadOnly && (
+          <motion.div
+            className="absolute inset-0 rounded-lg z-0"
+            style={{
+              background: 'linear-gradient(90deg, #3b82f6, #10b981, #6366f1, #3b82f6)',
+              backgroundSize: '300% 100%',
+            }}
+            animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+            transition={{
+              duration: isSearchFocused ? 2 : 6,
+              repeat: Infinity,
+              ease: 'linear',
+            }}
+          />
+        )}
 
-                {/* Inner surface — covers most of the gradient leaving 2px ring */}
-                <div className="relative z-10">
-                  <div className={`relative ${!isReadOnly ? 'rounded-[6px] overflow-hidden' : ''}`}>
-                    <Search
-                      className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${
-                        isSearchFocused && !isReadOnly
-                          ? 'text-blue-500'
-                          : colors.text.tertiary
-                      }`}
-                    />
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      placeholder={
-                        isReadOnly
-                          ? 'Payment completed — view only'
-                          : isLoading
-                          ? 'Loading billable items...'
-                          : 'Search by service/item name, code, or category...'
-                      }
-                      value={searchTerm}
-                      onChange={(e) => !isReadOnly && setSearchTerm(e.target.value)}
-                      onFocus={() => {
-                        if (isReadOnly) return;
-                        setIsSearchFocused(true);
-                        if (searchTerm.trim() || isLoading) setShowSearchResults(true);
-                      }}
-                      onBlur={() => setIsSearchFocused(false)}
-                      disabled={isLoading || isReadOnly}
-                      readOnly={isReadOnly}
-                      className={`w-full pl-9 pr-10 py-2.5 sm:py-3 transition-all duration-200
-                        placeholder:${colors.text.muted} shadow-sm
-                        disabled:opacity-75 disabled:cursor-not-allowed
-                        focus:outline-none
-                        ${
-                          isReadOnly
-                            ? `border ${colors.border.disabled} ${colors.bg.disabled} ${colors.text.disabled} cursor-not-allowed rounded-lg`
-                            : `border-transparent ${colors.bg.primary} ${colors.text.primary} rounded-[6px]`
-                        }`}
-                    />
+        {/* Inner surface — covers most of the gradient leaving 2px ring */}
+        <div className="relative z-10">
+          <div className={`relative ${!isReadOnly ? 'rounded-[6px] overflow-hidden' : ''}`}>
+            <Search
+              className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${
+                isSearchFocused && !isReadOnly ? 'text-blue-500' : colors.text.tertiary
+              }`}
+            />
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder={
+                isReadOnly
+                  ? 'Payment completed — view only'
+                  : isLoading
+                  ? 'Loading billable items...'
+                  : 'Search by service/item name, code, or category...'
+              }
+              value={searchTerm}
+              onChange={(e) => !isReadOnly && setSearchTerm(e.target.value)}
+              onFocus={() => {
+                if (isReadOnly) return;
+                setIsSearchFocused(true);
+                if (searchTerm.trim() || isLoading) setShowSearchResults(true);
+              }}
+              onBlur={() => setIsSearchFocused(false)}
+              disabled={isLoading || isReadOnly}
+              readOnly={isReadOnly}
+              className={`w-full pl-9 pr-10 py-2.5 sm:py-3 transition-all duration-200
+                placeholder:${colors.text.muted} shadow-sm
+                disabled:opacity-75 disabled:cursor-not-allowed
+                focus:outline-none
+                ${
+                  isReadOnly
+                    ? `border ${colors.border.disabled} ${colors.bg.disabled} ${colors.text.disabled} cursor-not-allowed rounded-lg`
+                    : `border-transparent ${colors.bg.primary} ${colors.text.primary} rounded-[6px]`
+                }`}
+            />
 
-                    {searchTerm && !isReadOnly && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearchTerm('');
-                          setShowSearchResults(false);
-                          inputRef.current?.focus();
-                        }}
-                        className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5
-                          ${colors.bg.hover} ${colors.text.secondary}
-                          cursor-pointer rounded-full transition-colors`}
-                        aria-label="Clear search"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
+            {searchTerm && !isReadOnly && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                  setShowSearchResults(false);
+                  inputRef.current?.focus();
+                }}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5
+                  ${colors.bg.hover} ${colors.text.secondary}
+                  cursor-pointer rounded-full transition-colors`}
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+  {/* Search Results Dropdown with animated border */}
+  {!isReadOnly && showSearchResults && (
+    <div className="absolute z-20 w-full mt-1.5">
+      {/* Animated border wrapper for dropdown */}
+      <div className="relative rounded-xl p-[2px]">
+        {/* Gradient border track for dropdown */}
+        <motion.div
+          className="absolute inset-0 rounded-xl z-0"
+          style={{
+            background: 'linear-gradient(90deg, #3b82f6, #10b981, #6366f1, #3b82f6)',
+            backgroundSize: '300% 100%',
+          }}
+          animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            ease: 'linear',
+          }}
+        />
+        
+        {/* Inner content with improved contrast */}
+        <div className={`
+          relative z-10 rounded-[10px] overflow-hidden
+          ${isDark 
+            ? 'bg-gray-900 border border-gray-800' 
+            : 'bg-white border border-gray-200 shadow-lg'
+          }
+        `}>
+          {isLoading ? (
+            <div className="p-6 text-center">
+              <div className="animate-pulse space-y-2">
+                <div className={`h-4 ${isDark ? 'bg-gray-800' : 'bg-gray-200'} rounded w-3/4 mx-auto`} />
+                <div className={`h-3 ${isDark ? 'bg-gray-800' : 'bg-gray-200'} rounded w-1/2 mx-auto`} />
               </div>
-
-              {/* Search Results Dropdown with animated border */}
-              {!isReadOnly && showSearchResults && (
-                <motion.div
-                  variants={scaleIn}
-                  initial="hidden"
-                  animate="visible"
-                  className="absolute z-20 w-full mt-1.5"
-                >
-                  {/* Animated border wrapper for dropdown */}
-                  <div className="relative rounded-xl p-[2px]">
-                    {/* Gradient border track for dropdown */}
-                    <motion.div
-                      className="absolute inset-0 rounded-xl z-0"
-                      style={{
-                        background: 'linear-gradient(90deg, #3b82f6, #10b981, #6366f1, #3b82f6)',
-                        backgroundSize: '300% 100%',
-                      }}
-                      animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-                      transition={{
-                        duration: 4, // medium speed for dropdown
-                        repeat: Infinity,
-                        ease: 'linear',
-                      }}
-                    />
-                    
-                    {/* Inner content */}
-                    <div className={`relative z-10 ${colors.bg.elevated} rounded-[10px] overflow-hidden backdrop-blur-sm ${colors.bg.overlay}`}>
-                      {isLoading ? (
-                        <div className="p-6 text-center">
-                          <div className="animate-pulse space-y-2">
-                            <div className={`h-4 ${colors.bg.secondary} rounded w-3/4 mx-auto`} />
-                            <div className={`h-3 ${colors.bg.secondary} rounded w-1/2 mx-auto`} />
-                          </div>
-                          <p className={`text-sm ${colors.text.secondary} mt-3`}>
-                            Loading services & inventory…
-                          </p>
+              <p className={`text-sm ${colors.text.secondary} mt-3`}>
+                Loading services & inventory…
+              </p>
+            </div>
+          ) : isError ? (
+            <div className="p-6 text-center">
+              <div className={`inline-flex p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full mb-3`}>
+                <AlertCircle className="w-5 h-5 text-red-500" />
+              </div>
+              <p className={`font-medium ${colors.text.primary} mb-1`}>Unable to load items</p>
+              <p className={`text-sm ${colors.text.secondary}`}>
+                {process.env.NODE_ENV === 'development' && error
+                  ? `Error: ${error.message}`
+                  : 'Check your connection or facility context.'}
+              </p>
+            </div>
+          ) : searchResults.length > 0 ? (
+            <div className="max-h-72 overflow-y-auto">
+              {searchResults.map((service, idx) => {
+                const outOfStock = isOutOfStock(service);
+                return (
+                  <button
+                    key={makeBillableKey(service)}
+                    type="button"
+                    onClick={() => !outOfStock && handleAddItem(service)}
+                    disabled={outOfStock}
+                    className={`
+                      w-full text-left p-3 border-b last:border-b-0
+                      transition-all duration-150
+                      ${isDark 
+                        ? 'border-gray-800 hover:bg-gray-800' 
+                        : 'border-gray-100 hover:bg-gray-50'
+                      }
+                      ${outOfStock
+                        ? `cursor-not-allowed ${isDark ? 'opacity-50' : 'opacity-60'}`
+                        : 'cursor-pointer'
+                      }
+                    `}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className={`font-semibold truncate ${
+                              outOfStock 
+                                ? isDark ? 'text-gray-500' : 'text-gray-400'
+                                : colors.text.primary
+                            }`}
+                          >
+                            {service.name}
+                          </span>
+                          <span
+                            className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0
+                              ${isDark 
+                                ? 'bg-gray-800 text-gray-300' 
+                                : 'bg-gray-100 text-gray-600'
+                              }`}
+                          >
+                            {service.code}
+                          </span>
+                          {getStockBadge(service)}
                         </div>
-                      ) : isError ? (
-                        <div className="p-6 text-center">
-                          <div className={`inline-flex p-3 ${colors.bg.secondary} rounded-full mb-3`}>
-                            <AlertCircle className="w-5 h-5 text-red-500" />
-                          </div>
-                          <p className={`font-medium ${colors.text.primary} mb-1`}>Unable to load items</p>
-                          <p className={`text-sm ${colors.text.secondary}`}>
-                            {process.env.NODE_ENV === 'development' && error
-                              ? `Error: ${error.message}`
-                              : 'Check your connection or facility context.'}
-                          </p>
+                        <div className="flex items-center justify-between mt-1 text-sm">
+                          <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>
+                            {service.category}
+                          </span>
+                          <span
+                            className={`font-semibold ${
+                              outOfStock 
+                                ? isDark ? 'text-gray-500' : 'text-gray-400'
+                                : colors.text.primary
+                            }`}
+                          >
+                            {formatCurrency(service.unitPrice)}
+                          </span>
                         </div>
-                      ) : searchResults.length > 0 ? (
-                        <div className="max-h-72 overflow-y-auto">
-                          {searchResults.map((service, idx) => {
-                            const outOfStock = isOutOfStock(service);
-                            return (
-                              <motion.button
-                                key={makeBillableKey(service)}
-                                type="button"
-                                variants={itemVariants}
-                                custom={idx}
-                                onClick={() => !outOfStock && handleAddItem(service)}
-                                disabled={outOfStock}
-                                className={`w-full text-left p-3 border-b last:border-b-0 ${colors.border.subtle}
-                                  transition-all duration-150
-                                  ${
-                                    outOfStock
-                                      ? `cursor-not-allowed ${isDark ? 'opacity-50' : 'opacity-60'}`
-                                      : `${colors.bg.hover} cursor-pointer active:scale-[0.995]`
-                                  }`}
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span
-                                        className={`font-semibold truncate ${
-                                          outOfStock ? colors.text.disabled : colors.text.primary
-                                        }`}
-                                      >
-                                        {service.name}
-                                      </span>
-                                      <span
-                                        className={`text-xs px-1.5 py-0.5 ${colors.bg.secondary} ${colors.text.secondary} flex-shrink-0 rounded`}
-                                      >
-                                        {service.code}
-                                      </span>
-                                      {getStockBadge(service)}
-                                    </div>
-                                    <div className="flex items-center justify-between mt-1 text-sm">
-                                      <span className={`truncate ${colors.text.secondary}`}>
-                                        {service.category}
-                                      </span>
-                                      <span
-                                        className={`font-semibold ${
-                                          outOfStock ? colors.text.disabled : colors.text.primary
-                                        }`}
-                                      >
-                                        {formatCurrency(service.unitPrice)}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div
-                                    className={`p-1.5 rounded-full flex-shrink-0 ${
-                                      outOfStock
-                                        ? isDark
-                                          ? 'bg-gray-800'
-                                          : 'bg-gray-100'
-                                        : isDark
-                                        ? 'bg-blue-900/30'
-                                        : 'bg-blue-50'
-                                    }`}
-                                  >
-                                    <Plus
-                                      className={`w-4 h-4 ${
-                                        outOfStock
-                                          ? colors.text.disabled
-                                          : isDark
-                                          ? 'text-blue-400'
-                                          : 'text-blue-600'
-                                      }`}
-                                    />
-                                  </div>
-                                </div>
-                              </motion.button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="p-6 text-center">
-                          <div className={`inline-flex p-3 ${colors.bg.secondary} rounded-full mb-3`}>
-                            <Filter className={`w-5 h-5 ${colors.text.tertiary}`} />
-                          </div>
-                          <p className={`font-medium ${colors.text.primary} mb-1`}>No results found</p>
-                          <p className={`text-sm ${colors.text.secondary}`}>
-                            Try adjusting your search or filters
-                          </p>
-                          <p className={`text-xs mt-2 ${colors.text.muted}`}>
-                            Search by service name, code, or category
-                          </p>
-                        </div>
-                      )}
+                      </div>
+                      <div
+                        className={`p-1.5 rounded-full flex-shrink-0 ${
+                          outOfStock
+                            ? isDark ? 'bg-gray-800' : 'bg-gray-100'
+                            : isDark ? 'bg-blue-900/30' : 'bg-blue-50'
+                        }`}
+                      >
+                        <Plus
+                          className={`w-4 h-4 ${
+                            outOfStock
+                              ? isDark ? 'text-gray-500' : 'text-gray-400'
+                              : isDark ? 'text-blue-400' : 'text-blue-600'
+                          }`}
+                        />
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              )}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-6 text-center">
+              <div className={`inline-flex p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-full mb-3`}>
+                <Filter className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+              </div>
+              <p className={`font-medium ${colors.text.primary} mb-1`}>No results found</p>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Try adjusting your search or filters
+              </p>
+              <p className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                Search by service name, code, or category
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )}
 
-              {/* Read-only message when search is attempted */}
-              {isReadOnly && searchTerm && (
-                <motion.div
-                  variants={fadeInUp}
-                  initial="hidden"
-                  animate="visible"
-                  className="absolute z-20 w-full mt-1.5"
-                >
-                  {/* Animated border for read-only message */}
-                  <div className="relative rounded-xl p-[2px]">
-                    <motion.div
-                      className="absolute inset-0 rounded-xl z-0"
-                      style={{
-                        background: 'linear-gradient(90deg, #6b7280, #9ca3af, #6b7280)',
-                        backgroundSize: '300% 100%',
-                      }}
-                      animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-                      transition={{
-                        duration: 5,
-                        repeat: Infinity,
-                        ease: 'linear',
-                      }}
-                    />
-                    <div className={`relative z-10 border ${colors.border.primary} ${colors.bg.elevated} rounded-[10px] p-4 text-center`}>
-                      <Lock className={`w-5 h-5 ${colors.text.tertiary} mx-auto mb-2`} />
-                      <p className={`text-sm font-medium ${colors.text.primary}`}>Payment Completed</p>
-                      <p className={`text-xs ${colors.text.secondary} mt-1`}>
-                        This billing session is settled. No further changes can be made.
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </motion.div>
+  {/* Read-only message when search is attempted */}
+  {isReadOnly && searchTerm && (
+    <div className="absolute z-20 w-full mt-1.5">
+      {/* Animated border for read-only message */}
+      <div className="relative rounded-xl p-[2px]">
+        <motion.div
+          className="absolute inset-0 rounded-xl z-0"
+          style={{
+            background: 'linear-gradient(90deg, #6b7280, #9ca3af, #6b7280)',
+            backgroundSize: '300% 100%',
+          }}
+          animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+          transition={{
+            duration: 5,
+            repeat: Infinity,
+            ease: 'linear',
+          }}
+        />
+        <div className={`relative z-10 border ${colors.border.primary} ${colors.bg.elevated} rounded-[10px] p-4 text-center`}>
+          <Lock className={`w-5 h-5 ${colors.text.tertiary} mx-auto mb-2`} />
+          <p className={`text-sm font-medium ${colors.text.primary}`}>Payment Completed</p>
+          <p className={`text-xs ${colors.text.secondary} mt-1`}>
+            This billing session is settled. No further changes can be made.
+          </p>
+        </div>
+      </div>
+    </div>
+  )}
+</div>
           </div>
 
           {/* Items header */}
@@ -739,7 +737,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                                 {item.service.code}
                               </span>
                               <span className={`text-xs truncate ${colors.text.secondary}`}>
-                                {item.service.category}
+                                {formatName(item.service.category)}
                               </span>
                               {getStockBadge(item.service)}
                             </div>
@@ -977,7 +975,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className={colors.text.secondary}>Subtotal</span>
-                  <span className={`font-semibold ${colors.text.primary}`}>{formatCurrency(subtotal)}</span>
+                  <span className={`text-lg font-extrabold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent`}>{formatCurrency(subtotal)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className={colors.text.secondary}>Tax</span>
@@ -991,7 +989,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                 <div className={`pt-4 border-t ${colors.border.primary}`}>
                   <div className="flex items-center justify-between">
                     <span className={`text-sm font-semibold ${colors.text.secondary}`}>Grand total</span>
-                    <span className="text-2xl font-extrabold text-green-500">{formatCurrency(subtotal)}</span>
+                    <span className="text-lg font-extrabold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">{formatCurrency(subtotal)}</span>
                   </div>
                 </div>
               </div>

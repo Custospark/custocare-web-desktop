@@ -2,14 +2,18 @@
 import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Receipt, ShoppingCart } from 'lucide-react';
-import { 
-  openTray, 
-  selectBillingState,
+import { type RootState } from '../../../../../app/store/rootReducer';
+import {
+  selectActivePatient,
+  selectActiveVisit,
+  selectActiveVisitInfo,
+} from '../../../../../app/store/slices/visitSlice';
+import {
+  openTray,
   selectChargeItems,
   selectBillingData,
   selectBillingStatus,
-  selectPatientInfo,
-  selectCanProceed  // Import the new selector
+  selectCanProceed,
 } from './billingSlice';
 import { formatCurrency } from './billing-types';
 
@@ -20,31 +24,27 @@ interface BillingSpaceProps {
 export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'light' }) => {
   const dispatch = useDispatch();
   
-  // Safely select from Redux store with defensive programming
-  const billingState = useSelector(selectBillingState);
+  // Get data from Redux store using the same approach as MRVisitActionCenter
+  const patient = useSelector((state: RootState) => selectActivePatient(state));
+  const activeVisit = useSelector((state: RootState) => selectActiveVisit(state));
+  const visitInfo = useSelector((state: RootState) => selectActiveVisitInfo(state));
+  
+  // Billing state selectors
   const chargeItems = useSelector(selectChargeItems);
   const billingData = useSelector(selectBillingData);
   const billingStatus = useSelector(selectBillingStatus);
-  const patientInfo = useSelector(selectPatientInfo);
-  const canProceed = useSelector(selectCanProceed);  // Use the new selector
+  const canProceed = useSelector(selectCanProceed);
   
-  const isDark = theme === 'dark';  // Fixed theme logic
+  const isDark = theme === 'dark';
   
-  // Validate billing state exists
-  if (!billingState) {
+  // Validate we have required data
+  const hasActiveVisit = activeVisit && visitInfo && visitInfo.uuid;
+  
+  if (!hasActiveVisit) {
     return null;
   }
   
-  // Safely extract properties
-  const visitId = patientInfo?.visitId || billingState?.visitId;
-  const patientName = patientInfo?.patientName || billingState?.patientName;
-  
-  // If no visitId, don't render
-  if (!visitId || typeof visitId !== 'string' || visitId.trim() === '') {
-    return null;
-  }
-  
-  // Safely calculate status using billingStatus from selector
+  // Safely calculate status
   const status = (() => {
     try {
       if (!billingStatus) return 'Draft';
@@ -67,10 +67,7 @@ export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'lig
   // Safely calculate charges length
   const safeChargesLength = (() => {
     try {
-      if (!chargeItems || typeof chargeItems !== 'object' || !Array.isArray(chargeItems)) {
-        return 0;
-      }
-      
+      if (!chargeItems || !Array.isArray(chargeItems)) return 0;
       const length = chargeItems.length;
       return typeof length === 'number' && !isNaN(length) && isFinite(length) && length >= 0 
         ? length 
@@ -83,9 +80,7 @@ export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'lig
   // Safely get subtotal from billingData
   const subtotal = (() => {
     try {
-      if (!billingData || typeof billingData !== 'object') {
-        return 0;
-      }
+      if (!billingData || typeof billingData !== 'object') return 0;
       return billingData.subtotal || 0;
     } catch {
       return 0;
@@ -95,30 +90,27 @@ export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'lig
   // Safely determine if summary button should be enabled
   const isSummaryEnabled = (() => {
     try {
-      if (typeof canProceed === 'undefined' || canProceed === null) {
-        return false;
-      }
+      if (typeof canProceed === 'undefined' || canProceed === null) return false;
       return canProceed === true;
     } catch {
       return false;
     }
   })();
   
-  // Safely get patient initials
+  // Get patient initials
   const getPatientInitial = () => {
     try {
-      if (!patientName || typeof patientName !== 'string' || patientName.trim() === '') {
+      if (!patient || !patient.name || typeof patient.name !== 'string' || patient.name.trim() === '') {
         return 'P';
       }
-      
-      const firstChar = patientName.trim().charAt(0).toUpperCase();
+      const firstChar = patient.name.trim().charAt(0).toUpperCase();
       return /[A-Z]/i.test(firstChar) ? firstChar : 'P';
     } catch {
       return 'P';
     }
   };
   
-  // Colors with safe defaults
+  // Colors
   const colors = {
     bg: isDark ? 'bg-gray-800' : 'bg-white',
     border: isDark ? 'border-gray-700' : 'border-gray-200',
@@ -136,7 +128,7 @@ export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'lig
   
   return (
     <div className={`fixed bottom-4 right-4 z-30 ${colors.bg} ${colors.border} border rounded-xl shadow-2xl p-4 max-w-sm`}>
-      {/* Patient Info */}
+      {/* Patient Info - Using the same approach as MRVisitActionCenter */}
       <div className="mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2 mb-1">
           <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
@@ -147,15 +139,21 @@ export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'lig
           <div className="flex-1 min-w-0">
             <p 
               className={`font-medium text-sm truncate ${colors.text.primary}`}
-              title={patientName || 'Unknown Patient'}
+              title={patient?.name || 'Unknown Patient'}
             >
-              {patientName || 'Unknown Patient'}
+              {patient?.name || 'Unknown Patient'}
             </p>
             <p className={`text-xs ${colors.text.secondary}`}>
-              {patientInfo.patientId}
+              {patient?.patient_number ? `Patient Number: ${patient.patient_number}` : 'No Number'}
             </p>
           </div>
         </div>
+        {/* Optional: Show visit phase if available */}
+        {visitInfo?.phase && (
+          <div className={`text-xs ${colors.text.secondary} mt-1 ml-10`}>
+            Phase: {visitInfo.phase.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+          </div>
+        )}
       </div>
       
       {/* Indicators */}
@@ -203,7 +201,11 @@ export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'lig
         <button
           onClick={() => {
             try {
-              dispatch(openTray({ step: 'charge_entry' }));
+              dispatch(openTray({ 
+                step: 'charge_entry',
+                visitId: visitInfo?.uuid,
+                patientId: patient?.patient_number,
+              }));
             } catch (error) {
               console.error('Failed to open charge entry tray:', error);
             }
@@ -212,7 +214,7 @@ export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'lig
           title="Open charge entry"
         >
           <ShoppingCart className="w-4 h-4 flex-shrink-0" />
-          <span className="truncate">Charge Entry</span>
+          <span className="truncate">Enter Charges</span>
         </button>
         
         {/* Summary Button - Conditionally enabled */}
@@ -221,7 +223,11 @@ export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'lig
             if (!isSummaryEnabled) return;
             
             try {
-              dispatch(openTray({ step: 'billing_summary' }));
+              dispatch(openTray({ 
+                step: 'billing_summary',
+                visitId: visitInfo?.uuid,
+                patientId: patient?.patient_number,
+              }));
             } catch (error) {
               console.error('Failed to open billing summary tray:', error);
             }
@@ -235,13 +241,13 @@ export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'lig
           title={isSummaryEnabled ? "Open billing summary" : "Add charges first"}
         >
           <Receipt className="w-4 h-4 flex-shrink-0" />
-          <span className="truncate">Summary</span>
+          <span className="truncate">Review & Bill.</span>
         </button>
       </div>
       
       {/* Visit ID Indicator (hidden but accessible) */}
       <div className="sr-only" aria-live="polite">
-        Billing space loaded for visit {visitId}
+        Billing space loaded for visit {visitInfo?.uuid}
       </div>
     </div>
   );
