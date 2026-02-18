@@ -1,6 +1,6 @@
 // LayoutTopBars.tsx
 import React, { useMemo } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+// import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '../../types/cn';
 import Navbar from './Navbar/Navbar';
 import StatusBar, { type SidebarPosition, type SystemStatus, type ThemeMode } from './StatusBar';
@@ -55,7 +55,7 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
   theme,
   themeClasses,
   topBarsVisible,
-  onToggleTopBarsVisible,
+  // onToggleTopBarsVisible,
   systemStatus,
   isOnline,
   latency,
@@ -172,7 +172,7 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
           </div>
 
           {/* Desktop-only TopBars Toggle */}
-          <div className={cn('hidden lg:flex items-center', sidebarPosition === 'left' ? 'ml-3' : 'mr-3')}>
+          {/* <div className={cn('hidden lg:flex items-center', sidebarPosition === 'left' ? 'ml-3' : 'mr-3')}>
             <button
               onClick={onToggleTopBarsVisible}
               aria-label={topBarsVisible ? 'Hide top bars' : 'Show top bars'}
@@ -189,7 +189,7 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
             >
               {topBarsVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
     </>
