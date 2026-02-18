@@ -357,7 +357,7 @@ const AddStock: React.FC<AddStockProps> = ({ theme }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Package Quantity *
+                Quantity *
               </label>
               <input
                 type="number"

@@ -48,6 +48,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   const [searchResults, setSearchResults] = useState<ServiceItem[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearchSticky, setIsSearchSticky] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const searchWrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -127,23 +128,23 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     },
   };
 
-    const getStockBadge = (service: ServiceItem) => {
-  const fullItem = data?.data?.items_full?.find(
-    (x) => x.id === service.id && x.code === service.code && x.category === service.category
-  );
-
-  // No full item found — treat as service fallback
-  if (!fullItem) {
-    return (
-      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-        isDark ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-50 text-purple-700'
-      }`}>
-        Service
-      </span>
+  const getStockBadge = (service: ServiceItem) => {
+    const fullItem = data?.data?.items_full?.find(
+      (x) => x.id === service.id && x.code === service.code && x.category === service.category
     );
-  }
 
-  if (isInventoryItem(fullItem)) {
+    // No full item found — treat as service fallback
+    if (!fullItem) {
+      return (
+        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+          isDark ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-50 text-purple-700'
+        }`}>
+          Service
+        </span>
+      );
+    }
+
+    if (isInventoryItem(fullItem)) {
       const units = fullItem.package_quantity;
       const isLow = fullItem.stock.is_low_stock;
       const isOut = units <= 0;
@@ -169,25 +170,26 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
           {isOut ? 'Out of stock' : `${units} ${displayUnit}`}
         </span>
       );
-  }
+    }
 
-  // It's a service type from items_full
-  return (
-    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-      isDark ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-50 text-purple-700'
-    }`}>
-      Service
-    </span>
-  );
-};
+    // It's a service type from items_full
+    return (
+      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+        isDark ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-50 text-purple-700'
+      }`}>
+        Service
+      </span>
+    );
+  };
 
-    const isOutOfStock = (service: ServiceItem): boolean => {
-      const fullItem = data?.data?.items_full?.find(
-        (x) => x.id === service.id && x.code === service.code && x.category === service.category
-      );
-      if (!fullItem || !isInventoryItem(fullItem)) return false;
-      return fullItem.stock.units_per_package <= 0;
-    };
+  const isOutOfStock = (service: ServiceItem): boolean => {
+    const fullItem = data?.data?.items_full?.find(
+      (x) => x.id === service.id && x.code === service.code && x.category === service.category
+    );
+    if (!fullItem || !isInventoryItem(fullItem)) return false;
+    return fullItem.stock.units_per_package <= 0;
+  };
+
   const subtotal = useMemo(() => chargeItems.reduce((sum, item) => sum + item.totalAmount, 0), [chargeItems]);
 
   // Client-side search filter with loading state awareness
@@ -268,8 +270,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     setShowSearchResults(false);
     inputRef.current?.focus();
   };
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-
 
   const handleClearAll = async () => {
     if (isReadOnly || chargeItems.length === 0) return;
@@ -328,7 +328,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   return (
     <div className="p-4 sm:p-5 lg:p-6 h-full relative">
       {/* Read-only overlay indicator (subtle) */}
-          {isReadOnly && (
+      {isReadOnly && (
         <div className="absolute top-4 right-8 z-20 flex items-center gap-2 px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-full shadow-sm border border-blue-400 dark:border-blue-400">
           <Lock className="w-3.5 h-3.5" />
           <span className="text-xs font-semibold">Payment settled - View only</span>
@@ -432,133 +432,147 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                 </div>
               </div>
 
-              {/* Search Results Dropdown */}
+              {/* Search Results Dropdown with animated border */}
               {!isReadOnly && showSearchResults && (
                 <motion.div
                   variants={scaleIn}
                   initial="hidden"
                   animate="visible"
-                  className={`absolute z-20 w-full mt-1.5 border shadow-2xl
-                    ${colors.border.primary} ${colors.bg.elevated}
-                    rounded-xl overflow-hidden backdrop-blur-sm ${colors.bg.overlay}`}
+                  className="absolute z-20 w-full mt-1.5"
                 >
-                  {isLoading ? (
-                    <div className="p-6 text-center">
-                      <div className="animate-pulse space-y-2">
-                        <div className={`h-4 ${colors.bg.secondary} rounded w-3/4 mx-auto`} />
-                        <div className={`h-3 ${colors.bg.secondary} rounded w-1/2 mx-auto`} />
-                      </div>
-                      <p className={`text-sm ${colors.text.secondary} mt-3`}>
-                        Loading services & inventory…
-                      </p>
-                    </div>
-                  ) : isError ? (
-                    <div className="p-6 text-center">
-                      <div className={`inline-flex p-3 ${colors.bg.secondary} rounded-full mb-3`}>
-                        <AlertCircle className="w-5 h-5 text-red-500" />
-                      </div>
-                      <p className={`font-medium ${colors.text.primary} mb-1`}>Unable to load items</p>
-                      <p className={`text-sm ${colors.text.secondary}`}>
-                        {process.env.NODE_ENV === 'development' && error
-                          ? `Error: ${error.message}`
-                          : 'Check your connection or facility context.'}
-                      </p>
-                    </div>
-                  ) : searchResults.length > 0 ? (
-                    <div className="max-h-72 overflow-y-auto">
-                      {searchResults.map((service, idx) => {
-                        const outOfStock = isOutOfStock(service);
-                        return (
-                          <motion.button
-                            key={makeBillableKey(service)}
-                            type="button"
-                            variants={itemVariants}
-                            custom={idx}
-                            onClick={() => !outOfStock && handleAddItem(service)}
-                            disabled={outOfStock}
-                            className={`w-full text-left p-3 border-b last:border-b-0 ${colors.border.subtle}
-                              transition-all duration-150
-                              ${
-                                outOfStock
-                                  ? `cursor-not-allowed ${isDark ? 'opacity-50' : 'opacity-60'}`
-                                  : `${colors.bg.hover} cursor-pointer active:scale-[0.995]`
-                              }`}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span
-                                    className={`font-semibold truncate ${
-                                      outOfStock ? colors.text.disabled : colors.text.primary
-                                    }`}
-                                  >
-                                    {service.name}
-                                  </span>
-                                  <span
-                                    className={`text-xs px-1.5 py-0.5 ${colors.bg.secondary} ${colors.text.secondary} flex-shrink-0 rounded`}
-                                  >
-                                    {service.code}
-                                  </span>
-                                  {getStockBadge(service)}
-                                </div>
-                                <div className="flex items-center justify-between mt-1 text-sm">
-                                  <span className={`truncate ${colors.text.secondary}`}>
-                                    {service.category}
-                                  </span>
-                                  <span
-                                    className={`font-semibold ${
-                                      outOfStock ? colors.text.disabled : colors.text.primary
-                                    }`}
-                                  >
-                                    {formatCurrency(service.unitPrice)}
-                                  </span>
-                                </div>
-                                {/* {outOfStock && (
-                                  <p className={`text-xs mt-1 ${isDark ? 'text-red-400' : 'text-red-600'}`}>
-                                    Cannot add — no stock available
-                                  </p>
-                                )} */}
-                              </div>
-                              <div
-                                className={`p-1.5 rounded-full flex-shrink-0 ${
-                                  outOfStock
-                                    ? isDark
-                                      ? 'bg-gray-800'
-                                      : 'bg-gray-100'
-                                    : isDark
-                                    ? 'bg-blue-900/30'
-                                    : 'bg-blue-50'
-                                }`}
-                              >
-                                <Plus
-                                  className={`w-4 h-4 ${
+                  {/* Animated border wrapper for dropdown */}
+                  <div className="relative rounded-xl p-[2px]">
+                    {/* Gradient border track for dropdown */}
+                    <motion.div
+                      className="absolute inset-0 rounded-xl z-0"
+                      style={{
+                        background: 'linear-gradient(90deg, #3b82f6, #10b981, #6366f1, #3b82f6)',
+                        backgroundSize: '300% 100%',
+                      }}
+                      animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+                      transition={{
+                        duration: 4, // medium speed for dropdown
+                        repeat: Infinity,
+                        ease: 'linear',
+                      }}
+                    />
+                    
+                    {/* Inner content */}
+                    <div className={`relative z-10 ${colors.bg.elevated} rounded-[10px] overflow-hidden backdrop-blur-sm ${colors.bg.overlay}`}>
+                      {isLoading ? (
+                        <div className="p-6 text-center">
+                          <div className="animate-pulse space-y-2">
+                            <div className={`h-4 ${colors.bg.secondary} rounded w-3/4 mx-auto`} />
+                            <div className={`h-3 ${colors.bg.secondary} rounded w-1/2 mx-auto`} />
+                          </div>
+                          <p className={`text-sm ${colors.text.secondary} mt-3`}>
+                            Loading services & inventory…
+                          </p>
+                        </div>
+                      ) : isError ? (
+                        <div className="p-6 text-center">
+                          <div className={`inline-flex p-3 ${colors.bg.secondary} rounded-full mb-3`}>
+                            <AlertCircle className="w-5 h-5 text-red-500" />
+                          </div>
+                          <p className={`font-medium ${colors.text.primary} mb-1`}>Unable to load items</p>
+                          <p className={`text-sm ${colors.text.secondary}`}>
+                            {process.env.NODE_ENV === 'development' && error
+                              ? `Error: ${error.message}`
+                              : 'Check your connection or facility context.'}
+                          </p>
+                        </div>
+                      ) : searchResults.length > 0 ? (
+                        <div className="max-h-72 overflow-y-auto">
+                          {searchResults.map((service, idx) => {
+                            const outOfStock = isOutOfStock(service);
+                            return (
+                              <motion.button
+                                key={makeBillableKey(service)}
+                                type="button"
+                                variants={itemVariants}
+                                custom={idx}
+                                onClick={() => !outOfStock && handleAddItem(service)}
+                                disabled={outOfStock}
+                                className={`w-full text-left p-3 border-b last:border-b-0 ${colors.border.subtle}
+                                  transition-all duration-150
+                                  ${
                                     outOfStock
-                                      ? colors.text.disabled
-                                      : isDark
-                                      ? 'text-blue-400'
-                                      : 'text-blue-600'
+                                      ? `cursor-not-allowed ${isDark ? 'opacity-50' : 'opacity-60'}`
+                                      : `${colors.bg.hover} cursor-pointer active:scale-[0.995]`
                                   }`}
-                                />
-                              </div>
-                            </div>
-                          </motion.button>
-                        );
-                      })}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span
+                                        className={`font-semibold truncate ${
+                                          outOfStock ? colors.text.disabled : colors.text.primary
+                                        }`}
+                                      >
+                                        {service.name}
+                                      </span>
+                                      <span
+                                        className={`text-xs px-1.5 py-0.5 ${colors.bg.secondary} ${colors.text.secondary} flex-shrink-0 rounded`}
+                                      >
+                                        {service.code}
+                                      </span>
+                                      {getStockBadge(service)}
+                                    </div>
+                                    <div className="flex items-center justify-between mt-1 text-sm">
+                                      <span className={`truncate ${colors.text.secondary}`}>
+                                        {service.category}
+                                      </span>
+                                      <span
+                                        className={`font-semibold ${
+                                          outOfStock ? colors.text.disabled : colors.text.primary
+                                        }`}
+                                      >
+                                        {formatCurrency(service.unitPrice)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div
+                                    className={`p-1.5 rounded-full flex-shrink-0 ${
+                                      outOfStock
+                                        ? isDark
+                                          ? 'bg-gray-800'
+                                          : 'bg-gray-100'
+                                        : isDark
+                                        ? 'bg-blue-900/30'
+                                        : 'bg-blue-50'
+                                    }`}
+                                  >
+                                    <Plus
+                                      className={`w-4 h-4 ${
+                                        outOfStock
+                                          ? colors.text.disabled
+                                          : isDark
+                                          ? 'text-blue-400'
+                                          : 'text-blue-600'
+                                      }`}
+                                    />
+                                  </div>
+                                </div>
+                              </motion.button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="p-6 text-center">
+                          <div className={`inline-flex p-3 ${colors.bg.secondary} rounded-full mb-3`}>
+                            <Filter className={`w-5 h-5 ${colors.text.tertiary}`} />
+                          </div>
+                          <p className={`font-medium ${colors.text.primary} mb-1`}>No results found</p>
+                          <p className={`text-sm ${colors.text.secondary}`}>
+                            Try adjusting your search or filters
+                          </p>
+                          <p className={`text-xs mt-2 ${colors.text.muted}`}>
+                            Search by service name, code, or category
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="p-6 text-center">
-                      <div className={`inline-flex p-3 ${colors.bg.secondary} rounded-full mb-3`}>
-                        <Filter className={`w-5 h-5 ${colors.text.tertiary}`} />
-                      </div>
-                      <p className={`font-medium ${colors.text.primary} mb-1`}>No results found</p>
-                      <p className={`text-sm ${colors.text.secondary}`}>
-                        Try adjusting your search or filters
-                      </p>
-                      <p className={`text-xs mt-2 ${colors.text.muted}`}>
-                        Search by service name, code, or category
-                      </p>
-                    </div>
-                  )}
+                  </div>
                 </motion.div>
               )}
 
@@ -568,13 +582,31 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                   variants={fadeInUp}
                   initial="hidden"
                   animate="visible"
-                  className={`absolute z-20 w-full mt-1.5 border ${colors.border.primary} ${colors.bg.elevated} rounded-xl p-4 text-center`}
+                  className="absolute z-20 w-full mt-1.5"
                 >
-                  <Lock className={`w-5 h-5 ${colors.text.tertiary} mx-auto mb-2`} />
-                  <p className={`text-sm font-medium ${colors.text.primary}`}>Payment Completed</p>
-                  <p className={`text-xs ${colors.text.secondary} mt-1`}>
-                    This billing session is settled. No further changes can be made.
-                  </p>
+                  {/* Animated border for read-only message */}
+                  <div className="relative rounded-xl p-[2px]">
+                    <motion.div
+                      className="absolute inset-0 rounded-xl z-0"
+                      style={{
+                        background: 'linear-gradient(90deg, #6b7280, #9ca3af, #6b7280)',
+                        backgroundSize: '300% 100%',
+                      }}
+                      animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+                      transition={{
+                        duration: 5,
+                        repeat: Infinity,
+                        ease: 'linear',
+                      }}
+                    />
+                    <div className={`relative z-10 border ${colors.border.primary} ${colors.bg.elevated} rounded-[10px] p-4 text-center`}>
+                      <Lock className={`w-5 h-5 ${colors.text.tertiary} mx-auto mb-2`} />
+                      <p className={`text-sm font-medium ${colors.text.primary}`}>Payment Completed</p>
+                      <p className={`text-xs ${colors.text.secondary} mt-1`}>
+                        This billing session is settled. No further changes can be made.
+                      </p>
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </motion.div>
