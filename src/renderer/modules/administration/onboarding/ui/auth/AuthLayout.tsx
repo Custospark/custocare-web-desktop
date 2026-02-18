@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Moon, Sun, Shield, Activity, Home, Lock, CheckCircle2 } from 'lucide-react';
+import { Moon, Sun, Shield, Home, Lock, CheckCircle2 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../../app/store/slices/uiSlice';
 import { cn } from '../../../../../shared/types/cn';
@@ -123,7 +123,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
              
                 <LogoImage></LogoImage>
               <div>
-                <h1 className="text-xl font-bold tracking-tight">Custocare AI</h1>
+                <h1 className="text-base sm:text-lg font-bold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">Custocare AI</h1>
                 <p className="text-xs text-cyan-100/90 font-medium">Continuous Care. Operational Excellence.</p>
               </div>
             </Link>
@@ -199,26 +199,16 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           )}
         >
           {/* Mobile Logo */}
-          <Link to="/" className="lg:hidden inline-flex items-center gap-2.5">
-            <motion.div 
-              whileHover={{ rotate: 360 }}
-              transition={{ duration: 0.7 }}
-              className={cn(
-                'w-10 h-10 rounded-xl flex items-center justify-center shadow-lg',
-                theme === 'dark'
-                  ? 'bg-gradient-to-br from-cyan-500 to-blue-600'
-                  : 'bg-gradient-to-br from-blue-500 to-cyan-600'
-              )}
-            >
-              <Activity className="w-5 h-5 text-white" strokeWidth={2.5} />
-            </motion.div>
-            <span className={cn(
-              'text-lg font-bold tracking-tight',
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            )}>
-              Custocare AI
-            </span>
-          </Link>
+            <div className="flex items-center gap-2">
+            <LogoImage/>
+                <span
+                  className={cn(
+                    'text-base sm:text-lg font-bold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent',
+                  )}
+                >
+                  Custocare AI
+                </span>
+              </div>
 
           {/* Action Buttons */}
           <div className="ml-auto flex items-center gap-2.5">
@@ -372,29 +362,29 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
         {/* Premium Footer */}
         <motion.footer 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.8 }}
-          className={cn(
-            'px-5 py-4 text-center text-xs border-t backdrop-blur-xl',
-            theme === 'dark' 
-              ? 'bg-slate-900/60 border-slate-800/60 text-slate-500'
-              : 'bg-white/60 border-slate-200/60 text-slate-500'
-          )}
-        >
-          Need help?{' '}
-          <Link
-            to="/help"
-            className={cn(
-              'font-semibold transition-colors',
-              theme === 'dark' 
-                ? 'text-cyan-400 hover:text-cyan-300' 
-                : 'text-blue-600 hover:text-blue-700'
-            )}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.8 }}
+        className={cn(
+          'px-5 py-4 text-center text-xs border-t backdrop-blur-xl',
+          theme === 'dark' 
+            ? 'bg-slate-900/60 border-slate-800/60 text-slate-500'
+            : 'bg-white/60 border-slate-200/60 text-slate-500'
+        )}
           >
-            Contact Support
-          </Link>
-        </motion.footer>
+            Need help?{' '}
+            <a
+              href="mailto:support@custospark.com"
+              className={cn(
+                'font-semibold transition-colors',
+                theme === 'dark' 
+                  ? 'text-cyan-400 hover:text-cyan-300' 
+                  : 'text-blue-600 hover:text-blue-700'
+              )}
+            >
+              Contact Support
+            </a>
+          </motion.footer>
       </div>
     </div>
   );

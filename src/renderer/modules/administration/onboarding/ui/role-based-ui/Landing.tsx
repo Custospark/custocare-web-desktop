@@ -680,23 +680,22 @@ export const Landing: React.FC = () => {
 
             </div>
             
-            <nav className="flex flex-wrap items-center justify-center gap-6" aria-label="Footer navigation">
-              {['Privacy Policy', 'Terms of Service', 'HIPAA Compliance', 'Contact Us'].map((item) => (
-                <motion.a
-                  key={item}
-                  whileHover={{ y: -2, scale: 1.03 }}
-                  href="#"
-                  className={cn(
-                    "text-sm font-semibold transition-colors",
-                    theme === 'dark' 
-                      ? "text-slate-400 hover:text-blue-400" 
-                      : "text-slate-600 hover:text-blue-600"
-                  )}
+           <div className="flex items-center gap-4">
+               <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-base sm:text-lg font-bold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+                  Custocare AI
+                </span>{' '}
+                is a product of{' '}
+                <a
+                  href="https://www.custospark.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-300 hover:underline font-medium"
                 >
-                  {item}
-                </motion.a>
-              ))}
-            </nav>
+                  Custospark company Ltd
+                </a>
+              </span>
+              </div>
           </div>
           
           <div className={cn(

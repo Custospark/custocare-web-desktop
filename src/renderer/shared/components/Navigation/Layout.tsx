@@ -4,7 +4,6 @@ import {
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
-  Plus,
 } from 'lucide-react';
 import { Outlet } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
@@ -133,28 +132,28 @@ export const Layout: React.FC = () => {
   }, [localState.sidebarPosition, sidebarOpen]);
 
   const positionClasses = useMemo(() => {
-  const isLeft = localState.sidebarPosition === 'left';
+    const isLeft = localState.sidebarPosition === 'left';
 
-  return {
-    sidebarPosition: isLeft ? 'left-0' : 'right-0',
-    sidebarBorder: isLeft ? 'border-r' : 'border-l',
-    sidebarWidth: sidebarOpen ? 'lg:w-70' : 'lg:w-20', // Changed from lg:w-72 to lg:w-70 (280px)
-    sidebarTransformMobile: localState.mobileSidebarOpen
-      ? 'translate-x-0'
-      : isLeft
-        ? '-translate-x-full'
-        : 'translate-x-full',
-    contentMargin: isLeft ? (sidebarOpen ? 'lg:ml-70' : 'lg:ml-20') : (sidebarOpen ? 'lg:mr-70' : 'lg:mr-20'), // Updated to lg:ml-70/lg:mr-70
-    navbarPosition: isLeft
-      ? (sidebarOpen ? 'left-0 lg:left-70' : 'left-0 lg:left-20') // Updated to lg:left-70
-      : (sidebarOpen ? 'right-0 lg:right-70' : 'right-0 lg:right-20'), // Updated to lg:right-70
-    navbarFull: isLeft ? 'right-0' : 'left-0',
-  };
-}, [localState.sidebarPosition, sidebarOpen, localState.mobileSidebarOpen]);
+    return {
+      sidebarPosition: isLeft ? 'left-0' : 'right-0',
+      sidebarBorder: isLeft ? 'border-r' : 'border-l',
+      sidebarWidth: sidebarOpen ? 'lg:w-70' : 'lg:w-20',
+      sidebarTransformMobile: localState.mobileSidebarOpen
+        ? 'translate-x-0'
+        : isLeft
+          ? '-translate-x-full'
+          : 'translate-x-full',
+      contentMargin: isLeft 
+        ? (sidebarOpen ? 'lg:ml-70' : 'lg:ml-20') 
+        : (sidebarOpen ? 'lg:mr-70' : 'lg:mr-20'),
+      navbarPosition: isLeft
+        ? (sidebarOpen ? 'left-0 lg:left-70' : 'left-0 lg:left-20')
+        : (sidebarOpen ? 'right-0 lg:right-70' : 'right-0 lg:right-20'),
+      navbarFull: isLeft ? 'right-0' : 'left-0',
+    };
+  }, [localState.sidebarPosition, sidebarOpen, localState.mobileSidebarOpen]);
 
   const topPaddingPx = useMemo(() => {
-    // On desktop, can hide/show the full top bars (status+navbar)
-    // On mobile, forced visible by effect below.
     return localState.topBarsVisible ? TOP_BARS_TOTAL_H : NAVBAR_H;
   }, [localState.topBarsVisible]);
 
@@ -208,7 +207,6 @@ export const Layout: React.FC = () => {
   }, []);
 
   const handleToggleTopBarsVisible = useCallback(() => {
-    // Hard guarantee: only toggleable on desktop
     if (!isDesktopNow()) return;
 
     setLocalState(prev => {
@@ -240,12 +238,10 @@ export const Layout: React.FC = () => {
 
   useEffect(() => {
     const handleResize = () => {
-      // close mobile sidebar when moving to desktop
       if (window.innerWidth >= 1024 && localState.mobileSidebarOpen) {
         handleCloseMobileSidebar();
       }
 
-      // enterprise UX: on mobile, keep top bars visible always
       if (window.innerWidth < 1024 && localState.topBarsVisible === false) {
         setLocalState(prev => ({ ...prev, topBarsVisible: true }));
       }
@@ -372,7 +368,7 @@ export const Layout: React.FC = () => {
           />
         </aside>
 
-            {/* Content */}
+        {/* Content */}
         <div
           className={cn(
             'min-h-screen flex flex-col',
@@ -383,11 +379,8 @@ export const Layout: React.FC = () => {
           <main className="flex-1">
             <div
               className={cn(
-                //  tighter margins on mobile
                 'px-1 py-1 mt-4',
-                // small phones
                 'sm:px-2 sm:py-2 sm:mt-3',
-                // desktop
                 'md:px-3 md:py-3 md:mt-4',
                 'min-h-[calc(100vh-11rem)]',
                 themeClasses.contentArea
@@ -414,46 +407,10 @@ export const Layout: React.FC = () => {
             />
           </footer>
         </div>
-
       </div>
 
       {/* Decorative */}
       <DecorativeBackground theme={theme} sidebarPosition={localState.sidebarPosition} />
-
-      {/* FAB */}
-      <div
-        className={cn(
-          'fixed bottom-6 z-40',
-          'transition-all duration-300 ease-in-out',
-          localState.sidebarPosition === 'left' ? 'right-6' : 'left-6'
-        )}
-      >
-        <button
-          aria-label="Quick actions"
-          className={cn(
-            'group relative p-3 rounded-xl backdrop-blur-xl border shadow-lg',
-            'transition-all duration-300 ease-out',
-            'hover:scale-110 hover:rotate-90 active:scale-95',
-            'focus:outline-none focus:ring-2 focus:ring-offset-2',
-            'overflow-hidden',
-            theme === 'dark'
-              ? 'bg-gray-900/70 border-gray-700/40 hover:border-cyan-500/60 focus:ring-cyan-500/50'
-              : 'bg-white/70 border-gray-300/40 hover:border-blue-500/60 focus:ring-blue-500/50'
-          )}
-        >
-          <div
-            className={cn(
-              'absolute inset-0 opacity-0 group-hover:opacity-100',
-              'transition-opacity duration-300',
-              'bg-gradient-to-br',
-              themeClasses.accent
-            )}
-          />
-          <div className="relative w-5 h-5 rounded-md flex items-center justify-center bg-gradient-to-br from-blue-600 to-cyan-500 group-hover:from-blue-500 group-hover:to-cyan-400 transition-all duration-300">
-            <Plus className="text-white text-sm transition-transform duration-300 group-hover:rotate-90" strokeWidth={2.5} />
-          </div>
-        </button>
-      </div>
     </div>
   );
 };
