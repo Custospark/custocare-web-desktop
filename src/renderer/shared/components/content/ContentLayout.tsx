@@ -281,7 +281,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
               // Small / tablet
               'sm:px-3 sm:py-3',
               // Desktop (tighter than before)
-              'lg:px-4 lg:py-4'
+              'lg:px-4 lg:py-1'
             )}
           >
           {/* Reduced spacing between content and sidebar (requirement #4) */}

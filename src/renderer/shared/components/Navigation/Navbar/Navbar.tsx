@@ -280,7 +280,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   className={cn(
     // Mobile: tighter padding, items start at left
     // Desktop: normal padding, spread out
-    'flex items-center gap-2 px-2 sm:px-4 py-3 md:justify-between',
+    'flex items-center gap-2 px-2 sm:px-4 py-1.2 md:justify-between',
     className
   )}
 >

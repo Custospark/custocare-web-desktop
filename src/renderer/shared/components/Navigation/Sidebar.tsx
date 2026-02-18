@@ -23,7 +23,6 @@ import {
   selectCurrentCapabilityName,
   selectActiveFacilityName,
   selectActiveRoleCode,
-  getRoleDisplayName,
 } from '../../../app/store/slices/activeContextSlice';
 import { FaRegCreditCard } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
@@ -489,7 +488,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
       onTouchMove={handleTouchMove}
     >
       {/* Header */}
-      <div className={cn('shrink-0 p-4 border-b', isDark ? 'border-gray-800/50' : 'border-gray-200/50')}>
+      <div className={cn('shrink-0 p-3 border-b', isDark ? 'border-gray-800/50' : 'border-gray-200/50')}>
         <div className="flex items-center justify-between gap-3">
           {/* Logo / Brand */}
           <div
