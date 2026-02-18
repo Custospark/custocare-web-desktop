@@ -181,34 +181,6 @@ export interface AssignStaffToVisitParams {
 /*                              CORE DATA TYPES                               */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Patient information from queue response
- * Lean representation for queue display
- */
-
-
-  // export interface QueueVisitItem {
-  //   visit_id: number;
-  //   visit_uuid: string;
-  //   facility_id: number;
-
-  //   patient_id: number;
-  //   patient: QueuePatient | null; // 👈 embedded patient snapshot for THIS visit row
-
-  //   current_phase: VisitPhase;
-  //   current_department_id: number | null;
-
-  //   assigned_staff_id: number | null;
-  //   assigned_at: string | null;
-
-  //   waiting_since: string | null;
-  //   acuity_score: number;
-  //   arrived_at: string | null;
-
-  //   visit_type: VisitType;
-  //   status: VisitStatus;
-  //   is_walk_in: boolean;
-  // }
 
   export interface QueueMeta {
   facility_id: number;

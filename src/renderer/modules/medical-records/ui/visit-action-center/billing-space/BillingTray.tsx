@@ -1,7 +1,8 @@
+// BillingTray.tsx
 import React, { useEffect, useCallback, useRef } from 'react';
-import { X, AlertTriangle, FileText, CreditCard, CheckCircle2, User, Info } from 'lucide-react';
+import { X, AlertTriangle, FileText, CreditCard, CheckCircle2, Info, LucideCreditCard } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom'; // or your router's hook
+import { useNavigate } from 'react-router-dom';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
 import { clearActiveVisit } from '../../../../../app/store/slices/visitSlice';
 import {
@@ -12,12 +13,12 @@ import {
   selectBillingStatus,
   selectIsDirty,
   saveDraft,
-  selectPatientInfo,
-  clearAll, 
+  clearAll,
 } from './billingSlice';
 import { ChargeEntryStep } from './ChargeEntryStep';
 import { BillingSummaryStep } from './BillingSummaryStep';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
+import LogoImage from '../../../../../shared/assets/LogoImage';
 
 interface BillingTrayProps {
   theme?: 'light' | 'dark';
@@ -26,16 +27,15 @@ interface BillingTrayProps {
 export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => {
   const isDark = theme === 'dark';
   const dispatch = useDispatch();
-
+  const navigate = useNavigate();
   const { confirm } = useConfirm();
 
   const isTrayOpen = useSelector(selectIsTrayOpen);
   const currentStep = useSelector(selectCurrentStep);
   const isDirty = useSelector(selectIsDirty);
   const status = useSelector(selectBillingStatus);
-  const patientInfo = useSelector(selectPatientInfo);
-  const QUEUE_ROUTE = MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE;
 
+  const QUEUE_ROUTE = MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE;
 
   // Use refs to track if we've shown the status messages without causing re-renders
   const hasShownSettledRef = useRef(false);
@@ -69,7 +69,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
     } else if (status === 'ready' && !hasShownReadyRef.current) {
       hasShownReadyRef.current = true;
     }
-  }, [status]); // Only depend on status, not refs
+  }, [status]);
 
   // Reset status message refs when tray is closed
   useEffect(() => {
@@ -77,47 +77,45 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
       hasShownSettledRef.current = false;
       hasShownReadyRef.current = false;
     }
-  }, [isTrayOpen]); // Only depend on isTrayOpen
+  }, [isTrayOpen]);
 
-const navigate = useNavigate();
+  const handleClose = useCallback(async () => {
+    if (status === 'settled') {
+      const confirmed = await confirm({
+        title: 'Close billing window?',
+        message: 'Payment has been successfully completed. All records are saved and the receipt has been generated.',
+        confirmText: 'Close',
+        cancelText: 'Stay',
+        variant: 'info',
+        theme,
+      });
 
-const handleClose = useCallback(async () => {
-  if (status === 'settled') {
-    const confirmed = await confirm({
-      title: 'Close billing window?',
-      message: 'Payment has been successfully completed. All records are saved and the receipt has been generated.',
-      confirmText: 'Close',
-      cancelText: 'Stay',
-      variant: 'info',
-      theme,
-    });
-
-    if (confirmed) {
-      dispatch(clearAll());        // reset billing state + clear sessionStorage draft
-      dispatch(clearActiveVisit()); // store current as previous, clear active visit
-      navigate(QUEUE_ROUTE);       // redirect to queue
+      if (confirmed) {
+        dispatch(clearAll());
+        dispatch(clearActiveVisit());
+        navigate(QUEUE_ROUTE);
+      }
+      return;
     }
-    return;
-  }
 
-  if (isDirty) {
-    const confirmed = await confirm({
-      title: 'Discard billing changes?',
-      message: 'You have unsaved billing changes. Closing will discard them.',
-      confirmText: 'Discard',
-      cancelText: 'Stay',
-      variant: 'warning',
-      theme,
-    });
+    if (isDirty) {
+      const confirmed = await confirm({
+        title: 'Discard billing changes?',
+        message: 'You have unsaved billing changes. Closing will discard them.',
+        confirmText: 'Discard',
+        cancelText: 'Stay',
+        variant: 'warning',
+        theme,
+      });
 
-    if (confirmed) {
-      dispatch(clearAll());
+      if (confirmed) {
+        dispatch(clearAll());
+      }
+      return;
     }
-    return;
-  }
 
-  dispatch(closeTray());
-}, [confirm, dispatch, isDirty, navigate, theme, status]);
+    dispatch(closeTray());
+  }, [confirm, dispatch, isDirty, navigate, theme, status, QUEUE_ROUTE]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -140,7 +138,6 @@ const handleClose = useCallback(async () => {
     { key: 'billing_summary', label: 'Payment', icon: CreditCard },
   ] as const;
 
-  // Get status display config using same approach as BillingSummary
   const getStatusConfig = (billingStatus: typeof status) => {
     switch (billingStatus) {
       case 'settled':
@@ -187,18 +184,17 @@ const handleClose = useCallback(async () => {
           {/* Header */}
           <div className={`flex items-center justify-between px-4 py-3 border-b ${colors.border.primary} gap-3`}>
             
-            {/* Left: Patient Info */}
+          {/* Left: App Logo */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className={`p-1.5 rounded-md ${colors.bg.secondary}`}>
-                <User className="w-4 h-4 text-gray-500" />
-              </div>
-              <div className="min-w-0">
-                <p className={`text-sm font-medium ${colors.text.primary} truncate`}>
-                  {patientInfo.patientName || 'New Patient'}
-                </p>
-                <p className={`text-xs ${colors.text.secondary} truncate`}>
-                  {patientInfo.patientId ? `ID: ${patientInfo.patientId}` : 'No ID assigned'}
-                </p>
+              <LogoImage size="sm" />
+              <div className="hidden sm:flex sm:items-center sm:gap-2">
+                <span className="text-base sm:text-lg font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+                  Custocare AI
+                </span>
+                <LucideCreditCard className="w-4 h-4 text-blue-500" />
+                <span className="text-sm font-medium text-blue-500">
+                  Billing
+                </span>
               </div>
             </div>
 

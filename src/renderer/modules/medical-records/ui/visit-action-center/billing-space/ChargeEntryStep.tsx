@@ -14,6 +14,13 @@ import {
   selectBillingStatus,
 } from './billingSlice';
 import { isInventoryItem } from '../../../api/billable-items/BillingItemsTypes';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  containerVariants,
+  itemVariants,
+  scaleIn,
+  fadeInUp,
+} from  '../../../../../shared/components/animations/motionVariants';
 
 import { type ServiceItem, formatCurrency, makeBillableKey } from './billing-types';
 import { useGetBillableItems } from '../../../api/billable-items/BillableItemsQueries';
@@ -261,6 +268,8 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     setShowSearchResults(false);
     inputRef.current?.focus();
   };
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
 
   const handleClearAll = async () => {
     if (isReadOnly || chargeItems.length === 0) return;
@@ -328,79 +337,125 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 h-full">
         {/* Left: Search + Items */}
-        <div className="lg:col-span-8 xl:col-span-9 flex flex-col min-h-0" ref={containerRef}>
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="lg:col-span-8 xl:col-span-9 flex flex-col min-h-0"
+          ref={containerRef}
+        >
           {/* Sticky Search Section */}
           <div
             className={`sticky top-0 z-30 pb-3 ${colors.bg.primary} transition-all duration-200 ${
               isSearchSticky ? 'pt-1 bg-opacity-95 backdrop-blur-sm' : ''
             }`}
           >
-            <div ref={searchWrapRef} className="relative">
-              <div className="relative">
-                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${colors.text.tertiary}`} />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  placeholder={
-                    isReadOnly
-                      ? 'Payment completed - browsing disabled'
-                      : isLoading 
-                        ? 'Loading billable items...' 
-                        : 'Search by service/item name, code, or category...'
-                  }
-                  value={searchTerm}
-                  onChange={(e) => !isReadOnly && setSearchTerm(e.target.value)}
-                  onFocus={() => {
-                    if (isReadOnly) return;
-                    if (searchTerm.trim() || isLoading) {
-                      setShowSearchResults(true);
-                    }
-                  }}
-                  disabled={isLoading || isReadOnly}
-                  readOnly={isReadOnly}
-                  className={`w-full pl-9 pr-10 py-2.5 sm:py-3 border ${
-                    isReadOnly 
-                      ? `${colors.border.disabled} ${colors.bg.disabled} ${colors.text.disabled} cursor-not-allowed` 
-                      : `${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}`
-                  } focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg transition-all duration-200
-                  placeholder:${colors.text.muted} shadow-sm disabled:opacity-75 disabled:cursor-not-allowed`}
-                />
-
-                {searchTerm && !isReadOnly && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchTerm('');
-                      setShowSearchResults(false);
-                      inputRef.current?.focus();
+            <motion.div variants={itemVariants} ref={searchWrapRef} className="relative">
+              {/* Sparkling animated border wrapper — always visible, speeds up on focus */}
+              <div className={`relative rounded-lg ${!isReadOnly ? 'p-[2px]' : ''}`}>
+                {/* Gradient border track — always rendered when not read-only */}
+                {!isReadOnly && (
+                  <motion.div
+                    className="absolute inset-0 rounded-lg z-0"
+                    style={{
+                      background:
+                        'linear-gradient(90deg, #3b82f6, #10b981, #6366f1, #3b82f6)',
+                      backgroundSize: '300% 100%',
                     }}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 ${colors.bg.hover} ${colors.text.secondary} 
-                    cursor-pointer rounded-full transition-colors hover:${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}
-                    aria-label="Clear search"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                    animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+                    transition={{
+                      duration: isSearchFocused ? 2 : 6, // fast when focused, slow ambient when not
+                      repeat: Infinity,
+                      ease: 'linear',
+                    }}
+                  />
                 )}
+
+                {/* Inner surface — covers most of the gradient leaving 2px ring */}
+                <div className="relative z-10">
+                  <div className={`relative ${!isReadOnly ? 'rounded-[6px] overflow-hidden' : ''}`}>
+                    <Search
+                      className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${
+                        isSearchFocused && !isReadOnly
+                          ? 'text-blue-500'
+                          : colors.text.tertiary
+                      }`}
+                    />
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      placeholder={
+                        isReadOnly
+                          ? 'Payment completed — view only'
+                          : isLoading
+                          ? 'Loading billable items...'
+                          : 'Search by service/item name, code, or category...'
+                      }
+                      value={searchTerm}
+                      onChange={(e) => !isReadOnly && setSearchTerm(e.target.value)}
+                      onFocus={() => {
+                        if (isReadOnly) return;
+                        setIsSearchFocused(true);
+                        if (searchTerm.trim() || isLoading) setShowSearchResults(true);
+                      }}
+                      onBlur={() => setIsSearchFocused(false)}
+                      disabled={isLoading || isReadOnly}
+                      readOnly={isReadOnly}
+                      className={`w-full pl-9 pr-10 py-2.5 sm:py-3 transition-all duration-200
+                        placeholder:${colors.text.muted} shadow-sm
+                        disabled:opacity-75 disabled:cursor-not-allowed
+                        focus:outline-none
+                        ${
+                          isReadOnly
+                            ? `border ${colors.border.disabled} ${colors.bg.disabled} ${colors.text.disabled} cursor-not-allowed rounded-lg`
+                            : `border-transparent ${colors.bg.primary} ${colors.text.primary} rounded-[6px]`
+                        }`}
+                    />
+
+                    {searchTerm && !isReadOnly && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchTerm('');
+                          setShowSearchResults(false);
+                          inputRef.current?.focus();
+                        }}
+                        className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5
+                          ${colors.bg.hover} ${colors.text.secondary}
+                          cursor-pointer rounded-full transition-colors`}
+                        aria-label="Clear search"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* Search Results Dropdown - only show when not read-only */}
+              {/* Search Results Dropdown */}
               {!isReadOnly && showSearchResults && (
-                <div
-                  className={`absolute z-20 w-full mt-1.5 border shadow-2xl ${colors.border.primary} ${colors.bg.elevated}
-                  rounded-lg overflow-hidden backdrop-blur-sm ${colors.bg.overlay}`}
+                <motion.div
+                  variants={scaleIn}
+                  initial="hidden"
+                  animate="visible"
+                  className={`absolute z-20 w-full mt-1.5 border shadow-2xl
+                    ${colors.border.primary} ${colors.bg.elevated}
+                    rounded-xl overflow-hidden backdrop-blur-sm ${colors.bg.overlay}`}
                 >
                   {isLoading ? (
                     <div className="p-6 text-center">
-                      <div className="animate-pulse">
-                        <div className={`h-4 ${colors.bg.secondary} rounded w-3/4 mx-auto mb-3`}></div>
-                        <div className={`h-3 ${colors.bg.secondary} rounded w-1/2 mx-auto`}></div>
+                      <div className="animate-pulse space-y-2">
+                        <div className={`h-4 ${colors.bg.secondary} rounded w-3/4 mx-auto`} />
+                        <div className={`h-3 ${colors.bg.secondary} rounded w-1/2 mx-auto`} />
                       </div>
-                      <p className={`text-sm ${colors.text.secondary} mt-2`}>Loading billable items…</p>
+                      <p className={`text-sm ${colors.text.secondary} mt-3`}>
+                        Loading services & inventory…
+                      </p>
                     </div>
                   ) : isError ? (
                     <div className="p-6 text-center">
                       <div className={`inline-flex p-3 ${colors.bg.secondary} rounded-full mb-3`}>
-                        <AlertCircle className={`w-5 h-5 text-red-500`} />
+                        <AlertCircle className="w-5 h-5 text-red-500" />
                       </div>
                       <p className={`font-medium ${colors.text.primary} mb-1`}>Unable to load items</p>
                       <p className={`text-sm ${colors.text.secondary}`}>
@@ -411,59 +466,82 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                     </div>
                   ) : searchResults.length > 0 ? (
                     <div className="max-h-72 overflow-y-auto">
-                   {searchResults.map((service) => {
+                      {searchResults.map((service, idx) => {
                         const outOfStock = isOutOfStock(service);
                         return (
-                          <button
+                          <motion.button
                             key={makeBillableKey(service)}
                             type="button"
+                            variants={itemVariants}
+                            custom={idx}
                             onClick={() => !outOfStock && handleAddItem(service)}
                             disabled={outOfStock}
                             className={`w-full text-left p-3 border-b last:border-b-0 ${colors.border.subtle}
                               transition-all duration-150
-                              ${outOfStock
-                                ? `cursor-not-allowed ${isDark ? 'opacity-50' : 'opacity-60'}`
-                                : `${colors.bg.hover} cursor-pointer hover:${isDark ? 'bg-gray-800' : 'bg-gray-50'} active:scale-[0.995]`
+                              ${
+                                outOfStock
+                                  ? `cursor-not-allowed ${isDark ? 'opacity-50' : 'opacity-60'}`
+                                  : `${colors.bg.hover} cursor-pointer active:scale-[0.995]`
                               }`}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className={`font-semibold truncate ${
-                                    outOfStock ? colors.text.disabled : colors.text.primary
-                                  }`}>
+                                  <span
+                                    className={`font-semibold truncate ${
+                                      outOfStock ? colors.text.disabled : colors.text.primary
+                                    }`}
+                                  >
                                     {service.name}
                                   </span>
-                                  <span className={`text-xs px-1.5 py-0.5 ${colors.bg.secondary} ${colors.text.secondary} flex-shrink-0 rounded`}>
+                                  <span
+                                    className={`text-xs px-1.5 py-0.5 ${colors.bg.secondary} ${colors.text.secondary} flex-shrink-0 rounded`}
+                                  >
                                     {service.code}
                                   </span>
                                   {getStockBadge(service)}
                                 </div>
                                 <div className="flex items-center justify-between mt-1 text-sm">
-                                  <span className={`truncate ${colors.text.secondary}`}>{service.category}</span>
-                                  <span className={`font-semibold ${outOfStock ? colors.text.disabled : colors.text.primary}`}>
+                                  <span className={`truncate ${colors.text.secondary}`}>
+                                    {service.category}
+                                  </span>
+                                  <span
+                                    className={`font-semibold ${
+                                      outOfStock ? colors.text.disabled : colors.text.primary
+                                    }`}
+                                  >
                                     {formatCurrency(service.unitPrice)}
                                   </span>
                                 </div>
-                                {outOfStock && (
+                                {/* {outOfStock && (
                                   <p className={`text-xs mt-1 ${isDark ? 'text-red-400' : 'text-red-600'}`}>
                                     Cannot add — no stock available
                                   </p>
-                                )}
+                                )} */}
                               </div>
-                              <div className={`p-1.5 rounded-full flex-shrink-0 ${
-                                outOfStock
-                                  ? isDark ? 'bg-gray-800' : 'bg-gray-100'
-                                  : isDark ? 'bg-blue-900/30' : 'bg-blue-50'
-                              }`}>
-                                <Plus className={`w-4 h-4 ${
+                              <div
+                                className={`p-1.5 rounded-full flex-shrink-0 ${
                                   outOfStock
-                                    ? colors.text.disabled
-                                    : isDark ? 'text-blue-400' : 'text-blue-600'
-                                }`} />
+                                    ? isDark
+                                      ? 'bg-gray-800'
+                                      : 'bg-gray-100'
+                                    : isDark
+                                    ? 'bg-blue-900/30'
+                                    : 'bg-blue-50'
+                                }`}
+                              >
+                                <Plus
+                                  className={`w-4 h-4 ${
+                                    outOfStock
+                                      ? colors.text.disabled
+                                      : isDark
+                                      ? 'text-blue-400'
+                                      : 'text-blue-600'
+                                  }`}
+                                />
                               </div>
                             </div>
-                          </button>
+                          </motion.button>
                         );
                       })}
                     </div>
@@ -473,86 +551,110 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                         <Filter className={`w-5 h-5 ${colors.text.tertiary}`} />
                       </div>
                       <p className={`font-medium ${colors.text.primary} mb-1`}>No results found</p>
-                      <p className={`text-sm ${colors.text.secondary}`}>Try adjusting your search or filters</p>
-                      <p className={`text-xs mt-2 ${colors.text.muted}`}>Search by service name, code, or category</p>
+                      <p className={`text-sm ${colors.text.secondary}`}>
+                        Try adjusting your search or filters
+                      </p>
+                      <p className={`text-xs mt-2 ${colors.text.muted}`}>
+                        Search by service name, code, or category
+                      </p>
                     </div>
                   )}
-                </div>
+                </motion.div>
               )}
 
               {/* Read-only message when search is attempted */}
               {isReadOnly && searchTerm && (
-                <div className={`absolute z-20 w-full mt-1.5 border ${colors.border.primary} ${colors.bg.elevated} rounded-lg p-4 text-center`}>
+                <motion.div
+                  variants={fadeInUp}
+                  initial="hidden"
+                  animate="visible"
+                  className={`absolute z-20 w-full mt-1.5 border ${colors.border.primary} ${colors.bg.elevated} rounded-xl p-4 text-center`}
+                >
                   <Lock className={`w-5 h-5 ${colors.text.tertiary} mx-auto mb-2`} />
-                  <p className={`text-sm font-medium ${colors.text.primary}`}>Payment已完成</p>
+                  <p className={`text-sm font-medium ${colors.text.primary}`}>Payment Completed</p>
                   <p className={`text-xs ${colors.text.secondary} mt-1`}>
                     This billing session is settled. No further changes can be made.
                   </p>
-                </div>
+                </motion.div>
               )}
-            </div>
+            </motion.div>
           </div>
 
           {/* Items header */}
-          <div
+          <motion.div
+            variants={itemVariants}
             className={`sticky top-12 z-20 ${colors.bg.primary} pb-2 transition-all duration-200 ${
               isSearchSticky ? 'pt-2 bg-opacity-95 backdrop-blur-sm' : ''
             }`}
           >
             <div className="flex items-center justify-between gap-3">
-              <h3 className={`text-base sm:text-lg font-bold ${colors.text.primary}`}>
-                Selected items <span className={`${colors.text.secondary} font-semibold`}>({chargeItems.length})</span>
+              <h3 className="text-base sm:text-lg font-bold">
+                <span className="bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+                  Selected items
+                </span>{' '}
+                <span className={`${colors.text.secondary} font-semibold`}>
+                  ({chargeItems.length})
+                </span>
                 {isReadOnly && (
-                  <span className={`ml-2 text-xs font-normal ${colors.status.settledBadge} px-2 py-0.5 rounded-full`}>
+                  <span
+                    className={`ml-2 text-xs font-normal ${colors.status.settledBadge} px-2 py-0.5 rounded-full`}
+                  >
                     View only
                   </span>
                 )}
               </h3>
 
               {!isReadOnly && chargeItems.length > 0 && (
-                <button
+                <motion.button
                   type="button"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={handleClearAll}
                   className={`flex items-center gap-2 px-3 py-2 ${colors.bg.hover} ${colors.text.secondary}
-                  transition-colors cursor-pointer rounded-lg hover:${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
+                    transition-colors cursor-pointer rounded-lg`}
                 >
                   <Trash2 className="w-4 h-4" />
                   <span className="text-sm font-semibold">Clear all</span>
-                </button>
+                </motion.button>
               )}
             </div>
-          </div>
+          </motion.div>
 
           {/* Items list area */}
           <div className="flex-1 min-h-0">
             {chargeItems.length === 0 ? (
-              <div
-                className={`h-full min-h-[260px] flex flex-col items-center justify-center text-center 
-                border ${colors.border.primary} rounded-xl ${colors.bg.secondary}`}
+              <motion.div
+                variants={fadeInUp}
+                initial="hidden"
+                animate="visible"
+                className={`h-full min-h-[260px] flex flex-col items-center justify-center text-center
+                  border ${colors.border.primary} rounded-xl ${colors.bg.secondary}`}
               >
                 <div className={`p-4 ${colors.bg.primary} rounded-full mb-4`}>
                   <Calculator className={`w-10 h-10 sm:w-12 sm:h-12 ${colors.text.tertiary}`} />
                 </div>
                 <p className={`text-base font-semibold ${colors.text.primary}`}>No items added</p>
                 <p className={`text-sm mt-1 ${colors.text.secondary}`}>
-                  {isReadOnly 
+                  {isReadOnly
                     ? 'This settled billing session has no items.'
                     : 'Search and add services/items to start billing'}
                 </p>
-              </div>
+              </motion.div>
             ) : (
-              <div
+              <motion.div
+                variants={fadeInUp}
+                initial="hidden"
+                animate="visible"
                 className={`h-full border ${colors.border.primary} rounded-xl overflow-hidden flex flex-col min-h-0
-                shadow-sm ${isReadOnly ? 'opacity-90' : ''}`}
+                  shadow-sm ${isReadOnly ? 'opacity-90' : ''}`}
               >
                 {/* Desktop table header */}
                 <div
-                  className={`hidden md:grid grid-cols-12 gap-3 px-4 py-3 text-sm font-semibold border-b 
-                  ${colors.bg.secondary} ${colors.border.primary} sticky top-0 z-10 rounded-t-xl`}
+                  className={`hidden md:grid grid-cols-12 gap-3 px-4 py-3 text-sm font-semibold border-b
+                    ${colors.bg.secondary} ${colors.border.primary} sticky top-0 z-10 rounded-t-xl`}
                 >
                   <div className="col-span-1 flex items-center gap-1">
                     <Hash className="w-3 h-3" />
-                    <span className="text-center"></span>
                   </div>
                   <div className="col-span-4">Item</div>
                   <div className="col-span-2">Unit</div>
@@ -563,226 +665,276 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                 {/* Scrollable list */}
                 <div
                   className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scroll-smooth
-                  [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-300 
-                  [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 
-                  dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 dark:[&::-webkit-scrollbar-track]:bg-gray-800
-                  hover:[&::-webkit-scrollbar-thumb]:bg-gray-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-gray-600"
+                    [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-300
+                    [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100
+                    dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 dark:[&::-webkit-scrollbar-track]:bg-gray-800
+                    hover:[&::-webkit-scrollbar-thumb]:bg-gray-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-gray-600"
                 >
                   {/* Desktop rows */}
                   <div className="hidden md:block">
-                    {chargeItems.map((item, index) => (
-                      <div
-                        key={item.id}
-                        className={`grid grid-cols-12 gap-3 px-4 py-3 items-center border-b last:border-b-0 
-                        ${colors.border.primary} transition-all duration-150 ${!isReadOnly && `hover:${colors.bg.hover}`}
-                        ${index % 2 === 0 ? colors.bg.stripe : colors.bg.stripeAlt}
-                        ${isReadOnly ? 'cursor-default' : ''}`}
-                      >
-                        <div className="col-span-1">
-                          <div
-                            className={`flex items-center justify-center w-7 h-7 rounded-full 
-                            ${isDark ? 'bg-gray-800' : 'bg-gray-100'} ${colors.text.secondary} text-sm font-medium`}
-                          >
-                            {index + 1}
+                    <AnimatePresence initial={false}>
+                      {chargeItems.map((item, index) => (
+                        <motion.div
+                          key={item.id}
+                          layout
+                          initial={{ opacity: 0, x: -16 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 16, height: 0 }}
+                          transition={{ duration: 0.22, ease: 'easeOut' }}
+                          className={`grid grid-cols-12 gap-3 px-4 py-3 items-center border-b last:border-b-0
+                            ${colors.border.primary} transition-colors duration-150
+                            ${!isReadOnly ? `hover:${colors.bg.hover}` : ''}
+                            ${index % 2 === 0 ? colors.bg.stripe : colors.bg.stripeAlt}
+                            ${isReadOnly ? 'cursor-default' : ''}`}
+                        >
+                          <div className="col-span-1">
+                            <div
+                              className={`flex items-center justify-center w-7 h-7 rounded-full
+                                ${isDark ? 'bg-gray-800' : 'bg-gray-100'} ${colors.text.secondary} text-sm font-medium`}
+                            >
+                              {index + 1}
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="col-span-4 min-w-0">
-                          <p className={`font-semibold truncate ${colors.text.primary}`}>{item.service.name ?? 'NA'}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-xs px-1.5 py-0.5 ${colors.bg.secondary} ${colors.text.secondary} rounded`}>
-                              {item.service.code}
+                          <div className="col-span-4 min-w-0">
+                            <p className={`font-semibold truncate ${colors.text.primary}`}>
+                              {item.service.name ?? 'NA'}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <span
+                                className={`text-xs px-1.5 py-0.5 ${colors.bg.secondary} ${colors.text.secondary} rounded`}
+                              >
+                                {item.service.code}
+                              </span>
+                              <span className={`text-xs truncate ${colors.text.secondary}`}>
+                                {item.service.category}
+                              </span>
+                              {getStockBadge(item.service)}
+                            </div>
+                          </div>
+
+                          <div className="col-span-2">
+                            <span className={`font-semibold ${colors.text.primary}`}>
+                              {formatCurrency(item.service.unitPrice)}
                             </span>
-                            <span className={`text-xs truncate ${colors.text.secondary}`}>{item.service.category}</span>
-                            {getStockBadge(item.service)}
                           </div>
-                        </div>
 
-                        <div className="col-span-2">
-                          <span className={`font-semibold ${colors.text.primary}`}>
-                            {formatCurrency(item.service.unitPrice)}
-                          </span>
-                        </div>
+                          <div className="col-span-3">
+                            <div className="flex items-center gap-2">
+                              {!isReadOnly ? (
+                                <>
+                                  <motion.button
+                                    type="button"
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => dispatch(decreaseQuantity(item.id))}
+                                    className={`p-2 border ${colors.border.primary} ${colors.bg.hover}
+                                      transition-colors cursor-pointer rounded`}
+                                    aria-label="Decrease quantity"
+                                  >
+                                    <Minus className="w-4 h-4" />
+                                  </motion.button>
 
-                        <div className="col-span-3">
-                          <div className="flex items-center gap-2">
-                            {!isReadOnly ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => dispatch(decreaseQuantity(item.id))}
-                                  className={`p-2 border ${colors.border.primary} ${colors.bg.hover} transition-colors 
-                                  cursor-pointer rounded hover:${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
-                                  aria-label="Decrease quantity"
-                                >
-                                  <Minus className="w-4 h-4" />
-                                </button>
+                                  <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={1}
+                                    max={9999}
+                                    value={item.quantity}
+                                    onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                                    onBlur={(e) => handleQtyBlur(item.id, e.target.value)}
+                                    className={`w-20 px-2 py-2 text-center border ${colors.border.primary}
+                                      ${colors.bg.primary} ${colors.text.primary}
+                                      focus:outline-none focus:ring-2 focus:ring-blue-500/30 rounded`}
+                                  />
 
-                                <input
-                                  type="number"
-                                  inputMode="numeric"
-                                  min={1}
-                                  max={9999}
-                                  value={item.quantity}
-                                  onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                                  onBlur={(e) => handleQtyBlur(item.id, e.target.value)}
-                                  className={`w-20 px-2 py-2 text-center border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
-                                  focus:outline-none focus:ring-2 focus:ring-blue-500/30 rounded`}
-                                />
+                                  <motion.button
+                                    type="button"
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => dispatch(increaseQuantity(item.id))}
+                                    className={`p-2 border ${colors.border.primary} ${colors.bg.hover}
+                                      transition-colors cursor-pointer rounded`}
+                                    aria-label="Increase quantity"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </motion.button>
 
-                                <button
-                                  type="button"
-                                  onClick={() => dispatch(increaseQuantity(item.id))}
-                                  className={`p-2 border ${colors.border.primary} ${colors.bg.hover} transition-colors 
-                                  cursor-pointer rounded hover:${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
-                                  aria-label="Increase quantity"
-                                >
-                                  <Plus className="w-4 h-4" />
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => dispatch(removeChargeItem(item.id))}
-                                  className={`ml-1 p-2 ${colors.bg.hover} ${colors.text.secondary} transition-colors 
-                                  cursor-pointer rounded-full hover:${isDark ? 'bg-red-900/20' : 'bg-red-50'} 
-                                  hover:text-red-500`}
-                                  title="Remove item"
-                                  aria-label="Remove item"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </>
-                            ) : (
-                              // Read-only quantity display
-                              <div className="flex items-center gap-2">
-                                <span className={`px-3 py-2 border ${colors.border.primary} ${colors.bg.secondary} rounded text-center w-20`}>
-                                  {item.quantity}
-                                </span>
-                                <span className={`text-xs ${colors.text.secondary} ml-2`}>
-                                  × {formatCurrency(item.service.unitPrice)}
-                                </span>
-                              </div>
-                            )}
+                                  <motion.button
+                                    type="button"
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => dispatch(removeChargeItem(item.id))}
+                                    className={`ml-1 p-2 ${colors.bg.hover} ${colors.text.secondary}
+                                      transition-colors cursor-pointer rounded-full
+                                      hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500`}
+                                    title="Remove item"
+                                    aria-label="Remove item"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </motion.button>
+                                </>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`px-3 py-2 border ${colors.border.primary} ${colors.bg.secondary} rounded text-center w-20`}
+                                  >
+                                    {item.quantity}
+                                  </span>
+                                  <span className={`text-xs ${colors.text.secondary} ml-2`}>
+                                    × {formatCurrency(item.service.unitPrice)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="col-span-2 text-right">
-                          <span className={`font-extrabold ${colors.text.primary}`}>{formatCurrency(item.totalAmount)}</span>
-                        </div>
-                      </div>
-                    ))}
+                          <div className="col-span-2 text-right">
+                            <span className={`font-extrabold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent`}>
+                              {formatCurrency(item.totalAmount)}
+                            </span>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
                   </div>
 
                   {/* Mobile cards */}
                   <div className="md:hidden p-3 space-y-3">
-                    {chargeItems.map((item, index) => (
-                      <div
-                        key={item.id}
-                        className={`border ${colors.border.primary} ${colors.bg.secondary} p-4 rounded-xl
-                        ${index % 2 === 0 ? colors.bg.stripe : colors.bg.stripeAlt}`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-start gap-3 min-w-0">
-                            <div
-                              className={`flex items-center justify-center w-6 h-6 rounded-full 
-                              ${isDark ? 'bg-gray-800' : 'bg-gray-100'} ${colors.text.secondary} text-xs font-medium flex-shrink-0`}
-                            >
-                              {index + 1}
-                            </div>
-                            <div className="min-w-0">
-                              <p className={`font-semibold ${colors.text.primary} truncate`}>{item.service.name}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className={`text-xs px-1.5 py-0.5 ${colors.bg.primary} ${colors.text.secondary} rounded`}>
-                                  {item.service.code}
-                                </span>
-                                <span className={`text-xs ${colors.text.secondary} truncate`}>{item.service.category}</span>
-                                
+                    <AnimatePresence initial={false}>
+                      {chargeItems.map((item, index) => (
+                        <motion.div
+                          key={item.id}
+                          layout
+                          initial={{ opacity: 0, y: -12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 12, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className={`border ${colors.border.primary} ${colors.bg.secondary} p-4 rounded-xl
+                            ${index % 2 === 0 ? colors.bg.stripe : colors.bg.stripeAlt}`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3 min-w-0">
+                              <div
+                                className={`flex items-center justify-center w-6 h-6 rounded-full
+                                  ${isDark ? 'bg-gray-800' : 'bg-gray-100'} ${colors.text.secondary} text-xs font-medium flex-shrink-0`}
+                              >
+                                {index + 1}
+                              </div>
+                              <div className="min-w-0">
+                                <p className={`font-semibold ${colors.text.primary} truncate`}>
+                                  {item.service.name}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  <span
+                                    className={`text-xs px-1.5 py-0.5 ${colors.bg.primary} ${colors.text.secondary} rounded`}
+                                  >
+                                    {item.service.code}
+                                  </span>
+                                  <span className={`text-xs ${colors.text.secondary} truncate`}>
+                                    {item.service.category}
+                                  </span>
+                                  {getStockBadge(item.service)}
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          {!isReadOnly && (
-                            <button
-                              type="button"
-                              onClick={() => dispatch(removeChargeItem(item.id))}
-                              className={`p-2 ${colors.bg.hover} ${colors.text.secondary} cursor-pointer rounded-full
-                              hover:${isDark ? 'bg-red-900/20' : 'bg-red-50'} hover:text-red-500 flex-shrink-0`}
-                              aria-label="Remove item"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="mt-4 grid grid-cols-2 gap-4 items-center">
-                          <div>
-                            <p className={`text-xs ${colors.text.secondary}`}>Unit price</p>
-                            <p className={`font-bold ${colors.text.primary}`}>{formatCurrency(item.service.unitPrice)}</p>
-                          </div>
-
-                          <div className="text-right">
-                            <p className={`text-xs ${colors.text.secondary}`}>Total</p>
-                            <p className={`font-extrabold ${colors.text.primary}`}>{formatCurrency(item.totalAmount)}</p>
-                          </div>
-
-                          <div className="col-span-2">
-                            <p className={`text-xs ${colors.text.secondary} mb-2`}>Quantity</p>
-                            {!isReadOnly ? (
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => dispatch(decreaseQuantity(item.id))}
-                                  className={`flex-1 p-2 border ${colors.border.primary} ${colors.bg.hover} 
-                                  transition-colors cursor-pointer rounded-lg hover:${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
-                                >
-                                  <Minus className="w-4 h-4 mx-auto" />
-                                </button>
-
-                                <input
-                                  type="number"
-                                  inputMode="numeric"
-                                  min={1}
-                                  max={9999}
-                                  value={item.quantity}
-                                  onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                                  onBlur={(e) => handleQtyBlur(item.id, e.target.value)}
-                                  className={`w-20 px-2 py-2 text-center border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
-                                  focus:outline-none focus:ring-2 focus:ring-blue-500/30 rounded`}
-                                />
-
-                                <button
-                                  type="button"
-                                  onClick={() => dispatch(increaseQuantity(item.id))}
-                                  className={`flex-1 p-2 border ${colors.border.primary} ${colors.bg.hover} 
-                                  transition-colors cursor-pointer rounded-lg hover:${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
-                                >
-                                  <Plus className="w-4 h-4 mx-auto" />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className={`p-3 ${colors.bg.primary} border ${colors.border.primary} rounded-lg text-center`}>
-                                <span className={`font-semibold ${colors.text.primary}`}>Quantity: {item.quantity}</span>
-                              </div>
+                            {!isReadOnly && (
+                              <motion.button
+                                type="button"
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => dispatch(removeChargeItem(item.id))}
+                                className={`p-2 ${colors.bg.hover} ${colors.text.secondary} cursor-pointer rounded-full
+                                  hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 flex-shrink-0`}
+                                aria-label="Remove item"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </motion.button>
                             )}
                           </div>
-                        </div>
-                      </div>
-                    ))}
+
+                          <div className="mt-4 grid grid-cols-2 gap-4 items-center">
+                            <div>
+                              <p className={`text-xs ${colors.text.secondary}`}>Unit price</p>
+                              <p className={`font-bold ${colors.text.primary}`}>
+                                {formatCurrency(item.service.unitPrice)}
+                              </p>
+                            </div>
+
+                            <div className="text-right">
+                              <p className={`text-xs ${colors.text.secondary}`}>Total</p>
+                              <p className="font-extrabold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+                                {formatCurrency(item.totalAmount)}
+                              </p>
+                            </div>
+
+                            <div className="col-span-2">
+                              <p className={`text-xs ${colors.text.secondary} mb-2`}>Quantity</p>
+                              {!isReadOnly ? (
+                                <div className="flex items-center gap-2">
+                                  <motion.button
+                                    type="button"
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => dispatch(decreaseQuantity(item.id))}
+                                    className={`flex-1 p-2 border ${colors.border.primary} ${colors.bg.hover}
+                                      transition-colors cursor-pointer rounded-lg`}
+                                  >
+                                    <Minus className="w-4 h-4 mx-auto" />
+                                  </motion.button>
+
+                                  <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={1}
+                                    max={9999}
+                                    value={item.quantity}
+                                    onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                                    onBlur={(e) => handleQtyBlur(item.id, e.target.value)}
+                                    className={`w-20 px-2 py-2 text-center border ${colors.border.primary}
+                                      ${colors.bg.primary} ${colors.text.primary}
+                                      focus:outline-none focus:ring-2 focus:ring-blue-500/30 rounded`}
+                                  />
+
+                                  <motion.button
+                                    type="button"
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => dispatch(increaseQuantity(item.id))}
+                                    className={`flex-1 p-2 border ${colors.border.primary} ${colors.bg.hover}
+                                      transition-colors cursor-pointer rounded-lg`}
+                                  >
+                                    <Plus className="w-4 h-4 mx-auto" />
+                                  </motion.button>
+                                </div>
+                              ) : (
+                                <div
+                                  className={`p-3 ${colors.bg.primary} border ${colors.border.primary} rounded-lg text-center`}
+                                >
+                                  <span className={`font-semibold ${colors.text.primary}`}>
+                                    Quantity: {item.quantity}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
                   </div>
                 </div>
 
                 {/* Bottom mini footer */}
                 <div
-                  className={`px-4 py-3 border-t ${colors.border.primary} ${colors.bg.secondary} 
-                  flex items-center justify-between sticky bottom-0 z-10 rounded-b-xl`}
+                  className={`px-4 py-3 border-t ${colors.border.primary} ${colors.bg.secondary}
+                    flex items-center justify-between sticky bottom-0 z-10 rounded-b-xl`}
                 >
                   <span className={`text-sm ${colors.text.secondary}`}>Subtotal</span>
-                  <span className={`text-lg font-extrabold text-green-500`}>{formatCurrency(subtotal)}</span>
+                  <span className="text-lg font-extrabold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+                    {formatCurrency(subtotal)}
+                  </span>
                 </div>
-              </div>
+              </motion.div>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Right: Summary */}
         <div className="lg:col-span-4 xl:col-span-3 min-h-0">
