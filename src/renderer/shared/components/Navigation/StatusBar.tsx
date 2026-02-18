@@ -158,7 +158,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     {
       id: 'patient-dashboard',
       label: 'My Health',
-      route: '/patient-dashboard',
+      route: '/dahboard/patient',
       description: 'Personal health overview',
       moduleCode: 'patient_dashboard',
       keywords: ['health', 'patient', 'dashboard', 'overview', 'personal'],
@@ -483,7 +483,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
                 if (searchQuery.trim()) setShowSearchResults(true);
               }}
               onBlur={onSearchBlur}
-              placeholder="Search everything..." // Simple and complete
+              placeholder="Search for anything you need..." // Slightly more professional              
               aria-label="Global module search"
               className={cn(
                 'w-full pl-9 pr-16 sm:pr-20 py-1.5 rounded-lg text-sm',
@@ -608,45 +608,45 @@ export const StatusBar: React.FC<StatusBarProps> = ({
                     ))}
                   </div>
                 ) : (
-                  <div className="p-6 sm:p-8 text-center">
-                    <div
-                      className={cn(
-                        'inline-flex p-3 sm:p-4 rounded-full mb-3 mx-auto',
-                        theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-100'
-                      )}
-                    >
-                      <Filter
-                        className={cn(
-                          'w-5 h-5 sm:w-6 sm:h-6',
-                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                        )}
-                      />
-                    </div>
-                    <p
-                      className={cn(
-                        'font-semibold text-sm sm:text-base mb-1',
-                        theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
-                      )}
-                    >
-                      No modules found
-                    </p>
-                    <p
-                      className={cn(
-                        'text-xs sm:text-sm',
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                      )}
-                    >
-                      Try adjusting your search terms
-                    </p>
-                    <p
-                      className={cn(
-                        'text-xs mt-2',
-                        theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
-                      )}
-                    >
-                      Search by module name, category, or description
-                    </p>
-                  </div>
+                 <div className="p-6 sm:p-8 text-center">
+                <div
+                  className={cn(
+                    'inline-flex p-3 sm:p-4 rounded-full mb-3 mx-auto',
+                    theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-100'
+                  )}
+                >
+                  <Filter
+                    className={cn(
+                      'w-5 h-5 sm:w-6 sm:h-6',
+                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    )}
+                  />
+                </div>
+                  <p
+                    className={cn(
+                      'font-semibold text-sm sm:text-base mb-1',
+                      theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+                    )}
+                  >
+                    No results found
+                  </p>
+                  <p
+                    className={cn(
+                      'text-xs sm:text-sm',
+                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                    )}
+                  >
+                    Try different keywords
+                  </p>
+                  <p
+                    className={cn(
+                      'text-xs mt-2',
+                      theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                    )}
+                  >
+                    Search by name, category, or functionality
+                  </p>
+                </div>
                 )}
               </div>
             )}
