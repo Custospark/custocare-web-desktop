@@ -1,5 +1,5 @@
 // components/TransactionList.tsx
-// Left panel - displays filtered transaction records with search and filters
+// Left panel - displays filtered transaction records using BillingReviewTypes
 
 import React from 'react';
 import {
@@ -7,28 +7,93 @@ import {
   ArrowUpDown,
   Calendar,
   ChevronRight,
-  Clock,
   FileText,
   Filter,
   Search,
   SlidersHorizontal,
 } from 'lucide-react';
-import { DerivedStatus, FilterState, MockTransaction, ThemeColors } from '../types';
-import { cx, deriveStatus, formatCurrency, formatDisplayDate, paymentIcon, statusLabel, statusPillClass } from '../utils';
+import { PaymentStatus, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_BADGE_VARIANTS, formatCurrency } from '../../../../api/billing-review/BillingReviewTypes';
+
+// Local types
+interface FilterState {
+  searchTerm: string;
+  statusFilter: PaymentStatus | 'all';
+  dateRange: { start: string; end: string };
+  sortBy: 'date' | 'amount' | 'patient';
+  sortOrder: 'asc' | 'desc';
+  showAdvancedFilters: boolean;
+}
+
+interface ThemeColors {
+  bg: {
+    primary: string;
+    secondary: string;
+    elevated: string;
+    hover: string;
+    selected: string;
+  };
+  text: {
+    primary: string;
+    secondary: string;
+    tertiary: string;
+  };
+  border: {
+    primary: string;
+  };
+  ring: string;
+}
 
 interface TransactionListProps {
-  transactions: MockTransaction[];
-  filteredTransactions: MockTransaction[];
-  selectedId: number | null;
+  transactions: any[]; // Using any for brevity, but would use BillingReviewItem in production
+  filteredTransactions: any[];
+  selectedId: string | null;
   filters: FilterState;
   searchTerm: string;
   theme: 'light' | 'dark';
   colors: ThemeColors;
   pillBg: string;
-  onSelectTransaction: (id: number) => void;
+  onSelectTransaction: (id: string) => void;
   onUpdateFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   onClearFilters: () => void;
 }
+
+// Utility functions
+const cx = (...classes: (string | boolean | undefined)[]) => {
+  return classes.filter(Boolean).join(' ');
+};
+
+const getStatusPillClass = (isDark: boolean, status: PaymentStatus) => {
+  const variant = PAYMENT_STATUS_BADGE_VARIANTS[status] || 'default';
+  const variants = {
+    success: isDark ? 'bg-green-900 text-green-100' : 'bg-green-100 text-green-800',
+    warning: isDark ? 'bg-yellow-900 text-yellow-100' : 'bg-yellow-100 text-yellow-800',
+    error: isDark ? 'bg-red-900 text-red-100' : 'bg-red-100 text-red-800',
+    info: isDark ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800',
+    secondary: isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-100 text-gray-800',
+    default: isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-100 text-gray-800',
+  };
+  return variants[variant] || variants.default;
+};
+
+const paymentIcon = (type: string) => {
+  const icons: Record<string, string> = {
+    cash: '💵',
+    card: '💳',
+    insurance: '🏥',
+    mobile: '📱',
+    bank_transfer: '🏦',
+    cheque: '📝',
+  };
+  return <span className="text-sm">{icons[type] || '💰'}</span>;
+};
+
+const formatDisplayDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
 
 export const TransactionList: React.FC<TransactionListProps> = ({
   filteredTransactions,
@@ -47,7 +112,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   return (
     <div
       className={cx(
-        'flex flex-col h-full min-h-0 border rounded-lg shadow-sm overflow-hidden',
+        'flex flex-col h-full min-h-0 border rounded-lg shadow-sm overflow-hidden w-full',
         colors.border.primary,
         colors.bg.elevated
       )}
@@ -108,7 +173,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                   <Filter className={cx('w-4 h-4', colors.text.tertiary)} />
                   <select
                     value={filters.statusFilter}
-                    onChange={(e) => onUpdateFilter('statusFilter', e.target.value as DerivedStatus | 'all')}
+                    onChange={(e) => onUpdateFilter('statusFilter', e.target.value as PaymentStatus | 'all')}
                     className={cx(
                       'w-full text-sm border rounded-lg px-3 py-2 focus:outline-none',
                       colors.border.primary,
@@ -117,12 +182,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                     )}
                   >
                     <option value="all">All</option>
-                    <option value="settled">Settled</option>
-                    <option value="ready">Ready</option>
-                    <option value="draft">Draft</option>
-                    <option value="partially_refunded">Partially Refunded</option>
-                    <option value="refunded">Refunded</option>
-                    <option value="voided">Voided</option>
+                    {Object.values(PaymentStatus).map((status) => (
+                      <option key={status} value={status}>
+                        {PAYMENT_STATUS_LABELS[status]}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </label>
@@ -215,13 +279,12 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         ) : (
           <div className="p-2 space-y-2">
             {filteredTransactions.map((t) => {
-              const derived = deriveStatus(t);
-              const isSelected = selectedId === t.id;
+              const isSelected = selectedId === t.visit_uuid;
 
               return (
                 <div
-                  key={t.id}
-                  onClick={() => onSelectTransaction(t.id)}
+                  key={t.visit_uuid}
+                  onClick={() => onSelectTransaction(t.visit_uuid)}
                   className={cx(
                     'cursor-pointer p-3 border rounded-lg transition-all duration-200',
                     colors.border.primary,
@@ -236,21 +299,21 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className={cx('text-xs font-mono font-extrabold', colors.text.primary)}>
-                          {t.receipt_number}
+                          {t.receipt_number || 'Draft'}
                         </span>
                         <span
                           className={cx(
                             'px-2 py-0.5 rounded-full text-xs font-extrabold',
-                            statusPillClass(isDark, derived)
+                            getStatusPillClass(isDark, t.payment_status)
                           )}
                         >
-                          {statusLabel(derived)}
+                          {PAYMENT_STATUS_LABELS[t.payment_status]}
                         </span>
                       </div>
                       <h4 className={cx('text-sm font-extrabold truncate', colors.text.primary)}>
-                        {t.patient.name}
+                        {t.patient_name}
                       </h4>
-                      <p className={cx('text-xs', colors.text.secondary)}>{t.patient.patient_number}</p>
+                      <p className={cx('text-xs', colors.text.secondary)}>{t.patient_number}</p>
                     </div>
                     <ChevronRight className={cx('w-5 h-5 shrink-0', colors.text.tertiary)} />
                   </div>
@@ -258,11 +321,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                   <div className="flex items-center gap-3 text-xs mt-2">
                     <div className="flex items-center gap-1">
                       <Calendar className={cx('w-3.5 h-3.5', colors.text.secondary)} />
-                      <span className={colors.text.secondary}>{formatDisplayDate(t.date)}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className={cx('w-3.5 h-3.5', colors.text.secondary)} />
-                      <span className={colors.text.secondary}>{t.time}</span>
+                      <span className={colors.text.secondary}>{formatDisplayDate(t.created_at)}</span>
                     </div>
                   </div>
 
@@ -272,13 +331,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                     </span>
 
                     <div className="flex items-center gap-1">
-                      {t.payment_methods.map((pm) => (
+                      {t.payment_methods.map((pm: any, index: number) => (
                         <div
-                          key={pm.id}
+                          key={index}
                           className="flex items-center"
-                          title={`${pm.type}: ${formatCurrency(pm.amount)}${
-                            pm.reference ? ` • ${pm.reference}` : ''
-                          }`}
+                          title={`${pm.type}: ${formatCurrency(pm.amount)}`}
                         >
                           {paymentIcon(pm.type)}
                         </div>

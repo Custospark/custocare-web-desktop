@@ -1,5 +1,5 @@
 // components/ReceiptView.tsx
-// Right panel - displays receipt details with print functionality
+// Right panel - displays receipt details using BillingReviewTypes
 
 import React, { useRef, useState } from 'react';
 import {
@@ -12,21 +12,34 @@ import {
   Undo2,
 } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
-import { DerivedFinancials, MockTransaction, ThemeColors } from '../types';
-import {
-  cx,
+import { 
+  PaymentStatus, 
+  PAYMENT_STATUS_LABELS,
   formatCurrency,
-  formatDisplayDate,
-  paymentIcon,
-  statusLabel,
-  statusPillClass,
-  watermarkForStatus,
-} from '../utils';
+  getOutstandingBalance
+} from  '../../../../api/billing-review/BillingReviewTypes';
+
+interface ThemeColors {
+  bg: {
+    primary: string;
+    secondary: string;
+    elevated: string;
+    hover: string;
+    selected: string;
+  };
+  text: {
+    primary: string;
+    secondary: string;
+    tertiary: string;
+  };
+  border: {
+    primary: string;
+  };
+  ring: string;
+}
 
 interface ReceiptViewProps {
-  selectedTransaction: MockTransaction | null;
-  derivedFinancials: DerivedFinancials | null;
-  refundedQtyMap: Map<number, number>;
+  selectedTransaction: any | null; // Using any for brevity, would use BillingReviewItem
   theme: 'light' | 'dark';
   colors: ThemeColors;
   onPrint: () => void;
@@ -44,6 +57,57 @@ interface ActionButtonProps {
   colors: ThemeColors;
   isDark: boolean;
 }
+
+const cx = (...classes: (string | boolean | undefined)[]) => {
+  return classes.filter(Boolean).join(' ');
+};
+
+const getStatusPillClass = (isDark: boolean, status: PaymentStatus) => {
+  const variants = {
+    [PaymentStatus.PAID_IN_FULL]: isDark ? 'bg-green-900 text-green-100' : 'bg-green-100 text-green-800',
+    [PaymentStatus.PARTIALLY_PAID]: isDark ? 'bg-yellow-900 text-yellow-100' : 'bg-yellow-100 text-yellow-800',
+    [PaymentStatus.PENDING]: isDark ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800',
+    [PaymentStatus.NOT_BILLED]: isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-100 text-gray-800',
+    [PaymentStatus.INSURANCE_PENDING]: isDark ? 'bg-purple-900 text-purple-100' : 'bg-purple-100 text-purple-800',
+    [PaymentStatus.DENIED]: isDark ? 'bg-red-900 text-red-100' : 'bg-red-100 text-red-800',
+    [PaymentStatus.BAD_DEBT]: isDark ? 'bg-red-900 text-red-100' : 'bg-red-100 text-red-800',
+    [PaymentStatus.CHARITY_CARE]: isDark ? 'bg-indigo-900 text-indigo-100' : 'bg-indigo-100 text-indigo-800',
+  };
+  return variants[status] || (isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-100 text-gray-800');
+};
+
+const paymentIcon = (type: string) => {
+  const icons: Record<string, string> = {
+    cash: '💵',
+    card: '💳',
+    insurance: '🏥',
+    mobile: '📱',
+    bank_transfer: '🏦',
+    cheque: '📝',
+  };
+  return <span className="text-sm">{icons[type] || '💰'}</span>;
+};
+
+const formatDisplayDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+const watermarkForStatus = (status: PaymentStatus, balanceDue: number) => {
+  if (status === PaymentStatus.PAID_IN_FULL) {
+    return { text: 'PAID', color: 'text-green-600' };
+  }
+  if (balanceDue > 0) {
+    return { text: 'DUE', color: 'text-amber-600' };
+  }
+  if (status === PaymentStatus.VOIDED) {
+    return { text: 'VOID', color: 'text-red-600' };
+  }
+  return { text: 'RECEIPT', color: 'text-gray-400' };
+};
 
 const ActionButton: React.FC<ActionButtonProps> = ({
   onClick,
@@ -83,8 +147,6 @@ const ActionButton: React.FC<ActionButtonProps> = ({
 
 export const ReceiptView: React.FC<ReceiptViewProps> = ({
   selectedTransaction,
-  derivedFinancials,
-  refundedQtyMap,
   theme,
   colors,
   onPrint,
@@ -98,7 +160,7 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
 
   const handlePrint = useReactToPrint({
     content: () => receiptRef.current,
-    documentTitle: selectedTransaction ? selectedTransaction.receipt_number : 'receipt',
+    documentTitle: selectedTransaction?.receipt_number || 'receipt',
     onBeforePrint: () => setIsPrinting(true),
     onAfterPrint: () => setIsPrinting(false),
     removeAfterPrint: false,
@@ -110,10 +172,29 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
     onPrint();
   };
 
+  // Derived financials from the backend types
+  const getDerivedFinancials = () => {
+    if (!selectedTransaction) return null;
+    
+    const billingData = selectedTransaction.billing_data;
+    const refunded = 0; // Would come from refunds array in real implementation
+    const netPaid = billingData.totalPaid - refunded;
+    const balanceDue = getOutstandingBalance(selectedTransaction);
+    
+    return {
+      status: selectedTransaction.payment_status,
+      refunded,
+      netPaid,
+      balanceDue,
+    };
+  };
+
+  const derivedFinancials = getDerivedFinancials();
+
   return (
     <div
       className={cx(
-        'flex flex-col h-full min-h-0 border rounded-lg shadow-sm overflow-hidden',
+        'flex flex-col h-full min-h-0 border rounded-lg shadow-sm overflow-hidden w-full',
         colors.border.primary,
         colors.bg.elevated
       )}
@@ -139,15 +220,15 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
             <span
               className={cx(
                 'px-2 py-1 rounded-full text-xs font-extrabold flex-shrink-0',
-                statusPillClass(isDark, derivedFinancials.status)
+                getStatusPillClass(isDark, derivedFinancials.status)
               )}
             >
-              {statusLabel(derivedFinancials.status)}
+              {PAYMENT_STATUS_LABELS[derivedFinancials.status]}
             </span>
           )}
         </div>
 
-        {/* Actions */}
+        {/* Actions - Non-functional as requested */}
         <div className="mt-3 flex flex-wrap gap-2 no-print">
           <ActionButton
             onClick={onPrintClick}
@@ -171,7 +252,7 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
 
           <ActionButton
             onClick={onRefund}
-            disabled={!selectedTransaction || (selectedTransaction?.voided ?? false)}
+            disabled={!selectedTransaction}
             icon={<Undo2 className="w-4 h-4" />}
             label="Refund"
             variant="warn"
@@ -181,7 +262,7 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
 
           <ActionButton
             onClick={onVoid}
-            disabled={!selectedTransaction || (selectedTransaction?.voided ?? false)}
+            disabled={!selectedTransaction}
             icon={<Ban className="w-4 h-4" />}
             label="Void"
             variant="danger"
@@ -226,26 +307,11 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
                   <p className="text-xs text-gray-600">Phone: +256 700 000 000</p>
                 </div>
 
-                {/* VOID Banner */}
-                {selectedTransaction.voided && (
-                  <div className="mb-3 p-2 border border-red-300 bg-red-50 rounded text-xs relative">
-                    <div className="flex items-center gap-2">
-                      <Ban className="w-4 h-4 text-red-700" />
-                      <p className="font-extrabold text-red-700">VOIDED</p>
-                    </div>
-                    <p className="text-red-700 mt-1">{selectedTransaction.voided.reason}</p>
-                    <p className="text-[11px] text-red-700 mt-1">
-                      {selectedTransaction.voided.voided_by} •{' '}
-                      {new Date(selectedTransaction.voided.voided_at).toLocaleString()}
-                    </p>
-                  </div>
-                )}
-
                 {/* Receipt Meta */}
                 <div className="border-t border-b border-gray-300 py-2 my-3 text-xs space-y-1 relative">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Receipt:</span>
-                    <span className="font-extrabold">{selectedTransaction.receipt_number}</span>
+                    <span className="font-extrabold">{selectedTransaction.receipt_number || 'Draft'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Visit ID:</span>
@@ -253,68 +319,38 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Patient:</span>
-                    <span className="font-semibold">{selectedTransaction.patient.name}</span>
+                    <span className="font-semibold">{selectedTransaction.patient_name}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Patient #:</span>
-                    <span>{selectedTransaction.patient.patient_number}</span>
+                    <span>{selectedTransaction.patient_number}</span>
                   </div>
-                  {selectedTransaction.patient.email && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Email:</span>
-                      <span className="text-[11px]">{selectedTransaction.patient.email}</span>
-                    </div>
-                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-600">Date:</span>
-                    <span>{formatDisplayDate(selectedTransaction.date)}</span>
+                    <span>{formatDisplayDate(selectedTransaction.created_at)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Time:</span>
-                    <span>{selectedTransaction.time}</span>
-                  </div>
-                  {selectedTransaction.settled_by && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Settled by:</span>
-                      <span>{selectedTransaction.settled_by}</span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Services */}
                 <div className="mb-3 relative">
                   <h3 className="text-sm font-extrabold mb-2">Services rendered</h3>
                   <div className="space-y-2">
-                    {selectedTransaction.charge_items.map((item) => {
-                      const refundedQty = refundedQtyMap.get(item.id) ?? 0;
-                      const netQty = Math.max(0, item.quantity - refundedQty);
-
-                      return (
-                        <div
-                          key={item.id}
-                          className={cx(
-                            'flex justify-between text-xs border-b border-gray-100 pb-1.5',
-                            netQty === 0 && refundedQty > 0 && 'text-gray-400'
-                          )}
-                        >
-                          <div className="min-w-0 pr-2 flex-1">
-                            <p className="font-semibold truncate">{item.service.name}</p>
-                            <p className="text-[11px] text-gray-600">
-                              {item.quantity} × {formatCurrency(item.service.unitPrice)} • {item.service.code}
-                              {refundedQty > 0 && (
-                                <span className="ml-2 text-[11px] text-fuchsia-700 font-bold">
-                                  (refunded {refundedQty} → net {netQty})
-                                </span>
-                              )}
-                            </p>
-                          </div>
-
-                          <span className="font-extrabold flex-shrink-0">
-                            {formatCurrency(item.totalAmount)}
-                          </span>
+                    {selectedTransaction.charge_items.map((item: any) => (
+                      <div
+                        key={item.id}
+                        className="flex justify-between text-xs border-b border-gray-100 pb-1.5"
+                      >
+                        <div className="min-w-0 pr-2 flex-1">
+                          <p className="font-semibold truncate">{item.service.name}</p>
+                          <p className="text-[11px] text-gray-600">
+                            {item.quantity} × {formatCurrency(item.service.unitPrice)} • {item.service.code}
+                          </p>
                         </div>
-                      );
-                    })}
+                        <span className="font-extrabold flex-shrink-0">
+                          {formatCurrency(item.totalAmount)}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -341,7 +377,7 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
                     </div>
                   )}
 
-                  {selectedTransaction.taxes.map((tax, index) => (
+                  {selectedTransaction.taxes.map((tax: any, index: number) => (
                     <div key={index} className="flex justify-between">
                       <span>{tax.name}</span>
                       <span className="font-semibold">{formatCurrency(tax.amount)}</span>
@@ -358,20 +394,6 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
                     <span className="font-extrabold">
                       {formatCurrency(selectedTransaction.billing_data.totalPaid)}
                     </span>
-                  </div>
-
-                  {derivedFinancials.refunded > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Total Refunded</span>
-                      <span className="font-extrabold text-fuchsia-700">
-                        -{formatCurrency(derivedFinancials.refunded)}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Net Paid</span>
-                    <span className="font-extrabold">{formatCurrency(derivedFinancials.netPaid)}</span>
                   </div>
 
                   <div className="flex justify-between">
@@ -393,14 +415,11 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
                 <div className="mt-3 pt-3 border-t border-gray-300 text-xs relative">
                   <h3 className="text-sm font-extrabold mb-2">Payment</h3>
                   <div className="space-y-1.5">
-                    {selectedTransaction.payment_methods.map((pm) => (
-                      <div key={pm.id} className="flex items-center justify-between">
+                    {selectedTransaction.payment_methods.map((pm: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between">
                         <div className="flex items-center gap-2 min-w-0">
                           {paymentIcon(pm.type)}
-                          <span className="capitalize font-semibold">{pm.type}</span>
-                          {pm.details && (
-                            <span className="text-[10px] text-gray-500 truncate">({pm.details})</span>
-                          )}
+                          <span className="capitalize font-semibold">{pm.type.replace('_', ' ')}</span>
                           {pm.reference && (
                             <span className="text-[10px] text-gray-500 truncate">Ref: {pm.reference}</span>
                           )}
@@ -410,66 +429,6 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
                     ))}
                   </div>
                 </div>
-
-                {/* Refunds */}
-                {(selectedTransaction.refunds?.length ?? 0) > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-300 text-xs relative">
-                    <h3 className="text-sm font-extrabold mb-2">Refunds</h3>
-
-                    <div className="space-y-3">
-                      {selectedTransaction.refunds!.map((r) => (
-                        <div key={r.id} className="border border-gray-200 rounded-lg p-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="font-extrabold text-[12px]">
-                                {r.refund_receipt_number}{' '}
-                                <span className="text-gray-500 font-normal">
-                                  • {new Date(r.created_at).toLocaleString()}
-                                </span>
-                              </p>
-                              <p className="text-[11px] text-gray-600 mt-0.5">
-                                {r.method.toUpperCase()}
-                                {r.reference ? ` • Ref: ${r.reference}` : ''}
-                                {' • '}
-                                {r.processed_by}
-                              </p>
-                              <p className="text-[11px] text-gray-700 italic mt-0.5">{r.reason}</p>
-                            </div>
-
-                            <div className="text-right flex-shrink-0">
-                              <p className="font-extrabold text-fuchsia-700">
-                                -{formatCurrency(r.total_amount)}
-                              </p>
-                              <p className="text-[10px] text-gray-500">{r.status.toUpperCase()}</p>
-                            </div>
-                          </div>
-
-                          <div className="mt-2 border-t border-gray-100 pt-2 space-y-1">
-                            {r.items.map((li, idx) => (
-                              <div key={idx} className="flex justify-between text-[11px]">
-                                <span className="text-gray-700">
-                                  {li.service_name} ({li.service_code}) • {li.quantity_refunded} ×{' '}
-                                  {formatCurrency(li.unitPrice)}
-                                </span>
-                                <span className="font-semibold text-gray-900">
-                                  {formatCurrency(li.amount)}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Notes */}
-                {selectedTransaction.additional_notes && (
-                  <div className="mt-3 pt-3 border-t border-gray-300 text-xs relative">
-                    <h3 className="text-sm font-extrabold mb-1">Notes</h3>
-                    <p className="text-gray-700 italic">{selectedTransaction.additional_notes}</p>
-                  </div>
-                )}
 
                 {/* Footer */}
                 <div className="text-center mt-4 pt-3 border-t border-gray-300 relative">
@@ -494,8 +453,7 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
                   )}
                 />
                 <p className={cx('text-xs leading-relaxed', colors.text.secondary)}>
-                  Printing is scoped to the receipt card only. Refunds are recorded as item quantities
-                  and displayed on the receipt.
+                  Using BillingReviewTypes.ts as the single source of truth. Actions are placeholders.
                 </p>
               </div>
             </div>
@@ -509,7 +467,7 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
           <AlertCircle className={cx('w-4 h-4 flex-shrink-0 mt-0.5', colors.text.tertiary)} />
           <p className={cx('text-xs leading-relaxed', colors.text.secondary)}>
             {selectedTransaction
-              ? `Viewing ${selectedTransaction.receipt_number} • ${selectedTransaction.patient.name}`
+              ? `Viewing ${selectedTransaction.receipt_number || 'Draft'} • ${selectedTransaction.patient_name}`
               : 'Select a transaction to view its receipt details'}
           </p>
         </div>
