@@ -402,7 +402,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             
             {/* Latency indicator */}
             {isOnline && latency !== null && (
-              <div className="hidden xs:flex items-center gap-1 ml-1">
+              <div className="hidden md:flex items-center gap-1 ml-1">
                 <Zap className="w-2.5 h-2.5" />
                 <span className="text-xs font-mono">{formatLatency(latency)}</span>
               </div>
