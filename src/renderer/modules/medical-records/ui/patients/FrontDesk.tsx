@@ -16,20 +16,20 @@ interface FrontDeskProps {
 const FrontDesk: React.FC<FrontDeskProps> = ({ theme }) => {
   return (
     <BaseActionWorkspace
-      title="Front Desk"
+      title="Patient Registry Management"
       icon={<PersonStanding className="w-6 h-6" />}
       theme={theme}
       defaultActionTo={MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH}
       actions={[
         {
           key: 'patient_search',
-          label: 'Patient Search',
+          label: 'Search Patient',
           icon: <Search className="w-4 h-4" />,
           to: MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH,
         },
         {
           key: 'patient_create',
-          label: 'Patient Create',
+          label: 'New Patient',
           icon: <UserPlus className="w-4 h-4" />,
           to: MEDICAL_RECORDS_ROUTES.PATIENTS_REGISTER,
         },

@@ -14,6 +14,8 @@ import ForwardPatient from "../../../modules/medical-records/ui/visit-action-cen
 import PatientComplaints from "../../../modules/medical-records/ui/visit-action-center/PatientComplaints";
 import VisitStatus from "../../../modules/medical-records/ui/visit-action-center/VisitStatus";
 import MRBilling from "../../../modules/medical-records/ui/visit-action-center/billing-space/MRBilling";
+import MRBillingReview from "../../../modules/medical-records/ui/revenue/MRBillingReview";
+import MRBillingCycle from "../../../modules/medical-records/ui/revenue/MRBillingCycle";
 export const medicalRecordsRoutes = [
   <Route
     key="overview"
@@ -84,6 +86,22 @@ export const medicalRecordsRoutes = [
           <WithThemeProp Component={MRBilling} />
         </SuspenseWrapper>
       } />
+    </Route>,
+     <Route
+    key="billing_cycle"
+    path={MEDICAL_RECORDS_ROUTES.REVENUE_INTEGRITY}
+    element={
+      <SuspenseWrapper variant="table">
+      <WithThemeProp Component={MRBillingCycle} />
+      </SuspenseWrapper>
+    }>
+    <Route index element={<Navigate to={MEDICAL_RECORDS_ROUTES.BILLING_CYCLE_REVIEW} replace />} />
+    <Route path={MEDICAL_RECORDS_ROUTES.BILLING_CYCLE_REVIEW} element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={MRBillingReview} />
+        </SuspenseWrapper>
+      } />
+   
     </Route>,
   <Route
     key="account-appearance"

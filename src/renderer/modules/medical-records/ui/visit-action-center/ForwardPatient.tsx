@@ -294,7 +294,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
           </div>
           {hasLoadedInitialData && (
             <div className={`text-xs px-2 py-1 rounded cursor-default ${isDark ? 'bg-green-900/50 text-green-400' : 'bg-green-100 text-green-800'}`}>
-              ✓ {staffMembers.length} staff loaded
+           ✓ Staff directory updated • {staffMembers.length} active members
             </div>
           )}
         </div>

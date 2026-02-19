@@ -161,7 +161,7 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
           {/* Right Main Content - Action Center */}
           <div className="lg:col-span-8 xl:col-span-9">
             <BaseActionWorkspace
-              title="Patient Visit Action Center"
+              title="Clinical Encounter Workflow"
               icon={<FileText className="w-6 h-6" />}
               theme={theme}
               defaultActionTo={MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS}
