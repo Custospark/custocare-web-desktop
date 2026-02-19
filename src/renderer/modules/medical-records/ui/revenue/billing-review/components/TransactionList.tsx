@@ -53,7 +53,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       )}
     >
       {/* Header */}
-      <div className={cx('flex-shrink-0 px-4 py-3 border-b', colors.border.primary, colors.bg.secondary)}>
+      <div className={cx('shrink-0 px-4 py-3 border-b', colors.border.primary, colors.bg.secondary)}>
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="min-w-0">
             <h3 className={cx('text-sm sm:text-base font-extrabold', colors.text.primary)}>
@@ -64,7 +64,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => onUpdateFilter('showAdvancedFilters', !filters.showAdvancedFilters)}
               className={cx(
@@ -252,7 +252,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                       </h4>
                       <p className={cx('text-xs', colors.text.secondary)}>{t.patient.patient_number}</p>
                     </div>
-                    <ChevronRight className={cx('w-5 h-5 flex-shrink-0', colors.text.tertiary)} />
+                    <ChevronRight className={cx('w-5 h-5 shrink-0', colors.text.tertiary)} />
                   </div>
 
                   <div className="flex items-center gap-3 text-xs mt-2">
@@ -293,9 +293,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       </div>
 
       {/* Footer */}
-      <div className={cx('flex-shrink-0 px-4 py-3 border-t', colors.border.primary, colors.bg.secondary)}>
+      <div className={cx('shrink-0 px-4 py-3 border-t', colors.border.primary, colors.bg.secondary)}>
         <div className="flex items-start gap-2">
-          <AlertCircle className={cx('w-4 h-4 flex-shrink-0 mt-0.5', colors.text.tertiary)} />
+          <AlertCircle className={cx('w-4 h-4 shrink-0 mt-0.5', colors.text.tertiary)} />
           <p className={cx('text-xs leading-relaxed', colors.text.secondary)}>
             Refunds are item-based and quantity-based — you can partially refund by reducing quantities.
           </p>
