@@ -458,12 +458,12 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                   )}>
                     Care Actions
                   </span>
-                  <span className={cn(
+                  {/* <span className={cn(
                     'text-xs leading-relaxed',
                     theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
                   )}>
                     Execute patient-centered actions within the current workflow.
-                  </span>
+                  </span> */}
                 </div>
               )}
             </div>
