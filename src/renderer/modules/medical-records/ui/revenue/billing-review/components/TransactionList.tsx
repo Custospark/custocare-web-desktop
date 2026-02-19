@@ -1,7 +1,5 @@
-// components/TransactionList.tsx
-// Left panel - displays filtered transaction records using BillingReviewTypes
-
-import React from 'react';
+// components/billing-review/components/TransactionList.tsx
+import React, { useRef, useState, useEffect } from 'react';
 import {
   AlertCircle,
   ArrowUpDown,
@@ -11,10 +9,23 @@ import {
   Filter,
   Search,
   SlidersHorizontal,
+  CreditCard,
+  Banknote,
+  Building2,
+  Smartphone,
+  User,
+  X,
+  Hash,
 } from 'lucide-react';
-import { PaymentStatus, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_BADGE_VARIANTS, formatCurrency } from '../../../../api/billing-review/BillingReviewTypes';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  PaymentStatus, 
+  PAYMENT_STATUS_LABELS, 
+  PAYMENT_STATUS_BADGE_VARIANTS, 
+  formatCurrency,
+  type BillingReviewItem,
+} from '../../../../api/billing-review/BillingReviewTypes';
 
-// Local types
 interface FilterState {
   searchTerm: string;
   statusFilter: PaymentStatus | 'all';
@@ -31,21 +42,30 @@ interface ThemeColors {
     elevated: string;
     hover: string;
     selected: string;
+    stripe: string;
+    stripeAlt: string;
   };
   text: {
     primary: string;
     secondary: string;
     tertiary: string;
+    muted: string;
   };
   border: {
     primary: string;
+    subtle: string;
   };
   ring: string;
+  accent: {
+    primary: string;
+    hover: string;
+    text: string;
+  };
 }
 
 interface TransactionListProps {
-  transactions: any[]; // Using any for brevity, but would use BillingReviewItem in production
-  filteredTransactions: any[];
+  transactions: BillingReviewItem[];
+  filteredTransactions: BillingReviewItem[];
   selectedId: string | null;
   filters: FilterState;
   searchTerm: string;
@@ -57,7 +77,6 @@ interface TransactionListProps {
   onClearFilters: () => void;
 }
 
-// Utility functions
 const cx = (...classes: (string | boolean | undefined)[]) => {
   return classes.filter(Boolean).join(' ');
 };
@@ -65,26 +84,39 @@ const cx = (...classes: (string | boolean | undefined)[]) => {
 const getStatusPillClass = (isDark: boolean, status: PaymentStatus) => {
   const variant = PAYMENT_STATUS_BADGE_VARIANTS[status] || 'default';
   const variants = {
-    success: isDark ? 'bg-green-900 text-green-100' : 'bg-green-100 text-green-800',
-    warning: isDark ? 'bg-yellow-900 text-yellow-100' : 'bg-yellow-100 text-yellow-800',
-    error: isDark ? 'bg-red-900 text-red-100' : 'bg-red-100 text-red-800',
-    info: isDark ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800',
-    secondary: isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-100 text-gray-800',
-    default: isDark ? 'bg-gray-700 text-gray-100' : 'bg-gray-100 text-gray-800',
+    success: isDark 
+      ? 'bg-green-900/30 text-green-300 border-green-700' 
+      : 'bg-green-100 text-green-800 border-green-200',
+    warning: isDark 
+      ? 'bg-yellow-900/30 text-yellow-300 border-yellow-700' 
+      : 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    error: isDark 
+      ? 'bg-red-900/30 text-red-300 border-red-700' 
+      : 'bg-red-100 text-red-800 border-red-200',
+    info: isDark 
+      ? 'bg-blue-900/30 text-blue-300 border-blue-700' 
+      : 'bg-blue-100 text-blue-800 border-blue-200',
+    secondary: isDark 
+      ? 'bg-gray-700 text-gray-300 border-gray-600' 
+      : 'bg-gray-100 text-gray-800 border-gray-300',
+    default: isDark 
+      ? 'bg-gray-700 text-gray-300 border-gray-600' 
+      : 'bg-gray-100 text-gray-800 border-gray-300',
   };
-  return variants[variant] || variants.default;
+  return `${variants[variant] || variants.default} border`;
 };
 
-const paymentIcon = (type: string) => {
-  const icons: Record<string, string> = {
-    cash: '💵',
-    card: '💳',
-    insurance: '🏥',
-    mobile: '📱',
-    bank_transfer: '🏦',
-    cheque: '📝',
+const PaymentIcon: React.FC<{ type: string; className?: string }> = ({ type, className = 'w-4 h-4' }) => {
+  const icons: Record<string, React.FC<any>> = {
+    cash: Banknote,
+    card: CreditCard,
+    insurance: Building2,
+    mobile: Smartphone,
+    bank_transfer: Building2,
+    cheque: FileText,
   };
-  return <span className="text-sm">{icons[type] || '💰'}</span>;
+  const IconComponent = icons[type] || Banknote;
+  return <IconComponent className={className} />;
 };
 
 const formatDisplayDate = (dateString: string) => {
@@ -108,256 +140,433 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   onClearFilters,
 }) => {
   const isDark = theme === 'dark';
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isHeaderSticky, setIsHeaderSticky] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Sticky header effect
+  useEffect(() => {
+    const handleScroll = () => {
+      if (containerRef.current) {
+        const scrollTop = containerRef.current.scrollTop;
+        setIsHeaderSticky(scrollTop > 20);
+      }
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
 
   return (
     <div
       className={cx(
-        'flex flex-col h-full min-h-0 border rounded-lg shadow-sm overflow-hidden w-full',
+        'flex flex-col h-full min-h-0 border rounded-xl shadow-sm overflow-hidden w-full relative',
         colors.border.primary,
         colors.bg.elevated
       )}
     >
-      {/* Header */}
-      <div className={cx('shrink-0 px-4 py-3 border-b', colors.border.primary, colors.bg.secondary)}>
-        <div className="flex items-center justify-between gap-3 mb-3">
+      {/* Sticky Header with backdrop blur */}
+      <div
+        className={cx(
+          'shrink-0 px-5 py-4 border-b transition-all duration-200 z-20',
+          colors.border.primary,
+          colors.bg.secondary,
+          isHeaderSticky && 'sticky top-0 bg-opacity-95 backdrop-blur-sm'
+        )}
+      >
+        <div className="flex items-center justify-between gap-3 mb-4">
           <div className="min-w-0">
-            <h3 className={cx('text-sm sm:text-base font-extrabold', colors.text.primary)}>
-              Visit Records
+            <h3 className={cx('text-base font-bold', colors.text.primary)}>
+              <span className="bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+                Payment Records
+              </span>
             </h3>
             <p className={cx('text-xs mt-0.5', colors.text.secondary)}>
-              Search receipts, patients, services, references.
+              Search receipts, patients, services, and references
             </p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => onUpdateFilter('showAdvancedFilters', !filters.showAdvancedFilters)}
               className={cx(
-                'cursor-pointer p-2 rounded-lg transition',
-                isDark ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-800'
+                'p-2.5 rounded-lg transition-all duration-200 relative',
+                filters.showAdvancedFilters
+                  ? isDark
+                    ? 'bg-blue-900/30 text-blue-400'
+                    : 'bg-blue-100 text-blue-600'
+                  : isDark
+                  ? 'hover:bg-gray-700 text-gray-300'
+                  : 'hover:bg-gray-100 text-gray-700'
               )}
               title="Toggle filters"
             >
               <SlidersHorizontal className="w-4 h-4" />
-            </button>
-            <span className={cx('text-xs px-2 py-1 rounded-full', colors.text.secondary, pillBg)}>
-              {filteredTransactions.length} txns
-            </span>
+            </motion.button>
+            <motion.span 
+              initial={{ scale: 1 }}
+              animate={{ scale: filteredTransactions.length > 0 ? [1, 1.1, 1] : 1 }}
+              transition={{ duration: 0.3 }}
+              className={cx('text-xs font-bold px-3 py-1.5 rounded-full', colors.text.secondary, pillBg)}
+            >
+              {filteredTransactions.length}
+            </motion.span>
           </div>
         </div>
 
-        {/* Search */}
+        {/* Animated Search with gradient border */}
         <div className="relative mb-3">
-          <Search className={cx('absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4', colors.text.tertiary)} />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => onUpdateFilter('searchTerm', e.target.value)}
-            placeholder="Search by receipt, patient, service, ref..."
-            className={cx(
-              'w-full pl-9 pr-4 py-2 text-sm border rounded-lg focus:outline-none',
-              colors.border.primary,
-              isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
-              colors.ring
+          <div className={`relative rounded-lg ${!isHeaderSticky ? 'p-[2px]' : ''}`}>
+            {/* Gradient border track */}
+            {!isHeaderSticky && (
+              <motion.div
+                className="absolute inset-0 rounded-lg z-0"
+                style={{
+                  background: 'linear-gradient(90deg, #3b82f6, #10b981, #6366f1, #3b82f6)',
+                  backgroundSize: '300% 100%',
+                }}
+                animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+                transition={{
+                  duration: isSearchFocused ? 2 : 6,
+                  repeat: Infinity,
+                  ease: 'linear',
+                }}
+              />
             )}
-          />
-        </div>
 
-        {/* Advanced Filters */}
-        {filters.showAdvancedFilters && (
-          <div className={cx('pt-3 border-t', colors.border.primary)}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="block">
-                <span className={cx('text-xs font-extrabold', colors.text.secondary)}>Status</span>
-                <div className="mt-1 flex items-center gap-2">
-                  <Filter className={cx('w-4 h-4', colors.text.tertiary)} />
-                  <select
-                    value={filters.statusFilter}
-                    onChange={(e) => onUpdateFilter('statusFilter', e.target.value as PaymentStatus | 'all')}
-                    className={cx(
-                      'w-full text-sm border rounded-lg px-3 py-2 focus:outline-none',
-                      colors.border.primary,
-                      isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
-                      colors.ring
-                    )}
-                  >
-                    <option value="all">All</option>
-                    {Object.values(PaymentStatus).map((status) => (
-                      <option key={status} value={status}>
-                        {PAYMENT_STATUS_LABELS[status]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </label>
-
-              <label className="block">
-                <span className={cx('text-xs font-extrabold', colors.text.secondary)}>Sort</span>
-                <div className="mt-1 flex items-center gap-2">
-                  <select
-                    value={filters.sortBy}
-                    onChange={(e) => onUpdateFilter('sortBy', e.target.value as 'date' | 'amount' | 'patient')}
-                    className={cx(
-                      'flex-1 text-sm border rounded-lg px-3 py-2 focus:outline-none',
-                      colors.border.primary,
-                      isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
-                      colors.ring
-                    )}
-                  >
-                    <option value="date">Date</option>
-                    <option value="amount">Amount</option>
-                    <option value="patient">Patient</option>
-                  </select>
+            {/* Inner surface */}
+            <div className="relative z-10">
+              <div className={`relative ${!isHeaderSticky ? 'rounded-[6px] overflow-hidden' : ''}`}>
+                <Search
+                  className={cx(
+                    'absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200',
+                    isSearchFocused ? 'text-blue-500' : colors.text.tertiary
+                  )}
+                />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => onUpdateFilter('searchTerm', e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setIsSearchFocused(false)}
+                  placeholder="Search by receipt, patient, service, ref..."
+                  className={cx(
+                    'w-full pl-10 pr-10 py-2.5 text-sm transition-all duration-200',
+                    'focus:outline-none',
+                    !isHeaderSticky
+                      ? `border-transparent ${colors.bg.primary} ${colors.text.primary} rounded-[6px]`
+                      : `border rounded-lg ${colors.border.primary} ${isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`
+                  )}
+                />
+                
+                {searchTerm && (
                   <button
-                    onClick={() => onUpdateFilter('sortOrder', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                    type="button"
+                    onClick={() => {
+                      onUpdateFilter('searchTerm', '');
+                      searchInputRef.current?.focus();
+                    }}
                     className={cx(
-                      'cursor-pointer p-2 rounded-lg border transition',
-                      colors.border.primary,
-                      isDark ? 'hover:bg-gray-800 text-gray-100' : 'hover:bg-gray-50 text-gray-900'
+                      'absolute right-2 top-1/2 -translate-y-1/2 p-1.5',
+                      isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500',
+                      'cursor-pointer rounded-full transition-colors'
                     )}
-                    title="Toggle sort order"
+                    aria-label="Clear search"
                   >
-                    <ArrowUpDown className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
-                </div>
-              </label>
-
-              <label className="block">
-                <span className={cx('text-xs font-extrabold', colors.text.secondary)}>From</span>
-                <input
-                  type="date"
-                  value={filters.dateRange.start}
-                  onChange={(e) => onUpdateFilter('dateRange', { ...filters.dateRange, start: e.target.value })}
-                  className={cx(
-                    'mt-1 w-full text-sm border rounded-lg px-3 py-2 focus:outline-none',
-                    colors.border.primary,
-                    isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
-                    colors.ring
-                  )}
-                />
-              </label>
-
-              <label className="block">
-                <span className={cx('text-xs font-extrabold', colors.text.secondary)}>To</span>
-                <input
-                  type="date"
-                  value={filters.dateRange.end}
-                  onChange={(e) => onUpdateFilter('dateRange', { ...filters.dateRange, end: e.target.value })}
-                  className={cx(
-                    'mt-1 w-full text-sm border rounded-lg px-3 py-2 focus:outline-none',
-                    colors.border.primary,
-                    isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
-                    colors.ring
-                  )}
-                />
-              </label>
-
-              <div className="sm:col-span-2 flex items-center justify-end gap-2">
-                <button
-                  onClick={onClearFilters}
-                  className={cx(
-                    'cursor-pointer text-xs font-extrabold px-3 py-2 rounded-lg border transition',
-                    colors.border.primary,
-                    isDark ? 'text-gray-100 hover:bg-gray-800' : 'text-gray-900 hover:bg-gray-50'
-                  )}
-                >
-                  Clear filters
-                </button>
+                )}
               </div>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Advanced Filters with animation */}
+        <AnimatePresence>
+          {filters.showAdvancedFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className={cx('pt-4 border-t overflow-hidden', colors.border.primary)}
+            >
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className={cx('text-xs font-bold mb-2 flex items-center gap-2', colors.text.secondary)}>
+                      <Filter className="w-3.5 h-3.5" />
+                      Payment Status
+                    </span>
+                    <select
+                      value={filters.statusFilter}
+                      onChange={(e) => onUpdateFilter('statusFilter', e.target.value as PaymentStatus | 'all')}
+                      className={cx(
+                        'w-full text-sm border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30',
+                        colors.border.primary,
+                        isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
+                      )}
+                    >
+                      <option value="all">All Statuses</option>
+                      {Object.values(PaymentStatus).map((status) => (
+                        <option key={status} value={status}>
+                          {PAYMENT_STATUS_LABELS[status]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className={cx('text-xs font-bold mb-2 block', colors.text.secondary)}>
+                      Sort By
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={filters.sortBy}
+                        onChange={(e) => onUpdateFilter('sortBy', e.target.value as 'date' | 'amount' | 'patient')}
+                        className={cx(
+                          'flex-1 text-sm border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30',
+                          colors.border.primary,
+                          isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
+                        )}
+                      >
+                        <option value="date">Date</option>
+                        <option value="amount">Amount</option>
+                        <option value="patient">Patient</option>
+                      </select>
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => onUpdateFilter('sortOrder', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                        className={cx(
+                          'p-2.5 rounded-lg border transition-all duration-200',
+                          colors.border.primary,
+                          isDark ? 'hover:bg-gray-800 text-gray-100' : 'hover:bg-gray-50 text-gray-900'
+                        )}
+                        title={`Sort ${filters.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                      >
+                        <ArrowUpDown className="w-4 h-4" />
+                      </motion.button>
+                    </div>
+                  </label>
+
+                  <label className="block">
+                    <span className={cx('text-xs font-bold mb-2 flex items-center gap-2', colors.text.secondary)}>
+                      <Calendar className="w-3.5 h-3.5" />
+                      Date From
+                    </span>
+                    <input
+                      type="date"
+                      value={filters.dateRange.start}
+                      onChange={(e) => onUpdateFilter('dateRange', { ...filters.dateRange, start: e.target.value })}
+                      className={cx(
+                        'w-full text-sm border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30',
+                        colors.border.primary,
+                        isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
+                      )}
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className={cx('text-xs font-bold mb-2 flex items-center gap-2', colors.text.secondary)}>
+                      <Calendar className="w-3.5 h-3.5" />
+                      Date To
+                    </span>
+                    <input
+                      type="date"
+                      value={filters.dateRange.end}
+                      onChange={(e) => onUpdateFilter('dateRange', { ...filters.dateRange, end: e.target.value })}
+                      className={cx(
+                        'w-full text-sm border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30',
+                        colors.border.primary,
+                        isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
+                      )}
+                    />
+                  </label>
+
+                  <div className="sm:col-span-2 flex items-center justify-end gap-2 pt-2">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={onClearFilters}
+                      className={cx(
+                        'text-xs font-bold px-4 py-2.5 rounded-lg border transition-all duration-200',
+                        colors.border.primary,
+                        isDark ? 'text-gray-100 hover:bg-gray-800' : 'text-gray-900 hover:bg-gray-50'
+                      )}
+                    >
+                      Clear All Filters
+                    </motion.button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Transaction List */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" style={{ scrollbarGutter: 'stable' }}>
+      <div 
+        ref={containerRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 scroll-smooth"
+        style={{ scrollbarGutter: 'stable' }}
+      >
         {filteredTransactions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 p-4">
-            <FileText className={cx('w-12 h-12 mb-3', colors.text.tertiary)} />
-            <p className={cx('text-sm text-center', colors.text.secondary)}>No transactions found</p>
-          </div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center h-64 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              transition={{ repeat: Infinity, duration: 2, repeatType: 'reverse' }}
+              className={cx('p-4 rounded-xl mb-4', isDark ? 'bg-gray-800' : 'bg-gray-100')}
+            >
+              <FileText className={cx('w-12 h-12', colors.text.tertiary)} />
+            </motion.div>
+            <p className={cx('text-sm font-semibold text-center', colors.text.primary)}>
+              No Transactions Found
+            </p>
+            <p className={cx('text-xs text-center mt-1', colors.text.secondary)}>
+              Try adjusting your filters or search terms
+            </p>
+          </motion.div>
         ) : (
-          <div className="p-2 space-y-2">
-            {filteredTransactions.map((t) => {
-              const isSelected = selectedId === t.visit_uuid;
+          <div className="p-3 space-y-2">
+            <AnimatePresence>
+              {filteredTransactions.map((t, index) => {
+                const isSelected = selectedId === t.visit_uuid;
 
-              return (
-                <div
-                  key={t.visit_uuid}
-                  onClick={() => onSelectTransaction(t.visit_uuid)}
-                  className={cx(
-                    'cursor-pointer p-3 border rounded-lg transition-all duration-200',
-                    colors.border.primary,
-                    isSelected
-                      ? cx(colors.bg.selected, 'border-blue-300', isDark && 'border-blue-700', 'shadow-md')
-                      : cx(colors.bg.hover, 'hover:shadow-sm')
-                  )}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className={cx('text-xs font-mono font-extrabold', colors.text.primary)}>
-                          {t.receipt_number || 'Draft'}
-                        </span>
-                        <span
-                          className={cx(
-                            'px-2 py-0.5 rounded-full text-xs font-extrabold',
-                            getStatusPillClass(isDark, t.payment_status)
-                          )}
-                        >
-                          {PAYMENT_STATUS_LABELS[t.payment_status]}
-                        </span>
-                      </div>
-                      <h4 className={cx('text-sm font-extrabold truncate', colors.text.primary)}>
-                        {t.patient_name}
-                      </h4>
-                      <p className={cx('text-xs', colors.text.secondary)}>{t.patient_number}</p>
-                    </div>
-                    <ChevronRight className={cx('w-5 h-5 shrink-0', colors.text.tertiary)} />
-                  </div>
-
-                  <div className="flex items-center gap-3 text-xs mt-2">
-                    <div className="flex items-center gap-1">
-                      <Calendar className={cx('w-3.5 h-3.5', colors.text.secondary)} />
-                      <span className={colors.text.secondary}>{formatDisplayDate(t.created_at)}</span>
-                    </div>
-                  </div>
-
-                  <div className={cx('flex items-center justify-between mt-2 pt-2 border-t', colors.border.primary)}>
-                    <span className={cx('text-sm font-extrabold', colors.text.primary)}>
-                      {formatCurrency(t.billing_data.grandTotal)}
-                    </span>
-
-                    <div className="flex items-center gap-1">
-                      {t.payment_methods.map((pm: any, index: number) => (
-                        <div
-                          key={index}
-                          className="flex items-center"
-                          title={`${pm.type}: ${formatCurrency(pm.amount)}`}
-                        >
-                          {paymentIcon(pm.type)}
+                return (
+                  <motion.div
+                    key={t.visit_uuid}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.2, delay: index * 0.03 }}
+                    onClick={() => onSelectTransaction(t.visit_uuid)}
+                    className={cx(
+                      'p-4 border rounded-xl transition-all duration-200 cursor-pointer group',
+                      colors.border.primary,
+                      index % 2 === 0 ? colors.bg.stripe : colors.bg.stripeAlt,
+                      isSelected
+                        ? cx(
+                            colors.bg.selected,
+                            isDark ? 'border-blue-700 shadow-lg' : 'border-blue-300 shadow-md',
+                            'ring-2 ring-blue-500 ring-opacity-20'
+                          )
+                        : cx(colors.bg.hover, 'hover:shadow-sm hover:scale-[1.02]')
+                    )}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelectTransaction(t.visit_uuid);
+                      }
+                    }}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <span className={cx('text-xs font-mono font-bold flex items-center gap-1', colors.text.primary)}>
+                            <Hash className="w-3 h-3" />
+                            {t.receipt_number || 'DRAFT'}
+                          </span>
+                          <span
+                            className={cx(
+                              'px-2.5 py-1 rounded-full text-xs font-bold',
+                              getStatusPillClass(isDark, t.payment_status)
+                            )}
+                          >
+                            {PAYMENT_STATUS_LABELS[t.payment_status]}
+                          </span>
                         </div>
-                      ))}
+                        <div className="flex items-center gap-2 mb-1">
+                          <User className={cx('w-4 h-4', colors.text.tertiary)} />
+                          <h4 className={cx('text-sm font-bold truncate', colors.text.primary)}>
+                            {t.patient_name}
+                          </h4>
+                        </div>
+                        <p className={cx('text-xs', colors.text.secondary)}>{t.patient_number}</p>
+                      </div>
+                      <motion.div
+                        animate={{ x: isSelected ? 5 : 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ChevronRight 
+                          className={cx(
+                            'w-5 h-5 shrink-0 transition-transform duration-200',
+                            colors.text.tertiary,
+                            isSelected && 'transform translate-x-1'
+                          )} 
+                        />
+                      </motion.div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
+
+                    <div className="flex items-center gap-3 text-xs mb-3">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className={cx('w-3.5 h-3.5', colors.text.secondary)} />
+                        <span className={colors.text.secondary}>{formatDisplayDate(t.created_at)}</span>
+                      </div>
+                    </div>
+
+                    <div className={cx('flex items-center justify-between pt-3 border-t', colors.border.subtle)}>
+                      <span className="text-base font-black bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+                        {formatCurrency(t.billing_data.grandTotal)}
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        {t.payment_methods.slice(0, 3).map((pm: any, index: number) => (
+                          <motion.div
+                            key={index}
+                            whileHover={{ scale: 1.1 }}
+                            className={cx(
+                              'p-1.5 rounded-lg',
+                              isDark ? 'bg-gray-700' : 'bg-gray-100'
+                            )}
+                            title={`${pm.type}: ${formatCurrency(pm.amount)}`}
+                          >
+                            <PaymentIcon type={pm.type} className={cx('w-3.5 h-3.5', colors.text.secondary)} />
+                          </motion.div>
+                        ))}
+                        {t.payment_methods.length > 3 && (
+                          <span className={cx('text-xs font-semibold', colors.text.tertiary)}>
+                            +{t.payment_methods.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <div className={cx('shrink-0 px-4 py-3 border-t', colors.border.primary, colors.bg.secondary)}>
-        <div className="flex items-start gap-2">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={cx('shrink-0 px-5 py-4 border-t', colors.border.primary, colors.bg.secondary)}
+      >
+        <div className="flex items-start gap-2.5">
           <AlertCircle className={cx('w-4 h-4 shrink-0 mt-0.5', colors.text.tertiary)} />
           <p className={cx('text-xs leading-relaxed', colors.text.secondary)}>
-            Refunds are item-based and quantity-based — you can partially refund by reducing quantities.
+            Refunds are item-based and quantity-based. You can partially refund by reducing quantities
+            of individual items.
           </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

@@ -1,15 +1,14 @@
-// MRBillingReview.tsx
-// Main component orchestrator - connects all sub-components and manages state
-// Using BillingReviewTypes.ts as the single source of truth for backend contract
-
-import React, { useEffect, useMemo, useState } from 'react';
+// components/billing-review/MRBillingReview.tsx
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { PaymentStatus } from '../../api/billing-review/BillingReviewTypes';
 import { TransactionList } from './billing-review/components/TransactionList';
 import { ReceiptView } from './billing-review/components/ReceiptView';
-import { EmailModal, RefundModal, Toast, VoidModal } from  './billing-review/components/Modals';
+import { EmailModal, RefundModal, Toast, VoidModal } from './billing-review/components/Modals';
 import { useGetBillingReview } from '../../api/billing-review/BillingReviewQueries';
+import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
+import { AlertCircle, LayoutGrid, Receipt } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// Local types for UI state (not part of backend contract)
 interface FilterState {
   searchTerm: string;
   statusFilter: PaymentStatus | 'all';
@@ -21,11 +20,9 @@ interface FilterState {
 
 interface ToastState {
   message: string;
-  type: 'success' | 'error' | 'info';
+  type: 'success' | 'error' | 'info' | 'warning';
   visible: boolean;
 }
-
-/* -------------------------------- Component -------------------------------- */
 
 interface MRBillingReviewProps {
   theme?: 'light' | 'dark';
@@ -33,9 +30,9 @@ interface MRBillingReviewProps {
 
 export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light' }) => {
   const isDark = theme === 'dark';
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
-  // ==================== BACKEND INTEGRATION ====================
-  // Using the query hook from BillingReviewQueries as the single source of truth
+  // Backend Integration
   const { 
     data: billingResponse, 
     isLoading, 
@@ -46,42 +43,21 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
     sort_order: 'desc'
   });
 
-  // Transform backend data to match our UI needs while preserving backend types
+  // Transform transactions with derived date/time fields
   const transactions = useMemo(() => {
     if (!billingResponse?.data.items) return [];
     return billingResponse.data.items.map(item => ({
       ...item,
-      // Add UI-specific computed fields without modifying backend types
       date: item.created_at.split('T')[0],
       time: new Date(item.created_at).toLocaleTimeString('en-US', { 
         hour: '2-digit', 
         minute: '2-digit' 
       }),
-      patient: {
-        name: item.patient_name,
-        patient_number: item.patient_number,
-        email: '', // This would come from a patient details endpoint
-      },
-      billing_data: {
-        ...item.billing_data,
-        // Ensure all required fields for UI
-      },
-      // Initialize empty arrays for refunds/voids (these would come from separate endpoints)
-      refunds: [],
-      voided: null,
-      settled_by: '',
     }));
   }, [billingResponse]);
 
+  // Core state
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [activePane, setActivePane] = useState<'list' | 'receipt'>('list');
-
-  const selectedTransaction = useMemo(
-    () => transactions.find((t) => t.visit_uuid === selectedId) ?? null,
-    [transactions, selectedId]
-  );
-
-  // ==================== LOCAL STATE ====================
   const [filters, setFilters] = useState<FilterState>({
     searchTerm: '',
     statusFilter: 'all',
@@ -102,11 +78,29 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
   const [emailOpen, setEmailOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
 
-  // ==================== FILTERING ====================
+  // Mobile view state - separate from selection to avoid the ESLint warning
+  const [mobileView, setMobileView] = useState<'list' | 'receipt'>('list');
+
+  // Derived state
+  const selectedTransaction = useMemo(
+    () => transactions.find((t) => t.visit_uuid === selectedId) ?? null,
+    [transactions, selectedId]
+  );
+
+  // Auto-switch to receipt view on mobile when a transaction is selected
+  // but only if we're not already on receipt view
+  const handleSelectTransaction = useCallback((id: string) => {
+    setSelectedId(id);
+    // On mobile, automatically switch to receipt view when selecting
+    if (window.innerWidth < 1024) {
+      setMobileView('receipt');
+    }
+  }, []);
+
+  // Filter transactions based on current filters
   const filteredTransactions = useMemo(() => {
     let filtered = [...transactions];
 
-    // Apply search
     if (filters.searchTerm) {
       const searchLower = filters.searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -118,12 +112,10 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
       );
     }
 
-    // Apply status filter
     if (filters.statusFilter !== 'all') {
       filtered = filtered.filter((t) => t.payment_status === filters.statusFilter);
     }
 
-    // Apply date range
     if (filters.dateRange.start) {
       filtered = filtered.filter((t) => t.date >= filters.dateRange.start);
     }
@@ -131,7 +123,6 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
       filtered = filtered.filter((t) => t.date <= filters.dateRange.end);
     }
 
-    // Apply sorting
     filtered.sort((a, b) => {
       let comparison = 0;
       switch (filters.sortBy) {
@@ -151,64 +142,58 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
     return filtered;
   }, [transactions, filters]);
 
-  // ==================== HANDLERS ====================
-  // Non-functional handlers as requested
-  const handlePrint = () => {
-    setToast({
-      message: 'Print functionality - backend integration pending',
-      type: 'info',
-      visible: true,
-    });
-    setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
-  };
+  // Toast management with cleanup
+  const showToastMessage = useCallback((message: string, type: ToastState['type']) => {
+    // Clear any existing timer
+    if (toastTimerRef.current) {
+    if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
+    }
 
-  const handleEmail = () => {
+    setToast({ message, type, visible: true });
+    
+    toastTimerRef.current = setTimeout(() => {
+      setToast(prev => ({ ...prev, visible: false }));
+    }, 3000);
+  }, []);
+
+  // Action handlers
+  const handlePrint = useCallback(() => {
+    showToastMessage('Print functionality - backend integration pending', 'info');
+  }, [showToastMessage]);
+
+  const handleEmail = useCallback(() => {
     setEmailOpen(true);
-  };
+  }, []);
 
-  const handleRefund = () => {
+  const handleRefund = useCallback(() => {
     setRefundOpen(true);
-  };
+  }, []);
 
-  const handleVoid = () => {
+  const handleVoid = useCallback(() => {
     setVoidOpen(true);
-  };
+  }, []);
 
-  const handleEmailSubmit = () => {
-    setToast({
-      message: 'Email functionality - backend integration pending',
-      type: 'info',
-      visible: true,
-    });
+  const handleEmailSubmit = useCallback(() => {
+    showToastMessage('Email functionality - backend integration pending', 'info');
     setEmailOpen(false);
-    setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
-  };
+  }, [showToastMessage]);
 
-  const handleRefundSubmit = () => {
-    setToast({
-      message: 'Refund functionality - backend integration pending',
-      type: 'info',
-      visible: true,
-    });
+  const handleRefundSubmit = useCallback(() => {
+    showToastMessage('Refund functionality - backend integration pending', 'info');
     setRefundOpen(false);
-    setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
-  };
+  }, [showToastMessage]);
 
-  const handleVoidSubmit = () => {
-    setToast({
-      message: 'Void functionality - backend integration pending',
-      type: 'info',
-      visible: true,
-    });
+  const handleVoidSubmit = useCallback(() => {
+    showToastMessage('Void functionality - backend integration pending', 'info');
     setVoidOpen(false);
-    setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
-  };
+  }, [showToastMessage]);
 
-  const updateFilter = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
+  // Filter management
+  const updateFilter = useCallback(<K extends keyof FilterState>(key: K, value: FilterState[K]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-  };
+  }, []);
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setFilters({
       searchTerm: '',
       statusFilter: 'all',
@@ -217,14 +202,9 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
       sortOrder: 'desc',
       showAdvancedFilters: false,
     });
-  };
+  }, []);
 
-  // Auto switch to receipt on mobile when selecting record
-  useEffect(() => {
-    if (selectedId != null) setActivePane('receipt');
-  }, [selectedId]);
-
-  // Theme colors based on the backend types
+  // Theme colors
   const colors = {
     bg: {
       primary: isDark ? 'bg-gray-900' : 'bg-gray-50',
@@ -232,56 +212,71 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
       elevated: isDark ? 'bg-gray-800' : 'bg-white',
       hover: isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50',
       selected: isDark ? 'bg-gray-700' : 'bg-blue-50',
+      stripe: isDark ? 'bg-gray-800/30' : 'bg-gray-50/50',
+      stripeAlt: isDark ? 'bg-gray-900/50' : 'bg-white/50',
     },
     text: {
       primary: isDark ? 'text-gray-100' : 'text-gray-900',
       secondary: isDark ? 'text-gray-400' : 'text-gray-600',
       tertiary: isDark ? 'text-gray-500' : 'text-gray-400',
+      muted: isDark ? 'text-gray-500' : 'text-gray-400',
     },
     border: {
       primary: isDark ? 'border-gray-700' : 'border-gray-200',
+      subtle: isDark ? 'border-gray-600' : 'border-gray-100',
     },
     ring: 'focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none',
+    accent: {
+      primary: isDark ? 'bg-blue-600' : 'bg-blue-600',
+      hover: isDark ? 'hover:bg-blue-700' : 'hover:bg-blue-700',
+      text: 'text-white',
+    },
   };
 
   const pillBg = isDark ? 'bg-gray-700' : 'bg-gray-100';
 
-  // Show loading state
+  // Loading state
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-sm text-gray-600">Loading billing records...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSkeleton variant="detail" theme={theme} message="Loading billing records..." />;
   }
 
-  // Show error state
+  // Error state
   if (error) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center text-red-600">
-          <p>Error loading billing records</p>
-          <p className="text-sm mt-1">Please try again later</p>
-        </div>
+      <div className={`flex items-center justify-center h-full ${colors.bg.primary} p-8`}>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center max-w-md"
+        >
+          <div className={`p-4 rounded-xl mb-4 inline-block ${isDark ? 'bg-red-900/20' : 'bg-red-100'}`}>
+            <AlertCircle className={`w-12 h-12 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
+          </div>
+          <h3 className={`text-lg font-bold mb-2 ${colors.text.primary}`}>
+            Error Loading Billing Records
+          </h3>
+          <p className={`text-sm ${colors.text.secondary}`}>
+            {error.message || 'An unexpected error occurred. Please try again later.'}
+          </p>
+        </motion.div>
       </div>
     );
   }
 
   return (
     <div className={`h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6 ${colors.bg.primary}`}>
-      {/* Toast */}
-      {toast.visible && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast(prev => ({ ...prev, visible: false }))}
-        />
-      )}
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast.visible && (
+          <Toast 
+            message={toast.message} 
+            type={toast.type} 
+            onClose={() => setToast(prev => ({ ...prev, visible: false }))}
+          />
+        )}
+      </AnimatePresence>
 
-      {/* Print styles */}
+      {/* Print Styles */}
       <style>{`
         @media print {
           html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -295,40 +290,56 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
         }
       `}</style>
 
-      {/* Mobile Tabs */}
+      {/* Mobile View Toggle */}
       <div className="no-print lg:hidden mb-4">
-        <div className={`flex items-center gap-2 p-1 rounded-xl border ${colors.border.primary}`}>
-          <button
-            onClick={() => setActivePane('list')}
-            className={`cursor-pointer flex-1 px-3 py-2 text-xs font-extrabold rounded-lg transition ${
-              activePane === 'list'
-                ? 'bg-blue-600 text-white'
+        <div className={`flex items-center gap-2 p-1 rounded-xl border ${colors.border.primary} ${colors.bg.elevated}`}>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setMobileView('list')}
+            className={`flex-1 px-4 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+              mobileView === 'list'
+                ? 'bg-blue-600 text-white shadow-sm'
                 : isDark
-                ? 'text-gray-200 hover:bg-gray-800'
-                : 'text-gray-900 hover:bg-gray-50'
+                ? 'text-gray-200 hover:bg-gray-700'
+                : 'text-gray-900 hover:bg-gray-100'
             }`}
           >
+            <LayoutGrid className="w-4 h-4" />
             Records ({filteredTransactions.length})
-          </button>
-          <button
-            onClick={() => setActivePane('receipt')}
-            className={`cursor-pointer flex-1 px-3 py-2 text-xs font-extrabold rounded-lg transition ${
-              activePane === 'receipt'
-                ? 'bg-blue-600 text-white'
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setMobileView('receipt')}
+            disabled={!selectedId}
+            className={`flex-1 px-4 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+              mobileView === 'receipt'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : !selectedId
+                ? isDark
+                  ? 'text-gray-600 cursor-not-allowed'
+                  : 'text-gray-400 cursor-not-allowed'
                 : isDark
-                ? 'text-gray-200 hover:bg-gray-800'
-                : 'text-gray-900 hover:bg-gray-50'
+                ? 'text-gray-200 hover:bg-gray-700'
+                : 'text-gray-900 hover:bg-gray-100'
             }`}
           >
+            <Receipt className="w-4 h-4" />
             Receipt
-          </button>
+          </motion.button>
         </div>
       </div>
 
-      {/* Main Layout */}
+      {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 h-full min-h-0">
-        {/* Left Panel: Transaction List */}
-        <div className={activePane === 'receipt' ? 'lg:flex hidden' : 'flex'}>
+        {/* Transaction List - Hidden on mobile when receipt view is active */}
+        <motion.div 
+          className={`
+            ${mobileView === 'receipt' ? 'hidden lg:flex' : 'flex'}
+            lg:flex
+          `}
+          layout
+          transition={{ duration: 0.2 }}
+        >
           <TransactionList
             transactions={transactions}
             filteredTransactions={filteredTransactions}
@@ -338,14 +349,21 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
             theme={theme}
             colors={colors}
             pillBg={pillBg}
-            onSelectTransaction={(id) => setSelectedId(id)}
+            onSelectTransaction={handleSelectTransaction}
             onUpdateFilter={updateFilter}
             onClearFilters={clearFilters}
           />
-        </div>
+        </motion.div>
 
-        {/* Right Panel: Receipt View */}
-        <div className={activePane === 'list' ? 'lg:flex hidden' : 'flex'}>
+        {/* Receipt View - Hidden on mobile when list view is active */}
+        <motion.div 
+          className={`
+            ${mobileView === 'list' ? 'hidden lg:flex' : 'flex'}
+            lg:flex
+          `}
+          layout
+          transition={{ duration: 0.2 }}
+        >
           <ReceiptView
             selectedTransaction={selectedTransaction}
             theme={theme}
@@ -355,10 +373,10 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
             onRefund={handleRefund}
             onVoid={handleVoid}
           />
-        </div>
+        </motion.div>
       </div>
 
-      {/* Modals - Non-functional with placeholder handlers */}
+      {/* Modals */}
       <RefundModal
         open={refundOpen}
         selectedTransaction={selectedTransaction}
