@@ -14,8 +14,8 @@ import ForwardPatient from "../../../modules/medical-records/ui/visit-action-cen
 import PatientComplaints from "../../../modules/medical-records/ui/visit-action-center/PatientComplaints";
 import VisitStatus from "../../../modules/medical-records/ui/visit-action-center/VisitStatus";
 import MRBilling from "../../../modules/medical-records/ui/visit-action-center/billing-space/MRBilling";
-import MRBillingReview from "../../../modules/medical-records/ui/revenue/MRBillingReview";
 import MRBillingCycle from "../../../modules/medical-records/ui/revenue/MRBillingCycle";
+import { MRBillingReview } from "../../../modules/medical-records/ui/revenue/MRBillingReview";
 export const medicalRecordsRoutes = [
   <Route
     key="overview"
