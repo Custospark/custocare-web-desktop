@@ -4,13 +4,8 @@ import {
   CreditCard,
   Wallet,
   Banknote,
-  Printer,
-  CheckCircle2,
-  AlertCircle,
   Shield,
-  Loader2,
-  Phone,
-  Zap,
+  AlertCircle,
   Lock,
 } from 'lucide-react';
 import { FaCashRegister } from 'react-icons/fa';
@@ -32,7 +27,6 @@ import {
 import {
   DEFAULT_DISCOUNT,
   DEFAULT_PAYMENT_METHODS,
-  formatCurrency,
   DEFAULT_TAXES,
 } from './billing-types';
 import { PaymentStatus } from '../../../api/billing-review/BillingReviewTypes';
@@ -43,8 +37,9 @@ import {
 } from '../../../../../app/store/slices/visitSlice';
 import { useFinalizeBilling } from '../../../api/billable-items/BillableItemsQueries';
 import type { BillingSubmissionPayload } from '../../../api/billable-items/BillingItemsTypes';
-import { PrintableReceipt } from '../../revenue/billing-review/components/receipt-view/PrintableReceipt';
-import type { BillingReviewItem }from '../../../api/billing-review/BillingReviewTypes';
+import type { BillingReviewItem } from '../../../api/billing-review/BillingReviewTypes';
+import { BillingControlsSection } from './billing-summary/BillingControlsSection';
+import { ReceiptPreviewSection } from './billing-summary/ReceiptPreviewSection';
 
 interface BillingSummaryStepProps {
   theme?: 'light' | 'dark';
@@ -57,7 +52,7 @@ const clamp = (n: number, min = 0, max = Number.POSITIVE_INFINITY) =>
 
 const onlyDigits = (v: string) => v.replace(/[^\d]/g, '');
 
-export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({ 
+export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   theme = 'light',
   visitId: propVisitId,
   patientId: propPatientId,
@@ -70,7 +65,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   const activeVisit = useSelector(selectActiveVisit);
   const activeVisitId = useSelector(selectActiveVisitId);
   const activePatient = useSelector(selectActivePatient);
-  
+
   const visitId = propVisitId ?? activeVisitId ?? activeVisit?.visit_id;
   const patientId = propPatientId ?? activeVisit?.patient_id;
 
@@ -138,10 +133,10 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     onSuccess: (response) => {
       const generatedReceiptNumber = response.data.receipt_number;
       setReceiptNumber(generatedReceiptNumber);
-      
+
       dispatch(finalizePayment());
       dispatch(saveDraft());
-      
+
       console.log('Billing finalized successfully:', response);
     },
     onError: (error) => {
@@ -164,14 +159,14 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
       0
     );
 
-    const cashPayments = paymentMethods.filter(m => m.type === 'cash');
+    const cashPayments = paymentMethods.filter((m) => m.type === 'cash');
     const hasCashPayment = cashPayments.length > 0;
     const cashTendered = cashPayments.reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
-    
+
     const nonCashTotal = paymentMethods
-      .filter(m => m.type !== 'cash')
+      .filter((m) => m.type !== 'cash')
       .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
-    
+
     const cashDue = Math.max(0, billingData.grandTotal - nonCashTotal);
     const changeAmount = Math.max(0, cashTendered - cashDue);
 
@@ -196,14 +191,14 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
   // Calculate cash breakdown for PrintableReceipt
   const cashBreakdown = useMemo(() => {
-    const cashPayments = paymentMethods.filter(m => m.type === 'cash');
+    const cashPayments = paymentMethods.filter((m) => m.type === 'cash');
     if (cashPayments.length === 0) return null;
 
     const tendered = cashPayments.reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
     const nonCashTotal = paymentMethods
-      .filter(m => m.type !== 'cash')
+      .filter((m) => m.type !== 'cash')
       .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
-    
+
     const cashDue = Math.max(0, billingData.grandTotal - nonCashTotal);
     const change = Math.max(0, tendered - cashDue);
     const netCash = tendered - change;
@@ -211,72 +206,121 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     return { tendered, change, netCash };
   }, [paymentMethods, billingData.grandTotal]);
 
-  // Build selectedTransaction object for PrintableReceipt
-  const selectedTransaction: BillingReviewItem = useMemo(() => {
-    const patientDisplayName = activeVisit?.patient?.name || activePatient?.name || 'Unknown Patient';
-    const patientNumber = activeVisit?.patient?.patient_number || activePatient?.patient_number || 'N/A';
+  //// Build selectedTransaction object for PrintableReceipt
+const selectedTransaction: BillingReviewItem = useMemo(() => {
+  const patientDisplayName =
+    activeVisit?.patient?.name || activePatient?.name || 'Unknown Patient';
+  const patientNumber =
+    activeVisit?.patient?.patient_number || activePatient?.patient_number || 'N/A';
 
-    return {
-      id: visitId || 0,
-      receipt_number: receiptNumber || 'DRAFT',
-      patient_name: patientDisplayName,
-      patient_number: patientNumber,
-      created_at: new Date().toISOString(),
-      charge_items: chargeItems.map(item => ({
-        id: item.id,
-        service: {
-          id: item.service.id,
-          code: item.service.code,
-          name: item.service.name,
-          unitPrice: item.service.unitPrice,
-          category: item.service.category,
-        },
-        quantity: item.quantity,
-        totalAmount: item.totalAmount,
+  // Get current timestamp
+  const now = new Date().toISOString();
+
+  return {
+    // Core identifiers
+    id: visitId || 0,
+    visit_id: visitId || 0,
+    visit_uuid: activeVisit?.visit_uuid || `temp_${Date.now()}`,
+    patient_id: patientId || 0,
+    patient_number: patientNumber,
+    patient_name: patientDisplayName,
+    
+    // Billing cycle info
+    billing_cycle_id: null,
+    billing_cycle_uuid: null,
+    
+    // Receipt info
+    receipt_number: receiptNumber || null,
+    
+    // Billing status
+    has_billing: status === 'settled',
+    payment_status: status === 'settled' ? PaymentStatus.PAID_IN_FULL : 
+                   (billingData.balance === 0 ? PaymentStatus.PAID_IN_FULL : 
+                    (billingData.balance < billingData.grandTotal ? PaymentStatus.PENDING : 
+                     PaymentStatus.NOT_BILLED)),
+    
+    // Items and charges
+    charge_items: chargeItems.map((item) => ({
+      id: item.id,
+      service: {
+        id: item.service.id,
+        code: item.service.code,
+        name: item.service.name,
+        unitPrice: item.service.unitPrice,
+        category: item.service.category,
+      },
+      quantity: item.quantity,
+      totalAmount: item.totalAmount,
+    })),
+    
+    // Discount
+    discount: {
+      type: discount.type,
+      value: discount.value,
+      reason: additionalNotes || undefined,
+    },
+    
+    // Taxes
+    taxes: DEFAULT_TAXES.map((tax, index) => ({
+      name: tax.name,
+      rate: tax.rate,
+      amount: billingData.taxes[index]?.amount || 0,
+    })),
+    
+    // Payment methods
+    payment_methods: paymentMethods
+      .filter((method) => (Number(method.amount) || 0) > 0)
+      .map((method) => ({
+        type: method.type,
+        amount: Number(method.amount),
+        reference: method.details || undefined,
+        details: method.details ? { phone: method.details } : undefined,
       })),
-      billing_data: {
-        subtotal: billingData.subtotal,
-        discountAmount: billingData.discountAmount,
-        taxableAmount: billingData.taxableAmount,
-        taxTotal: billingData.taxTotal,
-        grandTotal: billingData.grandTotal,
-        totalPaid: derivedFinancials.netPaid,
-        balance: billingData.balance,
-        taxes: DEFAULT_TAXES.map((tax, index) => ({
-          name: tax.name,
-          rate: tax.rate,
-          amount: billingData.taxes[index]?.amount || 0,
-        })),
-      },
-      payment_methods: paymentMethods
-        .filter(method => (Number(method.amount) || 0) > 0)
-        .map(method => ({
-          type: method.type,
-          amount: Number(method.amount),
-          reference: method.details || undefined,
-        })),
-      discount: {
-        type: discount.type,
-        value: discount.value,
-        reason: additionalNotes || undefined,
-      },
-      status: status as PaymentStatus,
-      additional_notes: additionalNotes || undefined,
-    };
-  }, [
-    visitId,
-    receiptNumber,
-    activeVisit,
-    activePatient,
-    chargeItems,
-    billingData,
-    derivedFinancials,
-    paymentMethods,
-    discount,
-    status,
-    additionalNotes,
-  ]);
-
+    
+    // Billing data
+    billing_data: {
+      subtotal: billingData.subtotal,
+      discountAmount: billingData.discountAmount,
+      taxableAmount: billingData.taxableAmount,
+      taxTotal: billingData.taxTotal,
+      grandTotal: billingData.grandTotal,
+      totalPaid: derivedFinancials.netPaid,
+      balance: billingData.balance,
+      taxes: DEFAULT_TAXES.map((tax, index) => ({
+        name: tax.name,
+        rate: tax.rate,
+        amount: billingData.taxes[index]?.amount || 0,
+      })),
+    },
+    
+    // Additional fields
+    additional_notes: additionalNotes || '',
+    
+    // Timestamps
+    billed_at: status === 'settled' ? now : null,
+    created_at: now,
+    updated_at: now,
+    
+    // UI state flags
+    last_updated: Date.now(),
+    is_dirty: false,
+    is_processing: isProcessing,
+  };
+}, [
+  visitId,
+  patientId,
+  receiptNumber,
+  activeVisit,
+  activePatient,
+  chargeItems,
+  billingData,
+  derivedFinancials,
+  paymentMethods,
+  discount,
+  status,
+  additionalNotes,
+  isProcessing,
+]);
   // Calculate cash change for each cash payment method (for controls UI)
   const cashChangeByIndex = useMemo(() => {
     const result: Record<number, { dueBefore: number; change: number }> = {};
@@ -300,13 +344,18 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     return result;
   }, [paymentMethods, billingData.grandTotal]);
 
-  const paidMethods = useMemo(
-    () => paymentMethods.filter((method) => (Number(method.amount) || 0) > 0),
-    [paymentMethods]
-  );
-
-  const canFinalize = !isProcessing && !isSubmitting && !isReadOnly && chargeItems.length > 0 && billingData.balance === 0 && hasRequiredIds;
-  const canPrint = (status === 'settled' || status === 'ready') && !!receiptNumber && !isProcessing && !isSubmitting;
+  const canFinalize =
+    !isProcessing &&
+    !isSubmitting &&
+    !isReadOnly &&
+    chargeItems.length > 0 &&
+    billingData.balance === 0 &&
+    hasRequiredIds;
+  const canPrint =
+    (status === 'settled' || status === 'ready') &&
+    !!receiptNumber &&
+    !isProcessing &&
+    !isSubmitting;
 
   const paymentIcon = (type: string) => {
     switch (type) {
@@ -506,7 +555,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
       const payload: BillingSubmissionPayload = {
         visit_id: visitId,
         patient_id: patientId,
-        charge_items: chargeItems.map(item => ({
+        charge_items: chargeItems.map((item) => ({
           service_key: item.service.code || `item_${item.id}`,
           service: {
             id: item.service.id,
@@ -529,8 +578,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
           amount: billingData.taxes[index]?.amount || 0,
         })),
         payment_methods: paymentMethods
-          .filter(method => (Number(method.amount) || 0) > 0)
-          .map(method => ({
+          .filter((method) => (Number(method.amount) || 0) > 0)
+          .map((method) => ({
             type: method.type,
             amount: Number(method.amount),
             reference: method.details || undefined,
@@ -558,20 +607,16 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     }
   };
 
-  /**
-   * Handle printing using the same approach as PrintView
-   * Sets isPrinting state, triggers browser print dialog
-   */
   const handlePrintReceipt = () => {
     if (!canPrint) return;
 
     setIsPrinting(true);
     dispatch(setProcessing(true));
-    
+
     // Small delay to ensure print styles are applied
     setTimeout(() => {
       window.print();
-      
+
       // Reset after print dialog closes (user prints or cancels)
       setTimeout(() => {
         setIsPrinting(false);
@@ -584,6 +629,24 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     const isFocused = focusedAmountInputs[index];
     const isZero = amount === 0;
     return !isFocused && isZero ? '' : String(amount);
+  };
+
+  const handleFocusAmountInput = (index: number) => {
+    if (isReadOnly) return;
+    if (!focusedAmountInputs[index]) {
+      setFocusedAmountInputs((prev) => ({ ...prev, [index]: true }));
+    }
+  };
+
+  const handleBlurAmountInput = (index: number) => {
+    if (isReadOnly) return;
+    if (paymentMethods[index].amount === 0) {
+      setFocusedAmountInputs((prev) => ({ ...prev, [index]: false }));
+    }
+  };
+
+  const handleDiscountFocus = () => {
+    if (discount.value === 0) setLocalDiscount((p) => ({ ...p, value: 0 }));
   };
 
   return (
@@ -607,505 +670,52 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 h-full min-h-0">
-        {/* LEFT: Receipt Preview using PrintableReceipt component */}
-        <div className="flex flex-col h-full min-h-0">
-          <div
-            className={`flex flex-col h-full border ${colors.border.primary} ${colors.bg.primary} rounded-lg shadow-sm overflow-hidden ${
-              isReadOnly ? 'opacity-90' : ''
-            }`}
-          >
-            {/* Fixed header */}
-            <div className={`flex-shrink-0 px-4 py-3 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="min-w-0 flex-1">
-                  <h3 className={`text-sm sm:text-base font-bold ${colors.text.primary}`}>Receipt Preview</h3>
-                  <p className={`text-xs ${colors.text.secondary} truncate`}>
-                    {isReadOnly
-                      ? 'Payment completed - receipt finalized'
-                      : 'Live updates as you adjust discount, taxes, and payment'}
-                  </p>
-                </div>
+        {/* LEFT: Receipt Preview using ReceiptPreviewSection component */}
+        <ReceiptPreviewSection
+          colors={colors}
+          isReadOnly={isReadOnly}
+          status={status}
+          receiptNumber={receiptNumber}
+          receiptRef={receiptRef}
+          selectedTransaction={selectedTransaction}
+          derivedFinancials={derivedFinancials}
+          cashBreakdown={cashBreakdown}
+          isPrinting={isPrinting}
+          additionalNotes={additionalNotes}
+          billingData={billingData}
+          onAdditionalNotesChange={handleAdditionalNotesChange}
+        />
 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <div
-                    className={`px-2 py-1 rounded-md text-xs font-medium select-none whitespace-nowrap ${
-                      status === 'draft'
-                        ? colors.status.draft
-                        : status === 'ready'
-                        ? colors.status.ready
-                        : colors.status.settled
-                    }`}
-                  >
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </div>
-                  <div
-                    className={`text-xs font-semibold px-2.5 py-1 rounded border ${colors.border.primary} ${colors.bg.secondary} ${colors.text.primary}`}
-                  >
-                    {receiptNumber ? `# ${receiptNumber}` : '# Pending'}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Scrollable receipt - Using PrintableReceipt component */}
-            <div
-              className="flex-1 overflow-y-auto overflow-x-hidden p-4 min-h-0"
-              style={{ scrollbarGutter: 'stable' }}
-            >
-              <div className="mx-auto w-full max-w-[360px] sm:max-w-[420px]">
-                <PrintableReceipt
-                  ref={receiptRef}
-                  selectedTransaction={selectedTransaction}
-                  derivedFinancials={derivedFinancials}
-                  cashBreakdown={cashBreakdown}
-                  changeAmount={derivedFinancials.changeAmount}
-                  isPrinting={isPrinting}
-                />
-              </div>
-            </div>
-
-            {/* Taxes and Additional Notes section */}
-            <div className={`flex-shrink-0 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
-              {/* Additional Notes */}
-              <div className="px-4 py-3">
-                <label className={`block text-sm font-bold mb-1 ${colors.text.primary}`}>
-                  Additional Notes <span className={`text-xs font-normal ${colors.text.secondary}`}>(optional)</span>
-                </label>
-
-                <textarea
-                  value={additionalNotes}
-                  onChange={(e) => handleAdditionalNotesChange(e.target.value)}
-                  placeholder="E.g. patient paid in two installments, waived consultation fee…"
-                  rows={2}
-                  readOnly={isReadOnly}
-                  disabled={isReadOnly}
-                  className={`w-full px-3 py-2 text-sm border ${
-                    isReadOnly
-                      ? `${colors.border.disabled} ${colors.bg.disabled} ${colors.text.disabled} cursor-not-allowed`
-                      : `${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-2 ${colors.accent.ring}`
-                  } rounded-lg transition-shadow resize-none`}
-                />
-              </div>
-
-              <div className="px-4 py-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className={`text-sm font-bold ${colors.text.primary}`}>Taxes</div>
-                  <div className={`text-xs ${colors.text.secondary}`}>Auto-calculated</div>
-                </div>
-
-                <div className="space-y-2">
-                  {DEFAULT_TAXES.map((tax, idx) => (
-                    <div
-                      key={idx}
-                      className={`flex items-center justify-between p-3 border ${colors.border.primary} ${colors.bg.primary} rounded-lg ${
-                        isReadOnly ? 'opacity-75' : ''
-                      }`}
-                    >
-                      <div className="min-w-0">
-                        <p className={`text-sm font-semibold ${colors.text.primary}`}>{tax.name}</p>
-                        <p className={`text-xs ${colors.text.secondary}`}>{tax.rate}% rate</p>
-                      </div>
-                      <p className={`text-sm font-extrabold ${colors.text.primary}`}>
-                        {formatCurrency(billingData.taxes[idx]?.amount || 0)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Left footer info */}
-            <div className={`flex-shrink-0 px-4 py-3 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
-              <div className="flex items-start gap-2">
-                <AlertCircle className={`w-4 h-4 ${colors.text.tertiary} flex-shrink-0 mt-0.5`} />
-                <p className={`text-xs ${colors.text.secondary} leading-relaxed`}>
-                  {isReadOnly
-                    ? 'Payment completed. Receipt is finalized and ready for printing.'
-                    : 'Receipt preview updates in real-time. Final totals include taxes and discount.'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT: Billing controls */}
-        <div className="flex flex-col h-full min-h-0">
-          <div
-            className={`flex flex-col h-full border ${colors.border.primary} ${colors.bg.primary} rounded-lg shadow-sm overflow-hidden ${
-              isReadOnly ? 'opacity-90' : ''
-            }`}
-          >
-            {/* Fixed header */}
-            <div className={`flex-shrink-0 px-4 py-3 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
-              <h3 className={`text-sm sm:text-base font-bold ${colors.text.primary}`}>
-                {isReadOnly ? 'Payment Details (Read-only)' : 'Billing Controls'}
-              </h3>
-              <p className={`text-xs ${colors.text.secondary} mt-0.5`}>
-                {isReadOnly
-                  ? 'Payment has been finalized. Only receipt printing is available.'
-                  : 'Enter cash tendered amount → system automatically calculates change'}
-              </p>
-            </div>
-
-            {/* Scrollable controls content */}
-            <div
-              className="flex-1 overflow-y-auto overflow-x-hidden p-4 min-h-0 space-y-4"
-              style={{ scrollbarGutter: 'stable' }}
-            >
-              {/* Payment methods section */}
-              <div className={`border ${colors.border.primary} rounded-lg overflow-hidden shadow-sm`}>
-                <div className={`px-4 py-3 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <h4 className={`text-sm font-bold ${colors.text.primary}`}>Payment Methods</h4>
-                    {!isReadOnly && (
-                      <button
-                        type="button"
-                        onClick={handleAddPaymentMethod}
-                        disabled={paymentMethods.length >= 3}
-                        className={`text-xs font-semibold px-3 py-1.5 border ${colors.border.primary} ${colors.bg.hover} ${colors.text.secondary}
-                        transition-all duration-200 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-sm active:scale-95`}
-                      >
-                        + Add Method
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className={`p-4 space-y-3 ${colors.bg.secondary}`}>
-                  {paymentMethods.map((method, index) => {
-                    const isMobile = method.type === 'mobile';
-                    const isCash = method.type === 'cash';
-                    const cashCalculation = isCash ? cashChangeByIndex[index] : undefined;
-                    const tendered = Number(method.amount) || 0;
-                    const showCashCalculation = isCash && (focusedAmountInputs[index] || tendered > 0);
-
-                    return (
-                      <div
-                        key={index}
-                        className={`p-3 sm:p-4 border ${colors.border.primary} ${colors.bg.primary} rounded-lg shadow-sm ${
-                          isReadOnly ? 'bg-opacity-50' : ''
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2 mb-3">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            {paymentIcon(method.type)}
-                            <div
-                              className={`border ${
-                                isReadOnly ? colors.border.disabled : colors.select.border
-                              } ${colors.select.wrap} px-2.5 py-1.5 rounded`}
-                            >
-                              <select
-                                value={method.type}
-                                onChange={(e) => handlePaymentTypeChange(index, e.target.value)}
-                                disabled={isReadOnly}
-                                className={`text-sm ${
-                                  isReadOnly
-                                    ? `${colors.select.disabled} cursor-not-allowed`
-                                    : `${colors.select.text} cursor-pointer`
-                                } bg-transparent capitalize outline-none`}
-                              >
-                                <option className={colors.select.option} value="cash">
-                                  Cash
-                                </option>
-                                <option className={colors.select.option} value="card">
-                                  Card
-                                </option>
-                                <option className={colors.select.option} value="insurance">
-                                  Insurance
-                                </option>
-                                <option className={colors.select.option} value="mobile">
-                                  Mobile Money
-                                </option>
-                                <option className={colors.select.option} value="mixed">
-                                  Mixed
-                                </option>
-                              </select>
-                            </div>
-                          </div>
-
-                          {!isReadOnly && paymentMethods.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemovePaymentMethod(index)}
-                              className={`p-2 ${colors.bg.hover} ${colors.text.secondary} transition-all duration-200 rounded cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600`}
-                              aria-label="Remove payment method"
-                              title="Remove"
-                            >
-                              <span className="text-lg leading-none">×</span>
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Mobile phone input */}
-                        {isMobile && (
-                          <div className="mb-3 grid grid-cols-1 sm:grid-cols-12 gap-2">
-                            <div className="sm:col-span-8">
-                              <div className="relative">
-                                <Phone
-                                  className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
-                                    isReadOnly ? colors.text.disabled : colors.text.tertiary
-                                  } pointer-events-none`}
-                                />
-                                <input
-                                  type="tel"
-                                  value={method.details || ''}
-                                  onChange={(e) => handleMobilePhoneChange(index, e.target.value)}
-                                  placeholder="Phone number (e.g. 2567xxxxxxx)"
-                                  inputMode="numeric"
-                                  readOnly={isReadOnly}
-                                  disabled={isReadOnly}
-                                  className={`w-full pl-10 pr-3 py-2.5 text-sm border ${
-                                    isReadOnly
-                                      ? `${colors.border.disabled} ${colors.bg.disabled} ${colors.text.disabled} cursor-not-allowed`
-                                      : `${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-2 ${colors.accent.ring}`
-                                  } rounded-lg transition-shadow`}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="sm:col-span-4">
-                              <button
-                                type="button"
-                                onClick={() => handleInitiateMobilePayment(index)}
-                                disabled={isProcessing || isReadOnly}
-                                className={`w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold transition-all duration-200 rounded-lg
-                                ${
-                                  isProcessing || isReadOnly
-                                    ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                                    : `${colors.accent.primary} ${colors.accent.hover} ${colors.accent.text} cursor-pointer hover:shadow-md active:scale-95`
-                                }`}
-                              >
-                                <Zap className="w-4 h-4" />
-                                <span>Initiate</span>
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Amount input */}
-                        <div className="space-y-2">
-                          <input
-                            type="number"
-                            value={getDisplayAmount(index, method.amount)}
-                            onFocus={() => {
-                              if (isReadOnly) return;
-                              if (!focusedAmountInputs[index]) {
-                                setFocusedAmountInputs((prev) => ({ ...prev, [index]: true }));
-                              }
-                            }}
-                            onBlur={() => {
-                              if (isReadOnly) return;
-                              if (method.amount === 0) {
-                                setFocusedAmountInputs((prev) => ({ ...prev, [index]: false }));
-                              }
-                            }}
-                            onChange={(e) => {
-                              if (isReadOnly) return;
-                              if (!focusedAmountInputs[index]) {
-                                setFocusedAmountInputs((prev) => ({ ...prev, [index]: true }));
-                              }
-                              handlePaymentAmountChange(index, e.target.value);
-                            }}
-                            placeholder={isCash ? 'Enter cash amount' : 'Enter amount'}
-                            min={0}
-                            step="0.01"
-                            readOnly={isReadOnly}
-                            disabled={isReadOnly}
-                            className={`w-full px-3.5 py-2.5 text-sm border ${
-                              isReadOnly
-                                ? `${colors.border.disabled} ${colors.bg.disabled} ${colors.text.disabled} cursor-not-allowed`
-                                : `${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-2 ${colors.accent.ring}`
-                            } rounded-lg transition-shadow`}
-                          />
-
-                          {!isReadOnly && (
-                            <button
-                              type="button"
-                              onClick={() => handleAutoFillRemaining(index)}
-                              className={`w-full text-xs font-semibold px-3 py-2 border ${colors.border.primary} ${colors.bg.hover} ${colors.text.secondary}
-                              transition-all duration-200 rounded-lg cursor-pointer hover:shadow-sm active:scale-98`}
-                            >
-                              Fill Remaining Balance
-                            </button>
-                          )}
-
-                          {/* Cash calculation */}
-                          {showCashCalculation && cashCalculation && (
-                            <div className={`p-3 sm:p-4 border ${colors.border.primary} ${colors.bg.secondary} rounded-lg`}>
-                              <div className="grid grid-cols-3 gap-3 sm:gap-4">
-                                <div>
-                                  <p className={`text-xs ${colors.text.secondary} mb-1`}>Due</p>
-                                  <p className={`text-sm sm:text-base font-extrabold ${colors.text.primary}`}>
-                                    {formatCurrency(cashCalculation.dueBefore)}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className={`text-xs ${colors.text.secondary} mb-1`}>Tendered</p>
-                                  <p className={`text-sm sm:text-base font-extrabold ${colors.text.primary}`}>
-                                    {formatCurrency(tendered)}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className={`text-xs ${colors.text.secondary} mb-1`}>Change</p>
-                                  <p className="text-sm sm:text-base font-extrabold text-green-600 dark:text-green-400">
-                                    {formatCurrency(cashCalculation.change)}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {!isReadOnly && tendered < cashCalculation.dueBefore && (
-                                <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-yellow-600 text-white dark:bg-yellow-500 dark:text-white">
-                                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-white" />
-                                  <p className="text-sm font-medium">
-                                    Insufficient cash by{' '}
-                                    <span className="font-bold underline decoration-white/60">
-                                      {formatCurrency(cashCalculation.dueBefore - tendered)}
-                                    </span>
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Discount section - only show on last payment method */}
-                          {index === paymentMethods.length - 1 && (
-                            <div className={`mt-3 pt-3 border-t ${colors.border.primary}`}>
-                              <div className="flex items-center justify-between mb-2">
-                                <div className={`text-sm font-bold ${colors.text.primary}`}>Discount</div>
-                                <div className={`text-xs ${colors.text.secondary}`}>
-                                  {discount.value > 0 ? `Applied: ${formatCurrency(billingData.discountAmount)}` : 'Not applied'}
-                                </div>
-                              </div>
-
-                              {!isReadOnly ? (
-                                <div className="flex items-stretch gap-2">
-                                  <input
-                                    type="number"
-                                    value={discount.value === 0 ? '' : String(discount.value)}
-                                    onFocus={() => {
-                                      if (discount.value === 0) setLocalDiscount((p) => ({ ...p, value: 0 }));
-                                    }}
-                                    onChange={(e) => handleDiscountChange(discount.type, e.target.value)}
-                                    placeholder="0"
-                                    min={0}
-                                    max={discount.type === 'percentage' ? 100 : billingData.subtotal}
-                                    step="0.01"
-                                    className={`flex-1 px-3.5 py-2.5 text-sm border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}
-                                    focus:outline-none focus:ring-2 ${colors.accent.ring} rounded-lg transition-shadow`}
-                                  />
-
-                                  <div className={`flex border ${colors.border.primary} overflow-hidden rounded-lg`}>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDiscountChange('percentage', String(discount.value))}
-                                      className={`px-3 sm:px-4 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer
-                                        ${
-                                          discount.type === 'percentage'
-                                            ? `${colors.accent.primary} ${colors.accent.text}`
-                                            : `${colors.bg.hover} ${colors.text.secondary}`
-                                        }`}
-                                    >
-                                      %
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDiscountChange('fixed', String(discount.value))}
-                                      className={`px-3 sm:px-4 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer border-l ${colors.border.primary}
-                                        ${
-                                          discount.type === 'fixed'
-                                            ? `${colors.accent.primary} ${colors.accent.text}`
-                                            : `${colors.bg.hover} ${colors.text.secondary}`
-                                        }`}
-                                    >
-                                      Fixed
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className={`p-3 ${colors.bg.secondary} rounded-lg text-sm ${colors.text.secondary}`}>
-                                  {discount.value > 0
-                                    ? `${discount.type === 'percentage' ? `${discount.value}%` : formatCurrency(discount.value)} discount applied`
-                                    : 'No discount applied'}
-                                </div>
-                              )}
-
-                              {/* Action buttons */}
-                              <div className="mt-3 flex items-center justify-end gap-2 flex-wrap">
-                                {!isReadOnly && (
-                                  <button
-                                    type="button"
-                                    onClick={handleFinalizePayment}
-                                    disabled={!canFinalize}
-                                    className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold transition-all duration-200 rounded-lg shadow-sm
-                                      ${
-                                        !canFinalize
-                                          ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-60'
-                                          : `${colors.accent.primary} ${colors.accent.hover} ${colors.accent.text} cursor-pointer hover:shadow-md active:scale-95`
-                                      }`}
-                                  >
-                                    {isProcessing || isSubmitting ? (
-                                      <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        <span>Processing...</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <CheckCircle2 className="w-4 h-4" />
-                                        <span>Finalize Payment</span>
-                                      </>
-                                    )}
-                                  </button>
-                                )}
-
-                                <button
-                                  type="button"
-                                  onClick={handlePrintReceipt}
-                                  disabled={!canPrint}
-                                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold transition-all duration-200 rounded-lg shadow-sm
-                                    ${
-                                      !canPrint
-                                        ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-60'
-                                        : `${colors.accent.primary} ${colors.accent.hover} ${colors.accent.text} cursor-pointer hover:shadow-md active:scale-95`
-                                    }`}
-                                >
-                                  <Printer className="w-4 h-4" />
-                                  <span>Print Receipt</span>
-                                </button>
-                              </div>
-
-                              <div className="mt-2 flex items-start gap-2">
-                                <AlertCircle className={`w-4 h-4 ${colors.text.tertiary} flex-shrink-0 mt-0.5`} />
-                                <p className={`text-xs ${colors.text.secondary} leading-relaxed`}>
-                                  {isReadOnly
-                                    ? 'Print receipt is available. Payment has been finalized.'
-                                    : !hasRequiredIds
-                                    ? 'Cannot finalize payment: Missing visit or patient information.'
-                                    : 'Print receipt is only available after finalizing payment.'}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Fixed footer info */}
-            <div className={`flex-shrink-0 px-4 py-3 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
-              <div className="flex items-start gap-2">
-                <AlertCircle className={`w-4 h-4 ${colors.text.tertiary} flex-shrink-0 mt-0.5`} />
-                <p className={`text-xs ${colors.text.secondary} leading-relaxed`}>
-                  {isReadOnly
-                    ? 'Payment completed. You can still print the receipt.'
-                    : 'Receipt preview updates in real-time. Finalize when balance is fully covered.'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* RIGHT: Billing controls using BillingControlsSection component */}
+        <BillingControlsSection
+          colors={colors}
+          isReadOnly={isReadOnly}
+          paymentMethods={paymentMethods}
+          focusedAmountInputs={focusedAmountInputs}
+          cashChangeByIndex={cashChangeByIndex}
+          discount={discount}
+          billingData={billingData}
+          isProcessing={isProcessing}
+          isSubmitting={isSubmitting}
+          canFinalize={canFinalize}
+          canPrint={canPrint}
+          hasRequiredIds={hasRequiredIds}
+          paymentIcon={paymentIcon}
+          getDisplayAmount={getDisplayAmount}
+          onAddPaymentMethod={handleAddPaymentMethod}
+          onPaymentTypeChange={handlePaymentTypeChange}
+          onRemovePaymentMethod={handleRemovePaymentMethod}
+          onMobilePhoneChange={handleMobilePhoneChange}
+          onInitiateMobilePayment={handleInitiateMobilePayment}
+          onPaymentAmountChange={handlePaymentAmountChange}
+          onAutoFillRemaining={handleAutoFillRemaining}
+          onFocusAmountInput={handleFocusAmountInput}
+          onBlurAmountInput={handleBlurAmountInput}
+          onDiscountChange={handleDiscountChange}
+          onDiscountFocus={handleDiscountFocus}
+          onFinalizePayment={handleFinalizePayment}
+          onPrintReceipt={handlePrintReceipt}
+        />
       </div>
 
       {/* Print styles - same approach as PrintView */}
