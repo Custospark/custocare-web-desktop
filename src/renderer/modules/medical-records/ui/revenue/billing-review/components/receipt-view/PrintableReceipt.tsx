@@ -9,11 +9,14 @@ import {
   Percent,
   Banknote,
   ArrowLeftRight,
+  CreditCard, 
+  Building2, 
+  Smartphone, 
+  FileText 
 } from 'lucide-react';
-import type { BillingReviewItem, ChargeItem, Tax, PaymentMethod} from '../../../../../api/billing-review/BillingReviewTypes';
-import {formatCurrency,PaymentStatus} from '../../../../../api/billing-review/BillingReviewTypes';
-// Import these at the top
-import { CreditCard, Building2, Smartphone, FileText } from 'lucide-react';
+import type { BillingReviewItem, ChargeItem, Tax, PaymentMethod } from '../../../../../api/billing-review/BillingReviewTypes';
+import { formatCurrency, PaymentStatus } from '../../../../../api/billing-review/BillingReviewTypes';
+
 interface DerivedFinancials {
   status: any;
   refunded: number;
@@ -90,6 +93,29 @@ const watermarkForStatus = (derivedFinancials: DerivedFinancials) => {
   return { text: 'RECEIPT', color: 'text-gray-400' };
 };
 
+// Helper function to determine if we should show a discount percentage
+const shouldShowDiscountPercentage = (discountAmount: number, subtotal: number): number | null => {
+  if (!discountAmount || !subtotal || subtotal === 0) return null;
+  
+  // Calculate percentage
+  const percentage = (discountAmount / subtotal) * 100;
+  
+  // Round to nearest 0.1% for display
+  const roundedPercentage = Math.round(percentage * 10) / 10;
+  
+  // Only show percentage if:
+  // 1. The discount is at least 0.5% (to avoid showing tiny percentages like 0.01%)
+  // 2. The discount amount is significant enough (you can adjust these thresholds)
+  const MIN_PERCENTAGE_TO_SHOW = 0.5;
+  const MIN_DISCOUNT_AMOUNT = 100; // Only show percentage if discount is at least 100 UGX
+  
+  if (roundedPercentage >= MIN_PERCENTAGE_TO_SHOW && discountAmount >= MIN_DISCOUNT_AMOUNT) {
+    return roundedPercentage;
+  }
+  
+  return null;
+};
+
 export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceiptProps>(({
   selectedTransaction,
   derivedFinancials,
@@ -99,6 +125,12 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
   facilityName,
 }, ref) => {
   const watermark = watermarkForStatus(derivedFinancials);
+  
+  // Determine if we should show discount percentage
+  const discountPercentage = shouldShowDiscountPercentage(
+    derivedFinancials.discountAmount, 
+    derivedFinancials.subtotal
+  );
 
   return (
     <motion.div
@@ -137,7 +169,7 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
 
             {/* Receipt Header */}
             <div className="text-center mb-5 relative">
-              <h2 className="text-2xl font-black bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+              <h2 className="text-2xl font-black bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
                 {facilityName || 'MEDICAL CLINIC'}
               </h2>
               <p className="text-xs text-gray-600 mt-1">123 Health Street, Kampala, Uganda</p>
@@ -215,9 +247,7 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
                 <div className="flex justify-between text-green-700">
                   <span className="font-semibold flex items-center gap-1">
                     <Percent className="w-3 h-3" />
-                    Discount {derivedFinancials.discountPercent > 0 && derivedFinancials.discountType === 'percentage' 
-                      ? `(${derivedFinancials.discountPercent}%)` 
-                      : ''}
+                    {discountPercentage ? `Discount (${discountPercentage}%)` : 'Discount'}
                   </span>
                   <span className="font-bold">
                     -{formatCurrency(derivedFinancials.discountAmount)}
@@ -234,7 +264,7 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
 
               <div className="flex justify-between font-black text-base mt-3 pt-3 border-t-2 border-gray-300">
                 <span>TOTAL</span>
-                <span className="bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
                   {formatCurrency(derivedFinancials.grandTotal)}
                 </span>
               </div>
@@ -324,7 +354,7 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
                       className={cx(
                         'font-black text-base',
                         derivedFinancials.balanceDue === 0 
-                          ? 'bg-linear-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent' 
+                          ? 'bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent' 
                           : 'text-amber-700'
                       )}
                     >
@@ -359,7 +389,5 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
     </motion.div>
   );
 });
-
-
 
 PrintableReceipt.displayName = 'PrintableReceipt';

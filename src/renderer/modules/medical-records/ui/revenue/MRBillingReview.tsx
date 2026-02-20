@@ -32,11 +32,13 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
   const isDark = theme === 'dark';
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
-  // Backend Integration
+  // Backend Integration with refresh capability
   const { 
     data: billingResponse, 
     isLoading, 
-    error 
+    error,
+    refetch, // Add refetch function
+    isFetching // Add isFetching to track refresh state
   } = useGetBillingReview({
     per_page: 50,
     sort_by: 'created_at',
@@ -146,7 +148,7 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
   const showToastMessage = useCallback((message: string, type: ToastState['type']) => {
     // Clear any existing timer
     if (toastTimerRef.current) {
-    if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
+      clearTimeout(toastTimerRef.current);
     }
 
     setToast({ message, type, visible: true });
@@ -155,6 +157,17 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
       setToast(prev => ({ ...prev, visible: false }));
     }, 3000);
   }, []);
+
+  // Refresh handler
+  const handleRefresh = useCallback(async () => {
+    try {
+      await refetch();
+      showToastMessage('Data refreshed successfully', 'success');
+    } catch (error) {
+      console.log(error);
+      showToastMessage('Failed to refresh data', 'error');
+    }
+  }, [refetch, showToastMessage]);
 
   // Action handlers
   const handlePrint = useCallback(() => {
@@ -258,6 +271,14 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
           <p className={`text-sm ${colors.text.secondary}`}>
             {error.message || 'An unexpected error occurred. Please try again later.'}
           </p>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleRefresh}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </motion.button>
         </motion.div>
       </div>
     );
@@ -352,6 +373,8 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
             onSelectTransaction={handleSelectTransaction}
             onUpdateFilter={updateFilter}
             onClearFilters={clearFilters}
+            onRefresh={handleRefresh} // Pass refresh handler
+            isRefreshing={isFetching} // Pass refreshing state
           />
         </motion.div>
 

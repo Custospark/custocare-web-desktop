@@ -16,6 +16,7 @@ import {
   User,
   X,
   Hash,
+  RefreshCw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -75,6 +76,8 @@ interface TransactionListProps {
   onSelectTransaction: (id: string) => void;
   onUpdateFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   onClearFilters: () => void;
+  onRefresh: () => void; // New prop for refresh functionality
+  isRefreshing?: boolean; // Optional prop to show loading state
 }
 
 const cx = (...classes: (string | boolean | undefined)[]) => {
@@ -138,6 +141,8 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   onSelectTransaction,
   onUpdateFilter,
   onClearFilters,
+  onRefresh,
+  isRefreshing = false,
 }) => {
   const isDark = theme === 'dark';
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -191,6 +196,30 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* Refresh Button */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className={cx(
+                'p-2.5 rounded-lg transition-all duration-200 relative',
+                isDark
+                  ? 'hover:bg-gray-700 text-gray-300'
+                  : 'hover:bg-gray-100 text-gray-700',
+                isRefreshing && 'cursor-not-allowed opacity-50'
+              )}
+              title="Refresh data"
+            >
+              <motion.div
+                animate={{ rotate: isRefreshing ? 360 : 0 }}
+                transition={{ duration: 1, repeat: isRefreshing ? Infinity : 0, ease: "linear" }}
+              >
+                <RefreshCw className="w-4 h-4" />
+              </motion.div>
+            </motion.button>
+
+            {/* Filters Button */}
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -209,6 +238,8 @@ export const TransactionList: React.FC<TransactionListProps> = ({
             >
               <SlidersHorizontal className="w-4 h-4" />
             </motion.button>
+
+            {/* Count Badge */}
             <motion.span 
               initial={{ scale: 1 }}
               animate={{ scale: filteredTransactions.length > 0 ? [1, 1.1, 1] : 1 }}
