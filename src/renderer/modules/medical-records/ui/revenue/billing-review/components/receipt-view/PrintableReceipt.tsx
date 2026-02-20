@@ -40,6 +40,17 @@ import {
 } from '../../../../../../../app/store/utils/contextSelectors';
 
 /* -------------------------------------------------------------------------- */
+/*                              CONSTANTS                                     */
+/* -------------------------------------------------------------------------- */
+
+const WATERMARK_OPACITY = 0.5; // 30% opacity - visible but subtle
+const Z_INDEX = {
+  BACKGROUND: 0,
+  WATERMARK: 1,   // Lower than content but still visible
+  CONTENT: 2,     // Above watermark
+};
+
+/* -------------------------------------------------------------------------- */
 /*                              HELPER FUNCTIONS                              */
 /* -------------------------------------------------------------------------- */
 
@@ -67,14 +78,13 @@ interface CashBreakdown {
   netCash: number;
 }
 
-// FIXED: Don't extend Partial<BillingReviewItem> - create a clean interface
 interface ReceiptTransactionShape {
   receipt_number: string | null;
   patient_name: string;
   patient_number: string;
   created_at: string;
   charge_items: ChargeItem[];
-  billing_data: BillingData; // Use the full BillingData type
+  billing_data: BillingData;
   payment_methods: PaymentMethod[];
   additional_notes?: string;
   facilityData?: any;
@@ -82,7 +92,6 @@ interface ReceiptTransactionShape {
   attending_staff_name?: string | null;
   attending_staff_role?: string | null;
   attending_staff_display?: string | null;
-  // Add any other fields from BillingReviewItem that might be needed
   discount?: any;
   taxes?: Tax[];
   payment_status?: PaymentStatus;
@@ -132,37 +141,129 @@ const formatDisplayTime = (dateString: string) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                         WATERMARK HELPER - RESPONSIVE                     */
+/*                         WATERMARK CONFIG TYPES                             */
 /* -------------------------------------------------------------------------- */
-const getWatermark = (derivedFinancials: DerivedFinancials): { text: string; color: string } | null => {
+
+interface WatermarkConfig {
+  text: string;
+  colorClass: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                         WATERMARK HELPER FUNCTIONS                         */
+/* -------------------------------------------------------------------------- */
+
+const getWatermarkConfig = (derivedFinancials: DerivedFinancials): WatermarkConfig | null => {
   const { status, balanceDue, grandTotal, changeAmount } = derivedFinancials;
   const isPaymentFinalized = status === PaymentStatus.PAID_IN_FULL || balanceDue === 0 || changeAmount > 0;
   if (!isPaymentFinalized) return null;
 
-  if (changeAmount > 0)   return { text: 'CHANGE GIVEN', color: 'text-blue-600/25' }; // Increased opacity
-  if (status === PaymentStatus.PAID_IN_FULL || balanceDue === 0)
-                          return { text: 'PAID',         color: 'text-green-600/25' }; // Increased opacity
-  if (balanceDue > 0 && balanceDue < grandTotal)
-                          return { text: 'PARTIAL',      color: 'text-amber-600/25' }; // Increased opacity
-  if (balanceDue === grandTotal && grandTotal > 0)
-                          return { text: 'DUE',          color: 'text-red-600/25' }; // Increased opacity
+  if (changeAmount > 0) {
+    return { text: 'CHANGE GIVEN', colorClass: 'text-blue-600' };
+  }
+  if (status === PaymentStatus.PAID_IN_FULL || balanceDue === 0) {
+    return { text: 'PAID', colorClass: 'text-green-600' };
+  }
+  if (balanceDue > 0 && balanceDue < grandTotal) {
+    return { text: 'PARTIAL', colorClass: 'text-amber-600' };
+  }
+  if (balanceDue === grandTotal && grandTotal > 0) {
+    return { text: 'DUE', colorClass: 'text-red-600' };
+  }
   return null;
 };
 
-const shouldShowDiscountPercentage = (discountAmount: number, subtotal: number): number | null => {
-  if (!discountAmount || !subtotal || subtotal === 0) return null;
-  
-  const percentage = (discountAmount / subtotal) * 100;
-  const roundedPercentage = Math.round(percentage * 10) / 10;
-  
-  const MIN_PERCENTAGE_TO_SHOW = 0.5;
-  const MIN_DISCOUNT_AMOUNT = 100;
-  
-  if (roundedPercentage >= MIN_PERCENTAGE_TO_SHOW && discountAmount >= MIN_DISCOUNT_AMOUNT) {
-    return roundedPercentage;
+/**
+ * Calculate responsive font size based on watermark text length
+ * Uses container query units (cqw) for true responsiveness
+ */
+const getWatermarkFontSize = (text: string): string => {
+  if (text === 'CHANGE GIVEN') {
+    return 'clamp(1.5rem, 12cqw, 4rem)';
   }
+  if (text === 'PARTIAL') {
+    return 'clamp(2rem, 16cqw, 5rem)';
+  }
+  return 'clamp(2.5rem, 20cqw, 6rem)';
+};
+
+/* -------------------------------------------------------------------------- */
+/*                         WATERMARK COMPONENT                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Watermark with proper print support
+ * Uses `print:opacity-30` to ensure it prints with correct opacity
+ */
+const Watermark: React.FC<{ config: WatermarkConfig }> = ({ config }) => {
+  const words = config.text.split(' ');
+  const isMultiWord = words.length > 1;
   
-  return null;
+  const getWordFontSize = (index: number): string => {
+    if (!isMultiWord) return getWatermarkFontSize(config.text);
+    if (index === 0) return 'clamp(1.5rem, 14cqw, 4rem)';
+    return 'clamp(1.2rem, 12cqw, 3.5rem)';
+  };
+  
+  return (
+    <div
+      aria-hidden="true"
+      className={cx(
+        'pointer-events-none select-none',
+        'absolute inset-0', // Cover entire container
+        'print:block' // Ensure it prints
+      )}
+      style={{
+        zIndex: Z_INDEX.WATERMARK,
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%) rotate(-35deg)',
+          width: '200%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          className={cx(
+            'font-black text-center',
+            config.colorClass,
+            'print:opacity-30' // Ensure opacity during print
+          )}
+          style={{
+            letterSpacing: '0.15em',
+            opacity: WATERMARK_OPACITY, // Screen opacity
+            marginInline: 'clamp(1rem, 8cqw, 4rem)',
+            textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            textAlign: 'center',
+            lineHeight: 1.3,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: isMultiWord ? '0.15em' : 0,
+          }}
+        >
+          {words.map((word, index) => (
+            <span 
+              key={index} 
+              style={{
+                whiteSpace: 'nowrap',
+                fontSize: getWordFontSize(index),
+              }}
+            >
+              {word}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 /* -------------------------------------------------------------------------- */
@@ -297,79 +398,61 @@ const AttendingStaff: React.FC<{ selectedTransaction: ReceiptTransactionShape }>
       .join(' ');
   };
 
-  // Helper to format the role part in blue
-  const formatDisplayWithBlueRole = (name: string, role: string | null | undefined): React.ReactNode => {
-    if (!role) return <span className="font-bold text-gray-800">{name}</span>;
-    
-    const formattedRole = formatRole(role);
+  const renderNameWithRole = (name: string, role: string | null | undefined) => {
+    const formattedRole = role ? formatRole(role) : '';
     return (
       <span className="font-bold text-gray-800">
-        {name} <span className="text-blue-600 font-semibold">({formattedRole})</span>
+        {name} {formattedRole && <span className="text-blue-500 font-semibold">({formattedRole})</span>}
       </span>
     );
   };
 
-  // PRIORITY 1: Backend has pre-formatted display
   if (backendDisplay) {
-    // Check if the display already contains parentheses - if so, try to make the role blue
-    // This is a best-effort attempt - ideally backend would provide separate fields
-    const hasParentheses = backendDisplay.includes('(') && backendDisplay.includes(')');
+    const openParen = backendDisplay.lastIndexOf('(');
+    const closeParen = backendDisplay.lastIndexOf(')');
     
-    if (hasParentheses) {
-      // Try to split and color the role part (assumes format "Name (Role)")
-      const lastOpenParen = backendDisplay.lastIndexOf('(');
-      const lastCloseParen = backendDisplay.lastIndexOf(')');
+    if (openParen > 0 && closeParen > openParen) {
+      const namePart = backendDisplay.substring(0, openParen).trim();
+      const rolePart = backendDisplay.substring(openParen + 1, closeParen).trim();
       
-      if (lastOpenParen > 0 && lastCloseParen > lastOpenParen) {
-        const namePart = backendDisplay.substring(0, lastOpenParen).trim();
-        const rolePart = backendDisplay.substring(lastOpenParen + 1, lastCloseParen).trim();
-        
-        return (
-          <div className="flex justify-between items-center text-xs mt-3 pt-2 border-t border-gray-200">
-            <span className="text-gray-600 font-semibold flex items-center gap-1">
-              <Stethoscope className="w-3 h-3" /> Attending Staff:
-            </span>
-            <span className="font-bold text-gray-800">
-              {namePart} <span className="text-blue-600 font-semibold">({rolePart})</span>
-            </span>
-          </div>
-        );
-      }
+      return (
+        <div className="flex justify-between items-center text-xs mt-3 pt-2 border-t border-gray-200">
+          <span className="text-gray-600 font-semibold flex items-center gap-1">
+            <Stethoscope className="w-3 h-3" /> Attending Staff:
+          </span>
+          {renderNameWithRole(namePart, rolePart)}
+        </div>
+      );
     }
     
-    // Fallback to original display
     return (
       <div className="flex justify-between items-center text-xs mt-3 pt-2 border-t border-gray-200">
         <span className="text-gray-600 font-semibold flex items-center gap-1">
           <Stethoscope className="w-3 h-3" /> Attending Staff:
         </span>
-        <span className="font-bold text-gray-800">
-          {backendDisplay}
-        </span>
+        <span className="font-bold text-gray-800">{backendDisplay}</span>
       </div>
     );
   }
 
-  // PRIORITY 2: Backend has name and role separately
   if (backendName) {
     return (
       <div className="flex justify-between items-center text-xs mt-3 pt-2 border-t border-gray-200">
         <span className="text-gray-600 font-semibold flex items-center gap-1">
           <Stethoscope className="w-3 h-3" /> Attending Staff:
         </span>
-        {formatDisplayWithBlueRole(backendName, backendRole)}
+        {renderNameWithRole(backendName, backendRole)}
       </div>
     );
   }
 
-  // PRIORITY 3: Fallback to context slice data
   if (isStaff && contextStaffName && contextStaffName !== 'Guest') {
     return (
       <div className="flex justify-between items-center text-xs mt-3 pt-2 border-t border-gray-200">
         <span className="text-gray-600 font-semibold flex items-center gap-1">
           <Stethoscope className="w-3 h-3" /> Attending Staff:
         </span>
-        {formatDisplayWithBlueRole(contextStaffName, contextRoleCode)}
+        {renderNameWithRole(contextStaffName, contextRoleCode)}
       </div>
     );
   }
@@ -459,7 +542,7 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
   changeAmount,
   isPrinting,
 }, ref) => {
-  const watermark = getWatermark(derivedFinancials);
+  const watermarkConfig = getWatermarkConfig(derivedFinancials);
   const discountPercentage = shouldShowDiscountPercentage(
     derivedFinancials.discountAmount, 
     derivedFinancials.subtotal
@@ -473,65 +556,37 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
       className="w-full"
     >
       <div className={`relative rounded-xl ${!isPrinting ? 'p-0.5' : ''} w-full`}>
-        {!isPrinting && watermark && (
+        {/* Decorative gradient border - only visible in preview mode */}
+        {!isPrinting && watermarkConfig && (
           <div
-            className="absolute inset-0 rounded-xl z-0"
+            className="absolute inset-0 rounded-xl"
             style={{
               background: 'linear-gradient(90deg, #3b82f6, #10b981, #6366f1, #3b82f6)',
               backgroundSize: '300% 100%',
+              zIndex: Z_INDEX.BACKGROUND,
             }}
           />
         )}
 
+        {/* Main receipt card */}
         <div 
           ref={ref} 
-          className="receipt-print relative z-10 w-full [container-type:inline-size]"
+          className="receipt-print relative w-full [container-type:inline-size]"
         >
           <div className={cx(
-            'bg-white text-black p-4 sm:p-6 rounded-[10px] shadow-lg relative overflow-hidden',
+            'bg-white text-black p-4 sm:p-6 rounded-[10px] shadow-lg relative',
             'print:shadow-none print:border print:border-gray-200',
             !isPrinting && 'border-0'
           )}>
-            {/* ===== RESPONSIVE WATERMARK - Increased Opacity ===== */}
-            {watermark && (
-              <>
-                {/* Main watermark - visible on all screens */}
-                <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
-                  <div 
-                    className="absolute flex items-center justify-center"
-                    style={{
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%) rotate(-35deg)',
-                      width: '200%',
-                      height: '200%',
-                    }}
-                  >
-                    <span
-                      className={cx(
-                        'whitespace-nowrap font-black text-center',
-                        watermark.color,
-                        // Responsive text sizing
-                        'text-[clamp(1.5rem,15cqw,6rem)] sm:text-[clamp(2rem,12cqw,5rem)] md:text-[clamp(2.5rem,10cqw,4.5rem)]'
-                      )}
-                      style={{
-                        letterSpacing: '0.18em',
-                        opacity: 0.5, // Increased from 0.28 to 0.5
-                      }}
-                    >
-                      {watermark.text}
-                    </span>
-                  </div>
-                </div>
-              </>
-            )}
+            {/* ===== WATERMARK - Now Prints Correctly ===== */}
+            {watermarkConfig && <Watermark config={watermarkConfig} />}
 
-            {/* Content wrapper with relative positioning */}
-            <div className="relative z-10">
+            {/* Content wrapper - sits above watermark */}
+            <div className="relative" style={{ zIndex: Z_INDEX.CONTENT }}>
               {/* Receipt Header */}
               <FacilityInfo isPrinting={isPrinting} />
 
-              {/* Receipt Meta - Responsive grid on mobile */}
+              {/* Receipt Meta */}
               <div className="border-t-2 border-b-2 border-gray-300 py-2 sm:py-3 my-3 sm:my-4 text-[10px] sm:text-xs space-y-1 sm:space-y-1.5 relative">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-0">
                   <span className="text-gray-600 font-semibold flex items-center gap-1">
@@ -738,3 +793,19 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
 });
 
 PrintableReceipt.displayName = 'PrintableReceipt';
+
+const shouldShowDiscountPercentage = (discountAmount: number, subtotal: number): number | null => {
+  if (!discountAmount || !subtotal || subtotal === 0) return null;
+  
+  const percentage = (discountAmount / subtotal) * 100;
+  const roundedPercentage = Math.round(percentage * 10) / 10;
+  
+  const MIN_PERCENTAGE_TO_SHOW = 0.5;
+  const MIN_DISCOUNT_AMOUNT = 100;
+  
+  if (roundedPercentage >= MIN_PERCENTAGE_TO_SHOW && discountAmount >= MIN_DISCOUNT_AMOUNT) {
+    return roundedPercentage;
+  }
+  
+  return null;
+};
