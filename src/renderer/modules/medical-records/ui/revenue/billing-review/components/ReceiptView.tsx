@@ -766,7 +766,7 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
                           {/* FIXED: Type-safe access to changeAmount */}
                           {changeAmount > 0 && (
                             <div className="mt-2 text-xs text-gray-500 italic">
-                              * Change of {formatCurrency(changeAmount)} returned to customer
+                              * Change of {formatCurrency(changeAmount)} returned to Patient.
                             </div>
                           )}
                         </div>
