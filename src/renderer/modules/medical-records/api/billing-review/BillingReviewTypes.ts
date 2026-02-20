@@ -133,6 +133,13 @@ export interface BillingReviewItem {
   billing_cycle_id: number | null;
   billing_cycle_uuid: string | null;
   receipt_number: string | null;
+  
+  // Attending Staff Information
+  attending_staff_id: number | null;
+  attending_staff_name: string | null;
+  attending_staff_role: string | null;
+  attending_staff_display: string | null;
+  
   charge_items: ChargeItem[];
   discount: Discount;
   taxes: Tax[];

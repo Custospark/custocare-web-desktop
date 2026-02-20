@@ -22,7 +22,7 @@ import {
   MapPin,
   Stethoscope
 } from 'lucide-react';
-import type {ChargeItem, Tax, PaymentMethod } from '../../../../../api/billing-review/BillingReviewTypes';
+import type {ChargeItem, Tax, PaymentMethod, BillingReviewItem } from '../../../../../api/billing-review/BillingReviewTypes';
 import { formatCurrency, PaymentStatus } from '../../../../../api/billing-review/BillingReviewTypes';
 import { useGetFacilityIdentity } from '../../../../../api/facility/FacilityQueries';
 import { 
@@ -67,8 +67,8 @@ interface CashBreakdown {
   netCash: number;
 }
 
-// Simplified interface that matches what we actually need
-interface ReceiptTransactionShape {
+// Updated interface to include BillingReviewItem fields
+interface ReceiptTransactionShape extends Partial<BillingReviewItem> {
   receipt_number: string | null;
   patient_name: string;
   patient_number: string;
@@ -87,6 +87,11 @@ interface ReceiptTransactionShape {
   payment_methods: PaymentMethod[];
   additional_notes?: string;
   facilityData?: any;
+  // Attending staff fields from backend
+  attending_staff_id?: number | null;
+  attending_staff_name?: string | null;
+  attending_staff_role?: string | null;
+  attending_staff_display?: string | null;
   [key: string]: any;
 }
 
@@ -301,28 +306,84 @@ const FacilityInfo: React.FC<FacilityInfoProps> = () => {
 /* -------------------------------------------------------------------------- */
 /*                           ATTENDING STAFF COMPONENT                        */
 /* -------------------------------------------------------------------------- */
-
-const AttendingStaff: React.FC = () => {
+/**
+ * Attending Staff Component
+ * 
+ * Priority order for displaying attending staff:
+ * 1. Backend data (attending_staff_display, attending_staff_name + attending_staff_role)
+ * 2. Context slice data (current logged-in user)
+ * 3. No display if neither is available
+ */
+const AttendingStaff: React.FC<{ selectedTransaction: ReceiptTransactionShape }> = ({ selectedTransaction }) => {
+  // Backend data (highest priority)
+  const backendDisplay = selectedTransaction?.attending_staff_display;
+  const backendName = selectedTransaction?.attending_staff_name;
+  const backendRole = selectedTransaction?.attending_staff_role;
+  
+  // Context slice data (fallback)
   const isStaff = useSelector((state: RootState) => isInStaffMode(state));
-  const staffName = useSelector((state: RootState) => getUserFullName(state));
-  const roleCode = useSelector((state: RootState) => getActiveRoleCode(state));
+  const contextStaffName = useSelector((state: RootState) => getUserFullName(state));
+  const contextRoleCode = useSelector((state: RootState) => getActiveRoleCode(state));
   
-  // Only show if in staff mode and we have a staff name
-  if (!isStaff || !staffName || staffName === 'Guest') return null;
-  
-  // Format role code for display
-  const formattedRole = roleCode ? roleCode.replace(/_/g, ' ').toUpperCase() : 'STAFF';
-  
-  return (
-    <div className="flex justify-between items-center text-xs mt-3 pt-2 border-t border-gray-200">
-      <span className="text-gray-600 font-semibold flex items-center gap-1">
-        <Stethoscope className="w-3 h-3" /> Attending Staff:
-      </span>
-      <span className="font-bold text-gray-800">
-        {staffName} {roleCode && <span className="text-blue-600 font-semibold">({formattedRole})</span>}
-      </span>
-    </div>
-  );
+  // Helper to format role (replace underscores/hyphens with spaces, capitalize words)
+  const formatRole = (role: string): string => {
+    if (!role) return '';
+    return role
+      .replace(/[_\-]/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  // Case 1: Backend has pre-formatted display
+  if (backendDisplay) {
+    return (
+      <div className="flex justify-between items-center text-xs mt-3 pt-2 border-t border-gray-200">
+        <span className="text-gray-600 font-semibold flex items-center gap-1">
+          <Stethoscope className="w-3 h-3" /> Attending Staff:
+        </span>
+        <span className="font-bold text-gray-800">
+          {backendDisplay}
+        </span>
+      </div>
+    );
+  }
+
+  // Case 2: Backend has name and role separately
+  if (backendName) {
+    const displayRole = backendRole ? formatRole(backendRole) : '';
+    const displayText = displayRole ? `${backendName} (${displayRole})` : backendName;
+    
+    return (
+      <div className="flex justify-between items-center text-xs mt-3 pt-2 border-t border-gray-200">
+        <span className="text-gray-600 font-semibold flex items-center gap-1">
+          <Stethoscope className="w-3 h-3" /> Attending Staff:
+        </span>
+        <span className="font-bold text-gray-800">
+          {displayText}
+        </span>
+      </div>
+    );
+  }
+
+  // Case 3: Fallback to context slice data (current logged-in staff)
+  if (isStaff && contextStaffName && contextStaffName !== 'Guest') {
+    const formattedRole = contextRoleCode ? formatRole(contextRoleCode) : 'STAFF';
+    
+    return (
+      <div className="flex justify-between items-center text-xs mt-3 pt-2 border-t border-gray-200">
+        <span className="text-gray-600 font-semibold flex items-center gap-1">
+          <Stethoscope className="w-3 h-3" /> Attending Staff:
+        </span>
+        <span className="font-bold text-gray-800">
+          {contextStaffName} {contextRoleCode && <span className="text-blue-600 font-semibold">({formattedRole})</span>}
+        </span>
+      </div>
+    );
+  }
+
+  // No attending staff information available
+  return null;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -647,8 +708,8 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
               </div>
             )}
 
-            {/* Attending Staff - NEW */}
-            <AttendingStaff />
+            {/* Attending Staff - With priority: Backend first, then context fallback */}
+            <AttendingStaff selectedTransaction={selectedTransaction} />
 
             {/* Footer with Custocare AI branding */}
             <ReceiptFooter />
