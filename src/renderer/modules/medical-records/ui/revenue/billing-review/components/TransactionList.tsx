@@ -150,6 +150,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const selectedItemRef = useRef<HTMLDivElement>(null);
+  const [hasScrolled, setHasScrolled] = useState(false);
 
   // Reorder transactions to put selected item at the top
   const orderedTransactions = useMemo(() => {
@@ -158,22 +159,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     const selected = filteredTransactions.find(t => t.visit_uuid === selectedId);
     const others = filteredTransactions.filter(t => t.visit_uuid !== selectedId);
     
+    // Put selected at the top if found
     return selected ? [selected, ...others] : filteredTransactions;
   }, [filteredTransactions, selectedId]);
-
-  // Auto-scroll to selected item when it changes
-  useEffect(() => {
-    if (selectedId && selectedItemRef.current) {
-      // Small delay to ensure DOM is updated
-      setTimeout(() => {
-        selectedItemRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-          inline: 'start'
-        });
-      }, 100);
-    }
-  }, [selectedId]);
 
   // Sticky header effect
   useEffect(() => {
@@ -190,6 +178,44 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       return () => container.removeEventListener('scroll', handleScroll);
     }
   }, []);
+
+  // Auto-scroll to top when selected item changes
+  useEffect(() => {
+    if (selectedId && containerRef.current && !hasScrolled) {
+      // Scroll to the top of the container
+      containerRef.current.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+      
+      // Mark that we've scrolled
+      setHasScrolled(true);
+      
+      // Reset after animation completes
+      const timer = setTimeout(() => {
+        setHasScrolled(false);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [selectedId, orderedTransactions]);
+
+  // Highlight the selected item with a subtle animation when it becomes selected
+  useEffect(() => {
+    if (selectedId && selectedItemRef.current) {
+      // Add a highlight animation class
+      selectedItemRef.current.classList.add('ring-4', 'ring-blue-300', 'ring-opacity-50');
+      
+      // Remove after animation
+      const timer = setTimeout(() => {
+        if (selectedItemRef.current) {
+          selectedItemRef.current.classList.remove('ring-4', 'ring-blue-300', 'ring-opacity-50');
+        }
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [selectedId]);
 
   return (
     <div
@@ -499,26 +525,28 @@ export const TransactionList: React.FC<TransactionListProps> = ({
             <AnimatePresence>
               {orderedTransactions.map((t, index) => {
                 const isSelected = selectedId === t.visit_uuid;
+                const isFirst = index === 0;
 
                 return (
                   <motion.div
                     key={t.visit_uuid}
-                    ref={isSelected ? selectedItemRef : null}
                     layout
+                    ref={isSelected ? selectedItemRef : null}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.2, delay: index * 0.03 }}
                     onClick={() => onSelectTransaction(t.visit_uuid)}
                     className={cx(
-                      'p-4 border rounded-xl transition-all duration-200 cursor-pointer group',
+                      'p-4 border rounded-xl transition-all duration-200 cursor-pointer group relative',
                       colors.border.primary,
                       index % 2 === 0 ? colors.bg.stripe : colors.bg.stripeAlt,
                       isSelected
                         ? cx(
                             colors.bg.selected,
                             isDark ? 'border-blue-700 shadow-lg' : 'border-blue-300 shadow-md',
-                            'ring-2 ring-blue-500 ring-opacity-20'
+                            'ring-2 ring-blue-500 ring-opacity-20',
+                            'scale-[1.02] relative z-10'
                           )
                         : cx(colors.bg.hover, 'hover:shadow-sm hover:scale-[1.02]')
                     )}
@@ -531,6 +559,29 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                       }
                     }}
                   >
+                    {/* Selected item visual indicator - blue bar */}
+                    {isSelected && (
+                      <>
+                        <motion.div
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-12 bg-blue-500 rounded-r-full shadow-lg shadow-blue-500/50"
+                        />
+                        
+                        {/* Top indicator for first item (selected) */}
+                        {isFirst && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-blue-500 text-white text-[10px] font-bold rounded-full shadow-lg"
+                          >
+                            Selected
+                          </motion.div>
+                        )}
+                      </>
+                    )}
+
                     <div className="flex items-start justify-between mb-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">

@@ -1,5 +1,5 @@
 // components/billing-review/MRBillingReview.tsx
-import React, { useMemo, useState, useCallback, useRef } from 'react';
+import React, { useMemo, useState, useCallback, useRef, } from 'react';
 import { PaymentStatus } from '../../api/billing-review/BillingReviewTypes';
 import { TransactionList } from './billing-review/components/TransactionList';
 import { ReceiptView } from './billing-review/components/ReceiptView';
@@ -37,8 +37,8 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
     data: billingResponse, 
     isLoading, 
     error,
-    refetch, // Add refetch function
-    isFetching // Add isFetching to track refresh state
+    refetch,
+    isFetching 
   } = useGetBillingReview({
     per_page: 50,
     sort_by: 'created_at',
@@ -80,7 +80,7 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
   const [emailOpen, setEmailOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
 
-  // Mobile view state - separate from selection to avoid the ESLint warning
+  // Mobile view state
   const [mobileView, setMobileView] = useState<'list' | 'receipt'>('list');
 
   // Derived state
@@ -90,7 +90,6 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
   );
 
   // Auto-switch to receipt view on mobile when a transaction is selected
-  // but only if we're not already on receipt view
   const handleSelectTransaction = useCallback((id: string) => {
     setSelectedId(id);
     // On mobile, automatically switch to receipt view when selecting
@@ -146,7 +145,6 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
 
   // Toast management with cleanup
   const showToastMessage = useCallback((message: string, type: ToastState['type']) => {
-    // Clear any existing timer
     if (toastTimerRef.current) {
       clearTimeout(toastTimerRef.current);
     }
@@ -275,7 +273,7 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleRefresh}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
           >
             Try Again
           </motion.button>
@@ -317,7 +315,7 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={() => setMobileView('list')}
-            className={`flex-1 px-4 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+            className={`flex-1 px-4 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
               mobileView === 'list'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : isDark
@@ -332,7 +330,7 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
             whileTap={{ scale: 0.97 }}
             onClick={() => setMobileView('receipt')}
             disabled={!selectedId}
-            className={`flex-1 px-4 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+            className={`flex-1 px-4 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
               mobileView === 'receipt'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : !selectedId
@@ -350,52 +348,56 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
         </div>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 h-full min-h-0">
-        {/* Transaction List - Hidden on mobile when receipt view is active */}
+      {/* Main Grid - Receipt Sticky, List Scrolls Independently */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 h-[calc(100%-4rem)]">
+        {/* Transaction List - Scrollable independently */}
         <motion.div 
           className={`
-            ${mobileView === 'receipt' ? 'hidden lg:flex' : 'flex'}
-            lg:flex
+            ${mobileView === 'receipt' ? 'hidden lg:block' : 'block'}
+            lg:block h-full overflow-hidden
           `}
           layout
           transition={{ duration: 0.2 }}
         >
-          <TransactionList
-            transactions={transactions}
-            filteredTransactions={filteredTransactions}
-            selectedId={selectedId}
-            filters={filters}
-            searchTerm={filters.searchTerm}
-            theme={theme}
-            colors={colors}
-            pillBg={pillBg}
-            onSelectTransaction={handleSelectTransaction}
-            onUpdateFilter={updateFilter}
-            onClearFilters={clearFilters}
-            onRefresh={handleRefresh} // Pass refresh handler
-            isRefreshing={isFetching} // Pass refreshing state
-          />
+          <div className="h-full overflow-hidden rounded-xl">
+            <TransactionList
+              transactions={transactions}
+              filteredTransactions={filteredTransactions}
+              selectedId={selectedId}
+              filters={filters}
+              searchTerm={filters.searchTerm}
+              theme={theme}
+              colors={colors}
+              pillBg={pillBg}
+              onSelectTransaction={handleSelectTransaction}
+              onUpdateFilter={updateFilter}
+              onClearFilters={clearFilters}
+              onRefresh={handleRefresh}
+              isRefreshing={isFetching}
+            />
+          </div>
         </motion.div>
 
-        {/* Receipt View - Hidden on mobile when list view is active */}
+        {/* Receipt View - Sticky, never scrolls */}
         <motion.div 
           className={`
-            ${mobileView === 'list' ? 'hidden lg:flex' : 'flex'}
-            lg:flex
+            ${mobileView === 'list' ? 'hidden lg:block' : 'block'}
+            lg:block
           `}
           layout
           transition={{ duration: 0.2 }}
         >
-          <ReceiptView
-            selectedTransaction={selectedTransaction}
-            theme={theme}
-            colors={colors}
-            onPrint={handlePrint}
-            onEmail={handleEmail}
-            onRefund={handleRefund}
-            onVoid={handleVoid}
-          />
+          <div className="sticky top-0 h-[calc(100vh-8rem)]">
+            <ReceiptView
+              selectedTransaction={selectedTransaction}
+              theme={theme}
+              colors={colors}
+              onPrint={handlePrint}
+              onEmail={handleEmail}
+              onRefund={handleRefund}
+              onVoid={handleVoid}
+            />
+          </div>
         </motion.div>
       </div>
 
