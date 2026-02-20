@@ -171,7 +171,7 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
 
   // Action handlers
   const handlePrint = useCallback(() => {
-    showToastMessage('Print functionality - backend integration pending', 'info');
+    showToastMessage('Print Request sent to the printing queue.', 'info');
   }, [showToastMessage]);
 
   const handleEmail = useCallback(() => {

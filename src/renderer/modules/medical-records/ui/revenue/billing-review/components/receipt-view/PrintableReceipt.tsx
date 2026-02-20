@@ -12,10 +12,30 @@ import {
   CreditCard, 
   Building2, 
   Smartphone, 
-  FileText 
+  FileText,
+  MapPin,
+  Phone,
+  Mail,
+  Zap,
+  Award,
+  Sparkles
 } from 'lucide-react';
 import type { BillingReviewItem, ChargeItem, Tax, PaymentMethod } from '../../../../../api/billing-review/BillingReviewTypes';
 import { formatCurrency, PaymentStatus } from '../../../../../api/billing-review/BillingReviewTypes';
+import { useGetFacilityIdentity } from '../../../../../api/facility/FacilityQueries';
+import { 
+  getOperationalStatusColor, 
+  getFacilityTypeDisplayName,
+} from '../../../../../api/facility/FacilityTypes';
+import LoadingSkeleton from '../../../../../../../shared/components/Loading/LoadingSkeletons';
+import { useSelector } from 'react-redux';
+import { type RootState } from '../../../../../../../app/store/rootReducer';
+import { darkThemeLogo } from '../../../../../../../shared/assets/logoConstants';
+import { lightThemeLogo } from '../../../../../../../shared/assets/logoConstants';
+
+/* -------------------------------------------------------------------------- */
+/*                              HELPER FUNCTIONS                              */
+/* -------------------------------------------------------------------------- */
 
 interface DerivedFinancials {
   status: any;
@@ -47,7 +67,6 @@ interface PrintableReceiptProps {
   cashBreakdown: CashBreakdown | null;
   changeAmount: number;
   isPrinting: boolean;
-  facilityName: string;
 }
 
 const cx = (...classes: (string | boolean | undefined)[]) => {
@@ -97,17 +116,11 @@ const watermarkForStatus = (derivedFinancials: DerivedFinancials) => {
 const shouldShowDiscountPercentage = (discountAmount: number, subtotal: number): number | null => {
   if (!discountAmount || !subtotal || subtotal === 0) return null;
   
-  // Calculate percentage
   const percentage = (discountAmount / subtotal) * 100;
-  
-  // Round to nearest 0.1% for display
   const roundedPercentage = Math.round(percentage * 10) / 10;
   
-  // Only show percentage if:
-  // 1. The discount is at least 0.5% (to avoid showing tiny percentages like 0.01%)
-  // 2. The discount amount is significant enough (you can adjust these thresholds)
   const MIN_PERCENTAGE_TO_SHOW = 0.5;
-  const MIN_DISCOUNT_AMOUNT = 100; // Only show percentage if discount is at least 100 UGX
+  const MIN_DISCOUNT_AMOUNT = 100;
   
   if (roundedPercentage >= MIN_PERCENTAGE_TO_SHOW && discountAmount >= MIN_DISCOUNT_AMOUNT) {
     return roundedPercentage;
@@ -116,17 +129,185 @@ const shouldShowDiscountPercentage = (discountAmount: number, subtotal: number):
   return null;
 };
 
+/* -------------------------------------------------------------------------- */
+/*                           FACILITY INFO COMPONENT                          */
+/* -------------------------------------------------------------------------- */
+
+interface FacilityInfoProps {
+  isPrinting: boolean;
+}
+
+const FacilityInfo: React.FC<FacilityInfoProps> = () => {
+  const { data, isLoading, error } = useGetFacilityIdentity();
+
+  if (isLoading) {
+    return (
+      <div className="text-center mb-5 relative">
+        <LoadingSkeleton variant="minimal" message="Loading facility info..." />
+      </div>
+    );
+  }
+
+  if (error || !data?.data?.facility) {
+    return (
+      <div className="text-center mb-5 relative">
+        <h2 className="text-2xl font-black bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+          MEDICAL FACILITY
+        </h2>
+      </div>
+    );
+  }
+
+  const facility = data.data.facility;
+  const statusColors = getOperationalStatusColor(facility.status);
+  
+  return (
+    <div className="text-center mb-5 relative">
+      <h2 className="text-2xl font-black bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+        {facility.name.toUpperCase()}
+      </h2>
+      
+      {facility.legal_name !== facility.name && (
+        <p className="text-[10px] text-gray-500 mt-0.5">
+          {facility.legal_name}
+        </p>
+      )}
+      
+      <div className="flex items-center justify-center gap-2 mt-1.5">
+        <span className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full font-medium">
+          {getFacilityTypeDisplayName(facility.type)}
+        </span>
+        <span className="text-[10px] px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full font-medium capitalize">
+          {facility.tier}
+        </span>
+        <span className={cx(
+          'text-[10px] px-2 py-0.5 rounded-full font-medium',
+          statusColors.bg,
+          statusColors.text
+        )}>
+          {facility.status.replace(/_/g, ' ')}
+        </span>
+      </div>
+      
+      <p className="text-xs text-gray-600 mt-2 flex items-center justify-center gap-1">
+        <MapPin className="w-3 h-3 inline" />
+        {facility.address.formatted}
+      </p>
+      
+      <div className="flex items-center justify-center gap-3 mt-1 text-xs text-gray-600">
+        <span className="flex items-center gap-1">
+          <Phone className="w-3 h-3" />
+          {facility.phone}
+        </span>
+        {facility.email && (
+          <span className="flex items-center gap-1">
+            <Mail className="w-3 h-3" />
+            {facility.email}
+          </span>
+        )}
+      </div>
+
+      <p className="text-[9px] text-gray-400 mt-2">
+        Facility Number: {facility.code}
+      </p>
+    </div>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/*                           FOOTER COMPONENT                                 */
+/* -------------------------------------------------------------------------- */
+
+
+const ReceiptFooter: React.FC = () => {
+  const { data } = useGetFacilityIdentity();
+  const facilityName = data?.data?.facility?.name;
+  // Using light theme logo only
+  const logo = lightThemeLogo;
+
+  return (
+    <div className="text-center mt-5 pt-4 border-t-2 border-gray-300 relative space-y-2">
+      {/* Dynamic Thank You Message with Facility Name */}
+      <p className="text-[10px] text-gray-500 mt-2">
+        Thank you for choosing{' '}
+        <span className="font-semibold text-gray-700">
+          {facilityName || 'Custocare AI'}
+        </span>
+      </p>
+      
+      {/* Powered by with Logo and Custocare AI Text */}
+      <div className="flex items-center justify-center gap-2 group mt-1">
+        {/* Decorative left sparkle - visible on hover */}
+        <Sparkles className="w-3 h-3 text-amber-300 opacity-0 group-hover:opacity-100 transition-all duration-300 -mr-1" />
+        
+        {/* Power badge */}
+        <span className="font-bold text-[7px] font-bold tracking-[0.2em] uppercase px-1.5 py-0.5 rounded-sm bg-gray-100 text-blue-400 group-hover:bg-gray-200 transition-colors duration-300">
+          Powered by
+        </span>
+        
+        {/* Logo with enhanced styling */}
+        <div className="relative">
+          {/* Glow effect behind logo */}
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-200 to-blue-200 rounded-full blur-sm opacity-0 group-hover:opacity-60 transition-opacity duration-500" />
+          
+          {/* Logo image */}
+          <img
+            src={logo}
+            alt="Custocare AI"
+            className="h-4 w-auto relative z-10 filter drop-shadow-sm group-hover:drop-shadow-md transition-all duration-300"
+          />
+        </div>
+        
+        {/* Custocare AI with gradient from blue-600 to emerald-600 */}
+        <div className="relative">
+          <span className="text-[9px] font-black bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent relative z-10">
+            CUSTOCARE AI
+          </span>
+          {/* Subtle underline on hover - matching the gradient */}
+          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-400 to-emerald-400 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
+        </div>
+        
+        {/* Decorative right zap - visible on hover */}
+        <Zap className="w-3 h-3 text-blue-300 opacity-0 group-hover:opacity-100 transition-all duration-300 -ml-1" />
+      </div>
+
+      {/* Pro Badge and Tagline */}
+      <div className="flex flex-col items-center gap-1 mt-2">
+        {/* Tagline */}
+        <p className="text-[8px] font-semibold text-blue-600">
+          Continuous Care. Operational Excellence.
+        </p>
+      </div>
+      
+      {/* Generated Timestamp with enhanced formatting */}
+      <p className="text-[7px] text-black font-bold mt-1 font-mono">
+        {new Date().toLocaleString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        }).replace(/,/g, '')}
+      </p>
+    </div>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/*                           MAIN RECEIPT COMPONENT                           */
+/* -------------------------------------------------------------------------- */
+
 export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceiptProps>(({
   selectedTransaction,
   derivedFinancials,
   cashBreakdown,
   changeAmount,
   isPrinting,
-  facilityName,
 }, ref) => {
   const watermark = watermarkForStatus(derivedFinancials);
   
-  // Determine if we should show discount percentage
   const discountPercentage = shouldShowDiscountPercentage(
     derivedFinancials.discountAmount, 
     derivedFinancials.subtotal
@@ -138,9 +319,7 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Static border wrapper */}
-      <div className={`relative rounded-xl ${!isPrinting ? 'p-[2px]' : ''}`}>
-        {/* Static gradient border track */}
+      <div className={`relative rounded-xl ${!isPrinting ? 'p-0.5' : ''}`}>
         {!isPrinting && (
           <div
             className="absolute inset-0 rounded-xl z-0"
@@ -151,7 +330,6 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
           />
         )}
 
-        {/* Inner receipt content */}
         <div ref={ref} className="receipt-print relative z-10">
           <div className={cx(
             'bg-white text-black p-6 rounded-[10px] shadow-lg relative overflow-hidden',
@@ -167,15 +345,8 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
               </div>
             </div>
 
-            {/* Receipt Header */}
-            <div className="text-center mb-5 relative">
-              <h2 className="text-2xl font-black bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-                {facilityName || 'MEDICAL CLINIC'}
-              </h2>
-              <p className="text-xs text-gray-600 mt-1">123 Health Street, Kampala, Uganda</p>
-              <p className="text-xs text-gray-600">Phone: +256 700 000 000</p>
-              <p className="text-xs text-gray-600">Email: info@{facilityName?.toLowerCase().replace(/\s+/g, '') || 'clinic'}.ug</p>
-            </div>
+            {/* Receipt Header - Facility Information */}
+            <FacilityInfo isPrinting={isPrinting} />
 
             {/* Receipt Meta with icons */}
             <div className="border-t-2 border-b-2 border-gray-300 py-3 my-4 text-xs space-y-1.5 relative">
@@ -275,7 +446,6 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
               <div className="mt-4 pt-4 border-t-2 border-gray-300 text-xs relative">
                 <h3 className="text-sm font-black mb-3 text-gray-800">PAYMENT DETAILS</h3>
                 
-                {/* Individual payment methods */}
                 <div className="space-y-2">
                   {selectedTransaction.payment_methods.map((pm: PaymentMethod, index: number) => (
                     <motion.div
@@ -297,7 +467,6 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
                   ))}
                 </div>
 
-                {/* Cash-specific details */}
                 {cashBreakdown && cashBreakdown.tendered > 0 && (
                   <div className="mt-3 space-y-2 border-t border-gray-200 pt-3">
                     <div className="flex justify-between items-center">
@@ -329,7 +498,6 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
                   </div>
                 )}
                 
-                {/* Show total paid from methods if multiple */}
                 {selectedTransaction.payment_methods.length > 1 && (
                   <div className="flex justify-between pt-3 mt-3 border-t border-gray-200 font-bold">
                     <span>Total Payments</span>
@@ -339,7 +507,6 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
                   </div>
                 )}
 
-                {/* Balance information */}
                 <div className="mt-4 pt-3 border-t border-gray-200">
                   <div className="flex justify-between">
                     <span className="text-gray-600 font-semibold">Amount Paid</span>
@@ -373,16 +540,8 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
               </div>
             )}
 
-            {/* Footer */}
-            <div className="text-center mt-5 pt-4 border-t-2 border-gray-300 relative space-y-1">
-              <p className="text-[11px] text-gray-600 font-semibold">
-                This is a computer-generated receipt
-              </p>
-              <p className="text-[11px] text-gray-600">Valid without signature</p>
-              <p className="text-[10px] text-gray-500 mt-2">
-                Thank you for choosing {facilityName || 'Custocare AI'}
-              </p>
-            </div>
+            {/* Footer with Custocare AI branding */}
+            <ReceiptFooter />
           </div>
         </div>
       </div>

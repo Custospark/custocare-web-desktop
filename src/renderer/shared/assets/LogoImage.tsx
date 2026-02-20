@@ -3,6 +3,7 @@ import { type RootState } from '../../app/store/store';
 import darkThemeLogo from './continousLogoDark.png';
 import lightThemeLogo from './continuousLogoLight.png';
 
+
 interface LogoImageProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
