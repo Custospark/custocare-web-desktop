@@ -1,5 +1,5 @@
 // components/billing-review/components/TransactionList.tsx
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import {
   AlertCircle,
   ArrowUpDown,
@@ -76,8 +76,8 @@ interface TransactionListProps {
   onSelectTransaction: (id: string) => void;
   onUpdateFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   onClearFilters: () => void;
-  onRefresh: () => void; // New prop for refresh functionality
-  isRefreshing?: boolean; // Optional prop to show loading state
+  onRefresh: () => void;
+  isRefreshing?: boolean;
 }
 
 const cx = (...classes: (string | boolean | undefined)[]) => {
@@ -149,6 +149,31 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   const [isHeaderSticky, setIsHeaderSticky] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const selectedItemRef = useRef<HTMLDivElement>(null);
+
+  // Reorder transactions to put selected item at the top
+  const orderedTransactions = useMemo(() => {
+    if (!selectedId) return filteredTransactions;
+    
+    const selected = filteredTransactions.find(t => t.visit_uuid === selectedId);
+    const others = filteredTransactions.filter(t => t.visit_uuid !== selectedId);
+    
+    return selected ? [selected, ...others] : filteredTransactions;
+  }, [filteredTransactions, selectedId]);
+
+  // Auto-scroll to selected item when it changes
+  useEffect(() => {
+    if (selectedId && selectedItemRef.current) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        selectedItemRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'start'
+        });
+      }, 100);
+    }
+  }, [selectedId]);
 
   // Sticky header effect
   useEffect(() => {
@@ -203,7 +228,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
               onClick={onRefresh}
               disabled={isRefreshing}
               className={cx(
-                'p-2.5 rounded-lg transition-all duration-200 relative',
+                'p-2.5 rounded-lg transition-all duration-200 relative cursor-pointer',
                 isDark
                   ? 'hover:bg-gray-700 text-gray-300'
                   : 'hover:bg-gray-100 text-gray-700',
@@ -225,7 +250,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
               whileTap={{ scale: 0.95 }}
               onClick={() => onUpdateFilter('showAdvancedFilters', !filters.showAdvancedFilters)}
               className={cx(
-                'p-2.5 rounded-lg transition-all duration-200 relative',
+                'p-2.5 rounded-lg transition-all duration-200 relative cursor-pointer',
                 filters.showAdvancedFilters
                   ? isDark
                     ? 'bg-blue-900/30 text-blue-400'
@@ -289,7 +314,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                   onBlur={() => setIsSearchFocused(false)}
                   placeholder="Search by receipt, patient, service, ref..."
                   className={cx(
-                    'w-full pl-10 pr-10 py-2.5 text-sm transition-all duration-200',
+                    'w-full pl-10 pr-10 py-2.5 text-sm transition-all duration-200 cursor-text',
                     'focus:outline-none',
                     !isHeaderSticky
                       ? `border-transparent ${colors.bg.primary} ${colors.text.primary} rounded-[6px]`
@@ -340,7 +365,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                       value={filters.statusFilter}
                       onChange={(e) => onUpdateFilter('statusFilter', e.target.value as PaymentStatus | 'all')}
                       className={cx(
-                        'w-full text-sm border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30',
+                        'w-full text-sm border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer',
                         colors.border.primary,
                         isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
                       )}
@@ -363,7 +388,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                         value={filters.sortBy}
                         onChange={(e) => onUpdateFilter('sortBy', e.target.value as 'date' | 'amount' | 'patient')}
                         className={cx(
-                          'flex-1 text-sm border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30',
+                          'flex-1 text-sm border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer',
                           colors.border.primary,
                           isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
                         )}
@@ -376,7 +401,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                         whileTap={{ scale: 0.95 }}
                         onClick={() => onUpdateFilter('sortOrder', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
                         className={cx(
-                          'p-2.5 rounded-lg border transition-all duration-200',
+                          'p-2.5 rounded-lg border transition-all duration-200 cursor-pointer',
                           colors.border.primary,
                           isDark ? 'hover:bg-gray-800 text-gray-100' : 'hover:bg-gray-50 text-gray-900'
                         )}
@@ -397,7 +422,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                       value={filters.dateRange.start}
                       onChange={(e) => onUpdateFilter('dateRange', { ...filters.dateRange, start: e.target.value })}
                       className={cx(
-                        'w-full text-sm border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30',
+                        'w-full text-sm border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer',
                         colors.border.primary,
                         isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
                       )}
@@ -414,7 +439,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                       value={filters.dateRange.end}
                       onChange={(e) => onUpdateFilter('dateRange', { ...filters.dateRange, end: e.target.value })}
                       className={cx(
-                        'w-full text-sm border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30',
+                        'w-full text-sm border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer',
                         colors.border.primary,
                         isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
                       )}
@@ -427,7 +452,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                       whileTap={{ scale: 0.98 }}
                       onClick={onClearFilters}
                       className={cx(
-                        'text-xs font-bold px-4 py-2.5 rounded-lg border transition-all duration-200',
+                        'text-xs font-bold px-4 py-2.5 rounded-lg border transition-all duration-200 cursor-pointer',
                         colors.border.primary,
                         isDark ? 'text-gray-100 hover:bg-gray-800' : 'text-gray-900 hover:bg-gray-50'
                       )}
@@ -448,7 +473,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 scroll-smooth"
         style={{ scrollbarGutter: 'stable' }}
       >
-        {filteredTransactions.length === 0 ? (
+        {orderedTransactions.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -472,12 +497,13 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         ) : (
           <div className="p-3 space-y-2">
             <AnimatePresence>
-              {filteredTransactions.map((t, index) => {
+              {orderedTransactions.map((t, index) => {
                 const isSelected = selectedId === t.visit_uuid;
 
                 return (
                   <motion.div
                     key={t.visit_uuid}
+                    ref={isSelected ? selectedItemRef : null}
                     layout
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
