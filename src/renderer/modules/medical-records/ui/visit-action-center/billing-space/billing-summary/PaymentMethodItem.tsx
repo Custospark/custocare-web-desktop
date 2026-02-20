@@ -1,6 +1,6 @@
 // components/PaymentMethodItem.tsx
 import React from 'react';
-import { Phone, Zap, AlertCircle } from 'lucide-react';
+import { Phone, AlertCircle } from 'lucide-react';
 import { formatCurrency } from '../billing-types';
 
 
@@ -38,12 +38,12 @@ export const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({
   onPaymentTypeChange,
   onRemovePaymentMethod,
   onMobilePhoneChange,
-  onInitiateMobilePayment,
+//   onInitiateMobilePayment,
   onPaymentAmountChange,
   onAutoFillRemaining,
   onFocusAmountInput,
   onBlurAmountInput,
-  isProcessing,
+//   isProcessing,
 }) => {
   const isMobile = method.type === 'mobile';
   const isCash = method.type === 'cash';
@@ -134,7 +134,13 @@ export const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({
             </div>
           </div>
 
-          <div className="sm:col-span-4">
+          {/* 
+          TODO: To implement in the future.
+          
+          */}
+
+
+          {/* <div className="sm:col-span-4">
             <button
               type="button"
               onClick={() => onInitiateMobilePayment(index)}
@@ -149,7 +155,7 @@ export const PaymentMethodItem: React.FC<PaymentMethodItemProps> = ({
               <Zap className="w-4 h-4" />
               <span>Initiate</span>
             </button>
-          </div>
+          </div> */}
         </div>
       )}
 

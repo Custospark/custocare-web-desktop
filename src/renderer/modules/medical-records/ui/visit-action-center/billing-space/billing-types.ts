@@ -101,7 +101,7 @@ export interface BillingState {
 /* -------------------------------------------------------------------------- */
 
 export const DEFAULT_TAXES: Tax[] = [
-  { name: 'VAT (0%)', rate: 0, amount: 0 },
+  { name: 'VAT', rate: 0, amount: 0 },
   { name: 'Service Charge', rate: 0, amount: 0 },
 ];
 

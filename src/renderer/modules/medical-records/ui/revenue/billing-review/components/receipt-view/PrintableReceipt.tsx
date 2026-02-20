@@ -297,7 +297,47 @@ const AttendingStaff: React.FC<{ selectedTransaction: ReceiptTransactionShape }>
       .join(' ');
   };
 
+  // Helper to format the role part in blue
+  const formatDisplayWithBlueRole = (name: string, role: string | null | undefined): React.ReactNode => {
+    if (!role) return <span className="font-bold text-gray-800">{name}</span>;
+    
+    const formattedRole = formatRole(role);
+    return (
+      <span className="font-bold text-gray-800">
+        {name} <span className="text-blue-600 font-semibold">({formattedRole})</span>
+      </span>
+    );
+  };
+
+  // PRIORITY 1: Backend has pre-formatted display
   if (backendDisplay) {
+    // Check if the display already contains parentheses - if so, try to make the role blue
+    // This is a best-effort attempt - ideally backend would provide separate fields
+    const hasParentheses = backendDisplay.includes('(') && backendDisplay.includes(')');
+    
+    if (hasParentheses) {
+      // Try to split and color the role part (assumes format "Name (Role)")
+      const lastOpenParen = backendDisplay.lastIndexOf('(');
+      const lastCloseParen = backendDisplay.lastIndexOf(')');
+      
+      if (lastOpenParen > 0 && lastCloseParen > lastOpenParen) {
+        const namePart = backendDisplay.substring(0, lastOpenParen).trim();
+        const rolePart = backendDisplay.substring(lastOpenParen + 1, lastCloseParen).trim();
+        
+        return (
+          <div className="flex justify-between items-center text-xs mt-3 pt-2 border-t border-gray-200">
+            <span className="text-gray-600 font-semibold flex items-center gap-1">
+              <Stethoscope className="w-3 h-3" /> Attending Staff:
+            </span>
+            <span className="font-bold text-gray-800">
+              {namePart} <span className="text-blue-600 font-semibold">({rolePart})</span>
+            </span>
+          </div>
+        );
+      }
+    }
+    
+    // Fallback to original display
     return (
       <div className="flex justify-between items-center text-xs mt-3 pt-2 border-t border-gray-200">
         <span className="text-gray-600 font-semibold flex items-center gap-1">
@@ -310,33 +350,26 @@ const AttendingStaff: React.FC<{ selectedTransaction: ReceiptTransactionShape }>
     );
   }
 
+  // PRIORITY 2: Backend has name and role separately
   if (backendName) {
-    const displayRole = backendRole ? formatRole(backendRole) : '';
-    const displayText = displayRole ? `${backendName} (${displayRole})` : backendName;
-    
     return (
       <div className="flex justify-between items-center text-xs mt-3 pt-2 border-t border-gray-200">
         <span className="text-gray-600 font-semibold flex items-center gap-1">
           <Stethoscope className="w-3 h-3" /> Attending Staff:
         </span>
-        <span className="font-bold text-gray-800">
-          {displayText}
-        </span>
+        {formatDisplayWithBlueRole(backendName, backendRole)}
       </div>
     );
   }
 
+  // PRIORITY 3: Fallback to context slice data
   if (isStaff && contextStaffName && contextStaffName !== 'Guest') {
-    const formattedRole = contextRoleCode ? formatRole(contextRoleCode) : 'STAFF';
-    
     return (
       <div className="flex justify-between items-center text-xs mt-3 pt-2 border-t border-gray-200">
         <span className="text-gray-600 font-semibold flex items-center gap-1">
           <Stethoscope className="w-3 h-3" /> Attending Staff:
         </span>
-        <span className="font-bold text-gray-800">
-          {contextStaffName} {contextRoleCode && <span className="text-blue-600 font-semibold">({formattedRole})</span>}
-        </span>
+        {formatDisplayWithBlueRole(contextStaffName, contextRoleCode)}
       </div>
     );
   }
