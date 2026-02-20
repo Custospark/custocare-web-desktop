@@ -300,7 +300,6 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
               cashBreakdown={cashBreakdown}
               changeAmount={changeAmount}
               isPrinting={isPrinting}
-              facilityName={facilityName || 'MEDICAL FACILITY'}
             />
 
             {/* Summary hint */}
