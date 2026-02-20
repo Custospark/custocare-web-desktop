@@ -348,18 +348,18 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
         </div>
       </div>
 
-      {/* Main Grid - Receipt Sticky, List Scrolls Independently */}
+      {/* Main Grid - Both panels sticky */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 h-[calc(100%-4rem)]">
-        {/* Transaction List - Scrollable independently */}
+        {/* Transaction List - Sticky with internal scrolling */}
         <motion.div 
           className={`
             ${mobileView === 'receipt' ? 'hidden lg:block' : 'block'}
-            lg:block h-full overflow-hidden
+            lg:block h-full
           `}
           layout
           transition={{ duration: 0.2 }}
         >
-          <div className="h-full overflow-hidden rounded-xl">
+          <div className="sticky top-0 h-[calc(100vh-10rem)] overflow-hidden rounded-xl">
             <TransactionList
               transactions={transactions}
               filteredTransactions={filteredTransactions}
@@ -387,7 +387,7 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
           layout
           transition={{ duration: 0.2 }}
         >
-          <div className="sticky top-0 h-[calc(100vh-8rem)]">
+          <div className="sticky top-0 h-[calc(100vh-10rem)]">
             <ReceiptView
               selectedTransaction={selectedTransaction}
               theme={theme}

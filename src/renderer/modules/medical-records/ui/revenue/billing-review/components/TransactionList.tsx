@@ -147,10 +147,10 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   const isDark = theme === 'dark';
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isHeaderSticky, setIsHeaderSticky] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const selectedItemRef = useRef<HTMLDivElement>(null);
-  const [hasScrolled, setHasScrolled] = useState(false);
 
   // Reorder transactions to put selected item at the top
   const orderedTransactions = useMemo(() => {
@@ -163,42 +163,32 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     return selected ? [selected, ...others] : filteredTransactions;
   }, [filteredTransactions, selectedId]);
 
-  // Sticky header effect
+  // Sticky header effect - detect when header should become sticky
   useEffect(() => {
     const handleScroll = () => {
-      if (containerRef.current) {
-        const scrollTop = containerRef.current.scrollTop;
-        setIsHeaderSticky(scrollTop > 20);
+      if (scrollContainerRef.current && headerRef.current) {
+        const scrollTop = scrollContainerRef.current.scrollTop;
+        setIsHeaderSticky(scrollTop > 10);
       }
     };
 
-    const container = containerRef.current;
+    const container = scrollContainerRef.current;
     if (container) {
-      container.addEventListener('scroll', handleScroll);
+      container.addEventListener('scroll', handleScroll, { passive: true });
       return () => container.removeEventListener('scroll', handleScroll);
     }
   }, []);
 
-  // Auto-scroll to top when selected item changes
+  // Auto-scroll to top when selected item changes (to show selected at top)
   useEffect(() => {
-    if (selectedId && containerRef.current && !hasScrolled) {
-      // Scroll to the top of the container
-      containerRef.current.scrollTo({
+    if (selectedId && scrollContainerRef.current) {
+      // Smooth scroll to top
+      scrollContainerRef.current.scrollTo({
         top: 0,
         behavior: 'smooth'
       });
-      
-      // Mark that we've scrolled
-      setHasScrolled(true);
-      
-      // Reset after animation completes
-      const timer = setTimeout(() => {
-        setHasScrolled(false);
-      }, 500);
-      
-      return () => clearTimeout(timer);
     }
-  }, [selectedId, orderedTransactions]);
+  }, [selectedId]);
 
   // Highlight the selected item with a subtle animation when it becomes selected
   useEffect(() => {
@@ -220,19 +210,25 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   return (
     <div
       className={cx(
-        'flex flex-col h-full min-h-0 border rounded-xl shadow-sm overflow-hidden w-full relative',
+        'flex flex-col h-full w-full relative overflow-hidden rounded-xl',
         colors.border.primary,
         colors.bg.elevated
       )}
     >
-      {/* Sticky Header with backdrop blur */}
+      {/* Sticky Header Section - This stays fixed at the top */}
       <div
+        ref={headerRef}
         className={cx(
-          'shrink-0 px-5 py-4 border-b transition-all duration-200 z-20',
+          'flex-shrink-0 px-5 py-4 border-b transition-all duration-200 z-30',
           colors.border.primary,
           colors.bg.secondary,
-          isHeaderSticky && 'sticky top-0 bg-opacity-95 backdrop-blur-sm'
+          isHeaderSticky && 'shadow-md'
         )}
+        style={{
+          position: 'sticky',
+          top: 0,
+          width: '100%',
+        }}
       >
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="min-w-0">
@@ -304,7 +300,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
         {/* Animated Search with gradient border */}
         <div className="relative mb-3">
-          <div className={`relative rounded-lg ${!isHeaderSticky ? 'p-[2px]' : ''}`}>
+          <div className="relative rounded-lg">
             {/* Gradient border track */}
             {!isHeaderSticky && (
               <motion.div
@@ -324,47 +320,55 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
             {/* Inner surface */}
             <div className="relative z-10">
-              <div className={`relative ${!isHeaderSticky ? 'rounded-[6px] overflow-hidden' : ''}`}>
-                <Search
-                  className={cx(
-                    'absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200',
-                    isSearchFocused ? 'text-blue-500' : colors.text.tertiary
-                  )}
-                />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => onUpdateFilter('searchTerm', e.target.value)}
-                  onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setIsSearchFocused(false)}
-                  placeholder="Search by receipt, patient, service, ref..."
-                  className={cx(
-                    'w-full pl-10 pr-10 py-2.5 text-sm transition-all duration-200 cursor-text',
-                    'focus:outline-none',
-                    !isHeaderSticky
-                      ? `border-transparent ${colors.bg.primary} ${colors.text.primary} rounded-[6px]`
-                      : `border rounded-lg ${colors.border.primary} ${isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`
-                  )}
-                />
-                
-                {searchTerm && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onUpdateFilter('searchTerm', '');
-                      searchInputRef.current?.focus();
-                    }}
+              <div className={cx(
+                'relative',
+                !isHeaderSticky ? 'p-[2px]' : ''
+              )}>
+                <div className={cx(
+                  'relative',
+                  !isHeaderSticky ? `bg-${isDark ? 'gray-900' : 'white'} rounded-[6px]` : ''
+                )}>
+                  <Search
                     className={cx(
-                      'absolute right-2 top-1/2 -translate-y-1/2 p-1.5',
-                      isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500',
-                      'cursor-pointer rounded-full transition-colors'
+                      'absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200',
+                      isSearchFocused ? 'text-blue-500' : colors.text.tertiary
                     )}
-                    aria-label="Clear search"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
+                  />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => onUpdateFilter('searchTerm', e.target.value)}
+                    onFocus={() => setIsSearchFocused(true)}
+                    onBlur={() => setIsSearchFocused(false)}
+                    placeholder="Search by receipt, patient, service, ref..."
+                    className={cx(
+                      'w-full pl-10 pr-10 py-2.5 text-sm transition-all duration-200 cursor-text rounded-lg',
+                      'focus:outline-none focus:ring-2 focus:ring-blue-500/30',
+                      !isHeaderSticky
+                        ? `border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary}`
+                        : `border ${colors.border.primary} ${isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`
+                    )}
+                  />
+                  
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUpdateFilter('searchTerm', '');
+                        searchInputRef.current?.focus();
+                      }}
+                      className={cx(
+                        'absolute right-2 top-1/2 -translate-y-1/2 p-1.5',
+                        isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500',
+                        'cursor-pointer rounded-full transition-colors'
+                      )}
+                      aria-label="Clear search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -493,11 +497,14 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         </AnimatePresence>
       </div>
 
-      {/* Transaction List */}
+      {/* Scrollable Transaction List - This area scrolls independently */}
       <div 
-        ref={containerRef}
+        ref={scrollContainerRef}
         className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 scroll-smooth"
-        style={{ scrollbarGutter: 'stable' }}
+        style={{ 
+          scrollbarGutter: 'stable',
+          height: '100%',
+        }}
       >
         {orderedTransactions.length === 0 ? (
           <motion.div
@@ -525,7 +532,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
             <AnimatePresence>
               {orderedTransactions.map((t, index) => {
                 const isSelected = selectedId === t.visit_uuid;
-                const isFirst = index === 0;
+                const isFirst = index === 0 && isSelected;
 
                 return (
                   <motion.div
@@ -535,7 +542,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.2, delay: index * 0.03 }}
+                    transition={{ duration: 0.2, delay: Math.min(index * 0.03, 0.3) }}
                     onClick={() => onSelectTransaction(t.visit_uuid)}
                     className={cx(
                       'p-4 border rounded-xl transition-all duration-200 cursor-pointer group relative',
@@ -559,9 +566,10 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                       }
                     }}
                   >
-                    {/* Selected item visual indicator - blue bar */}
+                    {/* Selected item visual indicators */}
                     {isSelected && (
                       <>
+                        {/* Left blue bar */}
                         <motion.div
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
@@ -574,7 +582,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                           <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-blue-500 text-white text-[10px] font-bold rounded-full shadow-lg"
+                            className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-blue-500 text-white text-[10px] font-bold rounded-full shadow-lg z-20"
                           >
                             Selected
                           </motion.div>
@@ -665,7 +673,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className={cx('shrink-0 px-5 py-4 border-t', colors.border.primary, colors.bg.secondary)}
+        className={cx('flex-shrink-0 px-5 py-4 border-t', colors.border.primary, colors.bg.secondary)}
       >
         <div className="flex items-start gap-2.5">
           <AlertCircle className={cx('w-4 h-4 shrink-0 mt-0.5', colors.text.tertiary)} />
