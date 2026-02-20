@@ -38,6 +38,7 @@ interface BaseModalProps {
   onClose: () => void;
   theme: 'light' | 'dark';
   colors: ThemeColors;
+  isProcessing?: boolean; // Added for processing state
 }
 
 const cx = (...classes: (string | boolean | undefined)[]) => {
@@ -50,7 +51,7 @@ const ModalBackdrop: React.FC<{ open: boolean; onClick: () => void }> = ({ open,
   
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-fadeIn"
+      className="fixed inset-0 bg-black/25 z-40 animate-fadeIn cursor-pointer"
       onClick={onClick}
       aria-hidden="true"
     />
@@ -83,6 +84,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   colors,
   onClose,
   onSubmit,
+  isProcessing = false,
 }) => {
   const isDark = theme === 'dark';
   const [email, setEmail] = useState('');
@@ -90,20 +92,29 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit();
-    setEmail('');
-    setMessage('');
+    if (!isProcessing) {
+      onSubmit();
+      setEmail('');
+      setMessage('');
+    }
+  };
+
+  const handleClose = () => {
+    if (!isProcessing) {
+      onClose();
+    }
   };
 
   return (
     <>
-      <ModalBackdrop open={open} onClick={onClose} />
+      <ModalBackdrop open={open} onClick={handleClose} />
       <ModalContainer open={open}>
         <div
           className={cx(
             'rounded-xl shadow-2xl border',
             colors.border.primary,
-            colors.bg.elevated
+            colors.bg.elevated,
+            isProcessing && 'pointer-events-none opacity-75'
           )}
         >
           {/* Header */}
@@ -120,11 +131,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               </div>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
+              disabled={isProcessing}
               className={cx(
-                'p-2 rounded-lg transition',
+                'p-2 rounded-lg transition cursor-pointer',
                 colors.text.tertiary,
-                isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
+                isProcessing && 'cursor-not-allowed opacity-50'
               )}
             >
               <X className="w-5 h-5" />
@@ -143,11 +156,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="patient@example.com"
                 required
+                disabled={isProcessing}
                 className={cx(
-                  'w-full px-4 py-2.5 rounded-lg border text-sm',
+                  'w-full px-4 py-2.5 rounded-lg border text-sm cursor-text',
                   colors.border.primary,
                   isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
-                  colors.ring
+                  colors.ring,
+                  isProcessing && 'cursor-not-allowed opacity-50'
                 )}
               />
             </div>
@@ -161,11 +176,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Add a custom message..."
                 rows={3}
+                disabled={isProcessing}
                 className={cx(
-                  'w-full px-4 py-2.5 rounded-lg border text-sm resize-none',
+                  'w-full px-4 py-2.5 rounded-lg border text-sm resize-none cursor-text',
                   colors.border.primary,
                   isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
-                  colors.ring
+                  colors.ring,
+                  isProcessing && 'cursor-not-allowed opacity-50'
                 )}
               />
             </div>
@@ -185,25 +202,29 @@ export const EmailModal: React.FC<EmailModalProps> = ({
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
+                disabled={isProcessing}
                 className={cx(
-                  'flex-1 px-4 py-2.5 rounded-lg border text-sm font-bold transition',
+                  'flex-1 px-4 py-2.5 rounded-lg border text-sm font-bold transition cursor-pointer',
                   colors.border.primary,
-                  isDark ? 'text-gray-100 hover:bg-gray-800' : 'text-gray-900 hover:bg-gray-50'
+                  isDark ? 'text-gray-100 hover:bg-gray-800' : 'text-gray-900 hover:bg-gray-50',
+                  isProcessing && 'cursor-not-allowed opacity-50'
                 )}
               >
                 Cancel
               </button>
               <button
                 type="submit"
+                disabled={isProcessing}
                 className={cx(
-                  'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition',
+                  'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition cursor-pointer',
                   'bg-blue-600 hover:bg-blue-700 text-white',
-                  'flex items-center justify-center gap-2'
+                  'flex items-center justify-center gap-2',
+                  isProcessing && 'cursor-not-allowed opacity-50'
                 )}
               >
                 <Send className="w-4 h-4" />
-                Send Email
+                {isProcessing ? 'Sending...' : 'Send Email'}
               </button>
             </div>
           </form>
@@ -226,25 +247,35 @@ export const RefundModal: React.FC<RefundModalProps> = ({
   colors,
   onClose,
   onSubmit,
+  isProcessing = false,
 }) => {
   const isDark = theme === 'dark';
   const [reason, setReason] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit();
-    setReason('');
+    if (!isProcessing) {
+      onSubmit();
+      setReason('');
+    }
+  };
+
+  const handleClose = () => {
+    if (!isProcessing) {
+      onClose();
+    }
   };
 
   return (
     <>
-      <ModalBackdrop open={open} onClick={onClose} />
+      <ModalBackdrop open={open} onClick={handleClose} />
       <ModalContainer open={open}>
         <div
           className={cx(
             'rounded-xl shadow-2xl border',
             colors.border.primary,
-            colors.bg.elevated
+            colors.bg.elevated,
+            isProcessing && 'pointer-events-none opacity-75'
           )}
         >
           {/* Header */}
@@ -261,11 +292,13 @@ export const RefundModal: React.FC<RefundModalProps> = ({
               </div>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
+              disabled={isProcessing}
               className={cx(
-                'p-2 rounded-lg transition',
+                'p-2 rounded-lg transition cursor-pointer',
                 colors.text.tertiary,
-                isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
+                isProcessing && 'cursor-not-allowed opacity-50'
               )}
             >
               <X className="w-5 h-5" />
@@ -320,11 +353,13 @@ export const RefundModal: React.FC<RefundModalProps> = ({
                 placeholder="Explain why this refund is being issued..."
                 rows={3}
                 required
+                disabled={isProcessing}
                 className={cx(
-                  'w-full px-4 py-2.5 rounded-lg border text-sm resize-none',
+                  'w-full px-4 py-2.5 rounded-lg border text-sm resize-none cursor-text',
                   colors.border.primary,
                   isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
-                  colors.ring
+                  colors.ring,
+                  isProcessing && 'cursor-not-allowed opacity-50'
                 )}
               />
             </div>
@@ -333,25 +368,29 @@ export const RefundModal: React.FC<RefundModalProps> = ({
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
+                disabled={isProcessing}
                 className={cx(
-                  'flex-1 px-4 py-2.5 rounded-lg border text-sm font-bold transition',
+                  'flex-1 px-4 py-2.5 rounded-lg border text-sm font-bold transition cursor-pointer',
                   colors.border.primary,
-                  isDark ? 'text-gray-100 hover:bg-gray-800' : 'text-gray-900 hover:bg-gray-50'
+                  isDark ? 'text-gray-100 hover:bg-gray-800' : 'text-gray-900 hover:bg-gray-50',
+                  isProcessing && 'cursor-not-allowed opacity-50'
                 )}
               >
                 Cancel
               </button>
               <button
                 type="submit"
+                disabled={isProcessing}
                 className={cx(
-                  'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition',
+                  'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition cursor-pointer',
                   'bg-amber-600 hover:bg-amber-700 text-white',
-                  'flex items-center justify-center gap-2'
+                  'flex items-center justify-center gap-2',
+                  isProcessing && 'cursor-not-allowed opacity-50'
                 )}
               >
                 <Undo2 className="w-4 h-4" />
-                Process Refund
+                {isProcessing ? 'Processing...' : 'Process Refund'}
               </button>
             </div>
           </form>
@@ -374,6 +413,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
   colors,
   onClose,
   onSubmit,
+  isProcessing = false,
 }) => {
   const isDark = theme === 'dark';
   const [reason, setReason] = useState('');
@@ -381,20 +421,29 @@ export const VoidModal: React.FC<VoidModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit();
-    setReason('');
-    setConfirmed(false);
+    if (!isProcessing) {
+      onSubmit();
+      setReason('');
+      setConfirmed(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (!isProcessing) {
+      onClose();
+    }
   };
 
   return (
     <>
-      <ModalBackdrop open={open} onClick={onClose} />
+      <ModalBackdrop open={open} onClick={handleClose} />
       <ModalContainer open={open}>
         <div
           className={cx(
             'rounded-xl shadow-2xl border',
             colors.border.primary,
-            colors.bg.elevated
+            colors.bg.elevated,
+            isProcessing && 'pointer-events-none opacity-75'
           )}
         >
           {/* Header */}
@@ -411,11 +460,13 @@ export const VoidModal: React.FC<VoidModalProps> = ({
               </div>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
+              disabled={isProcessing}
               className={cx(
-                'p-2 rounded-lg transition',
+                'p-2 rounded-lg transition cursor-pointer',
                 colors.text.tertiary,
-                isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
+                isProcessing && 'cursor-not-allowed opacity-50'
               )}
             >
               <X className="w-5 h-5" />
@@ -470,11 +521,13 @@ export const VoidModal: React.FC<VoidModalProps> = ({
                 placeholder="Explain why this transaction is being voided..."
                 rows={3}
                 required
+                disabled={isProcessing}
                 className={cx(
-                  'w-full px-4 py-2.5 rounded-lg border text-sm resize-none',
+                  'w-full px-4 py-2.5 rounded-lg border text-sm resize-none cursor-text',
                   colors.border.primary,
                   isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
-                  colors.ring
+                  colors.ring,
+                  isProcessing && 'cursor-not-allowed opacity-50'
                 )}
               />
             </div>
@@ -485,10 +538,20 @@ export const VoidModal: React.FC<VoidModalProps> = ({
                 id="void-confirm"
                 checked={confirmed}
                 onChange={(e) => setConfirmed(e.target.checked)}
-                className="mt-1 w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                required
+                disabled={isProcessing}
+                className={cx(
+                  'mt-1 w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer',
+                  isProcessing && 'cursor-not-allowed opacity-50'
+                )}
               />
-              <label htmlFor="void-confirm" className={cx('text-sm', colors.text.secondary)}>
+              <label 
+                htmlFor="void-confirm" 
+                className={cx(
+                  'text-sm cursor-pointer',
+                  colors.text.secondary,
+                  isProcessing && 'cursor-not-allowed opacity-50'
+                )}
+              >
                 I understand this action is permanent and cannot be undone. I have the authority
                 to void this transaction.
               </label>
@@ -498,27 +561,29 @@ export const VoidModal: React.FC<VoidModalProps> = ({
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
+                disabled={isProcessing}
                 className={cx(
-                  'flex-1 px-4 py-2.5 rounded-lg border text-sm font-bold transition',
+                  'flex-1 px-4 py-2.5 rounded-lg border text-sm font-bold transition cursor-pointer',
                   colors.border.primary,
-                  isDark ? 'text-gray-100 hover:bg-gray-800' : 'text-gray-900 hover:bg-gray-50'
+                  isDark ? 'text-gray-100 hover:bg-gray-800' : 'text-gray-900 hover:bg-gray-50',
+                  isProcessing && 'cursor-not-allowed opacity-50'
                 )}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={!confirmed}
+                disabled={!confirmed || isProcessing}
                 className={cx(
-                  'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition',
+                  'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition cursor-pointer',
                   'bg-red-600 hover:bg-red-700 text-white',
                   'flex items-center justify-center gap-2',
                   'disabled:opacity-50 disabled:cursor-not-allowed'
                 )}
               >
                 <Ban className="w-4 h-4" />
-                Void Transaction
+                {isProcessing ? 'Voiding...' : 'Void Transaction'}
               </button>
             </div>
           </form>
@@ -582,7 +647,7 @@ export const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
         <p className={cx('text-sm font-medium flex-1', textColor)}>{message}</p>
         <button
           onClick={onClose}
-          className={cx('flex-shrink-0 p-1 rounded transition', iconColor, 'hover:opacity-70')}
+          className={cx('flex-shrink-0 p-1 rounded transition cursor-pointer', iconColor, 'hover:opacity-70')}
         >
           <X className="w-4 h-4" />
         </button>
