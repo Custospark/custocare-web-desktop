@@ -28,9 +28,6 @@ import {
   getFacilityTypeDisplayName,
 } from '../../../../../api/facility/FacilityTypes';
 import LoadingSkeleton from '../../../../../../../shared/components/Loading/LoadingSkeletons';
-import { useSelector } from 'react-redux';
-import { type RootState } from '../../../../../../../app/store/rootReducer';
-import { darkThemeLogo } from '../../../../../../../shared/assets/logoConstants';
 import { lightThemeLogo } from '../../../../../../../shared/assets/logoConstants';
 
 /* -------------------------------------------------------------------------- */
