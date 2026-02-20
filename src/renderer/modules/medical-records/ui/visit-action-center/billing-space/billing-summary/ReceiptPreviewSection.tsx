@@ -1,17 +1,17 @@
-// components/ReceiptPreviewSection.tsx
+// ReceiptPreviewSection.tsx
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import { PrintableReceipt } from '../../../revenue/billing-review/components/receipt-view/PrintableReceipt';
-import { DEFAULT_TAXES, formatCurrency } from  '../billing-types';
-import type { BillingReviewItem } from  '../../../../api/billing-review/BillingReviewTypes';
+import { DEFAULT_TAXES, formatCurrency } from '../billing-types';
+import type { BillingReviewItem } from '../../../../api/billing-review/BillingReviewTypes';
 
 interface ReceiptPreviewSectionProps {
   colors: any;
   isReadOnly: boolean;
   status: string;
   receiptNumber: string;
-  receiptRef: React.RefObject<HTMLDivElement>;
-  selectedTransaction: BillingReviewItem;
+  receiptRef: React.RefObject<HTMLDivElement | null>;
+  transaction: BillingReviewItem;
   derivedFinancials: any;
   cashBreakdown: any;
   isPrinting: boolean;
@@ -26,7 +26,7 @@ export const ReceiptPreviewSection: React.FC<ReceiptPreviewSectionProps> = ({
   status,
   receiptNumber,
   receiptRef,
-  selectedTransaction,
+  transaction,
   derivedFinancials,
   cashBreakdown,
   isPrinting,
@@ -42,7 +42,7 @@ export const ReceiptPreviewSection: React.FC<ReceiptPreviewSectionProps> = ({
         }`}
       >
         {/* Fixed header */}
-        <div className={`flex-shrink-0 px-4 py-3 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
+        <div className={`flex-shrink-0 px-4 py-3 border-b ${colors.border.primary} ${colors.bg.secondary} no-print`}>
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="min-w-0 flex-1">
               <h3 className={`text-sm sm:text-base font-bold ${colors.text.primary}`}>Receipt Preview</h3>
@@ -80,9 +80,10 @@ export const ReceiptPreviewSection: React.FC<ReceiptPreviewSectionProps> = ({
           style={{ scrollbarGutter: 'stable' }}
         >
           <div className="mx-auto w-full max-w-[360px] sm:max-w-[420px]">
+            {/* FIXED: Use selectedTransaction prop name instead of transaction */}
             <PrintableReceipt
               ref={receiptRef}
-              selectedTransaction={selectedTransaction}
+              selectedTransaction={transaction}  // Changed from transaction to selectedTransaction
               derivedFinancials={derivedFinancials}
               cashBreakdown={cashBreakdown}
               changeAmount={derivedFinancials.changeAmount}
@@ -92,7 +93,7 @@ export const ReceiptPreviewSection: React.FC<ReceiptPreviewSectionProps> = ({
         </div>
 
         {/* Taxes and Additional Notes section */}
-        <div className={`flex-shrink-0 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
+        <div className={`flex-shrink-0 border-t ${colors.border.primary} ${colors.bg.secondary} no-print`}>
           {/* Additional Notes */}
           <div className="px-4 py-3">
             <label className={`block text-sm font-bold mb-1 ${colors.text.primary}`}>
@@ -142,7 +143,7 @@ export const ReceiptPreviewSection: React.FC<ReceiptPreviewSectionProps> = ({
         </div>
 
         {/* Left footer info */}
-        <div className={`flex-shrink-0 px-4 py-3 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
+        <div className={`flex-shrink-0 px-4 py-3 border-t ${colors.border.primary} ${colors.bg.secondary} no-print`}>
           <div className="flex items-start gap-2">
             <AlertCircle className={`w-4 h-4 ${colors.text.tertiary} flex-shrink-0 mt-0.5`} />
             <p className={`text-xs ${colors.text.secondary} leading-relaxed`}>
