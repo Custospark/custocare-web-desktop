@@ -22,7 +22,7 @@ import {
   MapPin,
   Stethoscope
 } from 'lucide-react';
-import type {ChargeItem, Tax, PaymentMethod, BillingReviewItem } from '../../../../../api/billing-review/BillingReviewTypes';
+import type {ChargeItem, Tax, PaymentMethod, BillingData } from '../../../../../api/billing-review/BillingReviewTypes';
 import { formatCurrency, PaymentStatus } from '../../../../../api/billing-review/BillingReviewTypes';
 import { useGetFacilityIdentity } from '../../../../../api/facility/FacilityQueries';
 import { 
@@ -67,31 +67,25 @@ interface CashBreakdown {
   netCash: number;
 }
 
-// Updated interface to include BillingReviewItem fields
-interface ReceiptTransactionShape extends Partial<BillingReviewItem> {
+// FIXED: Don't extend Partial<BillingReviewItem> - create a clean interface
+interface ReceiptTransactionShape {
   receipt_number: string | null;
   patient_name: string;
   patient_number: string;
   created_at: string;
   charge_items: ChargeItem[];
-  billing_data: {
-    subtotal: number;
-    discountAmount: number;
-    taxableAmount?: number;
-    taxTotal: number;
-    grandTotal: number;
-    totalPaid?: number;
-    balance?: number;
-    taxes: Tax[];
-  };
+  billing_data: BillingData; // Use the full BillingData type
   payment_methods: PaymentMethod[];
   additional_notes?: string;
   facilityData?: any;
-  // Attending staff fields from backend
   attending_staff_id?: number | null;
   attending_staff_name?: string | null;
   attending_staff_role?: string | null;
   attending_staff_display?: string | null;
+  // Add any other fields from BillingReviewItem that might be needed
+  discount?: any;
+  taxes?: Tax[];
+  payment_status?: PaymentStatus;
   [key: string]: any;
 }
 
@@ -138,39 +132,23 @@ const formatDisplayTime = (dateString: string) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                         WATERMARK HELPER - FIXED                           */
+/*                         WATERMARK HELPER - RESPONSIVE                     */
 /* -------------------------------------------------------------------------- */
-/**
- * Returns watermark text and color based on payment status
- * Watermark should ALWAYS be visible in the preview when payment is finalized
- */
 const getWatermark = (derivedFinancials: DerivedFinancials): { text: string; color: string } | null => {
-  const { status, balanceDue, grandTotal, changeAmount } = derivedFinancials;  
-  // Check if payment is finalized (status should be settled/paid)
+  const { status, balanceDue, grandTotal, changeAmount } = derivedFinancials;
   const isPaymentFinalized = status === PaymentStatus.PAID_IN_FULL || balanceDue === 0 || changeAmount > 0;
-  
-  // Only show watermark if payment is finalized - for preview AND print
-  if (!isPaymentFinalized) {
-    return null;
-  }
-  // Determine watermark text based on payment state
-  if (changeAmount > 0) {
-    return { text: 'CHANGE GIVEN', color: 'text-blue-600/10' };
-  }
-  if (status === PaymentStatus.PAID_IN_FULL || balanceDue === 0) {
-    return { text: 'PAID', color: 'text-green-600/10' };
-  }
-  if (balanceDue > 0 && balanceDue < grandTotal) {
-    return { text: 'PARTIAL', color: 'text-amber-600/10' };
-  }
-  if (balanceDue === grandTotal && grandTotal > 0) {
-    return { text: 'DUE', color: 'text-red-600/10' };
-  }
-  
+  if (!isPaymentFinalized) return null;
+
+  if (changeAmount > 0)   return { text: 'CHANGE GIVEN', color: 'text-blue-600/25' }; // Increased opacity
+  if (status === PaymentStatus.PAID_IN_FULL || balanceDue === 0)
+                          return { text: 'PAID',         color: 'text-green-600/25' }; // Increased opacity
+  if (balanceDue > 0 && balanceDue < grandTotal)
+                          return { text: 'PARTIAL',      color: 'text-amber-600/25' }; // Increased opacity
+  if (balanceDue === grandTotal && grandTotal > 0)
+                          return { text: 'DUE',          color: 'text-red-600/25' }; // Increased opacity
   return null;
 };
 
-// Helper function to determine if we should show a discount percentage
 const shouldShowDiscountPercentage = (discountAmount: number, subtotal: number): number | null => {
   if (!discountAmount || !subtotal || subtotal === 0) return null;
   
@@ -219,21 +197,16 @@ const FacilityInfo: React.FC<FacilityInfoProps> = () => {
   const facility = data.data.facility;
   const statusColors = getOperationalStatusColor(facility.status);
   
-  // FIX: Safely extract address string
   const getAddressString = (): string => {
     if (!facility.address) return 'Address not available';
     
-    // If address is a string, use it directly
     if (typeof facility.address === 'string') return facility.address;
     
-    // If address is an object with formatted property
     if (typeof facility.address === 'object' && facility.address !== null) {
-      // Check for formatted property
       if ('formatted' in facility.address && facility.address.formatted) {
         return facility.address.formatted;
       }
       
-      // Try to construct address from common fields
       const addr = facility.address as any;
       const parts = [
         addr.street,
@@ -277,7 +250,6 @@ const FacilityInfo: React.FC<FacilityInfoProps> = () => {
         </span>
       </div>
       
-      {/* FIX: Address is now always a string */}
       <p className="text-xs text-gray-600 mt-2 flex items-center justify-center gap-1">
         <MapPin className="w-3 h-3 inline shrink-0" />
         {getAddressString()}
@@ -306,26 +278,16 @@ const FacilityInfo: React.FC<FacilityInfoProps> = () => {
 /* -------------------------------------------------------------------------- */
 /*                           ATTENDING STAFF COMPONENT                        */
 /* -------------------------------------------------------------------------- */
-/**
- * Attending Staff Component
- * 
- * Priority order for displaying attending staff:
- * 1. Backend data (attending_staff_display, attending_staff_name + attending_staff_role)
- * 2. Context slice data (current logged-in user)
- * 3. No display if neither is available
- */
+
 const AttendingStaff: React.FC<{ selectedTransaction: ReceiptTransactionShape }> = ({ selectedTransaction }) => {
-  // Backend data (highest priority)
   const backendDisplay = selectedTransaction?.attending_staff_display;
   const backendName = selectedTransaction?.attending_staff_name;
   const backendRole = selectedTransaction?.attending_staff_role;
   
-  // Context slice data (fallback)
   const isStaff = useSelector((state: RootState) => isInStaffMode(state));
   const contextStaffName = useSelector((state: RootState) => getUserFullName(state));
   const contextRoleCode = useSelector((state: RootState) => getActiveRoleCode(state));
   
-  // Helper to format role (replace underscores/hyphens with spaces, capitalize words)
   const formatRole = (role: string): string => {
     if (!role) return '';
     return role
@@ -335,7 +297,6 @@ const AttendingStaff: React.FC<{ selectedTransaction: ReceiptTransactionShape }>
       .join(' ');
   };
 
-  // Case 1: Backend has pre-formatted display
   if (backendDisplay) {
     return (
       <div className="flex justify-between items-center text-xs mt-3 pt-2 border-t border-gray-200">
@@ -349,7 +310,6 @@ const AttendingStaff: React.FC<{ selectedTransaction: ReceiptTransactionShape }>
     );
   }
 
-  // Case 2: Backend has name and role separately
   if (backendName) {
     const displayRole = backendRole ? formatRole(backendRole) : '';
     const displayText = displayRole ? `${backendName} (${displayRole})` : backendName;
@@ -366,7 +326,6 @@ const AttendingStaff: React.FC<{ selectedTransaction: ReceiptTransactionShape }>
     );
   }
 
-  // Case 3: Fallback to context slice data (current logged-in staff)
   if (isStaff && contextStaffName && contextStaffName !== 'Guest') {
     const formattedRole = contextRoleCode ? formatRole(contextRoleCode) : 'STAFF';
     
@@ -382,7 +341,6 @@ const AttendingStaff: React.FC<{ selectedTransaction: ReceiptTransactionShape }>
     );
   }
 
-  // No attending staff information available
   return null;
 };
 
@@ -437,7 +395,6 @@ const ReceiptFooter: React.FC = () => {
         </p>
       </div>
       
-      {/* Print Time - Clearly indicated */}
       <div className="mt-2 pt-1">
         <p className="text-[7px] font-mono">
           <span className="text-gray-500 uppercase tracking-wider mr-1 font-bold">PRINT TIME:</span>
@@ -469,9 +426,7 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
   changeAmount,
   isPrinting,
 }, ref) => {
-  // Get watermark based ONLY on payment status
   const watermark = getWatermark(derivedFinancials);
-  
   const discountPercentage = shouldShowDiscountPercentage(
     derivedFinancials.discountAmount, 
     derivedFinancials.subtotal
@@ -482,8 +437,9 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      className="w-full"
     >
-      <div className={`relative rounded-xl ${!isPrinting ? 'p-0.5' : ''}`}>
+      <div className={`relative rounded-xl ${!isPrinting ? 'p-0.5' : ''} w-full`}>
         {!isPrinting && watermark && (
           <div
             className="absolute inset-0 rounded-xl z-0"
@@ -494,225 +450,253 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
           />
         )}
 
-        <div ref={ref} className="receipt-print relative z-10">
+        <div 
+          ref={ref} 
+          className="receipt-print relative z-10 w-full [container-type:inline-size]"
+        >
           <div className={cx(
-            'bg-white text-black p-6 rounded-[10px] shadow-lg relative overflow-hidden',
+            'bg-white text-black p-4 sm:p-6 rounded-[10px] shadow-lg relative overflow-hidden',
             'print:shadow-none print:border print:border-gray-200',
             !isPrinting && 'border-0'
           )}>
-            {/* Watermark - Always visible in preview when payment is finalized */}
+            {/* ===== RESPONSIVE WATERMARK - Increased Opacity ===== */}
             {watermark && (
-              <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-28deg] opacity-[0.06] print:opacity-[0.06]">
-                  <span className={cx('text-7xl font-black tracking-widest', watermark.color)}>
-                    {watermark.text}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Receipt Header - Facility Information */}
-            <FacilityInfo isPrinting={isPrinting} />
-
-            {/* Receipt Meta with icons */}
-            <div className="border-t-2 border-b-2 border-gray-300 py-3 my-4 text-xs space-y-1.5 relative">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 font-semibold flex items-center gap-1">
-                  <Hash className="w-3 h-3" /> Receipt Number:
-                </span>
-                <span className="font-black">{selectedTransaction.receipt_number || 'DRAFT'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 font-semibold flex items-center gap-1">
-                  <User className="w-3 h-3" /> Patient Name:
-                </span>
-                <span className="font-bold">{selectedTransaction.patient_name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 font-semibold flex items-center gap-1">
-                  <Tag className="w-3 h-3" /> Patient Number:
-                </span>
-                <span>{selectedTransaction.patient_number}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 font-semibold flex items-center gap-1">
-                  <Calendar className="w-3 h-3" /> Date:
-                </span>
-                <span>{formatDisplayDate(selectedTransaction.created_at)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 font-semibold flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> Time:
-                </span>
-                <span>{formatDisplayTime(selectedTransaction.created_at)}</span>
-              </div>
-            </div>
-
-            {/* Services */}
-            <div className="mb-4 relative">
-              <h3 className="text-sm font-black mb-3 text-gray-800 flex items-center gap-2">
-                <Package className="w-4 h-4" /> SERVICES RENDERED
-              </h3>
-              <div className="space-y-2.5">
-                {selectedTransaction.charge_items.map((item: ChargeItem) => (
-                  <div
-                    key={item.id}
-                    className="flex justify-between text-xs border-b border-gray-200 pb-2 p-1 rounded"
+              <>
+                {/* Main watermark - visible on all screens */}
+                <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
+                  <div 
+                    className="absolute flex items-center justify-center"
+                    style={{
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%) rotate(-35deg)',
+                      width: '200%',
+                      height: '200%',
+                    }}
                   >
-                    <div className="min-w-0 pr-3 flex-1">
-                      <p className="font-bold truncate">{item.service.name}</p>
-                      <p className="text-[11px] text-gray-600 mt-0.5">
-                        {item.quantity} × {formatCurrency(item.service.unitPrice)} • Code: {item.service.code}
-                      </p>
-                    </div>
-                    <span className="font-black shrink-0">
-                      {formatCurrency(item.totalAmount)}
+                    <span
+                      className={cx(
+                        'whitespace-nowrap font-black text-center',
+                        watermark.color,
+                        // Responsive text sizing
+                        'text-[clamp(1.5rem,15cqw,6rem)] sm:text-[clamp(2rem,12cqw,5rem)] md:text-[clamp(2.5rem,10cqw,4.5rem)]'
+                      )}
+                      style={{
+                        letterSpacing: '0.18em',
+                        opacity: 0.5, // Increased from 0.28 to 0.5
+                      }}
+                    >
+                      {watermark.text}
                     </span>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Totals - IMPROVED ALIGNMENT */}
-            <div className="border-t-2 border-gray-300 pt-3 text-xs space-y-2 relative">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">Subtotal</span>
-                <span className="font-bold tabular-nums">
-                  {formatCurrency(derivedFinancials.subtotal)}
-                </span>
-              </div>
-
-              {derivedFinancials.discountAmount > 0 && (
-                <div className="flex justify-between items-center text-green-700">
-                  <span className="font-semibold flex items-center gap-1">
-                    <Percent className="w-3 h-3" />
-                    {discountPercentage ? `Discount (${discountPercentage}%)` : 'Discount'}
-                  </span>
-                  <span className="font-bold tabular-nums">
-                    -{formatCurrency(derivedFinancials.discountAmount)}
-                  </span>
                 </div>
-              )}
+              </>
+            )}
 
-              {selectedTransaction.billing_data.taxes?.map((tax: Tax, index: number) => (
-                <div key={index} className="flex justify-between items-center">
-                  <span className="font-semibold">{tax.name} ({tax.rate}%)</span>
-                  <span className="font-bold tabular-nums">{formatCurrency(tax.amount)}</span>
+            {/* Content wrapper with relative positioning */}
+            <div className="relative z-10">
+              {/* Receipt Header */}
+              <FacilityInfo isPrinting={isPrinting} />
+
+              {/* Receipt Meta - Responsive grid on mobile */}
+              <div className="border-t-2 border-b-2 border-gray-300 py-2 sm:py-3 my-3 sm:my-4 text-[10px] sm:text-xs space-y-1 sm:space-y-1.5 relative">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-0">
+                  <span className="text-gray-600 font-semibold flex items-center gap-1">
+                    <Hash className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> Receipt Number:
+                  </span>
+                  <span className="font-black break-all">{selectedTransaction.receipt_number || 'DRAFT'}</span>
                 </div>
-              ))}
-
-              <div className="flex justify-between font-black text-base mt-3 pt-3 border-t-2 border-gray-300">
-                <span className="text-gray-800">TOTAL</span>
-                <span className="bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent tabular-nums">
-                  {formatCurrency(derivedFinancials.grandTotal)}
-                </span>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-0">
+                  <span className="text-gray-600 font-semibold flex items-center gap-1">
+                    <User className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> Patient Name:
+                  </span>
+                  <span className="font-bold break-words">{selectedTransaction.patient_name}</span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-0">
+                  <span className="text-gray-600 font-semibold flex items-center gap-1">
+                    <Tag className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> Patient Number:
+                  </span>
+                  <span className="break-all">{selectedTransaction.patient_number}</span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-0">
+                  <span className="text-gray-600 font-semibold flex items-center gap-1">
+                    <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> Date:
+                  </span>
+                  <span>{formatDisplayDate(selectedTransaction.created_at)}</span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-0">
+                  <span className="text-gray-600 font-semibold flex items-center gap-1">
+                    <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> Time:
+                  </span>
+                  <span>{formatDisplayTime(selectedTransaction.created_at)}</span>
+                </div>
               </div>
-            </div>
 
-            {/* Payment Methods - IMPROVED SEPARATION */}
-            {selectedTransaction.payment_methods && selectedTransaction.payment_methods.length > 0 && (
-              <div className="mt-4 pt-4 border-t-2 border-gray-300 text-xs relative">
-                <h3 className="text-sm font-black mb-3 text-gray-800">PAYMENT DETAILS</h3>
-                
-                <div className="space-y-2 bg-gray-50 p-3 rounded-lg">
-                  {selectedTransaction.payment_methods.map((pm: PaymentMethod, index: number) => (
+              {/* Services */}
+              <div className="mb-3 sm:mb-4 relative">
+                <h3 className="text-xs sm:text-sm font-black mb-2 sm:mb-3 text-gray-800 flex items-center gap-2">
+                  <Package className="w-3 h-3 sm:w-4 sm:h-4" /> SERVICES RENDERED
+                </h3>
+                <div className="space-y-1.5 sm:space-y-2.5">
+                  {selectedTransaction.charge_items.map((item: ChargeItem) => (
                     <div
-                      key={index}
-                      className="flex items-center justify-between"
+                      key={item.id}
+                      className="flex justify-between text-[10px] sm:text-xs border-b border-gray-200 pb-1 sm:pb-2 p-0.5 sm:p-1 rounded gap-2"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <PaymentIcon type={pm.type} className="w-4 h-4 text-gray-600" />
-                        <span className="capitalize font-bold">{pm.type.replace('_', ' ')}</span>
-                        {pm.reference && (
-                          <span className="text-[10px] text-gray-500 truncate">
-                            Ref: {pm.reference}
-                          </span>
-                        )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold truncate">{item.service.name}</p>
+                        <p className="text-[9px] sm:text-[11px] text-gray-600 mt-0.5 truncate">
+                          {item.quantity} × {formatCurrency(item.service.unitPrice)}
+                        </p>
                       </div>
-                      <span className="font-black tabular-nums">{formatCurrency(pm.amount)}</span>
+                      <span className="font-black shrink-0 tabular-nums">
+                        {formatCurrency(item.totalAmount)}
+                      </span>
                     </div>
                   ))}
                 </div>
+              </div>
 
-                {cashBreakdown && cashBreakdown.tendered > 0 && (
-                  <div className="mt-3 space-y-2 border-t border-gray-200 pt-3">
-                    <div className="flex justify-between items-center bg-blue-50 p-2 rounded">
-                      <span className="font-semibold text-gray-700 flex items-center gap-1">
-                        <Banknote className="w-3.5 h-3.5" /> Cash Tendered:
-                      </span>
-                      <span className="font-black text-gray-900 tabular-nums">
-                        {formatCurrency(cashBreakdown.tendered)}
-                      </span>
-                    </div>
-                    
-                    {cashBreakdown.change > 0 && (
-                      <>
-                        <div className="flex justify-between items-center text-blue-700">
-                          <span className="font-semibold flex items-center gap-1">
-                            <ArrowLeftRight className="w-3.5 h-3.5" /> Change:
-                          </span>
-                          <span className="font-black tabular-nums">{formatCurrency(cashBreakdown.change)}</span>
-                        </div>
-                        
-                        <div className="flex justify-between items-center pt-1 text-xs border-t border-dashed border-gray-200 mt-1">
-                          <span className="text-gray-600">Net Cash Payment:</span>
-                          <span className="font-bold text-gray-900 tabular-nums">
-                            {formatCurrency(cashBreakdown.netCash)}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-                
-                {selectedTransaction.payment_methods.length > 1 && (
-                  <div className="flex justify-between pt-3 mt-3 border-t border-gray-200 font-bold">
-                    <span>Total Payments</span>
-                    <span className="text-green-700 tabular-nums">
-                      {formatCurrency(derivedFinancials.totalPaidFromMethods)}
+              {/* Totals */}
+              <div className="border-t-2 border-gray-300 pt-2 sm:pt-3 text-[10px] sm:text-xs space-y-1 sm:space-y-2 relative">
+                <div className="flex justify-between">
+                  <span className="font-semibold">Subtotal</span>
+                  <span className="font-bold tabular-nums">
+                    {formatCurrency(derivedFinancials.subtotal)}
+                  </span>
+                </div>
+
+                {derivedFinancials.discountAmount > 0 && (
+                  <div className="flex justify-between text-green-700">
+                    <span className="font-semibold flex items-center gap-1">
+                      <Percent className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                      {discountPercentage ? `Discount (${discountPercentage}%)` : 'Discount'}
+                    </span>
+                    <span className="font-bold tabular-nums">
+                      -{formatCurrency(derivedFinancials.discountAmount)}
                     </span>
                   </div>
                 )}
 
-                {/* Balance Due - IMPROVED PROMINENCE */}
-                <div className="mt-4 pt-3 border-t-2 border-gray-300">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 font-semibold">Amount Paid</span>
-                    <span className="font-black text-green-700 tabular-nums">
-                      {formatCurrency(derivedFinancials.netPaid)}
-                    </span>
+                {selectedTransaction.billing_data.taxes?.map((tax: Tax, index: number) => (
+                  <div key={index} className="flex justify-between">
+                    <span className="font-semibold">{tax.name} ({tax.rate}%)</span>
+                    <span className="font-bold tabular-nums">{formatCurrency(tax.amount)}</span>
                   </div>
+                ))}
 
-                  <div className="flex justify-between items-center mt-2 bg-gray-50 p-3 rounded-lg">
-                    <span className="text-gray-700 font-bold">Balance Due</span>
-                    <span
-                      className={cx(
-                        'font-black text-lg',
-                        derivedFinancials.balanceDue === 0 
-                          ? 'bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent' 
-                          : 'text-amber-700'
-                      )}
-                    >
-                      {derivedFinancials.balanceDue === 0
-                        ? 'PAID IN FULL'
-                        : formatCurrency(derivedFinancials.balanceDue)}
-                    </span>
-                  </div>
-
-                  {changeAmount > 0 && (
-                    <div className="mt-2 text-xs text-gray-500 italic text-right">
-                      * Change of {formatCurrency(changeAmount)} returned to Patient.
-                    </div>
-                  )}
+                <div className="flex justify-between font-black text-sm sm:text-base mt-2 sm:mt-3 pt-2 sm:pt-3 border-t-2 border-gray-300">
+                  <span className="text-gray-800">TOTAL</span>
+                  <span className="bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent tabular-nums">
+                    {formatCurrency(derivedFinancials.grandTotal)}
+                  </span>
                 </div>
               </div>
-            )}
 
-            {/* Attending Staff - With priority: Backend first, then context fallback */}
-            <AttendingStaff selectedTransaction={selectedTransaction} />
+              {/* Payment Methods */}
+              {selectedTransaction.payment_methods && selectedTransaction.payment_methods.length > 0 && (
+                <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t-2 border-gray-300 text-[10px] sm:text-xs relative">
+                  <h3 className="text-xs sm:text-sm font-black mb-2 sm:mb-3 text-gray-800">PAYMENT DETAILS</h3>
+                  
+                  <div className="space-y-1.5 sm:space-y-2">
+                    {selectedTransaction.payment_methods.map((pm: PaymentMethod, index: number) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between bg-gray-50 p-1.5 sm:p-2 rounded gap-2"
+                      >
+                        <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
+                          <PaymentIcon type={pm.type} className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 shrink-0" />
+                          <span className="capitalize font-bold truncate">{pm.type.replace('_', ' ')}</span>
+                          {pm.reference && (
+                            <span className="text-[8px] sm:text-[10px] text-gray-500 truncate hidden xs:inline">
+                              Ref: {pm.reference}
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-black shrink-0 tabular-nums">{formatCurrency(pm.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
 
-            {/* Footer with Custocare AI branding */}
-            <ReceiptFooter />
+                  {cashBreakdown && cashBreakdown.tendered > 0 && (
+                    <div className="mt-2 sm:mt-3 space-y-1 sm:space-y-2 border-t border-gray-200 pt-2 sm:pt-3">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-gray-700 flex items-center gap-1">
+                          <Banknote className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Cash Tendered:
+                        </span>
+                        <span className="font-black text-gray-900 tabular-nums">
+                          {formatCurrency(cashBreakdown.tendered)}
+                        </span>
+                      </div>
+                      
+                      {cashBreakdown.change > 0 && (
+                        <>
+                          <div className="flex justify-between items-center text-blue-700">
+                            <span className="font-semibold flex items-center gap-1">
+                              <ArrowLeftRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Change:
+                            </span>
+                            <span className="font-black tabular-nums">{formatCurrency(cashBreakdown.change)}</span>
+                          </div>
+                          
+                          <div className="flex justify-between items-center pt-1 text-[8px] sm:text-xs border-t border-dashed border-gray-200 mt-1">
+                            <span className="text-gray-600">Net Cash Payment:</span>
+                            <span className="font-bold text-gray-900 tabular-nums">
+                              {formatCurrency(cashBreakdown.netCash)}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  
+                  {selectedTransaction.payment_methods.length > 1 && (
+                    <div className="flex justify-between pt-2 sm:pt-3 mt-2 sm:mt-3 border-t border-gray-200 font-bold">
+                      <span>Total Payments</span>
+                      <span className="text-green-700 tabular-nums">
+                        {formatCurrency(derivedFinancials.totalPaidFromMethods)}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="mt-3 sm:mt-4 pt-2 sm:pt-3 border-t border-gray-200">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 font-semibold">Amount Paid</span>
+                      <span className="font-black text-green-700 tabular-nums">
+                        {formatCurrency(derivedFinancials.netPaid)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between mt-1 sm:mt-2">
+                      <span className="text-gray-600 font-semibold">Balance Due</span>
+                      <span
+                        className={cx(
+                          'font-black text-sm sm:text-base',
+                          derivedFinancials.balanceDue === 0 
+                            ? 'bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent' 
+                            : 'text-amber-700'
+                        )}
+                      >
+                        {derivedFinancials.balanceDue === 0
+                          ? 'PAID IN FULL'
+                          : formatCurrency(derivedFinancials.balanceDue)}
+                      </span>
+                    </div>
+
+                    {changeAmount > 0 && (
+                      <div className="mt-1 sm:mt-2 text-[8px] sm:text-xs text-gray-500 italic">
+                        * Change of {formatCurrency(changeAmount)} returned to Patient.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Attending Staff */}
+              <AttendingStaff selectedTransaction={selectedTransaction} />
+
+              {/* Footer */}
+              <ReceiptFooter />
+            </div>
           </div>
         </div>
       </div>
