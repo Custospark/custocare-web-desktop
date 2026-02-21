@@ -1,6 +1,5 @@
 // components/billing-review/MRBillingReview.tsx
 import React, { useMemo, useState, useCallback, } from 'react';
-import { PaymentStatus } from '../../api/billing-review/BillingReviewTypes';
 import { TransactionList } from './billing-review/components/TransactionList';
 import { ReceiptView } from './billing-review/components/ReceiptView';
 import { EmailModal, RefundModal, VoidModal } from './billing-review/components/Modals';
@@ -9,10 +8,11 @@ import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkelet
 import { AlertCircle, LayoutGrid, Receipt } from 'lucide-react';
 import { motion, } from 'framer-motion';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
+import { BillingCycleStatus } from '../../api/billing-review/BillingReviewTypes';
 
 interface FilterState {
   searchTerm: string;
-  statusFilter: PaymentStatus | 'all';
+  statusFilter: BillingCycleStatus | 'all';
   dateRange: { start: string; end: string };
   sortBy: 'date' | 'amount' | 'patient';
   sortOrder: 'asc' | 'desc';
@@ -105,7 +105,7 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
     }
 
     if (filters.statusFilter !== 'all') {
-      filtered = filtered.filter((t) => t.payment_status === filters.statusFilter);
+      filtered = filtered.filter((t) => t.billing_status === filters.statusFilter);
     }
 
     if (filters.dateRange.start) {

@@ -3,13 +3,13 @@ import React from 'react';
 import { ArrowUpDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  PaymentStatus, 
-  PAYMENT_STATUS_LABELS,
+  BILLING_CYCLE_STATUS_LABELS,
+  BillingCycleStatus,
 }  from '../../../../../api/billing-review/BillingReviewTypes';
 
 interface FilterState {
   searchTerm: string;
-  statusFilter: PaymentStatus | 'all';
+  statusFilter: BillingCycleStatus | 'all';
   dateRange: { start: string; end: string };
   sortBy: 'date' | 'amount' | 'patient';
   sortOrder: 'asc' | 'desc';
@@ -79,7 +79,7 @@ export const TransactionListFilters: React.FC<TransactionListFiltersProps> = ({
             <div className="grid grid-cols-2 gap-2">
               <select
                 value={filters.statusFilter}
-                onChange={(e) => onUpdateFilter('statusFilter', e.target.value as PaymentStatus | 'all')}
+                onChange={(e) => onUpdateFilter('statusFilter', e.target.value as BillingCycleStatus | 'all')}
                 className={cx(
                   'w-full text-xs border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer',
                   colors.border.primary,
@@ -87,9 +87,9 @@ export const TransactionListFilters: React.FC<TransactionListFiltersProps> = ({
                 )}
               >
                 <option value="all">All Statuses</option>
-                {Object.values(PaymentStatus).map((status) => (
+                {Object.values(BillingCycleStatus).map((status) => (
                   <option key={status} value={status}>
-                    {PAYMENT_STATUS_LABELS[status]}
+                    {BILLING_CYCLE_STATUS_LABELS[status]}
                   </option>
                 ))}
               </select>

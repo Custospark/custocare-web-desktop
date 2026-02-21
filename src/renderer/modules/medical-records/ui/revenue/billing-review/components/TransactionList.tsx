@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { AlertCircle, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  PaymentStatus,
+  BillingCycleStatus,
   type BillingReviewItem,
 } from '../../../../api/billing-review/BillingReviewTypes';
 import { TransactionListItem } from './transaction-list/TransactionListItem';
@@ -11,7 +11,7 @@ import { TransactionListHeader } from './transaction-list/TransactionListHeader'
 import { TransactionListFilters } from './transaction-list/TransactionListFilters';
 interface FilterState {
   searchTerm: string;
-  statusFilter: PaymentStatus | 'all';
+  statusFilter: BillingCycleStatus | 'all';
   dateRange: { start: string; end: string };
   sortBy: 'date' | 'amount' | 'patient';
   sortOrder: 'asc' | 'desc';
