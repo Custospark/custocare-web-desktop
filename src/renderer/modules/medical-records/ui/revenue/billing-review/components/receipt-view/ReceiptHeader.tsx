@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Receipt, Printer, Undo2, Ban } from 'lucide-react';
-import { PaymentStatus, PAYMENT_STATUS_LABELS } from '../../../../../api/billing-review/BillingReviewTypes';
+import { BillingCycleStatus, BILLING_CYCLE_STATUS_LABELS } from '../../../../../api/billing-review/BillingReviewTypes';
 
 interface ThemeColors {
   bg: {
@@ -33,7 +33,7 @@ interface ThemeColors {
 
 // Define the DerivedFinancials interface properly
 interface DerivedFinancials {
-  status: PaymentStatus;
+  status: BillingCycleStatus;
   refunded: number;
   netPaid: number;
   balanceDue: number;
@@ -66,30 +66,33 @@ interface ReceiptHeaderProps {
 const cx = (...classes: (string | boolean | undefined)[]) => {
   return classes.filter(Boolean).join(' ');
 };
-const getStatusPillClass = (isDark: boolean, status: PaymentStatus) => {
-  const variants: Partial<Record<PaymentStatus, string>> = {
-    [PaymentStatus.PAID_IN_FULL]: isDark 
+const getStatusPillClass = (isDark: boolean, status: BillingCycleStatus) => {
+  const variants: Partial<Record<BillingCycleStatus, string>> = {
+    [BillingCycleStatus.PAID_IN_FULL]: isDark 
       ? 'bg-green-900/30 text-green-300 border-green-700' 
       : 'bg-green-100 text-green-800 border-green-200',
-    [PaymentStatus.PARTIALLY_PAID]: isDark 
+    [BillingCycleStatus.PENDING_SUBMISSION]: isDark 
       ? 'bg-yellow-900/30 text-yellow-300 border-yellow-700' 
       : 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    [PaymentStatus.PENDING]: isDark 
+    [BillingCycleStatus.PARTIALLY_PAID]: isDark 
       ? 'bg-blue-900/30 text-blue-300 border-blue-700' 
       : 'bg-blue-100 text-blue-800 border-blue-200',
-    [PaymentStatus.NOT_BILLED]: isDark 
+    [BillingCycleStatus.DRAFT]: isDark 
+      ? 'bg-blue-900/30 text-blue-300 border-blue-700' 
+      : 'bg-blue-100 text-blue-800 border-blue-200',
+    [BillingCycleStatus.PAYMENT_PLAN]: isDark 
       ? 'bg-gray-700 text-gray-300 border-gray-600' 
       : 'bg-gray-100 text-gray-800 border-gray-300',
-    [PaymentStatus.INSURANCE_PENDING]: isDark 
+    [BillingCycleStatus.PENDING_REVIEW]: isDark 
       ? 'bg-purple-900/30 text-purple-300 border-purple-700' 
       : 'bg-purple-100 text-purple-800 border-purple-200',
-    [PaymentStatus.DENIED]: isDark 
+    [BillingCycleStatus.WRITTEN_OFF]: isDark 
       ? 'bg-red-900/30 text-red-300 border-red-700' 
       : 'bg-red-100 text-red-800 border-red-200',
-    [PaymentStatus.BAD_DEBT]: isDark 
+    [BillingCycleStatus.DISPUTED]: isDark 
       ? 'bg-red-900/30 text-red-300 border-red-700' 
       : 'bg-red-100 text-red-800 border-red-200',
-    [PaymentStatus.CHARITY_CARE]: isDark 
+    [BillingCycleStatus.CHARITY_CARE]: isDark 
       ? 'bg-indigo-900/30 text-indigo-300 border-indigo-700' 
       : 'bg-indigo-100 text-indigo-800 border-indigo-200',
   };
@@ -171,11 +174,11 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
   }, []);
 
   // Helper function to safely get status label
-  const getStatusLabel = (status: PaymentStatus | undefined): string => {
+  const getStatusLabel = (status: BillingCycleStatus | undefined): string => {
     if (!status) return 'Unknown';
     
     // Check if the status exists in PAYMENT_STATUS_LABELS
-    const label = PAYMENT_STATUS_LABELS[status as PaymentStatus];
+    const label = BILLING_CYCLE_STATUS_LABELS[status as BillingCycleStatus];
     return label || 'Unknown';
   };
 
@@ -259,10 +262,10 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
             animate={{ scale: 1 }}
             className={cx(
               'px-3 py-1.5 rounded-full text-xs font-bold flex-linear-0 cursor-default',
-              getStatusPillClass(isDark, derivedFinancials.status)
+              getStatusPillClass(isDark, selectedTransaction.billing_status)
             )}
           >
-            {getStatusLabel(derivedFinancials.status)}
+            {getStatusLabel(selectedTransaction.billing_status)}
           </motion.span>
         )}
       </div>

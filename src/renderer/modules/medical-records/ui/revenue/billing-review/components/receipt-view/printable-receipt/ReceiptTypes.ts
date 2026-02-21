@@ -117,10 +117,10 @@ export const shouldShowDiscountPercentage = (discountAmount: number, subtotal: n
             return { text: 'PAID', colorClass: 'text-green-600' };
         
         case BillingCycleStatus.WRITTEN_OFF:
-            return { text: 'VOID', colorClass: 'text-gray-600' };
+            return { text: 'VOID', colorClass: 'text-red-600' };
         
         case BillingCycleStatus.PARTIALLY_PAID:
-            return { text: 'PARTIAL', colorClass: 'text-amber-600' };
+            return { text: 'PARTIAL', colorClass: 'text-blue-600' };
         
         case BillingCycleStatus.CHARITY_CARE:
             return { text: 'CHARITY', colorClass: 'text-purple-600' };
@@ -152,9 +152,7 @@ export const shouldShowDiscountPercentage = (discountAmount: number, subtotal: n
     if (paymentStatus) {
         switch (paymentStatus) {
         case PaymentStatus.PAID_IN_FULL:
-             if (changeAmount > 0) {
-                return { text: 'CHANGE GIVEN', colorClass: 'text-blue-600' };
-            }
+            
             return { text: 'PAID', colorClass: 'text-green-600' };
         
         case PaymentStatus.PARTIALLY_PAID:
@@ -185,12 +183,13 @@ export const shouldShowDiscountPercentage = (discountAmount: number, subtotal: n
     }
     
     // ===== PRIORITY 3: Derived calculations as last resort =====
-    if (changeAmount > 0) {
-        return { text: 'CHANGE GIVEN', colorClass: 'text-blue-600' };
-    }
     
     if (balanceDue === 0) {
         return { text: 'PAID', colorClass: 'text-green-600' };
+    }
+
+    if (changeAmount > 0) {
+        return { text: 'CHANGE GIVEN', colorClass: 'text-blue-600' };
     }
     
     if (balanceDue > 0 && balanceDue < grandTotal) {
