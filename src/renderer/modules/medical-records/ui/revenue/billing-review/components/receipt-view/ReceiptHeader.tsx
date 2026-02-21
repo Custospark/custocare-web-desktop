@@ -187,7 +187,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
             <div>
               <h3 className={cx('text-base font-bold', colors.text.primary)}>
                 <span className="bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-                  Receipt Details
+                  Payment Details
                 </span>
               </h3>
               <p className={cx('text-xs mt-0.5', colors.text.secondary)}>

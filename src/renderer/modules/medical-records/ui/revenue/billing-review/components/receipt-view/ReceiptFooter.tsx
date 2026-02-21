@@ -39,7 +39,7 @@ export const ReceiptFooter: React.FC<ReceiptFooterProps> = ({
         <p className={cx('text-xs leading-relaxed', colors.text.secondary)}>
           {selectedTransaction
             ? `Viewing ${selectedTransaction.receipt_number || 'Draft'} • ${selectedTransaction.patient_name} • ${selectedTransaction.patient_number}`
-            : 'Select a transaction to view its receipt details and perform actions'}
+            : 'Select a transaction to view its payment details and perform actions'}
         </p>
       </div>
     </motion.div>

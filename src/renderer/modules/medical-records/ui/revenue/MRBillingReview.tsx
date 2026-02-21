@@ -349,57 +349,57 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
       </div>
 
       {/* Main Grid - Both panels sticky */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 h-[calc(100%-4rem)]">
-        {/* Transaction List - Sticky with internal scrolling */}
-        <motion.div 
-          className={`
-            ${mobileView === 'receipt' ? 'hidden lg:block' : 'block'}
-            lg:block h-full
-          `}
-          layout
-          transition={{ duration: 0.2 }}
-        >
-          <div className="sticky top-0 h-[calc(100vh-10rem)] overflow-hidden rounded-xl">
-            <TransactionList
-              transactions={transactions}
-              filteredTransactions={filteredTransactions}
-              selectedId={selectedId}
-              filters={filters}
-              searchTerm={filters.searchTerm}
-              theme={theme}
-              colors={colors}
-              pillBg={pillBg}
-              onSelectTransaction={handleSelectTransaction}
-              onUpdateFilter={updateFilter}
-              onClearFilters={clearFilters}
-              onRefresh={handleRefresh}
-              isRefreshing={isFetching}
-            />
-          </div>
-        </motion.div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-6 h-[calc(100%-4rem)]">
+     {/* Receipt Preview - scrolls naturally with the page */}
+      <motion.div 
+        className={`
+          ${mobileView === 'list' ? 'hidden md:block' : 'block'}
+          md:block
+        `}
+        layout
+        transition={{ duration: 0.2 }}
+      >
+        <div>
+          <ReceiptView
+            selectedTransaction={selectedTransaction}
+            theme={theme}
+            colors={colors}
+            onPrint={handlePrint}
+            onEmail={handleEmail}
+            onRefund={handleRefund}
+            onVoid={handleVoid}
+          />
+        </div>
+      </motion.div>
 
-        {/* Receipt View - Sticky, never scrolls */}
-        <motion.div 
-          className={`
-            ${mobileView === 'list' ? 'hidden lg:block' : 'block'}
-            lg:block
-          `}
-          layout
-          transition={{ duration: 0.2 }}
-        >
-          <div className="sticky top-0 h-[calc(100vh-10rem)]">
-            <ReceiptView
-              selectedTransaction={selectedTransaction}
-              theme={theme}
-              colors={colors}
-              onPrint={handlePrint}
-              onEmail={handleEmail}
-              onRefund={handleRefund}
-              onVoid={handleVoid}
-            />
-          </div>
-        </motion.div>
-      </div>
+      {/* Transaction List - Now on the right for md screens and above (sticky) */}
+      <motion.div 
+        className={`
+          ${mobileView === 'receipt' ? 'hidden md:block' : 'block'}
+          md:block h-full
+        `}
+        layout
+        transition={{ duration: 0.2 }}
+      >
+        <div className="sticky top-0 h-[calc(100vh-10rem)] overflow-hidden rounded-xl">
+          <TransactionList
+            transactions={transactions}
+            filteredTransactions={filteredTransactions}
+            selectedId={selectedId}
+            filters={filters}
+            searchTerm={filters.searchTerm}
+            theme={theme}
+            colors={colors}
+            pillBg={pillBg}
+            onSelectTransaction={handleSelectTransaction}
+            onUpdateFilter={updateFilter}
+            onClearFilters={clearFilters}
+            onRefresh={handleRefresh}
+            isRefreshing={isFetching}
+          />
+        </div>
+          </motion.div>
+        </div>
 
       {/* Modals */}
       <RefundModal
