@@ -2,8 +2,20 @@
 import React, { useState } from 'react';
 import { X, Ban, AlertTriangle } from 'lucide-react';
 import type { BillingReviewItem } from '../../../../../api/billing-review/BillingReviewTypes';
+import { 
+  VoidReason, 
+  VOID_REASON_LABELS,
+  validateVoidRequest,
+  type VoidTransactionRequest 
+}  from '../../../../../api/refund/RefundTypes';
+import { 
+  useVoidTransaction,
+  extractErrorMessage,
+  formatValidationErrors 
+}  from '../../../../../api/refund/RefundQueries';
 import { ModalBackdrop, ModalContainer, } from './ModalPrimitives';
 import { cx } from '../../utils';
+import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
 
 interface ThemeColors {
   bg: {
@@ -29,9 +41,7 @@ interface VoidModalProps {
   onClose: () => void;
   theme: 'light' | 'dark';
   colors: ThemeColors;
-  isProcessing?: boolean;
   selectedTransaction: BillingReviewItem | null;
-  onSubmit: () => void;
 }
 
 export const VoidModal: React.FC<VoidModalProps> = ({
@@ -40,27 +50,68 @@ export const VoidModal: React.FC<VoidModalProps> = ({
   theme,
   colors,
   onClose,
-  onSubmit,
-  isProcessing = false,
 }) => {
   const isDark = theme === 'dark';
-  const [reason, setReason] = useState('');
+  const [reason, setReason] = useState<VoidReason>(VoidReason.BILLING_ERROR);
+  const [reasonNotes, setReasonNotes] = useState('');
+  const [restoreInventory, setRestoreInventory] = useState(true);
   const [confirmed, setConfirmed] = useState(false);
+  const {showToast}=useToast();
+
+  // Use void transaction mutation
+  const { mutate: voidTransaction, isPending: isProcessing } = useVoidTransaction({
+    onSuccess: (data) => {
+      console.log(data.message);
+      // handleClose();
+    },
+    onError: (error) => {
+      // const errorMessage = extractErrorMessage(error, 'Failed to void transaction');
+      const validationErrors = formatValidationErrors(error.response?.data?.errors);
+      showToast('error',validationErrors,5000);
+      
+  
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isProcessing) {
-      onSubmit();
-      setReason('');
-      setConfirmed(false);
+    
+    if (!selectedTransaction?.billing_cycle_id) {
+      showToast('error',"No billing Selected.",5000)
+      return;
     }
+
+    const requestData: VoidTransactionRequest = {
+      reason,
+      reason_notes: reason === VoidReason.OTHER ? reasonNotes : undefined,
+      restore_inventory: restoreInventory,
+    };
+
+    // Client-side validation
+    const validationError = validateVoidRequest(requestData);
+    if (validationError) {
+      return;
+    }
+
+    // Submit void request
+    voidTransaction({
+      billingCycleId: selectedTransaction.billing_cycle_id,
+      data: requestData,
+    });
   };
 
   const handleClose = () => {
     if (!isProcessing) {
+      setReason(VoidReason.BILLING_ERROR);
+      setReasonNotes('');
+      setRestoreInventory(true);
+      setConfirmed(false);
       onClose();
     }
   };
+
+  const isOtherReason = reason === VoidReason.OTHER;
+  const isSubmitDisabled = !confirmed || isProcessing || (isOtherReason && !reasonNotes.trim());
 
   return (
     <>
@@ -68,7 +119,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
       <ModalContainer open={open}>
         <div
           className={cx(
-            'rounded-xl shadow-2xl border',
+            'rounded-xl shadow-2xl border w-full max-w-lg',
             colors.border.primary,
             colors.bg.elevated,
             isProcessing && 'pointer-events-none opacity-75'
@@ -139,27 +190,81 @@ export const VoidModal: React.FC<VoidModalProps> = ({
               </div>
             )}
 
+            {/* Void Reason */}
             <div>
               <label className={cx('block text-sm font-semibold mb-2', colors.text.primary)}>
-                Void Reason
+                Void Reason <span className="text-red-500">*</span>
               </label>
-              <textarea
+              <select
                 value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="Explain why this transaction is being voided..."
-                rows={3}
-                required
+                onChange={(e) => setReason(e.target.value as VoidReason)}
                 disabled={isProcessing}
                 className={cx(
-                  'w-full px-4 py-2.5 rounded-lg border text-sm resize-none cursor-text',
+                  'w-full px-4 py-2.5 rounded-lg border text-sm cursor-pointer',
                   colors.border.primary,
                   isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
                   colors.ring,
                   isProcessing && 'cursor-not-allowed opacity-50'
                 )}
-              />
+              >
+                {Object.entries(VOID_REASON_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
             </div>
 
+            {/* Additional Notes (required for "other") */}
+            {isOtherReason && (
+              <div>
+                <label className={cx('block text-sm font-semibold mb-2', colors.text.primary)}>
+                  Additional Notes <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={reasonNotes}
+                  onChange={(e) => setReasonNotes(e.target.value)}
+                  placeholder="Please specify the reason for voiding..."
+                  rows={3}
+                  required
+                  disabled={isProcessing}
+                  className={cx(
+                    'w-full px-4 py-2.5 rounded-lg border text-sm resize-none cursor-text',
+                    colors.border.primary,
+                    isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
+                    colors.ring,
+                    isProcessing && 'cursor-not-allowed opacity-50'
+                  )}
+                />
+              </div>
+            )}
+
+            {/* Restore Inventory Checkbox */}
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="restore-inventory"
+                checked={restoreInventory}
+                onChange={(e) => setRestoreInventory(e.target.checked)}
+                disabled={isProcessing}
+                className={cx(
+                  'mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer',
+                  isProcessing && 'cursor-not-allowed opacity-50'
+                )}
+              />
+              <label 
+                htmlFor="restore-inventory" 
+                className={cx(
+                  'text-sm cursor-pointer',
+                  colors.text.secondary,
+                  isProcessing && 'cursor-not-allowed opacity-50'
+                )}
+              >
+                Restore inventory quantities for items in this transaction
+              </label>
+            </div>
+
+            {/* Confirmation Checkbox */}
             <div className="flex items-start gap-3">
               <input
                 type="checkbox"
@@ -202,7 +307,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={!confirmed || isProcessing}
+                disabled={isSubmitDisabled}
                 className={cx(
                   'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition cursor-pointer',
                   'bg-red-600 hover:bg-red-700 text-white',
