@@ -46,7 +46,7 @@ export const ReceiptEmptyState: React.FC<ReceiptEmptyStateProps> = ({
         <Receipt className={cx('w-16 h-16', colors.text.tertiary)} />
       </motion.div>
       <p className={cx('text-sm text-center font-medium', colors.text.primary)}>
-        No Transaction Selected
+       Select payment record to view details here.
       </p>
       <p className={cx('text-xs text-center mt-1', colors.text.secondary)}>
         Select a transaction from the left panel to view the receipt

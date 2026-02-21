@@ -1,13 +1,14 @@
 // components/billing-review/MRBillingReview.tsx
-import React, { useMemo, useState, useCallback, useRef, } from 'react';
+import React, { useMemo, useState, useCallback, } from 'react';
 import { PaymentStatus } from '../../api/billing-review/BillingReviewTypes';
 import { TransactionList } from './billing-review/components/TransactionList';
 import { ReceiptView } from './billing-review/components/ReceiptView';
-import { EmailModal, RefundModal, Toast, VoidModal } from './billing-review/components/Modals';
+import { EmailModal, RefundModal, VoidModal } from './billing-review/components/Modals';
 import { useGetBillingReview } from '../../api/billing-review/BillingReviewQueries';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 import { AlertCircle, LayoutGrid, Receipt } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, } from 'framer-motion';
+import { useToast } from '../../../../app/store/contexts/toast/useToast';
 
 interface FilterState {
   searchTerm: string;
@@ -18,19 +19,14 @@ interface FilterState {
   showAdvancedFilters: boolean;
 }
 
-interface ToastState {
-  message: string;
-  type: 'success' | 'error' | 'info' | 'warning';
-  visible: boolean;
-}
-
 interface MRBillingReviewProps {
   theme?: 'light' | 'dark';
 }
 
 export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light' }) => {
   const isDark = theme === 'dark';
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { showToast } = useToast();
+  
   
   // Backend Integration with refresh capability
   const { 
@@ -69,11 +65,6 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
     showAdvancedFilters: false,
   });
 
-  const [toast, setToast] = useState<ToastState>({
-    message: '',
-    type: 'info',
-    visible: false,
-  });
 
   // Modal states
   const [refundOpen, setRefundOpen] = useState(false);
@@ -143,34 +134,24 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
     return filtered;
   }, [transactions, filters]);
 
-  // Toast management with cleanup
-  const showToastMessage = useCallback((message: string, type: ToastState['type']) => {
-    if (toastTimerRef.current) {
-      clearTimeout(toastTimerRef.current);
-    }
-
-    setToast({ message, type, visible: true });
-    
-    toastTimerRef.current = setTimeout(() => {
-      setToast(prev => ({ ...prev, visible: false }));
-    }, 3000);
-  }, []);
+  
 
   // Refresh handler
-  const handleRefresh = useCallback(async () => {
-    try {
-      await refetch();
-      showToastMessage('Data refreshed successfully', 'success');
-    } catch (error) {
-      console.log(error);
-      showToastMessage('Failed to refresh data', 'error');
-    }
-  }, [refetch, showToastMessage]);
+// Refresh handler
+const handleRefresh = useCallback(async () => {
+  try {
+    await refetch();
+    showToast('success', 'Data refreshed successfully', 5000);
+  } catch (error) {
+    console.log(error);
+    showToast('error', 'Failed to refresh data', 5000);
+  }
+}, [refetch, showToast]); // Add showToast dependency
 
-  // Action handlers
-  const handlePrint = useCallback(() => {
-    showToastMessage('Print Request sent to the printing queue.', 'info');
-  }, [showToastMessage]);
+// Action handlers
+const handlePrint = useCallback(() => {
+  showToast('info', 'Print Request sent to the printing queue...', 5000);
+}, [showToast]); // Add showToast dependency
 
   const handleEmail = useCallback(() => {
     setEmailOpen(true);
@@ -183,21 +164,20 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
   const handleVoid = useCallback(() => {
     setVoidOpen(true);
   }, []);
+const handleEmailSubmit = useCallback(() => {
+  showToast('info', 'Email functionality - backend integration pending', 5000);
+  setEmailOpen(false);
+}, [showToast]); // Add showToast dependency
 
-  const handleEmailSubmit = useCallback(() => {
-    showToastMessage('Email functionality - backend integration pending', 'info');
-    setEmailOpen(false);
-  }, [showToastMessage]);
+const handleRefundSubmit = useCallback(() => {
+  showToast('info', 'Refund functionality - backend integration pending', 5000);
+  setRefundOpen(false);
+}, [showToast]); // Add showToast dependency
 
-  const handleRefundSubmit = useCallback(() => {
-    showToastMessage('Refund functionality - backend integration pending', 'info');
-    setRefundOpen(false);
-  }, [showToastMessage]);
-
-  const handleVoidSubmit = useCallback(() => {
-    showToastMessage('Void functionality - backend integration pending', 'info');
-    setVoidOpen(false);
-  }, [showToastMessage]);
+const handleVoidSubmit = useCallback(() => {
+  showToast('info', 'Void functionality - backend integration pending', 5000);
+  setVoidOpen(false);
+}, [showToast]); // Change from showToastMessage to showToast
 
   // Filter management
   const updateFilter = useCallback(<K extends keyof FilterState>(key: K, value: FilterState[K]) => {
@@ -284,16 +264,6 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
 
   return (
     <div className={`h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6 ${colors.bg.primary}`}>
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {toast.visible && (
-          <Toast 
-            message={toast.message} 
-            type={toast.type} 
-            onClose={() => setToast(prev => ({ ...prev, visible: false }))}
-          />
-        )}
-      </AnimatePresence>
 
       {/* Print Styles */}
       <style>{`
