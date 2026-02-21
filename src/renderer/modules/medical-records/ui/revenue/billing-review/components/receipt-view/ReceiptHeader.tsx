@@ -247,7 +247,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
               </h3>
               <p className={cx('text-xs mt-0.5', colors.text.secondary)}>
                 {selectedTransaction
-                  ? 'Preview, print, email, refund, or void'
+                  ? 'Preview, print, refund, or void'
                   : 'Select a transaction to view receipt'}
               </p>
             </div>
