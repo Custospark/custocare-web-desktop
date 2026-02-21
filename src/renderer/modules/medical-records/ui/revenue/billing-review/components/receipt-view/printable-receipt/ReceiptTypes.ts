@@ -1,6 +1,6 @@
 // ReceiptTypes.ts
 import type {ChargeItem, Tax, PaymentMethod, BillingData } from  '../../../../../../api/billing-review/BillingReviewTypes';
-import { PaymentStatus } from '../../../../../../api/billing-review/BillingReviewTypes';
+import { BillingCycleStatus, PaymentStatus } from '../../../../../../api/billing-review/BillingReviewTypes';
 
 /* -------------------------------------------------------------------------- */
 /*                              CONSTANTS                                     */
@@ -107,25 +107,102 @@ export const shouldShowDiscountPercentage = (discountAmount: number, subtotal: n
   return null;
 };
 
-export const getWatermarkConfig = (derivedFinancials: DerivedFinancials): WatermarkConfig | null => {
-  const { status, balanceDue, grandTotal, changeAmount } = derivedFinancials;
-  const isPaymentFinalized = status === PaymentStatus.PAID_IN_FULL || balanceDue === 0 || changeAmount > 0;
-  if (!isPaymentFinalized) return null;
-
-  if (changeAmount > 0) {
-    return { text: 'CHANGE GIVEN', colorClass: 'text-blue-600' };
-  }
-  if (status === PaymentStatus.PAID_IN_FULL || balanceDue === 0) {
-    return { text: 'PAID', colorClass: 'text-green-600' };
-  }
-  if (balanceDue > 0 && balanceDue < grandTotal) {
-    return { text: 'PARTIAL', colorClass: 'text-amber-600' };
-  }
-  if (balanceDue === grandTotal && grandTotal > 0) {
-    return { text: 'DUE', colorClass: 'text-red-600' };
-  }
-  return null;
-};
+    export const getWatermarkConfig = (derivedFinancials: DerivedFinancials, billingCycleStatus?: BillingCycleStatus, paymentStatus?: PaymentStatus): WatermarkConfig | null => {
+    const { balanceDue, grandTotal, changeAmount } = derivedFinancials;
+    
+    // ===== PRIORITY 1: Use BillingCycleStatus if available =====
+    if (billingCycleStatus) {
+        switch (billingCycleStatus) {
+        case BillingCycleStatus.PAID_IN_FULL:
+            return { text: 'PAID', colorClass: 'text-green-600' };
+        
+        case BillingCycleStatus.WRITTEN_OFF:
+            return { text: 'VOID', colorClass: 'text-gray-600' };
+        
+        case BillingCycleStatus.PARTIALLY_PAID:
+            return { text: 'PARTIAL', colorClass: 'text-amber-600' };
+        
+        case BillingCycleStatus.CHARITY_CARE:
+            return { text: 'CHARITY', colorClass: 'text-purple-600' };
+        
+        case BillingCycleStatus.DISPUTED:
+            return { text: 'DISPUTED', colorClass: 'text-orange-600' };
+        
+        case BillingCycleStatus.COLLECTIONS:
+            return { text: 'COLLECTIONS', colorClass: 'text-red-600' };
+        
+        case BillingCycleStatus.PAYMENT_PLAN:
+            return { text: 'PAYMENT PLAN', colorClass: 'text-blue-600' };
+        
+        case BillingCycleStatus.SUBMITTED_TO_INSURANCE:
+        case BillingCycleStatus.PENDING_SUBMISSION:
+        case BillingCycleStatus.PENDING_REVIEW:
+            return { text: 'INSURANCE', colorClass: 'text-indigo-600' };
+        
+        case BillingCycleStatus.DRAFT:
+            return { text: 'DRAFT', colorClass: 'text-gray-500' };
+        
+        default:
+            // Continue to fallbacks if no match
+            break;
+        }
+    }
+    
+    // ===== PRIORITY 2: Use PaymentStatus as fallback =====
+    if (paymentStatus) {
+        switch (paymentStatus) {
+        case PaymentStatus.PAID_IN_FULL:
+             if (changeAmount > 0) {
+                return { text: 'CHANGE GIVEN', colorClass: 'text-blue-600' };
+            }
+            return { text: 'PAID', colorClass: 'text-green-600' };
+        
+        case PaymentStatus.PARTIALLY_PAID:
+            return { text: 'PARTIAL', colorClass: 'text-amber-600' };
+        
+        case PaymentStatus.PENDING:
+            return { text: 'PENDING', colorClass: 'text-yellow-600' };
+        
+        case PaymentStatus.INSURANCE_PENDING:
+            return { text: 'INSURANCE', colorClass: 'text-indigo-600' };
+        
+        case PaymentStatus.NOT_BILLED:
+            return { text: 'NOT BILLED', colorClass: 'text-gray-500' };
+        
+        case PaymentStatus.DENIED:
+            return { text: 'DENIED', colorClass: 'text-red-600' };
+        
+        case PaymentStatus.BAD_DEBT:
+            return { text: 'BAD DEBT', colorClass: 'text-red-700' };
+        
+        case PaymentStatus.CHARITY_CARE:
+            return { text: 'CHARITY', colorClass: 'text-purple-600' };
+        
+        default:
+            // Continue to derived calculations as last resort
+            break;
+        }
+    }
+    
+    // ===== PRIORITY 3: Derived calculations as last resort =====
+    if (changeAmount > 0) {
+        return { text: 'CHANGE GIVEN', colorClass: 'text-blue-600' };
+    }
+    
+    if (balanceDue === 0) {
+        return { text: 'PAID', colorClass: 'text-green-600' };
+    }
+    
+    if (balanceDue > 0 && balanceDue < grandTotal) {
+        return { text: 'PARTIAL', colorClass: 'text-amber-600' };
+    }
+    
+    if (balanceDue === grandTotal && grandTotal > 0) {
+        return { text: 'DUE', colorClass: 'text-red-600' };
+    }
+    
+    return null;
+    };
 
 export const getWatermarkFontSize = (text: string): string => {
   if (text === 'CHANGE GIVEN') {

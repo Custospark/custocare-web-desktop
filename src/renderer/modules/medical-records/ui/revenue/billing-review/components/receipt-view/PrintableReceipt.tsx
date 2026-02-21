@@ -33,8 +33,11 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
   changeAmount,
   isPrinting,
 }, ref) => {
-  const watermarkConfig = getWatermarkConfig(derivedFinancials);
-
+  const watermarkConfig = getWatermarkConfig(
+    derivedFinancials, 
+    selectedTransaction?.billing_status,  // BillingCycleStatus
+    selectedTransaction?.payment_status    // PaymentStatus (fallback)
+  )
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
