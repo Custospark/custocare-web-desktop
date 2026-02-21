@@ -1,5 +1,4 @@
-// components/billing-review/components/TransactionListItem.tsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Calendar,
   ChevronRight,
@@ -20,6 +19,7 @@ import {
   formatCurrency,
   type BillingReviewItem,
 } from '../../../../../api/billing-review/BillingReviewTypes';
+
 interface ThemeColors {
   bg: {
     primary: string;
@@ -122,6 +122,18 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
   selectedItemRef,
 }) => {
   const isDark = theme === 'dark';
+  const [isLargeScreen, setIsLargeScreen] = useState(false);
+
+  // Check screen size on mount and resize
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsLargeScreen(window.innerWidth >= 768); // md breakpoint
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   return (
     <motion.div
@@ -155,25 +167,24 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
         }
       }}
     >
-      {/* Selected indicator */}
+      {/* Selected indicator - blue bar on the left */}
       {isSelected && (
-        <>
-          <motion.div
-            initial={{ opacity: 0, x: -5 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-500 rounded-r-full"
-          />
-          
-          {isFirst && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="absolute -top-2 right-2 w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg"
-            >
-              <Check className="w-3.5 h-3.5 stroke-3" />
-            </motion.div>
-          )}
-        </>
+        <motion.div
+          initial={{ opacity: 0, x: -5 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-500 rounded-r-full"
+        />
+      )}
+
+      {/* Check icon for first selected - positioned above status */}
+      {isFirst && isSelected && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="absolute -top-2 right-2 w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg"
+        >
+          <Check className="w-3.5 h-3.5 stroke-3" />
+        </motion.div>
       )}
 
       {/* Top row: Receipt and Status */}
@@ -235,13 +246,18 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
               +{t.payment_methods.length - 2}
             </span>
           )}
-          <ChevronRight 
-            className={cx(
-              'w-3.5 h-3.5 ml-1',
-              colors.text.tertiary,
-              isSelected && 'text-blue-500'
-            )} 
-          />
+          
+          {/* Mobile: Chevron for navigation */}
+          {!isLargeScreen && (
+            <ChevronRight 
+              className={cx(
+                'w-3.5 h-3.5 ml-1 transition-transform',
+                colors.text.tertiary,
+                'group-hover:translate-x-0.5',
+                isSelected && 'text-blue-500'
+              )} 
+            />
+          )}
         </div>
       </div>
     </motion.div>

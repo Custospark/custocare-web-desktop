@@ -1,5 +1,4 @@
-// components/billing-review/components/ReceiptHeader.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Receipt, Printer, Mail, Undo2, Ban } from 'lucide-react';
 import { PaymentStatus, PAYMENT_STATUS_LABELS } from '../../../../../api/billing-review/BillingReviewTypes';
@@ -67,9 +66,8 @@ interface ReceiptHeaderProps {
 const cx = (...classes: (string | boolean | undefined)[]) => {
   return classes.filter(Boolean).join(' ');
 };
-
 const getStatusPillClass = (isDark: boolean, status: PaymentStatus) => {
-  const variants = {
+  const variants: Partial<Record<PaymentStatus, string>> = {
     [PaymentStatus.PAID_IN_FULL]: isDark 
       ? 'bg-green-900/30 text-green-300 border-green-700' 
       : 'bg-green-100 text-green-800 border-green-200',
@@ -95,7 +93,10 @@ const getStatusPillClass = (isDark: boolean, status: PaymentStatus) => {
       ? 'bg-indigo-900/30 text-indigo-300 border-indigo-700' 
       : 'bg-indigo-100 text-indigo-800 border-indigo-200',
   };
-  return `${variants[status] || (isDark ? 'bg-gray-700 text-gray-300 border-gray-600' : 'bg-gray-100 text-gray-800 border-gray-300')} border`;
+  
+  // Use type assertion or check if status exists
+  const variantClass = variants[status];
+  return `${variantClass || (isDark ? 'bg-gray-700 text-gray-300 border-gray-600' : 'bg-gray-100 text-gray-800 border-gray-300')} border`;
 };
 
 interface ActionButtonProps {
@@ -157,6 +158,19 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
   onVoid,
   isPrinting,
 }) => {
+  const [isLargeScreen, setIsLargeScreen] = useState(false);
+
+  // Check screen size on mount and resize
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsLargeScreen(window.innerWidth >= 768); // md breakpoint
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
   // Helper function to safely get status label
   const getStatusLabel = (status: PaymentStatus | undefined): string => {
     if (!status) return 'Unknown';
@@ -165,6 +179,47 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
     const label = PAYMENT_STATUS_LABELS[status as PaymentStatus];
     return label || 'Unknown';
   };
+
+    // Button configuration for DRY approach
+    const buttonConfigs = [
+      {
+        onClick: onPrintClick,
+        disabled: !selectedTransaction || isPrinting,
+        icon: <Printer className="w-4 h-4" />,
+        label: isPrinting ? 'Printing…' : 'Print',
+        variant: 'primary' as const,
+        key: 'print'
+      },
+      // {
+      //   onClick: onEmail,
+      //   disabled: !selectedTransaction,
+      //   icon: <Mail className="w-4 h-4" />,
+      //   label: 'Email',
+      //   variant: 'email' as const,
+      //   key: 'email'    //TODO: Implement email in the future.
+      // },
+      {
+        onClick: onRefund,
+        disabled: !selectedTransaction,
+        icon: <Undo2 className="w-4 h-4" />,
+        label: 'Refund',
+        variant: 'warn' as const,
+        key: 'refund'
+      },
+      {
+        onClick: onVoid,
+        disabled: !selectedTransaction,
+        icon: <Ban className="w-4 h-4" />,
+        label: 'Void',
+        variant: 'danger' as const,
+        key: 'void'
+      }
+    ];
+
+  // Order buttons based on screen size
+  const orderedButtons = isLargeScreen 
+    ? [...buttonConfigs].reverse() // Desktop: Void, Refund, Email, Print
+    : buttonConfigs; // Mobile: Print, Email, Refund, Void
 
   return (
     <div
@@ -213,46 +268,22 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
         )}
       </div>
 
-      {/* Actions with animation */}
+      {/* Actions with animation - DRY implementation with responsive ordering */}
       <motion.div 
         layout
         className="mt-4 flex flex-wrap gap-2 no-print"
       >
-        <ActionButton
-          onClick={onPrintClick}
-          disabled={!selectedTransaction || isPrinting}
-          icon={<Printer className="w-4 h-4" />}
-          label={isPrinting ? 'Printing…' : 'Print'}
-          variant="primary"
-          isDark={isDark}
-        />
-
-        <ActionButton
-          onClick={onEmail}
-          disabled={!selectedTransaction}
-          icon={<Mail className="w-4 h-4" />}
-          label="Email"
-          variant="email"
-          isDark={isDark}
-        />
-
-        <ActionButton
-          onClick={onRefund}
-          disabled={!selectedTransaction}
-          icon={<Undo2 className="w-4 h-4" />}
-          label="Refund"
-          variant="warn"
-          isDark={isDark}
-        />
-
-        <ActionButton
-          onClick={onVoid}
-          disabled={!selectedTransaction}
-          icon={<Ban className="w-4 h-4" />}
-          label="Void"
-          variant="danger"
-          isDark={isDark}
-        />
+        {orderedButtons.map((button) => (
+          <ActionButton
+            key={button.key}
+            onClick={button.onClick}
+            disabled={button.disabled}
+            icon={button.icon}
+            label={button.label}
+            variant={button.variant}
+            isDark={isDark}
+          />
+        ))}
       </motion.div>
     </div>
   );
