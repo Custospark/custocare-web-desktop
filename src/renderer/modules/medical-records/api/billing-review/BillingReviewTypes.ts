@@ -52,6 +52,20 @@ export enum ServiceCategory {
   OTHER = 'other',
 }
 
+export enum BillingCycleStatus {
+  DRAFT                  = 'draft',
+  PENDING_REVIEW         = 'pending_review',
+  PENDING_SUBMISSION     = 'pending_submission',
+  SUBMITTED_TO_INSURANCE = 'submitted_to_insurance',
+  PARTIALLY_PAID         = 'partially_paid',
+  PAID_IN_FULL           = 'paid_in_full',
+  PAYMENT_PLAN           = 'payment_plan',
+  COLLECTIONS            = 'collections',
+  DISPUTED               = 'disputed',
+  WRITTEN_OFF            = 'written_off',
+  CHARITY_CARE           = 'charity_care',
+}
+
 /* -------------------------------------------------------------------------- */
 /*                              NESTED TYPES                                  */
 /* -------------------------------------------------------------------------- */
@@ -134,6 +148,7 @@ export interface BillingReviewItem {
   billing_cycle_id: number | null;
   billing_cycle_uuid: string | null;
   receipt_number: string | null;
+  billing_status: BillingCycleStatus;
   
   // Attending Staff Information
   attending_staff_id: number | null;
@@ -343,6 +358,7 @@ export const DEFAULT_CURRENCY = 'UGX';
 // Define a type that excludes ALL
 type PaymentStatusWithoutAll = Exclude<PaymentStatus, typeof PaymentStatus.ALL>;
 
+
 export const PAYMENT_STATUS_COLORS: Record<PaymentStatusWithoutAll, string> = {
   [PaymentStatus.NOT_BILLED]: 'error',
   [PaymentStatus.PENDING]: 'warning',
@@ -352,9 +368,12 @@ export const PAYMENT_STATUS_COLORS: Record<PaymentStatusWithoutAll, string> = {
   [PaymentStatus.DENIED]: 'error',
   [PaymentStatus.BAD_DEBT]: 'error',
   [PaymentStatus.CHARITY_CARE]: 'default',
-  // ALL is not allowed here
 };
 
+// Reuse PAYMENT_STATUS_COLORS for badge variants (they're the same values)
+export const PAYMENT_STATUS_BADGE_VARIANTS = PAYMENT_STATUS_COLORS;
+
+// Note: This payment status align with visits.
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   [PaymentStatus.NOT_BILLED]: 'Not Billed',
   [PaymentStatus.PENDING]: 'Pending',
@@ -364,19 +383,35 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   [PaymentStatus.DENIED]: 'Denied',
   [PaymentStatus.BAD_DEBT]: 'Bad Debt',
   [PaymentStatus.CHARITY_CARE]: 'Charity Care',
-  [PaymentStatus.ALL]: 'All Statuses', // or 'All', 'All Payments', etc.
+  [PaymentStatus.ALL]: 'All Statuses',
 };
 
-export const PAYMENT_STATUS_BADGE_VARIANTS: Record<PaymentStatus, 'error' | 'warning' | 'info' | 'success' | 'secondary' | 'default'> = {
-  [PaymentStatus.NOT_BILLED]: 'error',
-  [PaymentStatus.PENDING]: 'warning',
-  [PaymentStatus.PARTIALLY_PAID]: 'info',
-  [PaymentStatus.PAID_IN_FULL]: 'success',
-  [PaymentStatus.INSURANCE_PENDING]: 'secondary',
-  [PaymentStatus.DENIED]: 'error',
-  [PaymentStatus.BAD_DEBT]: 'error',
-  [PaymentStatus.CHARITY_CARE]: 'default',
-  [PaymentStatus.ALL]: 'default', // or 'info'/'secondary' depending on your design
+export const BILLING_CYCLE_STATUS_LABELS: Record<BillingCycleStatus, string> = {
+  [BillingCycleStatus.DRAFT]: 'Draft',
+  [BillingCycleStatus.PENDING_REVIEW]: 'Pending Review',
+  [BillingCycleStatus.PENDING_SUBMISSION]: 'Pending Submission',
+  [BillingCycleStatus.SUBMITTED_TO_INSURANCE]: 'Submitted to Insurance',
+  [BillingCycleStatus.PARTIALLY_PAID]: 'Partial',
+  [BillingCycleStatus.PAID_IN_FULL]: 'Paid',
+  [BillingCycleStatus.PAYMENT_PLAN]: 'Payment Plan',
+  [BillingCycleStatus.COLLECTIONS]: 'Collections',
+  [BillingCycleStatus.DISPUTED]: 'Disputed',
+  [BillingCycleStatus.WRITTEN_OFF]: 'Void',
+  [BillingCycleStatus.CHARITY_CARE]: 'Charity Care',
+};
+
+export const BILLING_CYCLE_STATUS_COLORS: Record<BillingCycleStatus, string> = {
+  [BillingCycleStatus.PAID_IN_FULL]: 'success',
+  [BillingCycleStatus.PARTIALLY_PAID]: 'info',
+  [BillingCycleStatus.DRAFT]: 'info',
+  [BillingCycleStatus.PENDING_REVIEW]: 'info',
+  [BillingCycleStatus.PENDING_SUBMISSION]: 'info',
+  [BillingCycleStatus.SUBMITTED_TO_INSURANCE]: 'secondary',
+  [BillingCycleStatus.PAYMENT_PLAN]: 'secondary',
+  [BillingCycleStatus.COLLECTIONS]: 'secondary',
+  [BillingCycleStatus.WRITTEN_OFF]: 'error',
+  [BillingCycleStatus.DISPUTED]: 'error',
+  [BillingCycleStatus.CHARITY_CARE]: 'default',
 };
 
 /**

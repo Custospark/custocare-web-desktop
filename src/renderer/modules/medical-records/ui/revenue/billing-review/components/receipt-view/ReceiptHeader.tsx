@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Receipt, Printer, Mail, Undo2, Ban } from 'lucide-react';
+import { Receipt, Printer, Undo2, Ban } from 'lucide-react';
 import { PaymentStatus, PAYMENT_STATUS_LABELS } from '../../../../../api/billing-review/BillingReviewTypes';
 
 interface ThemeColors {
@@ -153,7 +153,6 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
   colors,
   isHeaderSticky,
   onPrintClick,
-  onEmail,
   onRefund,
   onVoid,
   isPrinting,

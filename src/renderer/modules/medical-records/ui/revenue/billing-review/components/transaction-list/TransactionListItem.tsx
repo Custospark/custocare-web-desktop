@@ -13,11 +13,11 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { 
-  PaymentStatus, 
-  PAYMENT_STATUS_LABELS, 
-  PAYMENT_STATUS_BADGE_VARIANTS, 
+  BILLING_CYCLE_STATUS_LABELS,
   formatCurrency,
   type BillingReviewItem,
+  BillingCycleStatus,
+  PaymentMethodType,
 } from '../../../../../api/billing-review/BillingReviewTypes';
 
 interface ThemeColors {
@@ -60,49 +60,69 @@ interface TransactionListItemProps {
   selectedItemRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-const cx = (...classes: (string | boolean | undefined)[]) => {
-  return classes.filter(Boolean).join(' ');
-};
+// Utility function for conditional classes
+const cx = (...classes: (string | boolean | undefined)[]) => 
+  classes.filter(Boolean).join(' ');
 
-const getStatusPillClass = (isDark: boolean, status: PaymentStatus) => {
-  const variant = PAYMENT_STATUS_BADGE_VARIANTS[status] || 'default';
-  const variants = {
+// Status pill styling based on theme and status
+const getStatusPillClass = (isDark: boolean, status: BillingCycleStatus): string => {
+  const colorMap: Record<string, string> = {
     success: isDark 
-      ? 'bg-green-900/30 text-green-300 border-green-700' 
-      : 'bg-green-100 text-green-800 border-green-200',
+      ? 'bg-green-500/20 text-green-300 border-green-500' 
+      : 'bg-green-200 text-green-900 border-green-400',
     warning: isDark 
-      ? 'bg-yellow-900/30 text-yellow-300 border-yellow-700' 
-      : 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500' 
+      : 'bg-yellow-200 text-yellow-900 border-yellow-400',
     error: isDark 
-      ? 'bg-red-900/30 text-red-300 border-red-700' 
-      : 'bg-red-100 text-red-800 border-red-200',
+      ? 'bg-red-500/20 text-red-300 border-red-500' 
+      : 'bg-red-200 text-red-900 border-red-400',
     info: isDark 
-      ? 'bg-blue-900/30 text-blue-300 border-blue-700' 
-      : 'bg-blue-100 text-blue-800 border-blue-200',
+      ? 'bg-blue-500/20 text-blue-300 border-blue-500' 
+      : 'bg-blue-200 text-blue-900 border-blue-400',
     secondary: isDark 
-      ? 'bg-gray-700 text-gray-300 border-gray-600' 
-      : 'bg-gray-100 text-gray-800 border-gray-300',
+      ? 'bg-gray-600 text-gray-200 border-gray-500' 
+      : 'bg-gray-300 text-gray-900 border-gray-500',
     default: isDark 
-      ? 'bg-gray-700 text-gray-300 border-gray-600' 
-      : 'bg-gray-100 text-gray-800 border-gray-300',
+      ? 'bg-gray-600 text-gray-200 border-gray-500' 
+      : 'bg-gray-300 text-gray-900 border-gray-500',
   };
-  return `${variants[variant] || variants.default} border`;
+
+  // Map billing status to color variant
+  const statusColorMap: Partial<Record<BillingCycleStatus, string>> = {
+    [BillingCycleStatus.PAID_IN_FULL]: 'success',
+    [BillingCycleStatus.PARTIALLY_PAID]: 'info',
+    [BillingCycleStatus.DRAFT]: 'info',
+    [BillingCycleStatus.PENDING_REVIEW]: 'info',
+    [BillingCycleStatus.PENDING_SUBMISSION]: 'info',
+    [BillingCycleStatus.SUBMITTED_TO_INSURANCE]: 'secondary',
+    [BillingCycleStatus.PAYMENT_PLAN]: 'secondary',
+    [BillingCycleStatus.COLLECTIONS]: 'secondary',
+    [BillingCycleStatus.WRITTEN_OFF]: 'error',
+    [BillingCycleStatus.DISPUTED]: 'error',
+    [BillingCycleStatus.CHARITY_CARE]: 'default',
+  };
+
+  const variant = statusColorMap[status] || 'default';
+  return `${colorMap[variant]} border`;
 };
 
+// Payment icon component
 const PaymentIcon: React.FC<{ type: string; className?: string }> = ({ type, className = 'w-4 h-4' }) => {
   const icons: Record<string, React.FC<any>> = {
-    cash: Banknote,
-    card: CreditCard,
-    insurance: Building2,
-    mobile: Smartphone,
-    bank_transfer: Building2,
-    cheque: FileText,
+    [PaymentMethodType.CASH]: Banknote,
+    [PaymentMethodType.CARD]: CreditCard,
+    [PaymentMethodType.INSURANCE]: Building2,
+    [PaymentMethodType.MOBILE]: Smartphone,
+    [PaymentMethodType.BANK_TRANSFER]: Building2,
+    [PaymentMethodType.CHEQUE]: FileText,
   };
+  
   const IconComponent = icons[type] || Banknote;
   return <IconComponent className={className} />;
 };
 
-const formatDisplayDate = (dateString: string) => {
+// Date formatter
+const formatDisplayDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -198,10 +218,10 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
         <span
           className={cx(
             'px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap',
-            getStatusPillClass(isDark, t.payment_status)
+            getStatusPillClass(isDark, t.billing_status)
           )}
         >
-          {PAYMENT_STATUS_LABELS[t.payment_status]}
+          {BILLING_CYCLE_STATUS_LABELS[t.billing_status]}
         </span>
       </div>
 
@@ -228,7 +248,7 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
         </span>
 
         <div className="flex items-center gap-1">
-          {t.payment_methods.slice(0, 2).map((pm, idx: number) => (
+          {t.payment_methods.slice(0, 2).map((pm, idx) => (
             <motion.div
               key={`${uniqueKey}-pm-${idx}`}
               whileHover={{ scale: 1.1 }}
