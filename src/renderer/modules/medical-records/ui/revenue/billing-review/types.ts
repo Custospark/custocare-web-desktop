@@ -1,6 +1,7 @@
 // types.ts
 // All TypeScript interfaces and types for the billing system
 
+
 export interface MockPatient {
   id: number;
   name: string;

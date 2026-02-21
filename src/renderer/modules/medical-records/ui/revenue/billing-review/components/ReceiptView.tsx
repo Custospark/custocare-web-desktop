@@ -2,9 +2,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useReactToPrint } from 'react-to-print';
-import { useSelector } from 'react-redux';
-import type { RootState } from '../../../../../../app/store/rootReducer';
-import { getActiveFacilityName } from '../../../../../../app/store/utils/contextSelectors';
 import { 
   PaymentStatus, 
   type BillingReviewItem,
@@ -101,8 +98,6 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
   const [isHeaderSticky, setIsHeaderSticky] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Get facility info from Redux context selectors
-  const facilityName = useSelector((state: RootState) => getActiveFacilityName(state));
 
   // Sticky header effect
   useEffect(() => {

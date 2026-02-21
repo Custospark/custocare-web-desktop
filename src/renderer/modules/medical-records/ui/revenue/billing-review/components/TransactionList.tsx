@@ -6,7 +6,6 @@ import {
   Calendar,
   ChevronRight,
   FileText,
-  Filter,
   Search,
   SlidersHorizontal,
   CreditCard,

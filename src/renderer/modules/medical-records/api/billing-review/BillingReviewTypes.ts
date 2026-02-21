@@ -24,6 +24,7 @@ export enum PaymentStatus {
   DENIED = 'denied',
   BAD_DEBT = 'bad_debt',
   CHARITY_CARE = 'charity_care',
+  ALL='all',
 }
 
 export enum DiscountType {
@@ -339,7 +340,10 @@ export const DEFAULT_PAGE_SIZE = 15;
 export const MAX_PAGE_SIZE = 100;
 export const DEFAULT_CURRENCY = 'UGX';
 
-export const PAYMENT_STATUS_COLORS: Record<PaymentStatus, string> = {
+// Define a type that excludes ALL
+type PaymentStatusWithoutAll = Exclude<PaymentStatus, typeof PaymentStatus.ALL>;
+
+export const PAYMENT_STATUS_COLORS: Record<PaymentStatusWithoutAll, string> = {
   [PaymentStatus.NOT_BILLED]: 'error',
   [PaymentStatus.PENDING]: 'warning',
   [PaymentStatus.PARTIALLY_PAID]: 'info',
@@ -348,6 +352,7 @@ export const PAYMENT_STATUS_COLORS: Record<PaymentStatus, string> = {
   [PaymentStatus.DENIED]: 'error',
   [PaymentStatus.BAD_DEBT]: 'error',
   [PaymentStatus.CHARITY_CARE]: 'default',
+  // ALL is not allowed here
 };
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
@@ -359,6 +364,7 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   [PaymentStatus.DENIED]: 'Denied',
   [PaymentStatus.BAD_DEBT]: 'Bad Debt',
   [PaymentStatus.CHARITY_CARE]: 'Charity Care',
+  [PaymentStatus.ALL]: 'All Statuses', // or 'All', 'All Payments', etc.
 };
 
 export const PAYMENT_STATUS_BADGE_VARIANTS: Record<PaymentStatus, 'error' | 'warning' | 'info' | 'success' | 'secondary' | 'default'> = {
@@ -370,6 +376,7 @@ export const PAYMENT_STATUS_BADGE_VARIANTS: Record<PaymentStatus, 'error' | 'war
   [PaymentStatus.DENIED]: 'error',
   [PaymentStatus.BAD_DEBT]: 'error',
   [PaymentStatus.CHARITY_CARE]: 'default',
+  [PaymentStatus.ALL]: 'default', // or 'info'/'secondary' depending on your design
 };
 
 /**
