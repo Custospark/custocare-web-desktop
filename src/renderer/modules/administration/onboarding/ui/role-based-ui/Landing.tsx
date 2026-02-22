@@ -878,123 +878,141 @@ const AccessPanel: React.FC<AccessPanelProps> = ({
 
         {/* Access Options */}
         <div className="space-y-4" role="group" aria-label="Account access options">
-          {/* Create Account - Primary CTA */}
-          <motion.button
-            onClick={() => handleAction('signup')}
-            disabled={isLoading !== null}
-            onMouseEnter={() => setHoveredOption('signup')}
-            onMouseLeave={() => setHoveredOption(null)}
-            onFocus={() => setHoveredOption('signup')}
-            onBlur={() => setHoveredOption(null)}
-            whileHover={{ scale: 1.02, y: -3 }}
-            whileTap={{ scale: 0.98 }}
-            className={cn(
-              "w-full flex items-center justify-between cursor-pointer p-6 sm:p-7 rounded-2xl transition-all duration-300 group relative overflow-hidden disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-4",
-              "shadow-xl hover:shadow-2xl",
-              theme === 'dark'
-                ? "bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 focus:ring-blue-500/50"
-                : "bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 focus:ring-blue-400/50"
-            )}
-            aria-label="Create new account - Register as patient, medical professional, or health facility"
-          >
-            {/* Animated shimmer effect */}
-            <motion.div
-              className="absolute inset-0 opacity-0 cursor-pointer group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-              style={{
-                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)',
-              }}
-              animate={hoveredOption === 'signup' ? { x: ['-100%', '200%'] } : {}}
-              transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-              aria-hidden="true"
-            />
-            
-            <div className="flex items-center gap-4 relative z-10">
-              <motion.div 
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.7 }}
-                className="w-16 h-16 rounded-xl bg-white/25 backdrop-blur-sm flex items-center justify-center shrink-0 shadow-lg"
-                aria-hidden="true"
-              >
-                <UserCheck className="w-8 h-8 text-white drop-shadow-sm" />
-              </motion.div>
-              <div className="text-left">
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mb-1 tracking-tight">
-                  Begin Your Journey
-                </h3>
-                <p className="text-sm text-white/95 leading-snug font-medium">
-                  Register as Patient, Medical Professional or Health Facility
-                </p>
-              </div>
-            </div>
-            <motion.div
-              animate={hoveredOption === 'signup' ? { x: 6 } : { x: 0 }}
-              transition={{ type: "spring", stiffness: 350, damping: 25 }}
-              aria-hidden="true"
-            >
-              <ArrowRight className="w-7 h-7 text-white shrink-0 drop-shadow-sm" />
-            </motion.div>
-          </motion.button>
+        {/* Create Account - Primary CTA */}
+{/* Create Account - Primary CTA */}
+<motion.button
+  onClick={() => handleAction('signup')}
+  disabled={isLoading !== null}
+  onMouseEnter={() => setHoveredOption('signup')}
+  onMouseLeave={() => setHoveredOption(null)}
+  onFocus={() => setHoveredOption('signup')}
+  onBlur={() => setHoveredOption(null)}
+  whileHover={{ scale: 1.02, y: -3 }}
+  whileTap={{ scale: 0.98 }}
+  className={cn(
+    "w-full flex items-center justify-between cursor-pointer rounded-xl sm:rounded-2xl transition-all duration-300 group relative overflow-hidden disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-4",
+    "shadow-xl hover:shadow-2xl",
+    // Responsive padding - smaller on desktop
+    "p-3 sm:p-4 md:p-5 lg:p-6",
+    theme === 'dark'
+      ? "bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 focus:ring-blue-500/50"
+      : "bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 focus:ring-blue-400/50"
+  )}
+  aria-label="Create new account - Register as patient, medical professional, or health facility"
+>
+  {/* Animated shimmer effect */}
+  <motion.div
+    className="absolute inset-0 opacity-0 cursor-pointer group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+    style={{
+      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)',
+    }}
+    animate={hoveredOption === 'signup' ? { x: ['-100%', '200%'] } : {}}
+    transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+    aria-hidden="true"
+  />
+  
+  <div className="flex items-center gap-2 sm:gap-3 relative z-10">
+    <motion.div 
+      whileHover={{ rotate: 360 }}
+      transition={{ duration: 0.7 }}
+      // Responsive icon container - smaller on desktop
+      className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-lg sm:rounded-xl bg-white/25 backdrop-blur-sm flex items-center justify-center shrink-0 shadow-lg"
+      aria-hidden="true"
+    >
+      <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-white drop-shadow-sm" />
+    </motion.div>
+    <div className="text-left">
+      <h3 className="text-sm sm:text-base md:text-lg lg:text-xl font-extrabold text-white mb-0.5 tracking-tight">
+        Begin Your Journey
+      </h3>
+      <p className="text-xs sm:text-sm text-white/95 leading-snug font-medium hidden lg:block">
+        Register as Patient, Medical Professional or Health Facility
+      </p>
+      {/* Mobile-friendly short text */}
+      <p className="text-xs sm:text-sm text-white/95 leading-snug font-medium lg:hidden">
+        Create Account
+      </p>
+    </div>
+  </div>
+  <motion.div
+    animate={hoveredOption === 'signup' ? { x: 6 } : { x: 0 }}
+    transition={{ type: "spring", stiffness: 350, damping: 25 }}
+    aria-hidden="true"
+  >
+    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white shrink-0 drop-shadow-sm" />
+  </motion.div>
+</motion.button>
 
-          {/* Access Existing Account - Secondary */}
-          <motion.button
-            onClick={() => handleAction('login')}
-            disabled={isLoading !== null}
-            onMouseEnter={() => setHoveredOption('login')}
-            onMouseLeave={() => setHoveredOption(null)}
-            onFocus={() => setHoveredOption('login')}
-            onBlur={() => setHoveredOption(null)}
-            whileHover={{ scale: 1.02, y: -3 }}
-            whileTap={{ scale: 0.98 }}
-            className={cn(
-              "w-full flex items-center justify-between cursor-pointer p-6 sm:p-7 rounded-2xl border-2 transition-all duration-300 group disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-4",
-              "hover:shadow-2xl",
-              theme === 'dark'
-                ? "bg-slate-800/60 border-slate-700 hover:bg-slate-800 hover:border-blue-500/60 focus:ring-blue-500/50"
-                : "bg-white/60 border-slate-300 hover:bg-white hover:border-blue-500/60 focus:ring-blue-400/50"
-            )}
-            aria-label="Access existing account - Continue to your dashboard"
-          >
-            <div className="flex items-center gap-4">
-              <motion.div 
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.7 }}
-                className={cn(
-                  "w-16 h-16 rounded-xl flex items-center justify-center shrink-0 shadow-lg",
-                  theme === 'dark' ? "bg-blue-500/25" : "bg-blue-100"
-                )}
-                aria-hidden="true"
-              >
-                <Shield className={cn(
-                  "w-8 h-8 drop-shadow-sm",
-                  theme === 'dark' ? "text-blue-400" : "text-blue-600"
-                )} />
-              </motion.div>
-              <div className="text-left">
-                <h3 className={cn(
-                  "text-lg sm:text-xl font-extrabold mb-1 tracking-tight",
-                  theme === 'dark' ? "text-white" : "text-slate-900"
-                )}>
-                  Access Your Account
-                </h3>
-                <p className={cn(
-                  "text-sm leading-snug font-medium",
-                  theme === 'dark' ? "text-slate-400" : "text-slate-600"
-                )}>
-                  Continue to your dashboard
-                </p>
-              </div>
-            </div>
-            <motion.div
-              animate={hoveredOption === 'login' ? { x: 6 } : { x: 0 }}
-              transition={{ type: "spring", stiffness: 350, damping: 25 }}
-              aria-hidden="true"
-            >
-              <ChevronRight className={cn(
-                "w-7 h-7 shrink-0",
-                theme === 'dark' ? "text-slate-400" : "text-slate-500"
-              )} />
-            </motion.div>
-          </motion.button>
+{/* Access Existing Account - Secondary */}
+<motion.button
+  onClick={() => handleAction('login')}
+  disabled={isLoading !== null}
+  onMouseEnter={() => setHoveredOption('login')}
+  onMouseLeave={() => setHoveredOption(null)}
+  onFocus={() => setHoveredOption('login')}
+  onBlur={() => setHoveredOption(null)}
+  whileHover={{ scale: 1.02, y: -3 }}
+  whileTap={{ scale: 0.98 }}
+  className={cn(
+    "w-full flex items-center justify-between cursor-pointer rounded-xl sm:rounded-2xl border-2 transition-all duration-300 group disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-4",
+    "hover:shadow-2xl",
+    // Responsive padding - smaller on desktop
+    "p-3 sm:p-4 md:p-5 lg:p-6",
+    theme === 'dark'
+      ? "bg-slate-800/60 border-slate-700 hover:bg-slate-800 hover:border-blue-500/60 focus:ring-blue-500/50"
+      : "bg-white/60 border-slate-300 hover:bg-white hover:border-blue-500/60 focus:ring-blue-400/50"
+  )}
+  aria-label="Access existing account - Continue to your dashboard"
+>
+  <div className="flex items-center gap-2 sm:gap-3">
+    <motion.div 
+      whileHover={{ rotate: 360 }}
+      transition={{ duration: 0.7 }}
+      // Responsive icon container - smaller on desktop
+      className={cn(
+        "w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 shadow-lg",
+        theme === 'dark' ? "bg-blue-500/25" : "bg-blue-100"
+      )}
+      aria-hidden="true"
+    >
+      <Shield className={cn(
+        "w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 drop-shadow-sm",
+        theme === 'dark' ? "text-blue-400" : "text-blue-600"
+      )} />
+    </motion.div>
+    <div className="text-left">
+      <h3 className={cn(
+        "text-sm sm:text-base md:text-lg lg:text-xl font-extrabold mb-0.5 tracking-tight",
+        theme === 'dark' ? "text-white" : "text-slate-900"
+      )}>
+        Access Your Account
+      </h3>
+      <p className={cn(
+        "text-xs sm:text-sm leading-snug font-medium hidden md:block",
+        theme === 'dark' ? "text-slate-400" : "text-slate-600"
+      )}>
+        Continue to your dashboard
+      </p>
+      {/* Mobile-friendly short text */}
+      <p className={cn(
+        "text-xs sm:text-sm leading-snug font-medium md:hidden",
+        theme === 'dark' ? "text-slate-400" : "text-slate-600"
+      )}>
+        Sign In
+      </p>
+    </div>
+  </div>
+  <motion.div
+    animate={hoveredOption === 'login' ? { x: 6 } : { x: 0 }}
+    transition={{ type: "spring", stiffness: 350, damping: 25 }}
+    aria-hidden="true"
+  >
+    <ChevronRight className={cn(
+      "w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 shrink-0",
+      theme === 'dark' ? "text-slate-400" : "text-slate-500"
+    )} />
+  </motion.div>
+</motion.button>
         </div>
 
         {/* Security Assurance */}
