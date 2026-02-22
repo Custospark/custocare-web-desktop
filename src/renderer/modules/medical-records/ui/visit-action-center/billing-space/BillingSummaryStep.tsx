@@ -29,7 +29,6 @@ import {
   DEFAULT_DISCOUNT,
   DEFAULT_PAYMENT_METHODS,
   DEFAULT_TAXES,
-  formatCurrency,
 } from './billing-types';
 import {
   selectActiveVisitId,
@@ -39,7 +38,8 @@ import {
 import { useFinalizeBilling } from '../../../api/billable-items/BillableItemsQueries';
 import { useGetFacilityIdentity } from '../../../api/facility/FacilityQueries';
 import type { BillingSubmissionPayload } from '../../../api/billable-items/BillingItemsTypes';
-import { PaymentStatus, DiscountType, type Tax, type PaymentMethod, type ChargeItem } from '../../../api/billing-review/BillingReviewTypes';
+import { PaymentStatus, DiscountType, type Tax, type PaymentMethod } from '../../../api/billing-review/BillingReviewTypes';
+import { ChargeItem } from './billing-types';
 
 // Import the modular components
 import { BillingControlsSection } from './billing-summary/BillingControlsSection';

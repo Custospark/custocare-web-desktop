@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Receipt, Printer, Undo2, Ban } from 'lucide-react';
-import { BillingCycleStatus, BILLING_CYCLE_STATUS_LABELS } from '../../../../../api/billing-review/BillingReviewTypes';
+import { BillingCycleStatus, BILLING_CYCLE_STATUS_LABELS, PaymentStatus } from '../../../../../api/billing-review/BillingReviewTypes';
 
 interface ThemeColors {
   bg: {
@@ -30,10 +30,11 @@ interface ThemeColors {
     text: string;
   };
 }
+type ReceiptStatus = BillingCycleStatus | PaymentStatus;
 
 // Define the DerivedFinancials interface properly
 interface DerivedFinancials {
-  status: BillingCycleStatus;
+  status: ReceiptStatus;
   refunded: number;
   netPaid: number;
   balanceDue: number;

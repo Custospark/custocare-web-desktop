@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { X, Undo2, AlertTriangle, Percent, Coins } from 'lucide-react';
 import type { BillingReviewItem } from '../../../../../api/billing-review/BillingReviewTypes';
-import type { 
+import { 
   RefundReason, 
   RefundMethodType,
   RefundableLineItem 
@@ -57,14 +57,20 @@ export const RefundModal: React.FC<RefundModalProps> = ({
 }) => {
   const isDark = theme === 'dark';
   const { showToast } = useToast();
+  
+  // Ref to track if component is initializing
+  const isInitializing = useRef(false);
+  const prevTransactionId = useRef<string | null>(null);
+  
+  // Form state
   const [refundType, setRefundType] = useState<'full' | 'partial'>('full');
   const [reason, setReason] = useState<RefundReason | ''>('');
   const [reasonNotes, setReasonNotes] = useState('');
   const [restoreInventory, setRestoreInventory] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [eligibilityWarning, setEligibilityWarning] = useState<string | null>(null);
+  const [refundPercentage, setRefundPercentage] = useState<number>(100);
   
-  // Refund methods state - auto-initialized with original payment methods
+  // Refund methods state
   const [refundMethods, setRefundMethods] = useState<Array<{
     type: RefundMethodType | '';
     amount: number;
@@ -72,94 +78,272 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     originalAmount?: number;
   }>>([]);
 
-  // Line items for partial refund with quantity support
+  // Line items for partial refund
   const [lineItems, setLineItems] = useState<RefundableLineItem[]>([]);
 
-  // Smart percentage for quick partial refunds
-  const [refundPercentage, setRefundPercentage] = useState<number>(100);
+  // Memoized eligibility check
+  const eligibilityWarning = useMemo(() => {
+    if (!selectedTransaction) return null;
+    
+    const eligibility = isRefundable({
+      billing_status: selectedTransaction.billing_status,
+      patient_payment_received: selectedTransaction.billing_data.totalPaid,
+      insurance_payment_received: 0,
+    });
+    
+    return eligibility.eligible ? null : (eligibility.message || null);
+  }, [selectedTransaction]);
 
-  // Check eligibility when transaction loads
+  // Memoized initial line items generation
+  const generateInitialLineItems = useCallback((
+    transaction: BillingReviewItem | null,
+    type: 'full' | 'partial'
+  ): RefundableLineItem[] => {
+    if (!transaction) return [];
+    
+    return transaction.charge_items.map((item, index) => ({
+      id: parseInt(item.id.replace('charge::', '')) || index,
+      line_item_uuid: item.id.replace('charge::', ''),
+      service_code: item.service.code,
+      service_name: item.service.name,
+      // quantity: item.quantity,
+      unit_price: item.service.unitPrice,
+      line_total: item.totalAmount,
+      net_amount: item.totalAmount,
+      max_refundable_amount: item.totalAmount,
+      is_selected: type === 'full',
+      refund_amount: type === 'full' ? item.totalAmount : 0,
+      quantity: type === 'full' ? item.quantity : 0,
+      original_quantity: item.quantity,
+      max_refundable_quantity: item.quantity,
+    }));
+  }, []);
+
+  // Memoized initial payment methods generation
+  const generateInitialPaymentMethods = useCallback((
+    transaction: BillingReviewItem | null
+  ) => {
+    if (!transaction || !transaction.payment_methods?.length) {
+      return [{ type: RefundMethodType.CASH, amount: 0, reference: '', originalAmount: 0 }];
+    }
+    
+    return transaction.payment_methods.map(pm => ({
+      type: pm.type as RefundMethodType,
+      amount: pm.amount,
+      reference: pm.reference || '',
+      originalAmount: pm.amount,
+    }));
+  }, []);
+
+  // Calculate total refund amount (memoized)
+  const totalRefund = useMemo(() => {
+    if (refundType === 'full' && selectedTransaction) {
+      return selectedTransaction.billing_data.totalPaid;
+    }
+    return lineItems
+      .filter(item => item.is_selected)
+      .reduce((sum, item) => sum + (item.refund_amount || 0), 0);
+  }, [refundType, lineItems, selectedTransaction]);
+
+  // Calculate selected items count (memoized)
+  const selectedItemsCount = useMemo(() => {
+    return lineItems.filter(i => i.is_selected).length;
+  }, [lineItems]);
+
+  // Auto-distribute refund amount across payment methods (memoized function)
+  const distributeRefundAmount = useCallback((
+    methods: typeof refundMethods,
+    total: number
+  ) => {
+    if (methods.length === 0) return methods;
+
+    const originalTotal = methods.reduce((sum, m) => sum + (m.originalAmount || 0), 0);
+    if (originalTotal === 0) return methods;
+
+    const updated = methods.map(method => ({
+      ...method,
+      amount: Math.min(
+        method.originalAmount || 0,
+        Math.round((total * ((method.originalAmount || 0) / originalTotal)) / 100) * 100
+      ),
+    }));
+
+    // Adjust for rounding errors
+    const distributedTotal = updated.reduce((sum, m) => sum + m.amount, 0);
+    const difference = total - distributedTotal;
+    
+    if (Math.abs(difference) > 0.01 && updated.length > 0) {
+      const largestIndex = updated.reduce((maxIdx, curr, idx, arr) => 
+        curr.amount > arr[maxIdx].amount ? idx : maxIdx, 0);
+      updated[largestIndex] = {
+        ...updated[largestIndex],
+        amount: Math.max(0, updated[largestIndex].amount + difference)
+      };
+    }
+
+    return updated;
+  }, []);
+
+  // Apply percentage to line items (memoized function)
+  const applyPercentageToLineItems = useCallback((
+    items: RefundableLineItem[],
+    percentage: number
+  ): RefundableLineItem[] => {
+    const ratio = percentage / 100;
+    return items.map(item => ({
+      ...item,
+      is_selected: percentage > 0,
+      refund_amount: item.max_refundable_amount * ratio,
+      quantity: Math.max(1, Math.floor(item.original_quantity * ratio)),
+    }));
+  }, []);
+
+  // Initialize/reset form when modal opens or transaction changes
   useEffect(() => {
-    if (selectedTransaction) {
-      const eligibility = isRefundable({
-        billing_status: selectedTransaction.billing_status,
-        patient_payment_received: selectedTransaction.billing_data.totalPaid,
-        insurance_payment_received: 0,
-      });
+    if (!open) return;
+
+    const transactionId = selectedTransaction?.billing_cycle_id?.toString() || null;
+    const isNewTransaction = transactionId !== prevTransactionId.current;
+    
+    if (isNewTransaction) {
+      isInitializing.current = true;
+      prevTransactionId.current = transactionId;
       
-      if (!eligibility.eligible) {
-        setEligibilityWarning(eligibility.message || null);
-      } else {
-        setEligibilityWarning(null);
-      }
-    }
-  }, [selectedTransaction]);
-
-  // Initialize payment methods from transaction
-  useEffect(() => {
-    if (selectedTransaction && selectedTransaction.payment_methods?.length > 0) {
-      // Auto-populate refund methods from original payment methods
-      const methods = selectedTransaction.payment_methods.map(pm => ({
-        type: pm.method as RefundMethodType,
-        amount: pm.amount,
-        reference: pm.reference || '',
-        originalAmount: pm.amount,
-      }));
-      setRefundMethods(methods);
-    } else {
-      // Default to empty cash method if no payment methods
-      setRefundMethods([{ type: 'cash', amount: 0, reference: '' }]);
-    }
-  }, [selectedTransaction]);
-
-  // Initialize line items with quantity support
-  useEffect(() => {
-    if (selectedTransaction) {
-      const items: RefundableLineItem[] = selectedTransaction.charge_items.map((item, index) => ({
-        id: parseInt(item.id.replace('charge::', '')) || index,
-        line_item_uuid: item.id.replace('charge::', ''),
-        service_code: item.service.code,
-        service_name: item.service.name,
-        quantity: item.quantity,
-        unit_price: item.service.unitPrice,
-        line_total: item.totalAmount,
-        net_amount: item.totalAmount,
-        max_refundable_amount: item.totalAmount,
-        is_selected: refundType === 'full' ? true : false,
-        refund_amount: item.totalAmount,
-        refund_quantity: item.quantity, // Track quantity to refund
-        original_quantity: item.quantity,
-        max_refundable_quantity: item.quantity,
-      }));
-      setLineItems(items);
-    }
-  }, [selectedTransaction, refundType]);
-
-  // Auto-calculate refund amounts when percentage changes
-  useEffect(() => {
-    if (refundType === 'partial' && lineItems.length > 0) {
-      const percentage = refundPercentage / 100;
-      const updated = lineItems.map(item => ({
-        ...item,
-        is_selected: percentage > 0,
-        refund_amount: item.max_refundable_amount * percentage,
-        refund_quantity: Math.max(1, Math.floor(item.original_quantity * percentage)),
-      }));
-      setLineItems(updated);
-    }
-  }, [refundPercentage, refundType]);
-
-  // Reset form when modal opens
-  useEffect(() => {
-    if (open) {
+      // Reset all form state
       setReason('');
       setReasonNotes('');
       setRestoreInventory(true);
       setValidationError(null);
-      setEligibilityWarning(null);
+      setRefundPercentage(100);
+      setRefundType('full');
+      
+      // Initialize line items
+      const initialLineItems = generateInitialLineItems(selectedTransaction, 'full');
+      setLineItems(initialLineItems);
+      
+      // Initialize payment methods
+      const initialPaymentMethods = generateInitialPaymentMethods(selectedTransaction);
+      setRefundMethods(initialPaymentMethods);
+      
+      isInitializing.current = false;
+    }
+  }, [open, selectedTransaction, generateInitialLineItems, generateInitialPaymentMethods]);
+
+  // Update line items when refund type changes (independent effect)
+  useEffect(() => {
+    if (isInitializing.current || !selectedTransaction) return;
+    
+    setLineItems(prev => 
+      prev.map(item => ({
+        ...item,
+        is_selected: refundType === 'full',
+        refund_amount: refundType === 'full' ? item.max_refundable_amount : 0,
+        quantity: refundType === 'full' ? item.original_quantity : 0,
+      }))
+    );
+    
+    if (refundType === 'full') {
       setRefundPercentage(100);
     }
-  }, [open]);
+  }, [refundType, selectedTransaction]);
+
+  // Update refund methods when total refund changes
+  useEffect(() => {
+    if (isInitializing.current || refundMethods.length === 0) return;
+    
+    const updatedMethods = distributeRefundAmount(refundMethods, totalRefund);
+    
+    // Only update if amounts actually changed
+    const hasChanged = updatedMethods.some((method, index) => 
+      method.amount !== refundMethods[index].amount
+    );
+    
+    if (hasChanged) {
+      setRefundMethods(updatedMethods);
+    }
+  }, [totalRefund]); 
+
+  // Handlers with useCallback to prevent recreating functions
+  const handlePercentageChange = useCallback((percentage: number) => {
+    if (refundType !== 'partial') return;
+    
+    setRefundPercentage(percentage);
+    setLineItems(prev => applyPercentageToLineItems(prev, percentage));
+  }, [refundType, applyPercentageToLineItems]);
+
+  const handleSelectAll = useCallback(() => {
+    setLineItems(prev => prev.map(item => ({
+      ...item,
+      is_selected: true,
+      refund_amount: item.max_refundable_amount,
+      quantity: item.original_quantity,
+    })));
+    setRefundPercentage(100);
+  }, []);
+
+  const handleClearAll = useCallback(() => {
+    setLineItems(prev => prev.map(item => ({
+      ...item,
+      is_selected: false,
+      refund_amount: 0,
+      quantity: 0,
+    })));
+    setRefundPercentage(0);
+  }, []);
+
+  const toggleLineItem = useCallback((index: number) => {
+    setLineItems(prev => {
+      const updated = [...prev];
+      const item = updated[index];
+      const newSelected = !item.is_selected;
+      
+      updated[index] = {
+        ...item,
+        is_selected: newSelected,
+        refund_amount: newSelected ? item.max_refundable_amount : 0,
+        quantity: newSelected ? item.original_quantity : 0,
+      };
+      
+      // Calculate new percentage
+      const selectedCount = updated.filter(i => i.is_selected).length;
+      const newPercentage = selectedCount === updated.length ? 100 : 
+                           selectedCount === 0 ? 0 : 
+                           Math.round((selectedCount / updated.length) * 100);
+      setRefundPercentage(newPercentage);
+      
+      return updated;
+    });
+  }, []);
+
+  const updateLineItemQuantity = useCallback((index: number, quantity: number) => {
+    setLineItems(prev => {
+      const updated = [...prev];
+      const item = updated[index];
+      const maxQuantity = item.original_quantity;
+      const newQuantity = Math.min(Math.max(0, quantity), maxQuantity);
+      
+      updated[index] = {
+        ...item,
+        quantity: newQuantity,
+        refund_amount: newQuantity * item.unit_price,
+        is_selected: newQuantity > 0,
+      };
+      
+      return updated;
+    });
+  }, []);
+
+  const updateRefundMethod = useCallback((
+    index: number, 
+    field: 'type' | 'amount' | 'reference', 
+    value: string | number
+  ) => {
+    setRefundMethods(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  }, []);
 
   const billingCycleId = selectedTransaction?.billing_cycle_id;
 
@@ -185,52 +369,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     }
   );
 
-  const calculateTotalRefund = (): number => {
-    if (refundType === 'full') {
-      return selectedTransaction?.billing_data.totalPaid || 0;
-    }
-    return lineItems
-      .filter(item => item.is_selected)
-      .reduce((sum, item) => sum + (item.refund_amount || 0), 0);
-  };
-
-  // Auto-distribute refund amount across payment methods
-  const distributeRefundAmount = (totalRefund: number) => {
-    if (refundMethods.length === 0) return;
-
-    const originalTotal = refundMethods.reduce((sum, m) => sum + (m.originalAmount || 0), 0);
-    if (originalTotal === 0) return;
-
-    const updated = refundMethods.map(method => ({
-      ...method,
-      amount: Math.min(
-        method.originalAmount || 0,
-        Math.round((totalRefund * ((method.originalAmount || 0) / originalTotal)) / 100) * 100
-      ),
-    }));
-
-    // Adjust for rounding errors
-    const distributedTotal = updated.reduce((sum, m) => sum + m.amount, 0);
-    const difference = totalRefund - distributedTotal;
-    
-    if (Math.abs(difference) > 0.01 && updated.length > 0) {
-      // Add difference to the largest payment method
-      const largestIndex = updated.reduce((maxIdx, curr, idx, arr) => 
-        curr.amount > arr[maxIdx].amount ? idx : maxIdx, 0);
-      updated[largestIndex].amount = Math.max(0, updated[largestIndex].amount + difference);
-    }
-
-    setRefundMethods(updated);
-  };
-
-  // Update methods when total refund changes
-  useEffect(() => {
-    if (refundMethods.length > 0) {
-      distributeRefundAmount(calculateTotalRefund());
-    }
-  }, [lineItems, refundType, refundPercentage]);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(null);
 
@@ -249,7 +388,6 @@ export const RefundModal: React.FC<RefundModalProps> = ({
       return;
     }
 
-    const totalRefund = calculateTotalRefund();
     if (totalRefund <= 0) {
       showToast('error', 'Refund amount must be greater than 0', 3000);
       return;
@@ -282,7 +420,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
         .map(item => ({
           line_item_id: item.id,
           refund_amount: item.refund_amount,
-          refund_quantity: item.refund_quantity, // Include quantity for partial quantity refunds
+          quantity: item.quantity,
         }));
 
       if (selectedLineItems.length === 0) {
@@ -298,79 +436,28 @@ export const RefundModal: React.FC<RefundModalProps> = ({
         restore_inventory: restoreInventory,
       });
     }
-  };
+  }, [
+    billingCycleId,
+    reason,
+    reasonNotes,
+    totalRefund,
+    refundMethods,
+    refundType,
+    lineItems,
+    restoreInventory,
+    refundTransaction,
+    showToast
+  ]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (!isProcessing) {
       onClose();
     }
-  };
-
-  // Quick action: Refund all items
-  const handleSelectAll = () => {
-    const updated = lineItems.map(item => ({
-      ...item,
-      is_selected: true,
-      refund_amount: item.max_refundable_amount,
-      refund_quantity: item.original_quantity,
-    }));
-    setLineItems(updated);
-    setRefundPercentage(100);
-  };
-
-  // Quick action: Clear all selections
-  const handleClearAll = () => {
-    const updated = lineItems.map(item => ({
-      ...item,
-      is_selected: false,
-      refund_amount: 0,
-      refund_quantity: 0,
-    }));
-    setLineItems(updated);
-    setRefundPercentage(0);
-  };
-
-  // Toggle individual item with quantity support
-  const toggleLineItem = (index: number) => {
-    const updated = [...lineItems];
-    updated[index].is_selected = !updated[index].is_selected;
-    
-    if (updated[index].is_selected) {
-      updated[index].refund_amount = updated[index].max_refundable_amount;
-      updated[index].refund_quantity = updated[index].original_quantity;
-    } else {
-      updated[index].refund_amount = 0;
-      updated[index].refund_quantity = 0;
-    }
-    
-    setLineItems(updated);
-    
-    // Update percentage based on selection
-    const selectedCount = updated.filter(i => i.is_selected).length;
-    setRefundPercentage(selectedCount === updated.length ? 100 : 
-                       selectedCount === 0 ? 0 : Math.round((selectedCount / updated.length) * 100));
-  };
-
- 
-
-  // Update refund quantity and auto-adjust amount
-  const updateLineItemQuantity = (index: number, quantity: number) => {
-    const updated = [...lineItems];
-    const maxQuantity = updated[index].original_quantity;
-    const newQuantity = Math.min(Math.max(0, quantity), maxQuantity);
-    
-    updated[index].refund_quantity = newQuantity;
-    updated[index].refund_amount = newQuantity * updated[index].unit_price;
-    updated[index].is_selected = newQuantity > 0;
-    
-    setLineItems(updated);
-  };
+  }, [isProcessing, onClose]);
 
   if (!selectedTransaction) return null;
 
   const requiresNotes = reason === 'other';
-  const totalRefund = calculateTotalRefund();
-  const selectedItemsCount = lineItems.filter(i => i.is_selected).length;
 
   return (
     <>
@@ -588,7 +675,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
                       <button
                         key={preset}
                         type="button"
-                        onClick={() => setRefundPercentage(preset)}
+                        onClick={() => handlePercentageChange(preset)}
                         disabled={isProcessing}
                         className={cx(
                           'px-3 py-1 text-xs rounded transition',
@@ -660,7 +747,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
                       <div className="col-span-2">
                         <input
                           type="number"
-                          value={item.refund_quantity || 0}
+                          value={item.quantity || 0}
                           onChange={(e) => updateLineItemQuantity(index, parseInt(e.target.value) || 0)}
                           disabled={!item.is_selected || isProcessing}
                           min={0}
@@ -698,11 +785,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
                   <div key={index} className="flex gap-2 items-center">
                     <select
                       value={method.type}
-                      onChange={(e) => {
-                        const updated = [...refundMethods];
-                        updated[index].type = e.target.value as RefundMethodType;
-                        setRefundMethods(updated);
-                      }}
+                      onChange={(e) => updateRefundMethod(index, 'type', e.target.value)}
                       required
                       disabled={isProcessing}
                       className={cx(
@@ -722,11 +805,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
                       <input
                         type="number"
                         value={method.amount}
-                        onChange={(e) => {
-                          const updated = [...refundMethods];
-                          updated[index].amount = parseFloat(e.target.value) || 0;
-                          setRefundMethods(updated);
-                        }}
+                        onChange={(e) => updateRefundMethod(index, 'amount', parseFloat(e.target.value) || 0)}
                         placeholder="Amount"
                         required
                         min={0}
@@ -743,11 +822,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
                     <input
                       type="text"
                       value={method.reference}
-                      onChange={(e) => {
-                        const updated = [...refundMethods];
-                        updated[index].reference = e.target.value;
-                        setRefundMethods(updated);
-                      }}
+                      onChange={(e) => updateRefundMethod(index, 'reference', e.target.value)}
                       placeholder="Reference (opt)"
                       disabled={isProcessing}
                       className={cx(
@@ -786,7 +861,11 @@ export const RefundModal: React.FC<RefundModalProps> = ({
             )}
 
             {/* Actions */}
-            <div className="flex gap-3 pt-4 sticky bottom-0 bg-inherit border-t" style={{ marginTop: '1rem' }}>
+            <div className={cx(
+              'flex gap-3 pt-4 sticky bottom-0 border-t',
+              colors.border.primary,
+              colors.bg.elevated
+            )}>
               <button
                 type="button"
                 onClick={handleClose}

@@ -20,6 +20,8 @@ import type {
   VoidResponse,
   BaseRefundResponse,
   ValidationErrorResponse,
+  FullRefundResponseData,
+  PartialRefundResponseData,
 } from './RefundTypes';
 import { type RootState } from '../../../../app/store/store';
 import { getStaffId, getActiveFacilityId } from '../../../../app/store/utils/contextSelectors';
@@ -69,11 +71,13 @@ export const refundKeys = {
  */
 export const useVoidTransaction = (
   billingCycleId: number,
-  options?: UseMutationOptions<
+  options?: Omit<UseMutationOptions<
     VoidResponse,
     AxiosError<ValidationErrorResponse>,
     VoidRequest
-  >
+  >, 'onSuccess'> & {
+    onSuccess?: (data: VoidResponse, variables: VoidRequest, context: unknown) => void;
+  }
 ) => {
   const queryClient = useQueryClient();
   const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
@@ -100,7 +104,7 @@ export const useVoidTransaction = (
       );
       return response.data;
     },
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables, _onMutateResult, context) => {
       // Invalidate relevant queries
       if (facilityId) {
         queryClient.invalidateQueries({ 
@@ -111,7 +115,7 @@ export const useVoidTransaction = (
         });
       }
       
-      // Call user's onSuccess if provided
+      // Call user's onSuccess if provided - we ignore the onMutateResult parameter
       options?.onSuccess?.(data, variables, context);
     },
     ...options,
@@ -146,11 +150,13 @@ export const useVoidTransaction = (
  */
 export const useRefundTransaction = (
   billingCycleId: number,
-  options?: UseMutationOptions<
+  options?: Omit<UseMutationOptions<
     BaseRefundResponse,
     AxiosError<ValidationErrorResponse>,
     RefundRequest
-  >
+  >, 'onSuccess'> & {
+    onSuccess?: (data: BaseRefundResponse, variables: RefundRequest, context: unknown) => void;
+  }
 ) => {
   const queryClient = useQueryClient();
   const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
@@ -177,7 +183,7 @@ export const useRefundTransaction = (
       );
       return response.data;
     },
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables, _onMutateResult, context) => {
       // Invalidate relevant queries
       if (facilityId) {
         queryClient.invalidateQueries({ 
@@ -188,7 +194,7 @@ export const useRefundTransaction = (
         });
       }
       
-      // Call user's onSuccess if provided
+      // Call user's onSuccess if provided - ignore the onMutateResult parameter
       options?.onSuccess?.(data, variables, context);
     },
     ...options,
@@ -235,15 +241,15 @@ export const formatRefundValidationErrors = (errors?: Record<string, string[]>):
 /**
  * Check if a refund response indicates a full refund
  */
-export function isFullRefundResponse(response: BaseRefundResponse): boolean {
-  return response.data?.refund_type === 'full_refund';
+export function isFullRefundResponse(response: FullRefundResponseData): boolean {
+  return response.refund_type === 'full_refund';
 }
 
 /**
  * Check if a refund response indicates a partial refund
  */
-export function isPartialRefundResponse(response: BaseRefundResponse): boolean {
-  return response.data?.refund_type === 'partial_refund';
+export function isPartialRefundResponse(response: PartialRefundResponseData): boolean {
+  return response.refund_type === 'partial_refund';
 }
 
 /* -------------------------------------------------------------------------- */
