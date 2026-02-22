@@ -170,14 +170,18 @@ const handleEmailSubmit = useCallback(() => {
 }, [showToast]); // Add showToast dependency
 
 const handleRefundSubmit = useCallback(() => {
-  showToast('info', 'Refund functionality - backend integration pending', 5000);
-  setRefundOpen(false);
-}, [showToast]); // Add showToast dependency
+  // Modal now handles backend integration internally
+  // This callback is called after successful refund
+  showToast('success', 'Refund processed successfully', 5000);
+  handleRefresh(); // Refresh the list
+}, [showToast, handleRefresh]);
 
 const handleVoidSubmit = useCallback(() => {
-  showToast('info', 'Void functionality - backend integration pending', 5000);
-  setVoidOpen(false);
-}, [showToast]); // Change from showToastMessage to showToast
+  // Modal now handles backend integration internally
+  // This callback is called after successful void
+  showToast('success', 'Transaction voided successfully', 5000);
+  handleRefresh(); // Refresh the list
+}, [showToast, handleRefresh]);
 
   // Filter management
   const updateFilter = useCallback(<K extends keyof FilterState>(key: K, value: FilterState[K]) => {
