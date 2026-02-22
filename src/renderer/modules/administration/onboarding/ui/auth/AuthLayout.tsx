@@ -119,14 +119,6 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <Link to="/" className="inline-flex items-center gap-3 group w-fit">
-             
-                <LogoImage></LogoImage>
-              <div>
-                <h1 className="text-base sm:text-lg font-bold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">Custocare AI</h1>
-                <p className="text-xs text-cyan-100/90 font-medium">Continuous Care. Operational Excellence.</p>
-              </div>
-            </Link>
           </motion.div>
 
           {/* Hero Message */}
@@ -208,6 +200,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
                 >
                   Custocare AI
                 </span>
+
               </div>
 
           {/* Action Buttons */}
