@@ -20,6 +20,8 @@ import {
   sumProcessedRefundAmount,
   isoNow,
 } from './utils';
+import { RefundableLineItem } from '../../../api/refund/RefundTypes';
+import { BillingReviewItem } from './components/Modals';
 
 // ==================== TOAST HOOK ====================
 
@@ -361,6 +363,77 @@ export const useRefundForm = (
     submitRefund,
   };
 };
+
+
+// utils/refundCalculations.ts
+
+export interface RefundCalculationResult {
+  refundItemsSubtotal: number;
+  refundProportionalDiscount: number;
+  refundTaxableAmount: number;
+  refundTaxAmount: number;
+  totalRefundAmount: number;
+  breakdown: {
+    itemsTotal: number;
+    discountAllocated: number;
+    taxesAllocated: number;
+  };
+}
+
+export function calculatePartialRefundAmount(
+  selectedItems: RefundableLineItem[],
+  originalTransaction: BillingReviewItem
+): RefundCalculationResult {
+  const billingData = originalTransaction.billing_data;
+  
+  // Step 1: Calculate refund items' raw subtotal
+  const refundItemsSubtotal = selectedItems.reduce((sum, item) => 
+    sum + (item.quantity * item.unit_price), 0
+  );
+  
+  // Step 2: Calculate proportional discount
+  const originalSubtotal = billingData.subtotal;
+  const originalDiscountAmount = billingData.discountAmount || 0;
+  
+  // Proportional discount allocation
+  const discountRate = originalSubtotal > 0 
+    ? originalDiscountAmount / originalSubtotal 
+    : 0;
+  const refundProportionalDiscount = refundItemsSubtotal * discountRate;
+  
+  // Step 3: Calculate taxable amount for refund
+  const refundTaxableAmount = refundItemsSubtotal - refundProportionalDiscount;
+  
+  // Step 4: Calculate proportional tax
+  const refundTaxAmount = (billingData.taxes || []).reduce((sum, tax) => {
+    const taxRate = tax.rate / 100;
+    return sum + (refundTaxableAmount * taxRate);
+  }, 0);
+  
+  // Step 5: Final refund amount
+  const totalRefundAmount = refundTaxableAmount + refundTaxAmount;
+  
+  return {
+    refundItemsSubtotal,
+    refundProportionalDiscount,
+    refundTaxableAmount,
+    refundTaxAmount,
+    totalRefundAmount,
+    breakdown: {
+      itemsTotal: refundItemsSubtotal,
+      discountAllocated: refundProportionalDiscount,
+      taxesAllocated: refundTaxAmount,
+    }
+  };
+}
+
+export function calculateFullRefundAmount(
+  originalTransaction: BillingReviewItem
+): number {
+  // Full refund = exactly what customer paid
+  return originalTransaction.billing_data.grandTotal;
+}
+
 
 // ==================== EMAIL FORM HOOK ====================
 
