@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Receipt, Printer, Undo2, Ban } from 'lucide-react';
 import { BillingCycleStatus, BILLING_CYCLE_STATUS_LABELS } from '../../../../../api/billing-review/BillingReviewTypes';
@@ -66,6 +66,7 @@ interface ReceiptHeaderProps {
 const cx = (...classes: (string | boolean | undefined)[]) => {
   return classes.filter(Boolean).join(' ');
 };
+
 const getStatusPillClass = (isDark: boolean, status: BillingCycleStatus) => {
   const variants: Partial<Record<BillingCycleStatus, string>> = {
     [BillingCycleStatus.PAID_IN_FULL]: isDark 
@@ -109,6 +110,7 @@ interface ActionButtonProps {
   label: string;
   variant?: 'primary' | 'secondary' | 'email' | 'warn' | 'danger';
   isDark: boolean;
+  show?: boolean; // Add show prop for conditional rendering
 }
 
 const ActionButton: React.FC<ActionButtonProps> = ({
@@ -118,7 +120,11 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   label,
   variant = 'primary',
   isDark,
+  show = true, // Default to true
 }) => {
+  // Don't render if show is false
+  if (!show) return null;
+  
   const base = 'inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer';
   
   const styles = variant === 'primary'
@@ -182,46 +188,125 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
     return label || 'Unknown';
   };
 
-    // Button configuration for DRY approach
-    const buttonConfigs = [
-      {
-        onClick: onPrintClick,
-        disabled: !selectedTransaction || isPrinting,
-        icon: <Printer className="w-4 h-4" />,
-        label: isPrinting ? 'Printing…' : 'Print',
-        variant: 'primary' as const,
-        key: 'print'
-      },
-      // {
-      //   onClick: onEmail,
-      //   disabled: !selectedTransaction,
-      //   icon: <Mail className="w-4 h-4" />,
-      //   label: 'Email',
-      //   variant: 'email' as const,
-      //   key: 'email'    //TODO: Implement email in the future.
-      // },
-      {
-        onClick: onRefund,
-        disabled: !selectedTransaction,
-        icon: <Undo2 className="w-4 h-4" />,
-        label: 'Refund',
-        variant: 'warn' as const,
-        key: 'refund'
-      },
-      {
-        onClick: onVoid,
-        disabled: !selectedTransaction,
-        icon: <Ban className="w-4 h-4" />,
-        label: 'Void',
-        variant: 'danger' as const,
-        key: 'void'
-      }
-    ];
+  // Smart button visibility based on billing status
+  const buttonVisibility = useMemo(() => {
+    if (!selectedTransaction || !derivedFinancials) {
+      return {
+        showPrint: true,
+        showRefund: false,
+        showVoid: false,
+      };
+    }
+
+    const status = selectedTransaction.billing_status;
+    const hasPayment = derivedFinancials.totalPaidFromMethods > 0;
+
+    // Define visibility rules for each status
+    switch (status) {
+      case BillingCycleStatus.PAID_IN_FULL:
+        return {
+          showPrint: true,
+          showRefund: true,  // Can refund paid transactions
+          showVoid: false,   // Cannot void paid transactions (should refund instead)
+        };
+      
+      case BillingCycleStatus.PARTIALLY_PAID:
+        return {
+          showPrint: true,
+          showRefund: true,  // Can refund partial payments
+          showVoid: false,   // Cannot void partially paid
+        };
+      
+      case BillingCycleStatus.PENDING_SUBMISSION:
+      case BillingCycleStatus.DRAFT:
+        return {
+          showPrint: true,
+          showRefund: false, // No payments to refund
+          showVoid: true,    // Can void draft/pending transactions
+        };
+      
+      case BillingCycleStatus.WRITTEN_OFF:
+      case BillingCycleStatus.DISPUTED:
+        return {
+          showPrint: true,
+          showRefund: false, // Cannot refund written off/disputed
+          showVoid: false,   // Cannot void written off/disputed
+        };
+      
+      case BillingCycleStatus.CHARITY_CARE:
+        return {
+          showPrint: true,
+          showRefund: false, // Charity care - no refunds
+          showVoid: false,   // Cannot void charity care
+        };
+      
+      case BillingCycleStatus.PAYMENT_PLAN:
+        return {
+          showPrint: true,
+          showRefund: hasPayment, // Only show refund if payments exist
+          showVoid: false,        // Cannot void payment plans
+        };
+      
+      case BillingCycleStatus.PENDING_REVIEW:
+        return {
+          showPrint: true,
+          showRefund: false, // Under review - no actions
+          showVoid: false,
+        };
+      
+      default:
+        return {
+          showPrint: true,
+          showRefund: hasPayment,
+          showVoid: status === BillingCycleStatus.DRAFT || status === BillingCycleStatus.PENDING_SUBMISSION,
+        };
+    }
+  }, [selectedTransaction, derivedFinancials]);
+
+  // Button configuration with smart visibility
+  const buttonConfigs = useMemo(() => [
+    {
+      onClick: onPrintClick,
+      disabled: !selectedTransaction || isPrinting,
+      icon: <Printer className="w-4 h-4" />,
+      label: isPrinting ? 'Printing…' : 'Print',
+      variant: 'primary' as const,
+      key: 'print',
+      show: buttonVisibility.showPrint
+    },
+    // {
+    //   onClick: onEmail,
+    //   disabled: !selectedTransaction,
+    //   icon: <Mail className="w-4 h-4" />,
+    //   label: 'Email',
+    //   variant: 'email' as const,
+    //   key: 'email',
+    //   show: true // Email always shown but disabled TODO: Implement email in the future.
+    // },
+    {
+      onClick: onRefund,
+      disabled: !selectedTransaction,
+      icon: <Undo2 className="w-4 h-4" />,
+      label: 'Refund',
+      variant: 'warn' as const,
+      key: 'refund',
+      show: buttonVisibility.showRefund
+    },
+    {
+      onClick: onVoid,
+      disabled: !selectedTransaction,
+      icon: <Ban className="w-4 h-4" />,
+      label: 'Void',
+      variant: 'danger' as const,
+      key: 'void',
+      show: buttonVisibility.showVoid
+    }
+  ].filter(config => config.show), [selectedTransaction, isPrinting, onPrintClick, onRefund, onVoid, buttonVisibility]);
 
   // Order buttons based on screen size
   const orderedButtons = isLargeScreen 
-    ? [...buttonConfigs].reverse() // Desktop: Void, Refund, Email, Print
-    : buttonConfigs; // Mobile: Print, Email, Refund, Void
+    ? [...buttonConfigs].reverse() // Desktop: Void, Refund, Print (if they exist)
+    : buttonConfigs; // Mobile: Print, Refund, Void (if they exist)
 
   return (
     <div
@@ -249,7 +334,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
               </h3>
               <p className={cx('text-xs mt-0.5', colors.text.secondary)}>
                 {selectedTransaction
-                  ? 'Preview, print, refund, or void'
+                  ? getActionHint(selectedTransaction.billing_status, buttonVisibility)
                   : 'Select a transaction to view receipt'}
               </p>
             </div>
@@ -270,7 +355,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
         )}
       </div>
 
-      {/* Actions with animation - DRY implementation with responsive ordering */}
+      {/* Actions with animation - Only shows relevant buttons */}
       <motion.div 
         layout
         className="mt-4 flex flex-wrap gap-2 no-print"
@@ -284,9 +369,24 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
             label={button.label}
             variant={button.variant}
             isDark={isDark}
+            show={button.show}
           />
         ))}
       </motion.div>
     </div>
   );
+};
+
+// Helper function to provide contextual hints
+const getActionHint = (status: BillingCycleStatus, visibility: any): string => {
+  if (visibility.showRefund && visibility.showVoid) {
+    return 'Print, refund, or void this transaction';
+  }
+  if (visibility.showRefund) {
+    return 'Print or refund this transaction';
+  }
+  if (visibility.showVoid) {
+    return 'Print or void this transaction';
+  }
+  return 'View transaction details';
 };

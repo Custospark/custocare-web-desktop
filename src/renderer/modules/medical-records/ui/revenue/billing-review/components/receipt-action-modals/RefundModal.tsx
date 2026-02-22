@@ -15,7 +15,7 @@ import {
 import { useRefundTransaction } from '../../../../../api/refund/RefundQueries';
 import { ModalBackdrop, ModalContainer } from './ModalPrimitives';
 import { cx } from '../../utils';
-
+import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
 interface ThemeColors {
   bg: {
     primary: string;
@@ -53,6 +53,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
   onSuccess,
 }) => {
   const isDark = theme === 'dark';
+  const { showToast } = useToast();
   const [refundType, setRefundType] = useState<'full' | 'partial'>('full');
   const [reason, setReason] = useState<RefundReason | ''>('');
   const [reasonNotes, setReasonNotes] = useState('');
@@ -85,7 +86,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
         setEligibilityWarning(null);
       }
     }
-  }, [selectedTransaction]);
+  }, [selectedTransaction, showToast]);
 
   // Initialize line items when transaction changes and partial refund is selected
   useEffect(() => {
@@ -129,16 +130,19 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     {
       onSuccess: (response) => {
         if (response.success) {
+          showToast('success', 'Refund processed successfully', 3000);
           onClose();
-          onSuccess?.();
-          console.log('Refund successful:', response.data);
+          onSuccess?.(); // Trigger refresh in parent
         } else {
-          setValidationError(response.message || 'Failed to process refund');
+          const errorMsg = response.message || 'Failed to process refund';
+          setValidationError(errorMsg);
+          showToast('error', errorMsg, 5000);
         }
       },
-      onError: (error) => {
-        const errorMessage = error.response?.data?.message || error.message;
-        setValidationError(errorMessage || 'An error occurred while processing refund');
+      onError: (error: any) => {
+        const errorMessage = error.response?.data?.message || error.message || 'An error occurred while processing refund';
+        setValidationError(errorMessage);
+        showToast('error', errorMessage, 5000);
       },
     }
   );
@@ -162,7 +166,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     }
     
     if (Math.abs(methodsTotal - totalRefund) > 0.01) {
-      setValidationError(`Refund method total (${methodsTotal}) must equal refund amount (${totalRefund})`);
+      setValidationError(`Refund method total (${methodsTotal.toLocaleString()}) must equal refund amount (${totalRefund.toLocaleString()})`);
       return false;
     }
     
@@ -174,24 +178,32 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     setValidationError(null);
 
     if (!billingCycleId) {
-      setValidationError('No transaction selected');
+      const errorMsg = 'No transaction selected';
+      setValidationError(errorMsg);
+      showToast('error', errorMsg, 3000);
       return;
     }
 
     if (!reason) {
-      setValidationError('Please select a refund reason');
+      const errorMsg = 'Please select a refund reason';
+      setValidationError(errorMsg);
+      showToast('error', errorMsg, 3000);
       return;
     }
 
     if (reason === 'other' && !reasonNotes.trim()) {
-      setValidationError('Please provide notes for "Other" reason');
+      const errorMsg = 'Please provide notes for "Other" reason';
+      setValidationError(errorMsg);
+      showToast('error', errorMsg, 3000);
       return;
     }
 
     // Validate at least one refund method with amount > 0
     const hasValidMethod = refundMethods.some(m => m.type && m.amount > 0);
     if (!hasValidMethod) {
-      setValidationError('Please add at least one refund method with amount > 0');
+      const errorMsg = 'Please add at least one refund method with amount > 0';
+      setValidationError(errorMsg);
+      showToast('error', errorMsg, 3000);
       return;
     }
 
@@ -226,7 +238,9 @@ export const RefundModal: React.FC<RefundModalProps> = ({
         }));
 
       if (selectedLineItems.length === 0) {
-        setValidationError('Please select at least one line item to refund');
+        const errorMsg = 'Please select at least one line item to refund';
+        setValidationError(errorMsg);
+        showToast('error', errorMsg, 3000);
         return;
       }
 
@@ -248,11 +262,13 @@ export const RefundModal: React.FC<RefundModalProps> = ({
 
   const addRefundMethod = () => {
     setRefundMethods([...refundMethods, { type: '', amount: 0, reference: '' }]);
+    showToast('info', 'New refund method added', 2000);
   };
 
   const removeRefundMethod = (index: number) => {
     if (refundMethods.length > 1) {
       setRefundMethods(refundMethods.filter((_, i) => i !== index));
+      showToast('info', 'Refund method removed', 2000);
     }
   };
 
@@ -553,8 +569,9 @@ export const RefundModal: React.FC<RefundModalProps> = ({
                   onClick={addRefundMethod}
                   disabled={isProcessing}
                   className={cx(
-                    'flex items-center gap-1 px-2 py-1 text-xs rounded',
-                    isDark ? 'hover:bg-gray-700 text-amber-400' : 'hover:bg-gray-100 text-amber-600'
+                    'flex items-center gap-1 px-2 py-1 text-xs rounded transition',
+                    isDark ? 'hover:bg-gray-700 text-amber-400' : 'hover:bg-gray-100 text-amber-600',
+                    isProcessing && 'opacity-50 cursor-not-allowed'
                   )}
                 >
                   <Plus className="w-3 h-3" />
@@ -621,8 +638,9 @@ export const RefundModal: React.FC<RefundModalProps> = ({
                         onClick={() => removeRefundMethod(index)}
                         disabled={isProcessing}
                         className={cx(
-                          'p-2 rounded-lg',
-                          isDark ? 'hover:bg-gray-700 text-red-400' : 'hover:bg-gray-100 text-red-600'
+                          'p-2 rounded-lg transition',
+                          isDark ? 'hover:bg-gray-700 text-red-400' : 'hover:bg-gray-100 text-red-600',
+                          isProcessing && 'opacity-50 cursor-not-allowed'
                         )}
                       >
                         <Trash2 className="w-4 h-4" />
