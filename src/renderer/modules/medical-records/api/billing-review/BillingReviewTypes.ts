@@ -64,6 +64,8 @@ export enum BillingCycleStatus {
   DISPUTED               = 'disputed',
   WRITTEN_OFF            = 'written_off',
   CHARITY_CARE           = 'charity_care',
+  PARTIALLY_REFUNDED = 'partially_refunded',
+  FULLY_REFUNDED = 'fully_refunded',
 }
 
 /* -------------------------------------------------------------------------- */
@@ -398,6 +400,8 @@ export const BILLING_CYCLE_STATUS_LABELS: Record<BillingCycleStatus, string> = {
   [BillingCycleStatus.DISPUTED]: 'Disputed',
   [BillingCycleStatus.WRITTEN_OFF]: 'Void',
   [BillingCycleStatus.CHARITY_CARE]: 'Charity Care',
+  [BillingCycleStatus.PARTIALLY_REFUNDED]: 'Partially Refunded',
+[BillingCycleStatus.FULLY_REFUNDED]: 'Fully Refunded',
 };
 
 export const BILLING_CYCLE_STATUS_COLORS: Record<BillingCycleStatus, string> = {
@@ -411,6 +415,8 @@ export const BILLING_CYCLE_STATUS_COLORS: Record<BillingCycleStatus, string> = {
   [BillingCycleStatus.COLLECTIONS]: 'secondary',
   [BillingCycleStatus.WRITTEN_OFF]: 'error',
   [BillingCycleStatus.DISPUTED]: 'error',
+  [BillingCycleStatus.FULLY_REFUNDED]: 'error',
+  [BillingCycleStatus.PARTIALLY_REFUNDED]: 'error',
   [BillingCycleStatus.CHARITY_CARE]: 'default',
 };
 

@@ -90,6 +90,12 @@ const getStatusPillClass = (isDark: boolean, status: BillingCycleStatus) => {
     [BillingCycleStatus.WRITTEN_OFF]: isDark 
       ? 'bg-red-900/30 text-red-300 border-red-700' 
       : 'bg-red-100 text-red-800 border-red-200',
+    [BillingCycleStatus.FULLY_REFUNDED]: isDark 
+      ? 'bg-red-900/30 text-red-300 border-red-700' 
+      : 'bg-red-100 text-red-800 border-red-200',
+    [BillingCycleStatus.PARTIALLY_REFUNDED]: isDark 
+      ? 'bg-red-900/30 text-red-300 border-red-700' 
+      : 'bg-red-100 text-red-800 border-red-200',
     [BillingCycleStatus.DISPUTED]: isDark 
       ? 'bg-red-900/30 text-red-300 border-red-700' 
       : 'bg-red-100 text-red-800 border-red-200',
@@ -189,79 +195,72 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
   };
 
   // Smart button visibility based on billing status
-  const buttonVisibility = useMemo(() => {
-    if (!selectedTransaction || !derivedFinancials) {
+ // Smart button visibility based on billing status
+const buttonVisibility = useMemo(() => {
+  if (!selectedTransaction || !derivedFinancials) {
+    return {
+      showPrint: true,
+      showRefund: false,
+      showVoid: false,
+    };
+  }
+
+  const status = selectedTransaction.billing_status;
+  const hasPayment = derivedFinancials.totalPaidFromMethods > 0;
+
+  switch (status) {
+    case BillingCycleStatus.PAID_IN_FULL:
+      return {
+        showPrint: true,
+        showRefund: true,
+        showVoid: false,
+      };
+    
+    case BillingCycleStatus.PARTIALLY_PAID:
+      return {
+        showPrint: true,
+        showRefund: true,
+        showVoid: false,
+      };
+    
+    case BillingCycleStatus.PARTIALLY_REFUNDED:
+      return {
+        showPrint: true,
+        showRefund: true, // Allow additional refunds
+        showVoid: false,
+      };
+    
+    case BillingCycleStatus.FULLY_REFUNDED:
+      return {
+        showPrint: true,
+        showRefund: false, // No more refunds allowed
+        showVoid: false,
+      };
+    
+    case BillingCycleStatus.PENDING_SUBMISSION:
+    case BillingCycleStatus.DRAFT:
+      return {
+        showPrint: true,
+        showRefund: false,
+        showVoid: true,
+      };
+    
+    case BillingCycleStatus.WRITTEN_OFF:
+    case BillingCycleStatus.DISPUTED:
       return {
         showPrint: true,
         showRefund: false,
         showVoid: false,
       };
-    }
-
-    const status = selectedTransaction.billing_status;
-    const hasPayment = derivedFinancials.totalPaidFromMethods > 0;
-
-    // Define visibility rules for each status
-    switch (status) {
-      case BillingCycleStatus.PAID_IN_FULL:
-        return {
-          showPrint: true,
-          showRefund: true,  // Can refund paid transactions
-          showVoid: false,   // Cannot void paid transactions (should refund instead)
-        };
-      
-      case BillingCycleStatus.PARTIALLY_PAID:
-        return {
-          showPrint: true,
-          showRefund: true,  // Can refund partial payments
-          showVoid: false,   // Cannot void partially paid
-        };
-      
-      case BillingCycleStatus.PENDING_SUBMISSION:
-      case BillingCycleStatus.DRAFT:
-        return {
-          showPrint: true,
-          showRefund: false, // No payments to refund
-          showVoid: true,    // Can void draft/pending transactions
-        };
-      
-      case BillingCycleStatus.WRITTEN_OFF:
-      case BillingCycleStatus.DISPUTED:
-        return {
-          showPrint: true,
-          showRefund: false, // Cannot refund written off/disputed
-          showVoid: false,   // Cannot void written off/disputed
-        };
-      
-      case BillingCycleStatus.CHARITY_CARE:
-        return {
-          showPrint: true,
-          showRefund: false, // Charity care - no refunds
-          showVoid: false,   // Cannot void charity care
-        };
-      
-      case BillingCycleStatus.PAYMENT_PLAN:
-        return {
-          showPrint: true,
-          showRefund: hasPayment, // Only show refund if payments exist
-          showVoid: false,        // Cannot void payment plans
-        };
-      
-      case BillingCycleStatus.PENDING_REVIEW:
-        return {
-          showPrint: true,
-          showRefund: false, // Under review - no actions
-          showVoid: false,
-        };
-      
-      default:
-        return {
-          showPrint: true,
-          showRefund: hasPayment,
-          showVoid: status === BillingCycleStatus.DRAFT || status === BillingCycleStatus.PENDING_SUBMISSION,
-        };
-    }
-  }, [selectedTransaction, derivedFinancials]);
+    
+    default:
+      return {
+        showPrint: true,
+        showRefund: hasPayment,
+        showVoid: status === BillingCycleStatus.DRAFT || status === BillingCycleStatus.PENDING_SUBMISSION,
+      };
+  }
+}, [selectedTransaction, derivedFinancials]);
 
   // Button configuration with smart visibility
   const buttonConfigs = useMemo(() => [

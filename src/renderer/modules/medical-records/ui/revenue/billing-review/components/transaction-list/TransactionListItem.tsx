@@ -98,6 +98,8 @@ const getStatusPillClass = (isDark: boolean, status: BillingCycleStatus): string
     [BillingCycleStatus.PAYMENT_PLAN]: 'secondary',
     [BillingCycleStatus.COLLECTIONS]: 'secondary',
     [BillingCycleStatus.WRITTEN_OFF]: 'error',
+    [BillingCycleStatus.PARTIALLY_REFUNDED]: 'error',
+    [BillingCycleStatus.FULLY_REFUNDED]: 'error',
     [BillingCycleStatus.DISPUTED]: 'error',
     [BillingCycleStatus.CHARITY_CARE]: 'default',
   };

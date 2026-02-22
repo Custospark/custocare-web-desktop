@@ -118,6 +118,10 @@ export const shouldShowDiscountPercentage = (discountAmount: number, subtotal: n
         
         case BillingCycleStatus.WRITTEN_OFF:
             return { text: 'VOID', colorClass: 'text-red-600' };
+        case BillingCycleStatus.FULLY_REFUNDED:
+            return { text: 'FULL REFUND', colorClass: 'text-red-600' };
+        case BillingCycleStatus.PARTIALLY_REFUNDED:
+            return { text: 'PARTIAL REFUND', colorClass: 'text-red-600' };
         
         case BillingCycleStatus.PARTIALLY_PAID:
             return { text: 'PARTIAL', colorClass: 'text-blue-600' };
@@ -204,7 +208,7 @@ export const shouldShowDiscountPercentage = (discountAmount: number, subtotal: n
     };
 
 export const getWatermarkFontSize = (text: string): string => {
-  if (text === 'CHANGE GIVEN') {
+  if (text === 'CHANGE GIVEN' || text === 'FULL REFUND' || text === 'PARTIAL REFUND') {
     return 'clamp(1.5rem, 12cqw, 4rem)';
   }
   if (text === 'PARTIAL') {

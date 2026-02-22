@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { X, Undo2, AlertTriangle, Plus, Trash2, Percent, Coins } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Undo2, AlertTriangle, Percent, Coins } from 'lucide-react';
 import type { BillingReviewItem } from '../../../../../api/billing-review/BillingReviewTypes';
 import type { 
   RefundReason, 
@@ -351,23 +351,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
                        selectedCount === 0 ? 0 : Math.round((selectedCount / updated.length) * 100));
   };
 
-  // Update refund amount and auto-adjust quantity
-  const updateLineItemRefund = (index: number, amount: number) => {
-    const updated = [...lineItems];
-    const maxAmount = updated[index].max_refundable_amount;
-    const newAmount = Math.min(Math.max(0, amount), maxAmount);
-    
-    updated[index].refund_amount = newAmount;
-    // Auto-calculate quantity based on refund amount
-    if (updated[index].unit_price > 0) {
-      updated[index].refund_quantity = Math.min(
-        updated[index].original_quantity,
-        Math.ceil(newAmount / updated[index].unit_price)
-      );
-    }
-    
-    setLineItems(updated);
-  };
+ 
 
   // Update refund quantity and auto-adjust amount
   const updateLineItemQuantity = (index: number, quantity: number) => {

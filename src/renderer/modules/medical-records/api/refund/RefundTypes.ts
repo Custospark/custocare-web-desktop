@@ -11,6 +11,8 @@
  * @module refundTypes
  */
 
+import { BillingCycleStatus } from "../billing-review/BillingReviewTypes";
+
 /* -------------------------------------------------------------------------- */
 /*                                   ENUMS                                    */
 /* -------------------------------------------------------------------------- */
@@ -311,31 +313,44 @@ export function isVoidable(transaction: {
 /**
  * Check if a billing cycle is refundable
  */
-export function isRefundable(transaction: {
-  billing_status?: string;
-  patient_payment_received?: number;
-  insurance_payment_received?: number;
-}): EligibilityResult {
-  if (transaction.billing_status === 'written_off') {
-    return {
-      eligible: false,
-      message: 'Cannot refund a voided transaction.',
-      reason: 'already_voided',
-    };
-  }
+export const isRefundable = (data: { 
+  billing_status: BillingCycleStatus; 
+  patient_payment_received: number;
+  insurance_payment_received: number;
+}): { eligible: boolean; message?: string } => {
+  const { billing_status, patient_payment_received, insurance_payment_received } = data;
+  const totalPaid = patient_payment_received + insurance_payment_received;
 
-  const totalPaid = (transaction.patient_payment_received || 0) + (transaction.insurance_payment_received || 0);
-
+  // Can't refund if no payment received
   if (totalPaid <= 0) {
-    return {
-      eligible: false,
-      message: 'No payments have been received for this billing cycle.',
-      reason: 'no_payments',
-    };
+    return { eligible: false, message: 'No payment received to refund' };
   }
 
-  return { eligible: true };
-}
+  // Check status-based eligibility
+  switch (billing_status) {
+    case BillingCycleStatus.FULLY_REFUNDED:
+      return { eligible: false, message: 'Transaction has already been fully refunded' };
+    
+    case BillingCycleStatus.PARTIALLY_REFUNDED:
+      return { eligible: true, message: 'Additional refund can be processed' };
+    
+    case BillingCycleStatus.PAID_IN_FULL:
+    case BillingCycleStatus.PARTIALLY_PAID:
+      return { eligible: true };
+    
+    case BillingCycleStatus.DRAFT:
+    case BillingCycleStatus.PENDING_REVIEW:
+    case BillingCycleStatus.PENDING_SUBMISSION:
+      return { eligible: false, message: 'Transaction not yet paid' };
+    
+    case BillingCycleStatus.WRITTEN_OFF:
+    case BillingCycleStatus.DISPUTED:
+      return { eligible: false, message: `Cannot refund ${billing_status.replace('_', ' ')} transaction` };
+    
+    default:
+      return { eligible: false, message: 'Transaction not eligible for refund' };
+  }
+};
 
 /* -------------------------------------------------------------------------- */
 /*                            CONSTANTS & DEFAULTS                            */
