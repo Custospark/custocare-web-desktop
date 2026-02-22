@@ -1,22 +1,25 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { X, Undo2, AlertTriangle, Percent, Coins } from 'lucide-react';
+import { Undo2, AlertTriangle } from 'lucide-react';
 import type { BillingReviewItem } from '../../../../../api/billing-review/BillingReviewTypes';
 import { 
   RefundReason, 
   RefundMethodType,
   RefundableLineItem 
 } from '../../../../../api/refund/RefundTypes';
-import { 
-  REFUND_REASON_LABELS, 
-  REFUND_METHOD_LABELS,
-  isRefundable 
-} from '../../../../../api/refund/RefundTypes';
+import { isRefundable } from '../../../../../api/refund/RefundTypes';
 import { useRefundTransaction } from '../../../../../api/refund/RefundQueries';
 import { ModalBackdrop, ModalContainer } from './ModalPrimitives';
 import { cx } from '../../utils';
 import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
 
-interface ThemeColors {
+// Import sub-components
+import { RefundModalHeader } from './refund-modal-components/RefundModalHeader';
+import { TransactionSummaryCard } from './refund-modal-components/TransactionSummaryCard';
+import { RefundTypeAndReasonSelector } from './refund-modal-components/RefundTypeAndReasonSelector';
+import { PartialRefundItemsSelector } from './refund-modal-components/PartialRefundItemsSelector';
+import { RefundMethodsDistributor, type RefundMethod } from './refund-modal-components/RefundMethodsDistributor';
+
+export interface ThemeColors {
   bg: {
     primary: string;
     secondary: string;
@@ -44,9 +47,6 @@ interface RefundModalProps {
   selectedTransaction: BillingReviewItem | null;
 }
 
-// Quick refund amount presets
-const REFUND_PRESETS = [25, 50, 75, 100];
-
 export const RefundModal: React.FC<RefundModalProps> = ({
   open,
   selectedTransaction,
@@ -71,12 +71,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
   const [refundPercentage, setRefundPercentage] = useState<number>(100);
   
   // Refund methods state
-  const [refundMethods, setRefundMethods] = useState<Array<{
-    type: RefundMethodType | '';
-    amount: number;
-    reference: string;
-    originalAmount?: number;
-  }>>([]);
+  const [refundMethods, setRefundMethods] = useState<RefundMethod[]>([]);
 
   // Line items for partial refund
   const [lineItems, setLineItems] = useState<RefundableLineItem[]>([]);
@@ -106,7 +101,6 @@ export const RefundModal: React.FC<RefundModalProps> = ({
       line_item_uuid: item.id.replace('charge::', ''),
       service_code: item.service.code,
       service_name: item.service.name,
-      // quantity: item.quantity,
       unit_price: item.service.unitPrice,
       line_total: item.totalAmount,
       net_amount: item.totalAmount,
@@ -122,7 +116,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
   // Memoized initial payment methods generation
   const generateInitialPaymentMethods = useCallback((
     transaction: BillingReviewItem | null
-  ) => {
+  ): RefundMethod[] => {
     if (!transaction || !transaction.payment_methods?.length) {
       return [{ type: RefundMethodType.CASH, amount: 0, reference: '', originalAmount: 0 }];
     }
@@ -152,9 +146,9 @@ export const RefundModal: React.FC<RefundModalProps> = ({
 
   // Auto-distribute refund amount across payment methods (memoized function)
   const distributeRefundAmount = useCallback((
-    methods: typeof refundMethods,
+    methods: RefundMethod[],
     total: number
-  ) => {
+  ): RefundMethod[] => {
     if (methods.length === 0) return methods;
 
     const originalTotal = methods.reduce((sum, m) => sum + (m.originalAmount || 0), 0);
@@ -261,7 +255,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     if (hasChanged) {
       setRefundMethods(updatedMethods);
     }
-  }, [totalRefund]); 
+  }, [totalRefund, distributeRefundAmount]); 
 
   // Handlers with useCallback to prevent recreating functions
   const handlePercentageChange = useCallback((percentage: number) => {
@@ -343,6 +337,16 @@ export const RefundModal: React.FC<RefundModalProps> = ({
       updated[index] = { ...updated[index], [field]: value };
       return updated;
     });
+  }, []);
+
+  const handleReasonChange = useCallback((newReason: RefundReason | '') => {
+    setReason(newReason);
+    setValidationError(null);
+  }, []);
+
+  const handleReasonNotesChange = useCallback((notes: string) => {
+    setReasonNotes(notes);
+    setValidationError(null);
   }, []);
 
   const billingCycleId = selectedTransaction?.billing_cycle_id;
@@ -472,31 +476,12 @@ export const RefundModal: React.FC<RefundModalProps> = ({
           )}
         >
           {/* Header */}
-          <div className={cx('flex items-center justify-between p-5 border-b sticky top-0 z-10', colors.border.primary, colors.bg.elevated)}>
-            <div className="flex items-center gap-3">
-              <div className={cx('p-2 rounded-lg', isDark ? 'bg-amber-900/30' : 'bg-amber-100')}>
-                <Undo2 className={cx('w-5 h-5', isDark ? 'text-amber-400' : 'text-amber-600')} />
-              </div>
-              <div>
-                <h3 className={cx('text-lg font-bold', colors.text.primary)}>Process Refund</h3>
-                <p className={cx('text-xs mt-0.5', colors.text.secondary)}>
-                  Smart refunds with automatic calculations
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleClose}
-              disabled={isProcessing}
-              className={cx(
-                'p-2 rounded-lg transition cursor-pointer',
-                colors.text.tertiary,
-                isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
-                isProcessing && 'cursor-not-allowed opacity-50'
-              )}
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          <RefundModalHeader
+            colors={colors}
+            isDark={isDark}
+            isProcessing={isProcessing}
+            onClose={handleClose}
+          />
 
           {/* Body */}
           <form onSubmit={handleSubmit} className="p-5 space-y-4">
@@ -514,327 +499,51 @@ export const RefundModal: React.FC<RefundModalProps> = ({
             )}
 
             {/* Transaction Summary Card */}
-            <div className={cx(
-              'p-4 rounded-lg border grid grid-cols-2 md:grid-cols-4 gap-4',
-              isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
-            )}>
-              <div>
-                <div className={cx('text-xs', colors.text.secondary)}>Receipt</div>
-                <div className={cx('font-semibold', colors.text.primary)}>
-                  {selectedTransaction.receipt_number || 'Draft'}
-                </div>
-              </div>
-              <div>
-                <div className={cx('text-xs', colors.text.secondary)}>Patient</div>
-                <div className={cx('font-semibold', colors.text.primary)}>
-                  {selectedTransaction.patient_name}
-                </div>
-              </div>
-              <div>
-                <div className={cx('text-xs', colors.text.secondary)}>Total Paid</div>
-                <div className={cx('font-semibold text-green-600')}>
-                  UGX {selectedTransaction.billing_data.totalPaid.toLocaleString()}
-                </div>
-              </div>
-              <div>
-                <div className={cx('text-xs', colors.text.secondary)}>Refund Amount</div>
-                <div className={cx('font-semibold text-amber-600')}>
-                  UGX {totalRefund.toLocaleString()}
-                </div>
-              </div>
-            </div>
+            <TransactionSummaryCard
+              selectedTransaction={selectedTransaction}
+              totalRefund={totalRefund}
+              colors={colors}
+              isDark={isDark}
+            />
 
-            {/* Refund Type & Reason Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Refund Type */}
-              <div>
-                <label className={cx('block text-sm font-semibold mb-2', colors.text.primary)}>
-                  Refund Type
-                </label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="refundType"
-                      value="full"
-                      checked={refundType === 'full'}
-                      onChange={() => setRefundType('full')}
-                      disabled={isProcessing}
-                      className="cursor-pointer"
-                    />
-                    <span className={cx('text-sm', colors.text.secondary)}>Full Refund</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="refundType"
-                      value="partial"
-                      checked={refundType === 'partial'}
-                      onChange={() => setRefundType('partial')}
-                      disabled={isProcessing}
-                      className="cursor-pointer"
-                    />
-                    <span className={cx('text-sm', colors.text.secondary)}>Partial Refund</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Refund Reason */}
-              <div>
-                <label className={cx('block text-sm font-semibold mb-2', colors.text.primary)}>
-                  Refund Reason <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={reason}
-                  onChange={(e) => {
-                    setReason(e.target.value as RefundReason);
-                    setValidationError(null);
-                  }}
-                  required
-                  disabled={isProcessing}
-                  className={cx(
-                    'w-full px-4 py-2.5 rounded-lg border text-sm cursor-pointer',
-                    colors.border.primary,
-                    isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
-                    colors.ring,
-                    isProcessing && 'cursor-not-allowed opacity-50'
-                  )}
-                >
-                  <option value="">Select a reason</option>
-                  {Object.entries(REFUND_REASON_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Reason Notes */}
-            {requiresNotes && (
-              <div>
-                <textarea
-                  value={reasonNotes}
-                  onChange={(e) => {
-                    setReasonNotes(e.target.value);
-                    setValidationError(null);
-                  }}
-                  placeholder="Please provide details for 'Other' reason..."
-                  rows={2}
-                  required
-                  disabled={isProcessing}
-                  className={cx(
-                    'w-full px-4 py-2.5 rounded-lg border text-sm resize-none',
-                    colors.border.primary,
-                    isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
-                    colors.ring,
-                    isProcessing && 'cursor-not-allowed opacity-50'
-                  )}
-                />
-              </div>
-            )}
+            {/* Refund Type & Reason Selector */}
+            <RefundTypeAndReasonSelector
+              refundType={refundType}
+              reason={reason}
+              reasonNotes={reasonNotes}
+              isProcessing={isProcessing}
+              colors={colors}
+              isDark={isDark}
+              onRefundTypeChange={setRefundType}
+              onReasonChange={handleReasonChange}
+              onReasonNotesChange={handleReasonNotesChange}
+            />
 
             {/* Partial Refund Section */}
             {refundType === 'partial' && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className={cx('text-sm font-semibold', colors.text.primary)}>
-                    Select Items to Refund
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleSelectAll}
-                      disabled={isProcessing}
-                      className={cx(
-                        'px-3 py-1 text-xs rounded transition',
-                        isDark ? 'bg-blue-900/30 text-blue-300 hover:bg-blue-900/50' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                      )}
-                    >
-                      Select All
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleClearAll}
-                      disabled={isProcessing}
-                      className={cx(
-                        'px-3 py-1 text-xs rounded transition',
-                        isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      )}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-
-                {/* Quick Percentage Presets */}
-                <div className="flex items-center gap-2">
-                  <Percent className={cx('w-4 h-4', colors.text.secondary)} />
-                  <div className="flex gap-1 flex-wrap">
-                    {REFUND_PRESETS.map(preset => (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => handlePercentageChange(preset)}
-                        disabled={isProcessing}
-                        className={cx(
-                          'px-3 py-1 text-xs rounded transition',
-                          refundPercentage === preset
-                            ? isDark ? 'bg-amber-600 text-white' : 'bg-amber-600 text-white'
-                            : isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        )}
-                      >
-                        {preset}%
-                      </button>
-                    ))}
-                  </div>
-                  <span className={cx('text-sm ml-2', colors.text.secondary)}>
-                    {selectedItemsCount} of {lineItems.length} items
-                  </span>
-                </div>
-
-                {/* Line Items Table */}
-                <div className={cx(
-                  'border rounded-lg overflow-hidden',
-                  colors.border.primary
-                )}>
-                  {/* Header */}
-                  <div className={cx(
-                    'grid grid-cols-12 gap-2 p-3 text-xs font-semibold border-b',
-                    colors.border.primary,
-                    isDark ? 'bg-gray-800' : 'bg-gray-50'
-                  )}>
-                    <div className="col-span-4">Item</div>
-                    <div className="col-span-2 text-center">Qty</div>
-                    <div className="col-span-2 text-right">Unit Price</div>
-                    <div className="col-span-2 text-right">Total</div>
-                    <div className="col-span-2 text-right">Refund Qty</div>
-                  </div>
-
-                  {/* Items */}
-                  {lineItems.map((item, index) => (
-                    <div key={item.id} className={cx(
-                      'grid grid-cols-12 gap-2 p-3 text-xs border-b last:border-b-0',
-                      colors.border.primary,
-                      item.is_selected && (isDark ? 'bg-amber-900/20' : 'bg-amber-50')
-                    )}>
-                      <div className="col-span-4 flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={item.is_selected}
-                          onChange={() => toggleLineItem(index)}
-                          disabled={isProcessing}
-                          className="cursor-pointer"
-                        />
-                        <div>
-                          <div className={cx('font-medium', colors.text.primary)}>
-                            {item.service_name}
-                          </div>
-                          <div className={cx('text-xs', colors.text.tertiary)}>
-                            {item.service_code}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="col-span-2 text-center self-center">
-                        {item.original_quantity}
-                      </div>
-                      <div className="col-span-2 text-right self-center">
-                        UGX {item.unit_price.toLocaleString()}
-                      </div>
-                      <div className="col-span-2 text-right self-center">
-                        UGX {item.net_amount.toLocaleString()}
-                      </div>
-                      <div className="col-span-2">
-                        <input
-                          type="number"
-                          value={item.quantity || 0}
-                          onChange={(e) => updateLineItemQuantity(index, parseInt(e.target.value) || 0)}
-                          disabled={!item.is_selected || isProcessing}
-                          min={0}
-                          max={item.original_quantity}
-                          className={cx(
-                            'w-full px-2 py-1 rounded border text-right text-sm',
-                            colors.border.primary,
-                            isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
-                            !item.is_selected && 'opacity-50'
-                          )}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <PartialRefundItemsSelector
+                lineItems={lineItems}
+                refundPercentage={refundPercentage}
+                selectedItemsCount={selectedItemsCount}
+                isProcessing={isProcessing}
+                colors={colors}
+                isDark={isDark}
+                onPercentageChange={handlePercentageChange}
+                onSelectAll={handleSelectAll}
+                onClearAll={handleClearAll}
+                onToggleLineItem={toggleLineItem}
+                onUpdateQuantity={updateLineItemQuantity}
+              />
             )}
 
             {/* Refund Methods - Auto-populated */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className={cx('text-sm font-semibold', colors.text.primary)}>
-                  Refund Methods <span className="text-red-500">*</span>
-                </label>
-                <div className="flex items-center gap-2">
-                  <Coins className={cx('w-4 h-4', colors.text.secondary)} />
-                  <span className={cx('text-xs', colors.text.secondary)}>
-                    Auto-calculated from original payment
-                  </span>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                {refundMethods.map((method, index) => (
-                  <div key={index} className="flex gap-2 items-center">
-                    <select
-                      value={method.type}
-                      onChange={(e) => updateRefundMethod(index, 'type', e.target.value)}
-                      required
-                      disabled={isProcessing}
-                      className={cx(
-                        'flex-1 px-3 py-2 rounded-lg border text-sm cursor-pointer',
-                        colors.border.primary,
-                        isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
-                      )}
-                    >
-                      {Object.entries(REFUND_METHOD_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                    
-                    <div className="w-32">
-                      <input
-                        type="number"
-                        value={method.amount}
-                        onChange={(e) => updateRefundMethod(index, 'amount', parseFloat(e.target.value) || 0)}
-                        placeholder="Amount"
-                        required
-                        min={0}
-                        step={100}
-                        disabled={isProcessing}
-                        className={cx(
-                          'w-full px-3 py-2 rounded-lg border text-sm',
-                          colors.border.primary,
-                          isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
-                        )}
-                      />
-                    </div>
-                    
-                    <input
-                      type="text"
-                      value={method.reference}
-                      onChange={(e) => updateRefundMethod(index, 'reference', e.target.value)}
-                      placeholder="Reference (opt)"
-                      disabled={isProcessing}
-                      className={cx(
-                        'flex-1 px-3 py-2 rounded-lg border text-sm',
-                        colors.border.primary,
-                        isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
-                      )}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
+            <RefundMethodsDistributor
+              refundMethods={refundMethods}
+              isProcessing={isProcessing}
+              colors={colors}
+              isDark={isDark}
+              onUpdateMethod={updateRefundMethod}
+            />
 
             {/* Restore Inventory Toggle */}
             <label className="flex items-center gap-3 cursor-pointer">
