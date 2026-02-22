@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Undo2, AlertTriangle } from 'lucide-react';
 import type { BillingReviewItem } from '../../../../../api/billing-review/BillingReviewTypes';
 import { 
   RefundReason, 
@@ -11,13 +10,8 @@ import { useRefundTransaction } from '../../../../../api/refund/RefundQueries';
 import { ModalBackdrop, ModalContainer } from './ModalPrimitives';
 import { cx } from '../../utils';
 import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
-
-// Import sub-components
-import { RefundModalHeader } from './refund-modal-components/RefundModalHeader';
-import { TransactionSummaryCard } from './refund-modal-components/TransactionSummaryCard';
-import { RefundTypeAndReasonSelector } from './refund-modal-components/RefundTypeAndReasonSelector';
-import { PartialRefundItemsSelector } from './refund-modal-components/PartialRefundItemsSelector';
-import { RefundMethodsDistributor, type RefundMethod } from './refund-modal-components/RefundMethodsDistributor';
+import { MainRefundModalHeader } from './refund-modal-components/MainRefundModalHeader';
+import { RefundModalBody } from './refund-modal-components/RefundModalBody';
 
 export interface ThemeColors {
   bg: {
@@ -36,6 +30,13 @@ export interface ThemeColors {
     primary: string;
   };
   ring: string;
+}
+
+export interface RefundMethod {
+  type: RefundMethodType;
+  amount: number;
+  reference: string;
+  originalAmount?: number;
 }
 
 interface RefundModalProps {
@@ -349,6 +350,10 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     setValidationError(null);
   }, []);
 
+  const handleRestoreInventoryChange = useCallback((checked: boolean) => {
+    setRestoreInventory(checked);
+  }, []);
+
   const billingCycleId = selectedTransaction?.billing_cycle_id;
 
   const { mutate: refundTransaction, isPending: isProcessing } = useRefundTransaction(
@@ -461,8 +466,6 @@ export const RefundModal: React.FC<RefundModalProps> = ({
 
   if (!selectedTransaction) return null;
 
-  const requiresNotes = reason === 'other';
-
   return (
     <>
       <ModalBackdrop open={open} onClick={handleClose} />
@@ -475,134 +478,42 @@ export const RefundModal: React.FC<RefundModalProps> = ({
             isProcessing && 'pointer-events-none opacity-75'
           )}
         >
-          {/* Header */}
-          <RefundModalHeader
+          <MainRefundModalHeader
             colors={colors}
             isDark={isDark}
             isProcessing={isProcessing}
             onClose={handleClose}
           />
-
-          {/* Body */}
-          <form onSubmit={handleSubmit} className="p-5 space-y-4">
-            {/* Eligibility Warning */}
-            {eligibilityWarning && (
-              <div className={cx(
-                'p-4 rounded-lg border',
-                isDark ? 'bg-red-900/10 border-red-700' : 'bg-red-50 border-red-200'
-              )}>
-                <div className="flex gap-3">
-                  <AlertTriangle className={cx('w-5 h-5 flex-shrink-0', isDark ? 'text-red-400' : 'text-red-600')} />
-                  <p className={cx('text-sm', colors.text.secondary)}>{eligibilityWarning}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Transaction Summary Card */}
-            <TransactionSummaryCard
-              selectedTransaction={selectedTransaction}
-              totalRefund={totalRefund}
-              colors={colors}
-              isDark={isDark}
-            />
-
-            {/* Refund Type & Reason Selector */}
-            <RefundTypeAndReasonSelector
-              refundType={refundType}
-              reason={reason}
-              reasonNotes={reasonNotes}
-              isProcessing={isProcessing}
-              colors={colors}
-              isDark={isDark}
-              onRefundTypeChange={setRefundType}
-              onReasonChange={handleReasonChange}
-              onReasonNotesChange={handleReasonNotesChange}
-            />
-
-            {/* Partial Refund Section */}
-            {refundType === 'partial' && (
-              <PartialRefundItemsSelector
-                lineItems={lineItems}
-                refundPercentage={refundPercentage}
-                selectedItemsCount={selectedItemsCount}
-                isProcessing={isProcessing}
-                colors={colors}
-                isDark={isDark}
-                onPercentageChange={handlePercentageChange}
-                onSelectAll={handleSelectAll}
-                onClearAll={handleClearAll}
-                onToggleLineItem={toggleLineItem}
-                onUpdateQuantity={updateLineItemQuantity}
-              />
-            )}
-
-            {/* Refund Methods - Auto-populated */}
-            <RefundMethodsDistributor
-              refundMethods={refundMethods}
-              isProcessing={isProcessing}
-              colors={colors}
-              isDark={isDark}
-              onUpdateMethod={updateRefundMethod}
-            />
-
-            {/* Restore Inventory Toggle */}
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={restoreInventory}
-                onChange={(e) => setRestoreInventory(e.target.checked)}
-                disabled={isProcessing}
-                className="w-4 h-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
-              />
-              <span className={cx('text-sm', colors.text.secondary)}>
-                Restore inventory items
-              </span>
-            </label>
-
-            {/* Validation Error */}
-            {validationError && (
-              <div className={cx(
-                'p-3 rounded-lg text-sm',
-                isDark ? 'bg-red-900/20 text-red-300' : 'bg-red-50 text-red-600'
-              )}>
-                {validationError}
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className={cx(
-              'flex gap-3 pt-4 sticky bottom-0 border-t',
-              colors.border.primary,
-              colors.bg.elevated
-            )}>
-              <button
-                type="button"
-                onClick={handleClose}
-                disabled={isProcessing}
-                className={cx(
-                  'flex-1 px-4 py-3 rounded-lg border text-sm font-bold transition cursor-pointer',
-                  colors.border.primary,
-                  isDark ? 'text-gray-100 hover:bg-gray-800' : 'text-gray-900 hover:bg-gray-50',
-                  isProcessing && 'cursor-not-allowed opacity-50'
-                )}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={!reason || isProcessing || (requiresNotes && !reasonNotes.trim()) || totalRefund <= 0}
-                className={cx(
-                  'flex-1 px-4 py-3 rounded-lg text-sm font-bold transition cursor-pointer',
-                  'bg-amber-600 hover:bg-amber-700 text-white',
-                  'flex items-center justify-center gap-2',
-                  'disabled:opacity-50 disabled:cursor-not-allowed'
-                )}
-              >
-                <Undo2 className="w-4 h-4" />
-                {isProcessing ? 'Processing...' : `Refund UGX ${totalRefund.toLocaleString()}`}
-              </button>
-            </div>
-          </form>
+          
+          <RefundModalBody
+            selectedTransaction={selectedTransaction}
+            colors={colors}
+            isDark={isDark}
+            isProcessing={isProcessing}
+            eligibilityWarning={eligibilityWarning}
+            refundType={refundType}
+            reason={reason}
+            reasonNotes={reasonNotes}
+            totalRefund={totalRefund}
+            refundMethods={refundMethods}
+            lineItems={lineItems}
+            refundPercentage={refundPercentage}
+            selectedItemsCount={selectedItemsCount}
+            restoreInventory={restoreInventory}
+            validationError={validationError}
+            onRefundTypeChange={setRefundType}
+            onReasonChange={handleReasonChange}
+            onReasonNotesChange={handleReasonNotesChange}
+            onPercentageChange={handlePercentageChange}
+            onSelectAll={handleSelectAll}
+            onClearAll={handleClearAll}
+            onToggleLineItem={toggleLineItem}
+            onUpdateQuantity={updateLineItemQuantity}
+            onUpdateRefundMethod={updateRefundMethod}
+            onRestoreInventoryChange={handleRestoreInventoryChange}
+            onSubmit={handleSubmit}
+            onClose={handleClose}
+          />
         </div>
       </ModalContainer>
     </>
