@@ -1,12 +1,12 @@
 /**
  * RefundTypes.ts
  * ============================================================================
- * REFUND & VOID TYPE DEFINITIONS
+ * REFUND AND VOID TYPE DEFINITIONS
  * ============================================================================
  * 
  * This file contains all TypeScript type declarations for refund and void
  * operations in the healthcare billing system. These types support the
- * billing cycle refund and void endpoints.
+ * refund and void endpoints.
  * 
  * @module refundTypes
  */
@@ -15,23 +15,6 @@
 /*                                   ENUMS                                    */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Reasons for voiding a transaction
- */
-export enum VoidReason {
-  BILLING_ERROR = 'billing_error',
-  SERVICE_NOT_RENDERED = 'service_not_rendered',
-  DUPLICATE_CHARGE = 'duplicate_charge',
-  PATIENT_REQUEST = 'patient_request',
-  ADMINISTRATIVE_CORRECTION = 'administrative_correction',
-  PRICING_ERROR = 'pricing_error',
-  CANCELLED_SERVICE = 'cancelled_service',
-  OTHER = 'other',
-}
-
-/**
- * Reasons for refunding a transaction
- */
 export enum RefundReason {
   BILLING_ERROR = 'billing_error',
   SERVICE_NOT_RENDERED = 'service_not_rendered',
@@ -44,9 +27,17 @@ export enum RefundReason {
   OTHER = 'other',
 }
 
-/**
- * Payment method types for refunds
- */
+export enum VoidReason {
+  BILLING_ERROR = 'billing_error',
+  SERVICE_NOT_RENDERED = 'service_not_rendered',
+  DUPLICATE_CHARGE = 'duplicate_charge',
+  PATIENT_REQUEST = 'patient_request',
+  ADMINISTRATIVE_CORRECTION = 'administrative_correction',
+  PRICING_ERROR = 'pricing_error',
+  CANCELLED_SERVICE = 'cancelled_service',
+  OTHER = 'other',
+}
+
 export enum RefundMethodType {
   CASH = 'cash',
   CARD = 'card',
@@ -57,243 +48,299 @@ export enum RefundMethodType {
   OTHER = 'other',
 }
 
-/**
- * Status of adjustment/refund processing
- */
+export enum RefundType {
+  FULL_REFUND = 'full_refund',
+  PARTIAL_REFUND = 'partial_refund',
+}
+
 export enum AdjustmentStatus {
   PROCESSING = 'processing',
   COMPLETED = 'completed',
   FAILED = 'failed',
-  CANCELLED = 'cancelled',
 }
 
 /* -------------------------------------------------------------------------- */
-/*                          REQUEST PAYLOAD TYPES                             */
+/*                              REQUEST TYPES                                 */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Payload for voiding a transaction
- * POST /api/billing-cycles/{billingCycleId}/void
+ * Base refund/void request headers
  */
-export interface VoidTransactionRequest {
-  /** Reason for voiding (required) */
-  reason: VoidReason;
-  
-  /** Additional notes (required when reason = "other") */
+export interface RefundHeaders {
+  'X-Facility-Id': number;
+  'X-Staff-Id': number;
+}
+
+/**
+ * Void transaction request payload
+ */
+export interface VoidRequest {
+  reason: VoidReason | string;
   reason_notes?: string;
-  
-  /** Whether to restore inventory (optional, defaults to true in backend) */
   restore_inventory?: boolean;
 }
 
 /**
- * Individual line item for partial refund
- */
-export interface RefundLineItem {
-  /** Line item ID from invoice_line_items table (required) */
-  line_item_id: number;
-  
-  /** Amount to refund for this line item (optional, defaults to full line amount) */
-  refund_amount?: number;
-}
-
-/**
- * Refund method details
+ * Refund method item
  */
 export interface RefundMethod {
-  /** Type of refund method (required) */
-  type: RefundMethodType;
-  
-  /** Amount to refund via this method (required) */
+  type: RefundMethodType | string;
   amount: number;
-  
-  /** Reference number/transaction ID (optional) */
-  reference?: string;
+  reference?: string | null;
 }
 
 /**
- * Payload for full refund
- * POST /api/billing-cycles/{billingCycleId}/refund
+ * Line item for partial refund
  */
-export interface FullRefundRequest {
-  /** Reason for refund (required) */
-  reason: RefundReason;
-  
-  /** Additional notes (required when reason = "other") */
+export interface RefundLineItem {
+  line_item_id: number;
+  refund_amount?: number | null;
+}
+
+/**
+ * Base refund request (shared fields)
+ */
+export interface BaseRefundRequest {
+  reason: RefundReason | string;
   reason_notes?: string;
-  
-  /** Refund methods (required, min 1) */
   refund_methods: RefundMethod[];
-  
-  /** Whether to restore inventory (optional) */
   restore_inventory?: boolean;
 }
 
 /**
- * Payload for partial refund
- * POST /api/billing-cycles/{billingCycleId}/refund
+ * Full refund request (no line_items)
  */
-export interface PartialRefundRequest extends FullRefundRequest {
-  /** Line items to refund (required for partial refund, min 1) */
+export interface FullRefundRequest extends BaseRefundRequest {
+  line_items?: never;
+}
+
+/**
+ * Partial refund request (with line_items)
+ */
+export interface PartialRefundRequest extends BaseRefundRequest {
   line_items: RefundLineItem[];
 }
 
 /**
- * Union type for refund requests (auto-detected by backend)
+ * Union type for refund request (auto-detected by backend)
  */
-export type RefundTransactionRequest = FullRefundRequest | PartialRefundRequest;
+export type RefundRequest = FullRefundRequest | PartialRefundRequest;
 
 /* -------------------------------------------------------------------------- */
-/*                          RESPONSE DATA TYPES                               */
+/*                              RESPONSE TYPES                                */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Response data for void transaction
+ * Base refund response structure
  */
-export interface VoidTransactionData {
-  /** Financial adjustment ID */
+export interface BaseRefundResponse {
+  success: boolean;
+  message: string;
+  data?: RefundResponseData;
+  errors?: Record<string, string[]>;
+  error?: string; // Debug mode only
+}
+
+/**
+ * Refund response data (success case)
+ */
+export interface RefundResponseData {
   adjustment_id: number;
-  
-  /** Reference number for this void */
   reference_number: string;
-  
-  /** Amount that was voided */
-  voided_amount: number;
-  
-  /** Whether inventory was restored */
+  refund_amount: number;
+  patient_refund?: number;
+  insurance_refund?: number;
   inventory_restored: boolean;
-  
-  /** Timestamp when void was completed */
   completed_at: string;
 }
 
 /**
- * Affected line item in partial refund
+ * Full refund response data
  */
-export interface AffectedLineItem {
-  /** Line item ID */
-  line_item_id: number;
-  
-  /** Line item UUID */
-  line_item_uuid: string;
-  
-  /** Service code */
-  service_code: string;
-  
-  /** Service name/description */
-  service_name: string;
-  
-  /** Original line item amount */
-  original_amount: number;
-  
-  /** Amount refunded for this line item */
-  refund_amount: number;
-  
-  /** Quantity of the line item */
-  quantity: number;
-}
-
-/**
- * Response data for full refund
- */
-export interface FullRefundData {
-  /** Type of refund */
+export interface FullRefundResponseData extends RefundResponseData {
   refund_type: 'full_refund';
-  
-  /** Financial adjustment ID */
+}
+
+/**
+ * Partial refund response data
+ */
+export interface PartialRefundResponseData extends RefundResponseData {
+  refund_type: 'partial_refund';
+  affected_line_items?: number;
+  remaining_balance?: number;
+}
+
+/**
+ * Void response data
+ */
+export interface VoidResponseData {
   adjustment_id: number;
-  
-  /** Reference number for this refund */
   reference_number: string;
-  
-  /** Total refund amount */
-  refund_amount: number;
-  
-  /** Amount refunded to patient */
-  patient_refund: number;
-  
-  /** Amount refunded to insurance */
-  insurance_refund: number;
-  
-  /** Whether inventory was restored */
+  voided_amount: number;
   inventory_restored: boolean;
-  
-  /** Timestamp when refund was completed */
   completed_at: string;
 }
 
 /**
- * Response data for partial refund
+ * Void response
  */
-export interface PartialRefundData extends FullRefundData {
-  /** Type of refund */
-  refund_type: 'partial_refund';
-  
-  /** Number of affected line items */
-  affected_line_items: number;
-  
-  /** Remaining balance after refund */
-  remaining_balance: number;
-}
-
-/**
- * Union type for refund response data
- */
-export type RefundTransactionData = FullRefundData | PartialRefundData;
-
-/* -------------------------------------------------------------------------- */
-/*                          API RESPONSE TYPES                                */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Success response for void transaction
- */
-export interface VoidTransactionResponse {
-  success: true;
+export interface VoidResponse {
+  success: boolean;
   message: string;
-  data: VoidTransactionData;
+  data?: VoidResponseData;
+  errors?: Record<string, string[]>;
+  error?: string; // Debug mode only
 }
 
 /**
- * Success response for refund transaction
+ * Validation error response
  */
-export interface RefundTransactionResponse {
-  success: true;
-  message: string;
-  data: RefundTransactionData;
-}
-
-/**
- * API Error response
- */
-export interface ApiErrorResponse {
+export interface ValidationErrorResponse {
   success: false;
   message: string;
-  errors?: Record<string, string[]>;
-  error?: string; // Debug error message (only in development)
+  errors: Record<string, string[]>;
 }
 
 /* -------------------------------------------------------------------------- */
-/*                            CONSTANTS & LABELS                              */
+/*                              TRANSACTION TYPES                             */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Human-readable labels for void reasons
+ * Represents a line item in a billing cycle for refund selection
  */
-export const VOID_REASON_LABELS: Record<VoidReason, string> = {
-  [VoidReason.BILLING_ERROR]: 'Billing Error',
-  [VoidReason.SERVICE_NOT_RENDERED]: 'Service Not Rendered',
-  [VoidReason.DUPLICATE_CHARGE]: 'Duplicate Charge',
-  [VoidReason.PATIENT_REQUEST]: 'Patient Request',
-  [VoidReason.ADMINISTRATIVE_CORRECTION]: 'Administrative Correction',
-  [VoidReason.PRICING_ERROR]: 'Pricing Error',
-  [VoidReason.CANCELLED_SERVICE]: 'Cancelled Service',
-  [VoidReason.OTHER]: 'Other (Specify in Notes)',
-};
+export interface RefundableLineItem {
+  id: number;
+  line_item_uuid: string;
+  service_code: string;
+  service_name: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+  net_amount: number;
+  max_refundable_amount: number;
+  is_selected: boolean;
+  refund_amount: number;
+  original_quantity: number;
+}
 
 /**
- * Human-readable labels for refund reasons
+ * Refund summary for UI display
  */
+export interface RefundSummary {
+  totalRefundAmount: number;
+  patientRefund: number;
+  insuranceRefund: number;
+  affectedItemsCount: number;
+  remainingBalance: number;
+  isFullRefund: boolean;
+}
+
+/**
+ * Transaction eligibility check result
+ */
+export interface EligibilityResult {
+  eligible: boolean;
+  message?: string;
+  reason?: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              UTILITY FUNCTIONS                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Type guard to check if a refund request is a partial refund
+ */
+export function isPartialRefund(request: RefundRequest): request is PartialRefundRequest {
+  return 'line_items' in request && Array.isArray(request.line_items) && request.line_items.length > 0;
+}
+
+/**
+ * Type guard to check if a refund response is a full refund
+ */
+export function isFullRefundResponse(data: RefundResponseData): data is FullRefundResponseData {
+  return 'refund_type' in data && data.refund_type === 'full_refund';
+}
+
+/**
+ * Type guard to check if a refund response is a partial refund
+ */
+export function isPartialRefundResponse(data: RefundResponseData): data is PartialRefundResponseData {
+  return 'refund_type' in data && data.refund_type === 'partial_refund';
+}
+
+/**
+ * Check if a billing cycle is voidable
+ */
+export function isVoidable(transaction: {
+  billing_status?: string;
+  created_at?: string;
+  insurance_claim_submitted_at?: string | null;
+}): EligibilityResult {
+  if (transaction.billing_status === 'written_off') {
+    return {
+      eligible: false,
+      message: 'This transaction has already been voided.',
+      reason: 'already_voided',
+    };
+  }
+
+  const hoursSinceCreation = transaction.created_at 
+    ? Math.abs(new Date().getTime() - new Date(transaction.created_at).getTime()) / (1000 * 60 * 60)
+    : 0;
+
+  if (transaction.billing_status !== 'draft' && hoursSinceCreation > 24) {
+    return {
+      eligible: false,
+      message: 'Only draft billings or those created within 24 hours can be voided.',
+      reason: 'too_old',
+    };
+  }
+
+  if (transaction.insurance_claim_submitted_at) {
+    return {
+      eligible: false,
+      message: 'Cannot void after an insurance claim has been submitted.',
+      reason: 'insurance_claimed',
+    };
+  }
+
+  return { eligible: true };
+}
+
+/**
+ * Check if a billing cycle is refundable
+ */
+export function isRefundable(transaction: {
+  billing_status?: string;
+  patient_payment_received?: number;
+  insurance_payment_received?: number;
+}): EligibilityResult {
+  if (transaction.billing_status === 'written_off') {
+    return {
+      eligible: false,
+      message: 'Cannot refund a voided transaction.',
+      reason: 'already_voided',
+    };
+  }
+
+  const totalPaid = (transaction.patient_payment_received || 0) + (transaction.insurance_payment_received || 0);
+
+  if (totalPaid <= 0) {
+    return {
+      eligible: false,
+      message: 'No payments have been received for this billing cycle.',
+      reason: 'no_payments',
+    };
+  }
+
+  return { eligible: true };
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            CONSTANTS & DEFAULTS                            */
+/* -------------------------------------------------------------------------- */
+
 export const REFUND_REASON_LABELS: Record<RefundReason, string> = {
   [RefundReason.BILLING_ERROR]: 'Billing Error',
   [RefundReason.SERVICE_NOT_RENDERED]: 'Service Not Rendered',
@@ -303,12 +350,20 @@ export const REFUND_REASON_LABELS: Record<RefundReason, string> = {
   [RefundReason.ADMINISTRATIVE_CORRECTION]: 'Administrative Correction',
   [RefundReason.PRICING_ERROR]: 'Pricing Error',
   [RefundReason.CANCELLED_SERVICE]: 'Cancelled Service',
-  [RefundReason.OTHER]: 'Other (Specify in Notes)',
+  [RefundReason.OTHER]: 'Other',
 };
 
-/**
- * Human-readable labels for refund method types
- */
+export const VOID_REASON_LABELS: Record<VoidReason, string> = {
+  [VoidReason.BILLING_ERROR]: 'Billing Error',
+  [VoidReason.SERVICE_NOT_RENDERED]: 'Service Not Rendered',
+  [VoidReason.DUPLICATE_CHARGE]: 'Duplicate Charge',
+  [VoidReason.PATIENT_REQUEST]: 'Patient Request',
+  [VoidReason.ADMINISTRATIVE_CORRECTION]: 'Administrative Correction',
+  [VoidReason.PRICING_ERROR]: 'Pricing Error',
+  [VoidReason.CANCELLED_SERVICE]: 'Cancelled Service',
+  [VoidReason.OTHER]: 'Other',
+};
+
 export const REFUND_METHOD_LABELS: Record<RefundMethodType, string> = {
   [RefundMethodType.CASH]: 'Cash',
   [RefundMethodType.CARD]: 'Card',
@@ -319,103 +374,12 @@ export const REFUND_METHOD_LABELS: Record<RefundMethodType, string> = {
   [RefundMethodType.OTHER]: 'Other',
 };
 
-/* -------------------------------------------------------------------------- */
-/*                              UTILITY TYPES                                 */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Type guard to check if a refund request is partial
- */
-export function isPartialRefundRequest(
-  request: RefundTransactionRequest
-): request is PartialRefundRequest {
-  return 'line_items' in request && Array.isArray(request.line_items);
-}
-
-/**
- * Type guard to check if a refund response is partial
- */
-export function isPartialRefundData(
-  data: RefundTransactionData
-): data is PartialRefundData {
-  return data.refund_type === 'partial_refund';
-}
-
-/**
- * Validate void transaction request
- */
-export function validateVoidRequest(request: VoidTransactionRequest): string | null {
-  if (!request.reason) {
-    return 'Void reason is required';
-  }
-  
-  if (request.reason === VoidReason.OTHER && !request.reason_notes) {
-    return 'Reason notes are required when reason is "other"';
-  }
-  
-  return null;
-}
-
-/**
- * Validate refund transaction request
- */
-export function validateRefundRequest(request: RefundTransactionRequest): string | null {
-  if (!request.reason) {
-    return 'Refund reason is required';
-  }
-  
-  if (request.reason === RefundReason.OTHER && !request.reason_notes) {
-    return 'Reason notes are required when reason is "other"';
-  }
-  
-  if (!request.refund_methods || request.refund_methods.length === 0) {
-    return 'At least one refund method is required';
-  }
-  
-  // Validate refund methods
-  for (const method of request.refund_methods) {
-    if (!method.type) {
-      return 'Refund method type is required';
-    }
-    if (!method.amount || method.amount <= 0) {
-      return 'Refund method amount must be greater than 0';
-    }
-  }
-  
-  // Validate partial refund specific fields
-  if (isPartialRefundRequest(request)) {
-    if (!request.line_items || request.line_items.length === 0) {
-      return 'At least one line item is required for partial refund';
-    }
-    
-    for (const lineItem of request.line_items) {
-      if (!lineItem.line_item_id) {
-        return 'Line item ID is required';
-      }
-      if (lineItem.refund_amount !== undefined && lineItem.refund_amount < 0) {
-        return 'Line item refund amount cannot be negative';
-      }
-    }
-  }
-  
-  return null;
-}
-
-/**
- * Calculate total refund amount from refund methods
- */
-export function calculateTotalRefundAmount(refundMethods: RefundMethod[]): number {
-  return refundMethods.reduce((total, method) => total + method.amount, 0);
-}
-
-/**
- * Format currency amount
- */
-export function formatCurrency(amount: number, currency: string = 'UGX'): string {
-  return new Intl.NumberFormat('en-UG', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
+export const REFUND_METHOD_COLORS: Record<RefundMethodType, string> = {
+  [RefundMethodType.CASH]: 'success',
+  [RefundMethodType.CARD]: 'info',
+  [RefundMethodType.INSURANCE]: 'secondary',
+  [RefundMethodType.MOBILE]: 'warning',
+  [RefundMethodType.BANK_TRANSFER]: 'default',
+  [RefundMethodType.CHEQUE]: 'default',
+  [RefundMethodType.OTHER]: 'default',
+};

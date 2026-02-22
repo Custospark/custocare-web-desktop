@@ -1,21 +1,12 @@
 // VoidModal.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Ban, AlertTriangle } from 'lucide-react';
 import type { BillingReviewItem } from '../../../../../api/billing-review/BillingReviewTypes';
-import { 
-  VoidReason, 
-  VOID_REASON_LABELS,
-  validateVoidRequest,
-  type VoidTransactionRequest 
-}  from '../../../../../api/refund/RefundTypes';
-import { 
-  useVoidTransaction,
-  extractErrorMessage,
-  formatValidationErrors 
-}  from '../../../../../api/refund/RefundQueries';
-import { ModalBackdrop, ModalContainer, } from './ModalPrimitives';
+import type { VoidReason } from '../../../../../api/refund/RefundTypes';
+import { VOID_REASON_LABELS } from '../../../../../api/refund/RefundTypes';
+import { useVoidTransaction } from '../../../../../api/refund/RefundQueries';
+import { ModalBackdrop, ModalContainer } from './ModalPrimitives';
 import { cx } from '../../utils';
-import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
 
 interface ThemeColors {
   bg: {
@@ -39,6 +30,7 @@ interface ThemeColors {
 interface VoidModalProps {
   open: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   theme: 'light' | 'dark';
   colors: ThemeColors;
   selectedTransaction: BillingReviewItem | null;
@@ -50,68 +42,84 @@ export const VoidModal: React.FC<VoidModalProps> = ({
   theme,
   colors,
   onClose,
+  onSuccess,
 }) => {
   const isDark = theme === 'dark';
-  const [reason, setReason] = useState<VoidReason>(VoidReason.BILLING_ERROR);
+  const [reason, setReason] = useState<VoidReason | ''>('');
   const [reasonNotes, setReasonNotes] = useState('');
   const [restoreInventory, setRestoreInventory] = useState(true);
   const [confirmed, setConfirmed] = useState(false);
-  const {showToast}=useToast();
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Use void transaction mutation
-  const { mutate: voidTransaction, isPending: isProcessing } = useVoidTransaction({
-    onSuccess: (data) => {
-      console.log(data.message);
-      // handleClose();
-    },
-    onError: (error) => {
-      // const errorMessage = extractErrorMessage(error, 'Failed to void transaction');
-      const validationErrors = formatValidationErrors(error.response?.data?.errors);
-      showToast('error',validationErrors,5000);
-      
-  
-    },
-  });
+  // Reset form when modal opens/closes
+  useEffect(() => {
+    if (open) {
+      setReason('');
+      setReasonNotes('');
+      setRestoreInventory(true);
+      setConfirmed(false);
+      setValidationError(null);
+    }
+  }, [open]);
+
+  const billingCycleId = selectedTransaction?.billing_cycle_id;
+
+  const { mutate: voidTransaction, isPending: isProcessing } = useVoidTransaction(
+    billingCycleId || 0,
+    {
+      onSuccess: (response) => {
+        if (response.success) {
+          // Close modal and notify parent
+          onClose();
+          onSuccess?.();
+          // Show success toast (implement based on your toast system)
+          console.log('Void successful:', response.data);
+        } else {
+          setValidationError(response.message || 'Failed to void transaction');
+        }
+      },
+      onError: (error) => {
+        const errorMessage = error.response?.data?.message || error.message;
+        setValidationError(errorMessage || 'An error occurred while voiding');
+      },
+    }
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!selectedTransaction?.billing_cycle_id) {
-      showToast('error',"No billing Selected.",5000)
+    setValidationError(null);
+
+    if (!billingCycleId) {
+      setValidationError('No transaction selected');
       return;
     }
 
-    const requestData: VoidTransactionRequest = {
-      reason,
-      reason_notes: reason === VoidReason.OTHER ? reasonNotes : undefined,
-      restore_inventory: restoreInventory,
-    };
-
-    // Client-side validation
-    const validationError = validateVoidRequest(requestData);
-    if (validationError) {
+    if (!reason) {
+      setValidationError('Please select a void reason');
       return;
     }
 
-    // Submit void request
+    if (reason === 'other' && !reasonNotes.trim()) {
+      setValidationError('Please provide notes for "Other" reason');
+      return;
+    }
+
     voidTransaction({
-      billingCycleId: selectedTransaction.billing_cycle_id,
-      data: requestData,
+      reason: reason as VoidReason,
+      reason_notes: reason === 'other' ? reasonNotes : undefined,
+      restore_inventory: restoreInventory,
     });
   };
 
   const handleClose = () => {
     if (!isProcessing) {
-      setReason(VoidReason.BILLING_ERROR);
-      setReasonNotes('');
-      setRestoreInventory(true);
-      setConfirmed(false);
       onClose();
     }
   };
 
-  const isOtherReason = reason === VoidReason.OTHER;
-  const isSubmitDisabled = !confirmed || isProcessing || (isOtherReason && !reasonNotes.trim());
+  if (!selectedTransaction) return null;
+
+  const requiresNotes = reason === 'other';
 
   return (
     <>
@@ -119,7 +127,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
       <ModalContainer open={open}>
         <div
           className={cx(
-            'rounded-xl shadow-2xl border w-full max-w-lg',
+            'rounded-xl shadow-2xl border w-full max-w-md',
             colors.border.primary,
             colors.bg.elevated,
             isProcessing && 'pointer-events-none opacity-75'
@@ -139,6 +147,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
               </div>
             </div>
             <button
+              type="button"
               onClick={handleClose}
               disabled={isProcessing}
               className={cx(
@@ -154,6 +163,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
 
           {/* Body */}
           <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            {/* Warning Banner */}
             <div className={cx('p-4 rounded-lg border', isDark ? 'bg-red-900/10 border-red-700' : 'bg-red-50 border-red-200')}>
               <div className="flex gap-3">
                 <AlertTriangle className={cx('w-5 h-5 flex-shrink-0 mt-0.5', isDark ? 'text-red-400' : 'text-red-600')} />
@@ -169,6 +179,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
               </div>
             </div>
 
+            {/* Transaction Summary */}
             {selectedTransaction && (
               <div className={cx('p-3 rounded-lg text-xs space-y-2', isDark ? 'bg-gray-900' : 'bg-gray-50')}>
                 <div className="flex justify-between">
@@ -190,14 +201,18 @@ export const VoidModal: React.FC<VoidModalProps> = ({
               </div>
             )}
 
-            {/* Void Reason */}
+            {/* Void Reason Dropdown */}
             <div>
               <label className={cx('block text-sm font-semibold mb-2', colors.text.primary)}>
                 Void Reason <span className="text-red-500">*</span>
               </label>
               <select
                 value={reason}
-                onChange={(e) => setReason(e.target.value as VoidReason)}
+                onChange={(e) => {
+                  setReason(e.target.value as VoidReason);
+                  setValidationError(null);
+                }}
+                required
                 disabled={isProcessing}
                 className={cx(
                   'w-full px-4 py-2.5 rounded-lg border text-sm cursor-pointer',
@@ -207,6 +222,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
                   isProcessing && 'cursor-not-allowed opacity-50'
                 )}
               >
+                <option value="">Select a reason</option>
                 {Object.entries(VOID_REASON_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
@@ -215,17 +231,20 @@ export const VoidModal: React.FC<VoidModalProps> = ({
               </select>
             </div>
 
-            {/* Additional Notes (required for "other") */}
-            {isOtherReason && (
+            {/* Reason Notes (only for "other") */}
+            {requiresNotes && (
               <div>
                 <label className={cx('block text-sm font-semibold mb-2', colors.text.primary)}>
                   Additional Notes <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={reasonNotes}
-                  onChange={(e) => setReasonNotes(e.target.value)}
-                  placeholder="Please specify the reason for voiding..."
-                  rows={3}
+                  onChange={(e) => {
+                    setReasonNotes(e.target.value);
+                    setValidationError(null);
+                  }}
+                  placeholder="Please provide details..."
+                  rows={2}
                   required
                   disabled={isProcessing}
                   className={cx(
@@ -239,8 +258,8 @@ export const VoidModal: React.FC<VoidModalProps> = ({
               </div>
             )}
 
-            {/* Restore Inventory Checkbox */}
-            <div className="flex items-start gap-3">
+            {/* Restore Inventory Toggle */}
+            <div className="flex items-center gap-3">
               <input
                 type="checkbox"
                 id="restore-inventory"
@@ -248,7 +267,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
                 onChange={(e) => setRestoreInventory(e.target.checked)}
                 disabled={isProcessing}
                 className={cx(
-                  'mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer',
+                  'w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer',
                   isProcessing && 'cursor-not-allowed opacity-50'
                 )}
               />
@@ -260,7 +279,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
                   isProcessing && 'cursor-not-allowed opacity-50'
                 )}
               >
-                Restore inventory quantities for items in this transaction
+                Restore inventory items
               </label>
             </div>
 
@@ -270,7 +289,10 @@ export const VoidModal: React.FC<VoidModalProps> = ({
                 type="checkbox"
                 id="void-confirm"
                 checked={confirmed}
-                onChange={(e) => setConfirmed(e.target.checked)}
+                onChange={(e) => {
+                  setConfirmed(e.target.checked);
+                  setValidationError(null);
+                }}
                 disabled={isProcessing}
                 className={cx(
                   'mt-1 w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer',
@@ -290,6 +312,16 @@ export const VoidModal: React.FC<VoidModalProps> = ({
               </label>
             </div>
 
+            {/* Validation Error */}
+            {validationError && (
+              <div className={cx(
+                'p-3 rounded-lg text-sm',
+                isDark ? 'bg-red-900/20 text-red-300' : 'bg-red-50 text-red-600'
+              )}>
+                {validationError}
+              </div>
+            )}
+
             {/* Actions */}
             <div className="flex gap-3 pt-2">
               <button
@@ -307,7 +339,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={isSubmitDisabled}
+                disabled={!confirmed || !reason || isProcessing || (requiresNotes && !reasonNotes.trim())}
                 className={cx(
                   'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition cursor-pointer',
                   'bg-red-600 hover:bg-red-700 text-white',
