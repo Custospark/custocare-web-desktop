@@ -7,7 +7,7 @@ import { VOID_REASON_LABELS } from '../../../../../api/refund/RefundTypes';
 import { useVoidTransaction } from '../../../../../api/refund/RefundQueries';
 import { ModalBackdrop, ModalContainer } from './ModalPrimitives';
 import { cx } from '../../utils';
-
+import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
 interface ThemeColors {
   bg: {
     primary: string;
@@ -45,6 +45,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
   onSuccess,
 }) => {
   const isDark = theme === 'dark';
+  const { showToast } = useToast();
   const [reason, setReason] = useState<VoidReason | ''>('');
   const [reasonNotes, setReasonNotes] = useState('');
   const [restoreInventory, setRestoreInventory] = useState(true);
@@ -69,18 +70,19 @@ export const VoidModal: React.FC<VoidModalProps> = ({
     {
       onSuccess: (response) => {
         if (response.success) {
-          // Close modal and notify parent
+          showToast('success', 'Transaction voided successfully', 3000);
           onClose();
-          onSuccess?.();
-          // Show success toast (implement based on your toast system)
-          console.log('Void successful:', response.data);
+          onSuccess?.(); // This will trigger refresh in parent
         } else {
-          setValidationError(response.message || 'Failed to void transaction');
+          const errorMsg = response.message || 'Failed to void transaction';
+          setValidationError(errorMsg);
+          showToast('error', errorMsg, 5000);
         }
       },
-      onError: (error) => {
-        const errorMessage = error.response?.data?.message || error.message;
-        setValidationError(errorMessage || 'An error occurred while voiding');
+      onError: (error: any) => {
+        const errorMessage = error.response?.data?.message || error.message || 'An error occurred while voiding';
+        setValidationError(errorMessage);
+        showToast('error', errorMessage, 5000);
       },
     }
   );
@@ -90,17 +92,23 @@ export const VoidModal: React.FC<VoidModalProps> = ({
     setValidationError(null);
 
     if (!billingCycleId) {
-      setValidationError('No transaction selected');
+      const errorMsg = 'No transaction selected';
+      setValidationError(errorMsg);
+      showToast('error', errorMsg, 3000);
       return;
     }
 
     if (!reason) {
-      setValidationError('Please select a void reason');
+      const errorMsg = 'Please select a void reason';
+      setValidationError(errorMsg);
+      showToast('error', errorMsg, 3000);
       return;
     }
 
     if (reason === 'other' && !reasonNotes.trim()) {
-      setValidationError('Please provide notes for "Other" reason');
+      const errorMsg = 'Please provide notes for "Other" reason';
+      setValidationError(errorMsg);
+      showToast('error', errorMsg, 3000);
       return;
     }
 
@@ -312,7 +320,7 @@ export const VoidModal: React.FC<VoidModalProps> = ({
               </label>
             </div>
 
-            {/* Validation Error */}
+            {/* Validation Error - Only show if not already shown in toast */}
             {validationError && (
               <div className={cx(
                 'p-3 rounded-lg text-sm',

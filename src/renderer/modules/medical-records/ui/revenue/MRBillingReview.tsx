@@ -1,12 +1,12 @@
-// components/billing-review/MRBillingReview.tsx
-import React, { useMemo, useState, useCallback, } from 'react';
+// MRBillingReview.tsx - Updated with refresh on success
+import React, { useMemo, useState, useCallback } from 'react';
 import { TransactionList } from './billing-review/components/TransactionList';
 import { ReceiptView } from './billing-review/components/ReceiptView';
 import { EmailModal, RefundModal, VoidModal } from './billing-review/components/Modals';
 import { useGetBillingReview } from '../../api/billing-review/BillingReviewQueries';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 import { AlertCircle, LayoutGrid, Receipt } from 'lucide-react';
-import { motion, } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import { BillingCycleStatus } from '../../api/billing-review/BillingReviewTypes';
 
@@ -26,7 +26,6 @@ interface MRBillingReviewProps {
 export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light' }) => {
   const isDark = theme === 'dark';
   const { showToast } = useToast();
-  
   
   // Backend Integration with refresh capability
   const { 
@@ -64,7 +63,6 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
     sortOrder: 'desc',
     showAdvancedFilters: false,
   });
-
 
   // Modal states
   const [refundOpen, setRefundOpen] = useState(false);
@@ -134,54 +132,55 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
     return filtered;
   }, [transactions, filters]);
 
-  
-
   // Refresh handler
-// Refresh handler
-const handleRefresh = useCallback(async () => {
-  try {
-    await refetch();
-    showToast('success', 'Data refreshed successfully', 5000);
-  } catch (error) {
-    console.log(error);
-    showToast('error', 'Failed to refresh data', 5000);
-  }
-}, [refetch, showToast]); // Add showToast dependency
+  const handleRefresh = useCallback(async () => {
+    try {
+      await refetch();
+      showToast('success', 'Data refreshed successfully', 3000);
+    } catch (error) {
+      showToast('error', 'Failed to refresh data', 5000);
+    }
+  }, [refetch, showToast]);
 
-// Action handlers
-const handlePrint = useCallback(() => {
-  showToast('info', 'Print Request sent to the printing queue...', 5000);
-}, [showToast]); // Add showToast dependency
+  // Success handler for modal operations
+  const handleModalSuccess = useCallback(() => {
+    handleRefresh();
+  }, [handleRefresh]);
+
+  // Action handlers
+  const handlePrint = useCallback(() => {
+    showToast('info', 'Print request sent to the printing queue...', 3000);
+  }, [showToast]);
 
   const handleEmail = useCallback(() => {
+    if (!selectedTransaction) {
+      showToast('error', 'No transaction selected', 3000);
+      return;
+    }
     setEmailOpen(true);
-  }, []);
+  }, [selectedTransaction, showToast]);
 
   const handleRefund = useCallback(() => {
+    if (!selectedTransaction) {
+      showToast('error', 'No transaction selected', 3000);
+      return;
+    }
     setRefundOpen(true);
-  }, []);
+  }, [selectedTransaction, showToast]);
 
   const handleVoid = useCallback(() => {
+    if (!selectedTransaction) {
+      showToast('error', 'No transaction selected', 3000);
+      return;
+    }
     setVoidOpen(true);
-  }, []);
-const handleEmailSubmit = useCallback(() => {
-  showToast('info', 'Email functionality - backend integration pending', 5000);
-  setEmailOpen(false);
-}, [showToast]); // Add showToast dependency
+  }, [selectedTransaction, showToast]);
 
-const handleRefundSubmit = useCallback(() => {
-  // Modal now handles backend integration internally
-  // This callback is called after successful refund
-  showToast('success', 'Refund processed successfully', 5000);
-  handleRefresh(); // Refresh the list
-}, [showToast, handleRefresh]);
-
-const handleVoidSubmit = useCallback(() => {
-  // Modal now handles backend integration internally
-  // This callback is called after successful void
-  showToast('success', 'Transaction voided successfully', 5000);
-  handleRefresh(); // Refresh the list
-}, [showToast, handleRefresh]);
+  const handleEmailSubmit = useCallback(() => {
+    // Email functionality will be implemented separately
+    showToast('info', 'Email functionality - backend integration pending', 5000);
+    setEmailOpen(false);
+  }, [showToast]);
 
   // Filter management
   const updateFilter = useCallback(<K extends keyof FilterState>(key: K, value: FilterState[K]) => {
@@ -268,7 +267,6 @@ const handleVoidSubmit = useCallback(() => {
 
   return (
     <div className={`h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6 ${colors.bg.primary}`}>
-
       {/* Print Styles */}
       <style>{`
         @media print {
@@ -323,57 +321,57 @@ const handleVoidSubmit = useCallback(() => {
       </div>
 
       {/* Main Grid - Both panels sticky */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-6 h-[calc(100%-4rem)]">
-     {/* Receipt Preview - scrolls naturally with the page */}
-      <motion.div 
-        className={`
-          ${mobileView === 'list' ? 'hidden md:block' : 'block'}
-          md:block
-        `}
-        layout
-        transition={{ duration: 0.2 }}
-      >
-        <div>
-          <ReceiptView
-            selectedTransaction={selectedTransaction}
-            theme={theme}
-            colors={colors}
-            onPrint={handlePrint}
-            onEmail={handleEmail}
-            onRefund={handleRefund}
-            onVoid={handleVoid}
-          />
-        </div>
-      </motion.div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-6 h-[calc(100%-4rem)]">
+        {/* Receipt Preview */}
+        <motion.div 
+          className={`
+            ${mobileView === 'list' ? 'hidden md:block' : 'block'}
+            md:block
+          `}
+          layout
+          transition={{ duration: 0.2 }}
+        >
+          <div>
+            <ReceiptView
+              selectedTransaction={selectedTransaction}
+              theme={theme}
+              colors={colors}
+              onPrint={handlePrint}
+              onEmail={handleEmail}
+              onRefund={handleRefund}
+              onVoid={handleVoid}
+            />
+          </div>
+        </motion.div>
 
-      {/* Transaction List - Now on the right for md screens and above (sticky) */}
-      <motion.div 
-        className={`
-          ${mobileView === 'receipt' ? 'hidden md:block' : 'block'}
-          md:block h-full
-        `}
-        layout
-        transition={{ duration: 0.2 }}
-      >
-        <div className="sticky top-0 h-[calc(100vh-10rem)] overflow-hidden rounded-xl">
-          <TransactionList
-            transactions={transactions}
-            filteredTransactions={filteredTransactions}
-            selectedId={selectedId}
-            filters={filters}
-            searchTerm={filters.searchTerm}
-            theme={theme}
-            colors={colors}
-            pillBg={pillBg}
-            onSelectTransaction={handleSelectTransaction}
-            onUpdateFilter={updateFilter}
-            onClearFilters={clearFilters}
-            onRefresh={handleRefresh}
-            isRefreshing={isFetching}
-          />
-        </div>
-          </motion.div>
-        </div>
+        {/* Transaction List */}
+        <motion.div 
+          className={`
+            ${mobileView === 'receipt' ? 'hidden md:block' : 'block'}
+            md:block h-full
+          `}
+          layout
+          transition={{ duration: 0.2 }}
+        >
+          <div className="sticky top-0 h-[calc(100vh-10rem)] overflow-hidden rounded-xl">
+            <TransactionList
+              transactions={transactions}
+              filteredTransactions={filteredTransactions}
+              selectedId={selectedId}
+              filters={filters}
+              searchTerm={filters.searchTerm}
+              theme={theme}
+              colors={colors}
+              pillBg={pillBg}
+              onSelectTransaction={handleSelectTransaction}
+              onUpdateFilter={updateFilter}
+              onClearFilters={clearFilters}
+              onRefresh={handleRefresh}
+              isRefreshing={isFetching}
+            />
+          </div>
+        </motion.div>
+      </div>
 
       {/* Modals */}
       <RefundModal
@@ -382,7 +380,7 @@ const handleVoidSubmit = useCallback(() => {
         theme={theme}
         colors={colors}
         onClose={() => setRefundOpen(false)}
-        onSubmit={handleRefundSubmit}
+        onSuccess={handleModalSuccess} // Add this prop to RefundModal
       />
 
       <EmailModal
@@ -400,7 +398,7 @@ const handleVoidSubmit = useCallback(() => {
         theme={theme}
         colors={colors}
         onClose={() => setVoidOpen(false)}
-        onSubmit={handleVoidSubmit}
+        onSuccess={handleModalSuccess}
       />
     </div>
   );
