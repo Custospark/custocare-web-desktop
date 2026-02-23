@@ -14,8 +14,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Shield,
   Sparkles,
-  Moon,
-  Sun,
   Heart,
   Briefcase,
   UserCheck,
@@ -23,7 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../types/cn';
 import { useNavigate } from 'react-router-dom';
-import { ROUTES, ACCOUNT_ROUTES } from '../../../../app/routes/routeConstants';
+import { ROUTES} from '../../../../app/routes/routeConstants';
 import { logout } from '../../../../app/store/slices/authSlice';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
@@ -43,7 +41,6 @@ import {
   getPatientUuid,
 } from '../../../../app/store/utils/contextSelectors';
 
-import { NotificationCenter } from './NotificationCenter';
 import { UserProfileMenu } from './UserProfileMenu';
 import ContextSwitcher from './ContextSwitcher';
 import StaffPresence from './StaffPresence';
@@ -73,11 +70,9 @@ interface ContextOption {
 export const Navbar: React.FC<NavbarProps> = ({
   theme = 'dark',
   onMenuClick,
-  onThemeToggle,
   className,
 }) => {
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isContextSwitcherOpen, setIsContextSwitcherOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -184,8 +179,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     return allContextOptions.find((opt) => opt.isActive) || allContextOptions[0];
   }, [allContextOptions]);
 
-  const unreadCount = 3;
-
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -202,7 +195,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       }
       if (e.key === 'Escape') {
         setIsContextSwitcherOpen(false);
-        setIsNotificationsOpen(false);
         setIsUserDropdownOpen(false);
       }
     };
@@ -226,7 +218,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       navigate(ROUTES.HOME);
     };
 
-  const handleNotification = () => navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
 
   const handleContextSwitch = (option: ContextOption) => {
     try {
@@ -367,34 +358,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       <MySpace isDark={isDark} isMobile={isMobile} />
     </div>
   )}
-
-  {/* Theme toggle */}
-  <button
-    onClick={onThemeToggle}
-    className={cn(
-      'hidden md:flex items-center justify-center shrink-0 cursor-pointer',
-      'w-10 h-10 rounded-lg',
-      'transition-all duration-300 hover:scale-105',
-      'focus:outline-none focus:ring-2 focus:ring-offset-2',
-      isDark
-        ? 'bg-gray-800/80 hover:bg-gray-700/80 text-amber-400 border border-gray-700/50 focus:ring-amber-500/50'
-        : 'bg-gray-100/80 hover:bg-gray-200/80 text-indigo-600 border border-gray-300/50 focus:ring-indigo-500/50'
-    )}
-    title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-  >
-    {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-  </button>
-
-
-  {/* Notifications */}
-  <div className="cursor-pointer" title="Messages">
-    <NotificationCenter
-      unreadCount={unreadCount}
-      isOpen={isNotificationsOpen}
-      isDark={isDark}
-      onNotificationClick={handleNotification}
-    />
-  </div>
 
   {/* User profile */}
   <div className="cursor-pointer" title="">

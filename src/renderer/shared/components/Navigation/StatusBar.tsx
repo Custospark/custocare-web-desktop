@@ -15,6 +15,7 @@ import {
   Zap,
   Filter,
   ArrowRight,
+  Bell,
 } from 'lucide-react';
 import { cn } from '../../types/cn';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +25,7 @@ import {
 } from '../../../app/store/slices/activeContextSlice';
 import { useSelector } from 'react-redux';
 import { isInPatientMode } from '../../../app/store/utils/contextSelectors';
+import { ACCOUNT_ROUTES } from '../../../app/routes/routeConstants';
 
 export type SidebarPosition = 'left' | 'right';
 export type SystemStatus = 'online' | 'slow' | 'offline';
@@ -58,6 +60,10 @@ export interface StatusBarProps {
   onToggleTheme: () => void;
 
   appVersion: string;
+  
+  // New props for notifications
+  unreadCount?: number;
+  onNotificationClick?: () => void;
 }
 
 interface SearchableModule {
@@ -134,6 +140,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   onToggleSidebarPosition,
   onToggleTheme,
   appVersion,
+  unreadCount = 0,
+  onNotificationClick,
 }) => {
   const navigate = useNavigate();
   const status = useMemo(() => STATUS_STYLES[systemStatus], [systemStatus]);
@@ -153,12 +161,12 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     []
   );
 
-  // Define all searchable modules (same as sidebar)
+  // Define all searchable modules
   const allModules: SearchableModule[] = useMemo(() => [
     {
       id: 'patient-dashboard',
       label: 'My Health',
-      route: '/dahboard/patient',
+      route: '/dashboard/patient',
       description: 'Personal health overview',
       moduleCode: 'patient_dashboard',
       keywords: ['health', 'patient', 'dashboard', 'overview', 'personal'],
@@ -239,7 +247,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     {
       id: 'account',
       label: 'Account',
-      route: 'acount/profile',
+      route: '/account/profile',
       description: 'Manage your profile, security, and preferences',
       moduleCode: 'account',
       keywords: ['account', 'profile', 'security', 'preferences', 'settings', 'user'],
@@ -274,7 +282,6 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       }
 
       const results = accessibleModules.filter((module) => {
-        // Search across module name, description, category, and keywords
         const searchableText = [
           module.label,
           module.description,
@@ -283,11 +290,11 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         ].join(' ').toLowerCase();
 
         return searchableText.includes(term);
-      }).slice(0, 8); // Show up to 8 results
+      }).slice(0, 8);
 
       setSearchResults(results);
       setShowSearchResults(true);
-    }, 150); // Debounce delay
+    }, 150);
 
     return () => clearTimeout(timeoutId);
   }, [searchQuery, accessibleModules]);
@@ -322,6 +329,14 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     setShowSearchResults(false);
     searchInputRef.current?.blur();
   }, [navigate, onClearSearch, searchInputRef]);
+
+  const handleNotificationClick = useCallback(() => {
+    if (onNotificationClick) {
+      onNotificationClick();
+    } else {
+      navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
+    }
+  }, [onNotificationClick, navigate]);
 
   const positionToggleIcon = useMemo(() => {
     const isLeft = sidebarPosition === 'left';
@@ -374,7 +389,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   return (
     <div
       className={cn(
-        'fixed top-0 left-0 right-0 z-50 px-4 py-2.5',
+        'fixed top-0 left-0 right-0 z-50 px-2 sm:px-4 py-2.5',
         'border-b backdrop-blur-xl',
         'transition-all duration-300 ease-in-out',
         themeClasses.backdrop,
@@ -382,7 +397,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       )}
     >
       <div className="flex items-center justify-between gap-2 sm:gap-4">
-        {/* System Status - Real connectivity info */}
+        {/* LEFT: System Status */}
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           <div
             className={cn(
@@ -456,7 +471,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
           </span>
         </div>
 
-        {/* Search Bar with Dropdown - IMPROVED MOBILE RESPONSIVENESS */}
+        {/* CENTER: Search Bar with Dropdown */}
         <div className="flex-1 max-w-lg mx-2 sm:mx-3" ref={searchWrapRef}>
           <div className="relative group">
             <Search
@@ -483,7 +498,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
                 if (searchQuery.trim()) setShowSearchResults(true);
               }}
               onBlur={onSearchBlur}
-              placeholder="Search for anything you need..." // Slightly more professional              
+              placeholder="Search for anything you need..."
               aria-label="Global module search"
               className={cn(
                 'w-full pl-9 pr-16 sm:pr-20 py-1.5 rounded-lg text-sm',
@@ -523,24 +538,22 @@ export const StatusBar: React.FC<StatusBarProps> = ({
               </div>
             )}
 
-            {/* SEARCH RESULTS DROPDOWN - IMPROVED MOBILE RESPONSIVENESS AND CENTERING */}
+            {/* SEARCH RESULTS DROPDOWN */}
             {showSearchResults && (
               <div 
                 className={cn(
                   'absolute z-[60] mt-2 rounded-lg shadow-xl border backdrop-blur-sm',
                   'transition-all duration-200',
-                  // Mobile-first responsive design
-                  'left-0 right-0', // Full width on mobile
-                  'mx-auto', // Auto margins for centering
-                  'w-full', // Full width on mobile
-                  'max-h-[70vh] sm:max-h-96 overflow-y-auto', // Scrollable on mobile
+                  'left-0 right-0',
+                  'mx-auto',
+                  'w-full',
+                  'max-h-[70vh] sm:max-h-96 overflow-y-auto',
                   theme === 'dark'
                     ? 'bg-gray-900/98 border-gray-700/50'
                     : 'bg-white/98 border-gray-200/50'
                 )}
                 style={{
-                  // Ensure proper positioning on mobile
-                  maxWidth: 'min(100%, 500px)', // Max width on larger screens
+                  maxWidth: 'min(100%, 500px)',
                 }}
               >
                 {searchResults.length > 0 ? (
@@ -574,7 +587,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
                               <span
                                 className={cn(
                                   'text-xs px-2 py-0.5 rounded-full inline-flex items-center justify-center',
-                                  'w-fit', // Fit to content
+                                  'w-fit',
                                   theme === 'dark'
                                     ? 'bg-blue-900/30 text-blue-300 border border-blue-700/30'
                                     : 'bg-blue-50 text-blue-700 border border-blue-200/50'
@@ -608,52 +621,52 @@ export const StatusBar: React.FC<StatusBarProps> = ({
                     ))}
                   </div>
                 ) : (
-                 <div className="p-6 sm:p-8 text-center">
-                <div
-                  className={cn(
-                    'inline-flex p-3 sm:p-4 rounded-full mb-3 mx-auto',
-                    theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-100'
-                  )}
-                >
-                  <Filter
-                    className={cn(
-                      'w-5 h-5 sm:w-6 sm:h-6',
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                    )}
-                  />
-                </div>
-                  <p
-                    className={cn(
-                      'font-semibold text-sm sm:text-base mb-1',
-                      theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
-                    )}
-                  >
-                    No results found
-                  </p>
-                  <p
-                    className={cn(
-                      'text-xs sm:text-sm',
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                    )}
-                  >
-                    Try different keywords
-                  </p>
-                  <p
-                    className={cn(
-                      'text-xs mt-2',
-                      theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
-                    )}
-                  >
-                    Search by name, category, or functionality
-                  </p>
-                </div>
+                  <div className="p-6 sm:p-8 text-center">
+                    <div
+                      className={cn(
+                        'inline-flex p-3 sm:p-4 rounded-full mb-3 mx-auto',
+                        theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-100'
+                      )}
+                    >
+                      <Filter
+                        className={cn(
+                          'w-5 h-5 sm:w-6 sm:h-6',
+                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        )}
+                      />
+                    </div>
+                    <p
+                      className={cn(
+                        'font-semibold text-sm sm:text-base mb-1',
+                        theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+                      )}
+                    >
+                      No results found
+                    </p>
+                    <p
+                      className={cn(
+                        'text-xs sm:text-sm',
+                        theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                      )}
+                    >
+                      Try different keywords
+                    </p>
+                    <p
+                      className={cn(
+                        'text-xs mt-2',
+                        theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                      )}
+                    >
+                      Search by name, category, or functionality
+                    </p>
+                  </div>
                 )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Quick Actions */}
+        {/* RIGHT: Quick Actions */}
         <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
           {/* Sidebar Position Toggle */}
           <button
@@ -693,6 +706,39 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             )}
           >
             {theme === 'dark' ? <Sun className="w-4 h-4 sm:w-3.5 sm:h-3.5" /> : <Moon className="w-4 h-4 sm:w-3.5 sm:h-3.5" />}
+          </button>
+
+          {/* Notifications */}
+          <button
+            onClick={handleNotificationClick}
+            aria-label="Notifications"
+            title="View messages and notifications"
+            className={cn(
+              'relative p-2 sm:p-1.5 rounded-lg',
+              'transition-all duration-300 ease-in-out',
+              'hover:scale-105 active:scale-95',
+              'focus:outline-none focus:ring-2 focus:ring-offset-1',
+              'cursor-pointer',
+              theme === 'dark'
+                ? 'text-gray-400 hover:text-cyan-400 hover:bg-gray-800/60 focus:ring-cyan-500/50'
+                : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100/80 focus:ring-blue-500/50'
+            )}
+          >
+            <Bell className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+            {unreadCount > 0 && (
+              <span
+                className={cn(
+                  'absolute -top-1 -right-1 flex items-center justify-center',
+                  'min-w-[18px] h-[18px] px-1',
+                  'text-[10px] font-bold text-white rounded-full',
+                  'bg-gradient-to-r from-red-500 to-pink-500',
+                  'animate-pulse',
+                  'shadow-lg shadow-red-500/50'
+                )}
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </button>
 
           {/* Settings */}
