@@ -16,12 +16,12 @@ import { useSelector } from 'react-redux';
 import { axiosInstance } from '../../../../app/api/axiosConfig';
 import type { 
   VoidRequest,
-  RefundRequest,
   VoidResponse,
   BaseRefundResponse,
   ValidationErrorResponse,
   FullRefundResponseData,
   PartialRefundResponseData,
+  BaseRefundRequest,
 } from './RefundTypes';
 import { type RootState } from '../../../../app/store/store';
 import { getStaffId, getActiveFacilityId } from '../../../../app/store/utils/contextSelectors';
@@ -153,17 +153,17 @@ export const useRefundTransaction = (
   options?: Omit<UseMutationOptions<
     BaseRefundResponse,
     AxiosError<ValidationErrorResponse>,
-    RefundRequest
+    BaseRefundRequest
   >, 'onSuccess'> & {
-    onSuccess?: (data: BaseRefundResponse, variables: RefundRequest, context: unknown) => void;
+    onSuccess?: (data: BaseRefundResponse, variables: BaseRefundRequest, context: unknown) => void;
   }
 ) => {
   const queryClient = useQueryClient();
   const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
   const staffId = useSelector((state: RootState) => getStaffId(state));
 
-  return useMutation<BaseRefundResponse, AxiosError<ValidationErrorResponse>, RefundRequest>({
-    mutationFn: async (refundData: RefundRequest) => {
+  return useMutation<BaseRefundResponse, AxiosError<ValidationErrorResponse>, BaseRefundRequest>({
+    mutationFn: async (refundData: BaseRefundRequest) => {
       if (!facilityId) {
         throw new Error('No active facility selected');
       }

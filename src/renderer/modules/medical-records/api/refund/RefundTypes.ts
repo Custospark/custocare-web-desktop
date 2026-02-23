@@ -105,28 +105,21 @@ export interface RefundLineItem {
 export interface BaseRefundRequest {
   reason: RefundReason | string;
   reason_notes?: string;
-  refund_methods: RefundMethod[];
+  line_items?: Array<{                    // Optional - omit for full refund
+    line_item_id: number;                  // Backend expects integer
+    refund_amount: number;
+    quantity?: number;                      // Optional as per schema
+  }>;
+  refund_methods: Array<{
+    type: RefundMethodType;
+    amount: number;
+    reference: string | null;
+  }>;
   restore_inventory?: boolean;
 }
 
-/**
- * Full refund request (no line_items)
- */
-export interface FullRefundRequest extends BaseRefundRequest {
-  line_items?: never;
-}
 
-/**
- * Partial refund request (with line_items)
- */
-export interface PartialRefundRequest extends BaseRefundRequest {
-  line_items: RefundLineItem[];
-}
 
-/**
- * Union type for refund request (auto-detected by backend)
- */
-export type RefundRequest = FullRefundRequest | PartialRefundRequest;
 
 /* -------------------------------------------------------------------------- */
 /*                              RESPONSE TYPES                                */
@@ -250,12 +243,12 @@ export interface EligibilityResult {
 /*                              UTILITY FUNCTIONS                             */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Type guard to check if a refund request is a partial refund
- */
-export function isPartialRefund(request: RefundRequest): request is PartialRefundRequest {
-  return 'line_items' in request && Array.isArray(request.line_items) && request.line_items.length > 0;
-}
+// /**
+//  * Type guard to check if a refund request is a partial refund
+//  */
+// export function isPartialRefund(request: RefundRequest): request is PartialRefundRequest {
+//   return 'line_items' in request && Array.isArray(request.line_items) && request.line_items.length > 0;
+// }
 
 /**
  * Type guard to check if a refund response is a full refund

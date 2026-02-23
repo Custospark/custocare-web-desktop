@@ -59,9 +59,10 @@ export const RefundModal: React.FC<RefundModalProps> = ({
   const isDark = theme === 'dark';
   const { showToast } = useToast();
   
-  // Ref to track if component is initializing
+  // Refs
   const isInitializing = useRef(false);
   const prevTransactionId = useRef<string | null>(null);
+  const isSubmitting = useRef(false);
   
   // Form state
   const [refundType, setRefundType] = useState<'full' | 'partial'>('full');
@@ -77,6 +78,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
   // Line items for partial refund
   const [lineItems, setLineItems] = useState<RefundableLineItem[]>([]);
 
+
   // Memoized eligibility check
   const eligibilityWarning = useMemo(() => {
     if (!selectedTransaction) return null;
@@ -90,28 +92,35 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     return eligibility.eligible ? null : (eligibility.message || null);
   }, [selectedTransaction]);
 
-  // Memoized initial line items generation
+  // Memoized initial line items generation - FIXED ID ISSUE
   const generateInitialLineItems = useCallback((
     transaction: BillingReviewItem | null,
     type: 'full' | 'partial'
   ): RefundableLineItem[] => {
     if (!transaction) return [];
     
-    return transaction.charge_items.map((item, index) => ({
-      id: parseInt(item.id.replace('charge::', '')) || index,
-      line_item_uuid: item.id.replace('charge::', ''),
-      service_code: item.service.code,
-      service_name: item.service.name,
-      unit_price: item.service.unitPrice,
-      line_total: item.totalAmount,
-      net_amount: item.totalAmount,
-      max_refundable_amount: item.totalAmount,
-      is_selected: type === 'full',
-      refund_amount: type === 'full' ? item.totalAmount : 0,
-      quantity: type === 'full' ? item.quantity : 0,
-      original_quantity: item.quantity,
-      max_refundable_quantity: item.quantity,
-    }));
+    return transaction.charge_items
+      .map((item) => {
+            
+        // Create a complete object that matches RefundableLineItem
+        const lineItem: RefundableLineItem = {
+          id: item.service.id,
+          line_item_uuid: typeof item.service.id === 'string' ? item.id.replace('charge::', '') : String(item.id),
+          service_code: item.service.code,
+          service_name: item.service.name,
+          unit_price: item.service.unitPrice,
+          line_total: item.totalAmount,
+          net_amount: item.totalAmount,
+          max_refundable_amount: item.totalAmount,
+          is_selected: type === 'full',
+          refund_amount: type === 'full' ? item.totalAmount : 0,
+          quantity: type === 'full' ? item.quantity : 0,
+          original_quantity: item.quantity,
+        };
+        
+        return lineItem;
+      })
+      .filter((item): item is RefundableLineItem => item !== null); // Remove invalid items
   }, []);
 
   // Memoized initial payment methods generation
@@ -132,57 +141,40 @@ export const RefundModal: React.FC<RefundModalProps> = ({
 
   const totalRefund = useMemo(() => {
     if (refundType === 'full' && selectedTransaction) {
-      // Full refund should return the grand total (including taxes)
       return selectedTransaction.billing_data.grandTotal;
     }
     
-    // For partial refund, calculate items subtotal first
     const selectedItems = lineItems.filter(item => item.is_selected);
     if (selectedItems.length === 0) return 0;
     
-    // Calculate subtotal of selected items
     const itemsSubtotal = selectedItems.reduce((sum, item) => 
       sum + (item.refund_amount || 0), 0
     );
     
-    // Get original transaction data
-    const originalGrandTotal = selectedTransaction?.billing_data?.grandTotal || 0;
     const originalDiscount = selectedTransaction?.billing_data?.discountAmount || 0;
     const originalTaxes = selectedTransaction?.billing_data?.taxes || [];
     const originalSubtotal = selectedTransaction?.billing_data?.subtotal || 0;
     
-    // Calculate the proportion of the original transaction being refunded
-    // Use the original subtotal (before discount) for ratio calculation
     const refundRatio = originalSubtotal > 0 
       ? itemsSubtotal / originalSubtotal 
       : 0;
     
-    // Calculate proportional discount for the refunded items
     const discountAmount = originalDiscount * refundRatio;
-    
-    // Calculate taxable amount after discount for refunded items
     const taxableAmount = itemsSubtotal - discountAmount;
     
-    // Calculate taxes based on the taxable amount
     const taxAmount = originalTaxes.reduce((sum, tax) => {
-      // Apply tax rate to the taxable amount
-      // Assuming tax.rate is in percentage (e.g., 2 for 2%)
       const taxAmount = (taxableAmount * tax.rate) / 100;
       return sum + taxAmount;
     }, 0);
     
-    // Total refund = items subtotal - discount + taxes
-    // Round to 1 decimal place
     const rawTotal = itemsSubtotal - discountAmount + taxAmount;
-    return Number((rawTotal).toFixed(2));
+    return Number(rawTotal.toFixed(2));
   }, [refundType, lineItems, selectedTransaction]);
 
-  // Calculate selected items count (memoized)
   const selectedItemsCount = useMemo(() => {
     return lineItems.filter(i => i.is_selected).length;
   }, [lineItems]);
 
-  // Auto-distribute refund amount across payment methods (memoized function)
   const distributeRefundAmount = useCallback((
     methods: RefundMethod[],
     total: number
@@ -200,7 +192,6 @@ export const RefundModal: React.FC<RefundModalProps> = ({
       ),
     }));
 
-    // Adjust for rounding errors
     const distributedTotal = updated.reduce((sum, m) => sum + m.amount, 0);
     const difference = total - distributedTotal;
     
@@ -216,7 +207,6 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     return updated;
   }, []);
 
-  // Apply percentage to line items (memoized function)
   const applyPercentageToLineItems = useCallback((
     items: RefundableLineItem[],
     percentage: number
@@ -241,7 +231,6 @@ export const RefundModal: React.FC<RefundModalProps> = ({
       isInitializing.current = true;
       prevTransactionId.current = transactionId;
       
-      // Reset all form state
       setReason('');
       setReasonNotes('');
       setRestoreInventory(true);
@@ -249,19 +238,22 @@ export const RefundModal: React.FC<RefundModalProps> = ({
       setRefundPercentage(100);
       setRefundType('full');
       
-      // Initialize line items
       const initialLineItems = generateInitialLineItems(selectedTransaction, 'full');
       setLineItems(initialLineItems);
       
-      // Initialize payment methods
       const initialPaymentMethods = generateInitialPaymentMethods(selectedTransaction);
       setRefundMethods(initialPaymentMethods);
+      
+      // Debug log to verify IDs
+      console.log('Initialized line items with IDs:', 
+        initialLineItems.map(item => ({ id: item.id, name: item.service_name }))
+      );
       
       isInitializing.current = false;
     }
   }, [open, selectedTransaction, generateInitialLineItems, generateInitialPaymentMethods]);
 
-  // Update line items when refund type changes (independent effect)
+  // Update line items when refund type changes
   useEffect(() => {
     if (isInitializing.current || !selectedTransaction) return;
     
@@ -285,7 +277,6 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     
     const updatedMethods = distributeRefundAmount(refundMethods, totalRefund);
     
-    // Only update if amounts actually changed
     const hasChanged = updatedMethods.some((method, index) => 
       method.amount !== refundMethods[index].amount
     );
@@ -293,9 +284,9 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     if (hasChanged) {
       setRefundMethods(updatedMethods);
     }
-  }, [totalRefund, distributeRefundAmount]); 
+  }, [totalRefund, distributeRefundAmount, refundMethods]);
 
-  // Handlers with useCallback to prevent recreating functions
+  // Handlers
   const handlePercentageChange = useCallback((percentage: number) => {
     if (refundType !== 'partial') return;
     
@@ -336,7 +327,6 @@ export const RefundModal: React.FC<RefundModalProps> = ({
         quantity: newSelected ? item.original_quantity : 0,
       };
       
-      // Calculate new percentage
       const selectedCount = updated.filter(i => i.is_selected).length;
       const newPercentage = selectedCount === updated.length ? 100 : 
                            selectedCount === 0 ? 0 : 
@@ -397,6 +387,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     billingCycleId || 0,
     {
       onSuccess: (response) => {
+        isSubmitting.current = false;
         if (response.success) {
           showToast('success', 'Refund processed successfully', 3000);
           onClose();
@@ -408,6 +399,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
         }
       },
       onError: (error: any) => {
+        isSubmitting.current = false;
         const errorMessage = error.response?.data?.message || error.message || 'An error occurred while processing refund';
         setValidationError(errorMessage);
         showToast('error', errorMessage, 5000);
@@ -415,10 +407,18 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     }
   );
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
+ const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent double submission
+    if (isSubmitting.current) {
+      console.log('Submission already in progress, skipping...');
+      return;
+    }
+    
     setValidationError(null);
 
+    // Basic validation
     if (!billingCycleId) {
       showToast('error', 'No transaction selected', 3000);
       return;
@@ -444,8 +444,8 @@ export const RefundModal: React.FC<RefundModalProps> = ({
       .filter(m => m.type && m.amount > 0)
       .map(m => ({
         type: m.type as RefundMethodType,
-        amount: m.amount,
-        reference: m.reference || null,
+        amount: Number(m.amount.toFixed(2)),
+        reference: m.reference?.trim() || null,
       }));
 
     if (methods.length === 0) {
@@ -453,35 +453,65 @@ export const RefundModal: React.FC<RefundModalProps> = ({
       return;
     }
 
-    if (refundType === 'full') {
-      refundTransaction({
-        reason: reason as RefundReason,
-        reason_notes: reason === 'other' ? reasonNotes : undefined,
-        refund_methods: methods,
-        restore_inventory: restoreInventory,
-      });
-    } else {
+    // Validate total matches
+    const totalMethodAmount = methods.reduce((sum, m) => sum + m.amount, 0);
+    if (Math.abs(totalMethodAmount - totalRefund) > 0.01) {
+      showToast('error', `Refund method total (${totalMethodAmount}) must match refund amount (${totalRefund})`, 3000);
+      return;
+    }
+
+    // Build base payload
+    const payload: any = {
+      reason: reason as RefundReason,
+      reason_notes: reason === 'other' ? reasonNotes.trim() : undefined,
+      refund_methods: methods,
+      restore_inventory: restoreInventory,
+    };
+
+    // Add line items for partial refund
+    if (refundType === 'partial') {
       const selectedLineItems = lineItems
         .filter(item => item.is_selected && item.refund_amount > 0)
-        .map(item => ({
-          line_item_id: item.id,
-          refund_amount: item.refund_amount,
-          quantity: item.quantity,
-        }));
+        .map(item => {
+          // Validate item ID
+          if (item.id <= 0) {
+            console.error('Invalid item ID detected:', item);
+            return null;
+          }
+          
+          return {
+            line_item_id: item.id,
+            refund_amount: Number(item.refund_amount.toFixed(2)),
+            quantity: item.quantity > 0 ? item.quantity : undefined,
+            service_code: item.service_code,
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null);
 
       if (selectedLineItems.length === 0) {
-        showToast('error', 'Please select at least one line item to refund', 3000);
+        showToast('error', 'Please select at least one valid line item to refund', 3000);
         return;
       }
 
-      refundTransaction({
-        reason: reason as RefundReason,
-        reason_notes: reason === 'other' ? reasonNotes : undefined,
-        line_items: selectedLineItems,
-        refund_methods: methods,
-        restore_inventory: restoreInventory,
+    
+
+      payload.line_items = selectedLineItems;
+
+      console.log('Processing partial refund:', {
+        ...payload,
+        line_items: payload.line_items.map((item: any) => ({
+          line_item_id: item.line_item_id,
+          refund_amount: item.refund_amount,
+          quantity: item.quantity,
+        }))
       });
+    } else {
+      console.log('Processing full refund:', payload);
     }
+
+    isSubmitting.current = true;
+    refundTransaction(payload);
+
   }, [
     billingCycleId,
     reason,
@@ -497,6 +527,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
 
   const handleClose = useCallback(() => {
     if (!isProcessing) {
+      isSubmitting.current = false;
       onClose();
     }
   }, [isProcessing, onClose]);
