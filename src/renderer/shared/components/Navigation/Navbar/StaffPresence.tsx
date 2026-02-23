@@ -167,6 +167,10 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({ isDark, isMobile, classNa
 
   const isPending = isLoading || isRefetching || setPresenceMutation.isPending;
 
+  // Green ring colors matching MySpace component
+  const ringColor = isDark ? 'ring-emerald-500/60' : 'ring-emerald-600/70';
+  const hoverBg = isDark ? 'hover:bg-gray-800/70' : 'hover:bg-gray-50';
+
   return (
     <div ref={dropdownRef} className={cn('relative', className)}>
       <button
@@ -178,10 +182,11 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({ isDark, isMobile, classNa
           'group relative flex items-center gap-2 px-3 py-1.5 rounded-lg',
           'transition-all duration-200 cursor-pointer',
           'ring-1',
-          currentConfig.ringColor,
-          isDark ? 'bg-gray-800/40 hover:bg-gray-800/70' : 'bg-white hover:bg-gray-50',
+          ringColor,
+          isDark ? 'bg-gray-800/40' : 'bg-white',
+          hoverBg,
           'focus:outline-none focus:ring-2',
-          isDark ? 'focus:ring-blue-500/40' : 'focus:ring-blue-500/25',
+          isDark ? 'focus:ring-emerald-500/40' : 'focus:ring-emerald-500/25',
           !isPending && 'hover:scale-[1.02] active:scale-[0.98]',
           isPending && 'opacity-75 cursor-not-allowed'
         )}
@@ -206,7 +211,7 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({ isDark, isMobile, classNa
           <span className={cn('text-xs font-semibold truncate', isDark ? 'text-gray-100' : 'text-gray-900')}>
             {isLoading ? 'Loading...' : currentStatusLabel}
           </span>
-          <span className={cn('text-xs truncate', isDark ? 'text-gray-100' : 'text-gray-900')}>
+          <span className={cn('text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-600')}>
             {isPending ? 'Syncing...' : 'Click to change'}
           </span>
         </div>
@@ -221,7 +226,7 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({ isDark, isMobile, classNa
 
         {isPending && (
           <div className="absolute -top-1 -right-1">
-            <Loader2 className={cn('w-3 h-3 animate-spin', isDark ? 'text-blue-400' : 'text-blue-600')} />
+            <Loader2 className={cn('w-3 h-3 animate-spin', isDark ? 'text-emerald-400' : 'text-emerald-600')} />
           </div>
         )}
       </button>
@@ -261,13 +266,13 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({ isDark, isMobile, classNa
                     'group/item w-full flex items-center gap-2.5 p-2 rounded-md',
                     'transition-all duration-150 cursor-pointer',
                     'focus:outline-none focus:ring-1 focus:ring-inset',
-                    isDark ? 'focus:ring-blue-500/40' : 'focus:ring-blue-500/30',
+                    isDark ? 'focus:ring-emerald-500/40' : 'focus:ring-emerald-500/30',
                     option.hoverBg,
                     !setPresenceMutation.isPending && 'hover:scale-[1.01] active:scale-[0.99]',
                     isActive &&
                       (isDark
-                        ? 'bg-blue-500/10 ring-1 ring-blue-500/30'
-                        : 'bg-blue-50 ring-1 ring-blue-200/50'),
+                        ? 'bg-emerald-500/10 ring-1 ring-emerald-500/30'
+                        : 'bg-emerald-50 ring-1 ring-emerald-200/50'),
                     setPresenceMutation.isPending && !isUpdating && 'opacity-40 cursor-not-allowed'
                   )}
                 >
@@ -290,7 +295,7 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({ isDark, isMobile, classNa
                         {option.label}
                       </span>
                       {isActive && !isUpdating && (
-                        <CheckCircle2 className={cn('w-3 h-3 flex-shrink-0', isDark ? 'text-blue-400' : 'text-blue-600')} />
+                        <CheckCircle2 className={cn('w-3 h-3 flex-shrink-0', isDark ? 'text-emerald-400' : 'text-emerald-600')} />
                       )}
                     </div>
                     <p className={cn('text-xs mt-0.5 truncate', isDark ? 'text-gray-500' : 'text-gray-600')}>
@@ -299,7 +304,7 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({ isDark, isMobile, classNa
                   </div>
 
                   {isUpdating && (
-                    <Loader2 className={cn('w-3 h-3 animate-spin flex-shrink-0', isDark ? 'text-blue-400' : 'text-blue-600')} />
+                    <Loader2 className={cn('w-3 h-3 animate-spin flex-shrink-0', isDark ? 'text-emerald-400' : 'text-emerald-600')} />
                   )}
                 </button>
               );

@@ -80,37 +80,58 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
     onToggle();
   };
 
+  // Blue-green ring colors matching subscription component
+  const ringColor = isDark ? 'ring-blue-500/60' : 'ring-blue-600/70';
+  const hoverBg = isDark ? 'hover:bg-gray-800/70' : 'hover:bg-gray-50';
+
   return (
     <div ref={userDropdownRef} className="relative">
       <button
         onClick={onToggle}
         className={cn(
-          'flex items-center gap-1 sm:gap-2 pl-1 sm:pl-2 pr-1 sm:pr-1.5 py-1 sm:py-1.5 rounded-xl transition-all duration-300 hover:scale-105 cursor-pointer',
-          isDark 
-            ? 'hover:bg-gray-800' 
-            : 'hover:bg-gray-100'
+          'group relative flex items-center gap-1 sm:gap-2 pl-1 sm:pl-2 pr-1 sm:pr-1.5 py-1 sm:py-1.5 rounded-xl',
+          'transition-all duration-200 cursor-pointer',
+          'ring-1',
+          ringColor,
+          isDark ? 'bg-gray-800/40' : 'bg-white',
+          hoverBg,
+          'focus:outline-none focus:ring-2',
+          isDark ? 'focus:ring-blue-500/40' : 'focus:ring-blue-500/25',
+          'hover:scale-[1.02] active:scale-[0.98]'
         )}
       >
         {userName && (
           <div className="text-left hidden lg:block">
             <p className={cn(
-              'text-sm font-semibold truncate',
-              isDark ? 'text-gray-200' : 'text-gray-900'
+              'text-xs font-semibold truncate',
+              isDark ? 'text-gray-100' : 'text-gray-900'
             )}>
               {userName}
+            </p>
+            <p className={cn(
+              'text-xs truncate',
+              isDark ? 'text-gray-400' : 'text-gray-600'
+            )}>
+              {currentCapabilityName}
             </p>
           </div>
         )}
         
         <div className="relative">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center ring-2 ring-blue-500/20">
-            <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+          <div className={cn(
+            'w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center',
+            'bg-gradient-to-br from-blue-600 to-emerald-600',
+            'ring-2 ring-offset-1',
+            isDark ? 'ring-offset-gray-900 ring-blue-500/40' : 'ring-offset-white ring-blue-500/30'
+          )}>
+            <User className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white" />
           </div>
-          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full"></div>
+          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full"></div>
         </div>
         
         <ChevronDown className={cn(
           'w-4 h-4 transition-transform duration-200 hidden sm:block',
+          isDark ? 'text-gray-400' : 'text-gray-500',
           isOpen && 'rotate-180'
         )} />
       </button>
@@ -129,7 +150,12 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
           <div className="p-4 border-b border-gray-200/50 dark:border-gray-800/50">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center ring-4 ring-blue-500/10">
+                <div className={cn(
+                  'w-14 h-14 rounded-xl flex items-center justify-center',
+                  'bg-gradient-to-br from-blue-600 to-emerald-600',
+                  'ring-4 ring-offset-2',
+                  isDark ? 'ring-offset-gray-900 ring-blue-500/20' : 'ring-offset-white ring-blue-500/15'
+                )}>
                   <User className="w-7 h-7 text-white" />
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full"></div>
@@ -138,14 +164,14 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
                 {inStaffMode && staffNumber && (
                   <>
                     <p className={cn(
-                      'font-bold',
-                      isDark ? 'text-gray-200' : 'text-gray-900'
+                      'text-xs font-medium',
+                      isDark ? 'text-gray-400' : 'text-gray-600'
                     )}>
                       Staff Number
                     </p>
                     <p className={cn(
-                      'font-bold',
-                      isDark ? 'text-blue-200' : 'text-blue-500'
+                      'text-sm font-bold mb-1',
+                      isDark ? 'text-gray-200' : 'text-gray-900'
                     )}>
                       {staffNumber}
                     </p>
@@ -154,28 +180,28 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
                 {inPatientMode && patientNumber && (
                   <>
                     <p className={cn(
-                      'font-bold',
-                      isDark ? 'text-gray-200' : 'text-gray-900'
+                      'text-xs font-medium',
+                      isDark ? 'text-gray-400' : 'text-gray-600'
                     )}>
                       Patient Number
                     </p>
                     <p className={cn(
-                      'font-bold',
-                      isDark ? 'text-blue-200' : 'text-blue-500'
+                      'text-sm font-bold mb-1',
+                      isDark ? 'text-gray-200' : 'text-gray-900'
                     )}>
                       {patientNumber}
                     </p>
                   </>
                 )}
                 <p className={cn(
-                  'text-sm',
-                  isDark ? 'text-gray-500' : 'text-gray-600'
+                  'text-xs font-medium',
+                  isDark ? 'text-blue-400' : 'text-blue-600'
                 )}>
                   {currentCapabilityName}
                 </p>
                 <p className={cn(
-                  'text-xs mt-0.5',
-                  isDark ? 'text-gray-600' : 'text-gray-500'
+                  'text-xs mt-1',
+                  isDark ? 'text-gray-500' : 'text-gray-500'
                 )}>
                   {userEmail || 'No email'}
                 </p>

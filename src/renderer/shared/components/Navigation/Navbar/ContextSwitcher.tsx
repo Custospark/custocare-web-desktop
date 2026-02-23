@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../utils/classNameUtils';
 import { getRoleDisplayName as formatName } from '../../../utils/facilityRoleFormator';
+
 interface ContextOption {
   id: string;
   type: 'personal' | 'professional' | 'administrative';
@@ -197,16 +198,26 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
 
   if (!activeContextOption || allContextOptions.length === 0) return null;
 
+  // Blue-green ring colors matching subscription component
+  const ringColor = isDark ? 'ring-blue-500/60' : 'ring-blue-600/70';
+  const hoverBg = isDark ? 'hover:bg-gray-800/70' : 'hover:bg-gray-50';
+
   return (
     <div ref={contextSwitcherRef} className="relative">
       <button
         onClick={onToggle}
         className={cn(
-          'flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer duration-300 hover:scale-105',
+          'group relative flex items-center gap-2 px-3 py-2 rounded-lg',
+          'transition-all duration-200 cursor-pointer',
+          'ring-1',
+          ringColor,
+          isDark ? 'bg-gray-800/40' : 'bg-white',
+          hoverBg,
+          'focus:outline-none focus:ring-2',
+          isDark ? 'focus:ring-blue-500/40' : 'focus:ring-blue-500/25',
+          'hover:scale-[1.02] active:scale-[0.98]',
           'border shadow-sm',
-          isDark 
-            ? 'bg-gray-800/50 border-gray-700 hover:bg-gray-800' 
-            : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+          isDark ? 'border-gray-700' : 'border-gray-200'
         )}
         title="Switch workspace (⌘J)"
         aria-label="Switch workspace"
@@ -220,7 +231,7 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
             {activeContextOption.icon}
           </div>
         </div>
-       <div className="hidden lg:block text-left max-w-30">
+        <div className="hidden lg:block text-left max-w-30">
           <p className={cn(
             'text-xs font-semibold leading-tight truncate',
             isDark ? 'text-gray-100' : 'text-gray-900'
@@ -229,15 +240,15 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
           </p>
           <p className={cn(
             'text-xs leading-tight truncate',
-            isDark ? 'text-gray-500' : 'text-gray-500'
+            isDark ? 'text-gray-400' : 'text-gray-600'
           )}>
             {activeContextOption.subtitle}
           </p>
         </div>
         <ChevronDown className={cn(
-          'w-4 h-4 transition-transform',
+          'w-4 h-4 transition-transform duration-200',
           isOpen && 'rotate-180',
-          isDark ? 'text-gray-400' : 'text-gray-600'
+          isDark ? 'text-gray-400' : 'text-gray-500'
         )} />
       </button>
 
@@ -260,7 +271,7 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
             </h3>
             <p className={cn(
               'text-xs mt-1',
-              isDark ? 'text-gray-500' : 'text-gray-600'
+              isDark ? 'text-gray-400' : 'text-gray-600'
             )}>
               {userName} • All workspaces
             </p>
