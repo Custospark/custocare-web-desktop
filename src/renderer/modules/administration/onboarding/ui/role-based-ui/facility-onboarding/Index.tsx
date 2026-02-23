@@ -25,26 +25,26 @@ import {
   ChevronLeft,
   Loader2,
 } from 'lucide-react';
-import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/useApp';
-import LogoImage from '../../../../../shared/assets/LogoImage';
-import { FacilityTier, FacilityType, NatureOfFacility, OperatingHours, OperationalStatus, RegisterFacilityRequest } from '../../api/queries/facility-owner/registerFacilityTypes'
-import { useRegisterFacility } from '../../api/queries/facility-owner/registerFacilityQuery';
-import { ROUTES } from '../../routes/onboardingRouteConstants';
-import { toggleTheme } from '../../../../../app/store/slices/uiSlice';
-import { cn } from '../../../../../shared/utils/classNameUtils';
+import { useAppDispatch, useAppSelector } from '../../../../../../app/store/hooks/useApp';
+import LogoImage from '../../../../../../shared/assets/LogoImage';
+import { FacilityTier, FacilityType, NatureOfFacility, OperatingHours, OperationalStatus, RegisterFacilityRequest } from '../../../api/queries/facility-owner/registerFacilityTypes';
+import { useRegisterFacility } from '../../../api/queries/facility-owner/registerFacilityQuery';
+import { ROUTES } from '../../../routes/onboardingRouteConstants';
+import { toggleTheme } from '../../../../../../app/store/slices/uiSlice';
+import { cn } from '../../../../../../shared/utils/classNameUtils';
 
 // Import components
-import { ProgressIndicator } from './facility-onboarding/ProgressIndicator';
-import { Step1Identity } from './facility-onboarding/Step1Identity';
-import { Step2Location } from './facility-onboarding/Step2Location';
-import { Step3Services } from './facility-onboarding/Step3Services';
-import { SuccessScreen } from './facility-onboarding/SuccessScreen';
+import { ProgressIndicator } from './ProgressIndicator';
+import { Step1Identity } from './Step1Identity';
+import { Step2Location } from './Step2Location';
+import { Step3Services } from './Step3Services';
+import { SuccessScreen } from './SuccessScreen';
 
 // Import types and constants
 import { 
   FacilityFormData,
   DEFAULT_OPERATING_HOURS
-} from  './facility-onboarding/types';
+} from './types';
 
 /* ==========================================================================
    MAIN COMPONENT
@@ -409,30 +409,30 @@ export const Index: React.FC = () => {
                         <ArrowRight className="w-4 h-4" />
                       </motion.button>
                     ) : (
-                      <motion.button
+                     <motion.button
                         type="submit"
                         disabled={!isCurrentStepValid || isSubmitting}
                         whileHover={isCurrentStepValid && !isSubmitting ? { scale: 1.02 } : {}}
                         whileTap={isCurrentStepValid && !isSubmitting ? { scale: 0.98 } : {}}
                         className={cn(
-                          "ml-auto flex items-center gap-2 px-8 py-3 rounded-lg font-black transition-all shadow-lg text-base",
-                          isCurrentStepValid && !isSubmitting
-                            ? "bg-linear-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 hover:shadow-xl"
-                            : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                            "ml-auto flex items-center gap-2 px-8 py-3 rounded-lg font-black transition-all shadow-lg text-base",
+                            isCurrentStepValid && !isSubmitting
+                            ? "bg-linear-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 hover:shadow-xl cursor-pointer hover:cursor-pointer active:cursor-pointer"
+                            : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed hover:cursor-not-allowed"
                         )}
-                      >
+                        >
                         {isSubmitting ? (
-                          <>
+                            <>
                             <Loader2 className="w-5 h-5 animate-spin" />
                             Registering...
-                          </>
+                            </>
                         ) : (
-                          <>
+                            <>
                             <BadgeCheck className="w-5 h-5" />
                             Complete
-                          </>
+                            </>
                         )}
-                      </motion.button>
+                        </motion.button>
                     )}
                   </div>
                 </form>
