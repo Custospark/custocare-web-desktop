@@ -3,7 +3,7 @@ import { MEDICAL_RECORDS_ROUTES } from "../routeConstants";
 import { SuspenseWrapper } from "./shared/routeUtils";
 import { WithThemeProp } from "./shared/routeUtils";
 import FrontDesk from '../../../modules/medical-records/ui/patients/FrontDesk';
-import MedicalRecordsOverView from '../../../modules/medical-records/ui/overview/MedicalRecordsOverView';
+import { MedicalRecordsDashboard } from '../../../modules/medical-records/ui/overview/MedicalRecordsDashboard';
 import MRVisitActionCenter from '../../../modules/medical-records/ui/visit-action-center/MRVisitActionCenter';
 import MRPatientSearch from '../../../modules/medical-records/ui/patients/views/MRPatientSearch';
 import MRPatientCreate from '../../../modules/medical-records/ui/patients/views/MRPatientCreate';
@@ -16,13 +16,14 @@ import VisitStatus from "../../../modules/medical-records/ui/visit-action-center
 import MRBilling from "../../../modules/medical-records/ui/visit-action-center/billing-space/MRBilling";
 import MRBillingCycle from "../../../modules/medical-records/ui/revenue/MRBillingCycle";
 import { MRBillingReview } from "../../../modules/medical-records/ui/revenue/MRBillingReview";
+import RevenueStats from "../../../modules/medical-records/ui/revenue/stats/RevenueStats";
 export const medicalRecordsRoutes = [
   <Route
     key="overview"
     path={MEDICAL_RECORDS_ROUTES.OVERVIEW}
     element={
       <SuspenseWrapper variant="table">
-        <MedicalRecordsOverView />
+        <MedicalRecordsDashboard />
       </SuspenseWrapper>
     }
   />,
@@ -96,6 +97,16 @@ export const medicalRecordsRoutes = [
       </SuspenseWrapper>
     }>
     <Route index element={<Navigate to={MEDICAL_RECORDS_ROUTES.BILLING_CYCLE_REVIEW} replace />} />
+    <Route path={MEDICAL_RECORDS_ROUTES.BILLING_CYCLE_REVIEW} element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={MRBillingReview} />
+        </SuspenseWrapper>
+      } />
+    <Route path={MEDICAL_RECORDS_ROUTES.BILLING_STATS} element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={RevenueStats} />
+        </SuspenseWrapper>
+      } />
     <Route path={MEDICAL_RECORDS_ROUTES.BILLING_CYCLE_REVIEW} element={
         <SuspenseWrapper variant="table">
           <WithThemeProp Component={MRBillingReview} />

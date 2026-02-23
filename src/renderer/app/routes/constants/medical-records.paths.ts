@@ -11,12 +11,14 @@ export const MEDICAL_RECORDS_ROUTES = {
   
   // Nested under revenue-integrity-review
   BILLING_CYCLE_REVIEW: `${ROUTES.MEDICAL_RECORDS}/revenue/billing-cycle/review`,
+  BILLING_STATS: `${ROUTES.MEDICAL_RECORDS}/revenue/billing-stats`,
 
   // Patients nested actions
   PATIENTS_SEARCH: `${ROUTES.MEDICAL_RECORDS}/patients/search`,
   PATIENTS_REGISTER: `${ROUTES.MEDICAL_RECORDS}/patients/register`,
   WALKIN_PATIENT: `${ROUTES.MEDICAL_RECORDS}/patients/walk-in`,
   PATIENT_QUEUE: `${ROUTES.MEDICAL_RECORDS}/patients/queue`,
+  PATIENT_STATS: `${ROUTES.MEDICAL_RECORDS}/patients/statistics`,
 
   // Visit Action Center nested routes
   FORWARD_PATIENT: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/forward-patient`,
