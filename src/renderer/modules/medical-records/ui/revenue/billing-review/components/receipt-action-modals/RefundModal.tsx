@@ -130,14 +130,51 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     }));
   }, []);
 
-  // Calculate total refund amount (memoized)
   const totalRefund = useMemo(() => {
     if (refundType === 'full' && selectedTransaction) {
-      return selectedTransaction.billing_data.totalPaid;
+      // Full refund should return the grand total (including taxes)
+      return selectedTransaction.billing_data.grandTotal;
     }
-    return lineItems
-      .filter(item => item.is_selected)
-      .reduce((sum, item) => sum + (item.refund_amount || 0), 0);
+    
+    // For partial refund, calculate items subtotal first
+    const selectedItems = lineItems.filter(item => item.is_selected);
+    if (selectedItems.length === 0) return 0;
+    
+    // Calculate subtotal of selected items
+    const itemsSubtotal = selectedItems.reduce((sum, item) => 
+      sum + (item.refund_amount || 0), 0
+    );
+    
+    // Get original transaction data
+    const originalGrandTotal = selectedTransaction?.billing_data?.grandTotal || 0;
+    const originalDiscount = selectedTransaction?.billing_data?.discountAmount || 0;
+    const originalTaxes = selectedTransaction?.billing_data?.taxes || [];
+    const originalSubtotal = selectedTransaction?.billing_data?.subtotal || 0;
+    
+    // Calculate the proportion of the original transaction being refunded
+    // Use the original subtotal (before discount) for ratio calculation
+    const refundRatio = originalSubtotal > 0 
+      ? itemsSubtotal / originalSubtotal 
+      : 0;
+    
+    // Calculate proportional discount for the refunded items
+    const discountAmount = originalDiscount * refundRatio;
+    
+    // Calculate taxable amount after discount for refunded items
+    const taxableAmount = itemsSubtotal - discountAmount;
+    
+    // Calculate taxes based on the taxable amount
+    const taxAmount = originalTaxes.reduce((sum, tax) => {
+      // Apply tax rate to the taxable amount
+      // Assuming tax.rate is in percentage (e.g., 2 for 2%)
+      const taxAmount = (taxableAmount * tax.rate) / 100;
+      return sum + taxAmount;
+    }, 0);
+    
+    // Total refund = items subtotal - discount + taxes
+    // Round to 1 decimal place
+    const rawTotal = itemsSubtotal - discountAmount + taxAmount;
+    return Number((rawTotal).toFixed(2));
   }, [refundType, lineItems, selectedTransaction]);
 
   // Calculate selected items count (memoized)

@@ -169,3 +169,29 @@ export interface ThemeColors {
   };
   ring: string;
 }
+
+export interface RefundCalculationInput {
+  subtotal: number;
+  discountAmount: number;
+  taxes: Array<{
+    name: string;
+    rate: number;
+    amount: number;
+  }>;
+  grandTotal: number;
+  paymentMethods: Array<{
+    type: string;
+    amount: number;
+    reference?: string;
+  }>;
+}
+
+export interface LineItemRefundBreakdown {
+  lineItemId: number;
+  originalSubtotal: number;
+  discountPortion: number;
+  taxPortion: number;
+  netRefundableAmount: number;
+  quantity: number;
+  unitPrice: number;
+}

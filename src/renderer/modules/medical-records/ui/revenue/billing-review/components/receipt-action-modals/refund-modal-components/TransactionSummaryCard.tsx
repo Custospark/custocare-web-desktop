@@ -36,7 +36,7 @@ export const TransactionSummaryCard = React.memo<TransactionSummaryCardProps>(({
       <div>
         <div className={cx('text-xs', colors.text.secondary)}>Total Paid</div>
         <div className={cx('font-semibold text-green-600')}>
-          UGX {selectedTransaction.billing_data.totalPaid.toLocaleString()}
+          UGX {selectedTransaction.billing_data.grandTotal.toLocaleString()}
         </div>
       </div>
       <div>

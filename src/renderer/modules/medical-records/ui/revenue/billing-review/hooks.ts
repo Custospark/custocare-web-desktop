@@ -388,11 +388,11 @@ export function calculatePartialRefundAmount(
   
   // Step 1: Calculate refund items' raw subtotal
   const refundItemsSubtotal = selectedItems.reduce((sum, item) => 
-    sum + (item.quantity * item.unit_price), 0
+    sum + (item.original_quantity * item.unit_price), 0
   );
   
   // Step 2: Calculate proportional discount
-  const originalSubtotal = billingData.subtotal;
+  const originalSubtotal = billingData.grandTotal;
   const originalDiscountAmount = billingData.discountAmount || 0;
   
   // Proportional discount allocation
@@ -402,7 +402,7 @@ export function calculatePartialRefundAmount(
   const refundProportionalDiscount = refundItemsSubtotal * discountRate;
   
   // Step 3: Calculate taxable amount for refund
-  const refundTaxableAmount = refundItemsSubtotal - refundProportionalDiscount;
+  const refundTaxableAmount = originalTransaction.billing_data.grandTotal - originalTransaction.billing_data.taxTotal;
   
   // Step 4: Calculate proportional tax
   const refundTaxAmount = (billingData.taxes || []).reduce((sum, tax) => {

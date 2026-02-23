@@ -129,10 +129,13 @@ export const RefundModalBody: React.FC<RefundModalBodyProps> = ({
       {/* Refund Methods - Auto-populated */}
       <RefundMethodsDistributor
         refundMethods={refundMethods}
+        refundType={refundType}
         isProcessing={isProcessing}
         colors={colors}
         isDark={isDark}
+        totalRefund={totalRefund}
         onUpdateMethod={onUpdateRefundMethod}
+        selectedTransaction={selectedTransaction}
       />
 
       {/* Restore Inventory Toggle */}

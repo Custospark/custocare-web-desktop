@@ -101,8 +101,8 @@ export interface BillingState {
 /* -------------------------------------------------------------------------- */
 
 export const DEFAULT_TAXES: Tax[] = [
-  { name: 'VAT', rate: 0, amount: 0 },
-  { name: 'Service Charge', rate: 0, amount: 0 },
+  { name: 'VAT', rate: 2, amount: 0 },
+  { name: 'Service Charge', rate: 1, amount: 0 },
 ];
 
 export const DEFAULT_DISCOUNT: Discount = {
