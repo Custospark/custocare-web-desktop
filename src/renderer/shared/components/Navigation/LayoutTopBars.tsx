@@ -5,6 +5,9 @@ import {PanelTopClose } from 'lucide-react';
 import { cn } from '../../types/cn';
 import Navbar from './Navbar/Navbar';
 import StatusBar, { type SidebarPosition, type SystemStatus, type ThemeMode } from './StatusBar';
+import { useNavigate } from 'react-router-dom';
+import { ACCOUNT_ROUTES } from '../../../app/routes/routeConstants';
+
 
 export interface LayoutTopBarsThemeClasses {
   backdrop: string;
@@ -82,6 +85,8 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
   appVersion,
 }) => {
   const navbarTopPx = useMemo(() => (topBarsVisible ? STATUS_BAR_H : 0), [topBarsVisible]);
+  const navigate = useNavigate();
+  
 
   return (
     <>
@@ -106,6 +111,9 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
           onToggleSidebarPosition={onToggleSidebarPosition}
           onToggleTheme={onToggleTheme}
           appVersion={appVersion}
+          unreadCount={3}
+          onNotificationClick={() => navigate(ACCOUNT_ROUTES.MESSAGES_INBOX)} // NEW: Optional custom handler
+
         />
       )}
 

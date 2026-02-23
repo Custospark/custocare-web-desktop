@@ -45,6 +45,7 @@ import { UserProfileMenu } from './UserProfileMenu';
 import ContextSwitcher from './ContextSwitcher';
 import StaffPresence from './StaffPresence';
 import MySpace from './MySpace';
+import Subscription from './Subscription';
 
 export interface NavbarProps {
   theme: 'light' | 'dark';
@@ -327,6 +328,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   >
     <Menu className="w-5 h-5" />
   </button>
+   <div className="cursor-pointer" title="Manage subscription">
+    <Subscription 
+      isDark={isDark} 
+      isMobile={isMobile} 
+      currentPlan="professional" // You'll want to get this from Redux state
+    />
+  </div>
 
   {/* Context switcher */}
   {allContextOptions.length > 0 && (
