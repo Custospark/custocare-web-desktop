@@ -328,13 +328,19 @@ export const Navbar: React.FC<NavbarProps> = ({
   >
     <Menu className="w-5 h-5" />
   </button>
-   <div className="cursor-pointer" title="Manage subscription">
-    <Subscription 
+      <Subscription 
       isDark={isDark} 
-      isMobile={isMobile} 
-      currentPlan="professional" // You'll want to get this from Redux state
+      isMobile={isMobile}
+      currentPlan="essential" // This should come from your Redux store or API
+      onUpgradeClick={(planId) => {
+        // Handle upgrade navigation
+        navigate(`/billing/upgrade?plan=${planId}`);
+      }}
+      onManageClick={() => {
+        // Handle manage billing navigation
+        navigate('/billing/manage');
+      }}
     />
-  </div>
 
   {/* Context switcher */}
   {allContextOptions.length > 0 && (
