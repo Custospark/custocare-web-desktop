@@ -411,7 +411,7 @@ export const Index: React.FC = () => {
                       whileHover={isCurrentStepValid ? { scale: 1.02, x: 5 } : {}}
                       whileTap={isCurrentStepValid ? { scale: 0.98 } : {}}
                       className={cn(
-                        "ml-auto flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-black transition-all shadow-lg",
+                        "ml-auto flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-black transition-all shadow-lg cursor-pointer",
                         isCurrentStepValid
                           ? "bg-linear-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 hover:shadow-xl"
                           : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"
@@ -427,7 +427,7 @@ export const Index: React.FC = () => {
                       whileHover={isCurrentStepValid && !isSubmitting ? { scale: 1.02 } : {}}
                       whileTap={isCurrentStepValid && !isSubmitting ? { scale: 0.98 } : {}}
                       className={cn(
-                        "ml-auto flex items-center gap-2 px-8 py-3 rounded-lg font-black transition-all shadow-lg text-base",
+                        "ml-auto flex items-center gap-2 px-8 py-3 rounded-lg font-black transition-all shadow-lg text-base cursor-pointer",
                         isCurrentStepValid && !isSubmitting
                           ? "bg-linear-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 hover:shadow-xl"
                           : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"

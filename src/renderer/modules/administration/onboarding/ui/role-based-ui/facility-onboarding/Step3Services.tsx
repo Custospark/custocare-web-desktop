@@ -131,7 +131,7 @@ export const Step3Services: React.FC<Step3ServicesProps> = ({
                 "block text-sm font-semibold",
                 theme === 'dark' ? "text-white" : "text-slate-900"
               )}>
-                Services available <span className="text-red-500">*</span>
+                Select Services available <span className="text-red-500">*</span>
               </label>
               <span className={cn(
                 "text-xs font-medium px-2 py-1 rounded-full cursor-default",
@@ -260,7 +260,7 @@ export const Step3Services: React.FC<Step3ServicesProps> = ({
                 "w-4 h-4",
                 theme === 'dark' ? "text-blue-400" : "text-blue-600"
               )} />
-              Days & Hours
+              Operational Days & Hours
             </h4>
             <button
               type="button"

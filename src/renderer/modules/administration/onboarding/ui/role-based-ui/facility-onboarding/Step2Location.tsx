@@ -595,7 +595,7 @@ export const Step2Location: React.FC<Step2LocationProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormInput
             field="email"
-            label="Email Address"
+            label="Email Address(Optional)"
             placeholder="e.g., info@facility.co.ug"
             icon={<Mail className="w-4 h-4" />}
             type="email"
