@@ -1,16 +1,36 @@
 // AdminServiceCatalog/components/ServiceCatalogFiltersBar.tsx
-import React, { useState, useEffect } from 'react';
-import { Calendar, Eye, EyeOff, Filter, Search } from 'lucide-react';
-import type { CodeSystem, ServiceCategory, ServiceStatus } from '../../../api/service-catalog/serviceCatalogTypes';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Search,
+  X,
+  LayoutGrid,
+  List,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  XCircle,
+} from 'lucide-react';
+import type {
+  CodeSystem,
+  ServiceCategory,
+  ServiceStatus,
+} from '../../../api/service-catalog/serviceCatalogTypes';
+
+// ─── helpers ─────────────────────────────────────────────────────────────────
+const cn = (...classes: (string | false | undefined | null)[]) =>
+  classes.filter(Boolean).join(' ');
 
 type ViewMode = 'list' | 'grid';
 
+// ─── Props ───────────────────────────────────────────────────────────────────
 interface Props {
   theme: 'light' | 'dark';
 
+  // Filter state (managed by parent)
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
-  onSearchSubmit: () => void;
 
   categoryFilter: ServiceCategory | 'all';
   onCategoryFilterChange: (value: ServiceCategory | 'all') => void;
@@ -33,17 +53,61 @@ interface Props {
   perPage: number;
   onPerPageChange: (value: number) => void;
 
-  // options
+  // select options
   serviceCategoryOptions: { value: ServiceCategory; label: string }[];
   codeSystemOptions: { value: CodeSystem; label: string }[];
   statusOptions: { value: ServiceStatus; label: string }[];
 }
 
+// ─── tiny reusable select ────────────────────────────────────────────────────
+interface SelectProps {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  placeholder: string;
+  isDark: boolean;
+}
+const FilterSelect: React.FC<SelectProps> = ({
+  value,
+  onChange,
+  options,
+  placeholder,
+  isDark,
+}) => (
+  <div className="relative">
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={cn(
+        'appearance-none pl-3 pr-8 py-2 rounded-lg border text-sm cursor-pointer',
+        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+        'transition-colors',
+        isDark
+          ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
+          : 'bg-white border-gray-200 text-gray-900 hover:bg-gray-50'
+      )}
+    >
+      <option value="all">{placeholder}</option>
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+    <ChevronDown
+      className={cn(
+        'pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5',
+        isDark ? 'text-gray-400' : 'text-gray-500'
+      )}
+    />
+  </div>
+);
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export const ServiceCatalogFiltersBar: React.FC<Props> = ({
   theme,
   searchTerm,
   onSearchTermChange,
-  onSearchSubmit,
   categoryFilter,
   onCategoryFilterChange,
   codeSystemFilter,
@@ -63,198 +127,368 @@ export const ServiceCatalogFiltersBar: React.FC<Props> = ({
   statusOptions,
 }) => {
   const isDark = theme === 'dark';
-  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
 
-  const perPagePresets = [5, 10, 20, 50, 100] as const;
-  const isPreset = perPagePresets.includes(perPage as (typeof perPagePresets)[number]);
-  const perPageSelectValue = isPreset ? String(perPage) : 'custom';
+  // local search – immediate feedback, but only update parent on submit or debounce
+  const [localSearch, setLocalSearch] = useState(searchTerm);
+  const [isFocused, setIsFocused] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout>(null);
 
-  // Sync local state with prop changes
+  // keep local in sync if parent resets externally
   useEffect(() => {
-    setLocalSearchTerm(searchTerm);
+    setLocalSearch(searchTerm);
   }, [searchTerm]);
 
-  const handleSearchSubmit = () => {
-    onSearchTermChange(localSearchTerm);
-    onSearchSubmit();
+  // Handle search with debounce (updates filter as user types)
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalSearch(value);
+    
+    // Clear existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    // Set new timer for debounced update
+    debounceTimerRef.current = setTimeout(() => {
+      onSearchTermChange(value);
+    }, 300); // 300ms debounce
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      handleSearchSubmit();
+      // Clear any pending debounce and update immediately
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      onSearchTermChange(localSearch);
+    }
+    if (e.key === 'Escape') {
+      clearSearch();
+      inputRef.current?.blur();
     }
   };
 
-  const handleClearSearch = () => {
-    setLocalSearchTerm('');
+  const clearSearch = () => {
+    setLocalSearch('');
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
     onSearchTermChange('');
-    onSearchSubmit();
   };
 
+  // ── count active advanced filters (so we can badge the toggle) ──
+  const advancedActiveCount = [
+    effectiveDate !== '',
+    showDeleted,
+  ].filter(Boolean).length;
+
+  // ── count ALL active filters ──
+  const totalActiveFilters = [
+    searchTerm !== '',
+    categoryFilter !== 'all',
+    codeSystemFilter !== 'all',
+    statusFilter !== 'all',
+    advancedActiveCount > 0,
+  ].filter(Boolean).length;
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
   return (
-    <div className={`rounded-xl p-3 sm:p-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
-      <div className="flex flex-col gap-4">
-        {/* Top row: Search and View Mode buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-          <div className="flex-1 flex gap-2 min-w-0">
-            <div className="relative flex-1">
-              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-              <input
-                type="text"
-                placeholder="Search by name, code, description..."
-                value={localSearchTerm}
-                onChange={(e) => setLocalSearchTerm(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className={`w-full pl-10 pr-4 py-2 rounded-lg border text-sm sm:text-base ${
-                  isDark ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-              />
-            </div>
-            
-            <div className="flex items-center gap-1">
-              <button
-                onClick={handleSearchSubmit}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
-                  isDark 
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-                aria-label="Search"
-              >
-                <span className="hidden sm:inline">Search</span>
-                <Search className="sm:hidden w-4 h-4" />
-              </button>
-              
-              {localSearchTerm && (
-                <button
-                  onClick={handleClearSearch}
-                  className={`px-3 py-2 rounded-lg font-medium transition-colors ${
-                    isDark 
-                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
-                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                  }`}
-                  aria-label="Clear search"
-                >
-                  Clear
-                </button>
+    <div
+      className={cn(
+        'rounded-xl border',
+        isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+      )}
+    >
+      {/* ── Primary bar ───────────────────────────────────────────────────── */}
+      <div className="p-3 sm:p-4 flex flex-col sm:flex-row gap-3">
+
+        {/* ── Animated-border search ──────────────────────────────────────── */}
+        <div className="relative flex-1 min-w-0">
+          {/* gradient border track */}
+          <motion.div
+            className="absolute inset-0 rounded-lg z-0"
+            style={{
+              background:
+                'linear-gradient(90deg, #3b82f6, #10b981, #6366f1, #3b82f6)',
+              backgroundSize: '300% 100%',
+            }}
+            animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+            transition={{
+              duration: isFocused ? 2 : 6,
+              repeat: Infinity,
+              ease: 'linear',
+            }}
+          />
+
+          {/* inner surface with 2-px gap to reveal gradient */}
+          <div className="relative z-10 m-[2px] rounded-[6px] overflow-hidden">
+            <Search
+              className={cn(
+                'absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200',
+                isFocused ? 'text-blue-500' : isDark ? 'text-gray-500' : 'text-gray-400'
               )}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            <button
-              onClick={onToggleShowDeleted}
-              className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex-1 sm:flex-none min-w-[120px] justify-center ${
-                showDeleted
-                  ? (isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700')
-                  : (isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
-              }`}
-            >
-              {showDeleted ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-              <span className="hidden xs:inline">{showDeleted ? 'Hide Deleted' : 'Show Deleted'}</span>
-              <span className="xs:hidden">{showDeleted ? 'Hide' : 'Show'}</span>
-            </button>
-
-            <button
-              onClick={onToggleViewMode}
-              className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex-1 sm:flex-none min-w-[120px] justify-center ${
-                isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-              }`}
-            >
-              <Filter className="w-4 h-4" />
-              <span className="hidden xs:inline">{viewMode === 'list' ? 'Grid View' : 'List View'}</span>
-              <span className="xs:hidden">{viewMode === 'list' ? 'Grid' : 'List'}</span>
-            </button>
+            />
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Search by name, code, description..."
+              value={localSearch}
+              onChange={handleSearchChange}
+              onKeyDown={handleKeyDown}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              className={cn(
+                'w-full pl-9 pr-10 py-2.5 text-sm border-transparent',
+                'focus:outline-none focus:ring-0',
+                'transition-colors placeholder:text-sm',
+                isDark
+                  ? 'bg-gray-900 text-white placeholder-gray-500'
+                  : 'bg-white text-gray-900 placeholder-gray-400'
+              )}
+            />
+            {localSearch && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                aria-label="Clear search"
+                className={cn(
+                  'absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full',
+                  'transition-colors cursor-pointer',
+                  isDark
+                    ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                )}
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Bottom row: Filters */}
-        <div className="flex flex-wrap gap-2 sm:gap-3">
-          <select
-            value={categoryFilter}
-            onChange={(e) => onCategoryFilterChange(e.target.value as ServiceCategory | 'all')}
-            className={`px-3 py-2 rounded-lg border text-sm flex-1 min-w-[calc(50%-4px)] sm:min-w-0 sm:flex-none ${
-              isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'
-            } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+        {/* ── Right controls ───────────────────────────────────────────────── */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Advanced filters toggle */}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className={cn(
+              'relative flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium',
+              'border transition-colors cursor-pointer',
+              showAdvanced
+                ? isDark
+                  ? 'bg-blue-900/30 border-blue-700 text-blue-300'
+                  : 'bg-blue-50 border-blue-300 text-blue-700'
+                : isDark
+                  ? 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+            )}
+            aria-label="Toggle advanced filters"
           >
-            <option value="all">All Categories</option>
-            {serviceCategoryOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SlidersHorizontal className="w-4 h-4" />
+            <span className="hidden xs:inline">Filters</span>
+            {advancedActiveCount > 0 && (
+              <span className="flex items-center justify-center w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-bold leading-none">
+                {advancedActiveCount}
+              </span>
+            )}
+            {showAdvanced ? (
+              <ChevronUp className="w-3 h-3" />
+            ) : (
+              <ChevronDown className="w-3 h-3" />
+            )}
+          </button>
 
-          <select
-            value={codeSystemFilter}
-            onChange={(e) => onCodeSystemFilterChange(e.target.value as CodeSystem | 'all')}
-            className={`px-3 py-2 rounded-lg border text-sm flex-1 min-w-[calc(50%-4px)] sm:min-w-0 sm:flex-none ${
-              isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'
-            } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+          {/* View mode toggle */}
+          <button
+            type="button"
+            onClick={onToggleViewMode}
+            className={cn(
+              'flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium',
+              'border transition-colors cursor-pointer',
+              isDark
+                ? 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
+                : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+            )}
+            aria-label={viewMode === 'list' ? 'Switch to grid view' : 'Switch to list view'}
+            title={viewMode === 'list' ? 'Grid view' : 'List view'}
           >
-            <option value="all">All Code Systems</option>
-            {codeSystemOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-
-          <select
-            value={statusFilter}
-            onChange={(e) => onStatusFilterChange(e.target.value as ServiceStatus | 'all')}
-            className={`px-3 py-2 rounded-lg border text-sm flex-1 min-w-[calc(50%-4px)] sm:min-w-0 sm:flex-none ${
-              isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'
-            } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-          >
-            <option value="all">All Status</option>
-            {statusOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-
-          <div className="relative flex-1 min-w-[calc(50%-4px)] sm:min-w-0 sm:flex-none">
-            <Calendar className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-            <input
-              type="date"
-              value={effectiveDate}
-              onChange={(e) => onEffectiveDateChange(e.target.value)}
-              className={`w-full pl-10 pr-4 py-2 rounded-lg border text-sm ${
-                isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'
-              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-            />
-          </div>
-
-          {/* Per page controls */}
-          <div className="flex items-center gap-2 flex-1 min-w-full sm:min-w-0 sm:flex-none">
-            <span className={`text-sm whitespace-nowrap ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Rows:</span>
-            <div className="flex flex-1 gap-2">
-              <select
-                value={perPageSelectValue}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === 'custom') return;
-                  onPerPageChange(Number(v));
-                }}
-                className={`px-3 py-2 rounded-lg border text-sm flex-1 ${
-                  isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-              >
-                {perPagePresets.map(n => <option key={n} value={String(n)}>{n}</option>)}
-                <option value="custom">Custom</option>
-              </select>
-
-              <input
-                type="number"
-                min={1}
-                max={500}
-                value={perPage}
-                onChange={(e) => onPerPageChange(Math.max(1, Math.min(500, Number(e.target.value) || 1)))}
-                className={`px-3 py-2 rounded-lg border text-sm w-20 sm:w-24 ${
-                  isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                aria-label="Custom rows per page"
-              />
-            </div>
-          </div>
+            {viewMode === 'list' ? (
+              <LayoutGrid className="w-4 h-4" />
+            ) : (
+              <List className="w-4 h-4" />
+            )}
+          </button>
         </div>
       </div>
+
+      {/* ── Quick inline filters ─────────────────────────────────────────────── */}
+      <div className={cn('px-3 sm:px-4 pb-3 flex flex-wrap items-center gap-2',
+        isDark ? 'border-t border-gray-800' : 'border-t border-gray-100'
+      )}>
+        <span className={cn('text-xs font-medium mr-1', isDark ? 'text-gray-500' : 'text-gray-400')}>
+          Quick:
+        </span>
+
+        {/* Category */}
+        <FilterSelect
+          value={categoryFilter}
+          onChange={(v) => onCategoryFilterChange(v as ServiceCategory | 'all')}
+          options={serviceCategoryOptions}
+          placeholder="All Categories"
+          isDark={isDark}
+        />
+
+        {/* Code System */}
+        <FilterSelect
+          value={codeSystemFilter}
+          onChange={(v) => onCodeSystemFilterChange(v as CodeSystem | 'all')}
+          options={codeSystemOptions}
+          placeholder="All Code Systems"
+          isDark={isDark}
+        />
+
+        {/* Status */}
+        <FilterSelect
+          value={statusFilter}
+          onChange={(v) => onStatusFilterChange(v as ServiceStatus | 'all')}
+          options={statusOptions}
+          placeholder="All Statuses"
+          isDark={isDark}
+        />
+
+        {/* Items per page - now starting from 5 */}
+        <div className="flex items-center gap-1.5 ml-auto">
+          <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
+            Per page:
+          </span>
+          <select
+            value={perPage}
+            onChange={(e) => onPerPageChange(Number(e.target.value))}
+            className={cn(
+              'appearance-none pl-2 pr-6 py-1.5 rounded-lg border text-xs cursor-pointer',
+              'focus:outline-none focus:ring-2 focus:ring-blue-500',
+              isDark
+                ? 'bg-gray-800 border-gray-700 text-white'
+                : 'bg-white border-gray-200 text-gray-900'
+            )}
+          >
+            {[5, 10, 25, 50, 100].map((n) => ( // Changed to start from 5
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Active filter chips */}
+        {totalActiveFilters > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              clearSearch();
+              onCategoryFilterChange('all');
+              onCodeSystemFilterChange('all');
+              onStatusFilterChange('all');
+              onEffectiveDateChange('');
+              if (showDeleted) onToggleShowDeleted();
+            }}
+            className={cn(
+              'text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors cursor-pointer',
+              isDark
+                ? 'bg-red-900/30 text-red-300 hover:bg-red-900/50'
+                : 'bg-red-50 text-red-600 hover:bg-red-100'
+            )}
+          >
+            Clear all ({totalActiveFilters})
+          </button>
+        )}
+      </div>
+
+      {/* ── Advanced filters panel ────────────────────────────────────────────── */}
+      <AnimatePresence initial={false}>
+        {showAdvanced && (
+          <motion.div
+            key="advanced"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            <div
+              className={cn(
+                'px-3 sm:px-4 pb-4 pt-3',
+                isDark ? 'border-t border-gray-800' : 'border-t border-gray-100'
+              )}
+            >
+              <div className="flex flex-wrap gap-3">
+                {/* Effective date */}
+                <div className="flex items-center gap-1.5">
+                  <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                    Effective:
+                  </span>
+                  <input
+                    type="date"
+                    value={effectiveDate}
+                    onChange={(e) => onEffectiveDateChange(e.target.value)}
+                    className={cn(
+                      'pl-2 pr-2 py-1.5 rounded-lg border text-xs cursor-pointer',
+                      'focus:outline-none focus:ring-2 focus:ring-blue-500',
+                      isDark
+                        ? 'bg-gray-800 border-gray-700 text-white'
+                        : 'bg-white border-gray-200 text-gray-900'
+                    )}
+                  />
+                  {effectiveDate && (
+                    <button
+                      type="button"
+                      onClick={() => onEffectiveDateChange('')}
+                      className={cn(
+                        'p-1 rounded cursor-pointer',
+                        isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'
+                      )}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Show deleted toggle */}
+                <button
+                  type="button"
+                  onClick={onToggleShowDeleted}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
+                    'border transition-all cursor-pointer select-none',
+                    showDeleted
+                      ? isDark
+                        ? 'bg-amber-900/40 border-amber-700 text-amber-300'
+                        : 'bg-amber-50 border-amber-300 text-amber-700'
+                      : isDark
+                        ? 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
+                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                  )}
+                >
+                  {showDeleted ? (
+                    <CheckCircle2 className="w-3 h-3" />
+                  ) : (
+                    <XCircle className="w-3 h-3" />
+                  )}
+                  Show Deleted
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

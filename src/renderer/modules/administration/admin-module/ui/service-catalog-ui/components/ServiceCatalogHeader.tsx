@@ -1,6 +1,6 @@
 // AdminServiceCatalog/components/ServiceCatalogHeader.tsx
 import React from 'react';
-import { CheckCircle, DollarSign, Layers, Plus, RefreshCw, TrendingUp, Upload } from 'lucide-react';
+import { CheckCircle, DollarSign, Layers, Plus,TrendingUp } from 'lucide-react';
 import type { ServiceCatalog } from '../../../api/service-catalog/serviceCatalogTypes';
 import { formatPrice, normalizeAmount } from '../utils/serviceCatalogUiUtils';
 import  {ServiceStatus } from '../../../api/service-catalog/serviceCatalogTypes';
@@ -17,9 +17,7 @@ interface Props {
 export const ServiceCatalogHeader: React.FC<Props> = ({
   theme,
   services,
-  onRefresh,
   onCreate,
-  onImport,
 }) => {
   const isDark = theme === 'dark';
 
@@ -39,26 +37,6 @@ export const ServiceCatalogHeader: React.FC<Props> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={onRefresh}
-            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-          >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </button>
-
-          <button
-            onClick={onImport}
-            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-          >
-            <Upload className="w-4 h-4" />
-            Import
-          </button>
-
           <button
             onClick={onCreate}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"

@@ -1,6 +1,5 @@
 // AdminServiceCatalog/AdminServiceCatalog.tsx
 import React, { useMemo, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import {
   Building2,
   Microscope,
@@ -45,6 +44,7 @@ import { ServiceCatalogHeader } from './components/ServiceCatalogHeader';
 import { ServiceCatalogFiltersBar } from './components/ServiceCatalogFiltersBar';
 import { ServiceCatalogFormDrawer, type ServiceFormData } from './components/ServiceCatalogFormDrawer';
 import { ServiceCatalogList } from './components/ServiceCatalogList';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface AdminServiceCatalogProps {
   theme: 'light' | 'dark';
@@ -86,18 +86,23 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
   const [selectedService, setSelectedService] = useState<ServiceCatalog | null>(null);
   const [formData, setFormData] = useState<ServiceFormData>(() => emptyForm());
 
-  // Filter state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ServiceStatus | 'all'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<ServiceCategory | 'all'>('all');
-  const [codeSystemFilter, setCodeSystemFilter] = useState<CodeSystem | 'all'>('all');
-  const [showDeleted, setShowDeleted] = useState(false);
-  const [effectiveDate, setEffectiveDate] = useState<string>('');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [perPage, setPerPage] = useState<number>(10);
+  // Filter state - consolidated into a single object for easier management
+  const [filters, setFilters] = useState({
+    searchTerm: '',
+    categoryFilter: 'all' as ServiceCategory | 'all',
+    codeSystemFilter: 'all' as CodeSystem | 'all',
+    statusFilter: 'all' as ServiceStatus | 'all',
+    effectiveDate: '',
+    showDeleted: false,
+  });
 
   // UI state
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
+
+  // Pagination state - client-side only
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5); // Start from 5
 
   // ---------------------------------------------------------------------------
   // OPTIONS (aligned to enums from serviceCatalogTypes.ts)
@@ -172,39 +177,29 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
   );
 
   // ---------------------------------------------------------------------------
-  // FILTERS (type-safe: NO "page" because backend doesn't support it)
+  // FILTERS for backend (simplified - only fetch all data)
   // ---------------------------------------------------------------------------
-  const filters: ServiceCatalogFilters = useMemo(() => {
-    const status = showDeleted
-      ? undefined
-      : statusFilter !== 'all'
-        ? statusFilter
-        : ServiceStatus.ACTIVE;
-
+  const backendFilters: ServiceCatalogFilters = useMemo(() => {
+    // We fetch everything and let client-side handle filtering
     return {
-      status,
-      service_category: categoryFilter !== 'all' ? categoryFilter : undefined,
-      code_system: codeSystemFilter !== 'all' ? codeSystemFilter : undefined,
-      effective_date: effectiveDate || undefined,
-      search: searchTerm || undefined,
-      per_page: perPage,
+      per_page: 1000, // Fetch a large number to get all data
+      show_deleted: filters.showDeleted, // Still let backend know if we want deleted
     };
-  }, [showDeleted, statusFilter, categoryFilter, codeSystemFilter, effectiveDate, searchTerm, perPage]);
+  }, [filters.showDeleted]);
 
-  const listQueryKey = useMemo(() => serviceCatalogKeys.list(filters), [filters]);
+  const listQueryKey = useMemo(() => serviceCatalogKeys.list(backendFilters), [backendFilters]);
 
   const {
     data: servicesResponse,
     isLoading,
     error,
     refetch,
-  } = useGetServiceCatalogs(filters, {
+  } = useGetServiceCatalogs(backendFilters, {
     enabled: !!activeFacilityId,
-    staleTime: 1000 * 30,
+    staleTime: 1000 * 30, // 30 seconds
   });
 
   const services = servicesResponse?.data ?? [];
-  const pagination = servicesResponse?.pagination;
 
   const setListCache = (
     updater: (current: ServiceCatalogListResponse | undefined) => ServiceCatalogListResponse | undefined
@@ -488,15 +483,30 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
   };
 
   // ---------------------------------------------------------------------------
-  // Filter handlers
+  // Filter handlers - update filters object
   // ---------------------------------------------------------------------------
-  const handleSearchSubmit = () => {
-    // Trigger refetch with current filters (already in dependency array)
-    refetch();
+  const handleSearchTermChange = (value: string) => {
+    setFilters(prev => ({ ...prev, searchTerm: value }));
   };
 
-  const handlePerPageChange = (n: number) => {
-    setPerPage(Math.max(1, Math.min(500, n)));
+  const handleCategoryFilterChange = (value: ServiceCategory | 'all') => {
+    setFilters(prev => ({ ...prev, categoryFilter: value }));
+  };
+
+  const handleCodeSystemFilterChange = (value: CodeSystem | 'all') => {
+    setFilters(prev => ({ ...prev, codeSystemFilter: value }));
+  };
+
+  const handleStatusFilterChange = (value: ServiceStatus | 'all') => {
+    setFilters(prev => ({ ...prev, statusFilter: value }));
+  };
+
+  const handleEffectiveDateChange = (value: string) => {
+    setFilters(prev => ({ ...prev, effectiveDate: value }));
+  };
+
+  const handleToggleShowDeleted = () => {
+    setFilters(prev => ({ ...prev, showDeleted: !prev.showDeleted }));
   };
 
   // ---------------------------------------------------------------------------
@@ -543,23 +553,22 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
 
       <ServiceCatalogFiltersBar
         theme={theme}
-        searchTerm={searchTerm}
-        onSearchTermChange={setSearchTerm}
-        onSearchSubmit={handleSearchSubmit}
-        categoryFilter={categoryFilter}
-        onCategoryFilterChange={setCategoryFilter}
-        codeSystemFilter={codeSystemFilter}
-        onCodeSystemFilterChange={setCodeSystemFilter}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        effectiveDate={effectiveDate}
-        onEffectiveDateChange={setEffectiveDate}
-        showDeleted={showDeleted}
-        onToggleShowDeleted={() => setShowDeleted(v => !v)}
+        searchTerm={filters.searchTerm}
+        onSearchTermChange={handleSearchTermChange}
+        categoryFilter={filters.categoryFilter}
+        onCategoryFilterChange={handleCategoryFilterChange}
+        codeSystemFilter={filters.codeSystemFilter}
+        onCodeSystemFilterChange={handleCodeSystemFilterChange}
+        statusFilter={filters.statusFilter}
+        onStatusFilterChange={handleStatusFilterChange}
+        effectiveDate={filters.effectiveDate}
+        onEffectiveDateChange={handleEffectiveDateChange}
+        showDeleted={filters.showDeleted}
+        onToggleShowDeleted={handleToggleShowDeleted}
         viewMode={viewMode}
         onToggleViewMode={() => setViewMode(v => (v === 'list' ? 'grid' : 'list'))}
-        perPage={perPage}
-        onPerPageChange={handlePerPageChange}
+        perPage={itemsPerPage}
+        onPerPageChange={setItemsPerPage}
         serviceCategoryOptions={serviceCategoryOptions.map(({ value, label }) => ({ value, label }))}
         codeSystemOptions={codeSystemOptions}
         statusOptions={statusOptions}
@@ -579,11 +588,11 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
         onRestore={handleRestore}
         onRetry={() => refetch()}
         serviceCategoryOptions={serviceCategoryOptions}
-        pagination={pagination}
-        onPageChange={() => {
-          // Backend does not support paging => intentionally no-op.
-          // Keep the UI element hidden/disabled in ServiceCatalogList if you want.
-        }}
+        filters={filters}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={setItemsPerPage}
       />
 
       <ServiceCatalogFormDrawer
