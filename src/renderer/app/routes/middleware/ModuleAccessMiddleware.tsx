@@ -549,16 +549,6 @@ export const ModuleAccessMiddleware: React.FC = () => {
     }
   }, [currentPath]);
   
-  // Log route changes for debugging
-  useEffect(() => {
-    if (currentPath !== lastCheckedPathRef.current) {
-      console.log('[ModuleAccess] Route changed:', currentPath);
-      if (shouldBypass) {
-        console.log('[ModuleAccess] Bypassing middleware for:', currentPath);
-      }
-    }
-  }, [currentPath, shouldBypass]);
-  
   // Cleanup on unmount
   useEffect(() => {
     return () => {

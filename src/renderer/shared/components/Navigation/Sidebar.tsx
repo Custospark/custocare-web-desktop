@@ -63,6 +63,8 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
   const [activeHover, setActiveHover] = useState<string | null>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const navContainerRef = useRef<HTMLElement>(null);
+  const activeItemRef = useRef<HTMLAnchorElement | null>(null);
 
   // Get active context from Redux
   const activeContext = useAppSelector((state) => state.activeContext);
@@ -271,6 +273,41 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     return location.pathname.startsWith(route);
   }, [location.pathname]);
 
+  // Get active item ID
+  const activeItemId = useMemo(() => {
+    const activeItem = currentMenuItems.find(item => isRouteActive(item.route));
+    return activeItem?.id;
+  }, [currentMenuItems, isRouteActive]);
+
+  // Scroll active item into view
+  useEffect(() => {
+    if (activeItemRef.current && navContainerRef.current) {
+      const container = navContainerRef.current;
+      const activeElement = activeItemRef.current;
+      
+      const containerRect = container.getBoundingClientRect();
+      const activeRect = activeElement.getBoundingClientRect();
+      
+      // Check if active item is outside the visible area
+      const isAboveViewport = activeRect.top < containerRect.top;
+      const isBelowViewport = activeRect.bottom > containerRect.bottom;
+      
+      if (isAboveViewport) {
+        // Scroll up to show the top of active item
+        container.scrollTo({
+          top: container.scrollTop - (containerRect.top - activeRect.top) - 20, // 20px extra padding
+          behavior: 'smooth'
+        });
+      } else if (isBelowViewport) {
+        // Scroll down to show the bottom of active item
+        container.scrollTo({
+          top: container.scrollTop + (activeRect.bottom - containerRect.bottom) + 20, // 20px extra padding
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [activeItemId, location.pathname, currentMenuItems]); // Re-run when active item changes
+
   // Navigation handler
   const handleNavigation = useCallback((e: React.MouseEvent, route: string) => {
     e.preventDefault();
@@ -339,6 +376,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     return (
       <a
         key={item.id}
+        ref={isActive ? activeItemRef : null}
         href={item.href}
         onClick={(e) => handleNavigation(e, item.route)}
         className={cn(
@@ -347,7 +385,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
           'border',
           isActive
             ? cn(
-                'bg-gradient-to-r shadow-lg',
+                'bg-linear-to-r shadow-lg',
                 isDark 
                   ? 'from-blue-500/10 to-cyan-500/10 border-blue-500/30' 
                   : 'from-blue-50 to-cyan-50 border-blue-200'
@@ -364,10 +402,10 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         aria-current={isActive ? 'page' : undefined}
       >
         {isActive && !collapsed && (
-          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-10 rounded-r-full bg-gradient-to-b from-blue-400 via-cyan-400 to-blue-400 shadow-lg shadow-blue-400/50" />
+          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-10 rounded-r-full bg-linear-to-b from-blue-400 via-cyan-400 to-blue-400 shadow-lg shadow-blue-400/50" />
         )}
 
-        <div className={cn('relative flex-shrink-0', collapsed ? 'mx-auto' : '')}>
+        <div className={cn('relative shrink-0', collapsed ? 'mx-auto' : '')}>
           <div className={cn(
             'p-2.5 rounded-xl transition-all duration-300',
             'border',
@@ -539,7 +577,10 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain">
+      <nav 
+        ref={navContainerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain scroll-smooth"
+      >
         {!collapsed ? (
           // Expanded view with categories
           Object.entries(groupedMenuItems).map(([category, items]) => (
@@ -572,8 +613,8 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
             <div className={cn(
               'p-3 rounded-xl border',
               isDark 
-                ? 'bg-gradient-to-br from-gray-800/50 to-gray-800/30 border-gray-700/50' 
-                : 'bg-gradient-to-br from-gray-50 to-gray-100/50 border-gray-200/50'
+                ? 'bg-linear-to-br from-gray-800/50 to-gray-800/30 border-gray-700/50' 
+                : 'bg-linear-to-br from-gray-50 to-gray-100/50 border-gray-200/50'
             )}>
               <div className="flex items-center gap-3">
                 <div className={cn('p-2 rounded-lg shrink-0', isDark ? 'bg-cyan-500/20' : 'bg-cyan-100')}>
@@ -621,8 +662,8 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
             )}>
               <Bell className="w-5 h-5 mx-auto text-gray-500 dark:text-gray-400" />
             </button>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-700 to-gray-800 mx-auto overflow-hidden">
-              <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-gray-700 to-gray-800 mx-auto overflow-hidden">
+              <div className="w-full h-full bg-linear-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
                 <Users className="w-5 h-5 text-white/80" />
               </div>
             </div>
