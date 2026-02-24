@@ -21,6 +21,7 @@ import {
   Eye,
   EyeOff,
   CheckCircle2,
+  Bed,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../../../../../shared/utils/classNameUtils';
@@ -331,19 +332,30 @@ export const AdminFacilitySetup: React.FC<AdminFacilitySetupProps> = ({ theme })
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => refetch()}
-            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            onClick={() => {
+              refetch();
+              // Add rotation animation class on click
+              const button = document.activeElement as HTMLElement;
+              const icon = button?.querySelector('svg');
+              if (icon) {
+                icon.classList.add('animate-spin');
+                setTimeout(() => {
+                  icon.classList.remove('animate-spin');
+                }, 3000); 
+              }
+            }}
+            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
               isDark 
                 ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' 
                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
             }`}
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4 transition-transform duration-300" />
             Refresh
           </button>
           <button
             onClick={handleCreate}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             New Department
@@ -543,7 +555,7 @@ export const AdminFacilitySetup: React.FC<AdminFacilitySetupProps> = ({ theme })
                 ? 'bg-purple-500/20 group-hover:bg-purple-500/30 group-hover:scale-110' 
                 : 'bg-purple-100 group-hover:bg-purple-200 group-hover:scale-110'
             )}>
-              <DoorOpen className={cn(
+              <Bed className={cn(
                 'w-8 h-8',
                 isDark ? 'text-purple-400' : 'text-purple-600'
               )} />
