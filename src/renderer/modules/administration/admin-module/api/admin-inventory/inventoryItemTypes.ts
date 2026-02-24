@@ -134,7 +134,7 @@ export interface InventoryItem {
   currency_code: string;
 
   // Storage requirements
-  storage_requirements: Record<string, unknown> | null;
+  storage_requirements: string | null | undefined;
   requires_refrigeration: boolean;
   requires_controlled_access: boolean;
   storage_location_type: string | null;
@@ -144,8 +144,8 @@ export interface InventoryItem {
   regulatory_approvals: Record<string, unknown> | null;
   fda_approval_number: string | null;
   is_hazardous: boolean;
-  safety_warnings: Record<string, unknown> | null;
-  contraindications: Record<string, unknown> | null;
+  safety_warnings: string | null | undefined;
+  contraindications:string | null | undefined;
   special_handling_instructions: string | null;
 
   // Billing and tracking
@@ -252,16 +252,16 @@ export interface CreateInventoryItemRequest {
   packaging_type?: string | null;
   unit_cost?: number | null;
   average_wholesale_price?: number | null;
-  storage_requirements?: Record<string, unknown> | null;
+  storage_requirements?: string | null | undefined;
   requires_refrigeration?: boolean;
   requires_controlled_access?: boolean;
   storage_location_type?: string | null;
   requires_prescription?: boolean;
-  regulatory_approvals?: Record<string, unknown> | null;
+  regulatory_approvals?: string | null | undefined;
   fda_approval_number?: string | null;
   is_hazardous?: boolean;
-  safety_warnings?: Record<string, unknown> | null;
-  contraindications?: Record<string, unknown> | null;
+  safety_warnings?:string | null | undefined;
+  contraindications?:string | null | undefined;
   special_handling_instructions?: string | null;
   is_billable?: boolean;
   track_by_lot?: boolean;

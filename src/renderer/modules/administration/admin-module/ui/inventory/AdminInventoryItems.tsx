@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Box,
@@ -272,7 +272,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
   );
 
   // ---------------------------------------------------------------------------
-  // FILTERS
+  // FILTERS (Server-side only for initial load, client-side for UI filtering)
   // ---------------------------------------------------------------------------
   const filters: InventoryItemFilters = useMemo(() => {
     const status = showDeleted
@@ -299,8 +299,6 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
     searchTerm, perPage,
   ]);
 
-  const listQueryKey = useMemo(() => inventoryItemKeys.list(filters), [filters]);
-
   const {
     data: itemsResponse,
     isLoading,
@@ -314,11 +312,43 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
   const items = itemsResponse?.data ?? [];
   const pagination = itemsResponse?.pagination;
 
-  const setListCache = (
-    updater: (current: InventoryItemListResponse | undefined) => InventoryItemListResponse | undefined
-  ) => {
-    queryClient.setQueryData<InventoryItemListResponse>(listQueryKey, updater);
-  };
+  // ---------------------------------------------------------------------------
+  // CLIENT-SIDE FILTERING
+  // ---------------------------------------------------------------------------
+  const filteredItems = useMemo(() => {
+    let filtered = [...items];
+
+    // Apply client-side filters that aren't handled by the server
+    if (controlledSubstanceFilter === 'non_controlled') {
+      filtered = filtered.filter(item => !item.controlled_substance_schedule);
+    }
+
+    if (showDeleted) {
+      filtered = filtered.filter(item => item.deleted_at !== null);
+    } else {
+      filtered = filtered.filter(item => item.deleted_at === null);
+    }
+
+    // Apply client-side search if needed (additional to server search)
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(item => 
+        item.item_name.toLowerCase().includes(searchLower) ||
+        item.item_code?.toLowerCase().includes(searchLower) ||
+        (item.generic_name?.toLowerCase() || '').includes(searchLower) ||
+        (item.ndc_code?.toLowerCase() || '').includes(searchLower)
+      );
+    }
+
+    return filtered;
+  }, [items, controlledSubstanceFilter, showDeleted, searchTerm]);
+
+  const setListCache = useCallback(
+    (updater: (current: InventoryItemListResponse | undefined) => InventoryItemListResponse | undefined) => {
+      queryClient.setQueryData<InventoryItemListResponse>(inventoryItemKeys.list(filters), updater);
+    },
+    [queryClient, filters]
+  );
 
   // ---------------------------------------------------------------------------
   // MUTATIONS + optimistic UI
@@ -351,7 +381,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
   });
 
   // ---------------------------------------------------------------------------
-  // Drawer handlers - PRECISELY IMPLEMENTED
+  // Drawer handlers
   // ---------------------------------------------------------------------------
   const openCreate = () => {
     setDrawerMode('create');
@@ -372,7 +402,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       item_category: item.item_category,
       item_subcategory: item.item_subcategory || '',
       
-      // Clinical/Medication Details - ALL fields preserved
+      // Clinical/Medication Details
       generic_name: item.generic_name || '',
       brand_name: item.brand_name || '',
       ndc_code: item.ndc_code || '',
@@ -395,13 +425,13 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       average_wholesale_price: item.average_wholesale_price || 0,
       currency_code: item.currency_code,
       
-      // Storage Requirements - ALL fields
+      // Storage Requirements
       requires_refrigeration: item.requires_refrigeration,
       requires_controlled_access: item.requires_controlled_access,
       storage_location_type: item.storage_location_type || '',
-      storage_requirements: item.storage_requirements || '',
+      storage_requirements: item.storage_requirements as any,
       
-      // Safety & Compliance - ALL fields
+      // Safety & Compliance
       requires_prescription: item.requires_prescription,
       fda_approval_number: item.fda_approval_number || '',
       is_hazardous: item.is_hazardous,
@@ -414,7 +444,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       track_by_lot: item.track_by_lot,
       track_by_serial: item.track_by_serial,
       
-      // Stock Management - ALL fields
+      // Stock Management
       reorder_point: item.reorder_point,
       reorder_quantity: item.reorder_quantity,
       safety_stock_level: item.safety_stock_level,
@@ -445,22 +475,22 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       item_category: item.item_category,
       item_subcategory: item.item_subcategory || '',
       
-      // Clinical/Medication Details - ALL preserved EXCEPT ndc_code
+      // Clinical/Medication Details
       generic_name: item.generic_name || '',
       brand_name: item.brand_name || '',
-      ndc_code: '', // Clear NDC for duplicate (should be unique)
+      ndc_code: '', // Clear NDC for duplicate
       drug_class: item.drug_class || '',
       controlled_substance_schedule: item.controlled_substance_schedule || '',
-      dosage_form: item.dosage_form || '',
+      dosage_form: item.dosage_form as DosageForm,
       strength: item.strength || '',
-      route_of_administration: item.route_of_administration || '',
+      route_of_administration: item.route_of_administration as RouteOfAdministration,
       
-      // Manufacturer & Supplier - preserved except manufacturer_item_number
+      // Manufacturer & Supplier
       manufacturer: item.manufacturer || '',
-      manufacturer_item_number: '', // Clear manufacturer item number for duplicate
+      manufacturer_item_number: '', // Clear for duplicate
       supplier: item.supplier || '',
       
-      // Packaging & Pricing - ALL preserved
+      // Packaging & Pricing
       unit_of_measure: item.unit_of_measure,
       package_quantity: item.package_quantity,
       packaging_type: item.packaging_type || '',
@@ -468,32 +498,32 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       average_wholesale_price: item.average_wholesale_price || 0,
       currency_code: item.currency_code,
       
-      // Storage Requirements - ALL preserved
+      // Storage Requirements
       requires_refrigeration: item.requires_refrigeration,
       requires_controlled_access: item.requires_controlled_access,
       storage_location_type: item.storage_location_type || '',
-      storage_requirements: item.storage_requirements || '',
+      storage_requirements: item.storage_requirements as any,
       
-      // Safety & Compliance - ALL preserved EXCEPT fda_approval_number
+      // Safety & Compliance
       requires_prescription: item.requires_prescription,
-      fda_approval_number: '', // Clear approval number for duplicate
+      fda_approval_number: '', // Clear for duplicate
       is_hazardous: item.is_hazardous,
       safety_warnings: item.safety_warnings || '',
       contraindications: item.contraindications || '',
       special_handling_instructions: item.special_handling_instructions || '',
       
-      // Tracking & Billing - ALL preserved
+      // Tracking & Billing
       is_billable: item.is_billable,
       track_by_lot: item.track_by_lot,
       track_by_serial: item.track_by_serial,
       
-      // Stock Management - ALL preserved
+      // Stock Management
       reorder_point: item.reorder_point,
       reorder_quantity: item.reorder_quantity,
       safety_stock_level: item.safety_stock_level,
       max_stock_level: item.max_stock_level,
       
-      // Status - preserved
+      // Status
       status: item.status,
     });
 
@@ -503,55 +533,67 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
   const toggleExpand = (uuid: string) => {
     setExpandedItems(prev => {
       const next = new Set(prev);
-      if (next.has(uuid)) next.delete(uuid);
-      else next.add(uuid);
+      if (next.has(uuid)) {
+        next.delete(uuid);
+      } else {
+        next.add(uuid);
+      }
       return next;
     });
   };
+  
 
   // ---------------------------------------------------------------------------
-  // Submit (instant UI -> server)
+  // Submit
   // ---------------------------------------------------------------------------
   const handleSubmit = () => {
     if (!activeFacilityId) return;
 
+    // Helper function to safely trim strings
+    const safeTrim = (value: string | undefined | null): string | undefined => {
+      if (typeof value === 'string' && value.trim() !== '') {
+        return value.trim();
+      }
+      return undefined;
+    };
+
     const payload: CreateInventoryItemRequest = {
       // Required fields
-      item_code: formData.item_code?.trim() ?? '',
-      item_name: formData.item_name?.trim() ?? '',
+      item_code: safeTrim(formData.item_code) ?? '',
+      item_name: safeTrim(formData.item_name) ?? '',
       item_category: formData.item_category,
       unit_of_measure: formData.unit_of_measure,
       package_quantity: formData.package_quantity,
       currency_code: formData.currency_code,
       status: formData.status,
 
-      // Optional fields - using optional chaining and nullish coalescing
-      item_description: formData.item_description?.trim() || undefined,
-      item_subcategory: formData.item_subcategory?.trim() || undefined,
-      generic_name: formData.generic_name?.trim() || undefined,
-      brand_name: formData.brand_name?.trim() || undefined,
-      ndc_code: formData.ndc_code?.trim() || undefined,
-      drug_class: formData.drug_class?.trim() || undefined,
+      // Optional fields
+      item_description: safeTrim(formData.item_description),
+      item_subcategory: safeTrim(formData.item_subcategory),
+      generic_name: safeTrim(formData.generic_name),
+      brand_name: safeTrim(formData.brand_name),
+      ndc_code: safeTrim(formData.ndc_code),
+      drug_class: safeTrim(formData.drug_class),
       controlled_substance_schedule: formData.controlled_substance_schedule || undefined,
       dosage_form: formData.dosage_form || undefined,
-      strength: formData.strength?.trim() || undefined,
+      strength: safeTrim(formData.strength),
       route_of_administration: formData.route_of_administration || undefined,
-      manufacturer: formData.manufacturer?.trim() || undefined,
-      manufacturer_item_number: formData.manufacturer_item_number?.trim() || undefined,
-      supplier: formData.supplier?.trim() || undefined,
-      packaging_type: formData.packaging_type?.trim() || undefined,
+      manufacturer: safeTrim(formData.manufacturer),
+      manufacturer_item_number: safeTrim(formData.manufacturer_item_number),
+      supplier: safeTrim(formData.supplier),
+      packaging_type: safeTrim(formData.packaging_type),
       unit_cost: formData.unit_cost || undefined,
       average_wholesale_price: formData.average_wholesale_price || undefined,
       requires_refrigeration: formData.requires_refrigeration,
       requires_controlled_access: formData.requires_controlled_access,
-      storage_location_type: formData.storage_location_type?.trim() || undefined,
-      storage_requirements: formData.storage_requirements?.trim() || undefined,
+      storage_location_type: safeTrim(formData.storage_location_type),
+      storage_requirements: safeTrim(formData.storage_requirements),
       requires_prescription: formData.requires_prescription,
-      fda_approval_number: formData.fda_approval_number?.trim() || undefined,
+      fda_approval_number: safeTrim(formData.fda_approval_number),
       is_hazardous: formData.is_hazardous,
-      safety_warnings: formData.safety_warnings?.trim() || undefined,
-      contraindications: formData.contraindications?.trim() || undefined,
-      special_handling_instructions: formData.special_handling_instructions?.trim() || undefined,
+      safety_warnings: formData.safety_warnings as any,
+      contraindications: formData.contraindications,
+      special_handling_instructions: safeTrim(formData.special_handling_instructions),
       is_billable: formData.is_billable,
       track_by_lot: formData.track_by_lot,
       track_by_serial: formData.track_by_serial,
@@ -562,7 +604,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
     };
 
     if (drawerMode === 'create') {
-      const previous = queryClient.getQueryData<InventoryItemListResponse>(listQueryKey);
+      const previous = queryClient.getQueryData<InventoryItemListResponse>(inventoryItemKeys.list(filters));
       const now = new Date().toISOString();
       const tempUuid = `temp-${crypto.randomUUID()}`;
 
@@ -570,14 +612,11 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         id: -1,
         item_uuid: tempUuid,
         facility_id: Number(activeFacilityId),
-
-        // ALL fields mapped for optimistic update
         item_code: payload.item_code,
         item_name: payload.item_name,
         item_description: payload.item_description ?? null,
         item_category: payload.item_category,
         item_subcategory: payload.item_subcategory ?? null,
-        
         generic_name: payload.generic_name ?? null,
         brand_name: payload.brand_name ?? null,
         ndc_code: payload.ndc_code ?? null,
@@ -586,24 +625,20 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         active_ingredients: null,
         dosage_form: payload.dosage_form as DosageForm,
         strength: payload.strength ?? null,
-        route_of_administration: payload.route_of_administration ?? null,
-        
+        route_of_administration: payload.route_of_administration || null,
         manufacturer: payload.manufacturer ?? null,
         manufacturer_item_number: payload.manufacturer_item_number ?? null,
         supplier: payload.supplier ?? null,
-        
         unit_of_measure: payload.unit_of_measure,
         package_quantity: payload.package_quantity,
         packaging_type: payload.packaging_type ?? null,
         unit_cost: payload.unit_cost ?? null,
         average_wholesale_price: payload.average_wholesale_price ?? null,
         currency_code: payload.currency_code,
-        
         storage_requirements: payload.storage_requirements ?? null,
         requires_refrigeration: payload.requires_refrigeration ?? false,
         requires_controlled_access: payload.requires_controlled_access ?? false,
         storage_location_type: payload.storage_location_type ?? null,
-        
         requires_prescription: payload.requires_prescription ?? false,
         regulatory_approvals: null,
         fda_approval_number: payload.fda_approval_number ?? null,
@@ -611,19 +646,15 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         safety_warnings: payload.safety_warnings ?? null,
         contraindications: payload.contraindications ?? null,
         special_handling_instructions: payload.special_handling_instructions ?? null,
-        
         is_billable: payload.is_billable ?? true,
         track_by_lot: payload.track_by_lot ?? false,
         track_by_serial: payload.track_by_serial ?? false,
-        
         reorder_point: payload.reorder_point ?? null,
         reorder_quantity: payload.reorder_quantity ?? null,
         safety_stock_level: payload.safety_stock_level ?? null,
         max_stock_level: payload.max_stock_level ?? null,
-        
         status: payload.status,
         metadata: null,
-        
         created_at: now,
         updated_at: now,
         deleted_at: null,
@@ -637,38 +668,85 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
 
       createMutation.mutate(payload, {
         onError: () => {
-          queryClient.setQueryData(listQueryKey, previous);
+          queryClient.setQueryData(inventoryItemKeys.list(filters), previous);
         },
       });
 
       return;
     }
+    const mergeItemWithPayload = (
+  existingItem: InventoryItem,
+  payload: CreateInventoryItemRequest
+): InventoryItem => {
+  return {
+    ...existingItem,
+    item_code: payload.item_code,
+    item_name: payload.item_name,
+    item_description: payload.item_description ?? existingItem.item_description,
+    item_category: payload.item_category,
+    item_subcategory: payload.item_subcategory ?? existingItem.item_subcategory,
+    generic_name: payload.generic_name ?? existingItem.generic_name,
+    brand_name: payload.brand_name ?? existingItem.brand_name,
+    ndc_code: payload.ndc_code ?? existingItem.ndc_code,
+    drug_class: payload.drug_class ?? existingItem.drug_class,
+    controlled_substance_schedule: payload.controlled_substance_schedule ?? existingItem.controlled_substance_schedule,
+    dosage_form: payload.dosage_form ?? existingItem.dosage_form,
+    strength: payload.strength ?? existingItem.strength,
+    route_of_administration: payload.route_of_administration ?? existingItem.route_of_administration,
+    manufacturer: payload.manufacturer ?? existingItem.manufacturer,
+    manufacturer_item_number: payload.manufacturer_item_number ?? existingItem.manufacturer_item_number,
+    supplier: payload.supplier ?? existingItem.supplier,
+    unit_of_measure: payload.unit_of_measure,
+    package_quantity: payload.package_quantity,
+    packaging_type: payload.packaging_type ?? existingItem.packaging_type,
+    unit_cost: payload.unit_cost ?? existingItem.unit_cost,
+    average_wholesale_price: payload.average_wholesale_price ?? existingItem.average_wholesale_price,
+    currency_code: payload.currency_code,
+    requires_refrigeration: payload.requires_refrigeration ?? existingItem.requires_refrigeration,
+    requires_controlled_access: payload.requires_controlled_access ?? existingItem.requires_controlled_access,
+    storage_location_type: payload.storage_location_type ?? existingItem.storage_location_type,
+    storage_requirements: payload.storage_requirements ?? existingItem.storage_requirements,
+    requires_prescription: payload.requires_prescription ?? existingItem.requires_prescription,
+    // Keep existing regulatory_approvals
+    regulatory_approvals: existingItem.regulatory_approvals,
+    fda_approval_number: payload.fda_approval_number ?? existingItem.fda_approval_number,
+    is_hazardous: payload.is_hazardous ?? existingItem.is_hazardous,
+    safety_warnings: payload.safety_warnings ?? existingItem.safety_warnings,
+    contraindications: payload.contraindications ?? existingItem.contraindications,
+    special_handling_instructions: payload.special_handling_instructions ?? existingItem.special_handling_instructions,
+    is_billable: payload.is_billable ?? existingItem.is_billable,
+    track_by_lot: payload.track_by_lot ?? existingItem.track_by_lot,
+    track_by_serial: payload.track_by_serial ?? existingItem.track_by_serial,
+    reorder_point: payload.reorder_point ?? existingItem.reorder_point,
+    reorder_quantity: payload.reorder_quantity ?? existingItem.reorder_quantity,
+    safety_stock_level: payload.safety_stock_level ?? existingItem.safety_stock_level,
+    max_stock_level: payload.max_stock_level ?? existingItem.max_stock_level,
+    status: payload.status,
+    updated_at: new Date().toISOString(),
+  };
+};
+
+
 
     if (drawerMode === 'edit' && selectedItem) {
       const uuid = selectedItem.item_uuid;
-      const previous = queryClient.getQueryData<InventoryItemListResponse>(listQueryKey);
+      const previous = queryClient.getQueryData<InventoryItemListResponse>(inventoryItemKeys.list(filters));
 
-      setListCache(current => {
-        if (!current) return current;
-        return {
-          ...current,
-          data: current.data.map(i =>
-            i.item_uuid === uuid 
-              ? { 
-                  ...i, 
-                  ...payload, 
-                  updated_at: new Date().toISOString() 
-                } 
-              : i
-          ),
-        };
-      });
+          setListCache(current => {
+          if (!current) return current;
+          return {
+            ...current,
+            data: current.data.map(i =>
+              i.item_uuid === uuid ? mergeItemWithPayload(i, payload) : i
+            ),
+          };
+        });
 
       updateMutation.mutate(
         { uuid, data: payload as UpdateInventoryItemRequest },
         {
           onError: () => {
-            queryClient.setQueryData(listQueryKey, previous);
+            queryClient.setQueryData(inventoryItemKeys.list(filters), previous);
           },
         }
       );
@@ -687,7 +765,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
 
     if (!confirmed) return;
 
-    const previous = queryClient.getQueryData<InventoryItemListResponse>(listQueryKey);
+    const previous = queryClient.getQueryData<InventoryItemListResponse>(inventoryItemKeys.list(filters));
 
     setListCache(current => {
       if (!current) return current;
@@ -705,14 +783,14 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       { uuid: item.item_uuid },
       {
         onError: () => {
-          queryClient.setQueryData(listQueryKey, previous);
+          queryClient.setQueryData(inventoryItemKeys.list(filters), previous);
         },
       }
     );
   };
 
   const handleRestore = (item: InventoryItem) => {
-    const previous = queryClient.getQueryData<InventoryItemListResponse>(listQueryKey);
+    const previous = queryClient.getQueryData<InventoryItemListResponse>(inventoryItemKeys.list(filters));
 
     setListCache(current => {
       if (!current) return current;
@@ -730,7 +808,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       { uuid: item.item_uuid },
       {
         onError: () => {
-          queryClient.setQueryData(listQueryKey, previous);
+          queryClient.setQueryData(inventoryItemKeys.list(filters), previous);
         },
       }
     );
@@ -739,21 +817,22 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
   // ---------------------------------------------------------------------------
   // Filter handlers
   // ---------------------------------------------------------------------------
-  const handleSearchSubmit = () => {
+  const handleSearchSubmit = useCallback(() => {
     refetch();
-  };
+  }, [refetch]);
 
-  const handlePerPageChange = (n: number) => {
+  const handlePerPageChange = useCallback((n: number) => {
     setPerPage(Math.max(1, Math.min(500, n)));
-  };
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Validation
   // ---------------------------------------------------------------------------
-  const canSubmit =
-    !!formData.item_code.trim() &&
-    !!formData.item_name.trim() &&
-    formData.package_quantity > 0;
+  const canSubmit = useMemo(() => {
+    return !!formData.item_code?.trim() &&
+           !!formData.item_name?.trim() &&
+           formData.package_quantity > 0;
+  }, [formData.item_code, formData.item_name, formData.package_quantity]);
 
   // ---------------------------------------------------------------------------
   // Guards + loading
@@ -778,12 +857,10 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
     <div className="space-y-6">
       <InventoryItemHeader
         theme={theme}
-        items={items}
+        items={filteredItems}
         onRefresh={() => refetch()}
         onCreate={openCreate}
         onImport={() => {
-          // Hook your import modal here
-          // eslint-disable-next-line no-console
           console.log('Open import dialog');
         }}
       />
@@ -817,22 +894,23 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         statusOptions={statusOptions}
         controlledSubstanceOptions={controlledSubstanceOptions}
       />
-        <InventoryCatalogList
-          theme={theme}
-          viewMode={viewMode}
-          isLoading={isLoading}
-          error={error ? new Error(error.message) : null}
-          items={items}
-          expandedItems={expandedItems}
-          onToggleExpand={toggleExpand}
-          onEdit={openEdit}
-          onDuplicate={handleDuplicate}
-          onDelete={handleDelete}
-          onRestore={handleRestore}
-          onRetry={() => refetch()}
-          itemCategoryOptions={itemCategoryOptions}
-          defaultPageSize={perPage}          // ← replaces removed pagination prop
-        />
+
+      <InventoryCatalogList
+        theme={theme}
+        viewMode={viewMode}
+        isLoading={isLoading}
+        error={error ? new Error(error.message) : null}
+        items={filteredItems}
+        expandedItems={expandedItems}
+        onToggleExpand={toggleExpand}
+        onEdit={openEdit}
+        onDuplicate={handleDuplicate}
+        onDelete={handleDelete}
+        onRestore={handleRestore}
+        onRetry={() => refetch()}
+        itemCategoryOptions={itemCategoryOptions}
+        defaultPageSize={perPage}
+      />
 
       <InventoryItemFormDrawer
         theme={theme}

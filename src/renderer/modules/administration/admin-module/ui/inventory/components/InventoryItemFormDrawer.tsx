@@ -58,7 +58,7 @@ export interface InventoryItemFormData {
   fda_approval_number: string;
   is_hazardous: boolean;
   safety_warnings: string | unknown;
-  contraindications: string | unknown;
+  contraindications: string | null;
   special_handling_instructions: string;
   
   // Billing and tracking

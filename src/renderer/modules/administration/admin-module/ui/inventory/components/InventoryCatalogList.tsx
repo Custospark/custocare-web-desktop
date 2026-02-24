@@ -1,5 +1,4 @@
-// src/administration/admin-module/inventory-items/components/InventoryCatalogList.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo} from 'react';
 import {
   AlertTriangle,
   CheckCircle,
@@ -28,8 +27,7 @@ import {
   getStatusColor,
 } from '../utils/inventoryItemUiUtils';
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
-
-// ─── cn helper MUST be at top – used throughout the file ─────────────────────
+// ─── cn helper ──────────────────────────────────────────────────────────────
 const cn = (...classes: (string | false | null | undefined)[]): string =>
   classes.filter(Boolean).join(' ');
 
@@ -55,11 +53,387 @@ interface Props {
     icon: React.ElementType;
     color: string;
   }[];
-  /** Default page size for the client-side paginator. Defaults to 10. */
   defaultPageSize?: number;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Sub-components (defined OUTSIDE main component) ─────────────────────────
+
+interface BadgeProps {
+  size?: 'sm' | 'md';
+  isDark: boolean;
+}
+
+const HazardBadge: React.FC<BadgeProps> = ({ size = 'sm', isDark }) => {
+  const cls = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
+  return (
+    <div className="relative group">
+      <AlertTriangle className={cn(cls, isDark ? 'text-red-400' : 'text-red-600')} />
+      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-gray-900 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        Hazardous
+      </span>
+    </div>
+  );
+};
+
+const RefrigBadge: React.FC<BadgeProps> = ({ size = 'sm', isDark }) => {
+  const cls = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
+  return (
+    <div className="relative group">
+      <Thermometer className={cn(cls, isDark ? 'text-blue-400' : 'text-blue-600')} />
+      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-gray-900 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        Requires Refrigeration
+      </span>
+    </div>
+  );
+};
+
+const PrescriptionBadge: React.FC<BadgeProps> = ({ size = 'sm', isDark }) => {
+  const cls = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
+  return (
+    <div className="relative group">
+      <Shield className={cn(cls, isDark ? 'text-purple-400' : 'text-purple-600')} />
+      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-gray-900 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        Requires Prescription
+      </span>
+    </div>
+  );
+};
+
+interface RowActionsProps {
+  item: InventoryItem;
+  size?: 'sm' | 'md';
+  isDark: boolean;
+  onDuplicate: (item: InventoryItem) => void;
+  onEdit: (item: InventoryItem) => void;
+  onDelete: (item: InventoryItem) => void;
+  onRestore: (item: InventoryItem) => void;
+}
+
+const RowActions: React.FC<RowActionsProps> = ({
+  item,
+  size = 'md',
+  isDark,
+  onDuplicate,
+  onEdit,
+  onDelete,
+  onRestore,
+}) => {
+  const btn = cn(
+    'rounded-lg transition-colors cursor-pointer',
+    size === 'sm' ? 'p-1.5' : 'p-2',
+    isDark
+      ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+  );
+  const iconCls = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
+
+  return (
+    <div className="flex items-center gap-1">
+      <button onClick={() => onDuplicate(item)} className={btn} title="Duplicate">
+        <Copy className={iconCls} />
+      </button>
+      <button onClick={() => onEdit(item)} className={btn} title="Edit">
+        <Edit2 className={iconCls} />
+      </button>
+      {item.deleted_at ? (
+        <button
+          onClick={() => onRestore(item)}
+          className={cn(
+            'rounded-lg transition-colors cursor-pointer',
+            size === 'sm' ? 'p-1.5' : 'p-2',
+            isDark
+              ? 'text-green-400 hover:text-green-200 hover:bg-gray-700'
+              : 'text-green-600 hover:text-green-800 hover:bg-gray-200'
+          )}
+          title="Restore"
+        >
+          <RefreshCw className={iconCls} />
+        </button>
+      ) : (
+        <button
+          onClick={() => onDelete(item)}
+          className={cn(
+            'rounded-lg transition-colors cursor-pointer',
+            size === 'sm' ? 'p-1.5' : 'p-2',
+            isDark
+              ? 'text-red-400 hover:text-red-200 hover:bg-gray-700'
+              : 'text-red-600 hover:text-red-800 hover:bg-gray-200'
+          )}
+          title="Delete"
+        >
+          <Trash2 className={iconCls} />
+        </button>
+      )}
+    </div>
+  );
+};
+
+interface ExpandedDetailsProps {
+  item: InventoryItem;
+  isDark: boolean;
+}
+
+const ExpandedDetails: React.FC<ExpandedDetailsProps> = ({ item, isDark }) => (
+  <div
+    className={cn(
+      'mt-4 pt-4 border-t grid grid-cols-1 md:grid-cols-3 gap-4',
+      isDark ? 'border-gray-800' : 'border-gray-200'
+    )}
+  >
+    <div>
+      <h4 className="text-sm font-semibold mb-2">Item Details</h4>
+      <dl
+        className={cn(
+          'text-xs space-y-1.5',
+          isDark ? 'text-gray-400' : 'text-gray-600'
+        )}
+      >
+        <div>
+          <dt className="inline font-medium">Manufacturer: </dt>
+          <dd className="inline">{item.manufacturer || 'Not specified'}</dd>
+        </div>
+        <div>
+          <dt className="inline font-medium">Supplier: </dt>
+          <dd className="inline">{item.supplier || 'Not specified'}</dd>
+        </div>
+        <div>
+          <dt className="inline font-medium">NDC Code: </dt>
+          <dd className="inline">{item.ndc_code || 'N/A'}</dd>
+        </div>
+        {item.drug_class && (
+          <div>
+            <dt className="inline font-medium">Drug Class: </dt>
+            <dd className="inline">{item.drug_class}</dd>
+          </div>
+        )}
+        {item.strength && (
+          <div>
+            <dt className="inline font-medium">Strength: </dt>
+            <dd className="inline">{item.strength}</dd>
+          </div>
+        )}
+        {item.dosage_form && (
+          <div>
+            <dt className="inline font-medium">Dosage Form: </dt>
+            <dd className="inline">{item.dosage_form}</dd>
+          </div>
+        )}
+      </dl>
+    </div>
+
+    <div>
+      <h4 className="text-sm font-semibold mb-2">Storage & Safety</h4>
+      <div
+        className={cn(
+          'text-xs space-y-1.5',
+          isDark ? 'text-gray-400' : 'text-gray-600'
+        )}
+      >
+        <div className="flex items-center gap-2">
+          {item.requires_refrigeration ? (
+            <Thermometer className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+          ) : (
+            <XCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+          )}
+          Refrigeration:{' '}
+          <strong>{item.requires_refrigeration ? 'Required' : 'Not Required'}</strong>
+        </div>
+        <div className="flex items-center gap-2">
+          {item.requires_prescription ? (
+            <Shield className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+          ) : (
+            <XCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+          )}
+          Prescription:{' '}
+          <strong>{item.requires_prescription ? 'Required' : 'Not Required'}</strong>
+        </div>
+        <div className="flex items-center gap-2">
+          {item.is_hazardous ? (
+            <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+          ) : (
+            <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0" />
+          )}
+          Hazardous: <strong>{item.is_hazardous ? 'Yes' : 'No'}</strong>
+        </div>
+        {item.storage_location_type && (
+          <div>
+            <span className="font-medium">Storage: </span>
+            {item.storage_location_type}
+          </div>
+        )}
+      </div>
+    </div>
+
+    <div>
+      <h4 className="text-sm font-semibold mb-2">Stock Management</h4>
+      <dl
+        className={cn(
+          'text-xs space-y-1.5',
+          isDark ? 'text-gray-400' : 'text-gray-600'
+        )}
+      >
+        <div>
+          <dt className="inline font-medium">Reorder Point: </dt>
+          <dd className="inline">{item.reorder_point ?? 'Not set'}</dd>
+        </div>
+        <div>
+          <dt className="inline font-medium">Reorder Qty: </dt>
+          <dd className="inline">{item.reorder_quantity ?? 'Not set'}</dd>
+        </div>
+        <div>
+          <dt className="inline font-medium">Safety Stock: </dt>
+          <dd className="inline">{item.safety_stock_level ?? 'Not set'}</dd>
+        </div>
+        <div>
+          <dt className="inline font-medium">Max Stock: </dt>
+          <dd className="inline">{item.max_stock_level ?? 'Not set'}</dd>
+        </div>
+        <div>
+          <dt className="inline font-medium">Billable: </dt>
+          <dd className="inline">{item.is_billable ? 'Yes' : 'No'}</dd>
+        </div>
+        <div>
+          <dt className="inline font-medium">Track by Lot: </dt>
+          <dd className="inline">{item.track_by_lot ? 'Yes' : 'No'}</dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+);
+
+interface PaginationBarProps {
+  paginationData: {
+    safePage: number;
+    totalPages: number;
+    from: number;
+    to: number;
+    totalItems: number;
+  };
+  pageNumbers: (number | '...')[];
+  goToPage: (page: number) => void;
+  isDark: boolean;
+}
+
+const PaginationBar: React.FC<PaginationBarProps> = ({
+  paginationData,
+  pageNumbers,
+  goToPage,
+  isDark,
+}) => (
+  <div
+    className={cn(
+      'flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 rounded-xl border',
+      isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+    )}
+  >
+    <span className={cn('text-xs sm:text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
+      Showing{' '}
+      <span className="font-medium">{paginationData.from}</span>–
+      <span className="font-medium">{paginationData.to}</span>{' '}
+      of{' '}
+      <span className="font-medium">{paginationData.totalItems}</span> items
+    </span>
+
+    <div className="flex items-center gap-1 sm:gap-1.5">
+      <button
+        onClick={() => goToPage(1)}
+        disabled={paginationData.safePage === 1}
+        aria-label="First page"
+        className={cn(
+          'p-2 rounded-lg transition-colors cursor-pointer',
+          paginationData.safePage === 1
+            ? isDark ? 'text-gray-700 cursor-not-allowed' : 'text-gray-300 cursor-not-allowed'
+            : isDark
+              ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+        )}
+      >
+        <ChevronsLeft className="w-4 h-4" />
+      </button>
+
+      <button
+        onClick={() => goToPage(paginationData.safePage - 1)}
+        disabled={paginationData.safePage === 1}
+        aria-label="Previous page"
+        className={cn(
+          'p-2 rounded-lg transition-colors cursor-pointer',
+          paginationData.safePage === 1
+            ? isDark ? 'text-gray-700 cursor-not-allowed' : 'text-gray-300 cursor-not-allowed'
+            : isDark
+              ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+        )}
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </button>
+
+      {pageNumbers.map((p, i) =>
+        p === '...' ? (
+          <span
+            key={`dots-${i}`}
+            className={cn(
+              'px-2 py-1 text-xs',
+              isDark ? 'text-gray-500' : 'text-gray-400'
+            )}
+          >
+            …
+          </span>
+        ) : (
+          <button
+            key={`page-${p}`}
+            onClick={() => goToPage(p)}
+            aria-label={`Page ${p}`}
+            aria-current={paginationData.safePage === p ? 'page' : undefined}
+            className={cn(
+              'min-w-[32px] sm:min-w-[36px] px-2 py-1 sm:px-3 sm:py-1.5 rounded text-xs sm:text-sm font-medium transition-colors cursor-pointer',
+              paginationData.safePage === p
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : isDark
+                  ? 'text-gray-300 hover:bg-gray-800'
+                  : 'text-gray-700 hover:bg-gray-100'
+            )}
+          >
+            {p}
+          </button>
+        )
+      )}
+
+      <button
+        onClick={() => goToPage(paginationData.safePage + 1)}
+        disabled={paginationData.safePage === paginationData.totalPages}
+        aria-label="Next page"
+        className={cn(
+          'p-2 rounded-lg transition-colors cursor-pointer',
+          paginationData.safePage === paginationData.totalPages
+            ? isDark ? 'text-gray-700 cursor-not-allowed' : 'text-gray-300 cursor-not-allowed'
+            : isDark
+              ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+        )}
+      >
+        <ChevronRight className="w-4 h-4" />
+      </button>
+
+      <button
+        onClick={() => goToPage(paginationData.totalPages)}
+        disabled={paginationData.safePage === paginationData.totalPages}
+        aria-label="Last page"
+        className={cn(
+          'p-2 rounded-lg transition-colors cursor-pointer',
+          paginationData.safePage === paginationData.totalPages
+            ? isDark ? 'text-gray-700 cursor-not-allowed' : 'text-gray-300 cursor-not-allowed'
+            : isDark
+              ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+        )}
+      >
+        <ChevronsRight className="w-4 h-4" />
+      </button>
+    </div>
+  </div>
+);
+
+// ─── Main Component ────────────────────────────────────────────────────────────
 export const InventoryCatalogList: React.FC<Props> = ({
   theme,
   viewMode,
@@ -82,22 +456,22 @@ export const InventoryCatalogList: React.FC<Props> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(defaultPageSize);
 
-  // Reset to page 1 whenever the items array changes identity (filter/search applied)
-  const prevItemsRef = React.useRef(items);
-  React.useEffect(() => {
-    if (prevItemsRef.current !== items) {
-      setCurrentPage(1);
-      prevItemsRef.current = items;
-    }
-  }, [items]);
+  // Store previous items to detect changes
+  const [prevItems, setPrevItems] = useState(items);
+
+  // Reset to page 1 if the items array has changed
+  if (items !== prevItems) {
+    setPrevItems(items);
+    setCurrentPage(1);  // ✅ Safe: adjusts state during render
+  }
 
   const paginationData = useMemo(() => {
     const totalItems = items.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
-    // Clamp currentPage in case itemsPerPage just changed
     const safePage = Math.min(currentPage, totalPages);
     const startIndex = (safePage - 1) * itemsPerPage;
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+    
     return {
       totalItems,
       totalPages,
@@ -110,8 +484,9 @@ export const InventoryCatalogList: React.FC<Props> = ({
     };
   }, [items, currentPage, itemsPerPage]);
 
-  const goToPage = (page: number) =>
+  const goToPage = (page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, paginationData.totalPages)));
+  };
 
   const changeItemsPerPage = (n: number) => {
     setItemsPerPage(n);
@@ -123,6 +498,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
     const { totalPages, safePage } = paginationData;
     const delta = 2;
     const range: number[] = [];
+    
     for (let i = 1; i <= totalPages; i++) {
       if (
         i === 1 ||
@@ -132,8 +508,10 @@ export const InventoryCatalogList: React.FC<Props> = ({
         range.push(i);
       }
     }
+    
     const result: (number | '...')[] = [];
     let prev: number | undefined;
+    
     for (const page of range) {
       if (prev !== undefined) {
         if (page - prev === 2) result.push(prev + 1);
@@ -142,6 +520,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
       result.push(page);
       prev = page;
     }
+    
     return result;
   }, [paginationData]);
 
@@ -155,7 +534,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
         )}
       >
         <LoadingSkeleton
-          variant="table"
+          variant="dashboard"
           theme={theme}
           message="Loading inventory items..."
         />
@@ -211,350 +590,6 @@ export const InventoryCatalogList: React.FC<Props> = ({
       </div>
     );
   }
-
-  // ─── Pagination bar ───────────────────────────────────────────────────────
-  const PaginationBar = () => (
-    <div
-      className={cn(
-        'flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 rounded-xl border',
-        isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-      )}
-    >
-      <span className={cn('text-xs sm:text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
-        Showing{' '}
-        <span className="font-medium">{paginationData.from}</span>–
-        <span className="font-medium">{paginationData.to}</span>{' '}
-        of{' '}
-        <span className="font-medium">{paginationData.totalItems}</span> items
-      </span>
-
-      <div className="flex items-center gap-1 sm:gap-1.5">
-        {/* First */}
-        <button
-          onClick={() => goToPage(1)}
-          disabled={paginationData.safePage === 1}
-          aria-label="First page"
-          className={cn(
-            'p-2 rounded-lg transition-colors cursor-pointer',
-            paginationData.safePage === 1
-              ? isDark ? 'text-gray-700 cursor-not-allowed' : 'text-gray-300 cursor-not-allowed'
-              : isDark
-                ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-          )}
-        >
-          <ChevronsLeft className="w-4 h-4" />
-        </button>
-
-        {/* Prev */}
-        <button
-          onClick={() => goToPage(paginationData.safePage - 1)}
-          disabled={paginationData.safePage === 1}
-          aria-label="Previous page"
-          className={cn(
-            'p-2 rounded-lg transition-colors cursor-pointer',
-            paginationData.safePage === 1
-              ? isDark ? 'text-gray-700 cursor-not-allowed' : 'text-gray-300 cursor-not-allowed'
-              : isDark
-                ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-          )}
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-
-        {/* Page numbers */}
-        {pageNumbers.map((p, i) =>
-          p === '...' ? (
-            <span
-              key={`dots-${i}`}
-              className={cn(
-                'px-2 py-1 text-xs',
-                isDark ? 'text-gray-500' : 'text-gray-400'
-              )}
-            >
-              …
-            </span>
-          ) : (
-            <button
-              key={`page-${p}`}
-              onClick={() => goToPage(p)}
-              aria-label={`Page ${p}`}
-              aria-current={paginationData.safePage === p ? 'page' : undefined}
-              className={cn(
-                'min-w-[32px] sm:min-w-[36px] px-2 py-1 sm:px-3 sm:py-1.5 rounded text-xs sm:text-sm font-medium transition-colors cursor-pointer',
-                paginationData.safePage === p
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : isDark
-                    ? 'text-gray-300 hover:bg-gray-800'
-                    : 'text-gray-700 hover:bg-gray-100'
-              )}
-            >
-              {p}
-            </button>
-          )
-        )}
-
-        {/* Next */}
-        <button
-          onClick={() => goToPage(paginationData.safePage + 1)}
-          disabled={paginationData.safePage === paginationData.totalPages}
-          aria-label="Next page"
-          className={cn(
-            'p-2 rounded-lg transition-colors cursor-pointer',
-            paginationData.safePage === paginationData.totalPages
-              ? isDark ? 'text-gray-700 cursor-not-allowed' : 'text-gray-300 cursor-not-allowed'
-              : isDark
-                ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-          )}
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-
-        {/* Last */}
-        <button
-          onClick={() => goToPage(paginationData.totalPages)}
-          disabled={paginationData.safePage === paginationData.totalPages}
-          aria-label="Last page"
-          className={cn(
-            'p-2 rounded-lg transition-colors cursor-pointer',
-            paginationData.safePage === paginationData.totalPages
-              ? isDark ? 'text-gray-700 cursor-not-allowed' : 'text-gray-300 cursor-not-allowed'
-              : isDark
-                ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-          )}
-        >
-          <ChevronsRight className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-
-  // ─── Reusable icon badges ─────────────────────────────────────────────────
-  const HazardBadge = ({ size = 'sm' }: { size?: 'sm' | 'md' }) => {
-    const cls = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
-    return (
-      <div className="relative group">
-        <AlertTriangle className={cn(cls, isDark ? 'text-red-400' : 'text-red-600')} />
-        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-gray-900 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          Hazardous
-        </span>
-      </div>
-    );
-  };
-
-  const RefrigBadge = ({ size = 'sm' }: { size?: 'sm' | 'md' }) => {
-    const cls = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
-    return (
-      <div className="relative group">
-        <Thermometer className={cn(cls, isDark ? 'text-blue-400' : 'text-blue-600')} />
-        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-gray-900 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          Requires Refrigeration
-        </span>
-      </div>
-    );
-  };
-
-  const PrescriptionBadge = ({ size = 'sm' }: { size?: 'sm' | 'md' }) => {
-    const cls = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
-    return (
-      <div className="relative group">
-        <Shield className={cn(cls, isDark ? 'text-purple-400' : 'text-purple-600')} />
-        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-gray-900 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          Requires Prescription
-        </span>
-      </div>
-    );
-  };
-
-  // ─── Action buttons ───────────────────────────────────────────────────────
-  const RowActions = ({
-    item,
-    size = 'md',
-  }: {
-    item: InventoryItem;
-    size?: 'sm' | 'md';
-  }) => {
-    const btn = cn(
-      'rounded-lg transition-colors cursor-pointer',
-      size === 'sm' ? 'p-1.5' : 'p-2',
-      isDark
-        ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
-    );
-    const iconCls = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
-
-    return (
-      <div className="flex items-center gap-1">
-        <button onClick={() => onDuplicate(item)} className={btn} title="Duplicate">
-          <Copy className={iconCls} />
-        </button>
-        <button onClick={() => onEdit(item)} className={btn} title="Edit">
-          <Edit2 className={iconCls} />
-        </button>
-        {item.deleted_at ? (
-          <button
-            onClick={() => onRestore(item)}
-            className={cn(
-              'rounded-lg transition-colors cursor-pointer',
-              size === 'sm' ? 'p-1.5' : 'p-2',
-              isDark
-                ? 'text-green-400 hover:text-green-200 hover:bg-gray-700'
-                : 'text-green-600 hover:text-green-800 hover:bg-gray-200'
-            )}
-            title="Restore"
-          >
-            <RefreshCw className={iconCls} />
-          </button>
-        ) : (
-          <button
-            onClick={() => onDelete(item)}
-            className={cn(
-              'rounded-lg transition-colors cursor-pointer',
-              size === 'sm' ? 'p-1.5' : 'p-2',
-              isDark
-                ? 'text-red-400 hover:text-red-200 hover:bg-gray-700'
-                : 'text-red-600 hover:text-red-800 hover:bg-gray-200'
-            )}
-            title="Delete"
-          >
-            <Trash2 className={iconCls} />
-          </button>
-        )}
-      </div>
-    );
-  };
-
-  // ─── Expanded detail panel ────────────────────────────────────────────────
-  const ExpandedDetails = ({ item }: { item: InventoryItem }) => (
-    <div
-      className={cn(
-        'mt-4 pt-4 border-t grid grid-cols-1 md:grid-cols-3 gap-4',
-        isDark ? 'border-gray-800' : 'border-gray-200'
-      )}
-    >
-      <div>
-        <h4 className="text-sm font-semibold mb-2">Item Details</h4>
-        <dl
-          className={cn(
-            'text-xs space-y-1.5',
-            isDark ? 'text-gray-400' : 'text-gray-600'
-          )}
-        >
-          <div>
-            <dt className="inline font-medium">Manufacturer: </dt>
-            <dd className="inline">{item.manufacturer || 'Not specified'}</dd>
-          </div>
-          <div>
-            <dt className="inline font-medium">Supplier: </dt>
-            <dd className="inline">{item.supplier || 'Not specified'}</dd>
-          </div>
-          <div>
-            <dt className="inline font-medium">NDC Code: </dt>
-            <dd className="inline">{item.ndc_code || 'N/A'}</dd>
-          </div>
-          {item.drug_class && (
-            <div>
-              <dt className="inline font-medium">Drug Class: </dt>
-              <dd className="inline">{item.drug_class}</dd>
-            </div>
-          )}
-          {item.strength && (
-            <div>
-              <dt className="inline font-medium">Strength: </dt>
-              <dd className="inline">{item.strength}</dd>
-            </div>
-          )}
-          {item.dosage_form && (
-            <div>
-              <dt className="inline font-medium">Dosage Form: </dt>
-              <dd className="inline">{item.dosage_form}</dd>
-            </div>
-          )}
-        </dl>
-      </div>
-
-      <div>
-        <h4 className="text-sm font-semibold mb-2">Storage & Safety</h4>
-        <div
-          className={cn(
-            'text-xs space-y-1.5',
-            isDark ? 'text-gray-400' : 'text-gray-600'
-          )}
-        >
-          <div className="flex items-center gap-2">
-            {item.requires_refrigeration ? (
-              <Thermometer className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-            ) : (
-              <XCircle className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-            )}
-            Refrigeration:{' '}
-            <strong>{item.requires_refrigeration ? 'Required' : 'Not Required'}</strong>
-          </div>
-          <div className="flex items-center gap-2">
-            {item.requires_prescription ? (
-              <Shield className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
-            ) : (
-              <XCircle className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-            )}
-            Prescription:{' '}
-            <strong>{item.requires_prescription ? 'Required' : 'Not Required'}</strong>
-          </div>
-          <div className="flex items-center gap-2">
-            {item.is_hazardous ? (
-              <AlertTriangle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
-            ) : (
-              <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-            )}
-            Hazardous: <strong>{item.is_hazardous ? 'Yes' : 'No'}</strong>
-          </div>
-          {item.storage_location_type && (
-            <div>
-              <span className="font-medium">Storage: </span>
-              {item.storage_location_type}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <h4 className="text-sm font-semibold mb-2">Stock Management</h4>
-        <dl
-          className={cn(
-            'text-xs space-y-1.5',
-            isDark ? 'text-gray-400' : 'text-gray-600'
-          )}
-        >
-          <div>
-            <dt className="inline font-medium">Reorder Point: </dt>
-            <dd className="inline">{item.reorder_point ?? 'Not set'}</dd>
-          </div>
-          <div>
-            <dt className="inline font-medium">Reorder Qty: </dt>
-            <dd className="inline">{item.reorder_quantity ?? 'Not set'}</dd>
-          </div>
-          <div>
-            <dt className="inline font-medium">Safety Stock: </dt>
-            <dd className="inline">{item.safety_stock_level ?? 'Not set'}</dd>
-          </div>
-          <div>
-            <dt className="inline font-medium">Max Stock: </dt>
-            <dd className="inline">{item.max_stock_level ?? 'Not set'}</dd>
-          </div>
-          <div>
-            <dt className="inline font-medium">Billable: </dt>
-            <dd className="inline">{item.is_billable ? 'Yes' : 'No'}</dd>
-          </div>
-          <div>
-            <dt className="inline font-medium">Track by Lot: </dt>
-            <dd className="inline">{item.track_by_lot ? 'Yes' : 'No'}</dd>
-          </div>
-        </dl>
-      </div>
-    </div>
-  );
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -639,7 +674,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                   isDeleted && (isDark ? 'opacity-60' : 'opacity-70')
                 )}
               >
-                {/* ── Mobile ─────────────────────────────────────────────── */}
+                {/* Mobile view */}
                 <div className="sm:hidden p-3">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex items-start gap-2 min-w-0">
@@ -647,7 +682,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                         onClick={() => onToggleExpand(item.item_uuid)}
                         aria-label="Toggle details"
                         className={cn(
-                          'p-1 flex-shrink-0 cursor-pointer',
+                          'p-1 shrink-0 cursor-pointer',
                           isDark
                             ? 'text-gray-400 hover:text-gray-200'
                             : 'text-gray-500 hover:text-gray-700'
@@ -663,7 +698,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                         <div className="flex items-center gap-2 mb-0.5">
                           <div
                             className={cn(
-                              'p-1.5 rounded flex-shrink-0',
+                              'p-1.5 rounded shrink-0',
                               isDark ? 'bg-gray-800' : 'bg-gray-100'
                             )}
                           >
@@ -688,7 +723,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className="font-semibold text-sm">
                         {formatPrice(item.unit_cost ?? 0, item.currency_code)}
                       </span>
@@ -706,9 +741,9 @@ export const InventoryCatalogList: React.FC<Props> = ({
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      {item.is_hazardous && <HazardBadge />}
-                      {item.requires_refrigeration && <RefrigBadge />}
-                      {item.requires_prescription && <PrescriptionBadge />}
+                      {item.is_hazardous && <HazardBadge isDark={isDark} />}
+                      {item.requires_refrigeration && <RefrigBadge isDark={isDark} />}
+                      {item.requires_prescription && <PrescriptionBadge isDark={isDark} />}
                       <span
                         className={cn(
                           'text-xs',
@@ -718,19 +753,26 @@ export const InventoryCatalogList: React.FC<Props> = ({
                         {item.package_quantity} {item.unit_of_measure}
                       </span>
                     </div>
-                    <RowActions item={item} size="sm" />
+                    <RowActions
+                      item={item}
+                      size="sm"
+                      isDark={isDark}
+                      onDuplicate={onDuplicate}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      onRestore={onRestore}
+                    />
                   </div>
                 </div>
 
-                {/* ── Desktop ────────────────────────────────────────────── */}
+                {/* Desktop view */}
                 <div className="hidden sm:grid grid-cols-12 gap-4 items-center px-4 py-3">
-                  {/* Col 1: Item info */}
                   <div className="col-span-6 flex items-center gap-3 min-w-0">
                     <button
                       onClick={() => onToggleExpand(item.item_uuid)}
                       aria-label="Toggle details"
                       className={cn(
-                        'p-1 flex-shrink-0 cursor-pointer rounded',
+                        'p-1 shrink-0 cursor-pointer rounded',
                         isDark
                           ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                           : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
@@ -745,7 +787,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
 
                     <div
                       className={cn(
-                        'p-2 rounded-lg flex-shrink-0',
+                        'p-2 rounded-lg shrink-0',
                         isDark ? 'bg-gray-800' : 'bg-gray-100'
                       )}
                     >
@@ -770,7 +812,6 @@ export const InventoryCatalogList: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  {/* Col 2: Category */}
                   <div className="col-span-2 hidden md:block">
                     <span
                       className={cn(
@@ -784,7 +825,6 @@ export const InventoryCatalogList: React.FC<Props> = ({
                     </span>
                   </div>
 
-                  {/* Col 3: Cost / Qty / Status */}
                   <div className="col-span-2">
                     <p className="font-semibold text-sm">
                       {formatPrice(item.unit_cost ?? 0, item.currency_code)}
@@ -808,19 +848,26 @@ export const InventoryCatalogList: React.FC<Props> = ({
                     </span>
                   </div>
 
-                  {/* Col 4: Actions */}
                   <div className="col-span-2 flex items-center justify-end gap-1.5">
-                    {item.is_hazardous && <HazardBadge size="md" />}
-                    {item.requires_refrigeration && <RefrigBadge size="md" />}
-                    {item.requires_prescription && <PrescriptionBadge size="md" />}
-                    <RowActions item={item} size="md" />
+                    {item.is_hazardous && <HazardBadge size="md" isDark={isDark} />}
+                    {item.requires_refrigeration && <RefrigBadge size="md" isDark={isDark} />}
+                    {item.requires_prescription && <PrescriptionBadge size="md" isDark={isDark} />}
+                    <RowActions
+                      item={item}
+                      size="md"
+                      isDark={isDark}
+                      onDuplicate={onDuplicate}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      onRestore={onRestore}
+                    />
                   </div>
                 </div>
 
-                {/* ── Expanded detail ─────────────────────────────────────── */}
+                {/* Expanded detail */}
                 {isExpanded && (
                   <div className="px-3 sm:px-4 pb-4">
-                    <ExpandedDetails item={item} />
+                    <ExpandedDetails item={item} isDark={isDark} />
                   </div>
                 )}
               </div>
@@ -859,7 +906,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                     <div className="flex items-center gap-2 min-w-0">
                       <div
                         className={cn(
-                          'p-2 rounded-lg flex-shrink-0',
+                          'p-2 rounded-lg shrink-0',
                           isDark ? 'bg-gray-800' : 'bg-gray-100'
                         )}
                       >
@@ -883,7 +930,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                     </div>
                     <span
                       className={cn(
-                        'flex-shrink-0 px-1.5 py-0.5 rounded-full text-xs font-medium',
+                        'shrink-0 px-1.5 py-0.5 rounded-full text-xs font-medium',
                         getStatusBgColor(item.status, isDark),
                         getStatusColor(item.status, isDark)
                       )}
@@ -1039,7 +1086,14 @@ export const InventoryCatalogList: React.FC<Props> = ({
       )}
 
       {/* Bottom pagination */}
-      {paginationData.totalPages > 1 && <PaginationBar />}
+      {paginationData.totalPages > 1 && (
+        <PaginationBar
+          paginationData={paginationData}
+          pageNumbers={pageNumbers}
+          goToPage={goToPage}
+          isDark={isDark}
+        />
+      )}
     </div>
   );
 };
