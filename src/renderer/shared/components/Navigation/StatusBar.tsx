@@ -25,7 +25,8 @@ import {
 } from '../../../app/store/slices/activeContextSlice';
 import { useSelector } from 'react-redux';
 import { isInPatientMode } from '../../../app/store/utils/contextSelectors';
-import { ACCOUNT_ROUTES } from '../../../app/routes/routeConstants';
+import { ACCOUNT_ROUTES,ROUTES } from '../../../app/routes/routeConstants';
+
 
 export type SidebarPosition = 'left' | 'right';
 export type SystemStatus = 'online' | 'slow' | 'offline';
@@ -166,7 +167,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     {
       id: 'patient-dashboard',
       label: 'My Health',
-      route: '/dashboard/patient',
+      route: ROUTES.DASHBOARD,
       description: 'Personal health overview',
       moduleCode: 'patient_dashboard',
       keywords: ['health', 'patient', 'dashboard', 'overview', 'personal'],
@@ -668,26 +669,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
 
         {/* RIGHT: Quick Actions */}
         <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
-          {/* Sidebar Position Toggle */}
-          <button
-            onClick={onToggleSidebarPosition}
-            aria-label={`Move sidebar to ${sidebarPosition === 'left' ? 'right' : 'left'}`}
-            title={`Move sidebar to ${sidebarPosition === 'left' ? 'right' : 'left'}`}
-            disabled={isTransitioning}
-            className={cn(
-              'hidden lg:flex items-center justify-center px-2 py-1.5 rounded-lg',
-              'transition-all duration-300 ease-in-out',
-              'hover:scale-105 active:scale-95',
-              'focus:outline-none focus:ring-2 focus:ring-offset-1',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              'cursor-pointer',
-              theme === 'dark'
-                ? 'text-gray-400 hover:text-cyan-400 hover:bg-gray-800/60 focus:ring-cyan-500/50'
-                : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100/80 focus:ring-blue-500/50'
-            )}
-          >
-            {positionToggleIcon}
-          </button>
+         
 
           {/* Theme Toggle */}
           <button
@@ -739,6 +721,27 @@ export const StatusBar: React.FC<StatusBarProps> = ({
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
+          </button>
+          
+           {/* Sidebar Position Toggle */}
+          <button
+            onClick={onToggleSidebarPosition}
+            aria-label={`Move sidebar to ${sidebarPosition === 'left' ? 'right' : 'left'}`}
+            title={`Move sidebar to ${sidebarPosition === 'left' ? 'right' : 'left'}`}
+            disabled={isTransitioning}
+            className={cn(
+              'hidden lg:flex items-center justify-center px-2 py-1.5 rounded-lg',
+              'transition-all duration-300 ease-in-out',
+              'hover:scale-105 active:scale-95',
+              'focus:outline-none focus:ring-2 focus:ring-offset-1',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'cursor-pointer',
+              theme === 'dark'
+                ? 'text-gray-400 hover:text-cyan-400 hover:bg-gray-800/60 focus:ring-cyan-500/50'
+                : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100/80 focus:ring-blue-500/50'
+            )}
+          >
+            {positionToggleIcon}
           </button>
 
           {/* Settings */}
