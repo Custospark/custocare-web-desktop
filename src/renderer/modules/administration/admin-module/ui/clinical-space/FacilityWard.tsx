@@ -265,7 +265,19 @@ export const FacilityWard: React.FC<FacilityWardProps> = ({ theme }) => {
     enabled: !!activeFacilityId && activeFacilityId > 0,
     staleTime: 1000 * 30,
   });
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      // Keep the rotation for at least 300ms for visual feedback
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 300);
+    }
+  };
   /**
    * Defensive normalization:
    * - `wards` is already typed as Ward[] by GetWardsResponse
@@ -587,18 +599,25 @@ export const FacilityWard: React.FC<FacilityWardProps> = ({ theme }) => {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => refetch()}
-              className={cn(
-                'p-2 rounded-lg border transition-colors cursor-pointer',
-                colors.border.primary,
-                colors.bg.primary,
-                colors.bg.hover
-              )}
-              title="Refresh"
-            >
-              <RefreshCw className={cn('w-5 h-5', colors.text.secondary)} />
-            </button>
+          <button
+                onClick={handleRefresh}
+                className={cn(
+                  'p-2 rounded-lg border transition-colors cursor-pointer',
+                  colors.border.primary,
+                  colors.bg.primary,
+                  colors.bg.hover
+                )}
+                title="Refresh"
+                disabled={isRefreshing}
+              >
+                <RefreshCw 
+                  className={cn(
+                    'w-5 h-5 transition-transform duration-300',
+                    colors.text.secondary,
+                    isRefreshing && 'animate-spin'
+                  )} 
+                />
+              </button>
 
             <button
               onClick={openCreateDrawer}

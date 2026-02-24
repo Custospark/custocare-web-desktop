@@ -7,6 +7,7 @@ import type {
   ServiceStatus,
 } from '../../../api/service-catalog/serviceCatalogTypes';
 import { generateServiceCodeFromName } from '../utils/serviceCatalogUiUtils';
+import { cn } from '../../../../../../shared/utils/classNameUtils';
 
 export interface ServiceFormData {
   service_code: string;
@@ -545,19 +546,23 @@ export const ServiceCatalogFormDrawer: React.FC<Props> = ({
               </button>
 
               <button
-                onClick={onSubmit}
-                disabled={isSubmitting || !canSubmit}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  isDark ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    Saving...
-                  </span>
-                ) : mode === 'edit' ? 'Update Service' : 'Create Service'}
-              </button>
+                  onClick={onSubmit}
+                  disabled={isSubmitting || !canSubmit}
+                  className={cn(
+                    'px-4 py-2 rounded-lg font-medium transition-colors',
+                    isDark ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white',
+                    // Cursor logic
+                    (!isSubmitting && canSubmit) && 'cursor-pointer',
+                    (isSubmitting || !canSubmit) && 'opacity-50 cursor-not-allowed'
+                  )}
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </span>
+                  ) : mode === 'edit' ? 'Update Service' : 'Create Service'}
+                </button>
             </div>
           </div>
         </div>

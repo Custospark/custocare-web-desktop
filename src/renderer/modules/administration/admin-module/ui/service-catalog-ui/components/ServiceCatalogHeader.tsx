@@ -39,7 +39,7 @@ export const ServiceCatalogHeader: React.FC<Props> = ({
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={onCreate}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             New Service

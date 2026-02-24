@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { MapPin, Hospital, Shuffle, DoorOpen } from 'lucide-react';
+import { Hospital, Shuffle, DoorOpen } from 'lucide-react';
 import { BaseActionWorkspace } from '../../../../../shared/components/workspace/BaseActionWorkspace';
 import { ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import { FaHospitalUser } from 'react-icons/fa';
@@ -32,12 +32,6 @@ const ClinicalSpaceManagement: React.FC<ClinicalSpaceManagementProps> = ({ theme
           label: 'Ward Management',
           icon: <Hospital className="w-4 h-4" />,
           to: ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.WARD_MANAGEMENT,
-        },
-        {
-          key: 'zones',
-          label: 'Facility Zones',
-          icon: <MapPin className="w-4 h-4" />,
-          to: ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.FACILITY_ZONES,
         },
         {
           key: 'allocation',

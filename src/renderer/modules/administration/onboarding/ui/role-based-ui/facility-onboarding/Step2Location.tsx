@@ -363,41 +363,64 @@ export const Step2Location: React.FC<Step2LocationProps> = ({
                     <div className="max-h-64 overflow-y-auto">
                       {filteredCountries.length > 0 ? (
                         filteredCountries.map(country => (
-                          <button
-                            key={country.code}
-                            type="button"
-                            onClick={() => handleCountrySelect(country)}
-                            className={cn(
-                              "flex items-center gap-3 w-full px-3 py-3 transition-colors text-left",
-                              theme === 'dark'
-                                ? "hover:bg-slate-700"
-                                : "hover:bg-slate-50",
-                              formData.country_code === country.code && (
-                                theme === 'dark'
-                                  ? "bg-blue-900/20 hover:bg-blue-900/30"
-                                  : "bg-blue-50 hover:bg-blue-100"
-                              )
-                            )}
-                          >
-                            <span className="text-2xl shrink-0">{country.flag}</span>
-                            <div className="flex-1 min-w-0">
-                              <span className={cn(
-                                "text-sm font-medium block truncate",
-                                theme === 'dark' ? "text-white" : "text-slate-900"
-                              )}>
-                                {country.name}
-                              </span>
-                              <span className={cn(
-                                "text-xs",
-                                theme === 'dark' ? "text-slate-400" : "text-slate-500"
-                              )}>
-                                {country.code}
-                              </span>
-                            </div>
-                            {formData.country_code === country.code && (
-                              <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />
-                            )}
-                          </button>
+                        <button
+                        key={country.code}
+                        type="button"
+                        onClick={() => handleCountrySelect(country)}
+                        className={cn(
+                          "flex items-center gap-3 w-full px-3 py-3 transition-all duration-200 text-left rounded-lg",
+                          theme === 'dark'
+                            ? "hover:bg-slate-700/80 focus:bg-slate-700/80"
+                            : "hover:bg-slate-100 focus:bg-slate-100",
+                          formData.country_code === country.code && (
+                            theme === 'dark'
+                              ? "bg-blue-900/40 hover:bg-blue-900/50 ring-1 ring-blue-700/50"
+                              : "bg-blue-100 hover:bg-blue-200 ring-1 ring-blue-300"
+                          )
+                        )}
+                      >
+                        <span className={cn(
+                          "text-2xl shrink-0 drop-shadow-sm",
+                          theme === 'dark' ? "opacity-90" : "opacity-100"
+                        )}>
+                          {country.flag}
+                        </span>
+                        
+                        <div className="flex-1 min-w-0">
+                          <span className={cn(
+                            "text-sm font-medium block truncate",
+                            theme === 'dark' 
+                              ? formData.country_code === country.code
+                                ? "text-blue-100"
+                                : "text-slate-100"
+                              : formData.country_code === country.code
+                                ? "text-blue-900"
+                                : "text-slate-900"
+                          )}>
+                            {country.name}
+                          </span>
+                          
+                          {/* <span className={cn(
+                            "text-xs",
+                            theme === 'dark'
+                              ? formData.country_code === country.code
+                                ? "text-blue-300"
+                                : "text-slate-400"
+                              : formData.country_code === country.code
+                                ? "text-blue-700"
+                                : "text-slate-500"
+                          )}>
+                            {country.code}
+                          </span> */}
+                        </div>
+                        
+                        {formData.country_code === country.code && (
+                          <CheckCircle2 className={cn(
+                            "w-5 h-5 shrink-0",
+                            theme === 'dark' ? "text-blue-400" : "text-blue-600"
+                          )} />
+                        )}
+                      </button>
                         ))
                       ) : (
                         <div className="px-4 py-8 text-center">
@@ -425,7 +448,7 @@ export const Step2Location: React.FC<Step2LocationProps> = ({
         </div>
       </div>
 
-      {/* Contact Information - Phone with Country Code (Borrowed from SignUp) */}
+      {/* Contact Information - Phone with Country Code*/}
       <div className="space-y-4">
         <div>
           <label className={cn(
