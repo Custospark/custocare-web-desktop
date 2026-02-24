@@ -22,7 +22,7 @@ import {
   useDeleteInventoryItem,
   useRestoreInventoryItem,
   inventoryItemKeys,
-} from  '../../api/admin-inventory/useInventoryItemQueries';
+} from '../../api/admin-inventory/useInventoryItemQueries';
 
 import {
   type CreateInventoryItemRequest,
@@ -53,6 +53,7 @@ const emptyForm = (): InventoryItemFormData => ({
   item_category: ItemCategory.MEDICATION,
   item_subcategory: '',
   
+  // Clinical/Medication fields
   generic_name: '',
   brand_name: '',
   ndc_code: '',
@@ -62,10 +63,12 @@ const emptyForm = (): InventoryItemFormData => ({
   strength: '',
   route_of_administration: '',
   
+  // Manufacturer & Supplier
   manufacturer: '',
   manufacturer_item_number: '',
   supplier: '',
   
+  // Packaging & Pricing
   unit_of_measure: 'Each',
   package_quantity: 1,
   packaging_type: '',
@@ -73,11 +76,13 @@ const emptyForm = (): InventoryItemFormData => ({
   average_wholesale_price: 0,
   currency_code: 'UGX',
   
+  // Storage Requirements
   requires_refrigeration: false,
   requires_controlled_access: false,
   storage_location_type: '',
   storage_requirements: '',
   
+  // Safety & Compliance
   requires_prescription: false,
   fda_approval_number: '',
   is_hazardous: false,
@@ -85,15 +90,18 @@ const emptyForm = (): InventoryItemFormData => ({
   contraindications: '',
   special_handling_instructions: '',
   
+  // Tracking & Billing
   is_billable: true,
   track_by_lot: false,
   track_by_serial: false,
   
+  // Stock Management
   reorder_point: null,
   reorder_quantity: null,
   safety_stock_level: null,
   max_stock_level: null,
   
+  // Status
   status: ItemStatus.ACTIVE,
 });
 
@@ -343,7 +351,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
   });
 
   // ---------------------------------------------------------------------------
-  // Drawer handlers
+  // Drawer handlers - PRECISELY IMPLEMENTED
   // ---------------------------------------------------------------------------
   const openCreate = () => {
     setDrawerMode('create');
@@ -357,25 +365,29 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
     setSelectedItem(item);
 
     setFormData({
+      // Basic Info
       item_code: item.item_code || '',
       item_name: item.item_name,
       item_description: item.item_description || '',
       item_category: item.item_category,
       item_subcategory: item.item_subcategory || '',
       
+      // Clinical/Medication Details - ALL fields preserved
       generic_name: item.generic_name || '',
       brand_name: item.brand_name || '',
       ndc_code: item.ndc_code || '',
       drug_class: item.drug_class || '',
       controlled_substance_schedule: item.controlled_substance_schedule || '',
-        dosage_form: (item.dosage_form as DosageForm) ?? "",
+      dosage_form: item.dosage_form as DosageForm,
       strength: item.strength || '',
-      route_of_administration: (item.route_of_administration as RouteOfAdministration) || '',
+      route_of_administration: item.route_of_administration as RouteOfAdministration,
       
+      // Manufacturer & Supplier
       manufacturer: item.manufacturer || '',
       manufacturer_item_number: item.manufacturer_item_number || '',
       supplier: item.supplier || '',
       
+      // Packaging & Pricing
       unit_of_measure: item.unit_of_measure,
       package_quantity: item.package_quantity,
       packaging_type: item.packaging_type || '',
@@ -383,27 +395,32 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       average_wholesale_price: item.average_wholesale_price || 0,
       currency_code: item.currency_code,
       
+      // Storage Requirements - ALL fields
       requires_refrigeration: item.requires_refrigeration,
       requires_controlled_access: item.requires_controlled_access,
       storage_location_type: item.storage_location_type || '',
-      storage_requirements: '',
+      storage_requirements: item.storage_requirements || '',
       
+      // Safety & Compliance - ALL fields
       requires_prescription: item.requires_prescription,
       fda_approval_number: item.fda_approval_number || '',
       is_hazardous: item.is_hazardous,
-      safety_warnings: '',
-      contraindications: '',
+      safety_warnings: item.safety_warnings || '',
+      contraindications: item.contraindications || '',
       special_handling_instructions: item.special_handling_instructions || '',
       
+      // Tracking & Billing
       is_billable: item.is_billable,
       track_by_lot: item.track_by_lot,
       track_by_serial: item.track_by_serial,
       
+      // Stock Management - ALL fields
       reorder_point: item.reorder_point,
       reorder_quantity: item.reorder_quantity,
       safety_stock_level: item.safety_stock_level,
       max_stock_level: item.max_stock_level,
       
+      // Status
       status: item.status,
     });
 
@@ -421,26 +438,29 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
     setSelectedItem(null);
 
     setFormData({
-      ...emptyForm(),
-      item_code: `${item.item_code}-COPY`,
+      // Basic Info - modified for duplicate
+      item_code: item.item_code ? `${item.item_code}-COPY` : '',
       item_name: `${item.item_name} (Copy)`,
       item_description: item.item_description || '',
       item_category: item.item_category,
       item_subcategory: item.item_subcategory || '',
       
+      // Clinical/Medication Details - ALL preserved EXCEPT ndc_code
       generic_name: item.generic_name || '',
       brand_name: item.brand_name || '',
-      ndc_code: '',
+      ndc_code: '', // Clear NDC for duplicate (should be unique)
       drug_class: item.drug_class || '',
       controlled_substance_schedule: item.controlled_substance_schedule || '',
-      dosage_form: (item.dosage_form as DosageForm) || DosageForm,
+      dosage_form: item.dosage_form || '',
       strength: item.strength || '',
-      route_of_administration: (item.route_of_administration as RouteOfAdministration),
+      route_of_administration: item.route_of_administration || '',
       
+      // Manufacturer & Supplier - preserved except manufacturer_item_number
       manufacturer: item.manufacturer || '',
-      manufacturer_item_number: '',
+      manufacturer_item_number: '', // Clear manufacturer item number for duplicate
       supplier: item.supplier || '',
       
+      // Packaging & Pricing - ALL preserved
       unit_of_measure: item.unit_of_measure,
       package_quantity: item.package_quantity,
       packaging_type: item.packaging_type || '',
@@ -448,22 +468,33 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       average_wholesale_price: item.average_wholesale_price || 0,
       currency_code: item.currency_code,
       
+      // Storage Requirements - ALL preserved
       requires_refrigeration: item.requires_refrigeration,
       requires_controlled_access: item.requires_controlled_access,
       storage_location_type: item.storage_location_type || '',
+      storage_requirements: item.storage_requirements || '',
       
+      // Safety & Compliance - ALL preserved EXCEPT fda_approval_number
       requires_prescription: item.requires_prescription,
-      fda_approval_number: '',
+      fda_approval_number: '', // Clear approval number for duplicate
       is_hazardous: item.is_hazardous,
+      safety_warnings: item.safety_warnings || '',
+      contraindications: item.contraindications || '',
+      special_handling_instructions: item.special_handling_instructions || '',
       
+      // Tracking & Billing - ALL preserved
       is_billable: item.is_billable,
       track_by_lot: item.track_by_lot,
       track_by_serial: item.track_by_serial,
       
+      // Stock Management - ALL preserved
       reorder_point: item.reorder_point,
       reorder_quantity: item.reorder_quantity,
       safety_stock_level: item.safety_stock_level,
       max_stock_level: item.max_stock_level,
+      
+      // Status - preserved
+      status: item.status,
     });
 
     setDrawerOpen(true);
@@ -485,17 +516,18 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
     if (!activeFacilityId) return;
 
     const payload: CreateInventoryItemRequest = {
-      item_code: formData.item_code.trim(),
-      item_name: formData.item_name.trim(),
+      // Required fields
+      item_code: formData.item_code?.trim() ?? '',
+      item_name: formData.item_name?.trim() ?? '',
       item_category: formData.item_category,
       unit_of_measure: formData.unit_of_measure,
       package_quantity: formData.package_quantity,
       currency_code: formData.currency_code,
       status: formData.status,
 
+      // Optional fields - using optional chaining and nullish coalescing
       item_description: formData.item_description?.trim() || undefined,
       item_subcategory: formData.item_subcategory?.trim() || undefined,
-      
       generic_name: formData.generic_name?.trim() || undefined,
       brand_name: formData.brand_name?.trim() || undefined,
       ndc_code: formData.ndc_code?.trim() || undefined,
@@ -504,28 +536,25 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       dosage_form: formData.dosage_form || undefined,
       strength: formData.strength?.trim() || undefined,
       route_of_administration: formData.route_of_administration || undefined,
-      
       manufacturer: formData.manufacturer?.trim() || undefined,
       manufacturer_item_number: formData.manufacturer_item_number?.trim() || undefined,
       supplier: formData.supplier?.trim() || undefined,
-      
       packaging_type: formData.packaging_type?.trim() || undefined,
       unit_cost: formData.unit_cost || undefined,
       average_wholesale_price: formData.average_wholesale_price || undefined,
-      
       requires_refrigeration: formData.requires_refrigeration,
       requires_controlled_access: formData.requires_controlled_access,
       storage_location_type: formData.storage_location_type?.trim() || undefined,
-      
+      storage_requirements: formData.storage_requirements?.trim() || undefined,
       requires_prescription: formData.requires_prescription,
       fda_approval_number: formData.fda_approval_number?.trim() || undefined,
       is_hazardous: formData.is_hazardous,
+      safety_warnings: formData.safety_warnings?.trim() || undefined,
+      contraindications: formData.contraindications?.trim() || undefined,
       special_handling_instructions: formData.special_handling_instructions?.trim() || undefined,
-      
       is_billable: formData.is_billable,
       track_by_lot: formData.track_by_lot,
       track_by_serial: formData.track_by_serial,
-      
       reorder_point: formData.reorder_point,
       reorder_quantity: formData.reorder_quantity,
       safety_stock_level: formData.safety_stock_level,
@@ -542,6 +571,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         item_uuid: tempUuid,
         facility_id: Number(activeFacilityId),
 
+        // ALL fields mapped for optimistic update
         item_code: payload.item_code,
         item_name: payload.item_name,
         item_description: payload.item_description ?? null,
@@ -554,7 +584,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         drug_class: payload.drug_class ?? null,
         controlled_substance_schedule: payload.controlled_substance_schedule ?? null,
         active_ingredients: null,
-        dosage_form: payload.dosage_form ?? undefined,
+        dosage_form: payload.dosage_form as DosageForm,
         strength: payload.strength ?? null,
         route_of_administration: payload.route_of_administration ?? null,
         
@@ -569,7 +599,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         average_wholesale_price: payload.average_wholesale_price ?? null,
         currency_code: payload.currency_code,
         
-        storage_requirements: null,
+        storage_requirements: payload.storage_requirements ?? null,
         requires_refrigeration: payload.requires_refrigeration ?? false,
         requires_controlled_access: payload.requires_controlled_access ?? false,
         storage_location_type: payload.storage_location_type ?? null,
@@ -578,8 +608,8 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         regulatory_approvals: null,
         fda_approval_number: payload.fda_approval_number ?? null,
         is_hazardous: payload.is_hazardous ?? false,
-        safety_warnings: null,
-        contraindications: null,
+        safety_warnings: payload.safety_warnings ?? null,
+        contraindications: payload.contraindications ?? null,
         special_handling_instructions: payload.special_handling_instructions ?? null,
         
         is_billable: payload.is_billable ?? true,
@@ -623,7 +653,13 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         return {
           ...current,
           data: current.data.map(i =>
-            i.item_uuid === uuid ? { ...i, ...payload, updated_at: new Date().toISOString() } : i
+            i.item_uuid === uuid 
+              ? { 
+                  ...i, 
+                  ...payload, 
+                  updated_at: new Date().toISOString() 
+                } 
+              : i
           ),
         };
       });
@@ -658,7 +694,9 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       return {
         ...current,
         data: current.data.map(i =>
-          i.item_uuid === item.item_uuid ? { ...i, deleted_at: new Date().toISOString() } : i
+          i.item_uuid === item.item_uuid 
+            ? { ...i, deleted_at: new Date().toISOString() } 
+            : i
         ),
       };
     });
@@ -681,7 +719,9 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       return {
         ...current,
         data: current.data.map(i =>
-          i.item_uuid === item.item_uuid ? { ...i, deleted_at: null } : i
+          i.item_uuid === item.item_uuid 
+            ? { ...i, deleted_at: null } 
+            : i
         ),
       };
     });
@@ -777,27 +817,22 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         statusOptions={statusOptions}
         controlledSubstanceOptions={controlledSubstanceOptions}
       />
-
-      <InventoryCatalogList
-        theme={theme}
-        viewMode={viewMode}
-        isLoading={isLoading}
-        error={error ? new Error(error.message) : null}
-        items={items}
-        expandedItems={expandedItems}
-        onToggleExpand={toggleExpand}
-        onEdit={openEdit}
-        onDuplicate={handleDuplicate}
-        onDelete={handleDelete}
-        onRestore={handleRestore}
-        onRetry={() => refetch()}
-        itemCategoryOptions={itemCategoryOptions}
-        pagination={pagination}
-        onPageChange={() => {
-          // Backend does not support paging => intentionally no-op.
-          // Keep the UI element hidden/disabled in InventoryCatalogList if you want.
-        }}
-      />
+        <InventoryCatalogList
+          theme={theme}
+          viewMode={viewMode}
+          isLoading={isLoading}
+          error={error ? new Error(error.message) : null}
+          items={items}
+          expandedItems={expandedItems}
+          onToggleExpand={toggleExpand}
+          onEdit={openEdit}
+          onDuplicate={handleDuplicate}
+          onDelete={handleDelete}
+          onRestore={handleRestore}
+          onRetry={() => refetch()}
+          itemCategoryOptions={itemCategoryOptions}
+          defaultPageSize={perPage}          // ← replaces removed pagination prop
+        />
 
       <InventoryItemFormDrawer
         theme={theme}

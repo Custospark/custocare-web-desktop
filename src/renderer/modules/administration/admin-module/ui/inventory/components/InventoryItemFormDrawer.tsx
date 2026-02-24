@@ -57,8 +57,8 @@ export interface InventoryItemFormData {
   requires_prescription: boolean;
   fda_approval_number: string;
   is_hazardous: boolean;
-  safety_warnings: string;
-  contraindications: string;
+  safety_warnings: string | unknown;
+  contraindications: string | unknown;
   special_handling_instructions: string;
   
   // Billing and tracking
@@ -258,7 +258,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
       {/* Panel */}
       <div
         ref={onPanelMountRef}
-        className={`absolute right-0 top-0 h-full w-full sm:w-[640px] overflow-y-auto border-l ${
+        className={`absolute right-0 top-0 h-full w-full sm:w-160 overflow-y-auto border-l ${
           isDark ? 'bg-gray-950 border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'
         }`}
         role="dialog"
