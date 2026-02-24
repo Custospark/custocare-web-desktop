@@ -368,73 +368,85 @@ export const Index: React.FC = () => {
                   </AnimatePresence>
 
                   {/* Compact Navigation */}
-                  <div className="flex items-center justify-between pt-6 mt-6 border-t-2 border-slate-200 dark:border-slate-700">
-                    {currentStep > 1 ? (
-                      <motion.button
-                        type="button"
-                        onClick={() => setCurrentStep(prev => (prev - 1) as 1 | 2 | 3)}
-                        disabled={isSubmitting}
-                        whileHover={{ scale: 1.02, x: -5 }}
-                        whileTap={{ scale: 0.98 }}
-                        className={cn(
-                          "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all border-2",
-                          theme === 'dark'
-                            ? "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-600"
-                            : "border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400",
-                          isSubmitting && "opacity-50 cursor-not-allowed"
-                        )}
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        Back
-                      </motion.button>
-                    ) : (
-                      <div />
-                    )}
-                    
-                    {currentStep < 3 ? (
-                      <motion.button
-                        type="button"
-                        disabled={!isCurrentStepValid}
-                        onClick={() => setCurrentStep(prev => (prev + 1) as 1 | 2 | 3)}
-                        whileHover={isCurrentStepValid ? { scale: 1.02, x: 5 } : {}}
-                        whileTap={isCurrentStepValid ? { scale: 0.98 } : {}}
-                        className={cn(
-                          "ml-auto flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-black transition-all shadow-lg",
-                          isCurrentStepValid
-                            ? "bg-linear-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 hover:shadow-xl"
-                            : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"
-                        )}
-                      >
-                        Continue
-                        <ArrowRight className="w-4 h-4" />
-                      </motion.button>
-                    ) : (
-                      <motion.button
-                        type="submit"
-                        disabled={!isCurrentStepValid || isSubmitting}
-                        whileHover={isCurrentStepValid && !isSubmitting ? { scale: 1.02 } : {}}
-                        whileTap={isCurrentStepValid && !isSubmitting ? { scale: 0.98 } : {}}
-                        className={cn(
-                          "ml-auto flex items-center gap-2 px-8 py-3 rounded-lg font-black transition-all shadow-lg text-base",
-                          isCurrentStepValid && !isSubmitting
-                            ? "bg-linear-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 hover:shadow-xl"
-                            : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"
-                        )}
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            Registering...
-                          </>
-                        ) : (
-                          <>
-                            <BadgeCheck className="w-5 h-5" />
-                            Complete
-                          </>
-                        )}
-                      </motion.button>
-                    )}
-                  </div>
+                 <div className="flex items-center justify-between pt-6 mt-6 border-t-2 border-slate-200 dark:border-slate-700">
+                  {/* Back button - Always visible on all steps */}
+                 <motion.button
+                  type="button"
+                  onClick={() => {
+                    if (currentStep === 1) {
+                      // Navigate to Previous step.
+                      navigate(-1);
+                    } else {
+                      // Go to previous step
+                      setCurrentStep(prev => (prev - 1) as 1 | 2 | 3);
+                    }
+                  }}
+                  disabled={isSubmitting}
+                  whileHover={{ scale: 1.02, x: -5 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all border-2",
+                    // Base cursor - pointer when enabled, not-allowed when disabled
+                    !isSubmitting ? "cursor-pointer" : "cursor-not-allowed",
+                    theme === 'dark'
+                      ? currentStep === 1
+                        ? "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-600" // Exit button style
+                        : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-600" // Back button style
+                      : currentStep === 1
+                        ? "border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400" // Exit button style
+                        : "border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400", // Back button style
+                    isSubmitting && "opacity-50"
+                  )}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  {currentStep === 1 ? 'Back' : 'Back'}
+                </motion.button>
+  
+                  {/* Right side buttons */}
+                  {currentStep < 3 ? (
+                    <motion.button
+                      type="button"
+                      disabled={!isCurrentStepValid}
+                      onClick={() => setCurrentStep(prev => (prev + 1) as 1 | 2 | 3)}
+                      whileHover={isCurrentStepValid ? { scale: 1.02, x: 5 } : {}}
+                      whileTap={isCurrentStepValid ? { scale: 0.98 } : {}}
+                      className={cn(
+                        "ml-auto flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-black transition-all shadow-lg",
+                        isCurrentStepValid
+                          ? "bg-linear-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 hover:shadow-xl"
+                          : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                      )}
+                    >
+                      Continue
+                      <ArrowRight className="w-4 h-4" />
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      type="submit"
+                      disabled={!isCurrentStepValid || isSubmitting}
+                      whileHover={isCurrentStepValid && !isSubmitting ? { scale: 1.02 } : {}}
+                      whileTap={isCurrentStepValid && !isSubmitting ? { scale: 0.98 } : {}}
+                      className={cn(
+                        "ml-auto flex items-center gap-2 px-8 py-3 rounded-lg font-black transition-all shadow-lg text-base",
+                        isCurrentStepValid && !isSubmitting
+                          ? "bg-linear-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 hover:shadow-xl"
+                          : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                      )}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Registering...
+                        </>
+                      ) : (
+                        <>
+                          <BadgeCheck className="w-5 h-5" />
+                          Complete
+                        </>
+                      )}
+                    </motion.button>
+                  )}
+                </div>
                 </form>
               </>
             ) : (
