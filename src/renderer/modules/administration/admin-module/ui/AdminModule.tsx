@@ -67,27 +67,9 @@ const ADMIN_OPERATIONS: Operation[] = [
   },
   {
     id: 'facility-setup',
-    label: 'Facility Configuration',
+    label: 'Clinical Departments',
     icon: <Building2 className="w-4 h-4" />,
     description: 'Configure departments and facility structure',
-  },
-  {
-    id: 'team',
-    label: 'Workforce Administration',
-    icon: <Users className="w-4 h-4" />,
-    description: 'Manage staff, invitations, and roles',
-  },
-  {
-    id: 'service-catalog',
-    label: 'Clinical & Billing Services',
-    icon: <Layers className="w-4 h-4" />,
-    description: 'Manage services and pricing versions',
-  },
-    {
-    id: 'inventory',
-    label: 'Supply & Inventory Management',
-    icon: <Boxes className="w-4 h-4" />,
-    description: 'Manage stock items, locations, and inventory controls',
   },
   {
   id: 'space-governance',
@@ -95,6 +77,25 @@ const ADMIN_OPERATIONS: Operation[] = [
   icon: <MapIcon className="w-4 h-4" />,
   description: 'Define rooms, floors, buildings, and manage staff space assignments',
 },
+  {
+    id: 'service-catalog',
+    label: 'Clinical & Billing Services',
+    icon: <Layers className="w-4 h-4" />,
+    description: 'Manage services and pricing versions',
+  },
+   {
+    id: 'inventory',
+    label: 'Supply & Inventory Management',
+    icon: <Boxes className="w-4 h-4" />,
+    description: 'Manage stock items, locations, and inventory controls',
+  },
+ {
+    id: 'team',
+    label: 'Workforce Administration',
+    icon: <Users className="w-4 h-4" />,
+    description: 'Manage staff, invitations, and roles',
+  },
+  
 ];
 
 /* ============================================================================

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef} from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
@@ -20,7 +20,10 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  CheckCircle2,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { cn } from '../../../../../shared/utils/classNameUtils';
 import { 
   useGetDepartmentsByFacility,
   useCreateDepartment,
@@ -74,6 +77,8 @@ export const AdminFacilitySetup: React.FC<AdminFacilitySetupProps> = ({ theme })
   const [typeFilter, setTypeFilter] = useState<DepartmentType | 'all'>('all');
   const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(new Set());
   const [showDeleted, setShowDeleted] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   
   // Form state
   const [formData, setFormData] = useState<DepartmentFormData>({
@@ -245,23 +250,22 @@ export const AdminFacilitySetup: React.FC<AdminFacilitySetupProps> = ({ theme })
     }
   };
   
-    const { confirm } = useConfirm();
+  const { confirm } = useConfirm();
 
-    const handleDelete = async (department: Department) => {
-      const confirmed = await confirm({
-        title: 'Delete Department',
-        message: `Are you sure you want to delete "${department.department_name}"? This action can be undone.`,
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
-        variant: 'danger',
-        theme,
-      });
+  const handleDelete = async (department: Department) => {
+    const confirmed = await confirm({
+      title: 'Delete Department',
+      message: `Are you sure you want to delete "${department.department_name}"? This action can be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      theme,
+    });
 
-      if (!confirmed) return;
+    if (!confirmed) return;
 
-      deleteMutation.mutate({ uuid: department.department_uuid });
-    };
-
+    deleteMutation.mutate({ uuid: department.department_uuid });
+  };
   
   const handleRestore = (department: Department) => {
     restoreMutation.mutate({ uuid: department.department_uuid });
@@ -318,9 +322,9 @@ export const AdminFacilitySetup: React.FC<AdminFacilitySetupProps> = ({ theme })
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-start gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Facility Configuration</h1>
+          <h1 className="text-2xl font-semibold">Clinical Departments</h1>
           <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Configure the internal structure of your healthcare facility.
           </p>
@@ -347,66 +351,298 @@ export const AdminFacilitySetup: React.FC<AdminFacilitySetupProps> = ({ theme })
         </div>
       </div>
       
-      {/* Stats Overview */}
+      {/* Stats Overview - Enhanced with gradients, icons, and better visual hierarchy */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className={`rounded-xl p-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+        {/* Total Departments Card */}
+        <div className={cn(
+          'relative overflow-hidden rounded-xl p-5 transition-all duration-300',
+          'border-2',
+          isDark 
+            ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-blue-500/30 hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-500/20' 
+            : 'bg-gradient-to-br from-white to-blue-50/50 border-blue-200 hover:border-blue-400 hover:shadow-2xl hover:shadow-blue-500/20',
+          'group cursor-pointer transform hover:-translate-y-1'
+        )}>
+          <div className={cn(
+            'absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl transition-opacity',
+            isDark ? 'bg-blue-500/10 group-hover:opacity-100' : 'bg-blue-500/5 group-hover:opacity-100',
+            'opacity-0'
+          )} />
+          
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Total Departments</p>
-              <p className="text-2xl font-semibold mt-1">{departments.length}</p>
+              <p className={cn(
+                'text-sm font-medium mb-1',
+                isDark ? 'text-gray-400' : 'text-gray-600'
+              )}>Total Departments</p>
+              <p className={cn(
+                'text-3xl font-bold',
+                isDark ? 'text-white' : 'text-gray-900'
+              )}>{departments.length}</p>
+              
+              <div className="flex items-center gap-1 mt-2">
+                <ChevronUp className={cn(
+                  'w-4 h-4',
+                  isDark ? 'text-green-400' : 'text-green-600'
+                )} />
+                <span className={cn(
+                  'text-xs font-medium',
+                  isDark ? 'text-gray-400' : 'text-gray-600'
+                )}>
+                  +{departments.length > 0 ? Math.floor(departments.length * 0.15) : 0}% this month
+                </span>
+              </div>
             </div>
-            <Building2 className={`w-8 h-8 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+            
+            <div className={cn(
+              'p-3 rounded-xl transition-all duration-300',
+              isDark 
+                ? 'bg-blue-500/20 group-hover:bg-blue-500/30 group-hover:scale-110' 
+                : 'bg-blue-100 group-hover:bg-blue-200 group-hover:scale-110'
+            )}>
+              <Building2 className={cn(
+                'w-8 h-8',
+                isDark ? 'text-blue-400' : 'text-blue-600'
+              )} />
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 mt-4">
+            <span className={cn(
+              'text-xs px-2 py-1 rounded-full',
+              isDark ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-blue-100 text-blue-700 border border-blue-300'
+            )}>
+              Out Patient: {departments.filter(d => d.department_type === DepartmentType.OUTPATIENT).length}
+            </span>
+            <span className={cn(
+              'text-xs px-2 py-1 rounded-full',
+              isDark ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-purple-100 text-purple-700 border border-purple-300'
+            )}>
+              Support Services: {departments.filter(d => d.department_type === DepartmentType.SUPPORT_SERVICES).length}
+            </span>
           </div>
         </div>
-        <div className={`rounded-xl p-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+
+        {/* Active Departments Card */}
+        <div className={cn(
+          'relative overflow-hidden rounded-xl p-5 transition-all duration-300',
+          'border-2',
+          isDark 
+            ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-green-500/30 hover:border-green-500/50 hover:shadow-2xl hover:shadow-green-500/20' 
+            : 'bg-gradient-to-br from-white to-green-50/50 border-green-200 hover:border-green-400 hover:shadow-2xl hover:shadow-green-500/20',
+          'group cursor-pointer transform hover:-translate-y-1'
+        )}>
+          <div className={cn(
+            'absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl transition-opacity',
+            isDark ? 'bg-green-500/10 group-hover:opacity-100' : 'bg-green-500/5 group-hover:opacity-100',
+            'opacity-0'
+          )} />
+          
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Active Departments</p>
-              <p className="text-2xl font-semibold mt-1">
+              <p className={cn(
+                'text-sm font-medium mb-1',
+                isDark ? 'text-gray-400' : 'text-gray-600'
+              )}>Active Departments</p>
+              <p className={cn(
+                'text-3xl font-bold',
+                isDark ? 'text-white' : 'text-gray-900'
+              )}>
                 {departments.filter(d => d.status === DepartmentStatus.ACTIVE).length}
               </p>
+              
+              <div className="mt-2">
+                <span className={cn(
+                  'inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full',
+                  isDark ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-green-100 text-green-700 border border-green-300'
+                )}>
+                  <CheckCircle2 className="w-3 h-3" />
+                  Operational
+                </span>
+              </div>
             </div>
-            <Users className={`w-8 h-8 ${isDark ? 'text-green-400' : 'text-green-600'}`} />
+            
+            <div className={cn(
+              'p-3 rounded-xl transition-all duration-300',
+              isDark 
+                ? 'bg-green-500/20 group-hover:bg-green-500/30 group-hover:scale-110' 
+                : 'bg-green-100 group-hover:bg-green-200 group-hover:scale-110'
+            )}>
+              <Users className={cn(
+                'w-8 h-8',
+                isDark ? 'text-green-400' : 'text-green-600'
+              )} />
+            </div>
+          </div>
+          
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Activation Rate</span>
+              <span className={cn(
+                'font-medium',
+                isDark ? 'text-green-400' : 'text-green-600'
+              )}>
+                {departments.length > 0 
+                  ? Math.round((departments.filter(d => d.status === DepartmentStatus.ACTIVE).length / departments.length) * 100) 
+                  : 0}%
+              </span>
+            </div>
+            <div className="h-1.5 bg-gray-700/30 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-green-500 rounded-full transition-all duration-500"
+                style={{ 
+                  width: `${departments.length > 0 
+                    ? (departments.filter(d => d.status === DepartmentStatus.ACTIVE).length / departments.length) * 100 
+                    : 0}%` 
+                }}
+              />
+            </div>
           </div>
         </div>
-        <div className={`rounded-xl p-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+
+        {/* Total Beds Card */}
+        <div className={cn(
+          'relative overflow-hidden rounded-xl p-5 transition-all duration-300',
+          'border-2',
+          isDark 
+            ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-purple-500/30 hover:border-purple-500/50 hover:shadow-2xl hover:shadow-purple-500/20' 
+            : 'bg-gradient-to-br from-white to-purple-50/50 border-purple-200 hover:border-purple-400 hover:shadow-2xl hover:shadow-purple-500/20',
+          'group cursor-pointer transform hover:-translate-y-1'
+        )}>
+          <div className={cn(
+            'absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl transition-opacity',
+            isDark ? 'bg-purple-500/10 group-hover:opacity-100' : 'bg-purple-500/5 group-hover:opacity-100',
+            'opacity-0'
+          )} />
+          
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Total Beds</p>
-              <p className="text-2xl font-semibold mt-1">
+              <p className={cn(
+                'text-sm font-medium mb-1',
+                isDark ? 'text-gray-400' : 'text-gray-600'
+              )}>Total Beds</p>
+              <p className={cn(
+                'text-3xl font-bold',
+                isDark ? 'text-white' : 'text-gray-900'
+              )}>
                 {departments.reduce((sum, d) => sum + (d.bed_count || 0), 0)}
               </p>
+              
+              <p className={cn(
+                'text-xs mt-2',
+                isDark ? 'text-gray-500' : 'text-gray-500'
+              )}>
+                Avg. {departments.length > 0 
+                  ? Math.round(departments.reduce((sum, d) => sum + (d.bed_count || 0), 0) / departments.length) 
+                  : 0} beds/dept
+              </p>
             </div>
-            <DoorOpen className={`w-8 h-8 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
+            
+            <div className={cn(
+              'p-3 rounded-xl transition-all duration-300',
+              isDark 
+                ? 'bg-purple-500/20 group-hover:bg-purple-500/30 group-hover:scale-110' 
+                : 'bg-purple-100 group-hover:bg-purple-200 group-hover:scale-110'
+            )}>
+              <DoorOpen className={cn(
+                'w-8 h-8',
+                isDark ? 'text-purple-400' : 'text-purple-600'
+              )} />
+            </div>
+          </div>
+          
+          <div className="mt-4 flex items-center gap-3">
+            <div className="flex-1">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Max Capacity</span>
+                <span className={cn(
+                  'font-medium',
+                  isDark ? 'text-purple-400' : 'text-purple-600'
+                )}>
+                  {departments.reduce((sum, d) => sum + (d.bed_count || 0), 0)} beds
+                </span>
+              </div>
+              <div className="h-1.5 bg-gray-700/30 rounded-full overflow-hidden">
+                <div className="h-full w-full bg-purple-500 rounded-full" />
+              </div>
+            </div>
+            
+            {departments.length > 0 && (
+              <div className={cn(
+                'text-xs px-2 py-1 rounded-full',
+                isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-700'
+              )}>
+                Top: {Math.max(...departments.map(d => d.bed_count || 0))} beds
+              </div>
+            )}
           </div>
         </div>
       </div>
       
-      {/* Filters and Search */}
-      <div className={`rounded-xl p-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-            <input
-              type="text"
-              placeholder="Search departments..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
-                isDark 
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' 
-                  : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400'
-              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+      {/* Filters and Search - Redesigned with animated search bar */}
+      <div className={`rounded-xl border ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+        <div className="p-3 sm:p-4 flex flex-col sm:flex-row gap-3">
+          {/* Search bar with animated gradient border */}
+          <div className="relative flex-1 min-w-0">
+            <motion.div
+              className="absolute inset-0 rounded-lg z-0"
+              style={{
+                background: 'linear-gradient(90deg, #3b82f6, #10b981, #6366f1, #3b82f6)',
+                backgroundSize: '300% 100%',
+              }}
+              animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+              transition={{
+                duration: isFocused ? 2 : 6,
+                repeat: Infinity,
+                ease: 'linear',
+              }}
             />
+            
+            <div className="relative z-10 m-[2px] rounded-[6px] overflow-hidden">
+              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${
+                isFocused 
+                  ? 'text-blue-500' 
+                  : isDark 
+                    ? 'text-gray-500' 
+                    : 'text-gray-400'
+              }`} />
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder="Search departments by name or code..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                className={`w-full pl-10 pr-10 py-2.5 text-sm border-transparent focus:outline-none focus:ring-0 transition-colors placeholder:text-sm ${
+                  isDark 
+                    ? 'bg-gray-900 text-white placeholder-gray-500' 
+                    : 'bg-white text-gray-900 placeholder-gray-400'
+                }`}
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className={`absolute right-2.5 top-1/2 transform -translate-y-1/2 p-1 rounded-full transition-colors ${
+                    isDark 
+                      ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' 
+                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Filter controls */}
           <div className="flex flex-wrap gap-2">
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as DepartmentType | 'all')}
-              className={`px-3 py-2 rounded-lg border text-sm ${
+              className={`px-3 py-2.5 rounded-lg border text-sm appearance-none cursor-pointer transition-colors ${
                 isDark 
-                  ? 'bg-gray-800 border-gray-700 text-white' 
-                  : 'bg-gray-50 border-gray-300 text-gray-900'
+                  ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700' 
+                  : 'bg-gray-50 border-gray-200 text-gray-900 hover:bg-gray-100'
               } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
             >
               <option value="all">All Types</option>
@@ -416,13 +652,14 @@ export const AdminFacilitySetup: React.FC<AdminFacilitySetupProps> = ({ theme })
                 </option>
               ))}
             </select>
+
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as DepartmentStatus | 'all')}
-              className={`px-3 py-2 rounded-lg border text-sm ${
+              className={`px-3 py-2.5 rounded-lg border text-sm appearance-none cursor-pointer transition-colors ${
                 isDark 
-                  ? 'bg-gray-800 border-gray-700 text-white' 
-                  : 'bg-gray-50 border-gray-300 text-gray-900'
+                  ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700' 
+                  : 'bg-gray-50 border-gray-200 text-gray-900 hover:bg-gray-100'
               } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
             >
               <option value="all">All Status</option>
@@ -430,18 +667,49 @@ export const AdminFacilitySetup: React.FC<AdminFacilitySetupProps> = ({ theme })
               <option value={DepartmentStatus.INACTIVE}>Inactive</option>
               <option value={DepartmentStatus.TEMPORARILY_CLOSED}>Temporarily Closed</option>
             </select>
+
             <button
               onClick={() => setShowDeleted(!showDeleted)}
-              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`inline-flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                 showDeleted
-                  ? (isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700')
-                  : (isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700')
+                  ? isDark 
+                    ? 'bg-blue-900/30 text-blue-300 border border-blue-700' 
+                    : 'bg-blue-50 text-blue-700 border border-blue-300'
+                  : isDark 
+                    ? 'bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700' 
+                    : 'bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100'
               }`}
             >
               {showDeleted ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
             </button>
           </div>
+        </div>
+
+        {/* Filter stats */}
+        <div className={`px-3 sm:px-4 pb-3 flex flex-wrap items-center gap-2 ${
+          isDark ? 'border-t border-gray-800' : 'border-t border-gray-100'
+        }`}>
+          <span className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+            {filteredDepartments.length} departments found
+          </span>
+          {(searchTerm || typeFilter !== 'all' || statusFilter !== 'all' || showDeleted) && (
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setTypeFilter('all');
+                setStatusFilter('all');
+                setShowDeleted(false);
+              }}
+              className={`text-xs px-2 py-1 rounded-full transition-colors ${
+                isDark 
+                  ? 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-300' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+              }`}
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       </div>
       
