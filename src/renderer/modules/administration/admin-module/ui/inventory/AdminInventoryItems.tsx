@@ -46,6 +46,19 @@ interface AdminInventoryItemProps {
   theme: 'light' | 'dark';
 }
 
+// Define filter state interface
+interface FilterState {
+  searchTerm: string;
+  categoryFilter: ItemCategory | 'all';
+  statusFilter: ItemStatus | 'all';
+  controlledSubstanceFilter: ControlledSubstanceSchedule | 'all' | 'non_controlled';
+  effectiveDate: string;
+  showDeleted: boolean;
+  requiresRefrigerationFilter: boolean | 'all';
+  requiresPrescriptionFilter: boolean | 'all';
+  isHazardousFilter: boolean | 'all';
+}
+
 const emptyForm = (): InventoryItemFormData => ({
   item_code: '',
   item_name: '',
@@ -122,21 +135,26 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [formData, setFormData] = useState<InventoryItemFormData>(() => emptyForm());
 
-  // Filter state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ItemStatus | 'all'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<ItemCategory | 'all'>('all');
-  const [controlledSubstanceFilter, setControlledSubstanceFilter] = useState<ControlledSubstanceSchedule | 'all' | 'non_controlled'>('all');
-  const [showDeleted, setShowDeleted] = useState(false);
-  const [effectiveDate, setEffectiveDate] = useState<string>('');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [perPage, setPerPage] = useState<number>(10);
-  const [requiresRefrigerationFilter, setRequiresRefrigerationFilter] = useState<boolean | 'all'>('all');
-  const [requiresPrescriptionFilter, setRequiresPrescriptionFilter] = useState<boolean | 'all'>('all');
-  const [isHazardousFilter, setIsHazardousFilter] = useState<boolean | 'all'>('all');
+  // Consolidated filter state
+  const [filters, setFilters] = useState<FilterState>({
+    searchTerm: '',
+    categoryFilter: 'all',
+    statusFilter: 'all',
+    controlledSubstanceFilter: 'all',
+    effectiveDate: '',
+    showDeleted: false,
+    requiresRefrigerationFilter: 'all',
+    requiresPrescriptionFilter: 'all',
+    isHazardousFilter: 'all',
+  });
 
   // UI state
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5); // Start from 5
 
   // ---------------------------------------------------------------------------
   // OPTIONS
@@ -272,82 +290,103 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
   );
 
   // ---------------------------------------------------------------------------
-  // FILTERS (Server-side only for initial load, client-side for UI filtering)
+  // FILTERS (Fetch all data for client-side filtering)
   // ---------------------------------------------------------------------------
-  const filters: InventoryItemFilters = useMemo(() => {
-    const status = showDeleted
-      ? undefined
-      : statusFilter !== 'all'
-        ? statusFilter
-        : ItemStatus.ACTIVE;
-
+  const backendFilters: InventoryItemFilters = useMemo(() => {
     return {
-      status,
-      item_category: categoryFilter !== 'all' ? categoryFilter : undefined,
-      controlled_substance_schedule: controlledSubstanceFilter !== 'all' && controlledSubstanceFilter !== 'non_controlled'
-        ? controlledSubstanceFilter
-        : undefined,
-      requires_refrigeration: requiresRefrigerationFilter !== 'all' ? requiresRefrigerationFilter : undefined,
-      requires_prescription: requiresPrescriptionFilter !== 'all' ? requiresPrescriptionFilter : undefined,
-      is_hazardous: isHazardousFilter !== 'all' ? isHazardousFilter : undefined,
-      search: searchTerm || undefined,
-      per_page: perPage,
+      per_page: 1000, // Fetch a large number to get all data
+      show_deleted: filters.showDeleted, // Still let backend know if we want deleted
     };
-  }, [
-    showDeleted, statusFilter, categoryFilter, controlledSubstanceFilter,
-    requiresRefrigerationFilter, requiresPrescriptionFilter, isHazardousFilter,
-    searchTerm, perPage,
-  ]);
+  }, [filters.showDeleted]);
 
   const {
     data: itemsResponse,
     isLoading,
     error,
     refetch,
-  } = useGetInventoryItems(filters, {
+  } = useGetInventoryItems(backendFilters, {
     enabled: !!activeFacilityId,
-    staleTime: 1000 * 30,
+    staleTime: 1000 * 30, // 30 seconds
   });
 
   const items = itemsResponse?.data ?? [];
-  const pagination = itemsResponse?.pagination;
 
   // ---------------------------------------------------------------------------
-  // CLIENT-SIDE FILTERING
+  // CLIENT-SIDE FILTERING - Apply all filters to the loaded data
   // ---------------------------------------------------------------------------
   const filteredItems = useMemo(() => {
     let filtered = [...items];
 
-    // Apply client-side filters that aren't handled by the server
-    if (controlledSubstanceFilter === 'non_controlled') {
+    // Apply category filter
+    if (filters.categoryFilter !== 'all') {
+      filtered = filtered.filter(item => item.item_category === filters.categoryFilter);
+    }
+
+    // Apply status filter
+    if (filters.statusFilter !== 'all') {
+      filtered = filtered.filter(item => item.status === filters.statusFilter);
+    }
+
+    // Apply controlled substance filter
+    if (filters.controlledSubstanceFilter === 'non_controlled') {
       filtered = filtered.filter(item => !item.controlled_substance_schedule);
+    } else if (filters.controlledSubstanceFilter !== 'all') {
+      filtered = filtered.filter(item => item.controlled_substance_schedule === filters.controlledSubstanceFilter);
     }
 
-    if (showDeleted) {
-      filtered = filtered.filter(item => item.deleted_at !== null);
+    // Apply refrigeration filter
+    if (filters.requiresRefrigerationFilter !== 'all') {
+      filtered = filtered.filter(item => item.requires_refrigeration === filters.requiresRefrigerationFilter);
+    }
+
+    // Apply prescription filter
+    if (filters.requiresPrescriptionFilter !== 'all') {
+      filtered = filtered.filter(item => item.requires_prescription === filters.requiresPrescriptionFilter);
+    }
+
+    // Apply hazardous filter
+    if (filters.isHazardousFilter !== 'all') {
+      filtered = filtered.filter(item => item.is_hazardous === filters.isHazardousFilter);
+    }
+
+    // Apply show deleted filter
+    if (!filters.showDeleted) {
+      filtered = filtered.filter(item => !item.deleted_at);
     } else {
-      filtered = filtered.filter(item => item.deleted_at === null);
+      filtered = filtered.filter(item => item.deleted_at !== null);
     }
 
-    // Apply client-side search if needed (additional to server search)
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
+    // Apply effective date filter (if provided) - compare with created_at
+    if (filters.effectiveDate) {
+      const filterDate = new Date(filters.effectiveDate);
+      filtered = filtered.filter(item => new Date(item.created_at) <= filterDate);
+    }
+
+    // Apply search term (case-insensitive)
+    if (filters.searchTerm) {
+      const term = filters.searchTerm.toLowerCase();
       filtered = filtered.filter(item => 
-        item.item_name.toLowerCase().includes(searchLower) ||
-        item.item_code?.toLowerCase().includes(searchLower) ||
-        (item.generic_name?.toLowerCase() || '').includes(searchLower) ||
-        (item.ndc_code?.toLowerCase() || '').includes(searchLower)
+        item.item_name.toLowerCase().includes(term) ||
+        (item.item_code?.toLowerCase() || '').includes(term) ||
+        (item.generic_name?.toLowerCase() || '').includes(term) ||
+        (item.ndc_code?.toLowerCase() || '').includes(term) ||
+        (item.brand_name?.toLowerCase() || '').includes(term)
       );
     }
 
     return filtered;
-  }, [items, controlledSubstanceFilter, showDeleted, searchTerm]);
+  }, [items, filters]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, itemsPerPage]);
 
   const setListCache = useCallback(
     (updater: (current: InventoryItemListResponse | undefined) => InventoryItemListResponse | undefined) => {
-      queryClient.setQueryData<InventoryItemListResponse>(inventoryItemKeys.list(filters), updater);
+      queryClient.setQueryData<InventoryItemListResponse>(inventoryItemKeys.list(backendFilters), updater);
     },
-    [queryClient, filters]
+    [queryClient, backendFilters]
   );
 
   // ---------------------------------------------------------------------------
@@ -379,6 +418,49 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       queryClient.invalidateQueries({ queryKey: inventoryItemKeys.all });
     },
   });
+
+  // ---------------------------------------------------------------------------
+  // Filter handlers - update consolidated filters object
+  // ---------------------------------------------------------------------------
+  const handleSearchTermChange = (value: string) => {
+    setFilters(prev => ({ ...prev, searchTerm: value }));
+  };
+
+  const handleCategoryFilterChange = (value: ItemCategory | 'all') => {
+    setFilters(prev => ({ ...prev, categoryFilter: value }));
+  };
+
+  const handleStatusFilterChange = (value: ItemStatus | 'all') => {
+    setFilters(prev => ({ ...prev, statusFilter: value }));
+  };
+
+  const handleControlledSubstanceFilterChange = (value: ControlledSubstanceSchedule | 'all' | 'non_controlled') => {
+    setFilters(prev => ({ ...prev, controlledSubstanceFilter: value }));
+  };
+
+  const handleEffectiveDateChange = (value: string) => {
+    setFilters(prev => ({ ...prev, effectiveDate: value }));
+  };
+
+  const handleToggleShowDeleted = () => {
+    setFilters(prev => ({ ...prev, showDeleted: !prev.showDeleted }));
+  };
+
+  const handleRequiresRefrigerationChange = (value: boolean | 'all') => {
+    setFilters(prev => ({ ...prev, requiresRefrigerationFilter: value }));
+  };
+
+  const handleRequiresPrescriptionChange = (value: boolean | 'all') => {
+    setFilters(prev => ({ ...prev, requiresPrescriptionFilter: value }));
+  };
+
+  const handleIsHazardousChange = (value: boolean | 'all') => {
+    setFilters(prev => ({ ...prev, isHazardousFilter: value }));
+  };
+
+  const handlePerPageChange = (value: number) => {
+    setItemsPerPage(Math.max(1, Math.min(500, value)));
+  };
 
   // ---------------------------------------------------------------------------
   // Drawer handlers
@@ -541,7 +623,6 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       return next;
     });
   };
-  
 
   // ---------------------------------------------------------------------------
   // Submit
@@ -604,7 +685,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
     };
 
     if (drawerMode === 'create') {
-      const previous = queryClient.getQueryData<InventoryItemListResponse>(inventoryItemKeys.list(filters));
+      const previous = queryClient.getQueryData<InventoryItemListResponse>(inventoryItemKeys.list(backendFilters));
       const now = new Date().toISOString();
       const tempUuid = `temp-${crypto.randomUUID()}`;
 
@@ -668,85 +749,83 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
 
       createMutation.mutate(payload, {
         onError: () => {
-          queryClient.setQueryData(inventoryItemKeys.list(filters), previous);
+          queryClient.setQueryData(inventoryItemKeys.list(backendFilters), previous);
         },
       });
 
       return;
     }
+
     const mergeItemWithPayload = (
-  existingItem: InventoryItem,
-  payload: CreateInventoryItemRequest
-): InventoryItem => {
-  return {
-    ...existingItem,
-    item_code: payload.item_code,
-    item_name: payload.item_name,
-    item_description: payload.item_description ?? existingItem.item_description,
-    item_category: payload.item_category,
-    item_subcategory: payload.item_subcategory ?? existingItem.item_subcategory,
-    generic_name: payload.generic_name ?? existingItem.generic_name,
-    brand_name: payload.brand_name ?? existingItem.brand_name,
-    ndc_code: payload.ndc_code ?? existingItem.ndc_code,
-    drug_class: payload.drug_class ?? existingItem.drug_class,
-    controlled_substance_schedule: payload.controlled_substance_schedule ?? existingItem.controlled_substance_schedule,
-    dosage_form: payload.dosage_form ?? existingItem.dosage_form,
-    strength: payload.strength ?? existingItem.strength,
-    route_of_administration: payload.route_of_administration ?? existingItem.route_of_administration,
-    manufacturer: payload.manufacturer ?? existingItem.manufacturer,
-    manufacturer_item_number: payload.manufacturer_item_number ?? existingItem.manufacturer_item_number,
-    supplier: payload.supplier ?? existingItem.supplier,
-    unit_of_measure: payload.unit_of_measure,
-    package_quantity: payload.package_quantity,
-    packaging_type: payload.packaging_type ?? existingItem.packaging_type,
-    unit_cost: payload.unit_cost ?? existingItem.unit_cost,
-    average_wholesale_price: payload.average_wholesale_price ?? existingItem.average_wholesale_price,
-    currency_code: payload.currency_code,
-    requires_refrigeration: payload.requires_refrigeration ?? existingItem.requires_refrigeration,
-    requires_controlled_access: payload.requires_controlled_access ?? existingItem.requires_controlled_access,
-    storage_location_type: payload.storage_location_type ?? existingItem.storage_location_type,
-    storage_requirements: payload.storage_requirements ?? existingItem.storage_requirements,
-    requires_prescription: payload.requires_prescription ?? existingItem.requires_prescription,
-    // Keep existing regulatory_approvals
-    regulatory_approvals: existingItem.regulatory_approvals,
-    fda_approval_number: payload.fda_approval_number ?? existingItem.fda_approval_number,
-    is_hazardous: payload.is_hazardous ?? existingItem.is_hazardous,
-    safety_warnings: payload.safety_warnings ?? existingItem.safety_warnings,
-    contraindications: payload.contraindications ?? existingItem.contraindications,
-    special_handling_instructions: payload.special_handling_instructions ?? existingItem.special_handling_instructions,
-    is_billable: payload.is_billable ?? existingItem.is_billable,
-    track_by_lot: payload.track_by_lot ?? existingItem.track_by_lot,
-    track_by_serial: payload.track_by_serial ?? existingItem.track_by_serial,
-    reorder_point: payload.reorder_point ?? existingItem.reorder_point,
-    reorder_quantity: payload.reorder_quantity ?? existingItem.reorder_quantity,
-    safety_stock_level: payload.safety_stock_level ?? existingItem.safety_stock_level,
-    max_stock_level: payload.max_stock_level ?? existingItem.max_stock_level,
-    status: payload.status,
-    updated_at: new Date().toISOString(),
-  };
-};
-
-
+      existingItem: InventoryItem,
+      payload: CreateInventoryItemRequest
+    ): InventoryItem => {
+      return {
+        ...existingItem,
+        item_code: payload.item_code,
+        item_name: payload.item_name,
+        item_description: payload.item_description ?? existingItem.item_description,
+        item_category: payload.item_category,
+        item_subcategory: payload.item_subcategory ?? existingItem.item_subcategory,
+        generic_name: payload.generic_name ?? existingItem.generic_name,
+        brand_name: payload.brand_name ?? existingItem.brand_name,
+        ndc_code: payload.ndc_code ?? existingItem.ndc_code,
+        drug_class: payload.drug_class ?? existingItem.drug_class,
+        controlled_substance_schedule: payload.controlled_substance_schedule ?? existingItem.controlled_substance_schedule,
+        dosage_form: payload.dosage_form ?? existingItem.dosage_form,
+        strength: payload.strength ?? existingItem.strength,
+        route_of_administration: payload.route_of_administration ?? existingItem.route_of_administration,
+        manufacturer: payload.manufacturer ?? existingItem.manufacturer,
+        manufacturer_item_number: payload.manufacturer_item_number ?? existingItem.manufacturer_item_number,
+        supplier: payload.supplier ?? existingItem.supplier,
+        unit_of_measure: payload.unit_of_measure,
+        package_quantity: payload.package_quantity,
+        packaging_type: payload.packaging_type ?? existingItem.packaging_type,
+        unit_cost: payload.unit_cost ?? existingItem.unit_cost,
+        average_wholesale_price: payload.average_wholesale_price ?? existingItem.average_wholesale_price,
+        currency_code: payload.currency_code,
+        requires_refrigeration: payload.requires_refrigeration ?? existingItem.requires_refrigeration,
+        requires_controlled_access: payload.requires_controlled_access ?? existingItem.requires_controlled_access,
+        storage_location_type: payload.storage_location_type ?? existingItem.storage_location_type,
+        storage_requirements: payload.storage_requirements ?? existingItem.storage_requirements,
+        requires_prescription: payload.requires_prescription ?? existingItem.requires_prescription,
+        regulatory_approvals: existingItem.regulatory_approvals,
+        fda_approval_number: payload.fda_approval_number ?? existingItem.fda_approval_number,
+        is_hazardous: payload.is_hazardous ?? existingItem.is_hazardous,
+        safety_warnings: payload.safety_warnings ?? existingItem.safety_warnings,
+        contraindications: payload.contraindications ?? existingItem.contraindications,
+        special_handling_instructions: payload.special_handling_instructions ?? existingItem.special_handling_instructions,
+        is_billable: payload.is_billable ?? existingItem.is_billable,
+        track_by_lot: payload.track_by_lot ?? existingItem.track_by_lot,
+        track_by_serial: payload.track_by_serial ?? existingItem.track_by_serial,
+        reorder_point: payload.reorder_point ?? existingItem.reorder_point,
+        reorder_quantity: payload.reorder_quantity ?? existingItem.reorder_quantity,
+        safety_stock_level: payload.safety_stock_level ?? existingItem.safety_stock_level,
+        max_stock_level: payload.max_stock_level ?? existingItem.max_stock_level,
+        status: payload.status,
+        updated_at: new Date().toISOString(),
+      };
+    };
 
     if (drawerMode === 'edit' && selectedItem) {
       const uuid = selectedItem.item_uuid;
-      const previous = queryClient.getQueryData<InventoryItemListResponse>(inventoryItemKeys.list(filters));
+      const previous = queryClient.getQueryData<InventoryItemListResponse>(inventoryItemKeys.list(backendFilters));
 
-          setListCache(current => {
-          if (!current) return current;
-          return {
-            ...current,
-            data: current.data.map(i =>
-              i.item_uuid === uuid ? mergeItemWithPayload(i, payload) : i
-            ),
-          };
-        });
+      setListCache(current => {
+        if (!current) return current;
+        return {
+          ...current,
+          data: current.data.map(i =>
+            i.item_uuid === uuid ? mergeItemWithPayload(i, payload) : i
+          ),
+        };
+      });
 
       updateMutation.mutate(
         { uuid, data: payload as UpdateInventoryItemRequest },
         {
           onError: () => {
-            queryClient.setQueryData(inventoryItemKeys.list(filters), previous);
+            queryClient.setQueryData(inventoryItemKeys.list(backendFilters), previous);
           },
         }
       );
@@ -765,7 +844,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
 
     if (!confirmed) return;
 
-    const previous = queryClient.getQueryData<InventoryItemListResponse>(inventoryItemKeys.list(filters));
+    const previous = queryClient.getQueryData<InventoryItemListResponse>(inventoryItemKeys.list(backendFilters));
 
     setListCache(current => {
       if (!current) return current;
@@ -783,14 +862,14 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       { uuid: item.item_uuid },
       {
         onError: () => {
-          queryClient.setQueryData(inventoryItemKeys.list(filters), previous);
+          queryClient.setQueryData(inventoryItemKeys.list(backendFilters), previous);
         },
       }
     );
   };
 
   const handleRestore = (item: InventoryItem) => {
-    const previous = queryClient.getQueryData<InventoryItemListResponse>(inventoryItemKeys.list(filters));
+    const previous = queryClient.getQueryData<InventoryItemListResponse>(inventoryItemKeys.list(backendFilters));
 
     setListCache(current => {
       if (!current) return current;
@@ -808,22 +887,11 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       { uuid: item.item_uuid },
       {
         onError: () => {
-          queryClient.setQueryData(inventoryItemKeys.list(filters), previous);
+          queryClient.setQueryData(inventoryItemKeys.list(backendFilters), previous);
         },
       }
     );
   };
-
-  // ---------------------------------------------------------------------------
-  // Filter handlers
-  // ---------------------------------------------------------------------------
-  const handleSearchSubmit = useCallback(() => {
-    refetch();
-  }, [refetch]);
-
-  const handlePerPageChange = useCallback((n: number) => {
-    setPerPage(Math.max(1, Math.min(500, n)));
-  }, []);
 
   // ---------------------------------------------------------------------------
   // Validation
@@ -867,29 +935,28 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
 
       <InventoryItemFiltersBar
         theme={theme}
-        searchTerm={searchTerm}
-        onSearchTermChange={setSearchTerm}
-        onSearchSubmit={handleSearchSubmit}
-        categoryFilter={categoryFilter}
-        onCategoryFilterChange={setCategoryFilter}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        controlledSubstanceFilter={controlledSubstanceFilter}
-        onControlledSubstanceFilterChange={setControlledSubstanceFilter}
-        effectiveDate={effectiveDate}
-        onEffectiveDateChange={setEffectiveDate}
-        showDeleted={showDeleted}
-        onToggleShowDeleted={() => setShowDeleted(v => !v)}
+        searchTerm={filters.searchTerm}
+        onSearchTermChange={handleSearchTermChange}
+        categoryFilter={filters.categoryFilter}
+        onCategoryFilterChange={handleCategoryFilterChange}
+        statusFilter={filters.statusFilter}
+        onStatusFilterChange={handleStatusFilterChange}
+        controlledSubstanceFilter={filters.controlledSubstanceFilter}
+        onControlledSubstanceFilterChange={handleControlledSubstanceFilterChange}
+        effectiveDate={filters.effectiveDate}
+        onEffectiveDateChange={handleEffectiveDateChange}
+        showDeleted={filters.showDeleted}
+        onToggleShowDeleted={handleToggleShowDeleted}
         viewMode={viewMode}
         onToggleViewMode={() => setViewMode(v => (v === 'list' ? 'grid' : 'list'))}
-        perPage={perPage}
+        perPage={itemsPerPage}
         onPerPageChange={handlePerPageChange}
-        requiresRefrigerationFilter={requiresRefrigerationFilter}
-        onRequiresRefrigerationChange={setRequiresRefrigerationFilter}
-        requiresPrescriptionFilter={requiresPrescriptionFilter}
-        onRequiresPrescriptionChange={setRequiresPrescriptionFilter}
-        isHazardousFilter={isHazardousFilter}
-        onIsHazardousChange={setIsHazardousFilter}
+        requiresRefrigerationFilter={filters.requiresRefrigerationFilter}
+        onRequiresRefrigerationChange={handleRequiresRefrigerationChange}
+        requiresPrescriptionFilter={filters.requiresPrescriptionFilter}
+        onRequiresPrescriptionChange={handleRequiresPrescriptionChange}
+        isHazardousFilter={filters.isHazardousFilter}
+        onIsHazardousChange={handleIsHazardousChange}
         itemCategoryOptions={itemCategoryOptions.map(({ value, label }) => ({ value, label }))}
         statusOptions={statusOptions}
         controlledSubstanceOptions={controlledSubstanceOptions}
@@ -909,7 +976,10 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         onRestore={handleRestore}
         onRetry={() => refetch()}
         itemCategoryOptions={itemCategoryOptions}
-        defaultPageSize={perPage}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={setItemsPerPage}
       />
 
       <InventoryItemFormDrawer

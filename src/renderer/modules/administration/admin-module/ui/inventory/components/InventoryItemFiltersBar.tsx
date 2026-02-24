@@ -33,7 +33,6 @@ interface Props {
 
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
-  onSearchSubmit: () => void;
 
   categoryFilter: ItemCategory | 'all';
   onCategoryFilterChange: (value: ItemCategory | 'all') => void;
@@ -183,7 +182,6 @@ export const InventoryItemFiltersBar: React.FC<Props> = ({
   theme,
   searchTerm,
   onSearchTermChange,
-  onSearchSubmit,
   categoryFilter,
   onCategoryFilterChange,
   statusFilter,
@@ -210,24 +208,42 @@ export const InventoryItemFiltersBar: React.FC<Props> = ({
 }) => {
   const isDark = theme === 'dark';
 
-  // local search – submit on Enter or button click, not on every keystroke
+  // local search – debounced updates
   const [localSearch, setLocalSearch] = useState(searchTerm);
   const [isFocused, setIsFocused] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout>(null);
 
   // keep local in sync if parent resets externally
   useEffect(() => {
     setLocalSearch(searchTerm);
   }, [searchTerm]);
 
-  const submitSearch = (value: string = localSearch) => {
-    onSearchTermChange(value);
-    onSearchSubmit();
+  // Handle search with debounce
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalSearch(value);
+    
+    // Clear existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    // Set new timer for debounced update
+    debounceTimerRef.current = setTimeout(() => {
+      onSearchTermChange(value);
+    }, 300); // 300ms debounce
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') submitSearch();
+    if (e.key === 'Enter') {
+      // Clear any pending debounce and update immediately
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      onSearchTermChange(localSearch);
+    }
     if (e.key === 'Escape') {
       clearSearch();
       inputRef.current?.blur();
@@ -236,11 +252,13 @@ export const InventoryItemFiltersBar: React.FC<Props> = ({
 
   const clearSearch = () => {
     setLocalSearch('');
-    submitSearch('');
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
     onSearchTermChange('');
   };
 
-  // ── count active advanced filters (so we can badge the toggle) ──
+  // ── count active advanced filters ──
   const advancedActiveCount = [
     controlledSubstanceFilter !== 'all',
     requiresRefrigerationFilter !== 'all',
@@ -257,6 +275,15 @@ export const InventoryItemFiltersBar: React.FC<Props> = ({
     statusFilter !== 'all',
     advancedActiveCount > 0,
   ].filter(Boolean).length;
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div
@@ -297,9 +324,9 @@ export const InventoryItemFiltersBar: React.FC<Props> = ({
             <input
               ref={inputRef}
               type="text"
-              placeholder="Search by item name, code, generic name, NDC..."
+              placeholder="Search by name, code, generic name, NDC..."
               value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
+              onChange={handleSearchChange}
               onKeyDown={handleKeyDown}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
@@ -333,15 +360,6 @@ export const InventoryItemFiltersBar: React.FC<Props> = ({
 
         {/* ── Right controls ───────────────────────────────────────────────── */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Search submit button */}
-          <button
-            type="button"
-            onClick={() => submitSearch()}
-            className="px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-medium transition-colors whitespace-nowrap"
-          >
-            Search
-          </button>
-
           {/* Advanced filters toggle */}
           <button
             type="button"
@@ -422,7 +440,7 @@ export const InventoryItemFiltersBar: React.FC<Props> = ({
           isDark={isDark}
         />
 
-        {/* Items per page */}
+        {/* Items per page - now starting from 5 */}
         <div className="flex items-center gap-1.5 ml-auto">
           <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
             Per page:
@@ -438,7 +456,7 @@ export const InventoryItemFiltersBar: React.FC<Props> = ({
                 : 'bg-white border-gray-200 text-gray-900'
             )}
           >
-            {[10, 25, 50, 100].map((n) => (
+            {[5, 10, 25, 50, 100].map((n) => (
               <option key={n} value={n}>{n}</option>
             ))}
           </select>

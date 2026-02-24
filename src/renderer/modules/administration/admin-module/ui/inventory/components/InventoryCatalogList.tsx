@@ -1,4 +1,4 @@
-import React, { useState, useMemo} from 'react';
+import React, { useMemo, useEffect } from 'react';
 import {
   AlertTriangle,
   CheckCircle,
@@ -27,6 +27,7 @@ import {
   getStatusColor,
 } from '../utils/inventoryItemUiUtils';
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
+
 // ─── cn helper ──────────────────────────────────────────────────────────────
 const cn = (...classes: (string | false | null | undefined)[]): string =>
   classes.filter(Boolean).join(' ');
@@ -53,6 +54,12 @@ interface Props {
     icon: React.ElementType;
     color: string;
   }[];
+  // Pagination props from parent
+  currentPage: number;
+  onPageChange: (page: number) => void;
+  itemsPerPage: number;
+  onItemsPerPageChange: (value: number) => void;
+  // Optional fallback if parent doesn't provide pagination props
   defaultPageSize?: number;
 }
 
@@ -448,23 +455,14 @@ export const InventoryCatalogList: React.FC<Props> = ({
   onRestore,
   onRetry,
   itemCategoryOptions,
-  defaultPageSize = 10,
+  currentPage,
+  onPageChange,
+  itemsPerPage,
+  onItemsPerPageChange,
 }) => {
   const isDark = theme === 'dark';
 
-  // ── Client-side pagination ─────────────────────────────────────────────────
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(defaultPageSize);
-
-  // Store previous items to detect changes
-  const [prevItems, setPrevItems] = useState(items);
-
-  // Reset to page 1 if the items array has changed
-  if (items !== prevItems) {
-    setPrevItems(items);
-    setCurrentPage(1);  // ✅ Safe: adjusts state during render
-  }
-
+  // Calculate pagination based on props
   const paginationData = useMemo(() => {
     const totalItems = items.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
@@ -485,13 +483,17 @@ export const InventoryCatalogList: React.FC<Props> = ({
   }, [items, currentPage, itemsPerPage]);
 
   const goToPage = (page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, paginationData.totalPages)));
+    onPageChange(Math.max(1, Math.min(page, paginationData.totalPages)));
   };
 
   const changeItemsPerPage = (n: number) => {
-    setItemsPerPage(n);
-    setCurrentPage(1);
+    onItemsPerPageChange(n);
   };
+
+  // Reset to page 1 when items change (e.g., after filtering)
+  useEffect(() => {
+    onPageChange(1);
+  }, [items, onPageChange]);
 
   // ── Smart page numbers with ellipsis ──────────────────────────────────────
   const pageNumbers = useMemo<(number | '...')[]>(() => {
