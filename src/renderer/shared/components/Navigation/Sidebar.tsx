@@ -385,10 +385,11 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
           'border',
           isActive
             ? cn(
-                'bg-linear-to-r shadow-lg',
+                // ADJUSTMENT: Enhanced active item background with higher opacity and stronger gradient
+                'bg-linear-to-r shadow-xl', // Changed from shadow-lg to shadow-xl for deeper shadow
                 isDark 
-                  ? 'from-blue-500/10 to-cyan-500/10 border-blue-500/30' 
-                  : 'from-blue-50 to-cyan-50 border-blue-200'
+                  ? 'from-blue-500/20 to-cyan-500/20 border-blue-500/50' // Increased opacity from /10 to /20 and border from /30 to /50
+                  : 'from-blue-100 to-cyan-100 border-blue-300' // Enhanced light mode colors from blue-50/cyan-50 to blue-100/cyan-100
               )
             : cn(
                 'border-transparent',
@@ -401,24 +402,35 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         title={collapsed ? `${item.label} • ${item.description}` : undefined}
         aria-current={isActive ? 'page' : undefined}
       >
+        {/* ADJUSTMENT: Enhanced blue ring (active indicator) with higher opacity and stronger glow */}
         {isActive && !collapsed && (
-          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-10 rounded-r-full bg-linear-to-b from-blue-400 via-cyan-400 to-blue-400 shadow-lg shadow-blue-400/50" />
+          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1.5 h-12 rounded-r-full bg-linear-to-b from-blue-500 via-cyan-400 to-blue-500 shadow-xl shadow-blue-500/70" />
+          // Increased width from w-1 to w-1.5, height from h-10 to h-12
+          // Changed shadow-lg to shadow-xl and opacity from /50 to /70
+          // Enhanced gradient with more vibrant colors
         )}
 
         <div className={cn('relative shrink-0', collapsed ? 'mx-auto' : '')}>
+          {/* ADJUSTMENT: Enhanced icon container for active state */}
           <div className={cn(
             'p-2.5 rounded-xl transition-all duration-300',
             'border',
             isDark 
               ? 'bg-gray-800/50 border-gray-700/50' 
               : 'bg-gray-50 border-gray-200',
-            isActive && (isDark ? 'border-blue-500/30 bg-blue-500/10' : 'border-blue-300 bg-blue-50'),
-            isHovered && 'scale-110 shadow-lg'
+            isActive && (
+              isDark 
+                ? 'border-blue-500/50 bg-blue-500/20 shadow-lg shadow-blue-500/30' // Enhanced from /30 border, /10 bg to /50 border, /20 bg, added glow
+                : 'border-blue-400 bg-blue-100 shadow-md shadow-blue-300/50' // Enhanced light mode with stronger colors and shadow
+            ),
+            isHovered && 'scale-110 shadow-xl' // Enhanced from shadow-lg to shadow-xl
           )}>
             <div className={cn(
-              'transition-colors duration-300',
+              'transition-all duration-300', // Changed from transition-colors to transition-all
               isActive 
-                ? (isDark ? 'text-cyan-400' : 'text-blue-600')
+                ? (isDark 
+                    ? 'text-cyan-300 scale-110' // Enhanced from cyan-400 to cyan-300 with scale effect
+                    : 'text-blue-700 scale-110') // Enhanced from blue-600 to blue-700 with scale effect
                 : (isDark ? 'text-gray-400' : 'text-gray-600')
             )}>
               {item.icon}
@@ -446,7 +458,9 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
               <span className={cn(
                 'font-semibold text-sm truncate',
                 isActive 
-                  ? (isDark ? 'text-white' : 'text-gray-900')
+                  ? (isDark 
+                      ? 'text-white font-bold' // Added font-bold for active items
+                      : 'text-gray-900 font-bold') // Added font-bold for active items
                   : (isDark ? 'text-gray-300' : 'text-gray-700')
               )}>
                 {item.label}
@@ -468,7 +482,9 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
             
             <p className={cn(
               'text-xs truncate leading-relaxed',
-              isDark ? 'text-gray-500' : 'text-gray-600'
+              isActive 
+                ? (isDark ? 'text-gray-300' : 'text-gray-700') // Enhanced text color for active item description
+                : (isDark ? 'text-gray-500' : 'text-gray-600')
             )}>
               {item.description}
             </p>
@@ -477,7 +493,9 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
               {item.stats && (
                 <span className={cn(
                   'text-xs font-medium',
-                  isDark ? 'text-gray-400' : 'text-gray-600'
+                  isActive 
+                    ? (isDark ? 'text-gray-300' : 'text-gray-700') // Enhanced stats color for active item
+                    : (isDark ? 'text-gray-400' : 'text-gray-600')
                 )}>
                   {item.stats}
                 </span>
