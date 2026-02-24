@@ -296,7 +296,7 @@ export const Index: React.FC = () => {
                   "text-[9px] font-bold tracking-wider uppercase",
                   theme === 'dark' ? "text-slate-500" : "text-slate-500"
                 )}>
-                  Registration
+                  Complete Your Facility Profile
                 </div>
               </div>
             </div>

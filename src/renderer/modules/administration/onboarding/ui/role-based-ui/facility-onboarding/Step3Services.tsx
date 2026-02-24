@@ -1,12 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Zap, Search, CheckCircle2, Shield } from 'lucide-react';
+import { Clock, Zap, Search, CheckCircle2, ChevronDown } from 'lucide-react';
 import { FormSelect } from './FormElements';
 import { 
   OPERATIONAL_STATUS_OPTIONS, 
   OPERATIONAL_STATUS_LABELS,
   HEALTHCARE_SERVICES,
-  SECURITY_BADGES,
   FacilityFormData 
 } from './types';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
@@ -20,6 +19,39 @@ interface Step3ServicesProps {
   theme: string;
 }
 
+// Day abbreviations
+const DAY_ABBREVIATIONS: Record<string, string> = {
+  monday: 'MON',
+  tuesday: 'TUE',
+  wednesday: 'WED',
+  thursday: 'THU',
+  friday: 'FRI',
+  saturday: 'SAT',
+  sunday: 'SUN'
+};
+
+// Generate time options in 30-minute increments
+const generateTimeOptions = () => {
+  const times = [];
+  for (let hour = 0; hour < 24; hour++) {
+    for (const minute of ['00', '30']) {
+      const hourStr = hour.toString().padStart(2, '0');
+      times.push(`${hourStr}:${minute}`);
+    }
+  }
+  return times;
+};
+
+const TIME_OPTIONS = generateTimeOptions();
+
+// Helper to format time for display (12-hour format)
+const formatTimeForDisplay = (time: string): string => {
+  const [hour, minute] = time.split(':').map(Number);
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${minute.toString().padStart(2, '0')} ${period}`;
+};
+
 export const Step3Services: React.FC<Step3ServicesProps> = ({
   formData,
   updateField,
@@ -29,6 +61,7 @@ export const Step3Services: React.FC<Step3ServicesProps> = ({
   theme
 }) => {
   const [serviceSearch, setServiceSearch] = useState('');
+  const [showAllServices, setShowAllServices] = useState(false);
 
   const filteredServices = useMemo(() => {
     return HEALTHCARE_SERVICES.filter(service => 
@@ -36,273 +69,334 @@ export const Step3Services: React.FC<Step3ServicesProps> = ({
     );
   }, [serviceSearch]);
 
+  // Show only selected + first 6 initially, or all if search active/show all toggled
+  const displayedServices = useMemo(() => {
+    if (serviceSearch || showAllServices) {
+      return filteredServices;
+    }
+    
+    // Show selected services first, then up to 6 total
+    const selected = filteredServices.filter(s => formData.available_services.includes(s));
+    const unselected = filteredServices.filter(s => !formData.available_services.includes(s));
+    
+    return [...selected, ...unselected].slice(0, 6);
+  }, [filteredServices, formData.available_services, serviceSearch, showAllServices]);
+
+  const hasMoreServices = filteredServices.length > 6 && !serviceSearch && !showAllServices;
+
+  // Days for operating hours
+  const days = Object.entries(formData.operating_hours);
+
   return (
     <motion.div 
       key="step-3"
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      className="space-y-5"
+      className="space-y-4"
     >
-      {/* Compact Header */}
-      <div className="text-center mb-4">
-        <p className={cn(
-          "text-sm",
-          theme === 'dark' ? "text-slate-400" : "text-slate-600"
-        )}>
-          What services do you provide?
-        </p>
-      </div>
-
-      {/* Operational Status */}
-      <div>
-        <FormSelect
-          value={formData.operational_status}
-          onChange={(value) => updateField('operational_status', value)}
-          label="Operational Status"
-          options={OPERATIONAL_STATUS_OPTIONS.map(status => ({
-            value: status,
-            label: OPERATIONAL_STATUS_LABELS[status]
-          }))}
-          icon={<Zap className="w-4 h-4" />}
-          theme={theme}
-        />
-      </div>
-
-      {/* Available Services */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <label className={cn(
-            "block text-sm font-semibold",
-            theme === 'dark' ? "text-slate-200" : "text-slate-800"
+      {/* Two-Column Layout for Main Sections */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Left Column: Status & Services */}
+        <div className="space-y-4">
+          {/* Operational Status - Improved Dark Mode Contrast */}
+          <div className={cn(
+            "p-4 rounded-xl border-2",
+            theme === 'dark' 
+              ? "bg-slate-900 border-slate-600" 
+              : "bg-white border-slate-200"
           )}>
-            Services <span className="text-red-500">*</span>
-          </label>
-          <span className={cn(
-            "text-[10px] font-medium px-2 py-1 rounded-full",
-            formData.available_services.length > 0
-              ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-              : "bg-slate-100 dark:bg-slate-800 text-slate-500"
-          )}>
-            {formData.available_services.length} selected
-          </span>
-        </div>
-        
-        <div className="relative">
-          <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            value={serviceSearch}
-            onChange={(e) => setServiceSearch(e.target.value)}
-            placeholder="Search services..."
-            className={cn(
-              "w-full px-3 py-2.5 pl-10 rounded-lg border-2 transition-all text-sm",
-              "focus:outline-none focus:ring-2 focus:ring-blue-500/20",
-              theme === 'dark'
-                ? "bg-slate-800/50 text-white placeholder-slate-500 border-slate-700"
-                : "bg-white text-slate-900 placeholder-slate-400 border-slate-200"
-            )}
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1">
-          {filteredServices.map(service => {
-            const isSelected = formData.available_services.includes(service);
-            
-            return (
-              <motion.button
-                key={service}
-                type="button"
-                onClick={() => toggleService(service)}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className={cn(
-                  "flex items-center justify-between px-3 py-2 rounded-lg border-2 transition-all text-left",
-                  isSelected
-                    ? "border-blue-500 bg-linear-to-br from-blue-50 to-emerald-50 dark:from-blue-900/20 dark:to-emerald-900/20"
-                    : theme === 'dark'
-                    ? "border-slate-700 hover:border-blue-500/50 bg-slate-800/30"
-                    : "border-slate-200 hover:border-blue-400/50 bg-white hover:bg-slate-50"
-                )}
-              >
-                <span className={cn(
-                  "text-sm font-medium",
-                  isSelected
-                    ? "text-blue-600 dark:text-blue-400"
-                    : theme === 'dark' ? "text-white" : "text-slate-900"
-                )}>
-                  {service}
-                </span>
-                {isSelected && (
-                  <motion.div
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  </motion.div>
-                )}
-              </motion.button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Operating Hours */}
-      <div className={cn(
-        "p-4 rounded-xl border-2",
-        theme === 'dark' 
-          ? "bg-slate-800/50 border-slate-700" 
-          : "bg-slate-50 border-slate-200"
-      )}>
-        <div className="flex items-center justify-between mb-4">
-          <h4 className={cn(
-            "text-sm font-bold flex items-center gap-2",
-            theme === 'dark' ? "text-white" : "text-slate-900"
-          )}>
-            <Clock className="w-4 h-4 text-blue-500" />
-            Operating Hours
-          </h4>
-          <button
-            type="button"
-            onClick={applyToAllDays}
-            className={cn(
-              "text-[10px] font-medium px-3 py-1.5 rounded-lg transition-all",
-              "border-2 hover:scale-105",
-              theme === 'dark'
-                ? "border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
-                : "border-blue-400 text-blue-600 hover:bg-blue-50"
-            )}
-          >
-            Copy Mon to All
-          </button>
-        </div>
-
-        <div className="space-y-2">
-          {Object.entries(formData.operating_hours).map(([day, hours]) => (
-            <div 
-              key={day}
-              className={cn(
-                "flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg transition-all",
-                theme === 'dark'
-                  ? "bg-slate-900/50 hover:bg-slate-900/70"
-                  : "bg-white hover:bg-slate-50"
-              )}
-            >
-              <div className="flex items-center gap-2 min-w-25">
-                <div className={cn(
-                  "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-[10px]",
-                  theme === 'dark'
-                    ? "bg-slate-700 text-slate-300"
-                    : "bg-slate-100 text-slate-700"
-                )}>
-                  {day.substring(0, 3).toUpperCase()}
-                </div>
-                <span className={cn(
-                  "text-sm font-semibold capitalize",
-                  theme === 'dark' ? "text-white" : "text-slate-900"
-                )}>
-                  {day}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!hours.is_closed}
-                    onChange={(e) => updateOperatingHours(day, 'is_closed', !e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                  />
-                  <span className={cn(
-                    "text-sm font-medium",
-                    theme === 'dark' ? "text-slate-300" : "text-slate-700"
-                  )}>
-                    Open
-                  </span>
-                </label>
-
-                {!hours.is_closed && (
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="time"
-                      value={hours.open}
-                      onChange={(e) => updateOperatingHours(day, 'open', e.target.value)}
-                      className={cn(
-                        "px-2 py-1 rounded-md border-2 text-sm font-medium transition-all",
-                        "focus:outline-none focus:ring-2 focus:ring-blue-500",
-                        theme === 'dark'
-                          ? "bg-slate-700 border-slate-600 text-white"
-                          : "bg-white border-slate-200 text-slate-900"
-                      )}
-                    />
-                    <span className="text-slate-400 text-sm">to</span>
-                    <input
-                      type="time"
-                      value={hours.close}
-                      onChange={(e) => updateOperatingHours(day, 'close', e.target.value)}
-                      className={cn(
-                        "px-2 py-1 rounded-md border-2 text-sm font-medium transition-all",
-                        "focus:outline-none focus:ring-2 focus:ring-blue-500",
-                        theme === 'dark'
-                          ? "bg-slate-700 border-slate-600 text-white"
-                          : "bg-white border-slate-200 text-slate-900"
-                      )}
-                    />
-                  </div>
-                )}
-
-                {hours.is_closed && (
-                  <span className="text-sm text-red-500 font-medium">Closed</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Compact Security Notice */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={cn(
-          "p-3 rounded-xl border-2",
-          theme === 'dark' 
-            ? "bg-blue-900/20 border-blue-700/50" 
-            : "bg-blue-50 border-blue-200"
-        )}
-      >
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-linear-to-br from-blue-600 to-emerald-600 flex items-center justify-center shrink-0">
-            <Shield className="w-4 h-4 text-white" />
+            <FormSelect
+              value={formData.operational_status}
+              onChange={(value) => updateField('operational_status', value)}
+              label="Operational Status"
+              options={OPERATIONAL_STATUS_OPTIONS.map(status => ({
+                value: status,
+                label: OPERATIONAL_STATUS_LABELS[status]
+              }))}
+              icon={<Zap className="w-4 h-4" />}
+              theme={theme}
+            />
           </div>
-          <div className="flex-1">
-            <h5 className="text-sm font-bold text-blue-700 dark:text-blue-300 mb-1">
-              Security & Compliance
-            </h5>
-            <p className="text-[10px] text-blue-600 dark:text-blue-400 mb-2">
-              Your data is protected with enterprise-grade security.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {SECURITY_BADGES.map((item, idx) => (
-                <div 
-                  key={idx}
+
+          {/* Available Services */}
+          <div className={cn(
+            "p-4 rounded-xl border-2",
+            theme === 'dark' 
+              ? "bg-slate-900 border-slate-600" 
+              : "bg-white border-slate-200"
+          )}>
+            <div className="flex items-center justify-between mb-3">
+              <label className={cn(
+                "block text-sm font-semibold",
+                theme === 'dark' ? "text-white" : "text-slate-900"
+              )}>
+                Services available <span className="text-red-500">*</span>
+              </label>
+              <span className={cn(
+                "text-xs font-medium px-2 py-1 rounded-full cursor-default",
+                formData.available_services.length > 0
+                  ? "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300"
+                  : theme === 'dark' 
+                    ? "bg-slate-700 text-slate-300" 
+                    : "bg-slate-100 text-slate-600"
+              )}>
+                {formData.available_services.length}
+              </span>
+            </div>
+            
+            {/* Search */}
+            <div className="relative mb-3">
+              <Search className={cn(
+                "absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5",
+                theme === 'dark' ? "text-slate-400" : "text-slate-500"
+              )} />
+              <input
+                type="text"
+                value={serviceSearch}
+                onChange={(e) => setServiceSearch(e.target.value)}
+                placeholder="Search services..."
+                className={cn(
+                  "w-full px-3 py-2 pl-9 rounded-lg border-2 transition-all text-xs cursor-text",
+                  "focus:outline-none focus:ring-2 focus:ring-blue-500/20",
+                  theme === 'dark'
+                    ? "bg-slate-800 text-white placeholder-slate-400 border-slate-600 focus:border-blue-500"
+                    : "bg-white text-slate-900 placeholder-slate-400 border-slate-200 focus:border-blue-400"
+                )}
+              />
+            </div>
+            
+            {/* Services Grid - Scrollable */}
+            <div className="max-h-48 overflow-y-auto pr-1 space-y-1.5">
+              {displayedServices.map(service => {
+                const isSelected = formData.available_services.includes(service);
+                
+                return (
+                  <motion.button
+                    key={service}
+                    type="button"
+                    onClick={() => toggleService(service)}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-2 rounded-lg border transition-all text-left text-xs",
+                      "cursor-pointer",
+                      isSelected
+                        ? theme === 'dark'
+                          ? "border-blue-500 bg-blue-900/60"
+                          : "border-blue-500 bg-blue-50"
+                        : theme === 'dark'
+                        ? "border-slate-600 hover:border-blue-500 bg-slate-800 hover:bg-slate-700"
+                        : "border-slate-200 hover:border-blue-400/50 bg-white hover:bg-slate-50"
+                    )}
+                  >
+                    <span className={cn(
+                      "font-medium truncate pr-2 cursor-pointer",
+                      isSelected
+                        ? theme === 'dark'
+                          ? "text-blue-200"
+                          : "text-blue-600"
+                        : theme === 'dark' 
+                          ? "text-slate-200" 
+                          : "text-slate-700"
+                    )}>
+                      {service}
+                    </span>
+                    {isSelected && (
+                      <CheckCircle2 className={cn(
+                        "w-3.5 h-3.5 shrink-0",
+                        theme === 'dark' ? "text-blue-200" : "text-blue-600"
+                      )} />
+                    )}
+                  </motion.button>
+                );
+              })}
+
+              {/* Show More Button */}
+              {hasMoreServices && (
+                <button
+                  onClick={() => setShowAllServices(true)}
                   className={cn(
-                    "flex items-center gap-1 px-2 py-1 rounded-md",
+                    "w-full text-center text-xs py-2 rounded-lg border border-dashed transition-all cursor-pointer",
                     theme === 'dark'
-                      ? "bg-slate-800/50"
-                      : "bg-white/70"
+                      ? "border-slate-600 text-slate-300 hover:border-blue-500 hover:text-blue-300"
+                      : "border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600"
                   )}
                 >
-                  <item.icon className="w-3 h-3 text-emerald-500 shrink-0" />
-                  <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300">
-                    {item.text}
-                  </span>
-                </div>
-              ))}
+                  +{filteredServices.length - 6} more
+                </button>
+              )}
+
+              {showAllServices && filteredServices.length > 6 && (
+                <button
+                  onClick={() => setShowAllServices(false)}
+                  className={cn(
+                    "w-full text-center text-xs py-2 rounded-lg border border-dashed transition-all cursor-pointer",
+                    theme === 'dark'
+                      ? "border-slate-600 text-slate-300 hover:border-blue-500 hover:text-blue-300"
+                      : "border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600"
+                  )}
+                >
+                  Show less
+                </button>
+              )}
             </div>
           </div>
         </div>
-      </motion.div>
+
+        {/* Right Column: Operating Hours - Full Height */}
+        <div className={cn(
+          "p-4 rounded-xl border-2 h-full flex flex-col",
+          theme === 'dark' 
+            ? "bg-slate-900 border-slate-600" 
+            : "bg-white border-slate-200"
+        )}>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className={cn(
+              "text-sm font-bold flex items-center gap-1.5",
+              theme === 'dark' ? "text-white" : "text-slate-900"
+            )}>
+              <Clock className={cn(
+                "w-4 h-4",
+                theme === 'dark' ? "text-blue-400" : "text-blue-600"
+              )} />
+              Days & Hours
+            </h4>
+            <button
+              type="button"
+              onClick={applyToAllDays}
+              className={cn(
+                "text-[10px] font-medium px-2 py-1 rounded transition-all border cursor-pointer whitespace-nowrap",
+                theme === 'dark'
+                  ? "border-blue-500 text-blue-300 hover:bg-blue-900/40"
+                  : "border-blue-400 text-blue-600 hover:bg-blue-50"
+              )}
+            >
+              Copy Monday
+            </button>
+          </div>
+
+          {/* Scrollable Days Container - Takes remaining space */}
+          <div className="flex-1 max-h-[400px] overflow-y-auto pr-1 space-y-2">
+            {days.map(([day, hours]) => (
+              <div 
+                key={day}
+                className={cn(
+                  "flex items-center gap-2 p-2 rounded-lg transition-all",
+                  theme === 'dark'
+                    ? "bg-slate-800 hover:bg-slate-700"
+                    : "bg-slate-50 hover:bg-slate-100"
+                )}
+              >
+                {/* Day Abbreviation */}
+                <div className="w-10 flex-shrink-0">
+                  <div className={cn(
+                    "w-8 h-8 rounded-md flex items-center justify-center font-bold text-xs cursor-default",
+                    theme === 'dark'
+                      ? "bg-slate-700 text-slate-200"
+                      : "bg-slate-200 text-slate-700"
+                  )}>
+                    {DAY_ABBREVIATIONS[day]}
+                  </div>
+                </div>
+
+                {/* Hours Controls - Takes remaining space */}
+                <div className="flex-1 flex items-center justify-end gap-2">
+                  <label className="flex items-center gap-1 cursor-pointer flex-shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={!hours.is_closed}
+                      onChange={(e) => updateOperatingHours(day, 'is_closed', !e.target.checked)}
+                      className={cn(
+                        "w-3.5 h-3.5 rounded cursor-pointer",
+                        theme === 'dark'
+                          ? "border-slate-500 bg-slate-700 checked:bg-blue-500"
+                          : "border-slate-300 bg-white checked:bg-blue-600"
+                      )}
+                    />
+                    <span className={cn(
+                      "text-xs font-medium cursor-pointer",
+                      theme === 'dark' ? "text-slate-200" : "text-slate-700"
+                    )}>
+                      Open
+                    </span>
+                  </label>
+
+                  {!hours.is_closed ? (
+                    <div className="flex items-center gap-1">
+                      {/* Open Time Select */}
+                      <div className="relative">
+                        <select
+                          value={hours.open}
+                          onChange={(e) => updateOperatingHours(day, 'open', e.target.value)}
+                          className={cn(
+                            "appearance-none w-24 px-2 py-1.5 pr-6 rounded border text-xs font-medium cursor-pointer",
+                            "focus:outline-none focus:ring-1 focus:ring-blue-500",
+                            theme === 'dark'
+                              ? "bg-slate-700 border-slate-600 text-white"
+                              : "bg-white border-slate-200 text-slate-900"
+                          )}
+                        >
+                          {TIME_OPTIONS.map(time => (
+                            <option key={`open-${day}-${time}`} value={time} className="cursor-pointer">
+                              {formatTimeForDisplay(time)}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className={cn(
+                          "absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none",
+                          theme === 'dark' ? "text-slate-400" : "text-slate-500"
+                        )} />
+                      </div>
+
+                      <span className={cn(
+                        "text-xs cursor-default",
+                        theme === 'dark' ? "text-slate-400" : "text-slate-500"
+                      )}>
+                        to
+                      </span>
+
+                      {/* Close Time Select */}
+                      <div className="relative">
+                        <select
+                          value={hours.close}
+                          onChange={(e) => updateOperatingHours(day, 'close', e.target.value)}
+                          className={cn(
+                            "appearance-none w-24 px-2 py-1.5 pr-6 rounded border text-xs font-medium cursor-pointer",
+                            "focus:outline-none focus:ring-1 focus:ring-blue-500",
+                            theme === 'dark'
+                              ? "bg-slate-700 border-slate-600 text-white"
+                              : "bg-white border-slate-200 text-slate-900"
+                          )}
+                        >
+                          {TIME_OPTIONS.map(time => (
+                            <option key={`close-${day}-${time}`} value={time} className="cursor-pointer">
+                              {formatTimeForDisplay(time)}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className={cn(
+                          "absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none",
+                          theme === 'dark' ? "text-slate-400" : "text-slate-500"
+                        )} />
+                      </div>
+                    </div>
+                  ) : (
+                    <span className={cn(
+                      "text-xs font-medium px-3 py-1.5 rounded w-24 text-center flex-shrink-0 cursor-default",
+                      theme === 'dark'
+                        ? "bg-red-900/40 text-red-300"
+                        : "bg-red-100 text-red-600"
+                    )}>
+                      Closed
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 };

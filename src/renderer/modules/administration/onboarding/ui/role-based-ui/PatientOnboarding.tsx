@@ -511,36 +511,49 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
 
       {/* Navigation */}
       <div className="flex justify-between pt-6">
-        {currentStage > 1 ? (
-          <button
-            type="button"
-            onClick={() => setCurrentStage(1)}
-            disabled={isSubmitting}
-            className={cn(
-              "flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all",
-              theme === 'dark'
-                ? "border-2 border-slate-700 text-slate-300 hover:bg-slate-800"
-                : "border-2 border-slate-300 text-slate-700 hover:bg-slate-50",
-              isSubmitting && "opacity-50 cursor-not-allowed"
-            )}
-          >
-            <ChevronLeft className="w-5 h-5" />
-            Back
-          </button>
-        ) : (
-          <div />
-        )}
+        {/* Back button - Always visible on all steps */}
+        <button
+          type="button"
+          onClick={() => {
+            if (currentStage === 1) {
+              // On first step, go back to previous page
+              navigate(-1);
+            } else {
+              // On second step, go back to step 1
+              setCurrentStage(1);
+            }
+          }}
+          disabled={isSubmitting}
+          className={cn(
+            "flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all border-2",
+            // Cursor classes
+            !isSubmitting ? "cursor-pointer" : "cursor-not-allowed",
+            // Theme-based styling
+            theme === 'dark'
+              ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+              : "border-slate-300 text-slate-700 hover:bg-slate-50",
+            isSubmitting && "opacity-50"
+          )}
+        >
+          <ChevronLeft className="w-5 h-5" />
+          {currentStage === 1 ? 'Back' : 'Back'}
+        </button>
         
+        {/* Right side buttons - Continue or Submit */}
         {currentStage < 2 ? (
           <button
             type="button"
-            disabled={!isStage1Valid}
+            disabled={!isStage1Valid || isSubmitting}
             onClick={() => setCurrentStage(2)}
             className={cn(
               "ml-auto flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all",
-              isStage1Valid
+              // Cursor classes
+              isStage1Valid && !isSubmitting ? "cursor-pointer" : "cursor-not-allowed",
+              // Style based on validity
+              isStage1Valid && !isSubmitting
                 ? "bg-gradient-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400",
+              isSubmitting && "opacity-50"
             )}
           >
             Continue
@@ -552,9 +565,13 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
             disabled={!isFormComplete || isSubmitting}
             className={cn(
               "ml-auto flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all",
+              // Cursor classes
+              isFormComplete && !isSubmitting ? "cursor-pointer" : "cursor-not-allowed",
+              // Style based on validity
               isFormComplete && !isSubmitting
                 ? "bg-gradient-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400",
+              isSubmitting && "opacity-50"
             )}
           >
             {isSubmitting ? (
@@ -710,7 +727,7 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
                   "text-[11px] font-semibold tracking-wide uppercase",
                   theme === 'dark' ? "text-slate-500" : "text-slate-500"
                 )}>
-                  Patient Registration
+                Set Up Your Health Profile
                 </div>
               </div>
             </div>

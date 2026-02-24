@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   Sun,
   Moon,
+  ChevronLeft,
 } from 'lucide-react';
 import { cn } from '../../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from  '../../../../../app/store/hooks/useApp';
@@ -84,8 +85,6 @@ const ROLES = [
   }
 ];
 
-
-
 /* ==========================================================================
    MAIN COMPONENT
    ========================================================================== */
@@ -105,8 +104,12 @@ export const RoleSelection: React.FC = () => {
     }
   };
 
-    const { user } = useAppSelector((state) => state.auth);
-    const loggedInUserName=user?.profile.first_name
+  const handleGoBack = () => {
+    navigate(-1); // Navigate to previous page
+  };
+
+  const { user } = useAppSelector((state) => state.auth);
+  const loggedInUserName = user?.profile.first_name;
 
   return (
     <div className={cn(
@@ -136,13 +139,29 @@ export const RoleSelection: React.FC = () => {
       )}>
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            {/* Logo */}
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center gap-3"
-            >
-              <LogoImage></LogoImage>
+            {/* Logo and Back Button */}
+            <div className="flex items-center gap-4">
+              {/* Back Button */}
+              <motion.button
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                whileHover={{ scale: 1.05, x: -3 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleGoBack}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all border-2 cursor-pointer",
+                  theme === 'dark'
+                    ? 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-700/60 hover:border-slate-600'
+                    : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200 hover:border-slate-300'
+                )}
+                aria-label="Go back"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="text-sm font-medium hidden sm:inline">Back</span>
+              </motion.button>
+
+              {/* Logo */}
+              <LogoImage />
               <div>
                 <div className="text-xl font-bold tracking-tight bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
                   Custocare AI
@@ -151,10 +170,10 @@ export const RoleSelection: React.FC = () => {
                   "text-[11px] font-semibold tracking-wide uppercase",
                   theme === 'dark' ? "text-slate-500" : "text-slate-500"
                 )}>
-                  Setup Your Account
+                 Complete Your Profile
                 </div>
               </div>
-            </motion.div>
+            </div>
 
             {/* Theme Toggle */}
             <motion.button
@@ -187,28 +206,26 @@ export const RoleSelection: React.FC = () => {
             className="space-y-6"
           >
             {/* Header Section */}
-              <motion.div variants={itemVariants} className="text-center space-y-2">
-                <h1
-                  className={cn(
-                    "text-3xl sm:text-4xl font-semibold tracking-tight",
-                    theme === 'dark' ? "text-white" : "text-slate-900"
-                  )}
-                >
-                Hi{" "}
-              <span
+            <motion.div variants={itemVariants} className="text-center space-y-2">
+              <h1
                 className={cn(
-                  "font-medium",
-                  theme === 'dark' ? "text-indigo-300" : "text-indigo-600"
+                  "text-3xl sm:text-4xl font-semibold tracking-tight",
+                  theme === 'dark' ? "text-white" : "text-slate-900"
                 )}
               >
-                {loggedInUserName}
-              </span>
-              , select your role to continue...
+                Hi{" "}
+                <span
+                  className={cn(
+                    "font-medium",
+                    theme === 'dark' ? "text-indigo-300" : "text-indigo-600"
+                  )}
+                >
+                  {loggedInUserName}
+                </span>
+                , select your role to continue...
+              </h1>
+            </motion.div>
 
-                </h1>
-
-
-                </motion.div>
             {/* Role Cards */}
             <motion.div
               variants={containerVariants}
@@ -332,7 +349,7 @@ export const RoleSelection: React.FC = () => {
                           ? "bg-slate-700/50 text-slate-300 border border-slate-600"
                           : "bg-slate-100 text-slate-700 border border-slate-300"
                       )}>
-                        {isSelected ? 'Selected' : 'Proceed'}
+                        {isSelected ? 'Selected' : 'Select'}
                       </div>
                     </div>
                   </motion.button>
@@ -354,10 +371,10 @@ export const RoleSelection: React.FC = () => {
                     whileHover={{ scale: 1.03, y: -2 }}
                     whileTap={{ scale: 0.98 }}
                     className={cn(
-                      "flex items-center gap-3 px-10 py-1 rounded-2xl font-bold text-lg shadow-2xl cursor-pointer transition-all focus:outline-none focus:ring-4",
+                      "flex items-center gap-3 px-10 py-4 rounded-2xl font-bold text-lg shadow-2xl cursor-pointer transition-all focus:outline-none focus:ring-4",
                       selectedRoleData
                         ? `bg-gradient-to-r ${selectedRoleData.gradient} text-white hover:shadow-3xl focus:ring-blue-500/50`
-                        : "bg-slate-400 text-white"
+                        : "bg-slate-400 text-white cursor-not-allowed"
                     )}
                   >
                     Proceed as {selectedRoleData?.title}

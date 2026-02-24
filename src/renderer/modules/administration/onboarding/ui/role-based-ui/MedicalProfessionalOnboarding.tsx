@@ -564,67 +564,84 @@ export const MedicalProfessionalOnboarding: React.FC = () => {
       </AnimatePresence>
 
       {/* Navigation */}
-      <div className="flex justify-between pt-6">
-        {currentStage > 1 ? (
-          <button
-            type="button"
-            onClick={() => setCurrentStage(1)}
-            disabled={isSubmitting}
-            className={cn(
-              "flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all",
-              theme === 'dark'
-                ? "border-2 border-slate-700 text-slate-300 hover:bg-slate-800"
-                : "border-2 border-slate-300 text-slate-700 hover:bg-slate-50",
-              isSubmitting && "opacity-50 cursor-not-allowed"
-            )}
-          >
-            <ChevronLeft className="w-5 h-5" />
-            Back
-          </button>
-        ) : (
-          <div />
+    <div className="flex justify-between pt-6">
+      {/* Back button - Always visible on all steps */}
+      <button
+        type="button"
+        onClick={() => {
+          if (currentStage === 1) {
+            // On first step, go back to previous page
+            navigate(-1);
+          } else {
+            // On second step, go back to step 1
+            setCurrentStage(1);
+          }
+        }}
+        disabled={isSubmitting}
+        className={cn(
+          "flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all border-2",
+          // Cursor classes
+          !isSubmitting ? "cursor-pointer" : "cursor-not-allowed",
+          // Theme-based styling
+          theme === 'dark'
+            ? "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-600"
+            : "border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400",
+          isSubmitting && "opacity-50"
         )}
-        
-        {currentStage < 2 ? (
-          <button
-            type="button"
-            disabled={!isStage1Valid}
-            onClick={() => setCurrentStage(2)}
-            className={cn(
-              "ml-auto flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all",
-              isStage1Valid
-                ? "bg-gradient-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
-            )}
-          >
-            Continue
-            <ArrowRight className="w-5 h-5" />
-          </button>
-        ) : (
-          <button
-            type="submit"
-            disabled={!isFormComplete || isSubmitting}
-            className={cn(
-              "ml-auto flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all",
-              isFormComplete && !isSubmitting
-                ? "bg-gradient-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
-            )}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Submitting...
-              </>
-            ) : (
-              <>
-                <BadgeCheck className="w-5 h-5" />
-                Complete Registration
-              </>
-            )}
-          </button>
-        )}
-      </div>
+      >
+        <ChevronLeft className="w-5 h-5" />
+        Back
+      </button>
+      
+      {/* Right side buttons - Continue or Submit */}
+      {currentStage < 2 ? (
+        <button
+          type="button"
+          disabled={!isStage1Valid || isSubmitting}
+          onClick={() => setCurrentStage(2)}
+          className={cn(
+            "ml-auto flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all",
+            // Cursor classes
+            isStage1Valid && !isSubmitting ? "cursor-pointer" : "cursor-not-allowed",
+            // Style based on validity
+            isStage1Valid && !isSubmitting
+              ? "bg-gradient-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 hover:shadow-lg"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400",
+            isSubmitting && "opacity-50"
+          )}
+        >
+          Continue
+          <ArrowRight className="w-5 h-5" />
+        </button>
+      ) : (
+        <button
+          type="submit"
+          disabled={!isFormComplete || isSubmitting}
+          className={cn(
+            "ml-auto flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all",
+            // Cursor classes
+            isFormComplete && !isSubmitting ? "cursor-pointer" : "cursor-not-allowed",
+            // Style based on validity
+            isFormComplete && !isSubmitting
+              ? "bg-gradient-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 hover:shadow-lg"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400",
+            isSubmitting && "opacity-50"
+          )}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Submitting...
+            </>
+          ) : (
+            <>
+              <BadgeCheck className="w-5 h-5" />
+              Complete Registration
+            </>
+          )}
+        </button>
+      )}
+    </div>
     </form>
   );
 
@@ -808,7 +825,7 @@ export const MedicalProfessionalOnboarding: React.FC = () => {
                   "text-[11px] font-semibold tracking-wide uppercase",
                   theme === 'dark' ? "text-slate-500" : "text-slate-500"
                 )}>
-                  Care Team Member
+                  Add Your Professional Details
                 </div>
               </div>
             </div>
