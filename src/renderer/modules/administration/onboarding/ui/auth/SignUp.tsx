@@ -15,8 +15,7 @@ import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../../shared/types/cn';
 import { countryCodes } from './countryCodes';
-// Import the useRegister hook from the API layer
-import { useRegister } from '../../api/queries/register-user/registerUserQuery'
+import { useRegister } from '../../../../account/api/AccountQueries';
 
 interface FormState {
   email: string;
@@ -38,14 +37,13 @@ export const SignUp: React.FC = () => {
   const theme = useAppSelector((state) => state.ui.theme);
   
   // Initialize the registration mutation hook
-  // Note: Toast notifications are handled in the queries.ts file
   const { mutate: register, isPending: isLoading } = useRegister();
 
   // Form state management
   const [formState, setFormState] = useState<FormState>({
     email: '',
     phone: '',
-    phoneCountryCode: '+1', // Default to US country code
+    phoneCountryCode: '+256',
     firstName: '',
     lastName: '',
     password: '',
@@ -202,7 +200,7 @@ export const SignUp: React.FC = () => {
     // Prepare data for API call
     const registerData = {
       email: formState.email,
-      phone: selectedCountry.dial_code + formState.phone.replace(/\D/g, ''), // Combine country code with digits-only phone
+      phone: selectedCountry.dial_code + formState.phone.replace(/\D/g, ''),
       first_name: formState.firstName,
       last_name: formState.lastName,
       password: formState.password,
@@ -210,7 +208,6 @@ export const SignUp: React.FC = () => {
     };
 
     // Call the registration mutation
-    // Note: Success/error handling (including toast notifications) is managed in queries.ts
     register(registerData);
   };
 
@@ -331,7 +328,7 @@ export const SignUp: React.FC = () => {
 
           <div className="flex gap-2">
             {/* Country Code Selector */}
-            <div className="relative flex-shrink-0 w-36">
+            <div className="relative shrink-0 w-36">
               <button
                 type="button"
                 onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
@@ -349,7 +346,7 @@ export const SignUp: React.FC = () => {
                   <span className="text-base">{selectedCountry.flag}</span>
                   <span className="font-medium">{selectedCountry.dial_code}</span>
                 </span>
-                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
@@ -548,38 +545,37 @@ export const SignUp: React.FC = () => {
         </div>
 
         {/* Submit Button */}
-            <button
-        type="submit"
-        disabled={isLoading || !isFormValid}
-        className={cn(
-          'w-full py-3 rounded-lg font-semibold text-sm mt-6',
-          'transition-all duration-200 flex items-center justify-center gap-2',
-          'focus:outline-none focus:ring-4',
-          isFormValid && !isLoading
-            ? cn(
-                'cursor-pointer',
-                theme === 'dark'
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 focus:ring-blue-500/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
-                  : 'bg-gradient-to-r from-blue-600 to-blue-600 text-white hover:from-blue-700 hover:to-blue-700 focus:ring-blue-400/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
-              )
-            : cn(
-                'cursor-not-allowed',
-                theme === 'dark'
-                  ? 'bg-gray-700 text-gray-500'
-                  : 'bg-gray-200 text-gray-400'
-              )
-        )}
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Creating your account...
-          </>
-        ) : (
-          'Create Account'
-        )}
-      </button>
-
+        <button
+          type="submit"
+          disabled={isLoading || !isFormValid}
+          className={cn(
+            'w-full py-3 rounded-lg font-semibold text-sm mt-6',
+            'transition-all duration-200 flex items-center justify-center gap-2',
+            'focus:outline-none focus:ring-4',
+            isFormValid && !isLoading
+              ? cn(
+                  'cursor-pointer',
+                  theme === 'dark'
+                    ? 'bg-linear-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 focus:ring-blue-500/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
+                    : 'bg-linear-to-r from-blue-600 to-blue-600 text-white hover:from-blue-700 hover:to-blue-700 focus:ring-blue-400/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
+                )
+              : cn(
+                  'cursor-not-allowed',
+                  theme === 'dark'
+                    ? 'bg-gray-700 text-gray-500'
+                    : 'bg-gray-200 text-gray-400'
+                )
+          )}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Creating your account...
+            </>
+          ) : (
+            'Create Account'
+          )}
+        </button>
 
         {/* Sign in link */}
         <p className={cn('text-center text-xs pt-1', theme === 'dark' ? 'text-gray-500' : 'text-gray-600')}>

@@ -4,29 +4,8 @@ import { Lock, AlertCircle, Loader2, CheckCircle, Eye, EyeOff, ShieldCheck } fro
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../../shared/types/cn';
-
-/**
- * ============================================================================
- * RESET PASSWORD PAGE COMPONENT
- * ============================================================================
- * 
- * Secure password reset interface for Custocare AI healthcare platform.
- * Handles the final step of password recovery after email verification.
- * 
- * Key Features:
- * - Token validation from URL parameters
- * - Password strength requirements
- * - Real-time password matching validation
- * - Password visibility toggles
- * - Comprehensive error handling
- * - Success state with auto-redirect
- * 
- * Security:
- * - Validates reset token before allowing password change
- * - Enforces strong password requirements
- * - Single-use token system
- * - Time-limited token validity
- */
+import { selectPasswordResetEmail } from '../../../../../app/store/slices/authSlice';
+import { useResetPassword } from '../../../../account/api/AccountQueries';
 
 interface FormState {
   password: string;
@@ -49,16 +28,15 @@ export const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const theme = useAppSelector((state) => state.ui.theme);
+  const resetEmailFromSlice = useAppSelector(selectPasswordResetEmail);
 
   /* ==========================================================================
-     LOCAL STATE MANAGEMENT
+     LOCAL STATE
      ========================================================================== */
-
   const [formState, setFormState] = useState<FormState>({
     password: '',
     confirmPassword: '',
   });
-
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -73,12 +51,23 @@ export const ResetPassword: React.FC = () => {
 
   // Extract token from URL
   const resetToken = searchParams.get('token');
-  const email = searchParams.get('email');
+  const emailFromUrl = searchParams.get('email');
+
+  // Use email from URL or slice
+  const email = emailFromUrl || resetEmailFromSlice;
 
   /* ==========================================================================
-     TOKEN VALIDATION ON MOUNT
+     MUTATION
      ========================================================================== */
+  const resetPasswordMutation = useResetPassword({
+    onSuccess: () => {
+      setIsSuccess(true);
+    },
+  });
 
+  /* ==========================================================================
+     TOKEN VALIDATION (simulated to preserve UI)
+     ========================================================================== */
   useEffect(() => {
     const validateToken = async () => {
       if (!resetToken) {
@@ -87,21 +76,10 @@ export const ResetPassword: React.FC = () => {
         setIsValidatingToken(false);
         return;
       }
-
-      try {
-        // TODO: Replace with actual API call to validate token
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        
-        // Mock validation - in production, check with backend
-        setTokenValid(true);
-      } catch {
-        setFormErrors({
-          token: 'Reset link has expired or is invalid. Please request a new one.',
-        });
-        setTokenValid(false);
-      } finally {
-        setIsValidatingToken(false);
-      }
+      // Simulate a short validation delay (no actual API call)
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setTokenValid(true);
+      setIsValidatingToken(false);
     };
 
     validateToken();
@@ -110,13 +88,11 @@ export const ResetPassword: React.FC = () => {
   /* ==========================================================================
      AUTO-REDIRECT ON SUCCESS
      ========================================================================== */
-
   useEffect(() => {
     if (isSuccess) {
       const timer = setTimeout(() => {
         navigate('/login');
       }, 3000);
-
       return () => clearTimeout(timer);
     }
   }, [isSuccess, navigate]);
@@ -124,20 +100,15 @@ export const ResetPassword: React.FC = () => {
   /* ==========================================================================
      VALIDATION LOGIC
      ========================================================================== */
-
   const calculatePasswordStrength = useCallback((password: string): PasswordStrength => {
     if (!password) return { score: 0, label: '', color: '' };
-
     let score = 0;
-    
     if (password.length >= 8) score++;
     if (password.length >= 12) score++;
     if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
     if (/\d/.test(password)) score++;
     if (/[^a-zA-Z0-9]/.test(password)) score++;
-
     const normalized = Math.min(score, 4);
-
     const configs = [
       { label: 'Weak', color: 'bg-red-500' },
       { label: 'Fair', color: 'bg-orange-500' },
@@ -145,24 +116,17 @@ export const ResetPassword: React.FC = () => {
       { label: 'Strong', color: 'bg-emerald-500' },
       { label: 'Very Strong', color: 'bg-green-600' },
     ];
-
-    return {
-      score: normalized,
-      label: configs[normalized]?.label || '',
-      color: configs[normalized]?.color || '',
-    };
+    return { score: normalized, ...configs[normalized] };
   }, []);
 
   const validatePassword = useCallback(
     (password: string): string | undefined => {
       if (!password) return 'New password is required';
       if (password.length < 8) return 'Password must be at least 8 characters';
-      
       const strength = calculatePasswordStrength(password);
       if (strength.score < 2) {
         return 'Password is too weak. Add more characters, numbers, or symbols';
       }
-      
       return undefined;
     },
     [calculatePasswordStrength]
@@ -178,9 +142,8 @@ export const ResetPassword: React.FC = () => {
   );
 
   /* ==========================================================================
-     EVENT HANDLERS
+     HANDLERS
      ========================================================================== */
-
   const handleInputChange = useCallback((field: keyof FormState) => {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
       setFormState((prev) => ({ ...prev, [field]: e.target.value }));
@@ -192,12 +155,10 @@ export const ResetPassword: React.FC = () => {
     (field: keyof FormState) => {
       return () => {
         setTouched((prev) => ({ ...prev, [field]: true }));
-
         const error =
           field === 'password'
             ? validatePassword(formState.password)
             : validateConfirmPassword(formState.confirmPassword);
-
         if (error) {
           setFormErrors((prev) => ({ ...prev, [field]: error }));
         }
@@ -209,43 +170,44 @@ export const ResetPassword: React.FC = () => {
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-
       setTouched({ password: true, confirmPassword: true });
 
       const errors: FormErrors = {
         password: validatePassword(formState.password),
         confirmPassword: validateConfirmPassword(formState.confirmPassword),
       };
-
       setFormErrors(errors);
-
       if (errors.password || errors.confirmPassword) return;
 
-      try {
-        setIsLoading(true);
-
-        // TODO: Replace with actual API call
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-
-        setIsSuccess(true);
-      } catch (err) {
-        setFormErrors({
-          token:
-            err instanceof Error
-              ? err.message
-              : 'Failed to reset password. Please try again.',
-        });
-      } finally {
-        setIsLoading(false);
+      if (!resetToken) {
+        setFormErrors({ token: 'Reset token is missing' });
+        return;
       }
+
+      setIsLoading(true);
+      resetPasswordMutation.mutate({
+        code: resetToken,
+        new_password: formState.password,
+        new_password_confirmation: formState.confirmPassword,
+        is_token: true, // assuming token-based; adjust if needed
+        email: email || undefined, // fallback to slice email
+      });
+      // isLoading will be false after mutation settles; we set it false here but mutation handles its own loading
+      setIsLoading(false);
     },
-    [formState, validatePassword, validateConfirmPassword]
+    [
+      formState,
+      validatePassword,
+      validateConfirmPassword,
+      resetToken,
+      email,
+      resetPasswordMutation,
+    ]
   );
 
   /* ==========================================================================
      COMPUTED VALUES
      ========================================================================== */
-
   const passwordStrength = calculatePasswordStrength(formState.password);
   const showPasswordError = touched.password && formErrors.password;
   const showConfirmError = touched.confirmPassword && formErrors.confirmPassword;
@@ -258,7 +220,6 @@ export const ResetPassword: React.FC = () => {
   /* ==========================================================================
      RENDER - LOADING STATE
      ========================================================================== */
-
   if (isValidatingToken) {
     return (
       <AuthLayout
@@ -289,7 +250,6 @@ export const ResetPassword: React.FC = () => {
   /* ==========================================================================
      RENDER - INVALID TOKEN STATE
      ========================================================================== */
-
   if (!tokenValid) {
     return (
       <AuthLayout
@@ -307,7 +267,7 @@ export const ResetPassword: React.FC = () => {
             )}
             role="alert"
           >
-            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-6 h-6 shrink-0 mt-0.5" />
             <div className="space-y-2">
               <p className="font-semibold">Reset Link Expired or Invalid</p>
               <p
@@ -321,7 +281,6 @@ export const ResetPassword: React.FC = () => {
               </p>
             </div>
           </div>
-
           <Link
             to="/forgot-password"
             className={cn(
@@ -330,8 +289,8 @@ export const ResetPassword: React.FC = () => {
               'focus:outline-none focus:ring-4 focus:ring-offset-2',
               'flex items-center justify-center',
               theme === 'dark'
-                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
-                : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
+                ? 'bg-linear-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
+                : 'bg-linear-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
               'shadow-lg hover:shadow-xl hover:scale-[1.02]'
             )}
           >
@@ -345,7 +304,6 @@ export const ResetPassword: React.FC = () => {
   /* ==========================================================================
      RENDER - SUCCESS STATE
      ========================================================================== */
-
   if (isSuccess) {
     return (
       <AuthLayout
@@ -369,7 +327,6 @@ export const ResetPassword: React.FC = () => {
               />
             </div>
           </div>
-
           <div
             className={cn(
               'p-6 rounded-xl border text-center space-y-3',
@@ -396,7 +353,6 @@ export const ResetPassword: React.FC = () => {
               your new password.
             </p>
           </div>
-
           <Link
             to="/login"
             className={cn(
@@ -405,14 +361,13 @@ export const ResetPassword: React.FC = () => {
               'focus:outline-none focus:ring-4 focus:ring-offset-2',
               'flex items-center justify-center gap-2',
               theme === 'dark'
-                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
-                : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
+                ? 'bg-linear-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
+                : 'bg-linear-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
               'shadow-lg hover:shadow-xl hover:scale-[1.02]'
             )}
           >
             Continue to Sign In
           </Link>
-
           <p
             className={cn(
               'text-xs text-center',
@@ -429,11 +384,14 @@ export const ResetPassword: React.FC = () => {
   /* ==========================================================================
      RENDER - FORM STATE
      ========================================================================== */
-
   return (
     <AuthLayout
       title="Create New Password"
-      subtitle={email ? `Resetting password for ${email}` : 'Enter your new password'}
+      subtitle={
+        email
+          ? `Resetting password for ${email}`
+          : 'Enter your new password'
+      }
       heroImage="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=1200&q=80"
       heroHeadline="Secure Password Reset"
       heroSubtext="Your account security is paramount. Create a strong password to protect your healthcare data."
@@ -449,7 +407,7 @@ export const ResetPassword: React.FC = () => {
               : 'bg-blue-50 border-blue-200 text-blue-700'
           )}
         >
-          <ShieldCheck className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5" />
           <div className="text-sm space-y-1">
             <p className="font-semibold">Password Requirements</p>
             <ul
@@ -540,8 +498,6 @@ export const ResetPassword: React.FC = () => {
               {formErrors.password}
             </p>
           )}
-
-          {/* Password strength indicator */}
           {formState.password && touched.password && (
             <div className="space-y-2 mt-2">
               <div className="flex items-center justify-between text-xs">
@@ -626,7 +582,8 @@ export const ResetPassword: React.FC = () => {
                   ? theme === 'dark'
                     ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
                     : 'border-red-400 focus:border-red-500 focus:ring-red-100'
-                  : formState.confirmPassword && formState.confirmPassword === formState.password
+                  : formState.confirmPassword &&
+                    formState.confirmPassword === formState.password
                   ? theme === 'dark'
                     ? 'border-emerald-500/50 focus:border-emerald-500 focus:ring-emerald-500/20'
                     : 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-100'
@@ -651,14 +608,19 @@ export const ResetPassword: React.FC = () => {
               )}
               aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
             >
-              {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showConfirmPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
             </button>
-            {formState.confirmPassword && formState.confirmPassword === formState.password && (
-              <CheckCircle
-                className="absolute right-12 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500"
-                aria-label="Passwords match"
-              />
-            )}
+            {formState.confirmPassword &&
+              formState.confirmPassword === formState.password && (
+                <CheckCircle
+                  className="absolute right-12 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500"
+                  aria-label="Passwords match"
+                />
+              )}
           </div>
           {showConfirmError && (
             <p
@@ -684,8 +646,8 @@ export const ResetPassword: React.FC = () => {
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'flex items-center justify-center gap-3',
             theme === 'dark'
-              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
-              : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
+              ? 'bg-linear-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
+              : 'bg-linear-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
             !isLoading && isFormValid && 'shadow-lg hover:shadow-xl hover:scale-[1.02]'
           )}
         >

@@ -4,19 +4,7 @@ import { Mail, AlertCircle, Loader2, CheckCircle, ArrowRight } from 'lucide-reac
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../../shared/types/cn';
-
-/**
- * ============================================================================
- * FORGOT PASSWORD PAGE
- * ============================================================================
- * 
- * Enterprise-grade password recovery interface for Custocare AI.
- * Key features:
- * - Email validation with immediate feedback
- * - Success / error states
- * - Accessibility-first design
- * - Security guidance
- */
+import { useForgotPassword } from '../../../../account/api/AccountQueries';
 
 interface FormState {
   email: string;
@@ -33,6 +21,15 @@ const ForgotPassword: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [touched, setTouched] = useState(false);
+
+  // -------------------------------
+  // Mutation
+  // -------------------------------
+  const forgotPasswordMutation = useForgotPassword({
+    onSuccess: () => {
+      setIsSuccess(true);
+    },
+  });
 
   // -------------------------------
   // Validation
@@ -60,25 +57,22 @@ const ForgotPassword: React.FC = () => {
   }, [formState.email, validateEmail]);
 
   const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
+    (e: React.FormEvent) => {
       e.preventDefault();
       setTouched(true);
 
       const error = validateEmail(formState.email);
-      if (error) return setEmailError(error);
-
-      try {
-        setIsLoading(true);
-        // Simulated API call
-        await new Promise((res) => setTimeout(res, 1500));
-        setIsSuccess(true);
-      } catch (err) {
-        setEmailError(err instanceof Error ? err.message : 'Failed to send reset email.');
-      } finally {
-        setIsLoading(false);
+      if (error) {
+        setEmailError(error);
+        return;
       }
+
+      setIsLoading(true);
+      forgotPasswordMutation.mutate({ email: formState.email });
+      // The mutation will set isSuccess via onSuccess callback
+      setIsLoading(false);
     },
-    [formState.email, validateEmail]
+    [formState.email, validateEmail, forgotPasswordMutation]
   );
 
   const handleResendEmail = useCallback(() => {
@@ -123,16 +117,24 @@ const ForgotPassword: React.FC = () => {
           <div
             className={cn(
               'p-6 rounded-xl border text-center space-y-3',
-              theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200'
+              theme === 'dark'
+                ? 'bg-emerald-500/10 border-emerald-500/30'
+                : 'bg-emerald-50 border-emerald-200'
             )}
           >
             <h3
-              className={cn('text-lg font-semibold', theme === 'dark' ? 'text-emerald-300' : 'text-emerald-800')}
+              className={cn(
+                'text-lg font-semibold',
+                theme === 'dark' ? 'text-emerald-300' : 'text-emerald-800'
+              )}
             >
               Email Sent Successfully
             </h3>
             <p
-              className={cn('text-sm leading-relaxed', theme === 'dark' ? 'text-emerald-200/80' : 'text-emerald-700')}
+              className={cn(
+                'text-sm leading-relaxed',
+                theme === 'dark' ? 'text-emerald-200/80' : 'text-emerald-700'
+              )}
             >
               We've sent password reset instructions to <strong>{formState.email}</strong>.
               Please check your inbox and spam folder.
@@ -143,10 +145,17 @@ const ForgotPassword: React.FC = () => {
           <div
             className={cn(
               'space-y-4 p-5 rounded-xl border',
-              theme === 'dark' ? 'bg-gray-900/30 border-gray-800/50' : 'bg-gray-50/50 border-gray-200'
+              theme === 'dark'
+                ? 'bg-gray-900/30 border-gray-800/50'
+                : 'bg-gray-50/50 border-gray-200'
             )}
           >
-            <h4 className={cn('text-sm font-semibold', theme === 'dark' ? 'text-gray-200' : 'text-gray-800')}>
+            <h4
+              className={cn(
+                'text-sm font-semibold',
+                theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+              )}
+            >
               Next Steps:
             </h4>
             <ol className="space-y-3 text-sm">
@@ -156,11 +165,19 @@ const ForgotPassword: React.FC = () => {
                 'Create and confirm your new password',
                 'Sign in with your new credentials',
               ].map((step, i) => (
-                <li key={i} className={cn('flex gap-3', theme === 'dark' ? 'text-gray-400' : 'text-gray-600')}>
+                <li
+                  key={i}
+                  className={cn(
+                    'flex gap-3',
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  )}
+                >
                   <span
                     className={cn(
                       'flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold',
-                      theme === 'dark' ? 'bg-cyan-500/20 text-cyan-300' : 'bg-blue-100 text-blue-700'
+                      theme === 'dark'
+                        ? 'bg-cyan-500/20 text-cyan-300'
+                        : 'bg-blue-100 text-blue-700'
                     )}
                   >
                     {i + 1}
@@ -200,7 +217,12 @@ const ForgotPassword: React.FC = () => {
           </div>
 
           {/* Security Note */}
-          <div className={cn('text-xs text-center space-y-2 pt-2', theme === 'dark' ? 'text-gray-500' : 'text-gray-600')}>
+          <div
+            className={cn(
+              'text-xs text-center space-y-2 pt-2',
+              theme === 'dark' ? 'text-gray-500' : 'text-gray-600'
+            )}
+          >
             <p>
               <strong>Security Note:</strong> The reset link expires in 24 hours.
             </p>
@@ -228,25 +250,44 @@ const ForgotPassword: React.FC = () => {
         <div
           className={cn(
             'flex items-start gap-3 p-4 rounded-xl border',
-            theme === 'dark' ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300' : 'bg-blue-50 border-blue-200 text-blue-700'
+            theme === 'dark'
+              ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300'
+              : 'bg-blue-50 border-blue-200 text-blue-700'
           )}
         >
           <Mail className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="text-sm space-y-1">
             <p className="font-semibold">Password reset instructions</p>
-            <p className={cn(theme === 'dark' ? 'text-cyan-200/80' : 'text-blue-600')}>
-              We'll send a secure link to your email address. Click the link to create a new password.
+            <p
+              className={cn(
+                theme === 'dark' ? 'text-cyan-200/80' : 'text-blue-600'
+              )}
+            >
+              We'll send a secure link to your email address. Click the link to
+              create a new password.
             </p>
           </div>
         </div>
 
         {/* Email Field */}
         <div className="space-y-2">
-          <label htmlFor="email" className={cn('block text-sm font-semibold', theme === 'dark' ? 'text-gray-200' : 'text-gray-700')}>
+          <label
+            htmlFor="email"
+            className={cn(
+              'block text-sm font-semibold',
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+            )}
+          >
             Email Address
           </label>
           <div className="relative">
-            <Mail className={cn('absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5', theme === 'dark' ? 'text-gray-500' : 'text-gray-400')} aria-hidden="true" />
+            <Mail
+              className={cn(
+                'absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5',
+                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+              )}
+              aria-hidden="true"
+            />
             <input
               id="email"
               type="email"
@@ -273,7 +314,14 @@ const ForgotPassword: React.FC = () => {
             />
           </div>
           {showError && (
-            <p id="email-error" className={cn('text-sm flex items-center gap-2', theme === 'dark' ? 'text-red-400' : 'text-red-600')} role="alert">
+            <p
+              id="email-error"
+              className={cn(
+                'text-sm flex items-center gap-2',
+                theme === 'dark' ? 'text-red-400' : 'text-red-600'
+              )}
+              role="alert"
+            >
               <AlertCircle className="w-4 h-4" />
               {emailError}
             </p>
@@ -289,19 +337,59 @@ const ForgotPassword: React.FC = () => {
             theme === 'dark'
               ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
               : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
-            !isLoading && isFormValid ? 'shadow-lg hover:shadow-xl hover:scale-[1.02]' : ''
+            !isLoading && isFormValid
+              ? 'shadow-lg hover:shadow-xl hover:scale-[1.02]'
+              : ''
           )}
         >
-          {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /><span>Sending...</span></> : <><span>Send Reset Link</span><ArrowRight className="w-5 h-5" /></>}
+          {isLoading ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>Sending...</span>
+            </>
+          ) : (
+            <>
+              <span>Send Reset Link</span>
+              <ArrowRight className="w-5 h-5" />
+            </>
+          )}
         </button>
 
         {/* Security Measures */}
-        <div className={cn('p-4 rounded-xl border space-y-2', theme === 'dark' ? 'bg-gray-900/30 border-gray-800/50' : 'bg-gray-50/50 border-gray-200')}>
-          <h4 className={cn('text-xs font-semibold uppercase tracking-wider', theme === 'dark' ? 'text-gray-400' : 'text-gray-600')}>Security Measures</h4>
-          <ul className={cn('text-xs space-y-1.5', theme === 'dark' ? 'text-gray-500' : 'text-gray-600')}>
-            {['Reset link expires after 24 hours', 'Link can only be used once', 'HIPAA-compliant secure transmission'].map((item, i) => (
+        <div
+          className={cn(
+            'p-4 rounded-xl border space-y-2',
+            theme === 'dark'
+              ? 'bg-gray-900/30 border-gray-800/50'
+              : 'bg-gray-50/50 border-gray-200'
+          )}
+        >
+          <h4
+            className={cn(
+              'text-xs font-semibold uppercase tracking-wider',
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            )}
+          >
+            Security Measures
+          </h4>
+          <ul
+            className={cn(
+              'text-xs space-y-1.5',
+              theme === 'dark' ? 'text-gray-500' : 'text-gray-600'
+            )}
+          >
+            {[
+              'Reset link expires after 24 hours',
+              'Link can only be used once',
+              'HIPAA-compliant secure transmission',
+            ].map((item, i) => (
               <li key={i} className="flex items-center gap-2">
-                <div className={cn('w-1.5 h-1.5 rounded-full', theme === 'dark' ? 'bg-cyan-500' : 'bg-blue-500')} />
+                <div
+                  className={cn(
+                    'w-1.5 h-1.5 rounded-full',
+                    theme === 'dark' ? 'bg-cyan-500' : 'bg-blue-500'
+                  )}
+                />
                 {item}
               </li>
             ))}
@@ -309,9 +397,22 @@ const ForgotPassword: React.FC = () => {
         </div>
 
         {/* Help text */}
-        <div className={cn('text-center text-sm pt-2', theme === 'dark' ? 'text-gray-400' : 'text-gray-600')}>
+        <div
+          className={cn(
+            'text-center text-sm pt-2',
+            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+          )}
+        >
           Remember your password?{' '}
-          <Link to="/login" className={cn('font-semibold transition-colors', theme === 'dark' ? 'text-cyan-400 hover:text-cyan-300' : 'text-blue-600 hover:text-blue-700')}>
+          <Link
+            to="/login"
+            className={cn(
+              'font-semibold transition-colors',
+              theme === 'dark'
+                ? 'text-cyan-400 hover:text-cyan-300'
+                : 'text-blue-600 hover:text-blue-700'
+            )}
+          >
             Sign In
           </Link>
         </div>

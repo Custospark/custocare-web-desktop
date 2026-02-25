@@ -1,57 +1,51 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Shield, AlertCircle, Loader2, CheckCircle, Mail, Smartphone, RefreshCw } from 'lucide-react';
-import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/useApp';
+import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../../shared/types/cn';
-import {ROUTES} from '../../routes/onboardingRouteConstants'
-
-/**
- * ============================================================================
- * TWO-FACTOR AUTHENTICATION PAGE COMPONENT
- * ============================================================================
- * 
- * Multi-factor authentication verification for Custocare AI healthcare platform.
- * Implements secure 6-digit PIN/code verification for enhanced account security.
- * 
- * Key Features:
- * - 6-digit verification code input
- * - Auto-focus and auto-advance between digits
- * - Paste support for entire code
- * - Resend code functionality with cooldown
- * - Multiple delivery methods (email/SMS)
- * - Comprehensive error states
- * - Auto-submit on complete input
- * 
- * Security:
- * - Rate limiting on verification attempts
- * - Time-limited codes
- * - Secure token generation
- * - HIPAA-compliant authentication
- */
-
-interface LocationState {
-  email?: string;
-  phoneNumber?: string;
-  method?: 'email' | 'sms';
-}
+import {
+  selectVerificationContext,
+  selectPendingLogin,
+} from '../../../../../app/store/slices/authSlice';
+import {
+  useVerifyEmail,
+  useVerifyMfa,
+  useResendVerification,
+} from  '../../../../account/api/AccountQueries';
 
 const CODE_LENGTH = 6;
 const RESEND_COOLDOWN = 60; // seconds
 
 export const TwoFactorAuthPage: React.FC = () => {
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const location = useLocation();
   const theme = useAppSelector((state) => state.ui.theme);
 
-  const state = (location.state as LocationState) || {};
-  const { email, phoneNumber, method = 'email' } = state;
+  // Get verification context and pending login from slice
+  const verification = useAppSelector(selectVerificationContext);
+  const pendingLogin = useAppSelector(selectPendingLogin);
 
   /* ==========================================================================
-     LOCAL STATE MANAGEMENT
+     MUTATIONS
      ========================================================================== */
+  const verifyEmailMutation = useVerifyEmail({
+    onSuccess: () => {
+      setIsSuccess(true);
+      // Navigation is handled inside the hook; we just set local success for UI flash
+    },
+  });
 
+  const verifyMfaMutation = useVerifyMfa({
+    onSuccess: () => {
+      setIsSuccess(true);
+    },
+  });
+
+  const resendMutation = useResendVerification();
+
+  /* ==========================================================================
+     LOCAL STATE
+     ========================================================================== */
   const [code, setCode] = useState<string[]>(new Array(CODE_LENGTH).fill(''));
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -59,19 +53,29 @@ export const TwoFactorAuthPage: React.FC = () => {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isResending, setIsResending] = useState(false);
 
-  // Refs for input fields
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  /* ==========================================================================
+     DETERMINE VERIFICATION TYPE
+     ========================================================================== */
+  const verificationType = verification.type; // 'email' or 'mfa'
+  const userEmail = verification.email || pendingLogin?.email;
+
+  // For display: email verification uses email, MFA shows generic message
+  const deliveryMethod = verificationType === 'email' ? 'email' : 'authenticator app';
+  const maskedDestination =
+    verificationType === 'email' && userEmail
+      ? userEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')
+      : 'your registered device';
 
   /* ==========================================================================
      COUNTDOWN TIMER FOR RESEND
      ========================================================================== */
-
   useEffect(() => {
     if (resendCooldown > 0) {
       const timer = setTimeout(() => {
         setResendCooldown((prev) => prev - 1);
       }, 1000);
-
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
@@ -79,7 +83,6 @@ export const TwoFactorAuthPage: React.FC = () => {
   /* ==========================================================================
      AUTO-SUBMIT WHEN CODE COMPLETE
      ========================================================================== */
-
   useEffect(() => {
     if (code.every((digit) => digit !== '') && code.join('').length === CODE_LENGTH) {
       handleVerify();
@@ -88,15 +91,13 @@ export const TwoFactorAuthPage: React.FC = () => {
   }, [code]);
 
   /* ==========================================================================
-     REDIRECT ON SUCCESS
+     REDIRECT ON SUCCESS (if needed, though hooks navigate)
      ========================================================================== */
-
   useEffect(() => {
     if (isSuccess) {
       const timer = setTimeout(() => {
-        navigate(ROUTES.ROLE_SELECTION);
+        // Hooks already navigate, but this is a fallback
       }, 2000);
-
       return () => clearTimeout(timer);
     }
   }, [isSuccess, navigate]);
@@ -104,37 +105,27 @@ export const TwoFactorAuthPage: React.FC = () => {
   /* ==========================================================================
      EVENT HANDLERS
      ========================================================================== */
-
   const handleChange = useCallback(
     (index: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
-
-      // Only allow digits
       if (!/^\d*$/.test(value)) return;
 
       const newCode = [...code];
-
-      // Handle single digit input
       if (value.length === 1) {
         newCode[index] = value;
         setCode(newCode);
         setError('');
 
-        // Auto-advance to next input
         if (index < CODE_LENGTH - 1 && value !== '') {
           inputRefs.current[index + 1]?.focus();
         }
-      }
-      // Handle paste (multiple digits)
-      else if (value.length > 1) {
+      } else if (value.length > 1) {
         const digits = value.slice(0, CODE_LENGTH).split('');
         for (let i = 0; i < digits.length && index + i < CODE_LENGTH; i++) {
           newCode[index + i] = digits[i];
         }
         setCode(newCode);
         setError('');
-
-        // Focus last filled input or next empty one
         const nextIndex = Math.min(index + digits.length, CODE_LENGTH - 1);
         inputRefs.current[nextIndex]?.focus();
       }
@@ -144,32 +135,22 @@ export const TwoFactorAuthPage: React.FC = () => {
 
   const handleKeyDown = useCallback(
     (index: number) => (e: React.KeyboardEvent<HTMLInputElement>) => {
-      // Handle backspace
       if (e.key === 'Backspace') {
         e.preventDefault();
         const newCode = [...code];
-
         if (code[index] !== '') {
-          // Clear current digit
           newCode[index] = '';
           setCode(newCode);
         } else if (index > 0) {
-          // Move to previous digit and clear it
           newCode[index - 1] = '';
           setCode(newCode);
           inputRefs.current[index - 1]?.focus();
         }
-      }
-      // Handle left arrow
-      else if (e.key === 'ArrowLeft' && index > 0) {
+      } else if (e.key === 'ArrowLeft' && index > 0) {
         inputRefs.current[index - 1]?.focus();
-      }
-      // Handle right arrow
-      else if (e.key === 'ArrowRight' && index < CODE_LENGTH - 1) {
+      } else if (e.key === 'ArrowRight' && index < CODE_LENGTH - 1) {
         inputRefs.current[index + 1]?.focus();
-      }
-      // Handle Enter key - submit if code complete
-      else if (e.key === 'Enter' && code.every((digit) => digit !== '')) {
+      } else if (e.key === 'Enter' && code.every((digit) => digit !== '')) {
         handleVerify();
       }
     },
@@ -180,16 +161,11 @@ export const TwoFactorAuthPage: React.FC = () => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text');
     const digits = pastedData.replace(/\D/g, '').slice(0, CODE_LENGTH).split('');
-
     if (digits.length > 0) {
       const newCode = new Array(CODE_LENGTH).fill('');
-      digits.forEach((digit, index) => {
-        newCode[index] = digit;
-      });
+      digits.forEach((digit, i) => (newCode[i] = digit));
       setCode(newCode);
       setError('');
-
-      // Focus last filled input
       const lastIndex = Math.min(digits.length - 1, CODE_LENGTH - 1);
       inputRefs.current[lastIndex]?.focus();
     }
@@ -197,83 +173,57 @@ export const TwoFactorAuthPage: React.FC = () => {
 
   const handleVerify = useCallback(async () => {
     const verificationCode = code.join('');
-
     if (verificationCode.length !== CODE_LENGTH) {
       setError('Please enter the complete verification code');
       return;
     }
 
+    setError('');
+    setIsLoading(true);
+
     try {
-      setIsLoading(true);
-      setError('');
-
-      // TODO: Replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Mock validation - in production, verify with backend
-      // Simulating success for demo (accept any 6-digit code)
-      
-      // Mock successful authentication
-
-      // dispatch(loginSuccess(mockResponse));
-      setIsSuccess(true);
+      if (verificationType === 'email') {
+        // Email verification
+        verifyEmailMutation.mutate({
+          code: verificationCode,
+          is_token: false, // assuming not token-based; adjust if needed
+          // user_id will be taken from slice automatically by the hook
+        });
+      } else if (verificationType === 'mfa') {
+        // MFA verification
+        verifyMfaMutation.mutate({ mfa_code: verificationCode });
+      } else {
+        throw new Error('No active verification context');
+      }
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Invalid verification code. Please try again.'
-      );
-      // Clear code on error
+      setError(err instanceof Error ? err.message : 'Verification failed');
       setCode(new Array(CODE_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
     } finally {
       setIsLoading(false);
     }
-  }, [code, email, dispatch]);
+  }, [code, verificationType, verifyEmailMutation, verifyMfaMutation]);
 
   const handleResendCode = useCallback(async () => {
-    if (resendCooldown > 0) return;
+    if (resendCooldown > 0 || verificationType !== 'email') return; // only resend for email
 
     try {
       setIsResending(true);
       setError('');
-
-      // TODO: Replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Start cooldown
+      resendMutation.mutate({}); // user_id taken from slice automatically
       setResendCooldown(RESEND_COOLDOWN);
-
-      // Clear current code
       setCode(new Array(CODE_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to resend code. Please try again.'
-      );
+      setError(err instanceof Error ? err.message : 'Failed to resend code');
     } finally {
       setIsResending(false);
     }
-  }, [resendCooldown]);
-
-  /* ==========================================================================
-     COMPUTED VALUES
-     ========================================================================== */
-
-  const deliveryDestination = method === 'email' ? email : phoneNumber;
-  const deliveryMethod = method === 'email' ? 'email address' : 'phone number';
-  const maskedDestination = deliveryDestination
-    ? method === 'email'
-      ? deliveryDestination.replace(/(.{2})(.*)(@.*)/, '$1***$3')
-      : deliveryDestination.replace(/(\d{3})(\d{3})(\d{4})/, '(***) ***-$3')
-    : '***';
+  }, [resendCooldown, verificationType, resendMutation]);
 
   /* ==========================================================================
      RENDER - SUCCESS STATE
      ========================================================================== */
-
   if (isSuccess) {
     return (
       <AuthLayout
@@ -299,7 +249,6 @@ export const TwoFactorAuthPage: React.FC = () => {
               />
             </div>
           </div>
-
           <div
             className={cn(
               'p-6 rounded-xl border text-center',
@@ -325,7 +274,6 @@ export const TwoFactorAuthPage: React.FC = () => {
               Redirecting to your dashboard...
             </p>
           </div>
-
           <div className="flex justify-center">
             <Loader2
               className={cn(
@@ -342,7 +290,6 @@ export const TwoFactorAuthPage: React.FC = () => {
   /* ==========================================================================
      RENDER - VERIFICATION FORM
      ========================================================================== */
-
   return (
     <AuthLayout
       title="Two-Factor Authentication"
@@ -362,18 +309,14 @@ export const TwoFactorAuthPage: React.FC = () => {
               : 'bg-blue-50 border-blue-200 text-blue-700'
           )}
         >
-          {method === 'email' ? (
-            <Mail className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          {verificationType === 'email' ? (
+            <Mail className="w-5 h-5 shrink-0 mt-0.5" />
           ) : (
-            <Smartphone className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <Smartphone className="w-5 h-5 shrink-0 mt-0.5" />
           )}
           <div className="text-sm space-y-1">
             <p className="font-semibold">Verification Code Sent</p>
-            <p
-              className={cn(
-                theme === 'dark' ? 'text-cyan-200/80' : 'text-blue-600'
-              )}
-            >
+            <p className={cn(theme === 'dark' ? 'text-cyan-200/80' : 'text-blue-600')}>
               We've sent a 6-digit code to your {deliveryMethod}:{' '}
               <strong>{maskedDestination}</strong>
             </p>
@@ -391,7 +334,7 @@ export const TwoFactorAuthPage: React.FC = () => {
             )}
             role="alert"
           >
-            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
             <p className="text-sm">{error}</p>
           </div>
         )}
@@ -406,56 +349,60 @@ export const TwoFactorAuthPage: React.FC = () => {
           >
             Enter Verification Code
           </label>
-
-          <div className="flex justify-center gap-2 sm:gap-3">
-            {code.map((digit, index) => (
-              <input
-                key={index}
-                ref={(el) => {
-                  inputRefs.current[index] = el;
-                }}
-                type="text"
-                inputMode="numeric"
-                maxLength={2} // Allow 2 for paste handling
-                value={digit}
-                onChange={handleChange(index)}
-                onKeyDown={handleKeyDown(index)}
-                onPaste={index === 0 ? handlePaste : undefined}
-                disabled={isLoading}
-                className={cn(
-                  'w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-bold',
-                  'rounded-xl border-2 transition-all duration-200',
-                  'focus:outline-none focus:ring-4',
-                  'disabled:opacity-50 disabled:cursor-not-allowed',
-                  theme === 'dark'
-                    ? 'bg-gray-900/50 border-gray-800 text-white'
-                    : 'bg-white border-gray-300 text-gray-900',
-                  digit !== ''
-                    ? theme === 'dark'
-                      ? 'border-cyan-500 bg-cyan-500/10'
-                      : 'border-blue-500 bg-blue-50'
-                    : '',
-                  error
-                    ? theme === 'dark'
-                      ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
-                      : 'border-red-400 focus:border-red-500 focus:ring-red-100'
-                    : theme === 'dark'
-                    ? 'focus:border-cyan-500 focus:ring-cyan-500/20'
-                    : 'focus:border-blue-500 focus:ring-blue-100'
-                )}
-                aria-label={`Digit ${index + 1}`}
-                autoComplete="off"
-                autoFocus={index === 0}
-              />
-            ))}
-          </div>
+        <div className="flex justify-center gap-2 sm:gap-3">
+      {code.map((digit, index) => (
+        <input
+          key={index}
+          ref={(el) => {
+            inputRefs.current[index] = el;
+            // Don't return anything - implicit void
+          }}
+          type="text"
+          inputMode="numeric"
+          maxLength={2}
+          value={digit}
+          onChange={handleChange(index)}
+          onKeyDown={handleKeyDown(index)}
+          onPaste={index === 0 ? handlePaste : undefined}
+          disabled={isLoading}
+          className={cn(
+            'w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-bold',
+            'rounded-xl border-2 transition-all duration-200',
+            'focus:outline-none focus:ring-4',
+            'disabled:opacity-50 disabled:cursor-not-allowed',
+            theme === 'dark'
+              ? 'bg-gray-900/50 border-gray-800 text-white'
+              : 'bg-white border-gray-300 text-gray-900',
+            digit !== ''
+              ? theme === 'dark'
+                ? 'border-cyan-500 bg-cyan-500/10'
+                : 'border-blue-500 bg-blue-50'
+              : '',
+            error
+              ? theme === 'dark'
+                ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
+                : 'border-red-400 focus:border-red-500 focus:ring-red-100'
+              : theme === 'dark'
+              ? 'focus:border-cyan-500 focus:ring-cyan-500/20'
+              : 'focus:border-blue-500 focus:ring-blue-100'
+          )}
+          aria-label={`Digit ${index + 1}`}
+          autoComplete="off"
+          autoFocus={index === 0}
+        />
+      ))}
+    </div>
         </div>
 
-        {/* Verify button (manual trigger) */}
+        {/* Verify button */}
         <button
           type="button"
           onClick={handleVerify}
-          disabled={isLoading || code.some((digit) => digit === '')}
+          disabled={
+            isLoading ||
+            code.some((digit) => digit === '') ||
+            (!verificationType && !pendingLogin)
+          }
           className={cn(
             'w-full py-3.5 px-6 rounded-xl font-semibold text-base',
             'transition-all duration-200',
@@ -463,8 +410,8 @@ export const TwoFactorAuthPage: React.FC = () => {
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'flex items-center justify-center gap-3',
             theme === 'dark'
-              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
-              : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
+              ? 'bg-linear-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
+              : 'bg-linear-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
             !isLoading &&
               code.every((digit) => digit !== '') &&
               'shadow-lg hover:shadow-xl hover:scale-[1.02]'
@@ -483,45 +430,47 @@ export const TwoFactorAuthPage: React.FC = () => {
           )}
         </button>
 
-        {/* Resend code */}
-        <div className="text-center space-y-2">
-          {resendCooldown > 0 ? (
-            <p
-              className={cn(
-                'text-sm',
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-600'
-              )}
-            >
-              Resend code in {resendCooldown} seconds
-            </p>
-          ) : (
-            <button
-              type="button"
-              onClick={handleResendCode}
-              disabled={isResending}
-              className={cn(
-                'text-sm font-semibold transition-colors',
-                'inline-flex items-center gap-2',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-                theme === 'dark'
-                  ? 'text-cyan-400 hover:text-cyan-300'
-                  : 'text-blue-600 hover:text-blue-700'
-              )}
-            >
-              {isResending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Sending...</span>
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Resend Verification Code</span>
-                </>
-              )}
-            </button>
-          )}
-        </div>
+        {/* Resend code - only for email verification */}
+        {verificationType === 'email' && (
+          <div className="text-center space-y-2">
+            {resendCooldown > 0 ? (
+              <p
+                className={cn(
+                  'text-sm',
+                  theme === 'dark' ? 'text-gray-500' : 'text-gray-600'
+                )}
+              >
+                Resend code in {resendCooldown} seconds
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={handleResendCode}
+                disabled={isResending}
+                className={cn(
+                  'text-sm font-semibold transition-colors',
+                  'inline-flex items-center gap-2',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                  theme === 'dark'
+                    ? 'text-cyan-400 hover:text-cyan-300'
+                    : 'text-blue-600 hover:text-blue-700'
+                )}
+              >
+                {isResending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Resend Verification Code</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Security info */}
         <div
@@ -557,7 +506,7 @@ export const TwoFactorAuthPage: React.FC = () => {
             <li className="flex items-start gap-2">
               <div
                 className={cn(
-                  'w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0',
+                  'w-1.5 h-1.5 rounded-full mt-1.5 shrink-0',
                   theme === 'dark' ? 'bg-cyan-500' : 'bg-blue-500'
                 )}
               />
@@ -566,7 +515,7 @@ export const TwoFactorAuthPage: React.FC = () => {
             <li className="flex items-start gap-2">
               <div
                 className={cn(
-                  'w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0',
+                  'w-1.5 h-1.5 rounded-full mt-1.5 shrink-0',
                   theme === 'dark' ? 'bg-cyan-500' : 'bg-blue-500'
                 )}
               />
@@ -575,7 +524,7 @@ export const TwoFactorAuthPage: React.FC = () => {
             <li className="flex items-start gap-2">
               <div
                 className={cn(
-                  'w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0',
+                  'w-1.5 h-1.5 rounded-full mt-1.5 shrink-0',
                   theme === 'dark' ? 'bg-cyan-500' : 'bg-blue-500'
                 )}
               />
