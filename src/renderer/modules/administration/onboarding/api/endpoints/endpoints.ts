@@ -1,4 +1,4 @@
 export const STAFF_ENDPOINTS = {
-  REGISTER: '/register',
+  REGISTER: '/auth/register',
 
 } as const;

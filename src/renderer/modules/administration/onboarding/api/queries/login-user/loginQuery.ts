@@ -56,8 +56,8 @@ export const useLoginMutation = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  return useMutation<AuthData | null, Error, LoginRequest>({
-    mutationFn: async (credentials): Promise<AuthData | null> => {
+  return useMutation<AuthData | { requiresMfa: true } | null, Error, LoginRequest>({
+    mutationFn: async (credentials): Promise<AuthData | { requiresMfa: true } | null> => {
       const response: BackendLoginResponse = await authApi.login(credentials);
 
       switch (response.code) {
@@ -76,7 +76,8 @@ export const useLoginMutation = () => {
         }
 
         case 'MFA_REQUIRED':
-          return null;
+          // Return a special object to indicate MFA is required
+          return { requiresMfa: true };
 
         default:
           throw new Error(response.message || 'Login failed.');
@@ -87,8 +88,17 @@ export const useLoginMutation = () => {
       dispatch(loginStart());
     },
 
-    onSuccess: async (data: AuthData | null) => {
-      if (data) {
+    onSuccess: async (data: AuthData | { requiresMfa: true } | null) => {
+      // Check if it's an MFA required response
+      if (data && 'requiresMfa' in data) {
+        // MFA required
+        showToast('info', 'Two-factor authentication required.', 4000);
+        navigate(ROUTES.TWO_FACTOR_AUTH);
+        return;
+      }
+
+      // Check if it's a regular login response with user data
+      if (data && 'user' in data && 'token' in data) {
         // 1. Store auth data (user + token) in auth slice
         dispatch(loginSuccess(data));
         
@@ -131,9 +141,8 @@ export const useLoginMutation = () => {
           navigate(ROUTES.PORTAL_SELECTOR);
         }
       } else {
-        // MFA required
-        showToast('info', 'Two-factor authentication required.', 4000);
-        navigate(ROUTES.TWO_FACTOR_AUTH);
+        // This case should rarely happen now, but kept for safety
+        showToast('error', 'Unexpected login response format', 5000);
       }
     },
 

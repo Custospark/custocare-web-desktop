@@ -3,7 +3,7 @@ import { MEDICAL_RECORDS_ROUTES } from "../routeConstants";
 import { SuspenseWrapper } from "./shared/routeUtils";
 import { WithThemeProp } from "./shared/routeUtils";
 import FrontDesk from '../../../modules/medical-records/ui/patients/FrontDesk';
-import { MedicalRecordsDashboard } from '../../../modules/medical-records/ui/overview/MedicalRecordsDashboard';
+// import { MedicalRecordsDashboard } from '../../../modules/medical-records/ui/overview/MedicalRecordsDashboard';
 import MRVisitActionCenter from '../../../modules/medical-records/ui/visit-action-center/MRVisitActionCenter';
 import MRPatientSearch from '../../../modules/medical-records/ui/patients/views/MRPatientSearch';
 import MRPatientCreate from '../../../modules/medical-records/ui/patients/views/MRPatientCreate';
@@ -17,6 +17,7 @@ import MRBilling from "../../../modules/medical-records/ui/visit-action-center/b
 import MRBillingCycle from "../../../modules/medical-records/ui/revenue/MRBillingCycle";
 import { MRBillingReview } from "../../../modules/medical-records/ui/revenue/MRBillingReview";
 import RevenueStats from "../../../modules/medical-records/ui/revenue/stats/RevenueStats";
+import MedicalRecordsDashboard from "../../../modules/medical-records/ui/overview/MedicalRecordsDashboard";
 export const medicalRecordsRoutes = [
   <Route
     key="overview"
