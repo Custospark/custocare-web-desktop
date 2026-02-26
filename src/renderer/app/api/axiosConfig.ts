@@ -32,6 +32,8 @@ axiosInstance.interceptors.request.use(
     const state = store.getState();
 
     /* ---------------------------- Authorization ---------------------------- */
+    // Token is retrieved from the auth slice, which is populated after
+    // login, email verification, or MFA, and persisted to localStorage.
     const token = state.auth.token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

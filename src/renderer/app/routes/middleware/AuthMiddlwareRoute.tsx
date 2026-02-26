@@ -7,15 +7,24 @@ import LoadingSkeleton from '../../../shared/components/Loading/LoadingSkeletons
 
 /**
  * AuthMiddlewareRoute Component
- * Proper authentication middleware with initialization handling
+ * 
+ * Protects routes that require a fully authenticated user.
+ * - Uses `initializeAuth` to hydrate auth state from localStorage on mount.
+ * - Shows a loading skeleton until initialization is complete.
+ * - After initialization, checks for both token and user data.
+ * - If not fully authenticated, redirects to login and cleans up stale localStorage.
+ * 
+ * Note: This middleware does NOT handle partial authentication states
+ * (e.g., email verification or MFA flows) – those are managed by dedicated
+ * routes that read verification context from the slice.
  */
 function AuthMiddlewareRoute() {
   const dispatch = useAppDispatch();
-  const theme=useAppSelector((state)=>state.ui.theme);
+  const theme = useAppSelector((state) => state.ui.theme);
   const { isAuthenticated, token, user, isInitialized } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
-    // Initialize auth from localStorage on component mount
+    // Initialize auth from localStorage on component mount (only once)
     if (!isInitialized) {
       dispatch(initializeAuth());
     }
@@ -24,21 +33,21 @@ function AuthMiddlewareRoute() {
   // Show loading while initializing
   if (!isInitialized) {
     return (
-      <LoadingSkeleton message='Checking authentication...' variant='detail' theme={theme}></LoadingSkeleton>
+      <LoadingSkeleton message="Checking authentication..." variant="detail" theme={theme} />
     );
   }
 
-  // Check authentication only after initialization
-  // Require both token and user data for complete auth
+  // Require both Redux auth flag AND actual token/user data.
+  // This ensures we don't consider a partially hydrated state as authenticated.
   const isFullyAuthenticated = isAuthenticated && token && user;
 
   if (!isFullyAuthenticated) {
-    // Clear any stale localStorage data if Redux says we're not authenticated
+    // Clean up any stale localStorage data if Redux says we're not authenticated
     if (localStorage.getItem('authToken')) {
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');
     }
-   
+
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
 

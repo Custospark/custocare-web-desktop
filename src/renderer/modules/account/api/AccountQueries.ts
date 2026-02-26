@@ -349,6 +349,12 @@ export const useVerifyEmail = (
         return;
       }
 
+       if (data.token && data.user) {
+        dispatch(loginSuccess({ token: data.token, user: data.user }));
+        dispatch(clearVerificationContext());
+        dispatch(clearPendingLogin());
+        dispatch(mfaClear());
+      }
       dispatch(verifyEmailSuccess());
       showToast('success', data.message || 'Email verified successfully.', 8000);
 

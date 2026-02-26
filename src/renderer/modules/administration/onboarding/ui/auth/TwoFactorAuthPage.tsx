@@ -56,8 +56,6 @@ export const TwoFactorAuthPage: React.FC = () => {
     ? emailFromSlice.replace(/(.{2})(.*)(@.*)/, '$1***$3')
     : '***';
 
-  const deliveryMethod = isMfaFlow ? 'authenticator app' : 'email address';
-
   /* =========================================================================
      LOCAL STATE
      ========================================================================= */
@@ -310,7 +308,7 @@ export const TwoFactorAuthPage: React.FC = () => {
   return (
     <AuthLayout
       title="Two-Factor Authentication"
-      subtitle="Enter the verification code sent to your device"
+      subtitle="Enter the verification code sent to your email"
       heroImage="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=1200&q=80"
       heroHeadline="Enhanced Security"
       heroSubtext="Multi-factor authentication protects your account and sensitive patient data from unauthorized access."
@@ -332,15 +330,22 @@ export const TwoFactorAuthPage: React.FC = () => {
             <Smartphone className="w-5 h-5 flex-shrink-0 mt-0.5" />
           )}
           <div className="text-sm space-y-1">
-            <p className="font-semibold">Verification Code Sent</p>
+            <p className="font-semibold">
+              {isMfaFlow ? 'Verification Code Sent' : 'Email Verification Code Sent'}
+            </p>
             <p className={cn(theme === 'dark' ? 'text-cyan-200/80' : 'text-blue-600')}>
-              {isMfaFlow
-                ? 'Enter the 6-digit code from your '
-                : "We've sent a 6-digit code to your "}
-              {deliveryMethod}
-              {!isMfaFlow && (
+              {isMfaFlow && 
+              // (
+              //   'Enter the 6-digit code from your authenticator app.' //Currently using only one method for login in.
+              // ) : 
+              (
                 <>
-                  : <strong>{maskedDestination}</strong>
+                  We've sent a 6-digit verification code to your email:{' '}
+                  <strong>{maskedDestination}</strong>
+                  <br />
+                  <span className="text-xs opacity-80">
+                    (Please check your inbox and spam folder)
+                  </span>
                 </>
               )}
             </p>
