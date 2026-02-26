@@ -181,6 +181,11 @@ export interface UserCapabilities {
     | undefined;
 }
 
+/**
+ * Minimal user info from /user/context/resolve.
+ * Extended with optional fields to match richer user objects from auth responses
+ * (e.g., MFA_REQUIRED payload) for legacy compatibility.
+ */
 export interface MinimalUser {
   id: number;
   uuid: string;
@@ -190,6 +195,48 @@ export interface MinimalUser {
   email: string | null;
   phone: string | null;
   national_id_country_code: string | null;
+
+  // Optional extra fields (for richer user data, e.g., from MFA_REQUIRED response)
+  identity?: {
+    state: string;
+    verified_at: string | null;
+    verification_method: string | null;
+  };
+  compliance?: {
+    data_residency_region: string;
+    allowed_processing_regions: string[] | null;
+    created_from_facility_id: number | null;
+  };
+  profile?: {
+    title: string | null;
+    display_name: string | null;
+    dob: string | null;
+    gender: string | null;
+  };
+  contact?: {
+    email: string | null;
+    phone: string | null;
+  };
+  address?: {
+    line1: string | null;
+    line2: string | null;
+    city: string | null;
+    state: string | null;
+    country: string | null;
+    postal_code: string | null;
+  };
+  security?: {
+    requires_password_change: boolean;
+    mfa_enabled: boolean;
+    failed_login_attempts: number;
+    account_locked_until: string | null;
+  };
+  activity?: {
+    last_login_at: string | null;
+    created_at: string;
+    updated_at: string;
+  };
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface FacilityRole {
@@ -278,4 +325,3 @@ export interface ResendVerificationVariables {
 export interface ResetPasswordVariables extends Omit<ResetPasswordRequest, 'email'> {
   email?: string;
 }
-

@@ -4,8 +4,11 @@ import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../../shared/types/cn';
-import { useLoginMutation } from '../../api/queries/login-user/loginQuery';
-import {ROUTES} from '../../routes/onboardingRouteConstants'
+
+// ── Use the correct login hook from AccountQueries ─────────────────────────
+import { useLogin } from '../../../../account/api/AccountQueries';
+
+import { ROUTES } from '../../routes/onboardingRouteConstants';
 
 interface FormState {
   email: string;
@@ -23,8 +26,9 @@ interface FormErrors {
 export const Login: React.FC = () => {
   const theme = useAppSelector((state) => state.ui.theme);
   // const { error: authError } = useAppSelector((state) => state.auth);
-  
-  const loginMutation = useLoginMutation();
+
+  // useLogin returns a mutation object with mutate, isPending, etc.
+  const loginMutation = useLogin();
   const isLoading = loginMutation.isPending;
   // const error = authError || loginMutation.error?.message;
 
@@ -75,20 +79,23 @@ export const Login: React.FC = () => {
     };
   }, []);
 
-  const handleBlur = useCallback((field: 'email' | 'password') => {
-    return () => {
-      setTouched((prev) => ({ ...prev, [field]: true }));
+  const handleBlur = useCallback(
+    (field: 'email' | 'password') => {
+      return () => {
+        setTouched((prev) => ({ ...prev, [field]: true }));
 
-      const error =
-        field === 'email'
-          ? validateEmail(formState.email)
-          : validatePassword(formState.password);
+        const error =
+          field === 'email'
+            ? validateEmail(formState.email)
+            : validatePassword(formState.password);
 
-      if (error) {
-        setFormErrors((prev) => ({ ...prev, [field]: error }));
-      }
-    };
-  }, [formState, validateEmail, validatePassword]);
+        if (error) {
+          setFormErrors((prev) => ({ ...prev, [field]: error }));
+        }
+      };
+    },
+    [formState, validateEmail, validatePassword]
+  );
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -98,10 +105,11 @@ export const Login: React.FC = () => {
 
       if (!validateForm()) return;
 
+      // Map camelCase `rememberMe` to snake_case `remember_me` as expected by AccountTypes.LoginRequest
       loginMutation.mutate({
         email: formState.email.toLowerCase(),
         password: formState.password,
-        rememberMe: formState.rememberMe,
+        remember_me: formState.rememberMe,
       });
     },
     [formState, loginMutation, validateForm]

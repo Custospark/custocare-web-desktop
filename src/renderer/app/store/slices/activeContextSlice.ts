@@ -62,7 +62,9 @@ export interface UserCapabilities {
 }
 
 /**
- * Minimal user info from backend
+ * Minimal user info from backend – extended with optional fields
+ * to accommodate richer user objects from auth responses (e.g., MFA_REQUIRED payload)
+ * without breaking legacy consumers.
  */
 export interface MinimalUser {
   id: number;
@@ -73,6 +75,48 @@ export interface MinimalUser {
   email: string | null;
   phone: string | null;
   national_id_country_code: string | null;
+
+  // Optional extra fields (for richer user data, e.g., from MFA_REQUIRED response)
+  identity?: {
+    state: string;
+    verified_at: string | null;
+    verification_method: string | null;
+  };
+  compliance?: {
+    data_residency_region: string;
+    allowed_processing_regions: string[] | null;
+    created_from_facility_id: number | null;
+  };
+  profile?: {
+    title: string | null;
+    display_name: string | null;
+    dob: string | null;
+    gender: string | null;
+  };
+  contact?: {
+    email: string | null;
+    phone: string | null;
+  };
+  address?: {
+    line1: string | null;
+    line2: string | null;
+    city: string | null;
+    state: string | null;
+    country: string | null;
+    postal_code: string | null;
+  };
+  security?: {
+    requires_password_change: boolean;
+    mfa_enabled: boolean;
+    failed_login_attempts: number;
+    account_locked_until: string | null;
+  };
+  activity?: {
+    last_login_at: string | null;
+    created_at: string;
+    updated_at: string;
+  };
+  metadata?: Record<string, unknown> | null;
 }
 
 /**

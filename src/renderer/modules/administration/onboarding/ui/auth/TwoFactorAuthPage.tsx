@@ -571,3 +571,46 @@ export const TwoFactorAuthPage: React.FC = () => {
 };
 
 export default TwoFactorAuthPage;
+
+// import React from 'react';
+// import { useAppSelector } from '../../../../../app/store/hooks/useApp';
+// import {
+//   selectVerificationContext,
+//   selectPendingLogin,
+//   selectToken,
+//   selectUser,
+//   selectPasswordResetEmail,
+// } from '../../../../../app/store/slices/authSlice';
+
+// /**
+//  * Simple test component to verify auth slice state.
+//  * Displays current values from auth slice.
+//  */
+// export const TwoFactorAuthPage: React.FC = () => {
+//   const verification = useAppSelector(selectVerificationContext);
+//   const pendingLogin = useAppSelector(selectPendingLogin);
+//   const token = useAppSelector(selectToken);
+//   const user = useAppSelector(selectUser);
+//   const resetEmail = useAppSelector(selectPasswordResetEmail);
+
+//   return (
+//     <div style={{ padding: '20px', fontFamily: 'monospace' }}>
+//       <h2>Auth Slice Test</h2>
+//       <pre>
+//         {JSON.stringify(
+//           {
+//             verification,
+//             pendingLogin,
+//             token,
+//             user,
+//             resetEmail,
+//           },
+//           null,
+//           2
+//         )}
+//       </pre>
+//     </div>
+//   );
+// };
+
+// export default TwoFactorAuthPage;

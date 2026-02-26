@@ -202,6 +202,10 @@ const authSlice = createSlice({
       state.registration.error = action.payload;
     },
 
+    /**
+     * registerSuccess stores email and userId in the verification context.
+     * The user object may be partial (no token until verified).
+     */
     registerSuccess: (
       state,
       action: PayloadAction<{
@@ -252,6 +256,10 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
     },
 
+    /**
+     * loginSuccess stores the token and user, and persists them to localStorage.
+     * This is called after successful login (including after MFA verification or email verification + re-login).
+     */
     loginSuccess: (state, action: PayloadAction<{ user: UnifiedUserProfile; token: string }>) => {
       state.isLoading = false;
       state.user = action.payload.user;
@@ -293,12 +301,18 @@ const authSlice = createSlice({
       state.emailVerification.isLoading = false;
       state.emailVerification.error = null;
       state.emailVerification.verified = true;
+      // Note: token is NOT stored here; the verify-email endpoint returns token:null.
+      // Token will be stored after the subsequent login in the login flow.
     },
 
     /* ---------------------------------------------------------------------- */
     /*                                    MFA                                  */
     /* ---------------------------------------------------------------------- */
 
+    /**
+     * mfaRequired sets the verification context to type=mfa and stores email/userId.
+     * This happens when login response indicates MFA_REQUIRED.
+     */
     mfaRequired: (state, action: PayloadAction<{ email: string; userId: number | null }>) => {
       state.isLoading = false;
 

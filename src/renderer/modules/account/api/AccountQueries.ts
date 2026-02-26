@@ -131,6 +131,7 @@ export const useMe = (
     queryKey: accountKeys.me(),
     queryFn: async () => {
       const res = await axiosInstance.get<{ user: UnifiedUserProfile }>('/auth/me');
+      // refreshUser updates the auth slice with latest user data (email, id preserved)
       dispatch(refreshUser(res.data.user));
       return res.data.user;
     },
@@ -146,6 +147,7 @@ export const useMe = (
  * REGISTER
  * - Stores verification context in slice (flow=registration, type=email)
  * - Navigates to email verification screen
+ * - email and user_id are stored in registerSuccess (see authSlice)
  */
 export const useRegister = (
   callbacks: MutationCallbacks<RegisterResponse<UnifiedUserProfile>, AxiosError<ApiValidationErrorResponse>> = {}
@@ -164,6 +166,7 @@ export const useRegister = (
       if (data.success) {
         const userId = (data.user as any)?.id ?? null;
 
+        // registerSuccess stores email and userId in the slice (verification context)
         dispatch(
           registerSuccess({
             user: data.user ?? null,
@@ -198,7 +201,9 @@ export const useRegister = (
  * Handles:
  * - MFA_REQUIRED -> set slice verification(type=mfa, flow=login), set pendingLogin, navigate to 2FA page
  * - EMAIL_NOT_VERIFIED -> set slice verification(type=email, flow=login), set pendingLogin, navigate to email verification page
- * - LOGIN_SUCCESS -> set auth, fetch context, set activeContext, navigate to portal selection
+ * - LOGIN_SUCCESS -> set auth (token + user), fetch context, set activeContext, navigate to portal selection
+ *
+ * In success case, token is stored in loginSuccess (authSlice) and persisted to localStorage.
  */
 export const useLogin = (
   callbacks: MutationCallbacks<LoginResponse<UnifiedUserProfile>, AxiosError<ApiValidationErrorResponse>> = {}
@@ -261,6 +266,7 @@ export const useLogin = (
 
       // Successful login
       if (data.token && data.user) {
+        // loginSuccess stores token and user in authSlice and persists to localStorage
         dispatch(loginSuccess({ token: data.token, user: data.user }));
         dispatch(mfaClear());
         dispatch(clearVerificationContext());
@@ -302,6 +308,8 @@ export const useLogin = (
  * - If verification.flow=login -> auto re-attempt login using pendingLogin, then:
  *    - if MFA_REQUIRED -> navigate to MFA
  *    - if LOGIN_SUCCESS -> fetch context, set activeContext, navigate to portal selection
+ *
+ * Token is stored only after the re‑login (via loginSuccess) – the verify‑email endpoint itself returns token:null.
  */
 export const useVerifyEmail = (
   callbacks: MutationCallbacks<VerifyEmailResponse, AxiosError<ApiValidationErrorResponse>> = {}
@@ -384,6 +392,7 @@ export const useVerifyEmail = (
           }
 
           if (loginData.success && loginData.token && loginData.user) {
+            // Token stored here via loginSuccess
             dispatch(loginSuccess({ token: loginData.token, user: loginData.user }));
             dispatch(clearVerificationContext());
             dispatch(clearPendingLogin());
@@ -430,7 +439,7 @@ export const useVerifyEmail = (
  * VERIFY MFA (2FA)
  * Uses ONLY /auth/login with mfa_code (no new endpoint).
  * On success:
- * - set auth
+ * - set auth (token stored in loginSuccess)
  * - fetch context -> set activeContext
  * - navigate to portal selection
  */
@@ -468,6 +477,7 @@ export const useVerifyMfa = (
         return;
       }
 
+      // Token stored here via loginSuccess
       dispatch(loginSuccess({ token: data.token, user: data.user }));
       dispatch(mfaClear());
       dispatch(clearPendingLogin());
