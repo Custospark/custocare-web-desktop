@@ -41,8 +41,8 @@ export const TwoFactorAuthPage: React.FC = () => {
   const emailFromSlice = verification.email;
 
   const maskedDestination = emailFromSlice
-    ? emailFromSlice.replace(/(.{2})(.*)(@.*)/, '$1***$3')
-    : '***';
+    ? emailFromSlice.replace(/(.{2})(.*)(@.*)/, '$1••••$3')
+    : '•••';
 
   /* =========================================================================
      LOCAL STATE
@@ -262,86 +262,121 @@ export const TwoFactorAuthPage: React.FC = () => {
   if (isAuthenticated) {
     return (
       <AuthLayout
-        title="Authentication Successful"
-        subtitle="Access granted to your account"
+        title="Access Granted"
+        subtitle="Authentication successful"
         heroImage="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=1200&q=80"
-        heroHeadline="Identity Confirmed"
-        heroSubtext="Your identity has been verified. Welcome back to your secure workspace."
+        heroHeadline="Identity Verified"
+        heroSubtext="Your identity has been confirmed. Redirecting to your secure workspace."
       >
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Success Animation */}
           <div className="flex justify-center">
-            <div
-              className={cn(
-                'w-20 h-20 rounded-full flex items-center justify-center animate-pulse',
-                theme === 'dark' ? 'bg-emerald-500/20' : 'bg-emerald-100'
-              )}
-            >
-              <CheckCircle
+            <div className="relative">
+              {/* Animated rings */}
+              <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-emerald-400 dark:bg-emerald-300" />
+              <div className="absolute inset-0 rounded-full animate-pulse opacity-30 bg-emerald-500 dark:bg-emerald-400 scale-110" />
+              
+              {/* Main circle */}
+              <div
                 className={cn(
-                  'w-10 h-10 animate-bounce',
-                  theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'
+                  'relative w-24 h-24 rounded-2xl flex items-center justify-center',
+                  'backdrop-blur-xl border-2',
+                  theme === 'dark'
+                    ? 'bg-emerald-500/20 border-emerald-400/30'
+                    : 'bg-emerald-100 border-emerald-500/30'
                 )}
-              />
+              >
+                <CheckCircle
+                  className={cn(
+                    'w-12 h-12 animate-bounce',
+                    theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'
+                  )}
+                />
+              </div>
             </div>
           </div>
 
           {/* Success Message with Timer */}
           <div
             className={cn(
-              'p-6 rounded-xl border text-center transform transition-all duration-500 scale-100 opacity-100',
+              'p-8 rounded-2xl border-2 text-center',
+              'backdrop-blur-xl transform transition-all duration-700 scale-100 opacity-100',
+              'shadow-2xl',
               theme === 'dark'
-                ? 'bg-emerald-500/10 border-emerald-500/30'
-                : 'bg-emerald-50 border-emerald-200'
+                ? 'bg-emerald-500/10 border-emerald-500/30 shadow-emerald-500/10'
+                : 'bg-emerald-50/80 border-emerald-200 shadow-emerald-500/20'
             )}
           >
-            <p
-              className={cn(
-                'text-base font-semibold',
-                theme === 'dark' ? 'text-emerald-300' : 'text-emerald-800'
-              )}
-            >
-              Verification Complete
-            </p>
-            <p
-              className={cn(
-                'text-sm mt-2',
-                theme === 'dark' ? 'text-emerald-200/80' : 'text-emerald-700'
-              )}
-            >
-              Your authentication has been successfully validated.
-            </p>
-            
-            {/* Progress Bar */}
-            <div className="mt-4 w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-              <div 
-                className="bg-emerald-600 h-2.5 rounded-full transition-all duration-1000 ease-linear"
-                style={{ width: `${((5 - redirectTimer) / 5) * 100}%` }}
-              />
+            <div className="space-y-4">
+              <p
+                className={cn(
+                  'text-xl font-semibold tracking-tight',
+                  theme === 'dark' ? 'text-emerald-300' : 'text-emerald-800'
+                )}
+              >
+                Authentication Verified
+              </p>
+              <p
+                className={cn(
+                  'text-sm max-w-md mx-auto leading-relaxed',
+                  theme === 'dark' ? 'text-emerald-200/70' : 'text-emerald-700/80'
+                )}
+              >
+                Your identity has been confirmed. Establishing secure session...
+              </p>
+              
+              {/* Progress Indicator */}
+              <div className="mt-6 space-y-3">
+                <div className="flex justify-between text-xs">
+                  <span className={cn(
+                    'font-mono',
+                    theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'
+                  )}>
+                    Session Establishment
+                  </span>
+                  <span className={cn(
+                    'font-mono font-semibold',
+                    theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'
+                  )}>
+                    {redirectTimer}s
+                  </span>
+                </div>
+                <div className="relative h-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-full overflow-hidden backdrop-blur-sm">
+                  <div 
+                    className={cn(
+                      'absolute left-0 top-0 h-full rounded-full',
+                      'bg-gradient-to-r',
+                      theme === 'dark'
+                        ? 'from-emerald-400 to-cyan-400'
+                        : 'from-emerald-600 to-cyan-600'
+                    )}
+                    style={{ 
+                      width: `${((5 - redirectTimer) / 5) * 100}%`,
+                      transition: 'width 1s linear'
+                    }}
+                  />
+                </div>
+              </div>
             </div>
-            
-            {/* Countdown Timer */}
-            <p
-              className={cn(
-                'text-sm mt-3 font-medium',
-                theme === 'dark' ? 'text-emerald-200' : 'text-emerald-600'
-              )}
-            >
-              Redirecting to dashboard in {redirectTimer} second{redirectTimer !== 1 ? 's' : ''}
-            </p>
           </div>
 
-          {/* Loading Spinner */}
-          <div className="flex justify-center">
+          {/* Loading State */}
+          <div className="flex justify-center items-center gap-3">
             <div className="relative">
+              <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-cyan-400 dark:bg-cyan-300" />
               <Loader2
                 className={cn(
                   'w-8 h-8 animate-spin',
                   theme === 'dark' ? 'text-cyan-400' : 'text-blue-600'
                 )}
               />
-              <span className="sr-only">Loading secure session...</span>
             </div>
+            <span className={cn(
+              'text-sm',
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            )}>
+              Preparing your workspace...
+            </span>
           </div>
 
           {/* Manual redirect option */}
@@ -349,13 +384,14 @@ export const TwoFactorAuthPage: React.FC = () => {
             <button
               onClick={() => navigate('/dashboard')}
               className={cn(
-                'text-sm font-medium transition-colors hover:underline',
+                'text-sm font-medium transition-all duration-300',
+                'hover:tracking-wider opacity-60 hover:opacity-100',
                 theme === 'dark'
                   ? 'text-cyan-400 hover:text-cyan-300'
                   : 'text-blue-600 hover:text-blue-700'
               )}
             >
-              Continue to dashboard manually
+              Continue to dashboard
             </button>
           </div>
         </div>
@@ -370,10 +406,10 @@ export const TwoFactorAuthPage: React.FC = () => {
   return (
     <AuthLayout
       title="Two-Factor Authentication"
-      subtitle="Enter the code sent to your email"
+      subtitle="Enhanced security for your account"
       heroImage="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=1200&q=80"
       heroHeadline="Secure Account Access"
-      heroSubtext="Please complete two-factor authentication to access your account securely."
+      heroSubtext="Two-factor authentication adds an extra layer of protection to your account. Please enter the code sent to your email."
       showBackToLogin
     >
       <div className="space-y-6">
@@ -475,19 +511,27 @@ export const TwoFactorAuthPage: React.FC = () => {
           onClick={handleVerify}
           disabled={isLoading || code.some((digit) => digit === '')}
           className={cn(
-            'w-full py-3.5 px-6 rounded-xl font-semibold text-base',
-            'transition-all duration-200',
+            'relative w-full py-3.5 px-6 rounded-xl font-semibold text-base',
+            'transition-all duration-200 transform',
             'focus:outline-none focus:ring-4 focus:ring-offset-2',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'flex items-center justify-center gap-3',
+            'overflow-hidden group',
             theme === 'dark'
-              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
-              : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
+              ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-500 hover:to-blue-500 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
+              : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-500 hover:to-cyan-500 focus:ring-blue-500 focus:ring-offset-white',
             !isLoading &&
               code.every((digit) => digit !== '') &&
               'shadow-lg hover:shadow-xl hover:scale-[1.02]'
           )}
         >
+          {/* Animated background */}
+          <div className={cn(
+            'absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700',
+            'bg-gradient-to-r from-transparent via-white/20 to-transparent',
+            'translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000'
+          )} />
+          
           {isLoading ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -496,7 +540,7 @@ export const TwoFactorAuthPage: React.FC = () => {
           ) : (
             <>
               <Shield className="w-5 h-5" />
-              <span>Authenticate</span>
+              <span>Verify Identity</span>
             </>
           )}
         </button>
@@ -513,6 +557,7 @@ export const TwoFactorAuthPage: React.FC = () => {
               onClick={handleResendCode}
               disabled={isResending}
               className={cn(
+                'group relative px-6 py-2',
                 'text-sm font-medium transition-all duration-200',
                 'inline-flex items-center justify-center gap-2',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -523,17 +568,11 @@ export const TwoFactorAuthPage: React.FC = () => {
                 isResending && 'animate-pulse'
               )}
             >
-              {isResending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Sending new code...</span>
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-4 h-4 transition-transform group-hover:rotate-180" />
-                  <span>Request new code</span>
-                </>
-              )}
+              <RefreshCw className={cn(
+                'w-4 h-4 transition-transform duration-500',
+                'group-hover:rotate-180'
+              )} />
+              <span>{isResending ? 'Sending...' : 'Request new code'}</span>
             </button>
           )}
         </div>
