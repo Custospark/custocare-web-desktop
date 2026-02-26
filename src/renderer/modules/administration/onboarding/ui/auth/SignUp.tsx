@@ -1,21 +1,24 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Mail, 
-  Lock, 
-  User, 
-  AlertCircle, 
-  Loader2, 
-  Eye, 
-  EyeOff, 
+import {
+  Mail,
+  Lock,
+  User,
+  AlertCircle,
+  Loader2,
+  Eye,
+  EyeOff,
   CheckCircle2,
-  Phone
+  Phone,
 } from 'lucide-react';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../../shared/types/cn';
 import { countryCodes } from './countryCodes';
+
+// ── AccountQueries integration ──────────────────────────────────────────────
 import { useRegister } from '../../../../account/api/AccountQueries';
+import type { RegisterRequest } from '../../../../account/api/AccountTypes';
 
 interface FormState {
   email: string;
@@ -33,13 +36,13 @@ interface ValidationStatus {
 }
 
 export const SignUp: React.FC = () => {
-  // Get theme from Redux store
+  // ── Theme from Redux ───────────────────────────────────────────────────────
   const theme = useAppSelector((state) => state.ui.theme);
-  
-  // Initialize the registration mutation hook
+
+  // ── Registration mutation (toast + navigation handled inside the hook) ─────
   const { mutate: register, isPending: isLoading } = useRegister();
 
-  // Form state management
+  // ── Form state ─────────────────────────────────────────────────────────────
   const [formState, setFormState] = useState<FormState>({
     email: '',
     phone: '',
@@ -50,18 +53,13 @@ export const SignUp: React.FC = () => {
     confirmPassword: '',
   });
 
-  // Track which fields have been touched for validation display
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  
-  // Password visibility states
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
-  // Country dropdown state
   const [filterCountry, setFilterCountry] = useState('');
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
 
-  // Calculate password strength for visual feedback
+  // ── Password strength ──────────────────────────────────────────────────────
   const getPasswordStrength = useCallback((password: string) => {
     if (!password) return { score: 0, label: '', color: '' };
     let score = 0;
@@ -81,124 +79,124 @@ export const SignUp: React.FC = () => {
     return { score: normalized, ...configs[normalized] };
   }, []);
 
-  // Field validation function
-  const validateField = useCallback((field: keyof FormState, value: string): ValidationStatus => {
-    const validators: Record<string, () => ValidationStatus> = {
-      email: () => {
-        if (!value) return { isValid: false, error: 'Email is required' };
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) 
-          return { isValid: false, error: 'Please enter a valid email' };
-        return { isValid: true };
-      },
-      phone: () => {
-        if (!value) return { isValid: false, error: 'Phone number is required' };
-        const digitsOnly = value.replace(/\D/g, '');
-        if (digitsOnly.length < 6) return { isValid: false, error: 'Phone number too short' };
-        if (digitsOnly.length > 15) return { isValid: false, error: 'Phone number too long' };
-        return { isValid: true };
-      },
-      firstName: () => {
-        if (!value) return { isValid: false, error: 'First name is required' };
-        if (value.trim().length < 2) 
-          return { isValid: false, error: 'Minimum 2 characters' };
-        return { isValid: true };
-      },
-      lastName: () => {
-        if (!value) return { isValid: false, error: 'Last name is required' };
-        if (value.trim().length < 2) 
-          return { isValid: false, error: 'Minimum 2 characters' };
-        return { isValid: true };
-      },
-      password: () => {
-        if (!value) return { isValid: false, error: 'Password is required' };
-        if (value.length < 8) 
-          return { isValid: false, error: 'Minimum 8 characters required' };
-        if (getPasswordStrength(value).score < 2) 
-          return { isValid: false, error: 'Password is too weak' };
-        return { isValid: true };
-      },
-      confirmPassword: () => {
-        if (!value) return { isValid: false, error: 'Please confirm your password' };
-        if (value !== formState.password) 
-          return { isValid: false, error: 'Passwords must match' };
-        return { isValid: true };
-      },
-    };
-    return validators[field]?.() || { isValid: true };
-  }, [formState.password, getPasswordStrength]);
+  // ── Field validation ───────────────────────────────────────────────────────
+  const validateField = useCallback(
+    (field: keyof FormState, value: string): ValidationStatus => {
+      const validators: Record<string, () => ValidationStatus> = {
+        email: () => {
+          if (!value) return { isValid: false, error: 'Email is required' };
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+            return { isValid: false, error: 'Please enter a valid email' };
+          return { isValid: true };
+        },
+        phone: () => {
+          if (!value) return { isValid: false, error: 'Phone number is required' };
+          const digitsOnly = value.replace(/\D/g, '');
+          if (digitsOnly.length < 6) return { isValid: false, error: 'Phone number too short' };
+          if (digitsOnly.length > 15) return { isValid: false, error: 'Phone number too long' };
+          return { isValid: true };
+        },
+        firstName: () => {
+          if (!value) return { isValid: false, error: 'First name is required' };
+          if (value.trim().length < 2) return { isValid: false, error: 'Minimum 2 characters' };
+          return { isValid: true };
+        },
+        lastName: () => {
+          if (!value) return { isValid: false, error: 'Last name is required' };
+          if (value.trim().length < 2) return { isValid: false, error: 'Minimum 2 characters' };
+          return { isValid: true };
+        },
+        password: () => {
+          if (!value) return { isValid: false, error: 'Password is required' };
+          if (value.length < 8) return { isValid: false, error: 'Minimum 8 characters required' };
+          if (getPasswordStrength(value).score < 2)
+            return { isValid: false, error: 'Password is too weak' };
+          return { isValid: true };
+        },
+        confirmPassword: () => {
+          if (!value) return { isValid: false, error: 'Please confirm your password' };
+          if (value !== formState.password) return { isValid: false, error: 'Passwords must match' };
+          return { isValid: true };
+        },
+      };
+      return validators[field]?.() || { isValid: true };
+    },
+    [formState.password, getPasswordStrength]
+  );
 
-  // Memoized validation object for all fields
   const validation = useMemo(() => {
-    const fields: (keyof FormState)[] = ['email', 'phone', 'firstName', 'lastName', 'password', 'confirmPassword'];
-    return Object.fromEntries(fields.map(f => [f, validateField(f, formState[f])])) as Record<keyof FormState, ValidationStatus>;
+    const fields: (keyof FormState)[] = [
+      'email',
+      'phone',
+      'firstName',
+      'lastName',
+      'password',
+      'confirmPassword',
+    ];
+    return Object.fromEntries(
+      fields.map((f) => [f, validateField(f, formState[f])])
+    ) as Record<keyof FormState, ValidationStatus>;
   }, [formState, validateField]);
 
-  // Check if entire form is valid
-  const isFormValid = useMemo(() => {
-    return Object.values(validation).every(v => v.isValid);
-  }, [validation]);
+  const isFormValid = useMemo(
+    () => Object.values(validation).every((v) => v.isValid),
+    [validation]
+  );
 
-  // Current password strength for display
   const passwordStrength = getPasswordStrength(formState.password);
-  
-  // Filter countries based on search input
+
   const filteredCountries = useMemo(() => {
     if (!filterCountry) return countryCodes;
     const search = filterCountry.toLowerCase();
-    return countryCodes.filter(country => 
-      country.name.toLowerCase().includes(search) ||
-      country.code.includes(search) ||
-      country.dial_code.includes(search)
+    return countryCodes.filter(
+      (country) =>
+        country.name.toLowerCase().includes(search) ||
+        country.code.includes(search) ||
+        country.dial_code.includes(search)
     );
   }, [filterCountry]);
 
-  // Get currently selected country object
-  const selectedCountry = useMemo(() => {
-    return countryCodes.find(c => c.dial_code === formState.phoneCountryCode) || countryCodes[0];
-  }, [formState.phoneCountryCode]);
+  const selectedCountry = useMemo(
+    () => countryCodes.find((c) => c.dial_code === formState.phoneCountryCode) || countryCodes[0],
+    [formState.phoneCountryCode]
+  );
 
-  // Generic input change handler
-  const handleChange = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setFormState(prev => ({ ...prev, [field]: value }));
-    if (touched[field]) {
-      setTouched(prev => ({ ...prev, [field]: false }));
-    }
-  };
+  // ── Handlers ───────────────────────────────────────────────────────────────
+  const handleChange =
+    (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setFormState((prev) => ({ ...prev, [field]: value }));
+      if (touched[field]) setTouched((prev) => ({ ...prev, [field]: false }));
+    };
 
-  // Special handler for phone input (allows only digits and formatting chars)
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^\d\s\-()]/g, '');
-    setFormState(prev => ({ ...prev, phone: value }));
-    if (touched.phone) {
-      setTouched(prev => ({ ...prev, phone: false }));
-    }
+    setFormState((prev) => ({ ...prev, phone: value }));
+    if (touched.phone) setTouched((prev) => ({ ...prev, phone: false }));
   };
 
-  // Handle country selection from dropdown
   const handleCountrySelect = (dial_code: string) => {
-    setFormState(prev => ({ ...prev, phoneCountryCode: dial_code }));
+    setFormState((prev) => ({ ...prev, phoneCountryCode: dial_code }));
     setIsCountryDropdownOpen(false);
     setFilterCountry('');
   };
 
-  // Mark field as touched on blur for validation display
-  const handleBlur = (field: keyof FormState) => () => setTouched(prev => ({ ...prev, [field]: true }));
+  const handleBlur = (field: keyof FormState) => () =>
+    setTouched((prev) => ({ ...prev, [field]: true }));
 
-  // Form submission handler
+  // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate all fields and mark as touched if invalid
+
     if (!isFormValid) {
       const fields = ['email', 'phone', 'firstName', 'lastName', 'password', 'confirmPassword'];
       const touchedFields = fields.reduce((acc, field) => ({ ...acc, [field]: true }), {});
-      setTouched(prev => ({ ...prev, ...touchedFields }));
+      setTouched((prev) => ({ ...prev, ...touchedFields }));
       return;
     }
 
-    // Prepare data for API call
-    const registerData = {
+    // Build the payload that matches RegisterRequest from AccountTypes
+    const registerData: RegisterRequest = {
       email: formState.email,
       phone: selectedCountry.dial_code + formState.phone.replace(/\D/g, ''),
       first_name: formState.firstName,
@@ -207,11 +205,12 @@ export const SignUp: React.FC = () => {
       password_confirmation: formState.confirmPassword,
     };
 
-    // Call the registration mutation
+    // useRegister handles: dispatch(registerStart/Success/Failure),
+    // toast notifications, and navigate(ROUTES.TWO_FACTOR_AUTH) on success.
     register(registerData);
   };
 
-  // Dynamic input styling based on validation state and theme
+  // ── Styling helpers ────────────────────────────────────────────────────────
   const inputClass = (field: keyof FormState, hasIcon = true) => {
     const isValid = validation[field].isValid && formState[field];
     const hasError = touched[field] && validation[field].error;
@@ -223,19 +222,30 @@ export const SignUp: React.FC = () => {
         ? 'bg-gray-900/60 text-white placeholder-gray-500'
         : 'bg-white text-gray-900 placeholder-gray-400',
       hasError
-        ? theme === 'dark' ? 'border-red-500/60 focus:ring-red-500/30' : 'border-red-400 focus:ring-red-200'
+        ? theme === 'dark'
+          ? 'border-red-500/60 focus:ring-red-500/30'
+          : 'border-red-400 focus:ring-red-200'
         : isValid
-          ? theme === 'dark' ? 'border-emerald-500/60 focus:ring-emerald-500/30' : 'border-emerald-400 focus:ring-emerald-200'
-          : theme === 'dark' ? 'border-gray-700 focus:border-cyan-500 focus:ring-cyan-500/30' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'
+        ? theme === 'dark'
+          ? 'border-emerald-500/60 focus:ring-emerald-500/30'
+          : 'border-emerald-400 focus:ring-emerald-200'
+        : theme === 'dark'
+        ? 'border-gray-700 focus:border-cyan-500 focus:ring-cyan-500/30'
+        : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'
     );
   };
 
-  // Label styling based on theme
-  const labelClass = cn('block text-xs font-semibold mb-1.5', theme === 'dark' ? 'text-gray-300' : 'text-gray-700');
-  
-  // Icon styling based on theme
-  const iconClass = cn('absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4', theme === 'dark' ? 'text-gray-500' : 'text-gray-400');
+  const labelClass = cn(
+    'block text-xs font-semibold mb-1.5',
+    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+  );
 
+  const iconClass = cn(
+    'absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4',
+    theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+  );
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <AuthLayout
       title="Let's get you started…"
@@ -266,7 +276,8 @@ export const SignUp: React.FC = () => {
             </div>
             {touched.firstName && validation.firstName.error && (
               <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" />{validation.firstName.error}
+                <AlertCircle className="w-3 h-3" />
+                {validation.firstName.error}
               </p>
             )}
           </div>
@@ -289,7 +300,8 @@ export const SignUp: React.FC = () => {
             </div>
             {touched.lastName && validation.lastName.error && (
               <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" />{validation.lastName.error}
+                <AlertCircle className="w-3 h-3" />
+                {validation.lastName.error}
               </p>
             )}
           </div>
@@ -315,7 +327,8 @@ export const SignUp: React.FC = () => {
           </div>
           {touched.email && validation.email.error && (
             <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" />{validation.email.error}
+              <AlertCircle className="w-3 h-3" />
+              {validation.email.error}
             </p>
           )}
         </div>
@@ -328,7 +341,7 @@ export const SignUp: React.FC = () => {
 
           <div className="flex gap-2">
             {/* Country Code Selector */}
-            <div className="relative shrink-0 w-36">
+            <div className="relative flex-shrink-0 w-36">
               <button
                 type="button"
                 onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
@@ -346,20 +359,34 @@ export const SignUp: React.FC = () => {
                   <span className="text-base">{selectedCountry.flag}</span>
                   <span className="font-medium">{selectedCountry.dial_code}</span>
                 </span>
-                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <svg
+                  className="w-4 h-4 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </button>
 
               {/* Dropdown */}
               {isCountryDropdownOpen && (
-                <div className={cn(
-                  'absolute z-50 w-72 mt-1 rounded-lg border-2 shadow-xl',
-                  'max-h-64 overflow-hidden flex flex-col',
-                  theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'
-                )}>
-                  {/* Search */}
-                  <div className="p-2 border-b" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
+                <div
+                  className={cn(
+                    'absolute z-50 w-72 mt-1 rounded-lg border-2 shadow-xl',
+                    'max-h-64 overflow-hidden flex flex-col',
+                    theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'
+                  )}
+                >
+                  <div
+                    className="p-2 border-b"
+                    style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}
+                  >
                     <input
                       type="text"
                       value={filterCountry}
@@ -376,7 +403,6 @@ export const SignUp: React.FC = () => {
                     />
                   </div>
 
-                  {/* Country List */}
                   <div className="overflow-y-auto">
                     {filteredCountries.length > 0 ? (
                       filteredCountries.map((country) => (
@@ -388,20 +414,32 @@ export const SignUp: React.FC = () => {
                             'w-full px-3 py-2 text-left text-sm',
                             'hover:bg-opacity-50 transition-colors',
                             'flex items-center gap-2',
-                            theme === 'dark' ? 'hover:bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-900',
+                            theme === 'dark'
+                              ? 'hover:bg-gray-800 text-white'
+                              : 'hover:bg-gray-100 text-gray-900',
                             country.dial_code === formState.phoneCountryCode &&
                               (theme === 'dark' ? 'bg-gray-800' : 'bg-blue-50')
                           )}
                         >
                           <span className="text-lg">{country.flag}</span>
                           <span className="flex-1 truncate">{country.name}</span>
-                          <span className={cn('font-medium text-xs', theme === 'dark' ? 'text-gray-400' : 'text-gray-600')}>
+                          <span
+                            className={cn(
+                              'font-medium text-xs',
+                              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                            )}
+                          >
                             {country.dial_code}
                           </span>
                         </button>
                       ))
                     ) : (
-                      <div className={cn('px-3 py-4 text-center text-sm', theme === 'dark' ? 'text-gray-500' : 'text-gray-400')}>
+                      <div
+                        className={cn(
+                          'px-3 py-4 text-center text-sm',
+                          theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                        )}
+                      >
                         No countries found
                       </div>
                     )}
@@ -428,7 +466,6 @@ export const SignUp: React.FC = () => {
             </div>
           </div>
 
-          {/* Show full number with country code */}
           {formState.phone && (
             <p className={cn('text-xs mt-1', theme === 'dark' ? 'text-gray-400' : 'text-gray-600')}>
               {formState.phone.length < 3 ? 'Typing..: ' : 'Number: '}
@@ -438,7 +475,6 @@ export const SignUp: React.FC = () => {
             </p>
           )}
 
-          {/* Validation Errors */}
           {touched.phone && validation.phone.error && (
             <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
               <AlertCircle className="w-3 h-3" />
@@ -466,7 +502,9 @@ export const SignUp: React.FC = () => {
               onClick={() => setShowPassword(!showPassword)}
               className={cn(
                 'absolute right-9 top-1/2 -translate-y-1/2 p-0.5',
-                theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+                theme === 'dark'
+                  ? 'text-gray-500 hover:text-gray-300'
+                  : 'text-gray-400 hover:text-gray-600'
               )}
               disabled={isLoading}
             >
@@ -479,22 +517,33 @@ export const SignUp: React.FC = () => {
           {formState.password && (
             <div className="mt-1.5">
               <div className="flex items-center justify-between text-[10px] mb-1">
-                <span className={theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}>Strength:</span>
-                <span className={cn(
-                  'font-medium',
-                  passwordStrength.score >= 3 ? 'text-emerald-500' : 
-                  passwordStrength.score >= 2 ? 'text-yellow-500' : 'text-red-500'
-                )}>
+                <span className={theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}>
+                  Strength:
+                </span>
+                <span
+                  className={cn(
+                    'font-medium',
+                    passwordStrength.score >= 3
+                      ? 'text-emerald-500'
+                      : passwordStrength.score >= 2
+                      ? 'text-yellow-500'
+                      : 'text-red-500'
+                  )}
+                >
                   {passwordStrength.label}
                 </span>
               </div>
               <div className="flex gap-0.5">
-                {[0, 1, 2, 3, 4].map(i => (
+                {[0, 1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
                     className={cn(
                       'h-1 rounded-full flex-1 transition-all duration-300',
-                      i <= passwordStrength.score ? passwordStrength.color : theme === 'dark' ? 'bg-gray-800' : 'bg-gray-200'
+                      i <= passwordStrength.score
+                        ? passwordStrength.color
+                        : theme === 'dark'
+                        ? 'bg-gray-800'
+                        : 'bg-gray-200'
                     )}
                   />
                 ))}
@@ -503,7 +552,8 @@ export const SignUp: React.FC = () => {
           )}
           {touched.password && validation.password.error && (
             <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" />{validation.password.error}
+              <AlertCircle className="w-3 h-3" />
+              {validation.password.error}
             </p>
           )}
         </div>
@@ -527,11 +577,17 @@ export const SignUp: React.FC = () => {
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               className={cn(
                 'absolute right-9 top-1/2 -translate-y-1/2 p-0.5',
-                theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+                theme === 'dark'
+                  ? 'text-gray-500 hover:text-gray-300'
+                  : 'text-gray-400 hover:text-gray-600'
               )}
               disabled={isLoading}
             >
-              {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showConfirmPassword ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
             </button>
             {validation.confirmPassword.isValid && formState.confirmPassword && (
               <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
@@ -539,7 +595,8 @@ export const SignUp: React.FC = () => {
           </div>
           {touched.confirmPassword && validation.confirmPassword.error && (
             <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" />{validation.confirmPassword.error}
+              <AlertCircle className="w-3 h-3" />
+              {validation.confirmPassword.error}
             </p>
           )}
         </div>
@@ -556,14 +613,12 @@ export const SignUp: React.FC = () => {
               ? cn(
                   'cursor-pointer',
                   theme === 'dark'
-                    ? 'bg-linear-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 focus:ring-blue-500/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
-                    : 'bg-linear-to-r from-blue-600 to-blue-600 text-white hover:from-blue-700 hover:to-blue-700 focus:ring-blue-400/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 focus:ring-blue-500/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
+                    : 'bg-gradient-to-r from-blue-600 to-blue-600 text-white hover:from-blue-700 hover:to-blue-700 focus:ring-blue-400/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
                 )
               : cn(
                   'cursor-not-allowed',
-                  theme === 'dark'
-                    ? 'bg-gray-700 text-gray-500'
-                    : 'bg-gray-200 text-gray-400'
+                  theme === 'dark' ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-400'
                 )
           )}
         >
@@ -578,13 +633,20 @@ export const SignUp: React.FC = () => {
         </button>
 
         {/* Sign in link */}
-        <p className={cn('text-center text-xs pt-1', theme === 'dark' ? 'text-gray-500' : 'text-gray-600')}>
+        <p
+          className={cn(
+            'text-center text-xs pt-1',
+            theme === 'dark' ? 'text-gray-500' : 'text-gray-600'
+          )}
+        >
           Already have an account?{' '}
           <Link
             to="/login"
             className={cn(
               'font-semibold cursor-pointer',
-              theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
+              theme === 'dark'
+                ? 'text-blue-400 hover:text-blue-300'
+                : 'text-blue-600 hover:text-blue-700'
             )}
           >
             Sign In

@@ -1,88 +1,135 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Shield, AlertCircle, Loader2, CheckCircle, Mail, Smartphone, RefreshCw } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import {
+  Shield,
+  AlertCircle,
+  Loader2,
+  CheckCircle,
+  Mail,
+  Smartphone,
+  RefreshCw,
+} from 'lucide-react';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../../shared/types/cn';
-import {
-  selectVerificationContext,
-  selectPendingLogin,
-} from '../../../../../app/store/slices/authSlice';
+
+// ── AccountQueries & authSlice integration ───────────────────────────────────
 import {
   useVerifyEmail,
   useVerifyMfa,
   useResendVerification,
-} from  '../../../../account/api/AccountQueries';
+} from '../../../../account/api/AccountQueries';
+import { selectVerificationContext } from '../../../../../app/store/slices/authSlice';
+
+/**
+ * ============================================================================
+ * TWO-FACTOR AUTHENTICATION PAGE COMPONENT
+ * ============================================================================
+ *
+ * Handles both flows driven by authSlice.verification:
+ *   type = 'email' → useVerifyEmail  (registration or login email verification)
+ *   type = 'mfa'   → useVerifyMfa    (MFA / TOTP login step)
+ *
+ * Verification context (userId, email, flow) is read exclusively from
+ * authSlice — NO route state or query-param passing.
+ *
+ * All navigation after success is handled inside AccountQueries hooks;
+ * the local `isSuccess` flag keeps the success screen visible until the
+ * router transition completes.
+ */
 
 const CODE_LENGTH = 6;
 const RESEND_COOLDOWN = 60; // seconds
 
 export const TwoFactorAuthPage: React.FC = () => {
-  const navigate = useNavigate();
   const theme = useAppSelector((state) => state.ui.theme);
 
-  // Get verification context and pending login from slice
+  // ── Verification context from authSlice ──────────────────────────────────
   const verification = useAppSelector(selectVerificationContext);
-  const pendingLogin = useAppSelector(selectPendingLogin);
 
-  /* ==========================================================================
-     MUTATIONS
-     ========================================================================== */
+  // Derive display info from slice (no route state)
+  const isMfaFlow = verification.type === 'mfa';
+  const method = isMfaFlow ? 'sms' : 'email';
+  const emailFromSlice = verification.email;
+
+  const maskedDestination = emailFromSlice
+    ? emailFromSlice.replace(/(.{2})(.*)(@.*)/, '$1***$3')
+    : '***';
+
+  const deliveryMethod = isMfaFlow ? 'authenticator app' : 'email address';
+
+  /* =========================================================================
+     LOCAL STATE
+     ========================================================================= */
+
+  const [code, setCode] = useState<string[]>(new Array(CODE_LENGTH).fill(''));
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  /* =========================================================================
+     MUTATION HOOKS
+     ========================================================================= */
+
   const verifyEmailMutation = useVerifyEmail({
-    onSuccess: () => {
-      setIsSuccess(true);
-      // Navigation is handled inside the hook; we just set local success for UI flash
+    onSuccess: (data) => {
+      // Navigation is handled inside the hook.
+      // We set isSuccess to keep the success UI while the router transitions.
+      if (data.success) setIsSuccess(true);
+    },
+    onError: (err) => {
+      const msg =
+        err.response?.data?.message || err.message || 'Verification failed. Please try again.';
+      setError(msg);
+      setCode(new Array(CODE_LENGTH).fill(''));
+      inputRefs.current[0]?.focus();
     },
   });
 
   const verifyMfaMutation = useVerifyMfa({
-    onSuccess: () => {
-      setIsSuccess(true);
+    onSuccess: (data) => {
+      if (data.success) setIsSuccess(true);
+    },
+    onError: (err) => {
+      const msg =
+        err.response?.data?.message || err.message || 'MFA verification failed. Please try again.';
+      setError(msg);
+      setCode(new Array(CODE_LENGTH).fill(''));
+      inputRefs.current[0]?.focus();
     },
   });
 
-  const resendMutation = useResendVerification();
+  const resendMutation = useResendVerification({
+    onSuccess: (data) => {
+      if (data.success) {
+        setResendCooldown(RESEND_COOLDOWN);
+        setCode(new Array(CODE_LENGTH).fill(''));
+        inputRefs.current[0]?.focus();
+      }
+    },
+  });
 
-  /* ==========================================================================
-     LOCAL STATE
-     ========================================================================== */
-  const [code, setCode] = useState<string[]>(new Array(CODE_LENGTH).fill(''));
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [isResending, setIsResending] = useState(false);
+  // Combined loading flag
+  const isLoading = verifyEmailMutation.isPending || verifyMfaMutation.isPending;
+  const isResending = resendMutation.isPending;
 
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  /* ==========================================================================
-     DETERMINE VERIFICATION TYPE
-     ========================================================================== */
-  const verificationType = verification.type; // 'email' or 'mfa'
-  const userEmail = verification.email || pendingLogin?.email;
-
-  // For display: email verification uses email, MFA shows generic message
-  const deliveryMethod = verificationType === 'email' ? 'email' : 'authenticator app';
-  const maskedDestination =
-    verificationType === 'email' && userEmail
-      ? userEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')
-      : 'your registered device';
-
-  /* ==========================================================================
+  /* =========================================================================
      COUNTDOWN TIMER FOR RESEND
-     ========================================================================== */
+     ========================================================================= */
+
   useEffect(() => {
     if (resendCooldown > 0) {
-      const timer = setTimeout(() => {
-        setResendCooldown((prev) => prev - 1);
-      }, 1000);
+      const timer = setTimeout(() => setResendCooldown((prev) => prev - 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
 
-  /* ==========================================================================
-     AUTO-SUBMIT WHEN CODE COMPLETE
-     ========================================================================== */
+  /* =========================================================================
+     AUTO-SUBMIT WHEN CODE IS COMPLETE
+     ========================================================================= */
+
   useEffect(() => {
     if (code.every((digit) => digit !== '') && code.join('').length === CODE_LENGTH) {
       handleVerify();
@@ -90,32 +137,39 @@ export const TwoFactorAuthPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code]);
 
-  /* ==========================================================================
-     REDIRECT ON SUCCESS (if needed, though hooks navigate)
-     ========================================================================== */
-  useEffect(() => {
-    if (isSuccess) {
-      const timer = setTimeout(() => {
-        // Hooks already navigate, but this is a fallback
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [isSuccess, navigate]);
-
-  /* ==========================================================================
+  /* =========================================================================
      EVENT HANDLERS
-     ========================================================================== */
+     ========================================================================= */
+
+  const handleVerify = useCallback(() => {
+    const verificationCode = code.join('');
+
+    if (verificationCode.length !== CODE_LENGTH) {
+      setError('Please enter the complete verification code');
+      return;
+    }
+
+    setError('');
+
+    if (isMfaFlow) {
+      verifyMfaMutation.mutate({ mfa_code: verificationCode });
+    } else {
+      verifyEmailMutation.mutate({ code: verificationCode });
+    }
+  }, [code, isMfaFlow, verifyEmailMutation, verifyMfaMutation]);
+
   const handleChange = useCallback(
     (index: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
+
       if (!/^\d*$/.test(value)) return;
 
       const newCode = [...code];
+
       if (value.length === 1) {
         newCode[index] = value;
         setCode(newCode);
         setError('');
-
         if (index < CODE_LENGTH - 1 && value !== '') {
           inputRefs.current[index + 1]?.focus();
         }
@@ -154,16 +208,19 @@ export const TwoFactorAuthPage: React.FC = () => {
         handleVerify();
       }
     },
-    [code]
+    [code, handleVerify]
   );
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text');
     const digits = pastedData.replace(/\D/g, '').slice(0, CODE_LENGTH).split('');
+
     if (digits.length > 0) {
       const newCode = new Array(CODE_LENGTH).fill('');
-      digits.forEach((digit, i) => (newCode[i] = digit));
+      digits.forEach((digit, index) => {
+        newCode[index] = digit;
+      });
       setCode(newCode);
       setError('');
       const lastIndex = Math.min(digits.length - 1, CODE_LENGTH - 1);
@@ -171,59 +228,16 @@ export const TwoFactorAuthPage: React.FC = () => {
     }
   }, []);
 
-  const handleVerify = useCallback(async () => {
-    const verificationCode = code.join('');
-    if (verificationCode.length !== CODE_LENGTH) {
-      setError('Please enter the complete verification code');
-      return;
-    }
+  const handleResendCode = useCallback(() => {
+    if (resendCooldown > 0) return;
+    // useResendVerification reads userId from slice automatically
+    resendMutation.mutate({});
+  }, [resendCooldown, resendMutation]);
 
-    setError('');
-    setIsLoading(true);
+  /* =========================================================================
+     RENDER – SUCCESS STATE
+     ========================================================================= */
 
-    try {
-      if (verificationType === 'email') {
-        // Email verification
-        verifyEmailMutation.mutate({
-          code: verificationCode,
-          is_token: false, // assuming not token-based; adjust if needed
-          // user_id will be taken from slice automatically by the hook
-        });
-      } else if (verificationType === 'mfa') {
-        // MFA verification
-        verifyMfaMutation.mutate({ mfa_code: verificationCode });
-      } else {
-        throw new Error('No active verification context');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Verification failed');
-      setCode(new Array(CODE_LENGTH).fill(''));
-      inputRefs.current[0]?.focus();
-    } finally {
-      setIsLoading(false);
-    }
-  }, [code, verificationType, verifyEmailMutation, verifyMfaMutation]);
-
-  const handleResendCode = useCallback(async () => {
-    if (resendCooldown > 0 || verificationType !== 'email') return; // only resend for email
-
-    try {
-      setIsResending(true);
-      setError('');
-      resendMutation.mutate({}); // user_id taken from slice automatically
-      setResendCooldown(RESEND_COOLDOWN);
-      setCode(new Array(CODE_LENGTH).fill(''));
-      inputRefs.current[0]?.focus();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resend code');
-    } finally {
-      setIsResending(false);
-    }
-  }, [resendCooldown, verificationType, resendMutation]);
-
-  /* ==========================================================================
-     RENDER - SUCCESS STATE
-     ========================================================================== */
   if (isSuccess) {
     return (
       <AuthLayout
@@ -249,6 +263,7 @@ export const TwoFactorAuthPage: React.FC = () => {
               />
             </div>
           </div>
+
           <div
             className={cn(
               'p-6 rounded-xl border text-center',
@@ -274,6 +289,7 @@ export const TwoFactorAuthPage: React.FC = () => {
               Redirecting to your dashboard...
             </p>
           </div>
+
           <div className="flex justify-center">
             <Loader2
               className={cn(
@@ -287,9 +303,10 @@ export const TwoFactorAuthPage: React.FC = () => {
     );
   }
 
-  /* ==========================================================================
-     RENDER - VERIFICATION FORM
-     ========================================================================== */
+  /* =========================================================================
+     RENDER – VERIFICATION FORM
+     ========================================================================= */
+
   return (
     <AuthLayout
       title="Two-Factor Authentication"
@@ -309,16 +326,23 @@ export const TwoFactorAuthPage: React.FC = () => {
               : 'bg-blue-50 border-blue-200 text-blue-700'
           )}
         >
-          {verificationType === 'email' ? (
-            <Mail className="w-5 h-5 shrink-0 mt-0.5" />
+          {method === 'email' ? (
+            <Mail className="w-5 h-5 flex-shrink-0 mt-0.5" />
           ) : (
-            <Smartphone className="w-5 h-5 shrink-0 mt-0.5" />
+            <Smartphone className="w-5 h-5 flex-shrink-0 mt-0.5" />
           )}
           <div className="text-sm space-y-1">
             <p className="font-semibold">Verification Code Sent</p>
             <p className={cn(theme === 'dark' ? 'text-cyan-200/80' : 'text-blue-600')}>
-              We've sent a 6-digit code to your {deliveryMethod}:{' '}
-              <strong>{maskedDestination}</strong>
+              {isMfaFlow
+                ? 'Enter the 6-digit code from your '
+                : "We've sent a 6-digit code to your "}
+              {deliveryMethod}
+              {!isMfaFlow && (
+                <>
+                  : <strong>{maskedDestination}</strong>
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -334,7 +358,7 @@ export const TwoFactorAuthPage: React.FC = () => {
             )}
             role="alert"
           >
-            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <p className="text-sm">{error}</p>
           </div>
         )}
@@ -349,60 +373,56 @@ export const TwoFactorAuthPage: React.FC = () => {
           >
             Enter Verification Code
           </label>
-        <div className="flex justify-center gap-2 sm:gap-3">
-      {code.map((digit, index) => (
-        <input
-          key={index}
-          ref={(el) => {
-            inputRefs.current[index] = el;
-            // Don't return anything - implicit void
-          }}
-          type="text"
-          inputMode="numeric"
-          maxLength={2}
-          value={digit}
-          onChange={handleChange(index)}
-          onKeyDown={handleKeyDown(index)}
-          onPaste={index === 0 ? handlePaste : undefined}
-          disabled={isLoading}
-          className={cn(
-            'w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-bold',
-            'rounded-xl border-2 transition-all duration-200',
-            'focus:outline-none focus:ring-4',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-            theme === 'dark'
-              ? 'bg-gray-900/50 border-gray-800 text-white'
-              : 'bg-white border-gray-300 text-gray-900',
-            digit !== ''
-              ? theme === 'dark'
-                ? 'border-cyan-500 bg-cyan-500/10'
-                : 'border-blue-500 bg-blue-50'
-              : '',
-            error
-              ? theme === 'dark'
-                ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
-                : 'border-red-400 focus:border-red-500 focus:ring-red-100'
-              : theme === 'dark'
-              ? 'focus:border-cyan-500 focus:ring-cyan-500/20'
-              : 'focus:border-blue-500 focus:ring-blue-100'
-          )}
-          aria-label={`Digit ${index + 1}`}
-          autoComplete="off"
-          autoFocus={index === 0}
-        />
-      ))}
-    </div>
+
+          <div className="flex justify-center gap-2 sm:gap-3">
+            {code.map((digit, index) => (
+              <input
+                key={index}
+                ref={(el) => {
+                  inputRefs.current[index] = el;
+                }}
+                type="text"
+                inputMode="numeric"
+                maxLength={2}
+                value={digit}
+                onChange={handleChange(index)}
+                onKeyDown={handleKeyDown(index)}
+                onPaste={index === 0 ? handlePaste : undefined}
+                disabled={isLoading}
+                className={cn(
+                  'w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-bold',
+                  'rounded-xl border-2 transition-all duration-200',
+                  'focus:outline-none focus:ring-4',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                  theme === 'dark'
+                    ? 'bg-gray-900/50 border-gray-800 text-white'
+                    : 'bg-white border-gray-300 text-gray-900',
+                  digit !== ''
+                    ? theme === 'dark'
+                      ? 'border-cyan-500 bg-cyan-500/10'
+                      : 'border-blue-500 bg-blue-50'
+                    : '',
+                  error
+                    ? theme === 'dark'
+                      ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
+                      : 'border-red-400 focus:border-red-500 focus:ring-red-100'
+                    : theme === 'dark'
+                    ? 'focus:border-cyan-500 focus:ring-cyan-500/20'
+                    : 'focus:border-blue-500 focus:ring-blue-100'
+                )}
+                aria-label={`Digit ${index + 1}`}
+                autoComplete="off"
+                autoFocus={index === 0}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Verify button */}
         <button
           type="button"
           onClick={handleVerify}
-          disabled={
-            isLoading ||
-            code.some((digit) => digit === '') ||
-            (!verificationType && !pendingLogin)
-          }
+          disabled={isLoading || code.some((digit) => digit === '')}
           className={cn(
             'w-full py-3.5 px-6 rounded-xl font-semibold text-base',
             'transition-all duration-200',
@@ -410,8 +430,8 @@ export const TwoFactorAuthPage: React.FC = () => {
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'flex items-center justify-center gap-3',
             theme === 'dark'
-              ? 'bg-linear-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
-              : 'bg-linear-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
+              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
+              : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
             !isLoading &&
               code.every((digit) => digit !== '') &&
               'shadow-lg hover:shadow-xl hover:scale-[1.02]'
@@ -430,16 +450,11 @@ export const TwoFactorAuthPage: React.FC = () => {
           )}
         </button>
 
-        {/* Resend code - only for email verification */}
-        {verificationType === 'email' && (
+        {/* Resend code — only shown for email verification, not MFA */}
+        {!isMfaFlow && (
           <div className="text-center space-y-2">
             {resendCooldown > 0 ? (
-              <p
-                className={cn(
-                  'text-sm',
-                  theme === 'dark' ? 'text-gray-500' : 'text-gray-600'
-                )}
-              >
+              <p className={cn('text-sm', theme === 'dark' ? 'text-gray-500' : 'text-gray-600')}>
                 Resend code in {resendCooldown} seconds
               </p>
             ) : (
@@ -483,10 +498,7 @@ export const TwoFactorAuthPage: React.FC = () => {
         >
           <div className="flex items-center gap-2">
             <Shield
-              className={cn(
-                'w-4 h-4',
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              )}
+              className={cn('w-4 h-4', theme === 'dark' ? 'text-gray-400' : 'text-gray-600')}
             />
             <h4
               className={cn(
@@ -506,7 +518,7 @@ export const TwoFactorAuthPage: React.FC = () => {
             <li className="flex items-start gap-2">
               <div
                 className={cn(
-                  'w-1.5 h-1.5 rounded-full mt-1.5 shrink-0',
+                  'w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0',
                   theme === 'dark' ? 'bg-cyan-500' : 'bg-blue-500'
                 )}
               />
@@ -515,7 +527,7 @@ export const TwoFactorAuthPage: React.FC = () => {
             <li className="flex items-start gap-2">
               <div
                 className={cn(
-                  'w-1.5 h-1.5 rounded-full mt-1.5 shrink-0',
+                  'w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0',
                   theme === 'dark' ? 'bg-cyan-500' : 'bg-blue-500'
                 )}
               />
@@ -524,7 +536,7 @@ export const TwoFactorAuthPage: React.FC = () => {
             <li className="flex items-start gap-2">
               <div
                 className={cn(
-                  'w-1.5 h-1.5 rounded-full mt-1.5 shrink-0',
+                  'w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0',
                   theme === 'dark' ? 'bg-cyan-500' : 'bg-blue-500'
                 )}
               />

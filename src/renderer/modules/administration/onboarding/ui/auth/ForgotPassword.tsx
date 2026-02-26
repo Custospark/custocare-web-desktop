@@ -4,7 +4,23 @@ import { Mail, AlertCircle, Loader2, CheckCircle, ArrowRight } from 'lucide-reac
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../../shared/types/cn';
+
+// ── AccountQueries integration ───────────────────────────────────────────────
 import { useForgotPassword } from '../../../../account/api/AccountQueries';
+import type { ForgotPasswordRequest } from '../../../../account/api/AccountTypes';
+
+/**
+ * ============================================================================
+ * FORGOT PASSWORD PAGE
+ * ============================================================================
+ *
+ * Integrates with useForgotPassword (AccountQueries) which calls
+ * POST /auth/forgot-password and stores the submitted email in
+ * authSlice.passwordReset.email so ResetPassword can pick it up.
+ *
+ * Toast notifications are handled entirely inside the hook; this component
+ * only manages local form / success state.
+ */
 
 interface FormState {
   email: string;
@@ -13,39 +29,52 @@ interface FormState {
 const ForgotPassword: React.FC = () => {
   const theme = useAppSelector((state) => state.ui.theme);
 
-  // -------------------------------
-  // Local State
-  // -------------------------------
+  /* =========================================================================
+     LOCAL STATE
+     ========================================================================= */
+
   const [formState, setFormState] = useState<FormState>({ email: '' });
   const [emailError, setEmailError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [touched, setTouched] = useState(false);
 
-  // -------------------------------
-  // Mutation
-  // -------------------------------
-  const forgotPasswordMutation = useForgotPassword({
+  /* =========================================================================
+     MUTATION HOOK
+     ========================================================================= */
+
+  const {
+    mutate: forgotPassword,
+    isPending: isLoading,
+    reset: resetMutation,
+  } = useForgotPassword({
     onSuccess: () => {
+      // Hook dispatches forgotPasswordSuccess (stores email in slice) and
+      // shows a toast. We just flip the local success screen.
       setIsSuccess(true);
     },
+    // onError is intentionally omitted: useForgotPassword always shows a
+    // generic "if the email exists a reset code has been sent" message for
+    // security, and dispatches forgotPasswordFailure — no inline error needed.
   });
 
-  // -------------------------------
-  // Validation
-  // -------------------------------
+  /* =========================================================================
+     VALIDATION
+     ========================================================================= */
+
   const validateEmail = useCallback((email: string) => {
     if (!email) return 'Email address is required';
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regex.test(email) ? '' : 'Please enter a valid email address';
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+      ? ''
+      : 'Please enter a valid email address';
   }, []);
 
   const showError = touched && !!emailError;
-  const isFormValid = formState.email && !emailError;
+  const isFormValid = !!formState.email && !emailError;
 
-  // -------------------------------
-  // Handlers
-  // -------------------------------
+  /* =========================================================================
+     HANDLERS
+     ========================================================================= */
+
   const handleEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setFormState({ email: e.target.value });
     setEmailError('');
@@ -67,12 +96,12 @@ const ForgotPassword: React.FC = () => {
         return;
       }
 
-      setIsLoading(true);
-      forgotPasswordMutation.mutate({ email: formState.email });
-      // The mutation will set isSuccess via onSuccess callback
-      setIsLoading(false);
+      const payload: ForgotPasswordRequest = { email: formState.email };
+      // useForgotPassword dispatches forgotPasswordStart → forgotPasswordSuccess
+      // and shows a toast — all orchestration lives in AccountQueries.
+      forgotPassword(payload);
     },
-    [formState.email, validateEmail, forgotPasswordMutation]
+    [formState.email, validateEmail, forgotPassword]
   );
 
   const handleResendEmail = useCallback(() => {
@@ -80,11 +109,14 @@ const ForgotPassword: React.FC = () => {
     setFormState({ email: '' });
     setTouched(false);
     setEmailError('');
-  }, []);
+    // Reset the mutation so isPending / error states are cleared
+    resetMutation();
+  }, [resetMutation]);
 
-  // -------------------------------
-  // Success State
-  // -------------------------------
+  /* =========================================================================
+     RENDER – SUCCESS STATE
+     ========================================================================= */
+
   if (isSuccess) {
     return (
       <AuthLayout
@@ -136,8 +168,9 @@ const ForgotPassword: React.FC = () => {
                 theme === 'dark' ? 'text-emerald-200/80' : 'text-emerald-700'
               )}
             >
-              We've sent password reset instructions to <strong>{formState.email}</strong>.
-              Please check your inbox and spam folder.
+              We've sent password reset instructions to{' '}
+              <strong>{formState.email}</strong>. Please check your inbox and spam
+              folder.
             </p>
           </div>
 
@@ -233,12 +266,13 @@ const ForgotPassword: React.FC = () => {
     );
   }
 
-  // -------------------------------
-  // Render Form State
-  // -------------------------------
+  /* =========================================================================
+     RENDER – FORM STATE
+     ========================================================================= */
+
   return (
     <AuthLayout
-      title="Let’s reset your password"
+      title="Let's reset your password"
       subtitle="Enter your email to receive reset instructions"
       heroImage="https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=1200&q=80"
       heroHeadline="Secure Account Recovery"
@@ -258,13 +292,9 @@ const ForgotPassword: React.FC = () => {
           <Mail className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="text-sm space-y-1">
             <p className="font-semibold">Password reset instructions</p>
-            <p
-              className={cn(
-                theme === 'dark' ? 'text-cyan-200/80' : 'text-blue-600'
-              )}
-            >
-              We'll send a secure link to your email address. Click the link to
-              create a new password.
+            <p className={cn(theme === 'dark' ? 'text-cyan-200/80' : 'text-blue-600')}>
+              We'll send a secure link to your email address. Click the link to create a new
+              password.
             </p>
           </div>
         </div>
@@ -337,9 +367,7 @@ const ForgotPassword: React.FC = () => {
             theme === 'dark'
               ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
               : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
-            !isLoading && isFormValid
-              ? 'shadow-lg hover:shadow-xl hover:scale-[1.02]'
-              : ''
+            !isLoading && isFormValid ? 'shadow-lg hover:shadow-xl hover:scale-[1.02]' : ''
           )}
         >
           {isLoading ? (
