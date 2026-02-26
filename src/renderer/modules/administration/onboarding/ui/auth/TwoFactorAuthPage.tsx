@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Shield,
   AlertCircle,
@@ -21,10 +21,11 @@ import { selectVerificationContext } from '../../../../../app/store/slices/authS
 
 /**
  * ============================================================================
- * EMAIL VERIFICATION PAGE COMPONENT
+ * TWO-FACTOR AUTHENTICATION PAGE
  * ============================================================================
  *
- * Handles email verification flow with 5-second success delay before redirect.
+ * Handles email-based two-factor authentication with 5-second success delay
+ * before redirecting to the dashboard.
  */
 
 const CODE_LENGTH = 6;
@@ -35,7 +36,7 @@ export const TwoFactorAuthPage: React.FC = () => {
   const theme = useAppSelector((state) => state.ui.theme);
   const navigate = useNavigate();
 
-  // ── Verification context from authSlice ──────────────────────────────────
+  // ── Authentication context from authSlice ────────────────────────────────
   const verification = useAppSelector(selectVerificationContext);
   const emailFromSlice = verification.email;
 
@@ -48,10 +49,10 @@ export const TwoFactorAuthPage: React.FC = () => {
      ========================================================================= */
 
   const [code, setCode] = useState<string[]>(new Array(CODE_LENGTH).fill(''));
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState<string>('');
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [redirectTimer, setRedirectTimer] = useState<number>(5); // Countdown from 5 seconds
+  const [redirectTimer, setRedirectTimer] = useState<number>(5);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const successTimeoutRef = useRef<NodeJS.Timeout>(null);
@@ -64,8 +65,8 @@ export const TwoFactorAuthPage: React.FC = () => {
   const verifyEmailMutation = useVerifyEmail({
     onSuccess: (data) => {
       if (data.success) {
-        setIsSuccess(true);
-        setRedirectTimer(5); // Reset timer to 5 seconds
+        setIsAuthenticated(true);
+        setRedirectTimer(5);
         
         // Clear any existing timeouts/intervals
         if (successTimeoutRef.current) {
@@ -79,7 +80,6 @@ export const TwoFactorAuthPage: React.FC = () => {
         redirectIntervalRef.current = setInterval(() => {
           setRedirectTimer((prev) => {
             if (prev <= 1) {
-              // Clear interval when reaching 0
               if (redirectIntervalRef.current) {
                 clearInterval(redirectIntervalRef.current);
               }
@@ -89,15 +89,17 @@ export const TwoFactorAuthPage: React.FC = () => {
           });
         }, 1000);
         
-        // Set timeout for actual navigation
+        // Set timeout for navigation
         successTimeoutRef.current = setTimeout(() => {
-          navigate('/dashboard'); // or wherever you want to redirect
+          navigate('/dashboard');
         }, SUCCESS_DELAY);
       }
     },
     onError: (err) => {
       const msg =
-        err.response?.data?.message || err.message || 'Verification failed. Please try again.';
+        err.response?.data?.message || 
+        err.message || 
+        'Unable to verify the authentication code. Please check and try again.';
       setError(msg);
       setCode(new Array(CODE_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
@@ -115,7 +117,9 @@ export const TwoFactorAuthPage: React.FC = () => {
     },
     onError: (err) => {
       const msg =
-        err.response?.data?.message || err.message || 'Failed to resend code. Please try again.';
+        err.response?.data?.message || 
+        err.message || 
+        'Unable to send a new code at this moment. Please try again shortly.';
       setError(msg);
     },
   });
@@ -168,7 +172,7 @@ export const TwoFactorAuthPage: React.FC = () => {
     const verificationCode = code.join('');
 
     if (verificationCode.length !== CODE_LENGTH) {
-      setError('Please enter the complete verification code');
+      setError('Please enter the complete 6-digit code');
       return;
     }
 
@@ -252,17 +256,17 @@ export const TwoFactorAuthPage: React.FC = () => {
   }, [resendCooldown, isResending, resendMutation]);
 
   /* =========================================================================
-     RENDER – SUCCESS STATE WITH 5-SECOND DELAY
+     RENDER – AUTHENTICATION SUCCESS STATE
      ========================================================================= */
 
-  if (isSuccess) {
+  if (isAuthenticated) {
     return (
       <AuthLayout
-        title="Verification Successful"
+        title="Authentication Successful"
         subtitle="Access granted to your account"
         heroImage="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=1200&q=80"
-        heroHeadline="Email Verified Successfully"
-        heroSubtext="Your email has been confirmed. Welcome back to Custocare AI."
+        heroHeadline="Identity Confirmed"
+        heroSubtext="Your identity has been verified. Welcome back to your secure workspace."
       >
         <div className="space-y-6">
           {/* Success Animation */}
@@ -297,7 +301,7 @@ export const TwoFactorAuthPage: React.FC = () => {
                 theme === 'dark' ? 'text-emerald-300' : 'text-emerald-800'
               )}
             >
-              Email Verification Complete!
+              Verification Complete
             </p>
             <p
               className={cn(
@@ -305,7 +309,7 @@ export const TwoFactorAuthPage: React.FC = () => {
                 theme === 'dark' ? 'text-emerald-200/80' : 'text-emerald-700'
               )}
             >
-              Your email has been successfully verified.
+              Your authentication has been successfully validated.
             </p>
             
             {/* Progress Bar */}
@@ -323,7 +327,7 @@ export const TwoFactorAuthPage: React.FC = () => {
                 theme === 'dark' ? 'text-emerald-200' : 'text-emerald-600'
               )}
             >
-              Redirecting to dashboard in {redirectTimer} second{redirectTimer !== 1 ? 's' : ''}...
+              Redirecting to dashboard in {redirectTimer} second{redirectTimer !== 1 ? 's' : ''}
             </p>
           </div>
 
@@ -336,22 +340,22 @@ export const TwoFactorAuthPage: React.FC = () => {
                   theme === 'dark' ? 'text-cyan-400' : 'text-blue-600'
                 )}
               />
-              <span className="sr-only">Redirecting...</span>
+              <span className="sr-only">Loading secure session...</span>
             </div>
           </div>
 
-          {/* Optional: Manual redirect link */}
+          {/* Manual redirect option */}
           <div className="text-center">
             <button
               onClick={() => navigate('/dashboard')}
               className={cn(
-                'text-sm font-semibold transition-colors hover:underline',
+                'text-sm font-medium transition-colors hover:underline',
                 theme === 'dark'
                   ? 'text-cyan-400 hover:text-cyan-300'
                   : 'text-blue-600 hover:text-blue-700'
               )}
             >
-              Click here if you're not redirected automatically
+              Continue to dashboard manually
             </button>
           </div>
         </div>
@@ -360,16 +364,16 @@ export const TwoFactorAuthPage: React.FC = () => {
   }
 
   /* =========================================================================
-     RENDER – VERIFICATION FORM
+     RENDER – AUTHENTICATION FORM
      ========================================================================= */
 
   return (
     <AuthLayout
-      title="Email Verification"
-      subtitle="Enter the verification code sent to your email"
+      title="Two-Factor Authentication"
+      subtitle="Enter the code sent to your email"
       heroImage="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=1200&q=80"
-      heroHeadline="Secure Email Verification"
-      heroSubtext="Please verify your email address to access your account and protect your sensitive data."
+      heroHeadline="Secure Account Access"
+      heroSubtext="Please complete two-factor authentication to access your account securely."
       showBackToLogin
     >
       <div className="space-y-6">
@@ -384,14 +388,12 @@ export const TwoFactorAuthPage: React.FC = () => {
         >
           <Mail className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="text-sm space-y-1">
-            <p className="font-semibold">Verification Code Sent</p>
+            <p className="font-semibold">Authentication Code Sent</p>
             <p className={cn(theme === 'dark' ? 'text-cyan-200/80' : 'text-blue-600')}>
-              We've sent a 6-digit verification code to your email:{' '}
-              <strong>{maskedDestination}</strong>
-              <br />
-              <span className="text-xs opacity-80">
-                (Please check your inbox and spam folder)
-              </span>
+              A 6-digit code has been sent to <strong>{maskedDestination}</strong>
+            </p>
+            <p className="text-xs opacity-70">
+              The code expires in 10 minutes and is required to complete sign-in
             </p>
           </div>
         </div>
@@ -416,11 +418,11 @@ export const TwoFactorAuthPage: React.FC = () => {
         <div className="space-y-3">
           <label
             className={cn(
-              'block text-sm font-semibold text-center',
+              'block text-sm font-medium text-center',
               theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
             )}
           >
-            Enter Verification Code
+            Enter 6-Digit Code
           </label>
 
           <div className="flex justify-center gap-2 sm:gap-3">
@@ -459,7 +461,7 @@ export const TwoFactorAuthPage: React.FC = () => {
                     ? 'focus:border-cyan-500 focus:ring-cyan-500/20'
                     : 'focus:border-blue-500 focus:ring-blue-100'
                 )}
-                aria-label={`Digit ${index + 1}`}
+                aria-label={`Code digit ${index + 1}`}
                 autoComplete="off"
                 autoFocus={index === 0}
               />
@@ -494,7 +496,7 @@ export const TwoFactorAuthPage: React.FC = () => {
           ) : (
             <>
               <Shield className="w-5 h-5" />
-              <span>Verify Code</span>
+              <span>Authenticate</span>
             </>
           )}
         </button>
@@ -503,7 +505,7 @@ export const TwoFactorAuthPage: React.FC = () => {
         <div className="text-center space-y-2">
           {resendCooldown > 0 ? (
             <p className={cn('text-sm', theme === 'dark' ? 'text-gray-500' : 'text-gray-600')}>
-              Resend code in {resendCooldown} seconds
+              Request a new code in {resendCooldown} seconds
             </p>
           ) : (
             <button
@@ -511,30 +513,32 @@ export const TwoFactorAuthPage: React.FC = () => {
               onClick={handleResendCode}
               disabled={isResending}
               className={cn(
-                'text-sm font-semibold transition-colors',
-                'inline-flex items-center gap-2',
+                'text-sm font-medium transition-all duration-200',
+                'inline-flex items-center justify-center gap-2',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
+                'cursor-pointer hover:scale-105 active:scale-95',
                 theme === 'dark'
                   ? 'text-cyan-400 hover:text-cyan-300'
-                  : 'text-blue-600 hover:text-blue-700'
+                  : 'text-blue-600 hover:text-blue-700',
+                isResending && 'animate-pulse'
               )}
             >
               {isResending ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Sending...</span>
+                  <span>Sending new code...</span>
                 </>
               ) : (
                 <>
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Resend Verification Code</span>
+                  <RefreshCw className="w-4 h-4 transition-transform group-hover:rotate-180" />
+                  <span>Request new code</span>
                 </>
               )}
             </button>
           )}
         </div>
 
-        {/* Security info */}
+        {/* Security information */}
         <div
           className={cn(
             'p-4 rounded-xl border space-y-2',
@@ -553,7 +557,7 @@ export const TwoFactorAuthPage: React.FC = () => {
                 theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
               )}
             >
-              Security Notice
+              Security Information
             </h4>
           </div>
           <ul
@@ -569,7 +573,7 @@ export const TwoFactorAuthPage: React.FC = () => {
                   theme === 'dark' ? 'bg-cyan-500' : 'bg-blue-500'
                 )}
               />
-              <span>Verification code expires in 10 minutes</span>
+              <span>Codes expire 10 minutes after being sent</span>
             </li>
             <li className="flex items-start gap-2">
               <div
@@ -578,7 +582,7 @@ export const TwoFactorAuthPage: React.FC = () => {
                   theme === 'dark' ? 'bg-cyan-500' : 'bg-blue-500'
                 )}
               />
-              <span>Never share this code with anyone</span>
+              <span>Never share your authentication code with anyone</span>
             </li>
             <li className="flex items-start gap-2">
               <div
@@ -587,30 +591,30 @@ export const TwoFactorAuthPage: React.FC = () => {
                   theme === 'dark' ? 'bg-cyan-500' : 'bg-blue-500'
                 )}
               />
-              <span>Custocare AI will never ask for this code outside of verification</span>
+              <span>Our team will never ask for your code</span>
             </li>
           </ul>
         </div>
 
-        {/* Help link */}
+        {/* Support contact */}
         <div
           className={cn(
             'text-center text-sm',
             theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
           )}
         >
-          Having trouble?{' '}
-          <Link
-            to="/help"
+          Need assistance?{' '}
+          <a
+            href="mailto:info@custospark.com"
             className={cn(
-              'font-semibold transition-colors',
+              'font-medium transition-colors hover:underline cursor-pointer',
               theme === 'dark'
                 ? 'text-cyan-400 hover:text-cyan-300'
                 : 'text-blue-600 hover:text-blue-700'
             )}
           >
-            Contact Support
-          </Link>
+            Contact support
+          </a>
         </div>
       </div>
     </AuthLayout>
