@@ -91,7 +91,7 @@ class ErrorBoundary extends Component<Props, State> {
                 className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-xl font-semibold hover:from-blue-500 hover:to-cyan-400 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-5 h-5" />
-                Reload Page
+                Reload App
               </button>
 
               <button

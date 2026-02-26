@@ -140,46 +140,70 @@ const authSlice = createSlice({
     /* ---------------------------------------------------------------------- */
 
     initializeAuth: (state) => {
-      const token = localStorage.getItem('authToken');
-      const userStr = localStorage.getItem('authUser');
+        const token = localStorage.getItem('authToken');
+        const userStr = localStorage.getItem('authUser');
+        const verificationStr = localStorage.getItem('authVerification');
 
-      if (token) {
-        state.token = token;
-        state.isAuthenticated = true;
+        if (token) {
+          state.token = token;
+          state.isAuthenticated = true;
 
-        if (userStr) {
-          try {
-            state.user = JSON.parse(userStr) as UnifiedUserProfile;
-          } catch {
-            // ignore invalid cached user
+          if (userStr) {
+            try {
+              state.user = JSON.parse(userStr) as UnifiedUserProfile;
+            } catch {
+              // ignore invalid cached user
+            }
           }
         }
-      }
 
-      state.isInitialized = true;
-    },
+        // Restore verification context (userId, email, etc.)
+        if (verificationStr) {
+          try {
+            const savedVerification = JSON.parse(verificationStr);
+            // Only restore if it has the required fields
+            if (savedVerification && typeof savedVerification === 'object') {
+              state.verification = {
+                type: savedVerification.type || null,
+                flow: savedVerification.flow || null,
+                userId: savedVerification.userId || null,
+                email: savedVerification.email || null,
+              };
+            }
+          } catch {
+            // ignore corrupted storage
+          }
+        }
 
-    logout: (state) => {
-      // Clear all auth-related state
+        state.isInitialized = true;
+      },
+
+      logout: (state) => {
       Object.assign(state, initialState, { isInitialized: true });
-
-      // Clear persisted session
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');
+      localStorage.removeItem('authVerification'); // add this line
     },
 
     /* ---------------------------------------------------------------------- */
     /*                           VERIFICATION CONTEXT                           */
     /* ---------------------------------------------------------------------- */
 
-    setVerificationContext: (state, action: PayloadAction<VerificationContext>) => {
+   setVerificationContext: (state, action: PayloadAction<VerificationContext>) => {
       state.verification = action.payload;
+      // Persist to localStorage (omit sensitive data – only userId & email matter)
+      localStorage.setItem('authVerification', JSON.stringify({
+        type: action.payload.type,
+        flow: action.payload.flow,
+        userId: action.payload.userId,
+        email: action.payload.email,
+      }));
     },
 
-    clearVerificationContext: (state) => {
-      state.verification = { type: null, flow: null, userId: null, email: null };
-    },
-
+   clearVerificationContext: (state) => {
+    state.verification = { type: null, flow: null, userId: null, email: null };
+    localStorage.removeItem('authVerification');
+  },
     setPendingLogin: (state, action: PayloadAction<PendingLogin>) => {
       state.pendingLogin = action.payload;
     },
@@ -217,20 +241,20 @@ const authSlice = createSlice({
       state.registration.isLoading = false;
       state.registration.error = null;
 
-      // Save partial user if provided (token is null until verified)
       if (action.payload.user) {
         state.user = action.payload.user;
       }
 
-      // Set verification context for registration email verification
-      state.verification = {
-        type: 'email',
-        flow: 'registration',
+      const verification = {
+        type: 'email' as const,
+        flow: 'registration' as const,
         userId: action.payload.userId,
         email: action.payload.email,
       };
+      state.verification = verification;
+      // Persist verification context
+      localStorage.setItem('authVerification', JSON.stringify(verification));
 
-      // Ensure we are not authenticated after registration (backend returns no token)
       state.isAuthenticated = false;
       state.token = null;
     },
@@ -260,26 +284,26 @@ const authSlice = createSlice({
      * loginSuccess stores the token and user, and persists them to localStorage.
      * This is called after successful login (including after MFA verification or email verification + re-login).
      */
-    loginSuccess: (state, action: PayloadAction<{ user: UnifiedUserProfile; token: string }>) => {
-      state.isLoading = false;
-      state.user = action.payload.user;
-      state.token = action.payload.token;
-      state.isAuthenticated = true;
-      state.isInitialized = true;
+   loginSuccess: (state, action: PayloadAction<{ user: UnifiedUserProfile; token: string }>) => {
+    state.isLoading = false;
+    state.user = action.payload.user;
+    state.token = action.payload.token;
+    state.isAuthenticated = true;
+    state.isInitialized = true;
 
-      // Clear temporary verification & pending login state
-      state.verification = { type: null, flow: null, userId: null, email: null };
-      state.pendingLogin = null;
+    state.verification = { type: null, flow: null, userId: null, email: null };
+    state.pendingLogin = null;
 
-      // Persist session
-      localStorage.setItem('authToken', action.payload.token);
-      localStorage.setItem('authUser', JSON.stringify(action.payload.user));
-    },
+    // Clear persisted verification
+    localStorage.removeItem('authVerification');
 
+    localStorage.setItem('authToken', action.payload.token);
+    localStorage.setItem('authUser', JSON.stringify(action.payload.user));
+  },
     refreshUser: (state, action: PayloadAction<UnifiedUserProfile>) => {
-      state.user = action.payload;
-      localStorage.setItem('authUser', JSON.stringify(action.payload));
-    },
+        state.user = action.payload;
+        localStorage.setItem('authUser', JSON.stringify(action.payload));
+      },
 
     /* ---------------------------------------------------------------------- */
     /*                              EMAIL VERIFICATION                          */
@@ -320,12 +344,15 @@ const authSlice = createSlice({
       state.mfa.isVerifying = false;
       state.mfa.error = null;
 
-      state.verification = {
-        type: 'mfa',
-        flow: 'login',
+      const verification = {
+        type: 'mfa' as const,
+        flow: 'login' as const,
         userId: action.payload.userId,
         email: action.payload.email,
       };
+      state.verification = verification;
+      // Persist verification context
+      localStorage.setItem('authVerification', JSON.stringify(verification));
     },
 
     mfaVerificationStart: (state) => {

@@ -6,36 +6,26 @@ import {
   Loader2,
   CheckCircle,
   Mail,
-  Smartphone,
   RefreshCw,
 } from 'lucide-react';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../../shared/types/cn';
 
-// ── AccountQueries & authSlice integration ───────────────────────────────────
+// ── AccountQueries integration ───────────────────────────────────
 import {
   useVerifyEmail,
-  useVerifyMfa,
   useResendVerification,
 } from '../../../../account/api/AccountQueries';
 import { selectVerificationContext } from '../../../../../app/store/slices/authSlice';
 
 /**
  * ============================================================================
- * TWO-FACTOR AUTHENTICATION PAGE COMPONENT
+ * EMAIL VERIFICATION PAGE COMPONENT
  * ============================================================================
  *
- * Handles both flows driven by authSlice.verification:
- *   type = 'email' → useVerifyEmail  (registration or login email verification)
- *   type = 'mfa'   → useVerifyMfa    (MFA / TOTP login step)
- *
- * Verification context (userId, email, flow) is read exclusively from
- * authSlice — NO route state or query-param passing.
- *
- * All navigation after success is handled inside AccountQueries hooks;
- * the local `isSuccess` flag keeps the success screen visible until the
- * router transition completes.
+ * Handles email verification flow using authSlice.verification context.
+ * Verification context (userId, email) is read exclusively from authSlice.
  */
 
 const CODE_LENGTH = 6;
@@ -46,10 +36,6 @@ export const TwoFactorAuthPage: React.FC = () => {
 
   // ── Verification context from authSlice ──────────────────────────────────
   const verification = useAppSelector(selectVerificationContext);
-
-  // Derive display info from slice (no route state)
-  const isMfaFlow = verification.type === 'mfa';
-  const method = isMfaFlow ? 'sms' : 'email';
   const emailFromSlice = verification.email;
 
   const maskedDestination = emailFromSlice
@@ -73,26 +59,11 @@ export const TwoFactorAuthPage: React.FC = () => {
 
   const verifyEmailMutation = useVerifyEmail({
     onSuccess: (data) => {
-      // Navigation is handled inside the hook.
-      // We set isSuccess to keep the success UI while the router transitions.
       if (data.success) setIsSuccess(true);
     },
     onError: (err) => {
       const msg =
         err.response?.data?.message || err.message || 'Verification failed. Please try again.';
-      setError(msg);
-      setCode(new Array(CODE_LENGTH).fill(''));
-      inputRefs.current[0]?.focus();
-    },
-  });
-
-  const verifyMfaMutation = useVerifyMfa({
-    onSuccess: (data) => {
-      if (data.success) setIsSuccess(true);
-    },
-    onError: (err) => {
-      const msg =
-        err.response?.data?.message || err.message || 'MFA verification failed. Please try again.';
       setError(msg);
       setCode(new Array(CODE_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
@@ -105,12 +76,17 @@ export const TwoFactorAuthPage: React.FC = () => {
         setResendCooldown(RESEND_COOLDOWN);
         setCode(new Array(CODE_LENGTH).fill(''));
         inputRefs.current[0]?.focus();
+        setError('');
       }
+    },
+    onError: (err) => {
+      const msg =
+        err.response?.data?.message || err.message || 'Failed to resend code. Please try again.';
+      setError(msg);
     },
   });
 
-  // Combined loading flag
-  const isLoading = verifyEmailMutation.isPending || verifyMfaMutation.isPending;
+  const isLoading = verifyEmailMutation.isPending;
   const isResending = resendMutation.isPending;
 
   /* =========================================================================
@@ -148,13 +124,8 @@ export const TwoFactorAuthPage: React.FC = () => {
     }
 
     setError('');
-
-    if (isMfaFlow) {
-      verifyMfaMutation.mutate({ mfa_code: verificationCode });
-    } else {
-      verifyEmailMutation.mutate({ code: verificationCode });
-    }
-  }, [code, isMfaFlow, verifyEmailMutation, verifyMfaMutation]);
+    verifyEmailMutation.mutate({ code: verificationCode });
+  }, [code, verifyEmailMutation]);
 
   const handleChange = useCallback(
     (index: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -227,10 +198,9 @@ export const TwoFactorAuthPage: React.FC = () => {
   }, []);
 
   const handleResendCode = useCallback(() => {
-    if (resendCooldown > 0) return;
-    // useResendVerification reads userId from slice automatically
+    if (resendCooldown > 0 || isResending) return;
     resendMutation.mutate({});
-  }, [resendCooldown, resendMutation]);
+  }, [resendCooldown, isResending, resendMutation]);
 
   /* =========================================================================
      RENDER – SUCCESS STATE
@@ -242,8 +212,8 @@ export const TwoFactorAuthPage: React.FC = () => {
         title="Verification Successful"
         subtitle="Access granted to your account"
         heroImage="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=1200&q=80"
-        heroHeadline="Secure Access Verified"
-        heroSubtext="Your identity has been confirmed. Welcome back to Custocare AI."
+        heroHeadline="Email Verified Successfully"
+        heroSubtext="Your email has been confirmed. Welcome back to Custocare AI."
       >
         <div className="space-y-6">
           <div className="flex justify-center">
@@ -276,7 +246,7 @@ export const TwoFactorAuthPage: React.FC = () => {
                 theme === 'dark' ? 'text-emerald-300' : 'text-emerald-800'
               )}
             >
-              Authentication Complete
+              Email Verification Complete
             </p>
             <p
               className={cn(
@@ -307,11 +277,11 @@ export const TwoFactorAuthPage: React.FC = () => {
 
   return (
     <AuthLayout
-      title="Two-Factor Authentication"
+      title="Email Verification"
       subtitle="Enter the verification code sent to your email"
       heroImage="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=1200&q=80"
-      heroHeadline="Enhanced Security"
-      heroSubtext="Multi-factor authentication protects your account and sensitive patient data from unauthorized access."
+      heroHeadline="Secure Email Verification"
+      heroSubtext="Please verify your email address to access your account and protect your sensitive data."
       showBackToLogin
     >
       <div className="space-y-6">
@@ -324,30 +294,16 @@ export const TwoFactorAuthPage: React.FC = () => {
               : 'bg-blue-50 border-blue-200 text-blue-700'
           )}
         >
-          {method === 'email' ? (
-            <Mail className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          ) : (
-            <Smartphone className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          )}
+          <Mail className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="text-sm space-y-1">
-            <p className="font-semibold">
-              {isMfaFlow ? 'Verification Code Sent' : 'Email Verification Code Sent'}
-            </p>
+            <p className="font-semibold">Verification Code Sent</p>
             <p className={cn(theme === 'dark' ? 'text-cyan-200/80' : 'text-blue-600')}>
-              {isMfaFlow && 
-              // (
-              //   'Enter the 6-digit code from your authenticator app.' //Currently using only one method for login in.
-              // ) : 
-              (
-                <>
-                  We've sent a 6-digit verification code to your email:{' '}
-                  <strong>{maskedDestination}</strong>
-                  <br />
-                  <span className="text-xs opacity-80">
-                    (Please check your inbox and spam folder)
-                  </span>
-                </>
-              )}
+              We've sent a 6-digit verification code to your email:{' '}
+              <strong>{maskedDestination}</strong>
+              <br />
+              <span className="text-xs opacity-80">
+                (Please check your inbox and spam folder)
+              </span>
             </p>
           </div>
         </div>
@@ -455,42 +411,40 @@ export const TwoFactorAuthPage: React.FC = () => {
           )}
         </button>
 
-        {/* Resend code — only shown for email verification, not MFA */}
-        {!isMfaFlow && (
-          <div className="text-center space-y-2">
-            {resendCooldown > 0 ? (
-              <p className={cn('text-sm', theme === 'dark' ? 'text-gray-500' : 'text-gray-600')}>
-                Resend code in {resendCooldown} seconds
-              </p>
-            ) : (
-              <button
-                type="button"
-                onClick={handleResendCode}
-                disabled={isResending}
-                className={cn(
-                  'text-sm font-semibold transition-colors',
-                  'inline-flex items-center gap-2',
-                  'disabled:opacity-50 disabled:cursor-not-allowed',
-                  theme === 'dark'
-                    ? 'text-cyan-400 hover:text-cyan-300'
-                    : 'text-blue-600 hover:text-blue-700'
-                )}
-              >
-                {isResending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Sending...</span>
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4" />
-                    <span>Resend Verification Code</span>
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        )}
+        {/* Resend code */}
+        <div className="text-center space-y-2">
+          {resendCooldown > 0 ? (
+            <p className={cn('text-sm', theme === 'dark' ? 'text-gray-500' : 'text-gray-600')}>
+              Resend code in {resendCooldown} seconds
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={handleResendCode}
+              disabled={isResending}
+              className={cn(
+                'text-sm font-semibold transition-colors',
+                'inline-flex items-center gap-2',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                theme === 'dark'
+                  ? 'text-cyan-400 hover:text-cyan-300'
+                  : 'text-blue-600 hover:text-blue-700'
+              )}
+            >
+              {isResending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Sending...</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Resend Verification Code</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
 
         {/* Security info */}
         <div
@@ -545,7 +499,7 @@ export const TwoFactorAuthPage: React.FC = () => {
                   theme === 'dark' ? 'bg-cyan-500' : 'bg-blue-500'
                 )}
               />
-              <span>Custocare AI will never ask for this code</span>
+              <span>Custocare AI will never ask for this code outside of verification</span>
             </li>
           </ul>
         </div>
@@ -576,46 +530,3 @@ export const TwoFactorAuthPage: React.FC = () => {
 };
 
 export default TwoFactorAuthPage;
-
-// import React from 'react';
-// import { useAppSelector } from '../../../../../app/store/hooks/useApp';
-// import {
-//   selectVerificationContext,
-//   selectPendingLogin,
-//   selectToken,
-//   selectUser,
-//   selectPasswordResetEmail,
-// } from '../../../../../app/store/slices/authSlice';
-
-// /**
-//  * Simple test component to verify auth slice state.
-//  * Displays current values from auth slice.
-//  */
-// export const TwoFactorAuthPage: React.FC = () => {
-//   const verification = useAppSelector(selectVerificationContext);
-//   const pendingLogin = useAppSelector(selectPendingLogin);
-//   const token = useAppSelector(selectToken);
-//   const user = useAppSelector(selectUser);
-//   const resetEmail = useAppSelector(selectPasswordResetEmail);
-
-//   return (
-//     <div style={{ padding: '20px', fontFamily: 'monospace' }}>
-//       <h2>Auth Slice Test</h2>
-//       <pre>
-//         {JSON.stringify(
-//           {
-//             verification,
-//             pendingLogin,
-//             token,
-//             user,
-//             resetEmail,
-//           },
-//           null,
-//           2
-//         )}
-//       </pre>
-//     </div>
-//   );
-// };
-
-// export default TwoFactorAuthPage;

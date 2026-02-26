@@ -302,145 +302,122 @@ export const useLogin = (
   });
 };
 
-/**
- * VERIFY EMAIL
- * - If verification.flow=registration -> navigate to role selection
- * - If verification.flow=login -> auto re-attempt login using pendingLogin, then:
- *    - if MFA_REQUIRED -> navigate to MFA
- *    - if LOGIN_SUCCESS -> fetch context, set activeContext, navigate to portal selection
- *
- * Token is stored only after the re‑login (via loginSuccess) – the verify‑email endpoint itself returns token:null.
- */
-export const useVerifyEmail = (
-  callbacks: MutationCallbacks<VerifyEmailResponse, AxiosError<ApiValidationErrorResponse>> = {}
-) => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { showToast } = useToast();
+  /**
+   * VERIFY EMAIL
+   * - If verification.flow=registration -> navigate to role selection
+   * - If verification.flow=login -> auto re-attempt login using pendingLogin, then:
+   *    - if MFA_REQUIRED -> navigate to MFA
+   *    - if LOGIN_SUCCESS -> fetch context, set activeContext, navigate to portal selection
+   *
+   * Token is stored only after the re‑login (via loginSuccess) – the verify‑email endpoint itself returns token:null.
+   */
+  export const useVerifyEmail = (
+    callbacks: MutationCallbacks<VerifyEmailResponse, AxiosError<ApiValidationErrorResponse>> = {}
+  ) => {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const { showToast } = useToast();
 
-  const verification = useSelector(selectVerificationContext);
-  const pendingLogin = useSelector(selectPendingLogin);
+    const verification = useSelector(selectVerificationContext);
 
-  return useMutation<VerifyEmailResponse, AxiosError<ApiValidationErrorResponse>, VerifyEmailVariables>({
-    mutationFn: async (vars) => {
-      const user_id = vars.user_id ?? verification.userId;
+    return useMutation<VerifyEmailResponse, AxiosError<ApiValidationErrorResponse>, VerifyEmailVariables>({
+      mutationFn: async (vars) => {
+        const user_id = vars.user_id ?? verification.userId;
 
-      if (!user_id) {
-        throw new Error(
-          'Missing user_id for email verification. Ensure it is stored in slice (registration or login response).'
-        );
-      }
+        if (!user_id) {
+          throw new Error(
+            'Missing user_id for email verification. Ensure it is stored in slice (registration or login response).'
+          );
+        }
 
-      const res = await axiosInstance.post<VerifyEmailResponse>('/auth/verify-email', {
-        user_id,
-        code: vars.code,
-        is_token: vars.is_token ?? false,
-      });
+        const res = await axiosInstance.post<VerifyEmailResponse>('/auth/verify-email', {
+          user_id,
+          code: vars.code,
+          is_token: vars.is_token ?? false,
+        });
 
-      return res.data;
-    },
-    onMutate: () => dispatch(verifyEmailStart()),
-    onSuccess: async (data) => {
-      if (!data.success) {
-        const msg = data.message || 'Verification failed.';
-        dispatch(verifyEmailFailure(msg));
-        showToast('error', msg, 8000);
-        callbacks.onSuccess?.(data);
-        return;
-      }
-
-       if (data.token && data.user) {
-        dispatch(loginSuccess({ token: data.token, user: data.user }));
-        dispatch(clearVerificationContext());
-        dispatch(clearPendingLogin());
-        dispatch(mfaClear());
-      }
-      dispatch(verifyEmailSuccess());
-      showToast('success', data.message || 'Email verified successfully.', 8000);
-
-      // Registration flow: go to Role Selection (required)
-      if (verification.flow === 'registration') {
-        dispatch(clearVerificationContext());
-        navigate(ROUTES.ROLE_SELECTION);
-        callbacks.onSuccess?.(data);
-        return;
-      }
-
-      // Login flow: must complete login + fetch context + go to Portal Selection (required)
-      if (verification.flow === 'login') {
-        if (!pendingLogin) {
-          const msg = 'Cannot complete login after verification: missing pending login credentials in slice.';
+        return res.data;
+      },
+      onMutate: () => dispatch(verifyEmailStart()),
+      onSuccess: async (data) => {
+        if (!data.success) {
+          const msg = data.message || 'Verification failed.';
           dispatch(verifyEmailFailure(msg));
           showToast('error', msg, 8000);
           callbacks.onSuccess?.(data);
           return;
         }
 
-        try {
-          const loginRes = await axiosInstance.post<LoginResponse<UnifiedUserProfile>>('/auth/login', {
-            email: pendingLogin.email,
-            password: pendingLogin.password,
-            remember_me: pendingLogin.remember_me ?? null,
-          });
-
-          const loginData = loginRes.data;
-
-          if (loginData.success && loginData.code === 'MFA_REQUIRED') {
-            // Switch to MFA step after email verification
-            const userId = (loginData.user as any)?.id ?? verification.userId ?? null;
-
-            dispatch(mfaRequired({ email: pendingLogin.email, userId }));
-            showToast('info', loginData.message || 'MFA required.', 8000);
-
-            navigate(ROUTES.TWO_FACTOR_AUTH);
-            callbacks.onSuccess?.(data);
-            return;
-          }
-
-          if (loginData.success && loginData.token && loginData.user) {
-            // Token stored here via loginSuccess
-            dispatch(loginSuccess({ token: loginData.token, user: loginData.user }));
-            dispatch(clearVerificationContext());
-            dispatch(clearPendingLogin());
-            dispatch(mfaClear());
-
-            const context = await fetchUserContext();
-            dispatch(setUserContext(context));
-
-            navigate(ROUTES.PORTAL_SELECTOR);
-            callbacks.onSuccess?.(data);
-            return;
-          }
-
-          // If still not verified or other failure
-          const msg = loginData.message || 'Login failed after email verification.';
-          dispatch(loginFailure(msg));
-          showToast('error', msg, 8000);
-          callbacks.onSuccess?.(data);
-        } catch (e) {
-          const msg = 'Login failed after email verification.';
-          dispatch(loginFailure(msg));
-          showToast('error', msg, 8000);
-          callbacks.onSuccess?.(data);
+        // If the response includes token and user, authenticate the user
+        // This applies to BOTH registration and login flows
+        if (data.token && data.user) {
+          dispatch(loginSuccess({ token: data.token, user: data.user }));
+          dispatch(clearPendingLogin());
+          dispatch(mfaClear());
         }
 
-        return;
-      }
+        dispatch(verifyEmailSuccess());
+        showToast('success', data.message || 'Verification successfully completed.', 8000);
 
-      // No flow known: just clear and go to login
-      dispatch(clearVerificationContext());
-      navigate(ROUTES.LOGIN);
-      callbacks.onSuccess?.(data);
-    },
-    onError: (error) => {
-      const msg = error.response?.data?.message || error.message || 'Verification failed.';
-      dispatch(verifyEmailFailure(msg));
-      showToast('error', msg, 8000);
-      callbacks.onError?.(error);
-    },
-  });
-};
+        // Handle navigation based on flow
+        switch (verification.flow) {
+          case 'registration':
+            // Registration flow: user is authenticated if token was returned
+            dispatch(clearVerificationContext());
+            
+            if (data.token && data.user) {
+              // User is authenticated - fetch context and go to Portal Selector
+              try {
+                const context = await fetchUserContext();
+                dispatch(setUserContext(context));
+              } catch {
+                showToast('error', 'Authentication successful, but failed to load user context.', 8000);
+              }
+              navigate(ROUTES.ROLE_SELECTION);
+            } else {
+              // No token (unlikely) - go to Role Selection as before
+              navigate(ROUTES.ROLE_SELECTION);
+              showToast('error', 'Unexpected error occured.Please try again later.', 8000);
+            }
+            break;
 
+          case 'login':
+            // Login flow: user is authenticated if token was returned
+            dispatch(clearVerificationContext());
+            
+            if (data.token && data.user) {
+              // Fetch user context and go to Portal Selector
+              try {
+                const context = await fetchUserContext();
+                dispatch(setUserContext(context));
+              } catch {
+                showToast('error', 'Logged in, but failed to load user context.', 8000);
+              }
+              navigate(ROUTES.PORTAL_SELECTOR);
+            } else {
+              // Fallback: if no token (unlikely), send to login page
+              showToast('info', 'Please log in with your credentials.', 5000);
+              navigate(ROUTES.LOGIN);
+            }
+            break;
+
+          default:
+            // No flow known: go to login
+            dispatch(clearVerificationContext());
+            navigate(ROUTES.LOGIN);
+            break;
+        }
+
+        callbacks.onSuccess?.(data);
+      },
+      onError: (error) => {
+        const msg = error.response?.data?.message || error.message || 'Verification failed.';
+        dispatch(verifyEmailFailure(msg));
+        showToast('error', msg, 8000);
+        callbacks.onError?.(error);
+      },
+    });
+  };
 /**
  * VERIFY MFA (2FA)
  * Uses ONLY /auth/login with mfa_code (no new endpoint).
