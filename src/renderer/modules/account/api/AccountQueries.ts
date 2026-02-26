@@ -219,24 +219,24 @@ export const useLogin = (
     },
     onMutate: () => dispatch(loginStart()),
     onSuccess: async (data, variables) => {
-      // Store pending login for flows that need a second step (email verify or MFA).
+      // Store pending login for flows that need a second step (email verify).
       // Note: this stores password in-memory only, not persisted.
       const pending = { email: variables.email, password: variables.password, remember_me: variables.remember_me ?? null };
       dispatch(setPendingLogin(pending));
 
+      // Case 1: MFA required (legacy, but keep for backward compatibility)
       if (data.success && data.code === 'MFA_REQUIRED') {
-        // Backend provides user in MFA_REQUIRED flow (per your service)
         const userId = (data.user as any)?.id ?? null;
 
         dispatch(mfaRequired({ email: variables.email, userId }));
         showToast('info', data.message || 'MFA required.', 8000);
 
-        // Route to MFA screen
         navigate(ROUTES.TWO_FACTOR_AUTH);
         callbacks.onSuccess?.(data);
         return;
       }
 
+      // Case 2: API returned failure
       if (!data.success) {
         const msg = data.message || 'Login failed.';
         dispatch(loginFailure(msg));
@@ -245,9 +245,9 @@ export const useLogin = (
         return;
       }
 
-      // Email not verified case
+      // Case 3: Email not verified
       if (data.code === 'EMAIL_NOT_VERIFIED') {
-        const userId = (data.user as any)?.id ?? null; // may be null depending on backend response
+        const userId = (data.user as any)?.id ?? null;
 
         dispatch(
           setVerificationContext({
@@ -264,7 +264,7 @@ export const useLogin = (
         return;
       }
 
-      // Successful login
+      // Case 4: Successful login with user and token (email verified, no 2FA)
       if (data.token && data.user) {
         // loginSuccess stores token and user in authSlice and persists to localStorage
         dispatch(loginSuccess({ token: data.token, user: data.user }));
@@ -275,20 +275,20 @@ export const useLogin = (
         try {
           const context = await fetchUserContext();
           dispatch(setUserContext(context));
+          showToast('success', data.message || 'Login successful.', 8000);
+          navigate(ROUTES.PORTAL_SELECTOR);
         } catch {
           showToast('error', 'Logged in, but failed to load user context.', 8000);
-          // Still allow navigation; app may handle missing context gracefully.
+          // Still navigate to Portal Selector - app may handle missing context gracefully
+          navigate(ROUTES.PORTAL_SELECTOR);
         }
-
-        showToast('success', data.message || 'Login successful.', 8000);
-        navigate(ROUTES.PORTAL_SELECTOR);
 
         callbacks.onSuccess?.(data);
         return;
       }
 
-      // Fallback: unexpected shape
-      const msg = data.message || 'Login failed (unexpected response).';
+      // Case 5: Unexpected response shape (neither token/user nor verification needed)
+      const msg = data.message || 'Login failed.System error.';
       dispatch(loginFailure(msg));
       showToast('error', msg, 8000);
       callbacks.onSuccess?.(data);

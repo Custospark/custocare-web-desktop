@@ -760,7 +760,7 @@ export const MedicalProfessionalOnboarding: React.FC = () => {
                 "text-xs font-medium mb-1",
                 theme === 'dark' ? "text-slate-500" : "text-slate-500"
               )}>
-                Employment Type
+                Select Employment Type
               </p>
               <p className={cn(
                 "font-semibold",

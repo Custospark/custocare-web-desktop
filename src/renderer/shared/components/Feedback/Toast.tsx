@@ -9,6 +9,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 type ToastVariant = 'success' | 'error' | 'warning' | 'info';
+type ToastPosition = 'top-center' | 'top-right' | 'top-left' | 'bottom-center' | 'bottom-right' | 'bottom-left';
 
 interface ToastProps {
   variant: ToastVariant;
@@ -16,6 +17,7 @@ interface ToastProps {
   duration?: number;
   onClose: () => void;
   className?: string;
+  position?: ToastPosition;
 }
 
 /**
@@ -30,6 +32,7 @@ interface ToastProps {
  *   message="Patient record saved successfully"
  *   duration={3000}
  *   onClose={() => setShowToast(false)}
+ *   position="bottom-center"
  * />
  */
 const Toast: React.FC<ToastProps> = ({
@@ -37,7 +40,8 @@ const Toast: React.FC<ToastProps> = ({
   message,
   duration = 5000,
   onClose,
-  className = ''
+  className = '',
+  position = 'bottom-center'
 }) => {
   useEffect(() => {
     if (duration > 0) {
@@ -45,6 +49,44 @@ const Toast: React.FC<ToastProps> = ({
       return () => clearTimeout(timer);
     }
   }, [duration, onClose]);
+
+  // Get animation based on position
+  const getAnimationProps = () => {
+    switch (position) {
+      case 'top-center':
+        return {
+          initial: { opacity: 0, y: -50, scale: 0.95 },
+          animate: { opacity: 1, y: 0, scale: 1 },
+          exit: { opacity: 0, y: -50, scale: 0.95 }
+        };
+      case 'bottom-center':
+        return {
+          initial: { opacity: 0, y: 50, scale: 0.95 },
+          animate: { opacity: 1, y: 0, scale: 1 },
+          exit: { opacity: 0, y: 50, scale: 0.95 }
+        };
+      case 'top-right':
+      case 'bottom-right':
+        return {
+          initial: { opacity: 0, x: 50, scale: 0.95 },
+          animate: { opacity: 1, x: 0, scale: 1 },
+          exit: { opacity: 0, x: 50, scale: 0.95 }
+        };
+      case 'top-left':
+      case 'bottom-left':
+        return {
+          initial: { opacity: 0, x: -50, scale: 0.95 },
+          animate: { opacity: 1, x: 0, scale: 1 },
+          exit: { opacity: 0, x: -50, scale: 0.95 }
+        };
+      default:
+        return {
+          initial: { opacity: 0, y: 50, scale: 0.95 },
+          animate: { opacity: 1, y: 0, scale: 1 },
+          exit: { opacity: 0, y: 50, scale: 0.95 }
+        };
+    }
+  };
 
   // Theme-aware configuration with proper contrast
   const variantConfig = {
@@ -84,34 +126,27 @@ const Toast: React.FC<ToastProps> = ({
 
   const config = variantConfig[variant];
   const Icon = config.icon;
+  const animationProps = getAnimationProps();
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 50, scale: 0.95 }}
-      animate={{ 
-        opacity: 1, 
-        x: 0, 
-        scale: 1,
-        transition: { 
-          type: "spring", 
-          damping: 25, 
-          stiffness: 300 
-        }
-      }}
-      exit={{ 
-        opacity: 0, 
-        x: 50, 
-        scale: 0.95,
-        transition: { duration: 0.2 }
+      {...animationProps}
+      transition={{ 
+        type: "spring", 
+        damping: 25, 
+        stiffness: 300 
       }}
       whileHover={{ 
-        y: -2, 
+        y: position.includes('top') ? -2 : 2, 
         scale: 1.02,
         transition: { duration: 0.2 }
       }}
       className={`
         relative overflow-hidden
-        min-w-[300px] max-w-[500px]
+        w-full
+        sm:min-w-[320px] sm:max-w-[380px]
+        md:min-w-[360px] md:max-w-[420px]
+        lg:min-w-[400px] lg:max-w-[480px]
         ${config.bgClasses}
         border
         rounded-xl
@@ -119,6 +154,7 @@ const Toast: React.FC<ToastProps> = ({
         ${config.ringClasses}
         ring-1
         backdrop-blur-sm
+        pointer-events-auto
         ${className}
       `}
       role="alert"
@@ -135,7 +171,7 @@ const Toast: React.FC<ToastProps> = ({
       />
       
       {/* Toast content */}
-      <div className="flex items-start gap-3 p-4">
+      <div className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4">
         {/* Icon with animation */}
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
@@ -148,7 +184,7 @@ const Toast: React.FC<ToastProps> = ({
           }}
           className="flex-shrink-0"
         >
-          <Icon className={`w-5 h-5 ${config.iconClasses}`} aria-hidden="true" />
+          <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${config.iconClasses}`} aria-hidden="true" />
         </motion.div>
         
         {/* Message */}
@@ -156,14 +192,23 @@ const Toast: React.FC<ToastProps> = ({
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className={`flex-1 text-sm font-medium leading-relaxed ${config.textClasses}`}
+          className={`
+            flex-1 
+            text-xs sm:text-sm 
+            font-medium leading-relaxed 
+            break-words
+            ${config.textClasses}
+          `}
         >
           {message}
         </motion.p>
         
         {/* Close button */}
         <motion.button
-          onClick={onClose}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
           whileHover={{ scale: 1.1, rotate: 90 }}
           whileTap={{ scale: 0.9 }}
           className={`
@@ -174,10 +219,12 @@ const Toast: React.FC<ToastProps> = ({
             hover:bg-black/5 dark:hover:bg-white/10
             focus:outline-none focus:ring-2 focus:ring-current
             ${config.iconClasses}
+            cursor-pointer
+            self-start
           `}
           aria-label="Close notification"
         >
-          <X className="w-4 h-4" aria-hidden="true" />
+          <X className="w-3 h-3 sm:w-4 sm:h-4" aria-hidden="true" />
         </motion.button>
       </div>
     </motion.div>
@@ -188,11 +235,11 @@ const Toast: React.FC<ToastProps> = ({
  * ToastContainer Component
  * 
  * Container for managing multiple toast notifications
- * Position: top-right corner with proper stacking and spacing
+ * Supports various positions with bottom-center as default
  */
 interface ToastContainerProps {
   children: React.ReactNode;
-  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+  position?: ToastPosition;
 }
 
 export const ToastContainer: React.FC<ToastContainerProps> = ({ 
@@ -200,10 +247,20 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
   position = 'top-right' 
 }) => {
   const positionClasses = {
-    'top-right': 'top-4 right-4',
-    'top-left': 'top-4 left-4',
-    'bottom-right': 'bottom-4 right-4',
-    'bottom-left': 'bottom-4 left-4',
+    'top-center': 'top-2 sm:top-4 left-1/2 -translate-x-1/2',
+    'top-right': 'top-2 sm:top-4 right-2 sm:right-4',
+    'top-left': 'top-2 sm:top-4 left-2 sm:left-4',
+    'bottom-center': 'bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2',
+    'bottom-right': 'bottom-2 sm:bottom-4 right-2 sm:right-4',
+    'bottom-left': 'bottom-2 sm:bottom-4 left-2 sm:left-4',
+  };
+
+  // Responsive width classes based on position
+  const getWidthClasses = () => {
+    if (position.includes('center')) {
+      return 'w-[calc(100%-2rem)] sm:w-auto sm:max-w-md';
+    }
+    return 'w-auto max-w-[90vw] sm:max-w-md';
   };
 
   return (
@@ -214,8 +271,9 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
         z-[9999]
         flex 
         flex-col 
-        gap-3
+        gap-2 sm:gap-3
         pointer-events-none
+        ${getWidthClasses()}
       `}
     >
       {children}
@@ -224,7 +282,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
 };
 
 /**
- * ToastManager Component (Optional)
+ * ToastManager Component
  * 
  * For managing multiple toasts with AnimatePresence
  */
@@ -233,34 +291,41 @@ interface ToastItem {
   variant: ToastVariant;
   message: string;
   duration?: number;
+  position?: ToastPosition;
 }
 
 interface ToastManagerProps {
   toasts: ToastItem[];
   onRemove: (id: string) => void;
+  position?: ToastPosition;
 }
 
-export const ToastManager: React.FC<ToastManagerProps> = ({ toasts, onRemove }) => {
+export const ToastManager: React.FC<ToastManagerProps> = ({ 
+  toasts, 
+  onRemove,
+  position = 'top-right' 
+}) => {
   return (
-    <ToastContainer position="top-right">
+    <ToastContainer position={position}>
       <AnimatePresence mode="popLayout">
         {toasts.map((toast) => (
           <motion.div
             key={toast.id}
             layout
-            initial={{ opacity: 0, x: 50, scale: 0.95 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 50, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             transition={{ 
-              layout: { type: "spring", bounce: 0.4, duration: 0.8 },
+              layout: { type: "spring", bounce: 0.3, duration: 0.6 },
               opacity: { duration: 0.2 }
             }}
-            className="pointer-events-auto"
+            className="pointer-events-auto w-full"
           >
             <Toast
               variant={toast.variant}
               message={toast.message}
               duration={toast.duration}
+              position={toast.position || position}
               onClose={() => onRemove(toast.id)}
             />
           </motion.div>

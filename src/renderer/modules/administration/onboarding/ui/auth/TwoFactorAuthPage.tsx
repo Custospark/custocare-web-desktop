@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Shield,
   AlertCircle,
@@ -24,15 +24,16 @@ import { selectVerificationContext } from '../../../../../app/store/slices/authS
  * EMAIL VERIFICATION PAGE COMPONENT
  * ============================================================================
  *
- * Handles email verification flow using authSlice.verification context.
- * Verification context (userId, email) is read exclusively from authSlice.
+ * Handles email verification flow with 5-second success delay before redirect.
  */
 
 const CODE_LENGTH = 6;
 const RESEND_COOLDOWN = 60; // seconds
+const SUCCESS_DELAY = 5000; // 5 seconds in milliseconds
 
 export const TwoFactorAuthPage: React.FC = () => {
   const theme = useAppSelector((state) => state.ui.theme);
+  const navigate = useNavigate();
 
   // ── Verification context from authSlice ──────────────────────────────────
   const verification = useAppSelector(selectVerificationContext);
@@ -50,8 +51,11 @@ export const TwoFactorAuthPage: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string>('');
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [redirectTimer, setRedirectTimer] = useState<number>(5); // Countdown from 5 seconds
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const successTimeoutRef = useRef<NodeJS.Timeout>(null);
+  const redirectIntervalRef = useRef<NodeJS.Timeout>(null);
 
   /* =========================================================================
      MUTATION HOOKS
@@ -59,7 +63,37 @@ export const TwoFactorAuthPage: React.FC = () => {
 
   const verifyEmailMutation = useVerifyEmail({
     onSuccess: (data) => {
-      if (data.success) setIsSuccess(true);
+      if (data.success) {
+        setIsSuccess(true);
+        setRedirectTimer(5); // Reset timer to 5 seconds
+        
+        // Clear any existing timeouts/intervals
+        if (successTimeoutRef.current) {
+          clearTimeout(successTimeoutRef.current);
+        }
+        if (redirectIntervalRef.current) {
+          clearInterval(redirectIntervalRef.current);
+        }
+        
+        // Start countdown
+        redirectIntervalRef.current = setInterval(() => {
+          setRedirectTimer((prev) => {
+            if (prev <= 1) {
+              // Clear interval when reaching 0
+              if (redirectIntervalRef.current) {
+                clearInterval(redirectIntervalRef.current);
+              }
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        
+        // Set timeout for actual navigation
+        successTimeoutRef.current = setTimeout(() => {
+          navigate('/dashboard'); // or wherever you want to redirect
+        }, SUCCESS_DELAY);
+      }
     },
     onError: (err) => {
       const msg =
@@ -88,6 +122,21 @@ export const TwoFactorAuthPage: React.FC = () => {
 
   const isLoading = verifyEmailMutation.isPending;
   const isResending = resendMutation.isPending;
+
+  /* =========================================================================
+     CLEANUP TIMERS ON UNMOUNT
+     ========================================================================= */
+
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+      if (redirectIntervalRef.current) {
+        clearInterval(redirectIntervalRef.current);
+      }
+    };
+  }, []);
 
   /* =========================================================================
      COUNTDOWN TIMER FOR RESEND
@@ -203,7 +252,7 @@ export const TwoFactorAuthPage: React.FC = () => {
   }, [resendCooldown, isResending, resendMutation]);
 
   /* =========================================================================
-     RENDER – SUCCESS STATE
+     RENDER – SUCCESS STATE WITH 5-SECOND DELAY
      ========================================================================= */
 
   if (isSuccess) {
@@ -216,25 +265,27 @@ export const TwoFactorAuthPage: React.FC = () => {
         heroSubtext="Your email has been confirmed. Welcome back to Custocare AI."
       >
         <div className="space-y-6">
+          {/* Success Animation */}
           <div className="flex justify-center">
             <div
               className={cn(
-                'w-20 h-20 rounded-full flex items-center justify-center',
+                'w-20 h-20 rounded-full flex items-center justify-center animate-pulse',
                 theme === 'dark' ? 'bg-emerald-500/20' : 'bg-emerald-100'
               )}
             >
               <CheckCircle
                 className={cn(
-                  'w-10 h-10',
+                  'w-10 h-10 animate-bounce',
                   theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'
                 )}
               />
             </div>
           </div>
 
+          {/* Success Message with Timer */}
           <div
             className={cn(
-              'p-6 rounded-xl border text-center',
+              'p-6 rounded-xl border text-center transform transition-all duration-500 scale-100 opacity-100',
               theme === 'dark'
                 ? 'bg-emerald-500/10 border-emerald-500/30'
                 : 'bg-emerald-50 border-emerald-200'
@@ -246,7 +297,7 @@ export const TwoFactorAuthPage: React.FC = () => {
                 theme === 'dark' ? 'text-emerald-300' : 'text-emerald-800'
               )}
             >
-              Email Verification Complete
+              Email Verification Complete!
             </p>
             <p
               className={cn(
@@ -254,17 +305,54 @@ export const TwoFactorAuthPage: React.FC = () => {
                 theme === 'dark' ? 'text-emerald-200/80' : 'text-emerald-700'
               )}
             >
-              Redirecting to your dashboard...
+              Your email has been successfully verified.
+            </p>
+            
+            {/* Progress Bar */}
+            <div className="mt-4 w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+              <div 
+                className="bg-emerald-600 h-2.5 rounded-full transition-all duration-1000 ease-linear"
+                style={{ width: `${((5 - redirectTimer) / 5) * 100}%` }}
+              />
+            </div>
+            
+            {/* Countdown Timer */}
+            <p
+              className={cn(
+                'text-sm mt-3 font-medium',
+                theme === 'dark' ? 'text-emerald-200' : 'text-emerald-600'
+              )}
+            >
+              Redirecting to dashboard in {redirectTimer} second{redirectTimer !== 1 ? 's' : ''}...
             </p>
           </div>
 
+          {/* Loading Spinner */}
           <div className="flex justify-center">
-            <Loader2
+            <div className="relative">
+              <Loader2
+                className={cn(
+                  'w-8 h-8 animate-spin',
+                  theme === 'dark' ? 'text-cyan-400' : 'text-blue-600'
+                )}
+              />
+              <span className="sr-only">Redirecting...</span>
+            </div>
+          </div>
+
+          {/* Optional: Manual redirect link */}
+          <div className="text-center">
+            <button
+              onClick={() => navigate('/dashboard')}
               className={cn(
-                'w-8 h-8 animate-spin',
-                theme === 'dark' ? 'text-cyan-400' : 'text-blue-600'
+                'text-sm font-semibold transition-colors hover:underline',
+                theme === 'dark'
+                  ? 'text-cyan-400 hover:text-cyan-300'
+                  : 'text-blue-600 hover:text-blue-700'
               )}
-            />
+            >
+              Click here if you're not redirected automatically
+            </button>
           </div>
         </div>
       </AuthLayout>
@@ -312,7 +400,7 @@ export const TwoFactorAuthPage: React.FC = () => {
         {error && (
           <div
             className={cn(
-              'flex items-start gap-3 p-4 rounded-xl border',
+              'flex items-start gap-3 p-4 rounded-xl border animate-shake',
               theme === 'dark'
                 ? 'bg-red-500/10 border-red-500/30 text-red-300'
                 : 'bg-red-50 border-red-200 text-red-700'

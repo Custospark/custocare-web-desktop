@@ -512,7 +512,7 @@ export const StaffCreationForm: React.FC<StaffCreationFormProps> = ({
                 <label className={`block text-sm font-medium mb-1 ${
                   isDark ? 'text-gray-300' : 'text-gray-700'
                 }`}>
-                  Employment Type *
+                  Select Employment Type *
                 </label>
                 <select
                   value={formData.employment_type}
