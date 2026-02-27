@@ -604,12 +604,35 @@ export const useResetPassword = (
       }
       callbacks.onSuccess?.(data);
     },
-    onError: (error) => {
-      const msg = error.response?.data?.message || error.message || 'Password reset failed.';
-      dispatch(resetPasswordFailure(msg));
-      showToast('error', msg, 8000);
+   onError: (error) => {
+  // Get the main API message
+  const apiMessage = error.response?.data?.message || error.message || 'Password reset failed.';
+  
+  // Format validation errors if they exist
+  let errorDetails = '';
+  if (error.response?.data?.errors) {
+    errorDetails = Object.entries(error.response.data.errors)
+      .map(([field, msgs]) => {
+        // Handle both array and string error messages
+        const messages = Array.isArray(msgs) ? msgs.join(', ') : msgs;
+        return `${field}: ${messages}`;
+      })
+      .join(' • '); // Using bullet separator instead of pipe for cleaner look
+  }
+
+  // Construct final display message
+  const displayMessage = errorDetails 
+    ? `${apiMessage} (${errorDetails})` 
+    : apiMessage;
+      // Show toast with combined message
+      showToast('error', displayMessage, 8000);
+
+      // Dispatch failure action
+      dispatch(resetPasswordFailure(apiMessage));
+      
+      // Call original callback
       callbacks.onError?.(error);
-    },
+    }
   });
 };
 

@@ -613,8 +613,8 @@ export const SignUp: React.FC = () => {
               ? cn(
                   'cursor-pointer',
                   theme === 'dark'
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 focus:ring-blue-500/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
-                    : 'bg-gradient-to-r from-blue-600 to-blue-600 text-white hover:from-blue-700 hover:to-blue-700 focus:ring-blue-400/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
+                    ? 'bg-linear-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 focus:ring-blue-500/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
+                    : 'bg-linear-to-r from-blue-600 to-blue-600 text-white hover:from-blue-700 hover:to-blue-700 focus:ring-blue-400/40 shadow-lg hover:shadow-xl hover:scale-[1.01]'
                 )
               : cn(
                   'cursor-not-allowed',

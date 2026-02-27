@@ -18,9 +18,9 @@ interface AuthLayoutProps {
 }
 
 const DEFAULT_HERO = {
-  image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1200&q=80',
-  headline: 'Intelligent Medical Decision Support',
-  subtext: 'Empowering healthcare professionals with AI-driven insights for better patient outcomes.',
+  image: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=1200&q=80',
+  headline: 'Continuous Care. Operational Excellence.',
+  subtext: 'Unifying clinical workflows, financial operations, and patient engagement into one scalable healthcare platform.',
 };
 
 export const AuthLayout: React.FC<AuthLayoutProps> = ({
