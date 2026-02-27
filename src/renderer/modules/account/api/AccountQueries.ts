@@ -554,11 +554,11 @@ export const useForgotPassword = (
     onSuccess: (data, variables) => {
       // Backend returns success always for security
       dispatch(forgotPasswordSuccess({ email: variables.email, expiresAt: data.expires_at ?? null }));
-      showToast('success', data.message || 'If the email exists, a reset code has been sent.', 8000);
+      showToast('success', data.message ||'If that email address is associated with an account, a password reset code has been sent.', 8000);
       callbacks.onSuccess?.(data);
     },
     onError: () => {
-      const msg = 'If the email exists, a reset code has been sent.';
+      const msg = 'If that email address is associated with an account, a password reset code has been sent.';
       dispatch(forgotPasswordFailure(msg));
       showToast('success', msg, 8000);
     },

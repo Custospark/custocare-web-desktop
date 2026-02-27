@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, AlertCircle, Loader2, CheckCircle, ArrowRight } from 'lucide-react';
+import { Mail, AlertCircle, Loader2, CheckCircle, ArrowRight, Clock } from 'lucide-react';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
 import { cn } from '../../../../../shared/types/cn';
@@ -18,9 +18,13 @@ import type { ForgotPasswordRequest } from '../../../../account/api/AccountTypes
  * POST /auth/forgot-password and stores the submitted email in
  * authSlice.passwordReset.email so ResetPassword can pick it up.
  *
- * Toast notifications are handled entirely inside the hook; this component
- * only manages local form / success state.
+ * Features:
+ * - 60-second cooldown between password reset requests
+ * - Visual feedback for resend availability
+ * - Toast notifications handled inside the hook
  */
+
+const COOLDOWN_SECONDS = 60; // 1 minute cooldown
 
 interface FormState {
   email: string;
@@ -37,6 +41,11 @@ const ForgotPassword: React.FC = () => {
   const [emailError, setEmailError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [touched, setTouched] = useState(false);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [lastSubmittedEmail, setLastSubmittedEmail] = useState('');
+
+  const cooldownTimerRef = useRef<NodeJS.Timeout>(null);
+  const mountedRef = useRef(true);
 
   /* =========================================================================
      MUTATION HOOK
@@ -48,14 +57,68 @@ const ForgotPassword: React.FC = () => {
     reset: resetMutation,
   } = useForgotPassword({
     onSuccess: () => {
-      // Hook dispatches forgotPasswordSuccess (stores email in slice) and
-      // shows a toast. We just flip the local success screen.
+      if (!mountedRef.current) return;
+      
+      // Store the email that was successfully submitted
+      setLastSubmittedEmail(formState.email);
+      
+      // Start cooldown timer
+      setCooldownRemaining(COOLDOWN_SECONDS);
+      
+      // Show success screen
       setIsSuccess(true);
     },
     // onError is intentionally omitted: useForgotPassword always shows a
     // generic "if the email exists a reset code has been sent" message for
     // security, and dispatches forgotPasswordFailure — no inline error needed.
   });
+
+  /* =========================================================================
+     CLEANUP TIMER ON UNMOUNT
+     ========================================================================= */
+
+  useEffect(() => {
+    mountedRef.current = true;
+    
+    return () => {
+      mountedRef.current = false;
+      if (cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current);
+      }
+    };
+  }, []);
+
+  /* =========================================================================
+     COOLDOWN TIMER MANAGEMENT
+     ========================================================================= */
+
+  useEffect(() => {
+    // Clear any existing timer
+    if (cooldownTimerRef.current) {
+      clearInterval(cooldownTimerRef.current);
+    }
+
+    // Start new timer if cooldown is active
+    if (cooldownRemaining > 0) {
+      cooldownTimerRef.current = setInterval(() => {
+        setCooldownRemaining((prev) => {
+          if (prev <= 1) {
+            if (cooldownTimerRef.current) {
+              clearInterval(cooldownTimerRef.current);
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current);
+      }
+    };
+  }, [cooldownRemaining]);
 
   /* =========================================================================
      VALIDATION
@@ -70,6 +133,7 @@ const ForgotPassword: React.FC = () => {
 
   const showError = touched && !!emailError;
   const isFormValid = !!formState.email && !emailError;
+  
 
   /* =========================================================================
      HANDLERS
@@ -97,20 +161,41 @@ const ForgotPassword: React.FC = () => {
       }
 
       const payload: ForgotPasswordRequest = { email: formState.email };
-      // useForgotPassword dispatches forgotPasswordStart → forgotPasswordSuccess
-      // and shows a toast — all orchestration lives in AccountQueries.
       forgotPassword(payload);
     },
     [formState.email, validateEmail, forgotPassword]
   );
 
   const handleResendEmail = useCallback(() => {
+    // Only allow resend if cooldown is complete
+    if (cooldownRemaining > 0) return;
+    
+    // Exit success state to show form again
+    setIsSuccess(false);
+    
+    // Pre-fill the email field with last submitted email
+    setFormState({ email: lastSubmittedEmail });
+    
+    // Validate the email (it should be valid since it was previously submitted)
+    setEmailError(validateEmail(lastSubmittedEmail));
+    
+    // Reset mutation state
+    resetMutation();
+  }, [cooldownRemaining, lastSubmittedEmail, resetMutation, validateEmail]);
+
+  const handleTryDifferentEmail = useCallback(() => {
     setIsSuccess(false);
     setFormState({ email: '' });
+    setLastSubmittedEmail('');
+    setCooldownRemaining(0);
     setTouched(false);
     setEmailError('');
-    // Reset the mutation so isPending / error states are cleared
     resetMutation();
+    
+    // Clear any running timer
+    if (cooldownTimerRef.current) {
+      clearInterval(cooldownTimerRef.current);
+    }
   }, [resetMutation]);
 
   /* =========================================================================
@@ -118,6 +203,7 @@ const ForgotPassword: React.FC = () => {
      ========================================================================= */
 
   if (isSuccess) {
+    
     return (
       <AuthLayout
         title="Check Your Email"
@@ -169,11 +255,104 @@ const ForgotPassword: React.FC = () => {
               )}
             >
               We've sent password reset instructions to{' '}
-              <strong>{formState.email}</strong>. Please check your inbox and spam
+              <strong>{lastSubmittedEmail}</strong>. Please check your inbox and spam
               folder.
             </p>
           </div>
 
+          {/* Resend Timer Status */}
+          <div
+            className={cn(
+              'p-4 rounded-xl border flex items-center gap-3',
+              theme === 'dark'
+                ? cooldownRemaining > 0
+                  ? 'bg-gray-800/50 border-gray-700'
+                  : 'bg-blue-500/10 border-blue-500/30'
+                : cooldownRemaining > 0
+                  ? 'bg-gray-100 border-gray-200'
+                  : 'bg-blue-50 border-blue-200'
+            )}
+          >
+            <Clock className={cn(
+              'w-5 h-5',
+              theme === 'dark'
+                ? cooldownRemaining > 0 ? 'text-gray-500' : 'text-blue-400'
+                : cooldownRemaining > 0 ? 'text-gray-500' : 'text-blue-600'
+            )} />
+            <div className="flex-1">
+              <p className={cn(
+                'text-sm font-medium',
+                theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+              )}>
+                {cooldownRemaining > 0 
+                  ? `Resend available in ${cooldownRemaining} second${cooldownRemaining !== 1 ? 's' : ''}`
+                  : 'Resend available now'
+                }
+              </p>
+              <p className={cn(
+                'text-xs',
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              )}>
+                {cooldownRemaining > 0 
+                  ? 'Please wait before requesting another reset link'
+                  : 'You can request another reset email now'
+                }
+              </p>
+            </div>
+          </div>
+
+          
+
+          {/* Actions */}
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <button
+                onClick={handleResendEmail}
+                disabled={cooldownRemaining > 0}
+                className={cn(
+                  'flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-offset-2',
+                  'disabled:opacity-50',
+                  cooldownRemaining > 0 ? 'cursor-not-allowed' : 'cursor-pointer',
+                  theme === 'dark'
+                    ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 focus:ring-blue-500 focus:ring-offset-white'
+                )}
+              >
+                {cooldownRemaining > 0 ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Wait {cooldownRemaining}s
+                  </span>
+                ) : (
+                  'Resend'
+                )}
+              </button>
+              
+              <button
+                onClick={handleTryDifferentEmail}
+                className={cn(
+                  'px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-offset-2 cursor-pointer',
+                  theme === 'dark'
+                    ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 focus:ring-blue-500 focus:ring-offset-white'
+                )}
+              >
+                Try Different Email
+              </button>
+            </div>
+             <Link
+              to="/login"
+              className={cn(
+                'w-full py-3.5 px-6 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-offset-2 shadow-lg hover:shadow-xl hover:scale-[1.02]',
+                theme === 'dark'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
+                  : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white'
+              )}
+            >
+              <span>Back to Sign In</span>
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
           {/* Steps */}
           <div
             className={cn(
@@ -207,7 +386,7 @@ const ForgotPassword: React.FC = () => {
                 >
                   <span
                     className={cn(
-                      'flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold',
+                      'shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold',
                       theme === 'dark'
                         ? 'bg-cyan-500/20 text-cyan-300'
                         : 'bg-blue-100 text-blue-700'
@@ -219,34 +398,6 @@ const ForgotPassword: React.FC = () => {
                 </li>
               ))}
             </ol>
-          </div>
-
-          {/* Actions */}
-          <div className="space-y-3">
-            <Link
-              to="/login"
-              className={cn(
-                'w-full py-3.5 px-6 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-offset-2 shadow-lg hover:shadow-xl hover:scale-[1.02]',
-                theme === 'dark'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
-                  : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white'
-              )}
-            >
-              <span>Back to Sign In</span>
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-
-            <button
-              onClick={handleResendEmail}
-              className={cn(
-                'w-full py-3 px-6 rounded-xl font-medium text-sm transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-offset-2',
-                theme === 'dark'
-                  ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 focus:ring-blue-500 focus:ring-offset-white'
-              )}
-            >
-              Didn't receive email? Try again
-            </button>
           </div>
 
           {/* Security Note */}
@@ -272,7 +423,7 @@ const ForgotPassword: React.FC = () => {
 
   return (
     <AuthLayout
-      title="Let's reset your password"
+      title="Reset Your Password"
       subtitle="Enter your email to receive reset instructions"
       heroImage="https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=1200&q=80"
       heroHeadline="Secure Account Recovery"
@@ -289,7 +440,7 @@ const ForgotPassword: React.FC = () => {
               : 'bg-blue-50 border-blue-200 text-blue-700'
           )}
         >
-          <Mail className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <Mail className="w-5 h-5 shrink-0 mt-0.5" />
           <div className="text-sm space-y-1">
             <p className="font-semibold">Password reset instructions</p>
             <p className={cn(theme === 'dark' ? 'text-cyan-200/80' : 'text-blue-600')}>
@@ -298,6 +449,23 @@ const ForgotPassword: React.FC = () => {
             </p>
           </div>
         </div>
+
+        {/* Cooldown Warning if applicable */}
+        {lastSubmittedEmail && cooldownRemaining > 0 && (
+          <div
+            className={cn(
+              'flex items-center gap-3 p-3 rounded-xl border text-sm',
+              theme === 'dark'
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                : 'bg-amber-50 border-amber-200 text-amber-700'
+            )}
+          >
+            <Clock className="w-4 h-4" />
+            <span>
+              Please wait {cooldownRemaining} second{cooldownRemaining !== 1 ? 's' : ''} before requesting another reset link.
+            </span>
+          </div>
+        )}
 
         {/* Email Field */}
         <div className="space-y-2">
@@ -361,13 +529,20 @@ const ForgotPassword: React.FC = () => {
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={isLoading || !isFormValid}
+          disabled={isLoading || !isFormValid || (lastSubmittedEmail === formState.email && cooldownRemaining > 0)}
           className={cn(
-            'w-full py-3.5 px-6 rounded-xl font-semibold text-base flex items-center justify-center gap-3 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed',
+            'w-full py-3.5 px-6 rounded-xl font-semibold text-base flex items-center justify-center gap-3 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-offset-2',
+            'disabled:opacity-50',
+            // Conditional cursor pointer
+            isLoading || !isFormValid || (lastSubmittedEmail === formState.email && cooldownRemaining > 0) 
+              ? 'cursor-not-allowed' 
+              : 'cursor-pointer',
             theme === 'dark'
               ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
               : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
-            !isLoading && isFormValid ? 'shadow-lg hover:shadow-xl hover:scale-[1.02]' : ''
+            !isLoading && isFormValid && !(lastSubmittedEmail === formState.email && cooldownRemaining > 0) 
+              ? 'shadow-lg hover:shadow-xl hover:scale-[1.02]' 
+              : ''
           )}
         >
           {isLoading ? (
@@ -410,6 +585,7 @@ const ForgotPassword: React.FC = () => {
               'Reset link expires after 24 hours',
               'Link can only be used once',
               'HIPAA-compliant secure transmission',
+              'Rate-limited to one request per minute',
             ].map((item, i) => (
               <li key={i} className="flex items-center gap-2">
                 <div
