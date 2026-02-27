@@ -1,13 +1,15 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Lock,
+  Mail,
   AlertCircle,
   Loader2,
-  CheckCircle,
+  CheckCircle2,
   Eye,
   EyeOff,
   ShieldCheck,
+  XCircle,
 } from 'lucide-react';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import AuthLayout from './AuthLayout';
@@ -17,7 +19,7 @@ import { cn } from '../../../../../shared/types/cn';
 import { useResetPassword } from '../../../../account/api/AccountQueries';
 import { selectPasswordResetEmail } from '../../../../../app/store/slices/authSlice';
 import type { ResetPasswordVariables } from '../../../../account/api/AccountTypes';
-
+import { ROUTES } from '../../../../../app/routes/routeConstants';
 /**
  * ============================================================================
  * RESET PASSWORD PAGE COMPONENT
@@ -29,24 +31,24 @@ import type { ResetPasswordVariables } from '../../../../account/api/AccountType
  * Token / code resolution order:
  *   1. ?token=xxx  (link-based reset)
  *   2. ?code=xxx   (OTP-based reset)
- * Email resolution order:
- *   1. ?email=xxx  (URL param, used only as override)
- *   2. authSlice.passwordReset.email  (set by useForgotPassword)
- *
- * Token validation is handled by the backend on submit — there is no
- * pre-flight validation call. If the token is absent from the URL the
- * invalid-token UI is shown immediately.
+ * 
+ * Email resolution order (display only - user must confirm):
+ *   1. ?email=xxx  (URL param, used for display)
+ *   2. authSlice.passwordReset.email (set by useForgotPassword, used for display)
+ * 
+ * The email field is REQUIRED in the form submission to ensure
+ * the user confirms the email address for security purposes.
  */
 
 interface FormState {
+  email: string;
   password: string;
   confirmPassword: string;
 }
 
-interface FormErrors {
-  password?: string;
-  confirmPassword?: string;
-  token?: string;
+interface ValidationStatus {
+  isValid: boolean;
+  error?: string;
 }
 
 interface PasswordStrength {
@@ -69,10 +71,8 @@ export const ResetPassword: React.FC = () => {
   // Fallback email from the forgot-password slice state when not in the URL
   const emailFromSlice = useAppSelector(selectPasswordResetEmail);
 
-  // ── Token presence check (synchronous — no network pre-flight needed) ──────
+  // ── Token presence check ───────────────────────────────────────────────────
   const [tokenValid] = useState<boolean>(!!resetToken);
-  // isValidatingToken is kept for structural parity; always false since we
-  // resolve token presence synchronously.
   const [isValidatingToken] = useState<boolean>(false);
 
   /* =========================================================================
@@ -80,18 +80,16 @@ export const ResetPassword: React.FC = () => {
      ========================================================================= */
 
   const [formState, setFormState] = useState<FormState>({
+    email: emailFromUrl || emailFromSlice || '',
     password: '',
     confirmPassword: '',
   });
 
-  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [touched, setTouched] = useState<{ password: boolean; confirmPassword: boolean }>({
-    password: false,
-    confirmPassword: false,
-  });
+  const [tokenError, setTokenError] = useState<string | undefined>();
 
   /* =========================================================================
      MUTATION HOOK
@@ -102,19 +100,16 @@ export const ResetPassword: React.FC = () => {
       if (data.success) {
         setIsSuccess(true);
       } else {
-        // Backend returned success:false (non-throwing path)
-        setFormErrors({
-          token: data.message || 'Password reset failed. Please try again.',
-        });
+        // Backend returned success:false
+        setTokenError(data.message || 'Password reset failed. Please try again.');
       }
     },
     onError: (error) => {
-      setFormErrors({
-        token:
-          error.response?.data?.message ||
+      setTokenError(
+        error.response?.data?.message ||
           error.message ||
-          'Failed to reset password. Please try again.',
-      });
+          'Failed to reset password. Please try again.'
+      );
     },
   });
 
@@ -122,27 +117,27 @@ export const ResetPassword: React.FC = () => {
      AUTO-REDIRECT ON SUCCESS
      ========================================================================= */
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (isSuccess) {
-      const timer = setTimeout(() => navigate('/login'), 3000);
+      const timer = setTimeout(() => navigate(ROUTES.RESET_PASSWORD_SUCCESS), 3000);
       return () => clearTimeout(timer);
     }
   }, [isSuccess, navigate]);
 
   /* =========================================================================
-     VALIDATION
+     PASSWORD STRENGTH
      ========================================================================= */
 
-  const calculatePasswordStrength = useCallback((password: string): PasswordStrength => {
+  const getPasswordStrength = useCallback((password: string): PasswordStrength => {
     if (!password) return { score: 0, label: '', color: '' };
-
+    
     let score = 0;
     if (password.length >= 8) score++;
     if (password.length >= 12) score++;
     if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
     if (/\d/.test(password)) score++;
     if (/[^a-zA-Z0-9]/.test(password)) score++;
-
+    
     const normalized = Math.min(score, 4);
     const configs = [
       { label: 'Weak', color: 'bg-red-500' },
@@ -151,116 +146,153 @@ export const ResetPassword: React.FC = () => {
       { label: 'Strong', color: 'bg-emerald-500' },
       { label: 'Very Strong', color: 'bg-green-600' },
     ];
-
+    
     return { score: normalized, ...configs[normalized] };
   }, []);
 
-  const validatePassword = useCallback(
-    (password: string): string | undefined => {
-      if (!password) return 'New password is required';
-      if (password.length < 8) return 'Password must be at least 8 characters';
-      const strength = calculatePasswordStrength(password);
-      if (strength.score < 2)
-        return 'Password is too weak. Add more characters, numbers, or symbols';
-      return undefined;
+  /* =========================================================================
+     FIELD VALIDATION
+     ========================================================================= */
+
+  const validateField = useCallback(
+    (field: keyof FormState, value: string): ValidationStatus => {
+      const validators: Record<string, () => ValidationStatus> = {
+        email: () => {
+          if (!value) return { isValid: false, error: 'Email is required' };
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+            return { isValid: false, error: 'Please enter a valid email address' };
+          return { isValid: true };
+        },
+        password: () => {
+          if (!value) return { isValid: false, error: 'New password is required' };
+          if (value.length < 8) 
+            return { isValid: false, error: 'Password must be at least 8 characters' };
+          if (getPasswordStrength(value).score < 2)
+            return { isValid: false, error: 'Password is too weak. Add more characters, numbers, or symbols' };
+          return { isValid: true };
+        },
+        confirmPassword: () => {
+          if (!value) return { isValid: false, error: 'Please confirm your password' };
+          if (value !== formState.password) 
+            return { isValid: false, error: 'Passwords do not match' };
+          return { isValid: true };
+        },
+      };
+      return validators[field]?.() || { isValid: true };
     },
-    [calculatePasswordStrength]
+    [formState.password, getPasswordStrength]
   );
 
-  const validateConfirmPassword = useCallback(
-    (confirmPassword: string): string | undefined => {
-      if (!confirmPassword) return 'Please confirm your password';
-      if (confirmPassword !== formState.password) return 'Passwords do not match';
-      return undefined;
-    },
-    [formState.password]
+  const validation = useMemo(() => {
+    const fields: (keyof FormState)[] = ['email', 'password', 'confirmPassword'];
+    return Object.fromEntries(
+      fields.map((f) => [f, validateField(f, formState[f])])
+    ) as Record<keyof FormState, ValidationStatus>;
+  }, [formState, validateField]);
+
+  const isFormValid = useMemo(
+    () => Object.values(validation).every((v) => v.isValid),
+    [validation]
   );
+
+  const passwordStrength = getPasswordStrength(formState.password);
+
+  // Check if passwords match (separate from validation for UI feedback)
+  const doPasswordsMatch = useMemo(() => {
+    if (!formState.password || !formState.confirmPassword) return false;
+    return formState.password === formState.confirmPassword;
+  }, [formState.password, formState.confirmPassword]);
+
+  // Track field completion for button enabling (same as SignUp approach)
+  // The button uses isFormValid which already checks all validation criteria
+  // including email format, password strength, and password match
 
   /* =========================================================================
      EVENT HANDLERS
      ========================================================================= */
 
-  const handleInputChange = useCallback(
-    (field: keyof FormState) =>
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormState((prev) => ({ ...prev, [field]: e.target.value }));
-        setFormErrors((prev) => ({ ...prev, [field]: undefined }));
-      },
-    []
-  );
+  const handleChange =
+    (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setFormState((prev) => ({ ...prev, [field]: value }));
+      if (touched[field]) setTouched((prev) => ({ ...prev, [field]: false }));
+      // Clear token error when user makes changes
+      if (tokenError) setTokenError(undefined);
+    };
 
-  const handleBlur = useCallback(
-    (field: keyof FormState) => () => {
-      setTouched((prev) => ({ ...prev, [field]: true }));
+  const handleBlur = (field: keyof FormState) => () => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
 
-      const err =
-        field === 'password'
-          ? validatePassword(formState.password)
-          : validateConfirmPassword(formState.confirmPassword);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
 
-      if (err) setFormErrors((prev) => ({ ...prev, [field]: err }));
-    },
-    [formState, validatePassword, validateConfirmPassword]
-  );
+    // Mark all fields as touched to show validation errors (same as SignUp)
+    const allFields = ['email', 'password', 'confirmPassword'];
+    const touchedFields = allFields.reduce((acc, field) => ({ ...acc, [field]: true }), {});
+    setTouched((prev) => ({ ...prev, ...touchedFields }));
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
+    if (!isFormValid) return;
 
-      setTouched({ password: true, confirmPassword: true });
+    if (!resetToken) {
+      setTokenError('Missing reset token. Please request a new link.');
+      return;
+    }
 
-      const errors: FormErrors = {
-        password: validatePassword(formState.password),
-        confirmPassword: validateConfirmPassword(formState.confirmPassword),
-      };
+    // Build payload conforming to ResetPasswordVariables
+    // Email is REQUIRED from the form field for submission
+    const payload: ResetPasswordVariables = {
+      code: resetToken,
+      email: formState.email, // Email MUST be submitted with the request
+      new_password: formState.password,
+      new_password_confirmation: formState.confirmPassword,
+      is_token: true, // the code comes from a URL token
+    };
 
-      setFormErrors(errors);
-      if (errors.password || errors.confirmPassword) return;
-
-      if (!resetToken) {
-        setFormErrors({ token: 'Missing reset token. Please request a new link.' });
-        return;
-      }
-
-      // Build payload conforming to ResetPasswordVariables
-      const payload: ResetPasswordVariables = {
-        code: resetToken,
-        new_password: formState.password,
-        new_password_confirmation: formState.confirmPassword,
-        // email: if present in URL use it; otherwise the hook uses slice value
-        ...(emailFromUrl ? { email: emailFromUrl } : {}),
-        is_token: true, // the code comes from a URL token
-      };
-
-      // useResetPassword dispatches resetPasswordStart/Success/Failure and
-      // shows toast — we just handle the local success/error states here.
-      resetPassword(payload);
-    },
-    [
-      formState,
-      resetToken,
-      emailFromUrl,
-      validatePassword,
-      validateConfirmPassword,
-      resetPassword,
-    ]
-  );
+    resetPassword(payload);
+  };
 
   /* =========================================================================
-     COMPUTED VALUES
+     STYLING HELPERS
      ========================================================================= */
 
-  const passwordStrength = calculatePasswordStrength(formState.password);
-  const showPasswordError = touched.password && formErrors.password;
-  const showConfirmError = touched.confirmPassword && formErrors.confirmPassword;
-  const isFormValid =
-    !!formState.password &&
-    !!formState.confirmPassword &&
-    !formErrors.password &&
-    !formErrors.confirmPassword;
+  const inputClass = (field: keyof FormState, hasIcon = true) => {
+    const isValid = validation[field].isValid && formState[field];
+    const hasError = touched[field] && validation[field].error;
+    
+    return cn(
+      'w-full py-3 rounded-xl text-sm border-2 transition-all duration-200',
+      'focus:outline-none focus:ring-4',
+      hasIcon ? 'pl-11 pr-12' : 'px-4',
+      theme === 'dark'
+        ? 'bg-gray-900/50 text-white placeholder-gray-500'
+        : 'bg-white text-gray-900 placeholder-gray-400',
+      hasError
+        ? theme === 'dark'
+          ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
+          : 'border-red-400 focus:border-red-500 focus:ring-red-100'
+        : isValid
+        ? theme === 'dark'
+          ? 'border-emerald-500/50 focus:border-emerald-500 focus:ring-emerald-500/20'
+          : 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-100'
+        : theme === 'dark'
+        ? 'border-gray-800 focus:border-cyan-500 focus:ring-cyan-500/20'
+        : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+    );
+  };
 
-  // Display email: prefer URL param, then slice
-  const displayEmail = emailFromUrl || emailFromSlice;
+  const labelClass = cn(
+    'block text-xs font-semibold mb-1.5',
+    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+  );
+
+  const iconClass = cn(
+    'absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5',
+    theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+  );
+
+  // Display helper text: show which email is being used from URL/slice
+  const defaultEmailHint = emailFromUrl || emailFromSlice;
 
   /* =========================================================================
      RENDER – LOADING STATE (token validation)
@@ -323,7 +355,7 @@ export const ResetPassword: React.FC = () => {
                   theme === 'dark' ? 'text-red-200/80' : 'text-red-600'
                 )}
               >
-                {formErrors.token ||
+                {tokenError ||
                   'This reset link may have expired, been used already, or is invalid.'}
               </p>
             </div>
@@ -368,7 +400,7 @@ export const ResetPassword: React.FC = () => {
                 theme === 'dark' ? 'bg-emerald-500/20' : 'bg-emerald-100'
               )}
             >
-              <CheckCircle
+              <CheckCircle2
                 className={cn(
                   'w-10 h-10',
                   theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'
@@ -399,8 +431,9 @@ export const ResetPassword: React.FC = () => {
                 theme === 'dark' ? 'text-emerald-200/80' : 'text-emerald-700'
               )}
             >
-              Your password has been changed successfully. You can now sign in with your new
-              password.
+              Your password has been changed successfully for{' '}
+              <span className="font-semibold">{formState.email}</span>. You can now sign in with
+              your new password.
             </p>
           </div>
 
@@ -440,7 +473,7 @@ export const ResetPassword: React.FC = () => {
   return (
     <AuthLayout
       title="Create New Password"
-      subtitle={displayEmail ? `Resetting password for ${displayEmail}` : 'Enter your new password'}
+      subtitle="Please confirm your email and create a new password"
       heroImage="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=1200&q=80"
       heroHeadline="Secure Password Reset"
       heroSubtext="Your account security is paramount. Create a strong password to protect your healthcare data."
@@ -458,22 +491,22 @@ export const ResetPassword: React.FC = () => {
         >
           <ShieldCheck className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="text-sm space-y-1">
-            <p className="font-semibold">Password Requirements</p>
+            <p className="font-semibold">For Security, Please Confirm:</p>
             <ul
               className={cn(
                 'text-xs space-y-0.5 list-disc list-inside',
                 theme === 'dark' ? 'text-cyan-200/80' : 'text-blue-600'
               )}
             >
-              <li>At least 8 characters long</li>
-              <li>Mix of uppercase and lowercase letters</li>
-              <li>Include numbers and special characters</li>
+              <li>Your email address (must match the reset request)</li>
+              <li>Create a strong password (at least 8 characters)</li>
+              <li>Mix of uppercase, lowercase, numbers, and symbols</li>
             </ul>
           </div>
         </div>
 
         {/* Backend / token error */}
-        {formErrors.token && (
+        {tokenError && (
           <div
             className={cn(
               'flex items-start gap-3 p-4 rounded-xl border',
@@ -484,108 +517,118 @@ export const ResetPassword: React.FC = () => {
             role="alert"
           >
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <p className="text-sm">{formErrors.token}</p>
+            <p className="text-sm">{tokenError}</p>
           </div>
         )}
 
-        {/* New Password */}
-        <div className="space-y-1.5">
-          <label
-            htmlFor="password"
+        {/* Password Mismatch Warning - Shows when passwords don't match (like SignUp) */}
+        {formState.password && formState.confirmPassword && !doPasswordsMatch && (
+          <div
             className={cn(
-              'block text-sm font-semibold',
-              theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+              'flex items-center gap-2 p-3 rounded-lg border text-sm',
+              theme === 'dark'
+                ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                : 'bg-red-50 border-red-200 text-red-700'
             )}
           >
-            New Password
+            <XCircle className="w-4 h-4 flex-shrink-0" />
+            <span className="font-medium">Passwords do not match</span>
+          </div>
+        )}
+
+        {/* Email Field - REQUIRED for submission */}
+        <div>
+          <label htmlFor="email" className={labelClass}>
+            Email Address <span className="text-red-500">*</span>
           </label>
           <div className="relative">
-            <Lock
-              className={cn(
-                'absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5',
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-              )}
-              aria-hidden="true"
+            <Mail className={iconClass} />
+            <input
+              id="email"
+              type="email"
+              value={formState.email}
+              onChange={handleChange('email')}
+              onBlur={handleBlur('email')}
+              disabled={isLoading}
+              placeholder="Enter your email address"
+              className={inputClass('email')}
+              autoComplete="email"
+              autoFocus
             />
+            {validation.email.isValid && formState.email && (
+              <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
+            )}
+          </div>
+          {touched.email && validation.email.error && (
+            <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5" />
+              {validation.email.error}
+            </p>
+          )}
+          {defaultEmailHint && defaultEmailHint !== formState.email && !touched.email && (
+            <p
+              className={cn(
+                'text-xs flex items-center gap-1.5 mt-1.5',
+                theme === 'dark' ? 'text-amber-400' : 'text-amber-600'
+              )}
+            >
+              <AlertCircle className="w-3.5 h-3.5" />
+              Reset requested for: {defaultEmailHint}
+            </p>
+          )}
+        </div>
+
+        {/* New Password */}
+        <div>
+          <label htmlFor="password" className={labelClass}>
+            New Password <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
+            <Lock className={iconClass} />
             <input
               id="password"
               type={showPassword ? 'text' : 'password'}
               value={formState.password}
-              onChange={handleInputChange('password')}
+              onChange={handleChange('password')}
               onBlur={handleBlur('password')}
               disabled={isLoading}
               placeholder="Create a strong password"
-              className={cn(
-                'w-full pl-11 pr-12 py-3 rounded-xl text-sm',
-                'border-2 transition-all duration-200',
-                'focus:outline-none focus:ring-4',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-                theme === 'dark'
-                  ? 'bg-gray-900/50 border-gray-800 text-white placeholder-gray-500'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
-                showPasswordError
-                  ? theme === 'dark'
-                    ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
-                    : 'border-red-400 focus:border-red-500 focus:ring-red-100'
-                  : theme === 'dark'
-                  ? 'focus:border-cyan-500 focus:ring-cyan-500/20'
-                  : 'focus:border-blue-500 focus:ring-blue-100'
-              )}
-              aria-invalid={!!showPasswordError}
+              className={cn(inputClass('password'), 'pr-12')}
               autoComplete="new-password"
-              autoFocus
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              disabled={isLoading}
               className={cn(
-                'absolute right-3.5 top-1/2 -translate-y-1/2',
-                'p-1 rounded-lg transition-colors',
-                'focus:outline-none focus:ring-2',
+                'absolute right-9 top-1/2 -translate-y-1/2 p-1',
                 theme === 'dark'
-                  ? 'text-gray-500 hover:text-gray-300 focus:ring-cyan-500'
-                  : 'text-gray-400 hover:text-gray-600 focus:ring-blue-500'
+                  ? 'text-gray-500 hover:text-gray-300'
+                  : 'text-gray-400 hover:text-gray-600'
               )}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              disabled={isLoading}
             >
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
+            {validation.password.isValid && formState.password && (
+              <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
+            )}
           </div>
-          {showPasswordError && (
-            <p
-              className={cn(
-                'text-xs flex items-center gap-1.5 mt-1',
-                theme === 'dark' ? 'text-red-400' : 'text-red-600'
-              )}
-            >
-              <AlertCircle className="w-3.5 h-3.5" />
-              {formErrors.password}
-            </p>
-          )}
 
-          {/* Password strength indicator */}
-          {formState.password && touched.password && (
-            <div className="space-y-2 mt-2">
-              <div className="flex items-center justify-between text-xs">
-                <span
-                  className={cn(
-                    'font-medium',
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  )}
-                >
-                  Password strength:
+          {/* Password strength indicator - exactly like SignUp */}
+          {formState.password && (
+            <div className="mt-2">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+                  Strength:
                 </span>
                 <span
                   className={cn(
-                    'font-semibold',
+                    'font-medium',
                     passwordStrength.score >= 3
-                      ? theme === 'dark'
-                        ? 'text-emerald-400'
-                        : 'text-emerald-600'
-                      : theme === 'dark'
-                      ? 'text-amber-400'
-                      : 'text-amber-600'
+                      ? theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'
+                      : passwordStrength.score >= 2
+                      ? theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'
+                      : theme === 'dark' ? 'text-red-400' : 'text-red-600'
                   )}
                 >
                   {passwordStrength.label}
@@ -608,101 +651,63 @@ export const ResetPassword: React.FC = () => {
               </div>
             </div>
           )}
+
+          {touched.password && validation.password.error && (
+            <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5" />
+              {validation.password.error}
+            </p>
+          )}
         </div>
 
         {/* Confirm Password */}
-        <div className="space-y-1.5">
-          <label
-            htmlFor="confirmPassword"
-            className={cn(
-              'block text-sm font-semibold',
-              theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-            )}
-          >
-            Confirm New Password
+        <div>
+          <label htmlFor="confirmPassword" className={labelClass}>
+            Confirm New Password <span className="text-red-500">*</span>
           </label>
           <div className="relative">
-            <Lock
-              className={cn(
-                'absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5',
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-              )}
-              aria-hidden="true"
-            />
+            <Lock className={iconClass} />
             <input
               id="confirmPassword"
               type={showConfirmPassword ? 'text' : 'password'}
               value={formState.confirmPassword}
-              onChange={handleInputChange('confirmPassword')}
+              onChange={handleChange('confirmPassword')}
               onBlur={handleBlur('confirmPassword')}
               disabled={isLoading}
               placeholder="Re-enter your password"
-              className={cn(
-                'w-full pl-11 pr-12 py-3 rounded-xl text-sm',
-                'border-2 transition-all duration-200',
-                'focus:outline-none focus:ring-4',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-                theme === 'dark'
-                  ? 'bg-gray-900/50 border-gray-800 text-white placeholder-gray-500'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400',
-                showConfirmError
-                  ? theme === 'dark'
-                    ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
-                    : 'border-red-400 focus:border-red-500 focus:ring-red-100'
-                  : formState.confirmPassword &&
-                    formState.confirmPassword === formState.password
-                  ? theme === 'dark'
-                    ? 'border-emerald-500/50 focus:border-emerald-500 focus:ring-emerald-500/20'
-                    : 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-100'
-                  : theme === 'dark'
-                  ? 'focus:border-cyan-500 focus:ring-cyan-500/20'
-                  : 'focus:border-blue-500 focus:ring-blue-100'
-              )}
-              aria-invalid={!!showConfirmError}
+              className={cn(inputClass('confirmPassword'), 'pr-12')}
               autoComplete="new-password"
             />
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              disabled={isLoading}
               className={cn(
-                'absolute right-3.5 top-1/2 -translate-y-1/2',
-                'p-1 rounded-lg transition-colors',
-                'focus:outline-none focus:ring-2',
+                'absolute right-9 top-1/2 -translate-y-1/2 p-1',
                 theme === 'dark'
-                  ? 'text-gray-500 hover:text-gray-300 focus:ring-cyan-500'
-                  : 'text-gray-400 hover:text-gray-600 focus:ring-blue-500'
+                  ? 'text-gray-500 hover:text-gray-300'
+                  : 'text-gray-400 hover:text-gray-600'
               )}
-              aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+              disabled={isLoading}
             >
               {showConfirmPassword ? (
-                <EyeOff className="w-5 h-5" />
+                <EyeOff className="w-4 h-4" />
               ) : (
-                <Eye className="w-5 h-5" />
+                <Eye className="w-4 h-4" />
               )}
             </button>
-            {formState.confirmPassword &&
-              formState.confirmPassword === formState.password && (
-                <CheckCircle
-                  className="absolute right-12 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500"
-                  aria-label="Passwords match"
-                />
-              )}
+            {validation.confirmPassword.isValid && formState.confirmPassword && (
+              <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
+            )}
           </div>
-          {showConfirmError && (
-            <p
-              className={cn(
-                'text-xs flex items-center gap-1.5 mt-1',
-                theme === 'dark' ? 'text-red-400' : 'text-red-600'
-              )}
-            >
+          {touched.confirmPassword && validation.confirmPassword.error && (
+            <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
               <AlertCircle className="w-3.5 h-3.5" />
-              {formErrors.confirmPassword}
+              {validation.confirmPassword.error}
             </p>
           )}
         </div>
 
-        {/* Submit button */}
+        {/* Submit Button - exactly the same behavior as SignUp */}
         <button
           type="submit"
           disabled={isLoading || !isFormValid}
@@ -710,12 +715,18 @@ export const ResetPassword: React.FC = () => {
             'w-full py-3.5 px-6 rounded-xl font-semibold text-base',
             'transition-all duration-200',
             'focus:outline-none focus:ring-4 focus:ring-offset-2',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
             'flex items-center justify-center gap-3',
-            theme === 'dark'
-              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900'
-              : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white',
-            !isLoading && isFormValid && 'shadow-lg hover:shadow-xl hover:scale-[1.02]'
+            isFormValid && !isLoading
+              ? cn(
+                  'cursor-pointer',
+                  theme === 'dark'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 focus:ring-cyan-500/50 focus:ring-offset-gray-900 shadow-lg hover:shadow-xl hover:scale-[1.02]'
+                    : 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 focus:ring-blue-500 focus:ring-offset-white shadow-lg hover:shadow-xl hover:scale-[1.02]'
+                )
+              : cn(
+                  'cursor-not-allowed',
+                  theme === 'dark' ? 'bg-gray-800 text-gray-500' : 'bg-gray-200 text-gray-400'
+                )
           )}
         >
           {isLoading ? (

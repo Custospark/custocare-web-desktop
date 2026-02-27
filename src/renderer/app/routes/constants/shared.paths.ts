@@ -9,6 +9,7 @@ export const ROUTES = {
   SIGNUP: '/signup',
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
+  RESET_PASSWORD_SUCCESS: '/reset-password-success',
   TWO_FACTOR_AUTH: '/verify-2fa',
 
   // Facility Management

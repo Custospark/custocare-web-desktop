@@ -20,6 +20,7 @@ const Dashboard = React.lazy(() => import('../../../../shared/pages/Dashboard'))
 import Layout from '../../../../shared/components/Navigation/Layout';
 import Landing from '../ui/role-based-ui/Landing';
 import PatientPortalModule from '../../../patient-portal/ui/PatientPortalModule';
+import PasswordResetSuccess from '../ui/auth/PasswordResetSuccess';
 /**
  * Authentication Routes Configuration
  * Returns an array of Route components
@@ -89,6 +90,15 @@ export const OnboardingRoutes = () => [
     element={
       <Suspense fallback={<LoadingSkeleton />}>
         <TwoFactorAuthPage />
+      </Suspense>
+    } 
+  />,
+  <Route 
+    key="password-reset-success"
+    path={ROUTES.RESET_PASSWORD_SUCCESS} 
+    element={
+      <Suspense fallback={<LoadingSkeleton />}>
+        <PasswordResetSuccess />
       </Suspense>
     } 
   />,

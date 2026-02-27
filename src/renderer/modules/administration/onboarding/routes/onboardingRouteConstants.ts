@@ -6,6 +6,7 @@ export const ROUTES = {
   SIGNUP: '/signup',
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
+  RESET_PASSWORD_SUCCESS: '/reset-password-success',
   TWO_FACTOR_AUTH: '/two-factor-auth',
   PORTAL_SELECTOR: '/portal-selector', 
   PATIENT_PORTAL: '/portal/patient', 
