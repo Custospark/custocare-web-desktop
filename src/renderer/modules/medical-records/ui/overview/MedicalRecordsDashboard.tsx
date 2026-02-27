@@ -29,6 +29,7 @@
 //   RefreshCw
 // } from 'lucide-react';
 
+
 // // Assuming your root state type is defined elsewhere
 // interface RootState {
 //   ui: {
@@ -484,6 +485,7 @@
 function MedicalRecordsDashboard() {
   return (
     <div>MedicalRecordsDashboard</div>
+    // <AuthStatus></AuthStatus>
   )
 }
 
