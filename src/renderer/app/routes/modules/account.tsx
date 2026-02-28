@@ -6,6 +6,7 @@ import { WithThemeProp } from "./shared/routeUtils";
 import { ACCOUNT_ROUTES } from "../routeConstants";
 import Message from "../../../modules/account/ui/message/Message";
 import Settings from "../../../modules/account/ui/settings/Settings";
+import Profile from "../../../modules/account/ui/settings/profile/Profile";
 export const accountRoutes = [
   <Route
     key="account-invitations"
@@ -42,8 +43,11 @@ export const accountRoutes = [
     }
   >
     <Route index element={<Navigate to={ACCOUNT_ROUTES.SETTINGS_PROFILE} replace />} />
-    <Route path="profile" element={<PlaceholderPanel title="Profile Settings" />} />
-    <Route path="security" element={<PlaceholderPanel title="Security Settings" />} />
+      <Route path={ACCOUNT_ROUTES.SETTINGS_PROFILE} element={
+            <Profile />
+        } />   
+
+       <Route path="security" element={<PlaceholderPanel title="Security Settings" />} />
     <Route path="preferences" element={<PlaceholderPanel title="Preferences" />} />
   </Route>,
 ];
