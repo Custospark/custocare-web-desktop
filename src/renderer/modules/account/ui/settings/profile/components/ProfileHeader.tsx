@@ -132,7 +132,7 @@ const EditModeFields: React.FC<{
         <input
           type="text"
           maxLength={50}
-          value={form.title}
+          value={form.title ?? ""}
           onChange={(e) => handleField('title', e.target.value)}
           className={inputBase}
           placeholder="e.g. Senior Software Engineer"
@@ -241,12 +241,12 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           )}
         </div>
 
-        {!editMode && (
-          <CheckCircle
-            className={`w-6 h-6 flex-shrink-0 ${isDark ? 'text-cyan-500' : 'text-blue-500'}`}
-            title="Profile complete"
-          />
-        )}
+    {!editMode && (
+      <CheckCircle
+        className={`w-6 h-6 shrink-0 ${isDark ? 'text-cyan-500' : 'text-blue-500'}`}
+        aria-label="Profile complete"
+      />
+)}
       </div>
     </div>
   );

@@ -88,18 +88,6 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
   const activeFacilityName     = useAppSelector(selectActiveFacilityName);
   const activeRoleCode         = useAppSelector(selectActiveRoleCode);
 
-  /* ── Auth slice — single source of truth for the user's identity ── */
-  const authUser = useSelector(selectUser);
-
-  /* Derive display name: prefer display_name → full_name → name → fallback */
-  const userDisplayName = useMemo(
-    () =>
-      authUser?.profile?.display_name ||
-      authUser?.profile?.full_name    ||
-      authUser?.name                  ||
-      'User',
-    [authUser],
-  );
 
   /* ── UUID helpers ── */
   const staffNumber  = useSelector(getStaffUuid);

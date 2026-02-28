@@ -71,7 +71,7 @@ const ProfilePersonalInfo: React.FC<ProfilePersonalInfoProps> = ({
             <FieldGroup label="Date of Birth" isDark={isDark}>
               <input
                 type="date"
-                value={form.dob}
+                value={form.dob ?? ""}
                 max={new Date().toISOString().split('T')[0]}
                 onChange={(e) => handleField('dob', e.target.value)}
                 className={inputBase}
@@ -82,7 +82,7 @@ const ProfilePersonalInfo: React.FC<ProfilePersonalInfoProps> = ({
             <FieldGroup label="Gender" isDark={isDark}>
               <div className="relative">
                 <select
-                  value={form.gender}
+                  value={form.gender ?? ""}
                   onChange={(e) => handleField('gender', e.target.value)}
                   className={`${inputBase} appearance-none pr-8`}
                 >

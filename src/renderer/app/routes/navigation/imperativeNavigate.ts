@@ -9,9 +9,15 @@
  *  2. axiosConfig (or anything outside React) calls `imperativeNavigate.to('/login')`.
  */
 
-import type { NavigateFunction } from 'react-router-dom';
+import type { NavigateFunction, To } from 'react-router-dom';
 
 let _navigate: NavigateFunction | null = null;
+
+type NavigateOptions = {
+  replace?: boolean;
+  state?: any;
+  relative?: 'route' | 'path';
+};
 
 export const imperativeNavigate = {
   /** Called once by the NavigationBridge component to wire up the real navigate fn. */
@@ -25,13 +31,36 @@ export const imperativeNavigate = {
   },
 
   /** Navigate from anywhere — inside or outside React. */
-  to(path: string, options?: Parameters<NavigateFunction>[1]): void {
+  to(to: To, options?: NavigateOptions): void {
     if (_navigate) {
-      _navigate(path, options);
+      _navigate(to, options);
     } else {
       console.warn(
-        `[imperativeNavigate] No handler registered — navigation dropped: ${path}`,
+        `[imperativeNavigate] No handler registered — navigation dropped: ${JSON.stringify(to)}`,
       );
     }
   },
+
+  /** Convenience method for replace navigation */
+  replace(to: To, state?: any): void {
+    imperativeNavigate.to(to, { replace: true, state });
+  },
+
+  /** Go back in history */
+  back(): void {
+    if (_navigate) {
+      _navigate(-1);
+    } else {
+      console.warn('[imperativeNavigate] No handler registered — cannot go back');
+    }
+  },
+
+  /** Go forward in history */
+  forward(): void {
+    if (_navigate) {
+      _navigate(1);
+    } else {
+      console.warn('[imperativeNavigate] No handler registered — cannot go forward');
+    }
+  }
 };

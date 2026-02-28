@@ -16,6 +16,7 @@ export interface UserResource {
   id: string;
   uuid: string;
   national_id_country_code: string | null;
+  profile_photo_path: string | null;
   identity: {
     state: string;
     verified_at: string | null;

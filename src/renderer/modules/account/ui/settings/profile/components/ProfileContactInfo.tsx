@@ -53,7 +53,7 @@ export const ProfileContactInfo: React.FC<ProfileContactInfoProps> = ({
               <input
                 type="tel"
                 maxLength={30}
-                value={form.phone}
+                value={form.phone ?? ""}
                 onChange={(e) => handleField('phone', e.target.value)}
                 className={inputBase}
                 placeholder="+1 234 567 8900"
@@ -134,7 +134,7 @@ export const ProfileAddress: React.FC<ProfileAddressProps> = ({
                 <input
                   type="text"
                   maxLength={max}
-                  value={form[key]}
+                  value={form[key] ?? ""}
                   onChange={(e) => handleField(key, e.target.value)}
                   className={inputBase}
                   placeholder={placeholder}
