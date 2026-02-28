@@ -11,6 +11,7 @@ import { ACCOUNT_ROUTES } from "../routeConstants";
 // Lazy load components for better performance
 import React from 'react';
 import UserPreferences from "../../../modules/account/ui/Preferences/Prefrences";
+import UserSecurity from "../../../modules/account/ui/security/Security";
 
 // Lazy imports
 const MyInvitations = React.lazy(() => import("../../../modules/account/ui/invitations/MyInvitations"));
@@ -82,8 +83,16 @@ export const accountRoutes = [
           </SuspenseWrapper>
         } 
       />       
-      
-      <Route path="security" element={<PlaceholderPanel title="Security Settings" />} />
-    </Route>,
+      <Route 
+        path={ACCOUNT_ROUTES.SETTINGS_SECURITY} 
+        element={
+          <SuspenseWrapper variant="detail">
+            <WithAuthProp 
+              Component={UserSecurity} 
+            />
+          </SuspenseWrapper>
+        } 
+      />       
+          </Route>,
   </Route>
 ];
