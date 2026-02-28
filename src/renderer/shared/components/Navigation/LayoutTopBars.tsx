@@ -4,9 +4,11 @@ import React, { useMemo } from 'react';
 import {PanelTopClose } from 'lucide-react';
 import { cn } from '../../types/cn';
 import Navbar from './Navbar/Navbar';
-import StatusBar, { type SidebarPosition, type SystemStatus, type ThemeMode } from './StatusBar';
+import { type SidebarPosition, type SystemStatus, type ThemeMode } from './status-bar-components/StatusBarTypes';
+
 import { useNavigate } from 'react-router-dom';
 import { ACCOUNT_ROUTES } from '../../../app/routes/routeConstants';
+import StatusBar from './StatusBar';
 
 
 export interface LayoutTopBarsThemeClasses {

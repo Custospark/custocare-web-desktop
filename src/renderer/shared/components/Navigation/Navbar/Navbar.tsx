@@ -216,7 +216,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       dispatch(logout());
       
       // 3. Finally navigate (redirects user)
-      navigate(ROUTES.HOME);
+      navigate(ROUTES.LANDING);
     };
 
 

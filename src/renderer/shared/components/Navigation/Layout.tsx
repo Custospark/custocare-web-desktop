@@ -6,39 +6,26 @@ import {
   PanelRightClose,
   PanelRightOpen,
 } from 'lucide-react';
-import { Outlet } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 
 import type { RootState, AppDispatch } from '../../../app/store/store';
 import { toggleSidebar, setSidebarOpen, toggleTheme } from '../../../app/store/slices/uiSlice';
 
-import { Sidebar } from './Sidebar';
-import { Footer } from './Footer';
 import { cn } from '../../types/cn';
-
 import LayoutTopBars from './LayoutTopBars';
 import DecorativeBackground from './DecorativeBackground';
-import type { SidebarPosition, ThemeMode } from './StatusBar';
+import { LayoutSidebarSection } from './layout-components/LayoutSidebarSection';
+import { LayoutContentSection } from './layout-components/LayoutContentSection';
+import { 
+  ThemeMode, 
+  SidebarPosition, 
+  LayoutThemeClasses,
+  STORAGE_KEYS,
+  ANIMATION_CONFIG,
+  TOP_BARS_TOTAL_H,
+  NAVBAR_H 
+} from './layout-components/LayoutTypes';
 import { useNetworkStatus } from '../../../app/store/hooks/seNetworkStatus';
-/**
- * ============================================================================
- * CONSTANTS
- * ============================================================================
- */
-const STORAGE_KEYS = {
-  SIDEBAR_POSITION: 'sidebar-position',
-  SIDEBAR_OPEN: 'sidebar-open',
-  THEME: 'app-theme',
-  TOP_BARS_VISIBLE: 'layout-topbars-visible',
-} as const;
-
-const ANIMATION_CONFIG = {
-  duration: { slow: 350 },
-} as const;
-
-const STATUS_BAR_H = 56; // matches pt-14
-const NAVBAR_H = 56; // navbar row
-const TOP_BARS_TOTAL_H = STATUS_BAR_H + NAVBAR_H;
 
 interface LocalLayoutState {
   mobileSidebarOpen: boolean;
@@ -110,7 +97,7 @@ export const Layout: React.FC = () => {
    * COMPUTED VALUES
    * ============================================================================
    */
-  const themeClasses = useMemo(() => {
+  const themeClasses = useMemo((): LayoutThemeClasses => {
     const isDark = theme === 'dark';
     return {
       background: isDark
@@ -139,27 +126,15 @@ export const Layout: React.FC = () => {
     return sidebarOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />;
   }, [localState.sidebarPosition, sidebarOpen]);
 
-  const positionClasses = useMemo(() => {
+  const navbarPositionClasses = useMemo(() => {
     const isLeft = localState.sidebarPosition === 'left';
-
     return {
-      sidebarPosition: isLeft ? 'left-0' : 'right-0',
-      sidebarBorder: isLeft ? 'border-r' : 'border-l',
-      sidebarWidth: sidebarOpen ? 'lg:w-70' : 'lg:w-20',
-      sidebarTransformMobile: localState.mobileSidebarOpen
-        ? 'translate-x-0'
-        : isLeft
-          ? '-translate-x-full'
-          : 'translate-x-full',
-      contentMargin: isLeft 
-        ? (sidebarOpen ? 'lg:ml-70' : 'lg:ml-20') 
-        : (sidebarOpen ? 'lg:mr-70' : 'lg:mr-20'),
       navbarPosition: isLeft
         ? (sidebarOpen ? 'left-0 lg:left-70' : 'left-0 lg:left-20')
         : (sidebarOpen ? 'right-0 lg:right-70' : 'right-0 lg:right-20'),
       navbarFull: isLeft ? 'right-0' : 'left-0',
     };
-  }, [localState.sidebarPosition, sidebarOpen, localState.mobileSidebarOpen]);
+  }, [localState.sidebarPosition, sidebarOpen]);
 
   const topPaddingPx = useMemo(() => {
     return localState.topBarsVisible ? TOP_BARS_TOTAL_H : NAVBAR_H;
@@ -314,88 +289,33 @@ export const Layout: React.FC = () => {
         onToggleMobileSidebar={handleToggleMobileSidebar}
         collapseIcon={collapseIcon}
         onToggleSidebar={handleToggleSidebar}
-        navbarPositionClass={positionClasses.navbarPosition}
-        navbarFullClass={positionClasses.navbarFull}
+        navbarPositionClass={navbarPositionClasses.navbarPosition}
+        navbarFullClass={navbarPositionClasses.navbarFull}
         appVersion={String(__APP_VERSION__)}
       />
 
       {/* MAIN LAYOUT */}
       <div style={{ paddingTop: topPaddingPx }}>
-        {/* Mobile overlay */}
-        {localState.mobileSidebarOpen && (
-          <div
-            className={cn('fixed inset-0 z-40 lg:hidden', 'bg-black/50 backdrop-blur-sm', 'animate-in fade-in duration-200')}
-            onClick={handleCloseMobileSidebar}
-            aria-hidden="true"
-          />
-        )}
+        {/* Sidebar Section */}
+        <LayoutSidebarSection
+          mobileSidebarOpen={localState.mobileSidebarOpen}
+          sidebarOpen={sidebarOpen}
+          sidebarPosition={localState.sidebarPosition}
+          isTransitioning={localState.isTransitioning}
+          topPaddingPx={topPaddingPx}
+          NAVBAR_H={NAVBAR_H}
+          themeClasses={themeClasses}
+          theme={theme}
+          onCloseMobileSidebar={handleCloseMobileSidebar}
+          onToggleSidebar={handleToggleSidebar}
+        />
 
-        {/* Sidebar */}
-        <aside
-          className={cn(
-            'fixed z-40 bottom-0',
-            'transition-all duration-300 ease-in-out',
-            'flex flex-col',
-            positionClasses.sidebarPosition,
-            positionClasses.sidebarWidth,
-            positionClasses.sidebarBorder,
-            'border',
-            themeClasses.sidebarBorder,
-            themeClasses.backdrop,
-            positionClasses.sidebarTransformMobile,
-            'lg:translate-x-0',
-            localState.isTransitioning && 'pointer-events-none'
-          )}
-          style={{ top: topPaddingPx - NAVBAR_H }}
-        >
-          <Sidebar
-            isOpen={localState.mobileSidebarOpen}
-            onClose={handleCloseMobileSidebar}
-            collapsed={!sidebarOpen}
-            onToggleCollapse={handleToggleSidebar}
-            theme={theme}
-          />
-        </aside>
-
-        {/* Content */}
-        <div
-          className={cn(
-            'min-h-screen flex flex-col',
-            'transition-all duration-300 ease-in-out',
-            positionClasses.contentMargin
-          )}
-        >
-          <main className="flex-1">
-            <div
-              className={cn(
-                'px-1 py-1 mt-4',
-                'sm:px-2 sm:py-2 sm:mt-3',
-                'md:px-3 md:py-3 md:mt-4',
-                'min-h-[calc(100vh-11rem)]',
-                themeClasses.contentArea
-              )}
-            >
-              <Outlet />
-            </div>
-          </main>
-
-          {/* Footer */}
-          <footer
-            className={cn(
-              'border-t backdrop-blur-xl',
-              'transition-colors duration-300',
-              themeClasses.glass
-            )}
-          >
-            <Footer
-              theme={theme}
-              showContact={true}
-              showSocial={true}
-              showCopyright={true}
-              compact={true}
-            />
-          </footer>
-        </div>
+        {/* Content Section */}
+        <LayoutContentSection
+          sidebarOpen={sidebarOpen}
+          sidebarPosition={localState.sidebarPosition}
+          themeClasses={themeClasses}
+        />
       </div>
 
       {/* Decorative */}

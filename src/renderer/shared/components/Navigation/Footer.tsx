@@ -1,14 +1,17 @@
+// Footer.tsx
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
+import { useSelector } from 'react-redux';
 import { type FooterProps } from '../../types/index';
 import { cn } from '../../types/cn';
 import LogoImage from '../../assets/LogoImage';
+import type { RootState } from '../../../app/store/store';
 
 export const Footer: React.FC<FooterProps> = ({
-  theme = 'dark',
   className,
   showCopyright = true,
 }) => {
+  const theme = useSelector((state: RootState) => state.ui.theme);
   const isDark = theme === 'dark';
   const currentYear = new Date().getFullYear();
 
