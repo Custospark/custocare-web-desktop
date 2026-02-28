@@ -17,6 +17,8 @@ import { selectUser } from '../../../../app/store/slices/authSlice';
 import { useGetUserProfile } from '../../../../modules/account/api/settings/profile/ProfileQueries';
 import { resolveStorageUrl } from '../../../../modules/account/api/settings/profile/profileUtils';
 import { ACCOUNT_ROUTES } from '../../../../app/routes/routeConstants';
+import { useConfirm } from '../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
+
 interface MenuItem {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
@@ -58,6 +60,7 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const user = useSelector(selectUser);
   const userId = user?.id;
+  const { confirm } = useConfirm();
 
   // Fetch full profile from DB only when auth slice has no photo path yet
   const { data: profileData } = useGetUserProfile(userId || '', {
@@ -89,6 +92,25 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, onToggle]);
+
+  const handleLogoutClick = async () => {
+    // Close the dropdown immediately for better UX
+    onToggle();
+    
+    // Show confirmation dialog
+    const confirmed = await confirm({
+      title: 'Sign Out',
+      message: 'Are you sure you want to sign out? You will need to log in again to access your account.',
+      confirmText: 'Sign Out',
+      cancelText: 'Cancel',
+      variant: 'info', // Using info variant as requested
+      theme: isDark ? 'dark' : 'light',
+    });
+
+    if (confirmed) {
+      onLogout();
+    }
+  };
 
   const menuItems: MenuItem[] = [
     { 
@@ -160,7 +182,6 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
           <div
             className={cn(
               'w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center overflow-hidden',
-              // ✅ FIX: each conditional is its own string argument — no arrays
               !profilePhotoUrl && 'bg-linear-to-br from-blue-600 to-emerald-600 ring-2 ring-offset-1',
               !profilePhotoUrl && (isDark
                 ? 'ring-offset-gray-900 ring-blue-500/40'
@@ -211,7 +232,6 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
                 <div
                   className={cn(
                     'w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden',
-                    // ✅ FIX: same pattern — individual string arguments, no arrays
                     !profilePhotoUrl && 'bg-linear-to-br from-blue-600 to-emerald-600 ring-4 ring-offset-2',
                     !profilePhotoUrl && (isDark
                       ? 'ring-offset-gray-900 ring-blue-500/20'
@@ -320,7 +340,7 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
           {/* Sign out */}
           <div className="p-2 border-t border-gray-200/50 dark:border-gray-800/50">
             <button
-              onClick={onLogout}
+              onClick={handleLogoutClick}
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium',
                 'transition-all duration-200 cursor-pointer',
