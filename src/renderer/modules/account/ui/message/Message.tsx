@@ -8,8 +8,8 @@
 import React from 'react';
 import { Inbox, SendIcon, Notebook, Trash, MessageCircleMore } from 'lucide-react';
 import { FaVirus } from 'react-icons/fa';
-import { BaseActionWorkspace } from '../../../shared/components/workspace/BaseActionWorkspace';
-import { ACCOUNT_ROUTES } from '../../../app/routes/routeConstants';
+import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
+import { ACCOUNT_ROUTES } from '../../../../app/routes/routeConstants';
 
 interface MessageProps {
   theme: 'light' | 'dark';

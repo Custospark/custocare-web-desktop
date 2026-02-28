@@ -119,7 +119,7 @@ export const ProtectedRoutes = () => [
               </SuspenseWrapper>
             }
           >
-            <Route index element={<Navigate to={ACCOUNT_ROUTES.PROFILE} replace />} />
+            <Route index element={<Navigate to={ACCOUNT_ROUTES.SETTINGS_PROFILE} replace />} />
             {accountRoutes}
           </Route>
         </Route>

@@ -22,10 +22,10 @@ import {
   Building2,
   Calendar,
 } from 'lucide-react';
-import { useGetMyPendingInvitations } from '../../administration/admin-module/api/team-management/queries/useStaffInvitationQueries';
+import { useGetMyPendingInvitations } from '../../../administration/admin-module/api/team-management/queries/useStaffInvitationQueries';
 import { InvitationCard } from './InvitationCard';
 import { InvitationActions } from './InvitationActions';
-import type { StaffInvitation } from '../../administration/admin-module/api/team-management/types/staffInvitationTypes';
+import type { StaffInvitation } from '../../../administration/admin-module/api/team-management/types/staffInvitationTypes';
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */

@@ -23,8 +23,8 @@ import {
   Phone,
 } from 'lucide-react';
 
-import type { StaffInvitation } from '../../administration/admin-module/api/team-management/types/staffInvitationTypes';
-import { cn } from '../../../shared/utils/classNameUtils';
+import type { StaffInvitation } from '../../../administration/admin-module/api/team-management/types/staffInvitationTypes';
+import { cn } from '../../../../shared/utils/classNameUtils';
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */

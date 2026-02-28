@@ -9,7 +9,6 @@ import MRPatientSearch from '../../../modules/medical-records/ui/patients/views/
 import MRPatientCreate from '../../../modules/medical-records/ui/patients/views/MRPatientCreate';
 import MRPatientQueue from '../../../modules/medical-records/ui/patients/views/MRPatientQueue';
 import MRPatientWalkIn from '../../../modules/medical-records/ui/patients/views/MRPatientWalkIn';
-import Appearance from "../../../modules/account/apearance/Appearance";
 import ForwardPatient from "../../../modules/medical-records/ui/visit-action-center/ForwardPatient";
 import PatientComplaints from "../../../modules/medical-records/ui/visit-action-center/PatientComplaints";
 import VisitStatus from "../../../modules/medical-records/ui/visit-action-center/VisitStatus";
@@ -115,13 +114,4 @@ export const medicalRecordsRoutes = [
       } />
    
     </Route>,
-  <Route
-    key="account-appearance"
-    path="appearance"
-    element={
-      <SuspenseWrapper variant="table">
-        <Appearance />
-      </SuspenseWrapper>
-    }
-  />,
 ];

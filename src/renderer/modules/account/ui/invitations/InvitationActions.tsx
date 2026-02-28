@@ -16,24 +16,24 @@ import React, { useCallback } from 'react';
 import { Check, X, Loader2} from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { useConfirm } from '../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
+import { useConfirm } from '../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { 
   useAcceptInvitation, 
   useDeclineInvitation,
   staffInvitationKeys
-} from '../../administration/admin-module/api/team-management/queries/useStaffInvitationQueries';
-import type { StaffInvitation } from '../../administration/admin-module/api/team-management/types/staffInvitationTypes';
-import { useToast } from '../../../app/store/contexts/toast/useToast';
-import { useAppDispatch } from '../../../app/store/hooks/useApp';
+} from '../../../administration/admin-module/api/team-management/queries/useStaffInvitationQueries';
+import type { StaffInvitation } from '../../../administration/admin-module/api/team-management/types/staffInvitationTypes';
+import { useToast } from '../../../../app/store/contexts/toast/useToast';
+import { useAppDispatch } from '../../../../app/store/hooks/useApp';
 import { 
   setUserContext,
   setLoading as setContextLoading,
   setError as setContextError,
   type UserContext,
-} from '../../../app/store/slices/activeContextSlice';
-import { axiosInstance } from '../../../../renderer/app/api/axiosConfig';
-import { ROUTES } from '../../administration/onboarding/routes/onboardingRouteConstants';
-import { getRoleDisplayName } from '../../../shared/utils/facilityRoleFormator';
+} from '../../../../app/store/slices/activeContextSlice';
+import { axiosInstance } from '../../../../app/api/axiosConfig';
+import { ROUTES } from '../../../administration/onboarding/routes/onboardingRouteConstants';
+import { getRoleDisplayName } from '../../../../shared/utils/facilityRoleFormator';
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */

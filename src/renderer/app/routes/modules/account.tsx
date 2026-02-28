@@ -1,32 +1,12 @@
-import { Route,Navigate} from "react-router-dom";
+import { Route, Navigate } from "react-router-dom";
 import { SuspenseWrapper } from "./shared/routeUtils";
-import MyInvitations from "../../../modules/account/invitations/MyInvitations";
-import Profile from "../../../modules/account/profile/Profile";
-import Security from "../../../modules/account/security/Security";
+import MyInvitations from "../../../modules/account/ui/invitations/MyInvitations";
 import { PlaceholderPanel } from "./shared/routeUtils";
 import { WithThemeProp } from "./shared/routeUtils";
 import { ACCOUNT_ROUTES } from "../routeConstants";
-import Appearance from '../../../modules/account/apearance/Appearance';
-import Message from "../../../modules/account/message/Message";
- export const accountRoutes = [
-  <Route
-    key="account-profile"
-    path="profile"
-    element={
-      <SuspenseWrapper variant="table">
-        <Profile />
-      </SuspenseWrapper>
-    }
-  />,
-  <Route
-    key="account-security"
-    path="security"
-    element={
-      <SuspenseWrapper variant="table">
-        <Security />
-      </SuspenseWrapper>
-    }
-  />,
+import Message from "../../../modules/account/ui/message/Message";
+import Settings from "../../../modules/account/ui/settings/Settings";
+export const accountRoutes = [
   <Route
     key="account-invitations"
     path="invitations"
@@ -53,12 +33,17 @@ import Message from "../../../modules/account/message/Message";
     <Route path="spam" element={<PlaceholderPanel title="Spam Messages" />} />
   </Route>,
   <Route
-    key="account-appearance"
-    path="appearance"
+    key="account-settings"
+    path="settings"
     element={
       <SuspenseWrapper variant="table">
-        <Appearance />
+        <WithThemeProp Component={Settings} />
       </SuspenseWrapper>
     }
-  />,
+  >
+    <Route index element={<Navigate to={ACCOUNT_ROUTES.SETTINGS_PROFILE} replace />} />
+    <Route path="profile" element={<PlaceholderPanel title="Profile Settings" />} />
+    <Route path="security" element={<PlaceholderPanel title="Security Settings" />} />
+    <Route path="preferences" element={<PlaceholderPanel title="Preferences" />} />
+  </Route>,
 ];
