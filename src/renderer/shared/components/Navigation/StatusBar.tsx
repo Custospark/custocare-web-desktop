@@ -248,7 +248,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     {
       id: 'account',
       label: 'Account',
-      route: ACCOUNT_ROUTES.PROFILE,
+      route: ACCOUNT_ROUTES.SETTINGS_PROFILE,
       description: 'Manage your profile, security, and preferences',
       moduleCode: 'account',
       keywords: ['account', 'profile', 'security', 'preferences', 'settings', 'user'],
