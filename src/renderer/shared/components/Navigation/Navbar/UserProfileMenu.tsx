@@ -160,22 +160,22 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
         )}
       >
         {/* Name + capability (desktop only) */}
-        {displayName && (
-          <div className="text-left hidden lg:block">
-            <p className={cn(
-              'text-xs font-semibold truncate max-w-[120px]',
-              isDark ? 'text-gray-100' : 'text-gray-900',
-            )}>
-              {displayName}
-            </p>
-            <p className={cn(
-              'text-xs truncate max-w-[120px]',
-              isDark ? 'text-gray-400' : 'text-gray-600',
-            )}>
-              {currentCapabilityName}
-            </p>
-          </div>
-        )}
+       {displayName && (
+            <div className="text-left hidden lg:block max-w-16">
+              <p className={cn(
+                'text-xs font-semibold truncate',
+                isDark ? 'text-gray-100' : 'text-gray-900',
+              )}>
+                {displayName}
+              </p>
+              <p className={cn(
+                'text-xs truncate',
+                isDark ? 'text-gray-400' : 'text-gray-600',
+              )}>
+                {currentCapabilityName}
+              </p>
+            </div>
+          )}
 
         {/* Small avatar */}
         <div className="relative">
