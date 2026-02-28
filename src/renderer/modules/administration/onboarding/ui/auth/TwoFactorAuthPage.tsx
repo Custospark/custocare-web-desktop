@@ -449,7 +449,6 @@ export const TwoFactorAuthPage: React.FC = () => {
             <p className="text-sm">{error}</p>
           </div>
         )}
-
         {/* Code input */}
         <div className="space-y-3">
           <label

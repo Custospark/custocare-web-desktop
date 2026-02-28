@@ -1,53 +1,79 @@
 import { Route, Navigate } from "react-router-dom";
-import { SuspenseWrapper } from "./shared/routeUtils";
-import MyInvitations from "../../../modules/account/ui/invitations/MyInvitations";
-import { PlaceholderPanel } from "./shared/routeUtils";
-import { WithThemeProp } from "./shared/routeUtils";
+import { 
+  SuspenseWrapper, 
+  WithThemeProp, 
+  WithAuthProp,
+  PlaceholderPanel,
+  ProtectedThemeOutlet
+} from "./shared/routeUtils";
 import { ACCOUNT_ROUTES } from "../routeConstants";
-import Message from "../../../modules/account/ui/message/Message";
-import Settings from "../../../modules/account/ui/settings/Settings";
-import Profile from "../../../modules/account/ui/settings/profile/Profile";
-export const accountRoutes = [
-  <Route
-    key="account-invitations"
-    path="invitations"
-    element={
-      <SuspenseWrapper variant="table">
-        <MyInvitations />
-      </SuspenseWrapper>
-    }
-  />,
-  <Route
-    key="account-messages"
-    path="messages"
-    element={
-      <SuspenseWrapper variant="table">
-        <WithThemeProp Component={Message} />
-      </SuspenseWrapper>
-    }
-  >
-    <Route index element={<Navigate to={ACCOUNT_ROUTES.MESSAGES_INBOX} replace />} />
-    <Route path="inbox" element={<PlaceholderPanel title="Inbox Messages" />} />
-    <Route path="sent" element={<PlaceholderPanel title="Sent Messages" />} />
-    <Route path="draft" element={<PlaceholderPanel title="Draft Messages" />} />
-    <Route path="trash" element={<PlaceholderPanel title="Trash Messages" />} />
-    <Route path="spam" element={<PlaceholderPanel title="Spam Messages" />} />
-  </Route>,
-  <Route
-    key="account-settings"
-    path="settings"
-    element={
-      <SuspenseWrapper variant="table">
-        <WithThemeProp Component={Settings} />
-      </SuspenseWrapper>
-    }
-  >
-    <Route index element={<Navigate to={ACCOUNT_ROUTES.SETTINGS_PROFILE} replace />} />
-      <Route path={ACCOUNT_ROUTES.SETTINGS_PROFILE} element={
-            <Profile userId={60}/>
-        } />   
 
-       <Route path="security" element={<PlaceholderPanel title="Security Settings" />} />
-    <Route path="preferences" element={<PlaceholderPanel title="Preferences" />} />
-  </Route>,
+// Lazy load components for better performance
+import React from 'react';
+
+// Lazy imports
+const MyInvitations = React.lazy(() => import("../../../modules/account/ui/invitations/MyInvitations"));
+const Message = React.lazy(() => import("../../../modules/account/ui/message/Message"));
+const Settings = React.lazy(() => import("../../../modules/account/ui/settings/Settings"));
+const UserProfile = React.lazy(() => import("../../../modules/account/ui/settings/profile/UserProfile"));
+
+export const accountRoutes = [
+  <Route key="account-base" element={<ProtectedThemeOutlet />}>
+    {/* Invitations Route */}
+    <Route
+      key="account-invitations"
+      path="invitations"
+      element={
+        <SuspenseWrapper variant="table">
+          <MyInvitations />
+        </SuspenseWrapper>
+      }
+    />,
+    
+    {/* Messages Routes */}
+    <Route
+      key="account-messages"
+      path="messages"
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={Message} />
+        </SuspenseWrapper>
+      }
+    >
+      <Route index element={<Navigate to={ACCOUNT_ROUTES.MESSAGES_INBOX} replace />} />
+      <Route path="inbox" element={<PlaceholderPanel title="Inbox Messages" />} />
+      <Route path="sent" element={<PlaceholderPanel title="Sent Messages" />} />
+      <Route path="draft" element={<PlaceholderPanel title="Draft Messages" />} />
+      <Route path="trash" element={<PlaceholderPanel title="Trash Messages" />} />
+      <Route path="spam" element={<PlaceholderPanel title="Spam Messages" />} />
+    </Route>,
+    
+    {/* Settings Routes */}
+    <Route
+      key="account-settings"
+      path="settings"
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={Settings} />
+        </SuspenseWrapper>
+      }
+    >
+      <Route index element={<Navigate to={ACCOUNT_ROUTES.SETTINGS_PROFILE} replace />} />
+      
+      {/* UserProfile - Using WithAuthProp to inject userId from auth slice */}
+      <Route 
+        path={ACCOUNT_ROUTES.SETTINGS_PROFILE} 
+        element={
+          <SuspenseWrapper variant="detail">
+            <WithAuthProp 
+              Component={UserProfile} 
+            />
+          </SuspenseWrapper>
+        } 
+      />       
+      
+      <Route path="security" element={<PlaceholderPanel title="Security Settings" />} />
+      <Route path="preferences" element={<PlaceholderPanel title="Preferences" />} />
+    </Route>,
+  </Route>
 ];

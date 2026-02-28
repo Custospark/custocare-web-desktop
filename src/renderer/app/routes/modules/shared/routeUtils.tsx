@@ -1,9 +1,9 @@
-// routeUtils.ts
 import React, { Suspense } from 'react';
-import { useOutletContext,Outlet } from 'react-router-dom';
+import { useOutletContext, Outlet, Navigate } from 'react-router-dom';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 import type { RootState } from '../../../store/store';
-import { useSelector } from 'react-redux';
+import { useSelector } from "react-redux";
+import { selectUser } from '../../../store/slices/authSlice';
 
 /**
  * Shared utility components and functions for route configurations
@@ -17,6 +17,13 @@ export interface ProtectedOutletContext {
 
 export interface ThemeProp {
   theme: ThemeMode;
+}
+
+/**
+ * Props for components that require a user ID from auth
+ */
+export interface WithAuthProp {
+  userId: number | string;
 }
 
 /**
@@ -47,6 +54,30 @@ export function WithThemeProp<P extends ThemeProp>({
 }
 
 /**
+ * Auth Prop Injector HOC
+ * Wraps a component that needs the authenticated user's ID
+ */
+export function WithAuthProp<P extends WithAuthProp>({
+  Component,
+  props,
+  redirectTo = '/login',
+}: {
+  Component: React.ComponentType<P>;
+  props?: Omit<P, keyof WithAuthProp>;
+  redirectTo?: string;
+}): React.ReactElement {
+  const user = useSelector(selectUser);
+  const userId = user?.id;
+  
+  if (!userId) {
+    return <Navigate to={redirectTo} replace />;
+  }
+  
+  const mergedProps = { ...(props ?? {}), userId } as P;
+  return <Component {...mergedProps} />;
+}
+
+/**
  * Suspense Wrapper
  */
 export const SuspenseWrapper: React.FC<{
@@ -58,6 +89,9 @@ export const SuspenseWrapper: React.FC<{
   </Suspense>
 );
 
+/**
+ * Protected Theme Outlet - provides theme context to child routes
+ */
 export const ProtectedThemeOutlet: React.FC = () => {
   const theme = useSelector((state: RootState) => state.ui.theme as ThemeMode);
   return <Outlet context={{ theme } satisfies ProtectedOutletContext} />;
