@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { UnifiedUserProfile } from '../../../shared/types/userTypes';
-import type { VerificationFlow, VerificationType } from  '../../../modules/account/api/AccountTypes';
+import type { VerificationFlow, VerificationType } from '../../../modules/account/api/AccountTypes';
 
 /**
  * Pending login credentials used ONLY to complete a verification step (email or MFA).
@@ -17,7 +17,7 @@ export interface PendingLogin {
 /**
  * Unified verification context so any screen can pick it up.
  * - type=email: verify using /auth/verify-email
- * - type=mfa: verify by re-calling /auth/login with mfa_code
+ * - type=mfa:   verify by re-calling /auth/login with mfa_code
  */
 export interface VerificationContext {
   type: VerificationType | null;
@@ -140,70 +140,72 @@ const authSlice = createSlice({
     /* ---------------------------------------------------------------------- */
 
     initializeAuth: (state) => {
-        const token = localStorage.getItem('authToken');
-        const userStr = localStorage.getItem('authUser');
-        const verificationStr = localStorage.getItem('authVerification');
+      const token           = localStorage.getItem('authToken');
+      const userStr         = localStorage.getItem('authUser');
+      const verificationStr = localStorage.getItem('authVerification');
 
-        if (token) {
-          state.token = token;
-          state.isAuthenticated = true;
+      if (token) {
+        state.token          = token;
+        state.isAuthenticated = true;
 
-          if (userStr) {
-            try {
-              state.user = JSON.parse(userStr) as UnifiedUserProfile;
-            } catch {
-              // ignore invalid cached user
-            }
-          }
-        }
-
-        // Restore verification context (userId, email, etc.)
-        if (verificationStr) {
+        if (userStr) {
           try {
-            const savedVerification = JSON.parse(verificationStr);
-            // Only restore if it has the required fields
-            if (savedVerification && typeof savedVerification === 'object') {
-              state.verification = {
-                type: savedVerification.type || null,
-                flow: savedVerification.flow || null,
-                userId: savedVerification.userId || null,
-                email: savedVerification.email || null,
-              };
-            }
+            state.user = JSON.parse(userStr) as UnifiedUserProfile;
           } catch {
-            // ignore corrupted storage
+            // ignore invalid cached user
           }
         }
+      }
 
-        state.isInitialized = true;
-      },
+      // Restore verification context (userId, email, etc.)
+      if (verificationStr) {
+        try {
+          const saved = JSON.parse(verificationStr);
+          if (saved && typeof saved === 'object') {
+            state.verification = {
+              type:   saved.type   || null,
+              flow:   saved.flow   || null,
+              userId: saved.userId || null,
+              email:  saved.email  || null,
+            };
+          }
+        } catch {
+          // ignore corrupted storage
+        }
+      }
 
-      logout: (state) => {
+      state.isInitialized = true;
+    },
+
+    logout: (state) => {
       Object.assign(state, initialState, { isInitialized: true });
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');
-      localStorage.removeItem('authVerification'); // add this line
+      localStorage.removeItem('authVerification');
     },
 
     /* ---------------------------------------------------------------------- */
     /*                           VERIFICATION CONTEXT                           */
     /* ---------------------------------------------------------------------- */
 
-   setVerificationContext: (state, action: PayloadAction<VerificationContext>) => {
+    setVerificationContext: (state, action: PayloadAction<VerificationContext>) => {
       state.verification = action.payload;
-      // Persist to localStorage (omit sensitive data – only userId & email matter)
-      localStorage.setItem('authVerification', JSON.stringify({
-        type: action.payload.type,
-        flow: action.payload.flow,
-        userId: action.payload.userId,
-        email: action.payload.email,
-      }));
+      localStorage.setItem(
+        'authVerification',
+        JSON.stringify({
+          type:   action.payload.type,
+          flow:   action.payload.flow,
+          userId: action.payload.userId,
+          email:  action.payload.email,
+        }),
+      );
     },
 
-   clearVerificationContext: (state) => {
-    state.verification = { type: null, flow: null, userId: null, email: null };
-    localStorage.removeItem('authVerification');
-  },
+    clearVerificationContext: (state) => {
+      state.verification = { type: null, flow: null, userId: null, email: null };
+      localStorage.removeItem('authVerification');
+    },
+
     setPendingLogin: (state, action: PayloadAction<PendingLogin>) => {
       state.pendingLogin = action.payload;
     },
@@ -218,12 +220,12 @@ const authSlice = createSlice({
 
     registerStart: (state) => {
       state.registration.isLoading = true;
-      state.registration.error = null;
+      state.registration.error     = null;
     },
 
     registerFailure: (state, action: PayloadAction<string>) => {
       state.registration.isLoading = false;
-      state.registration.error = action.payload;
+      state.registration.error     = action.payload;
     },
 
     /**
@@ -236,27 +238,24 @@ const authSlice = createSlice({
         user: UnifiedUserProfile | null;
         email: string;
         userId: number | null;
-      }>
+      }>,
     ) => {
       state.registration.isLoading = false;
-      state.registration.error = null;
+      state.registration.error     = null;
 
-      if (action.payload.user) {
-        state.user = action.payload.user;
-      }
+      if (action.payload.user) state.user = action.payload.user;
 
       const verification = {
-        type: 'email' as const,
-        flow: 'registration' as const,
+        type:   'email' as const,
+        flow:   'registration' as const,
         userId: action.payload.userId,
-        email: action.payload.email,
+        email:  action.payload.email,
       };
       state.verification = verification;
-      // Persist verification context
       localStorage.setItem('authVerification', JSON.stringify(verification));
 
       state.isAuthenticated = false;
-      state.token = null;
+      state.token           = null;
     },
 
     /* ---------------------------------------------------------------------- */
@@ -264,46 +263,52 @@ const authSlice = createSlice({
     /* ---------------------------------------------------------------------- */
 
     loginStart: (state) => {
-      state.isLoading = true;
-      state.loginError = null;
-      state.error = null;
+      state.isLoading   = true;
+      state.loginError  = null;
+      state.error       = null;
 
-      // reset MFA UI
-      state.mfa.isRequired = false;
+      state.mfa.isRequired  = false;
       state.mfa.isVerifying = false;
-      state.mfa.error = null;
+      state.mfa.error       = null;
     },
 
     loginFailure: (state, action: PayloadAction<string>) => {
-      state.isLoading = false;
-      state.loginError = action.payload;
+      state.isLoading       = false;
+      state.loginError      = action.payload;
       state.isAuthenticated = false;
     },
 
     /**
      * loginSuccess stores the token and user, and persists them to localStorage.
-     * This is called after successful login (including after MFA verification or email verification + re-login).
+     * Called after successful login (including after MFA / email verification + re-login).
      */
-   loginSuccess: (state, action: PayloadAction<{ user: UnifiedUserProfile; token: string }>) => {
-    state.isLoading = false;
-    state.user = action.payload.user;
-    state.token = action.payload.token;
-    state.isAuthenticated = true;
-    state.isInitialized = true;
+    loginSuccess: (
+      state,
+      action: PayloadAction<{ user: UnifiedUserProfile; token: string }>,
+    ) => {
+      state.isLoading       = false;
+      state.user            = action.payload.user;
+      state.token           = action.payload.token;
+      state.isAuthenticated = true;
+      state.isInitialized   = true;
 
-    state.verification = { type: null, flow: null, userId: null, email: null };
-    state.pendingLogin = null;
+      state.verification = { type: null, flow: null, userId: null, email: null };
+      state.pendingLogin = null;
 
-    // Clear persisted verification
-    localStorage.removeItem('authVerification');
+      localStorage.removeItem('authVerification');
+      localStorage.setItem('authToken', action.payload.token);
+      localStorage.setItem('authUser', JSON.stringify(action.payload.user));
+    },
 
-    localStorage.setItem('authToken', action.payload.token);
-    localStorage.setItem('authUser', JSON.stringify(action.payload.user));
-  },
+    /**
+     * refreshUser — call this any time the user's profile data changes
+     * (e.g. after saving profile settings or uploading a photo).
+     * Updates both the Redux state and the persisted localStorage copy.
+     */
     refreshUser: (state, action: PayloadAction<UnifiedUserProfile>) => {
-        state.user = action.payload;
-        localStorage.setItem('authUser', JSON.stringify(action.payload));
-      },
+      state.user = action.payload;
+      localStorage.setItem('authUser', JSON.stringify(action.payload));
+    },
 
     /* ---------------------------------------------------------------------- */
     /*                              EMAIL VERIFICATION                          */
@@ -311,22 +316,21 @@ const authSlice = createSlice({
 
     verifyEmailStart: (state) => {
       state.emailVerification.isLoading = true;
-      state.emailVerification.error = null;
-      state.emailVerification.verified = false;
+      state.emailVerification.error     = null;
+      state.emailVerification.verified  = false;
     },
 
     verifyEmailFailure: (state, action: PayloadAction<string>) => {
       state.emailVerification.isLoading = false;
-      state.emailVerification.error = action.payload;
-      state.emailVerification.verified = false;
+      state.emailVerification.error     = action.payload;
+      state.emailVerification.verified  = false;
     },
 
     verifyEmailSuccess: (state) => {
       state.emailVerification.isLoading = false;
-      state.emailVerification.error = null;
-      state.emailVerification.verified = true;
-      // Note: token is NOT stored here; the verify-email endpoint returns token:null.
-      // Token will be stored after the subsequent login in the login flow.
+      state.emailVerification.error     = null;
+      state.emailVerification.verified  = true;
+      // Token is NOT stored here; it will be stored after the subsequent login.
     },
 
     /* ---------------------------------------------------------------------- */
@@ -334,41 +338,42 @@ const authSlice = createSlice({
     /* ---------------------------------------------------------------------- */
 
     /**
-     * mfaRequired sets the verification context to type=mfa and stores email/userId.
-     * This happens when login response indicates MFA_REQUIRED.
+     * mfaRequired — sets verification context to type=mfa when login responds with MFA_REQUIRED.
      */
-    mfaRequired: (state, action: PayloadAction<{ email: string; userId: number | null }>) => {
+    mfaRequired: (
+      state,
+      action: PayloadAction<{ email: string; userId: number | null }>,
+    ) => {
       state.isLoading = false;
 
-      state.mfa.isRequired = true;
+      state.mfa.isRequired  = true;
       state.mfa.isVerifying = false;
-      state.mfa.error = null;
+      state.mfa.error       = null;
 
       const verification = {
-        type: 'mfa' as const,
-        flow: 'login' as const,
+        type:   'mfa'   as const,
+        flow:   'login' as const,
         userId: action.payload.userId,
-        email: action.payload.email,
+        email:  action.payload.email,
       };
       state.verification = verification;
-      // Persist verification context
       localStorage.setItem('authVerification', JSON.stringify(verification));
     },
 
     mfaVerificationStart: (state) => {
       state.mfa.isVerifying = true;
-      state.mfa.error = null;
+      state.mfa.error       = null;
     },
 
     mfaVerificationFailure: (state, action: PayloadAction<string>) => {
       state.mfa.isVerifying = false;
-      state.mfa.error = action.payload;
+      state.mfa.error       = action.payload;
     },
 
     mfaClear: (state) => {
-      state.mfa.isRequired = false;
+      state.mfa.isRequired  = false;
       state.mfa.isVerifying = false;
-      state.mfa.error = null;
+      state.mfa.error       = null;
     },
 
     /* ---------------------------------------------------------------------- */
@@ -376,20 +381,23 @@ const authSlice = createSlice({
     /* ---------------------------------------------------------------------- */
 
     resendVerificationStart: (state) => {
-      state.resendVerification.isLoading = true;
-      state.resendVerification.error = null;
-      state.resendVerification.expiresAt = null;
+      state.resendVerification.isLoading  = true;
+      state.resendVerification.error      = null;
+      state.resendVerification.expiresAt  = null;
     },
 
-    resendVerificationSuccess: (state, action: PayloadAction<{ expiresAt: string | null }>) => {
+    resendVerificationSuccess: (
+      state,
+      action: PayloadAction<{ expiresAt: string | null }>,
+    ) => {
       state.resendVerification.isLoading = false;
-      state.resendVerification.error = null;
+      state.resendVerification.error     = null;
       state.resendVerification.expiresAt = action.payload.expiresAt;
     },
 
     resendVerificationFailure: (state, action: PayloadAction<string>) => {
       state.resendVerification.isLoading = false;
-      state.resendVerification.error = action.payload;
+      state.resendVerification.error     = action.payload;
     },
 
     /* ---------------------------------------------------------------------- */
@@ -397,38 +405,41 @@ const authSlice = createSlice({
     /* ---------------------------------------------------------------------- */
 
     forgotPasswordStart: (state) => {
-      state.passwordReset.isLoading = true;
-      state.passwordReset.error = null;
-      state.passwordReset.resetDone = false;
+      state.passwordReset.isLoading  = true;
+      state.passwordReset.error      = null;
+      state.passwordReset.resetDone  = false;
     },
 
-    forgotPasswordSuccess: (state, action: PayloadAction<{ email: string; expiresAt: string | null }>) => {
-      state.passwordReset.isLoading = false;
-      state.passwordReset.error = null;
-      state.passwordReset.email = action.payload.email;
-      state.passwordReset.expiresAt = action.payload.expiresAt;
+    forgotPasswordSuccess: (
+      state,
+      action: PayloadAction<{ email: string; expiresAt: string | null }>,
+    ) => {
+      state.passwordReset.isLoading  = false;
+      state.passwordReset.error      = null;
+      state.passwordReset.email      = action.payload.email;
+      state.passwordReset.expiresAt  = action.payload.expiresAt;
     },
 
     forgotPasswordFailure: (state, action: PayloadAction<string>) => {
       state.passwordReset.isLoading = false;
-      state.passwordReset.error = action.payload;
+      state.passwordReset.error     = action.payload;
     },
 
     resetPasswordStart: (state) => {
       state.passwordReset.isLoading = true;
-      state.passwordReset.error = null;
+      state.passwordReset.error     = null;
       state.passwordReset.resetDone = false;
     },
 
     resetPasswordSuccess: (state) => {
       state.passwordReset.isLoading = false;
-      state.passwordReset.error = null;
+      state.passwordReset.error     = null;
       state.passwordReset.resetDone = true;
     },
 
     resetPasswordFailure: (state, action: PayloadAction<string>) => {
       state.passwordReset.isLoading = false;
-      state.passwordReset.error = action.payload;
+      state.passwordReset.error     = action.payload;
       state.passwordReset.resetDone = false;
     },
 
@@ -437,13 +448,13 @@ const authSlice = createSlice({
     /* ---------------------------------------------------------------------- */
 
     clearError: (state) => {
-      state.error = null;
-      state.loginError = null;
-      state.emailVerification.error = null;
-      state.mfa.error = null;
-      state.registration.error = null;
-      state.passwordReset.error = null;
-      state.resendVerification.error = null;
+      state.error                      = null;
+      state.loginError                 = null;
+      state.emailVerification.error    = null;
+      state.mfa.error                  = null;
+      state.registration.error         = null;
+      state.passwordReset.error        = null;
+      state.resendVerification.error   = null;
     },
   },
 });
@@ -495,11 +506,20 @@ export const {
 
 export const selectAuth = (state: { auth: AuthState }) => state.auth;
 export const selectToken = (state: { auth: AuthState }) => state.auth.token;
-export const selectUser = (state: { auth: AuthState }) => state.auth.user;
+export const selectUser  = (state: { auth: AuthState }) => state.auth.user;
+
+/**
+ * Returns the best available display name for the authenticated user.
+ * Priority: display_name → full_name → name → null
+ */
+export const selectUserDisplayName = (state: { auth: AuthState }): string | null => {
+  const u = state.auth.user;
+  if (!u) return null;
+  return u.profile?.display_name || u.profile?.full_name || u.name || null;
+};
 
 export const selectVerificationContext = (state: { auth: AuthState }) => state.auth.verification;
-export const selectPendingLogin = (state: { auth: AuthState }) => state.auth.pendingLogin;
-
-export const selectPasswordResetEmail = (state: { auth: AuthState }) => state.auth.passwordReset.email;
+export const selectPendingLogin        = (state: { auth: AuthState }) => state.auth.pendingLogin;
+export const selectPasswordResetEmail  = (state: { auth: AuthState }) => state.auth.passwordReset.email;
 
 export default authSlice.reducer;

@@ -66,7 +66,7 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
 
   // Derived display values — auth slice is source of truth, props are fallback
   const displayName =
-    user?.profile?.first_name || user?.name || propUserName || 'User';
+    user?.profile?.first_name || user?.display_name || propUserName || 'User';
   const email = user?.email || propUserEmail || 'No email';
 
   // Step 1: auth slice  →  Step 2: DB  →  Step 3: null (icon fallback)

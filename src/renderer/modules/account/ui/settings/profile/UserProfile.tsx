@@ -19,6 +19,11 @@ import ProfilePersonalInfo from './components/ProfilePersonalInfo';
 import { ProfileContactInfo, ProfileAddress } from './components/ProfileContactInfo';
 import type { ProfileFormState } from './components/ProfileTypes';
 
+/* auth-slice wiring */
+import { useAppDispatch } from '../../../../../app/store/hooks/useApp';
+import { refreshUser, selectUser } from '../../../../../app/store/slices/authSlice';
+import type { UnifiedUserProfile } from '../../../../../shared/types/userTypes';
+
 /* -------------------------------------------------------------------------- */
 /*                              Helper functions                              */
 /* -------------------------------------------------------------------------- */
@@ -43,7 +48,10 @@ const profileToFormState = (p: UserProfile): ProfileFormState => ({
 const buildUpdatePayload = (form: ProfileFormState, original: UserProfile): any => {
   const payload: any = {};
 
-  const str = (key: keyof Omit<ProfileFormState, 'gender' | 'profile_photo_path'>, origKey: keyof UserProfile) => {
+  const str = (
+    key: keyof Omit<ProfileFormState, 'gender' | 'profile_photo_path'>,
+    origKey: keyof UserProfile,
+  ) => {
     const v = form[key] as string;
     if (v !== (original[origKey] ?? '')) payload[key] = v || null;
   };
@@ -67,27 +75,64 @@ const buildUpdatePayload = (form: ProfileFormState, original: UserProfile): any 
   return payload;
 };
 
+/** Merge updated UserProfile fields back into the UnifiedUserProfile stored in the auth slice. */
+const mergeIntoAuthUser = (
+  authUser: UnifiedUserProfile,
+  updated: UserProfile,
+): UnifiedUserProfile => {
+  const firstName = updated.first_name ?? authUser.profile.first_name;
+  const lastName  = updated.last_name  ?? authUser.profile.last_name;
+
+  return {
+    ...authUser,
+    profile: {
+      ...authUser.profile,
+      first_name:   firstName,
+      last_name:    lastName,
+      full_name:    [firstName, lastName].filter(Boolean).join(' ') || authUser.profile.full_name,
+      display_name: updated.display_name ?? authUser.profile.display_name,
+      title:        updated.title        ?? authUser.profile.title,
+      dob:          updated.dob          ?? authUser.profile.dob,
+      gender:       updated.gender       ?? authUser.profile.gender,
+    },
+  };
+};
+
+/* -------------------------------------------------------------------------- */
+
 interface UserProfileProps {
   userId: number | string;
 }
 
 const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
-  const theme = useSelector((state: RootState) => state.ui.theme);
-  const isDark = theme === 'dark';
+  const dispatch   = useAppDispatch();
+  const authUser   = useSelector(selectUser);                           // ← auth slice
+  const theme      = useSelector((state: RootState) => state.ui.theme);
+  const isDark     = theme === 'dark';
 
-  const { data: profileResponse, isLoading, isError, error: fetchError } = useGetUserProfile(userId);
+  const { data: profileResponse, isLoading, isError, error: fetchError } =
+    useGetUserProfile(userId);
 
+  /* ── Save profile ── */
   const { mutate: saveProfile, isPending: isSaving } = useUpdateUserProfile({
-    onSuccess: () => setEditMode(false),
+    onSuccess: (data) => {
+      setEditMode(false);
+
+      /* Sync auth slice so Sidebar / avatar / anywhere else updates immediately */
+      if (authUser) {
+        dispatch(refreshUser(mergeIntoAuthUser(authUser, data.data)));
+      }
+    },
   });
 
+  /* ── Upload photo ── */
   const { mutate: uploadPhoto, isPending: isUploading } = useUploadProfilePhoto();
 
   const profile = profileResponse?.data ?? null;
 
-  const [editMode, setEditMode] = useState(false);
-  const [form, setForm] = useState<ProfileFormState | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [editMode, setEditMode]       = useState(false);
+  const [form, setForm]               = useState<ProfileFormState | null>(null);
+  const [previewUrl, setPreviewUrl]   = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -97,7 +142,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
     if (profile) setForm(profileToFormState(profile));
   }, [profile]);
 
-  /* Revoke preview URL when replaced/unmounted */
+  /* Revoke preview URL when replaced / unmounted */
   useEffect(() => {
     return () => {
       if (previewUrl?.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
@@ -118,7 +163,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
       setForm(profileToFormState(profile));
       setFieldErrors({});
     }
-    // Clear preview if any
     setPreviewUrl((prev) => {
       if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
       return null;
@@ -129,17 +173,17 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
   const validate = (f: ProfileFormState): boolean => {
     const errs: Record<string, string> = {};
 
-    if (f.first_name && f.first_name.length > 100) errs.first_name = 'Max 100 characters.';
-    if (f.last_name && f.last_name.length > 100) errs.last_name = 'Max 100 characters.';
+    if (f.first_name   && f.first_name.length   > 100) errs.first_name   = 'Max 100 characters.';
+    if (f.last_name    && f.last_name.length    > 100) errs.last_name    = 'Max 100 characters.';
     if (f.display_name && f.display_name.length > 150) errs.display_name = 'Max 150 characters.';
-    if (f.title && f.title.length > 50) errs.title = 'Max 50 characters.';
-    if (f.phone && f.phone.length > 30) errs.phone = 'Max 30 characters.';
-    if (f.postal_code && f.postal_code.length > 20) errs.postal_code = 'Max 20 characters.';
+    if (f.title        && f.title.length        >  50) errs.title        = 'Max 50 characters.';
+    if (f.phone        && f.phone.length        >  30) errs.phone        = 'Max 30 characters.';
+    if (f.postal_code  && f.postal_code.length  >  20) errs.postal_code  = 'Max 20 characters.';
 
     if (f.dob) {
       const d = new Date(f.dob);
       if (Number.isNaN(d.getTime())) errs.dob = 'Invalid date.';
-      else if (d >= new Date()) errs.dob = 'Date of birth must be a past date.';
+      else if (d >= new Date())      errs.dob = 'Date of birth must be a past date.';
     }
 
     if (f.gender && !['male', 'female', 'other', ''].includes(f.gender)) {
@@ -167,18 +211,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Frontend validation (fast feedback)
-    if (!file.type.startsWith('image/')) {
-      e.target.value = '';
-      return;
-    }
-    const maxBytes = 5 * 1024 * 1024; // 5MB (match backend if possible)
-    if (file.size > maxBytes) {
-      e.target.value = '';
-      return;
-    }
+    if (!file.type.startsWith('image/')) { e.target.value = ''; return; }
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) { e.target.value = ''; return; }
 
-    // Revoke old preview
     setPreviewUrl((prev) => {
       if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
       return prev;
@@ -190,12 +226,22 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
     uploadPhoto(
       { userId, file },
       {
-        onSuccess: () => {
-          // Clear preview so the UI uses the real storage path after cache update/refetch.
+        onSuccess: (data) => {
+          /* Clear blob preview */
           setPreviewUrl((prev) => {
             if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
             return null;
           });
+
+          /* Sync new photo path into auth slice */
+          if (authUser) {
+            dispatch(
+              refreshUser({
+                ...authUser,
+                profile_photo_path: data.data.profile_photo_path,
+              }),
+            );
+          }
         },
         onError: () => {
           setPreviewUrl((prev) => {
@@ -209,7 +255,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
     e.target.value = '';
   };
 
-  /* -------------------------------- UI states ----------------------------- */
+  /* ── UI states ── */
 
   if (isLoading) {
     return <LoadingSkeleton variant="detail" theme={theme} message="Loading your profile…" />;
@@ -232,8 +278,13 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
   }
 
   return (
-    <div className={`min-h-screen transition-colors ${isDark ? 'bg-gray-1000 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
+    <div
+      className={`min-h-screen transition-colors ${
+        isDark ? 'bg-gray-1000 text-gray-100' : 'bg-gray-50 text-gray-900'
+      }`}
+    >
       <div className="max-w-4xl mx-auto p-4 lg:p-8 space-y-6">
+        {/* ── Page header ── */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold">My Profile</h1>
@@ -347,10 +398,20 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
               }`}
             >
               <div className="flex items-center gap-2">
-                <span className={`p-1.5 rounded-lg ${isDark ? 'bg-cyan-500/15 text-cyan-400' : 'bg-blue-50 text-blue-600'}`}>
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                <span
+                  className={`p-1.5 rounded-lg ${
+                    isDark ? 'bg-cyan-500/15 text-cyan-400' : 'bg-blue-50 text-blue-600'
+                  }`}
+                >
+                  <svg
+                    className="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
                 </span>
                 <h3 className="text-sm font-semibold uppercase tracking-wider">Account</h3>
