@@ -34,7 +34,6 @@ import { WelcomeSection } from './port-selector-components/WelcomeSection';
 import { ProfessionalWorkspaces } from './port-selector-components/ProfessionalWorkspaces';
 import { PersonalAccessSection } from './port-selector-components/PersonalAccessSection';
 
-const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&q=80';
 
 export const PortalSelector: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -167,7 +166,6 @@ export const PortalSelector: React.FC = () => {
       <PortalHeader
         theme={theme}
         userName={user?.full_name}
-        avatarUrl={DEFAULT_AVATAR}
         onToggleTheme={handleToggleTheme}
         onLogout={handleLogout}
       />

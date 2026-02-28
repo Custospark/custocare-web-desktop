@@ -2,121 +2,185 @@
  * ============================================================================
  * PORTAL HEADER COMPONENT
  * ============================================================================
- * Responsive header with logo, theme toggle, logout, and user avatar
+ * Responsive header with logo, theme toggle, logout, and user avatar.
+ *
+ * Profile image resolution order:
+ *   1. auth slice → user.profile_photo_path  (resolved via resolveStorageUrl)
+ *   2. DB fetch   → useGetUserProfile        (when auth slice path is absent)
+ *   3. Fallback   → gradient avatar with User icon  (no external URL)
  */
 
 import React from 'react';
-import { Sun, Moon, User } from 'lucide-react';
 import { useSelector } from 'react-redux';
+import { Sun, Moon, User } from 'lucide-react';
 import { cn } from '../../../../../../shared/types/cn';
 import LogoImage from '../../../../../../shared/assets/LogoImage';
-import { selectUser } from '../../../../../../app/store/slices/authSlice';
-import { useGetUserProfile } from '../../../../../account/api/settings/profile/ProfileQueries';
+import { selectUser } from '../../../../../../app/store/slices/authSlice';           
 import { resolveStorageUrl } from '../../../../../account/api/settings/profile/profileUtils';
+import { useGetUserProfile } from '../../../../../account/api/settings/profile/ProfileQueries';
+
+/* -------------------------------------------------------------------------- */
+/*                         Internal Avatar Sub-component                       */
+/* -------------------------------------------------------------------------- */
+
+interface HeaderAvatarProps {
+  src: string | null | undefined;
+  alt: string;
+  isDark: boolean;
+}
+
+/**
+ * Renders the user avatar in the portal header.
+ * - Has a photo  → circular <img> with blue ring
+ * - No photo     → gradient circle with User icon (same ring)
+ */
+const HeaderAvatar: React.FC<HeaderAvatarProps> = ({ src, alt }) => (
+  <div
+    className={cn(
+      'w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden shrink-0',
+      'flex items-center justify-center',
+      'bg-gradient-to-br from-blue-600 to-emerald-600',
+      'border-2 border-blue-500 shadow-sm',
+    )}
+  >
+    {src ? (
+      <img
+        src={src}
+        alt={alt}
+        className="w-full h-full object-cover"
+        draggable={false}
+      />
+    ) : (
+      <User className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white" />
+    )}
+  </div>
+);
+
+/* -------------------------------------------------------------------------- */
+/*                              Hook: resolve photo URL                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Returns the resolved profile photo URL using the three-step fallback chain:
+ *   auth slice  →  DB fetch  →  null (caller renders fallback icon)
+ */
+function useProfilePhotoUrl(
+  userId: string | number | null | undefined,
+  authPhotoPath: string | null | undefined,
+): string | null {
+  // Step 1 – resolve from auth slice (synchronous, no network)
+  const fromAuth = authPhotoPath ? resolveStorageUrl(authPhotoPath) : null;
+
+  // Step 2 – fetch from DB only when auth slice has no path
+  const { data: profileData } = useGetUserProfile(userId ?? '', {
+    enabled: !!userId && !authPhotoPath,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (fromAuth) return fromAuth;
+
+  const dbPath = profileData?.data?.profile_photo_path;
+  return dbPath ? resolveStorageUrl(dbPath) : null;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                               Component Props                               */
+/* -------------------------------------------------------------------------- */
 
 interface PortalHeaderProps {
   theme: 'light' | 'dark';
+  /** Displayed next to the avatar (optional). */
+  userName?: string;
   onToggleTheme: () => void;
   onLogout: () => void;
 }
 
+/* -------------------------------------------------------------------------- */
+/*                               Main Component                                */
+/* -------------------------------------------------------------------------- */
+
 export const PortalHeader: React.FC<PortalHeaderProps> = ({
   theme,
+  userName,
   onToggleTheme,
   onLogout,
 }) => {
-  const user = useSelector(selectUser);
-  const userId = user?.id;
-  
-  // Fetch full profile if needed to get profile_photo_path
-  const { data: profileData } = useGetUserProfile(userId || '', {
-    enabled: !!userId && !user?.profile_photo_path, // Only fetch if we don't have photo path
-  });
+  const isDark = theme === 'dark';
 
-  // Get profile photo path from either auth user or fetched profile
-  const profilePhotoPath = user?.profile_photo_path || profileData?.data?.profile_photo_path;
-  
-  // Resolve the full URL for the profile photo
-  const avatarUrl = profilePhotoPath ? resolveStorageUrl(profilePhotoPath) : null;
+  /* ── Redux user ── */
+  const authUser = useSelector(selectUser);
 
-  // Get user's display name
-  const userName = user?.profile?.display_name || user?.name || user?.email || 'User';
+  /* ── Resolved photo URL ── */
+  const photoUrl = useProfilePhotoUrl(
+    authUser?.id,
+    authUser?.profile_photo_path,
+  );
+
+  /* ── Effective display name ── */
+  const displayName = userName ?? authUser?.name ?? authUser?.profile?.display_name ?? 'User';
 
   return (
     <header
       className={cn(
         'sticky top-0 z-50 border-b',
-        theme === 'dark' ? 'bg-gray-950 border-gray-800' : 'bg-white border-gray-200'
+        isDark ? 'bg-gray-950 border-gray-800' : 'bg-white border-gray-200',
       )}
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 sm:py-3">
         <div className="flex items-center justify-between gap-4 w-full">
-          {/* Logo Section - Left aligned with text below logo */}
+
+          {/* ── Logo (left) ── */}
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <div className="flex flex-col items-start shrink-0">
               <LogoImage />
-              <span
-                className={cn(
-                  'text-xs sm:text-sm font-medium bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent',
-                )}
-              >
+              <span className="text-xs sm:text-sm font-medium bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
                 Custocare AI
               </span>
             </div>
           </div>
 
-          {/* Actions Section - Right aligned with consistent spacing */}
+          {/* ── Actions (right) ── */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Theme Toggle */}
+
+            {/* Theme toggle */}
             <button
               onClick={onToggleTheme}
               className={cn(
                 'p-2 rounded-lg transition-all duration-200 cursor-pointer',
                 'hover:scale-105 active:scale-95',
-                theme === 'dark'
+                isDark
                   ? 'hover:bg-gray-800 text-gray-400'
-                  : 'hover:bg-gray-100 text-gray-600'
+                  : 'hover:bg-gray-100 text-gray-600',
               )}
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
             >
-              {theme === 'dark' ? 
-                <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : 
+              {isDark ? (
+                <Sun className="w-4 h-4 sm:w-5 sm:h-5" />
+              ) : (
                 <Moon className="w-4 h-4 sm:w-5 sm:h-5" />
-              }
+              )}
             </button>
 
-            {/* Logout Button */}
+            {/* Logout */}
             <button
               onClick={onLogout}
               className={cn(
-                'px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 cursor-pointer',
+                'px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg',
+                'text-xs sm:text-sm font-medium whitespace-nowrap',
                 'bg-blue-600 text-white hover:bg-blue-700',
+                'transition-all duration-200 cursor-pointer',
                 'hover:scale-105 active:scale-95',
-                'whitespace-nowrap'
               )}
             >
               Logout
             </button>
 
-            {/* User Avatar - Now using actual profile image with fallback */}
-            <div className={cn(
-              'w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center overflow-hidden',
-              'border-2 border-blue-500 shadow-sm flex-shrink-0',
-              theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
-            )}>
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={userName}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User className={cn(
-                  'w-4 h-4 sm:w-5 sm:h-5',
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                )} />
-              )}
-            </div>
+            {/* User avatar — real photo or fallback icon (NO external URL) */}
+            <HeaderAvatar
+              src={photoUrl}
+              alt={displayName}
+              isDark={isDark}
+            />
           </div>
         </div>
       </div>
