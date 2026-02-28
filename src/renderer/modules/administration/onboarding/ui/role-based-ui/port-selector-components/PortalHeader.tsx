@@ -10,7 +10,7 @@
  *   3. Fallback   → gradient avatar with User icon  (no external URL)
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { Sun, Moon, User } from 'lucide-react';
 import { cn } from '../../../../../../shared/types/cn';
@@ -18,6 +18,7 @@ import LogoImage from '../../../../../../shared/assets/LogoImage';
 import { selectUser } from '../../../../../../app/store/slices/authSlice';           
 import { resolveStorageUrl } from '../../../../../account/api/settings/profile/profileUtils';
 import { useGetUserProfile } from '../../../../../account/api/settings/profile/ProfileQueries';
+import { useConfirm } from '../../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 
 /* -------------------------------------------------------------------------- */
 /*                         Internal Avatar Sub-component                       */
@@ -106,6 +107,7 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
   onLogout,
 }) => {
   const isDark = theme === 'dark';
+  const { confirm } = useConfirm();
 
   /* ── Redux user ── */
   const authUser = useSelector(selectUser);
@@ -118,6 +120,22 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
 
   /* ── Effective display name ── */
   const displayName = userName ?? authUser?.name ?? authUser?.profile?.display_name ?? 'User';
+
+  /* ── Handle logout with confirmation ── */
+  const handleLogoutClick = useCallback(async () => {
+    const confirmed = await confirm({
+      title: 'Sign Out',
+      message: 'Are you sure you want to sign out? You will need to log in again to access your account.',
+      confirmText: 'Sign Out',
+      cancelText: 'Cancel',
+      variant: 'info',
+      theme,
+    });
+
+    if (confirmed) {
+      onLogout();
+    }
+  }, [confirm, onLogout, theme]);
 
   return (
     <header
@@ -161,9 +179,9 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
               )}
             </button>
 
-            {/* Logout */}
+            {/* Logout - Now with confirmation */}
             <button
-              onClick={onLogout}
+              onClick={handleLogoutClick}
               className={cn(
                 'px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg',
                 'text-xs sm:text-sm font-medium whitespace-nowrap',
