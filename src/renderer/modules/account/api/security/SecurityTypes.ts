@@ -91,12 +91,15 @@ export function formatDate(dateString: string | null): string {
   
   try {
     const date = new Date(dateString);
+    
+    // This automatically uses the user's browser timezone
     return date.toLocaleString(undefined, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      timeZoneName: 'short', // Optional: shows timezone abbreviation
     });
   } catch {
     return 'Invalid date';
