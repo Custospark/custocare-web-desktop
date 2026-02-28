@@ -1,3 +1,5 @@
+// src/renderer/app/App.tsx
+
 import { Provider } from 'react-redux';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -13,9 +15,8 @@ import ErrorBoundary from './shared/components/Loading/ErrorBoundary';
 import { AppProvider } from './app/store/contexts/app/AppContext';
 import { ConfirmProvider } from './shared/components/Feedback/ConfirmDialog/ConfirmProvider';
 import { ToastProvider } from './app/store/contexts/toast/ToastContext';
-
+import { NavigationBridge } from './app/routes/navigation/NavigationBridge';
 import { UpdateNotification } from './shared/components/Feedback/UpdateNotification';
-
 
 import './App.css';
 
@@ -42,6 +43,7 @@ function App() {
           <Provider store={store}>
             <QueryClientProvider client={queryClient}>
               <Router>
+                <NavigationBridge /> {/* ← registers imperativeNavigate.tS, must be inside <Router> */}
                 <AppProvider>
                   {/* One-time initialization layer */}
                   <AppInitializer>

@@ -6,27 +6,42 @@
  */
 
 import React from 'react';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, User } from 'lucide-react';
+import { useSelector } from 'react-redux';
 import { cn } from '../../../../../../shared/types/cn';
 import LogoImage from '../../../../../../shared/assets/LogoImage';
+import { selectUser } from '../../../../../../app/store/slices/authSlice';
+import { useGetUserProfile } from '../../../../../account/api/settings/profile/ProfileQueries';
+import { resolveStorageUrl } from '../../../../../account/api/settings/profile/profileUtils';
 
 interface PortalHeaderProps {
   theme: 'light' | 'dark';
-  userName?: string;
-  avatarUrl?: string;
   onToggleTheme: () => void;
   onLogout: () => void;
 }
 
-const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&q=80';
-
 export const PortalHeader: React.FC<PortalHeaderProps> = ({
   theme,
-  userName,
-  avatarUrl = DEFAULT_AVATAR,
   onToggleTheme,
   onLogout,
 }) => {
+  const user = useSelector(selectUser);
+  const userId = user?.id;
+  
+  // Fetch full profile if needed to get profile_photo_path
+  const { data: profileData } = useGetUserProfile(userId || '', {
+    enabled: !!userId && !user?.profile_photo_path, // Only fetch if we don't have photo path
+  });
+
+  // Get profile photo path from either auth user or fetched profile
+  const profilePhotoPath = user?.profile_photo_path || profileData?.data?.profile_photo_path;
+  
+  // Resolve the full URL for the profile photo
+  const avatarUrl = profilePhotoPath ? resolveStorageUrl(profilePhotoPath) : null;
+
+  // Get user's display name
+  const userName = user?.profile?.display_name || user?.name || user?.email || 'User';
+
   return (
     <header
       className={cn(
@@ -83,12 +98,25 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
               Logout
             </button>
 
-            {/* User Avatar */}
-            <img
-              src={avatarUrl}
-              alt={userName || 'User'}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-blue-500 shadow-sm flex-shrink-0"
-            />
+            {/* User Avatar - Now using actual profile image with fallback */}
+            <div className={cn(
+              'w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center overflow-hidden',
+              'border-2 border-blue-500 shadow-sm flex-shrink-0',
+              theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
+            )}>
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={userName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className={cn(
+                  'w-4 h-4 sm:w-5 sm:h-5',
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                )} />
+              )}
+            </div>
           </div>
         </div>
       </div>

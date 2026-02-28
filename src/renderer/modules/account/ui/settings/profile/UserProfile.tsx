@@ -18,6 +18,7 @@ import ProfileHeader from './components/ProfileHeader';
 import ProfilePersonalInfo from './components/ProfilePersonalInfo';
 import { ProfileContactInfo, ProfileAddress } from './components/ProfileContactInfo';
 import type { ProfileFormState } from './components/ProfileTypes';
+import AuthStatus from '../../../../administration/onboarding/ui/role-based-ui/AuthStatus';
 
 /* -------------------------------------------------------------------------- */
 /*                              Helper functions                              */
@@ -241,6 +242,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
               Manage your personal information and settings.
             </p>
           </div>
+          <AuthStatus></AuthStatus>
 
           <div className="flex items-center gap-3">
             {editMode ? (

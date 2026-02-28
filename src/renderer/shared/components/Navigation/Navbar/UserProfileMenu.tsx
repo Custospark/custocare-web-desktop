@@ -14,7 +14,11 @@ import {
   Building2, 
   Activity 
 } from 'lucide-react';
+import { useSelector } from 'react-redux';
 import { cn } from '../../../utils/classNameUtils';
+import { selectUser } from '../../../../app/store/slices/authSlice';
+import { useGetUserProfile } from '../../../../modules/account/api/settings/profile/ProfileQueries';
+import { resolveStorageUrl } from '../../../../modules/account/api/settings/profile/profileUtils';
 
 interface MenuItem {
   icon: React.ComponentType<{ className?: string }>;
@@ -44,8 +48,8 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
   onToggle,
   isDark,
   isMobile,
-  userName,
-  userEmail,
+  userName: propUserName,
+  userEmail: propUserEmail,
   currentCapabilityName,
   inStaffMode,
   inPatientMode,
@@ -55,6 +59,23 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
   onNavigate,
 }) => {
   const userDropdownRef = useRef<HTMLDivElement>(null);
+  const user = useSelector(selectUser);
+  const userId = user?.id;
+  
+  // Fetch full profile if needed to get profile_photo_path
+  const { data: profileData } = useGetUserProfile(userId || '', {
+    enabled: !!userId && !user?.profile_photo_path, // Only fetch if we don't have photo path
+  });
+
+  // Get user data from auth slice with fallback to props
+  const displayName = user?.profile?.display_name || user?.name || propUserName || 'User';
+  const email = user?.email || propUserEmail || 'No email';
+  
+  // Get profile photo path from either auth user or fetched profile
+  const profilePhotoPath = user?.profile_photo_path || profileData?.data?.profile_photo_path;
+  
+  // Resolve the full URL for the profile photo
+  const profilePhotoUrl = profilePhotoPath ? resolveStorageUrl(profilePhotoPath) : null;
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -100,16 +121,16 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
           'hover:scale-[1.02] active:scale-[0.98]'
         )}
       >
-        {userName && (
+        {displayName && (
           <div className="text-left hidden lg:block">
             <p className={cn(
-              'text-xs font-semibold truncate',
+              'text-xs font-semibold truncate max-w-[120px]',
               isDark ? 'text-gray-100' : 'text-gray-900'
             )}>
-              {userName}
+              {displayName}
             </p>
             <p className={cn(
-              'text-xs truncate',
+              'text-xs truncate max-w-[120px]',
               isDark ? 'text-gray-400' : 'text-gray-600'
             )}>
               {currentCapabilityName}
@@ -119,12 +140,22 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
         
         <div className="relative">
           <div className={cn(
-            'w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center',
-            'bg-gradient-to-br from-blue-600 to-emerald-600',
-            'ring-2 ring-offset-1',
-            isDark ? 'ring-offset-gray-900 ring-blue-500/40' : 'ring-offset-white ring-blue-500/30'
+            'w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center overflow-hidden',
+            !profilePhotoUrl && [
+              'bg-gradient-to-br from-blue-600 to-emerald-600',
+              'ring-2 ring-offset-1',
+              isDark ? 'ring-offset-gray-900 ring-blue-500/40' : 'ring-offset-white ring-blue-500/30'
+            ]
           )}>
-            <User className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white" />
+            {profilePhotoUrl ? (
+              <img
+                src={profilePhotoUrl}
+                alt={displayName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white" />
+            )}
           </div>
           <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full"></div>
         </div>
@@ -151,16 +182,26 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
             <div className="flex items-center gap-3">
               <div className="relative">
                 <div className={cn(
-                  'w-14 h-14 rounded-xl flex items-center justify-center',
-                  'bg-gradient-to-br from-blue-600 to-emerald-600',
-                  'ring-4 ring-offset-2',
-                  isDark ? 'ring-offset-gray-900 ring-blue-500/20' : 'ring-offset-white ring-blue-500/15'
+                  'w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden',
+                  !profilePhotoUrl && [
+                    'bg-gradient-to-br from-blue-600 to-emerald-600',
+                    'ring-4 ring-offset-2',
+                    isDark ? 'ring-offset-gray-900 ring-blue-500/20' : 'ring-offset-white ring-blue-500/15'
+                  ]
                 )}>
-                  <User className="w-7 h-7 text-white" />
+                  {profilePhotoUrl ? (
+                    <img
+                      src={profilePhotoUrl}
+                      alt={displayName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-7 h-7 text-white" />
+                  )}
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full"></div>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 {inStaffMode && staffNumber && (
                   <>
                     <p className={cn(
@@ -170,7 +211,7 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
                       Staff Number
                     </p>
                     <p className={cn(
-                      'text-sm font-bold mb-1',
+                      'text-sm font-bold mb-1 truncate',
                       isDark ? 'text-gray-200' : 'text-gray-900'
                     )}>
                       {staffNumber}
@@ -186,7 +227,7 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
                       Patient Number
                     </p>
                     <p className={cn(
-                      'text-sm font-bold mb-1',
+                      'text-sm font-bold mb-1 truncate',
                       isDark ? 'text-gray-200' : 'text-gray-900'
                     )}>
                       {patientNumber}
@@ -194,16 +235,16 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
                   </>
                 )}
                 <p className={cn(
-                  'text-xs font-medium',
+                  'text-xs font-medium truncate',
                   isDark ? 'text-blue-400' : 'text-blue-600'
                 )}>
                   {currentCapabilityName}
                 </p>
                 <p className={cn(
-                  'text-xs mt-1',
+                  'text-xs mt-1 truncate',
                   isDark ? 'text-gray-500' : 'text-gray-500'
                 )}>
-                  {userEmail || 'No email'}
+                  {email}
                 </p>
               </div>
             </div>

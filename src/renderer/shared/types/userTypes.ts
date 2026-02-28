@@ -5,6 +5,7 @@ export interface UserResource {
   id: string;
   uuid: string;
   national_id_country_code: string | null;
+  profile_photo_path: string | null;
   identity: {
     state: string;
     verified_at: string | null;
@@ -58,6 +59,7 @@ export interface LoginUserProfile {
   role: string;
   uuid?: string;
   national_id_country_code?: string;
+  profile_photo_path?: string;
   profile?: {
     first_name: string;
     last_name: string;
@@ -100,6 +102,7 @@ export interface UnifiedUserProfile {
   name: string;
   role?: string;
   national_id_country_code: string | null;
+  profile_photo_path: string | null;
   profile: {
     first_name: string;
     last_name: string;
@@ -121,6 +124,7 @@ export const mapUserResourceToProfile = (user: UserResource): UnifiedUserProfile
   name: user.profile.full_name,
   role: 'user',
   national_id_country_code: user.national_id_country_code,
+  profile_photo_path: user.profile_photo_path,
   profile: {
     first_name: user.profile.first_name,
     last_name: user.profile.last_name,
@@ -140,6 +144,7 @@ export const mapLoginUserToProfile = (user: LoginUserProfile): UnifiedUserProfil
   name: user.name,
   role: user.role,
   national_id_country_code: user.national_id_country_code || null,
+  profile_photo_path: user.profile_photo_path || null,
   profile: {
     first_name: user.profile?.first_name || user.name.split(' ')[0] || '',
     last_name: user.profile?.last_name || user.name.split(' ').slice(1).join(' ') || '',

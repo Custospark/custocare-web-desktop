@@ -223,6 +223,10 @@ export const AuthStatus: React.FC = () => {
             <span style={{ color: userId != null ? '#4caf50' : '#f44336' }}>
               {userId != null ? String(userId) : '<null>'}
             </span>
+            <span style={{ color: '#888' }}>Profile Photo Path:</span>{' '}
+            <span style={{ color: userId != null ? '#4caf50' : '#f44336' }}>
+              {userId != null ? String(userId) : '<null>'}
+            </span>
           </div>
           <div>
             <span style={{ color: '#888' }}>type:</span>{' '}

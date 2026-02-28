@@ -8,6 +8,9 @@ import axios, {
 import { QueryClient } from '@tanstack/react-query';
 
 import { store } from '../store/store';
+import { logout } from '../store/slices/authSlice';                        
+import { imperativeToast } from '../store/contexts/toast/imperativeToast';
+import { imperativeNavigate } from '../routes/navigation/imperativeNavigate';  
 import { API_BASE_URL, API_TIMEOUT } from './apiConfig';
 
 const axiosInstance: AxiosInstance = axios.create({
@@ -74,12 +77,39 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
+/**
+ * Prevents multiple in-flight 401 responses (e.g. several parallel queries
+ * all expiring at once) from each triggering a logout + toast + redirect.
+ */
+let _isHandling401 = false;
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      console.warn('[API] Unauthorized (401)');
+    if (error.response?.status === 401 && !_isHandling401) {
+      _isHandling401 = true;
+
+      // 1️⃣  Wipe Redux auth state + clear localStorage (token, user, verification)
+      store.dispatch(logout());
+
+      // 2️⃣  Tell the user what happened
+      imperativeToast.show(
+        'error',
+        'Your session has expired. Please log in again.',
+        8000,
+      );
+
+      // 3️⃣  Redirect to login page
+      imperativeNavigate.to('/login');
+
+      console.warn('[API] 401 Unauthorized — session expired, user logged out.');
+
+      // Reset flag after a short window so future logins work normally
+      setTimeout(() => {
+        _isHandling401 = false;
+      }, 3000);
     }
+
     return Promise.reject(error);
   },
 );

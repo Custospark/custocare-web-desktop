@@ -195,6 +195,7 @@ export interface MinimalUser {
   email: string | null;
   phone: string | null;
   national_id_country_code: string | null;
+  profile_photo_path: string | null;
 
   // Optional extra fields (for richer user data, e.g., from MFA_REQUIRED response)
   identity?: {
