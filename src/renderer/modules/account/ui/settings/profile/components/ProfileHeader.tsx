@@ -31,14 +31,34 @@ const PhotoHeader: React.FC<{
   fileInputRef,
   onFileChange,
 }) => {
-  const resolvePhotoUrl = (path: string | null): string | null => {
+ 
+    const resolvePhotoUrl = (path: string | null): string | null => {
     if (!path) return null;
+    
+    // If it's already a blob URL (for preview) or full URL, return as is
     if (path.startsWith('blob:') || path.startsWith('http')) return path;
+    
+    // Get base URL from environment or use default
     const base = (import.meta as Record<string, unknown> & {
       env: Record<string, string>;
     }).env?.VITE_STORAGE_BASE_URL ?? '';
-    return `${base}/storage/${path}`;
-  };
+    
+    // If we have a base URL, use it
+    if (base) {
+        return `${base}/storage/${path}`;
+    }
+    
+    // Fallback to API base URL
+    // You can import API_BASE_URL from your apiConfig
+    const API_BASE_URL = 'http://127.0.0.1:8000'; // or import from config
+    
+    // Handle different path formats
+    if (path.startsWith('profile-photos/')) {
+        return `${API_BASE_URL}/storage/${path}`;
+    }
+    
+    return `${API_BASE_URL}/storage/${path}`;
+};
 
   const photoUrl = previewUrl ?? resolvePhotoUrl(profile.profile_photo_path);
   const initials = `${profile.first_name?.[0] ?? ''}${
@@ -55,11 +75,11 @@ const PhotoHeader: React.FC<{
         }`}
       >
         {photoUrl ? (
-          <img
-            src={photoUrl}
-            alt={profile.display_name}
+       <img
+            src={previewUrl || (profile.profile_photo_path ? resolvePhotoUrl(profile.profile_photo_path) : undefined)}
+            alt={profile.display_name || 'Profile photo'}
             className="w-full h-full object-cover"
-          />
+/>
         ) : (
           <span>{initials || <User className="w-12 h-12" />}</span>
         )}

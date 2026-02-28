@@ -6,30 +6,38 @@
 /* ======================================================
    Environment
 ====================================================== */
-const isDevelopment = process.env.NODE_ENV === 'development';
-const isProduction = process.env.NODE_ENV === 'production';
+
+// Vite-native environment detection
+const MODE = import.meta.env.MODE;
+const APP_ENV = import.meta.env.VITE_APP_ENV ?? MODE ?? 'development';
+
+const isDevelopment = APP_ENV === 'development';
+const isProduction = APP_ENV === 'production';
 
 /* ======================================================
    Base URL & Timeout
 ====================================================== */
 
-  export const API_BASE_URL =isDevelopment
-                            ? 'http://127.0.0.1:8000/api' // local dev
-                           //  : 'http://127.0.0.1:8000/api'; // production
-                            : 'https://custocareai-api.custospark.com/api'; // production
+// These keep the same export names so nothing breaks
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  'http://127.0.0.1:8000/api'; // safe fallback
 
-
+export const STORAGE_BASE_URL =
+  import.meta.env.VITE_STORAGE_BASE_URL ||
+  'http://127.0.0.1:8000'; // safe fallback
 
 export const API_TIMEOUT = parseInt(
-  '30000',
+  import.meta.env.VITE_API_TIMEOUT || '30000',
   10
-); // 30 seconds by default
+);
 
 /* ======================================================
    Feature Flags
 ====================================================== */
+
 export const FEATURES = {
-  ENABLE_ANALYTICS: !isDevelopment,
+  ENABLE_ANALYTICS: isProduction,
   ENABLE_ERROR_LOGGING: isProduction,
   ENABLE_PERFORMANCE_MONITORING: isProduction,
   ENABLE_DEBUG_MODE: isDevelopment,
@@ -38,37 +46,35 @@ export const FEATURES = {
 /* ======================================================
    API Config
 ====================================================== */
+
 export const API_CONFIG = {
   retryAttempts: 3,
-  retryDelay: 1000, // 1 second
+  retryDelay: 1000,
   cacheDuration: {
-    short: 1000 * 60 * 1,   // 1 minute
-    medium: 1000 * 60 * 5,  // 5 minutes
-    long: 1000 * 60 * 30,   // 30 minutes
+    short: 1000 * 60 * 1,
+    medium: 1000 * 60 * 5,
+    long: 1000 * 60 * 30,
   },
 } as const;
 
 /* ======================================================
    Rate Limiting
 ====================================================== */
+
 export const RATE_LIMIT = {
   maxRequests: 100,
-  windowMs: 1000 * 60, // 1 minute
+  windowMs: 1000 * 60,
 } as const;
 
 /* ======================================================
-   API Endpoints
+   Default Export (Unchanged Structure)
 ====================================================== */
 
-
-/* ======================================================
-   Default Export
-====================================================== */
 export default {
   API_BASE_URL,
+  STORAGE_BASE_URL,
   API_TIMEOUT,
   FEATURES,
   API_CONFIG,
   RATE_LIMIT,
-  // API_ENDPOINTS,
 };

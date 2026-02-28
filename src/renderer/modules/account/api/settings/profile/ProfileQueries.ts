@@ -202,7 +202,7 @@ export const useUploadProfilePhoto = (
       form.append('photo', file);
 
       const response = await axiosInstance.post<UploadProfilePhotoResponse>(
-        `/${userId}/profile/photo`,
+        `users/${userId}/profile/photo`,
         form,
         { headers: { 'Content-Type': 'multipart/form-data' } },
       );
