@@ -44,7 +44,7 @@ export const accountRoutes = [
   >
     <Route index element={<Navigate to={ACCOUNT_ROUTES.SETTINGS_PROFILE} replace />} />
       <Route path={ACCOUNT_ROUTES.SETTINGS_PROFILE} element={
-            <Profile />
+            <Profile userId={60}/>
         } />   
 
        <Route path="security" element={<PlaceholderPanel title="Security Settings" />} />

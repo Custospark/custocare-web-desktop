@@ -1,794 +1,1107 @@
-import React, { useState, useEffect, useRef } from 'react';
+/**
+ * ============================================================================
+ * USER PROFILE COMPONENT
+ * ============================================================================
+ *
+ * Fetches and displays the authenticated user's profile while providing
+ * a full in-place edit experience, including profile-photo upload with
+ * live preview.
+ *
+ * Architecture
+ * ─────────────
+ *  • Theme is read directly from the Redux `ui` slice (dark / light).
+ *  • All data-fetching is delegated to the hooks in ProfileQueries.ts.
+ *  • `useQueryClient` cache invalidation is handled inside the hooks.
+ *  • Loading states are covered by `<LoadingSkeleton variant="detail" />`.
+ *  • Toast notifications are emitted by the query hooks; the component
+ *    only needs to handle UI transitions (edit ↔ view mode).
+ *
+ * Props
+ * ─────
+ *  userId  – The numeric / string user-ID used in the API route
+ *            `/{user}/profile`.  Typically sourced from your auth slice.
+ *
+ * @example
+ * <UserProfile userId={authUser.id} />
+ */
+
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useSelector } from 'react-redux';
 import {
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  Briefcase,
   Camera,
+  CheckCircle,
+  ChevronDown,
+  Edit3,
+  Lock,
+  Mail,
+  MapPin,
+  Phone,
   Save,
+  User,
   X,
-  Edit2,
-  ChevronRight,
-  Loader2,
-  Home,
-  Building,
-  Map,
-  Flag,
-  Hash,
-  Users,
+  XCircle,
 } from 'lucide-react';
+
 import { type RootState } from '../../../../../app/store/rootReducer';
-import { useGetProfile, useUpdateProfile, useProfilePhotoUpload } from '../../../api/settings/profile/ProfileQueries';
-import type { UserProfile, UpdateProfileRequest } from '../../../api/settings/profile/ProfileTypes';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
+import {
+  useGetUserProfile,
+  useUpdateUserProfile,
+  useUploadProfilePhoto,
+} from '../../../api/settings/profile/ProfileQueries';
+import {
+  type UpdateUserProfileRequest,
+  type UserProfile,
+  Gender,
+  parsePhone,
+} from '../../../api/settings/profile/ProfileTypes';
 
 /* -------------------------------------------------------------------------- */
-/*                              TYPES & INTERFACES                            */
+/*                                   TYPES                                    */
 /* -------------------------------------------------------------------------- */
 
-interface ProfileProps {
-  userId?: number | string; // Optional, defaults to 'me'
+interface UserProfileProps {
+  /** Route param `{user}` – typically the logged-in user's numeric ID. */
+  userId: number | string;
 }
 
-interface ProfileFormData extends UpdateProfileRequest {
-  // No additional fields needed, uses UpdateProfileRequest
-  meta:string;
-}
-
-interface EditableFieldProps {
-  label: string;
-  value: string | null;
-  fieldName: keyof UpdateProfileRequest;
-  icon?: React.ReactNode;
-  type?: 'text' | 'email' | 'tel' | 'date' | 'select';
-  options?: Array<{ value: string; label: string }>;
-  placeholder?: string;
-  isEditing: boolean;
-  formData: ProfileFormData;
-  onChange: (field: keyof UpdateProfileRequest, value: any) => void;
-  theme: 'dark' | 'light';
-  className?: string;
-}
+/** Local form state – mirrors UpdateUserProfileRequest plus a guard flag. */
+type ProfileFormState = Required<
+  Omit<UpdateUserProfileRequest, 'profile_photo_path'>
+> & {
+  profile_photo_path: string;
+};
 
 /* -------------------------------------------------------------------------- */
-/*                            UTILITY FUNCTIONS                               */
+/*                              HELPER FUNCTIONS                              */
 /* -------------------------------------------------------------------------- */
 
-const formatDisplayValue = (value: string | null): string => {
-  if (value === null || value === undefined || value === '') return '—';
-  return value;
+/** Derive a full avatar URL from a storage-relative path or a blob: URL. */
+const resolvePhotoUrl = (path: string | null): string | null => {
+  if (!path) return null;
+  // Blob preview URLs come through as-is
+  if (path.startsWith('blob:') || path.startsWith('http')) return path;
+  // Adjust this base to match your Laravel storage URL
+  const base = (import.meta as Record<string, unknown> & {
+    env: Record<string, string>;
+  }).env?.VITE_STORAGE_BASE_URL ?? '';
+  return `${base}/storage/${path}`;
 };
 
-const formatDateForInput = (dateString: string | null): string => {
-  if (!dateString) return '';
-  try {
-    return dateString; // API returns YYYY-MM-DD format
-  } catch {
-    return '';
-  }
-};
+/** Map a UserProfile into a clean form state, hoisting the phone value. */
+const profileToFormState = (p: UserProfile): ProfileFormState => ({
+  first_name:          p.first_name        ?? '',
+  last_name:           p.last_name         ?? '',
+  display_name:        p.display_name      ?? '',
+  title:               p.title             ?? '',
+  dob:                 p.dob               ?? '',
+  gender:              p.gender            ?? ('' as Gender),
+  phone:               parsePhone(p.phone) ?? '',
+  address_line1:       p.address_line1     ?? '',
+  address_line2:       p.address_line2     ?? '',
+  city:                p.city              ?? '',
+  state:               p.state             ?? '',
+  country:             p.country           ?? '',
+  postal_code:         p.postal_code       ?? '',
+  profile_photo_path:  p.profile_photo_path ?? '',
+});
 
-const formatDateForDisplay = (dateString: string | null): string => {
-  if (!dateString) return '—';
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  } catch {
-    return dateString;
-  }
-};
+/** Convert the form state back to a diff-only update request. */
+const buildUpdatePayload = (
+  form: ProfileFormState,
+  original: UserProfile,
+): UpdateUserProfileRequest => {
+  const payload: UpdateUserProfileRequest = {};
 
-const getGenderLabel = (gender: string | null): string => {
-  if (!gender) return '—';
-  const labels: Record<string, string> = {
-    male: 'Male',
-    female: 'Female',
-    other: 'Other',
+  const str = (
+    key: keyof Omit<ProfileFormState, 'gender' | 'profile_photo_path'>,
+    origKey: keyof UserProfile,
+  ) => {
+    const v = form[key] as string;
+    if (v !== (original[origKey] ?? '')) payload[key] = v || null;
   };
-  return labels[gender] || gender;
+
+  str('first_name',    'first_name');
+  str('last_name',     'last_name');
+  str('display_name',  'display_name');
+  str('title',         'title');
+  str('dob',           'dob');
+  str('phone',         'phone');          // backend encrypts plain text
+  str('address_line1', 'address_line1');
+  str('address_line2', 'address_line2');
+  str('city',          'city');
+  str('state',         'state');
+  str('country',       'country');
+  str('postal_code',   'postal_code');
+
+  const g = form.gender as string;
+  if (g !== (original.gender ?? '')) {
+    payload.gender = (g || null) as Gender | null;
+  }
+
+  return payload;
 };
 
-const GENDER_OPTIONS = [
-  { value: 'male', label: 'Male' },
-  { value: 'female', label: 'Female' },
-  { value: 'other', label: 'Other' },
-];
-
 /* -------------------------------------------------------------------------- */
-/*                           EDITABLE FIELD COMPONENT                         */
+/*                        SUB-COMPONENTS (declared above parent)              */
 /* -------------------------------------------------------------------------- */
 
-const EditableField: React.FC<EditableFieldProps> = ({
-  label,
-  value,
-  fieldName,
-  icon,
-  type = 'text',
-  options,
-  placeholder,
+/** ---------- Field wrapper ---------- */
+const FieldGroup: React.FC<{
+  label:    string;
+  children: React.ReactNode;
+  isDark:   boolean;
+  fullWidth?: boolean;
+}> = ({ label, children, isDark, fullWidth = false }) => (
+  <div className={fullWidth ? 'col-span-2' : ''}>
+    <label
+      className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${
+        isDark ? 'text-gray-400' : 'text-gray-500'
+      }`}
+    >
+      {label}
+    </label>
+    {children}
+  </div>
+);
+
+/** ---------- Read-only value row ---------- */
+const ViewRow: React.FC<{
+  label:   string;
+  value:   string | null | undefined;
+  isDark:  boolean;
+  icon?:   React.ReactNode;
+}> = ({ label, value, isDark, icon }) => (
+  <div className="flex items-start gap-3 py-2">
+    {icon && (
+      <span
+        className={`mt-0.5 flex-shrink-0 ${
+          isDark ? 'text-gray-500' : 'text-gray-400'
+        }`}
+      >
+        {icon}
+      </span>
+    )}
+    <div className="min-w-0 flex-1">
+      <p
+        className={`text-xs font-medium uppercase tracking-wider mb-0.5 ${
+          isDark ? 'text-gray-500' : 'text-gray-400'
+        }`}
+      >
+        {label}
+      </p>
+      <p
+        className={`text-sm font-medium break-words ${
+          value
+            ? isDark
+              ? 'text-gray-100'
+              : 'text-gray-900'
+            : isDark
+            ? 'text-gray-600'
+            : 'text-gray-400'
+        }`}
+      >
+        {value || '—'}
+      </p>
+    </div>
+  </div>
+);
+
+/* ─────── Shared input / select classes ─────── */
+const inputBase = (isDark: boolean) =>
+  `w-full px-3 py-2 rounded-lg text-sm border outline-none transition-colors
+   focus:ring-2 ${
+     isDark
+       ? 'bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-cyan-500 focus:ring-cyan-500/20'
+       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500/20'
+   }`;
+
+/* -------------------------------------------------------------------------- */
+/*                            SECTION COMPONENTS                              */
+/* -------------------------------------------------------------------------- */
+
+/** ── Photo Header ── */
+const PhotoHeader: React.FC<{
+  profile:     UserProfile;
+  previewUrl:  string | null;
+  isUploading: boolean;
+  isEditing:   boolean;
+  isDark:      boolean;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}> = ({
+  profile,
+  previewUrl,
+  isUploading,
   isEditing,
-  formData,
-  onChange,
-  theme,
-  className = '',
+  isDark,
+  fileInputRef,
+  onFileChange,
 }) => {
-  const isDark = theme === 'dark';
-  const fieldValue = formData[fieldName] !== undefined ? formData[fieldName] : value;
+  const photoUrl = previewUrl ?? resolvePhotoUrl(profile.profile_photo_path);
+  const initials = `${profile.first_name?.[0] ?? ''}${
+    profile.last_name?.[0] ?? ''
+  }`.toUpperCase();
 
   return (
-    <div className={`space-y-1.5 ${className}`}>
-      <div className={`text-xs font-medium flex items-center gap-1.5 ${
-        isDark ? 'text-gray-400' : 'text-gray-600'
-      }`}>
-        {icon}
-        <span>{label}</span>
-      </div>
-      
-      {isEditing ? (
-        type === 'select' ? (
-          <select
-            value={fieldValue || ''}
-            onChange={(e) => onChange(fieldName, e.target.value || null)}
-            className={`w-full px-3 py-2 rounded-lg text-sm transition-all ${
-              isDark
-                ? 'bg-gray-800 border-gray-700 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500'
-                : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
-            } border outline-none`}
-          >
-            <option value="">Select {label}</option>
-            {options?.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <input
-            type={type}
-            value={fieldValue || ''}
-            onChange={(e) => onChange(fieldName, e.target.value || null)}
-            placeholder={placeholder || `Enter ${label.toLowerCase()}`}
-            className={`w-full px-3 py-2 rounded-lg text-sm transition-all ${
-              isDark
-                ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500'
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
-            } border outline-none`}
+    <div className="relative group w-28 h-28 shrink-0">
+      {/* Avatar */}
+      <div
+        className={`w-28 h-28 rounded-2xl overflow-hidden flex items-center justify-center text-3xl font-bold shadow-xl border-4 ${
+          isDark
+            ? 'border-gray-800 bg-linear-to-br from-cyan-600 to-blue-700 text-white'
+            : 'border-white bg-linear-to-br from-blue-500 to-indigo-600 text-white shadow-blue-200'
+        }`}
+      >
+        {photoUrl ? (
+          <img
+            src={photoUrl}
+            alt={profile.display_name}
+            className="w-full h-full object-cover"
           />
-        )
-      ) : (
-        <div className={`text-sm font-medium ${
-          isDark ? 'text-white' : 'text-gray-900'
-        }`}>
-          {type === 'date' 
-            ? formatDateForDisplay(value)
-            : type === 'select'
-            ? getGenderLabel(value)
-            : formatDisplayValue(value)}
-        </div>
+        ) : (
+          <span>{initials || <User className="w-12 h-12" />}</span>
+        )}
+      </div>
+
+      {/* Upload overlay – visible only in edit mode */}
+      {isEditing && (
+        <>
+          <button
+            type="button"
+            disabled={isUploading}
+            onClick={() => fileInputRef.current?.click()}
+            className={`absolute inset-0 rounded-2xl flex flex-col items-center justify-center gap-1
+              text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer
+              ${
+                isDark
+                  ? 'bg-black/60 text-cyan-300'
+                  : 'bg-black/50 text-white'
+              }`}
+          >
+            {isUploading ? (
+              <>
+                <svg
+                  className="animate-spin w-6 h-6"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8z"
+                  />
+                </svg>
+                <span>Uploading…</span>
+              </>
+            ) : (
+              <>
+                <Camera className="w-6 h-6" />
+                <span>Change</span>
+              </>
+            )}
+          </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="hidden"
+            onChange={onFileChange}
+          />
+        </>
+      )}
+
+      {/* Subtle camera badge – visible always in edit mode */}
+      {isEditing && !isUploading && (
+        <span
+          className={`absolute -bottom-2 -right-2 p-1.5 rounded-full border-2 shadow ${
+            isDark
+              ? 'bg-cyan-600 border-gray-900 text-white'
+              : 'bg-blue-600 border-white text-white'
+          }`}
+        >
+          <Camera className="w-3.5 h-3.5" />
+        </span>
       )}
     </div>
   );
 };
 
 /* -------------------------------------------------------------------------- */
-/*                           PROFILE PHOTO COMPONENT                          */
+/*                              MAIN COMPONENT                                */
 /* -------------------------------------------------------------------------- */
 
-interface ProfilePhotoProps {
-  photoPath: string | null;
-  fullName: string;
-  isEditing: boolean;
-  onPhotoChange: (file: File) => void;
-  isUploading: boolean;
-  uploadProgress: number;
-  theme: 'dark' | 'light';
-}
-
-const ProfilePhoto: React.FC<ProfilePhotoProps> = ({
-  photoPath,
-  fullName,
-  isEditing,
-  onPhotoChange,
-  isUploading,
-  uploadProgress,
-  theme,
-}) => {
+const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
+  /* ── Theme from ui slice ───────────────────────────────────────────────── */
+  const theme  = useSelector((state: RootState) => state.ui.theme);
   const isDark = theme === 'dark';
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // Get the full URL for the profile photo
-  const photoUrl = photoPath 
-    ? `${import.meta.env.VITE_API_URL || ''}/storage/${photoPath}`
-    : null;
+  /* ── Query / mutation hooks ────────────────────────────────────────────── */
+  const {
+    data: profileResponse,
+    isLoading,
+    isError,
+    error: fetchError,
+  } = useGetUserProfile(userId);
+
+  const { mutate: saveProfile, isPending: isSaving } = useUpdateUserProfile({
+    onSuccess: () => setEditMode(false),
+  });
+
+  const { mutate: uploadPhoto, isPending: isUploading } =
+    useUploadProfilePhoto();
+
+  /* ── Local state ───────────────────────────────────────────────────────── */
+  const [editMode,    setEditMode]    = useState(false);
+  const [form,        setForm]        = useState<ProfileFormState | null>(null);
+  const [previewUrl,  setPreviewUrl]  = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const profile      = profileResponse?.data ?? null;
+
+  /* ── Sync form when profile loads ──────────────────────────────────────── */
+  useEffect(() => {
+    if (profile) setForm(profileToFormState(profile));
+  }, [profile]);
+
+  /* ── Revoke object URL to avoid memory leaks ───────────────────────────── */
+  useEffect(
+    () => () => {
+      if (previewUrl?.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
+    },
+    [previewUrl],
+  );
+
+  /* ── Handlers ──────────────────────────────────────────────────────────── */
+  const handleField = useCallback(
+    (key: keyof ProfileFormState, value: string) => {
+      setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    },
+    [],
+  );
+
+  const handleCancelEdit = () => {
+    if (profile) {
+      setForm(profileToFormState(profile));
+      setPreviewUrl(null);
+      setFieldErrors({});
+    }
+    setEditMode(false);
+  };
+
+  /** Client-side validation – mirrors the Laravel rules. */
+  const validate = (f: ProfileFormState): boolean => {
+    const errs: Record<string, string> = {};
+
+    if (f.first_name   && f.first_name.length   > 100) errs.first_name   = 'Max 100 characters.';
+    if (f.last_name    && f.last_name.length    > 100) errs.last_name    = 'Max 100 characters.';
+    if (f.display_name && f.display_name.length > 150) errs.display_name = 'Max 150 characters.';
+    if (f.title        && f.title.length        >  50) errs.title        = 'Max 50 characters.';
+    if (f.phone        && f.phone.length        >  30) errs.phone        = 'Max 30 characters.';
+    if (f.postal_code  && f.postal_code.length  >  20) errs.postal_code  = 'Max 20 characters.';
+
+    if (f.dob) {
+      const d = new Date(f.dob);
+      if (isNaN(d.getTime()))       errs.dob = 'Invalid date.';
+      else if (d >= new Date())     errs.dob = 'Date of birth must be a past date.';
+    }
+
+    if (f.gender && !['male', 'female', 'other', ''].includes(f.gender)) {
+      errs.gender = 'Must be male, female, or other.';
+    }
+
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSave = () => {
+    if (!form || !profile) return;
+    if (!validate(form)) return;
+
+    const payload = buildUpdatePayload(form, profile);
+    if (Object.keys(payload).length === 0) {
+      setEditMode(false);
+      return;
+    }
+
+    saveProfile({ userId, data: payload });
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Create preview
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
+    // Live preview
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
 
-    // Call parent handler
-    onPhotoChange(file);
+    // Upload immediately; on success the cache is invalidated → profile refetches
+    uploadPhoto(
+      { userId, file },
+      {
+        onError: () => setPreviewUrl(null), // roll back preview on failure
+      },
+    );
+
+    // Reset the input so the same file can be re-selected
+    e.target.value = '';
   };
 
-  const handlePhotoClick = () => {
-    if (isEditing && !isUploading) {
-      fileInputRef.current?.click();
-    }
-  };
+  /* ── Derived values ────────────────────────────────────────────────────── */
+  const cardBase = `rounded-xl border p-6 ${
+    isDark
+      ? 'bg-gray-900 border-gray-800'
+      : 'bg-white border-gray-200 shadow-sm'
+  }`;
 
-  // Clean up preview URL on unmount
-  useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
+  const divider = `border-t ${
+    isDark ? 'border-gray-800' : 'border-gray-100'
+  }`;
 
-  const displayUrl = previewUrl || photoUrl;
-
-  return (
-    <div className="relative">
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept="image/jpeg,image/png,image/gif,image/webp"
-        className="hidden"
+  /* ════════════════════════════════════════════════════════════════════════ */
+  /*  LOADING STATE                                                          */
+  /* ════════════════════════════════════════════════════════════════════════ */
+  if (isLoading) {
+    return (
+      <LoadingSkeleton
+        variant="detail"
+        theme={theme}
+        message="Loading your profile…"
       />
+    );
+  }
 
+  /* ════════════════════════════════════════════════════════════════════════ */
+  /*  ERROR STATE                                                            */
+  /* ════════════════════════════════════════════════════════════════════════ */
+  if (isError || !profile || !form) {
+    return (
       <div
-        onClick={handlePhotoClick}
-        className={`relative w-24 h-24 rounded-xl overflow-hidden group cursor-${
-          isEditing && !isUploading ? 'pointer' : 'default'
-        } transition-all duration-200 ${
-          isDark 
-            ? 'bg-gray-800 border-2 border-gray-700' 
-            : 'bg-gray-100 border-2 border-gray-200'
+        className={`flex flex-col items-center justify-center min-h-[400px] gap-4 p-8 ${
+          isDark ? 'text-gray-100' : 'text-gray-900'
         }`}
       >
-        {displayUrl ? (
-          <img
-            src={displayUrl}
-            alt={fullName}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <User className={`w-10 h-10 ${
-              isDark ? 'text-gray-600' : 'text-gray-400'
-            }`} />
-          </div>
-        )}
-
-        {/* Upload overlay */}
-        {isEditing && !isUploading && (
-          <div className={`absolute inset-0 flex items-center justify-center transition-opacity opacity-0 group-hover:opacity-100 ${
-            isDark ? 'bg-gray-900/70' : 'bg-black/50'
-          }`}>
-            <Camera className="w-6 h-6 text-white" />
-          </div>
-        )}
-
-        {/* Upload progress overlay */}
-        {isUploading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70">
-            <Loader2 className="w-6 h-6 text-white animate-spin mb-1" />
-            <span className="text-xs text-white font-medium">{uploadProgress}%</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-/* -------------------------------------------------------------------------- */
-/*                           SECTION HEADER COMPONENT                         */
-/* -------------------------------------------------------------------------- */
-
-interface SectionHeaderProps {
-  title: string;
-  icon: React.ReactNode;
-  theme: 'dark' | 'light';
-  className?: string;
-}
-
-const SectionHeader: React.FC<SectionHeaderProps> = ({
-  title,
-  icon,
-  theme,
-  className = '',
-}) => {
-  const isDark = theme === 'dark';
-
-  return (
-    <div className={`flex items-center gap-2 mb-4 ${className}`}>
-      <div className={`p-1.5 rounded-lg ${
-        isDark ? 'bg-gray-800' : 'bg-gray-100'
-      }`}>
-        {icon}
-      </div>
-      <h3 className={`text-sm font-semibold uppercase tracking-wide ${
-        isDark ? 'text-gray-300' : 'text-gray-700'
-      }`}>
-        {title}
-      </h3>
-      <div className={`flex-1 h-px ml-2 ${
-        isDark ? 'bg-gray-800' : 'bg-gray-200'
-      }`} />
-    </div>
-  );
-};
-
-/* -------------------------------------------------------------------------- */
-/*                           MAIN PROFILE COMPONENT                           */
-/* -------------------------------------------------------------------------- */
-
-const Profile: React.FC<ProfileProps> = ({ userId = 60 }) => {
-  // Get theme from Redux UI slice
-  const theme = useSelector((state: RootState) => state.ui.theme);
-  const isDark = theme === 'dark';
-
-  // State
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<ProfileFormData>({});
-  const [hasChanges, setHasChanges] = useState(false);
-  const [, setPhotoFile] = useState<File | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-
-  // Queries and mutations
-  const { 
-    data: profileData, 
-    isLoading, 
-    error,
-    refetch 
-  } = useGetProfile({ user: userId });
-
-  const updateProfile = useUpdateProfile({
-    onSuccess: () => {
-      setIsEditing(false);
-      setHasChanges(false);
-      setFormData({});
-    },
-  });
-
-  const uploadPhoto = useProfilePhotoUpload({
-    onProgress: (percentage) => setUploadProgress(percentage),
-    onSuccess: () => {
-      setPhotoFile(null);
-      setUploadProgress(0);
-      // Refetch profile to get updated photo path
-      refetch();
-    },
-  });
-
-  // Set form data when profile loads
-  useEffect(() => {
-    if (profileData?.data) {
-      setFormData(profileData.data);
-    }
-  }, [profileData]);
-
-  // Track changes
-  useEffect(() => {
-    if (!profileData?.data || !isEditing) {
-      setHasChanges(false);
-      return;
-    }
-
-    const hasUnsavedChanges = Object.keys(formData).some((key) => {
-      const fieldKey = key as keyof UpdateProfileRequest;
-      return formData[fieldKey] !== profileData.data[fieldKey as keyof UserProfile];
-    });
-
-    setHasChanges(hasUnsavedChanges);
-  }, [formData, profileData, isEditing]);
-
-  // Handle form field changes
-  const handleFieldChange = (field: keyof UpdateProfileRequest, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // Handle photo change
-  const handlePhotoChange = (file: File) => {
-    setPhotoFile(file);
-    uploadPhoto.mutate({ 
-      photo: file,
-      onProgress: setUploadProgress,
-    });
-  };
-
-  // Handle save
-  const handleSave = () => {
-    if (!hasChanges) {
-      setIsEditing(false);
-      return;
-    }
-
-    updateProfile.mutate({
-      user: userId,
-      data: formData,
-    });
-  };
-
-  // Handle cancel
-  const handleCancel = () => {
-    if (profileData?.data) {
-      setFormData(profileData.data);
-    }
-    setIsEditing(false);
-    setHasChanges(false);
-  };
-
-  // Handle edit
-  const handleEdit = () => {
-    setIsEditing(true);
-  };
-
-  // Handle error
-  if (error) {
-    return (
-      <div className={`min-h-[400px] flex items-center justify-center p-8 ${
-        isDark ? 'bg-gray-900' : 'bg-gray-50'
-      }`}>
-        <div className="text-center max-w-md">
-          <div className={`inline-flex p-4 rounded-full mb-4 ${
-            isDark ? 'bg-red-500/20' : 'bg-red-100'
-          }`}>
-            <X className={`w-8 h-8 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
-          </div>
-          <h3 className={`text-lg font-semibold mb-2 ${
-            isDark ? 'text-white' : 'text-gray-900'
-          }`}>
-            Failed to Load Profile
-          </h3>
-          <p className={`text-sm mb-4 ${
+        <XCircle
+          className={`w-16 h-16 ${
+            isDark ? 'text-red-400' : 'text-red-500'
+          }`}
+        />
+        <h2 className="text-xl font-bold">Failed to load profile</h2>
+        <p
+          className={`text-sm text-center max-w-md ${
             isDark ? 'text-gray-400' : 'text-gray-600'
-          }`}>
-            {error.response?.data?.message || error.message || 'An unexpected error occurred.'}
-          </p>
-          <button
-            onClick={() => refetch()}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              isDark
-                ? 'bg-gray-800 hover:bg-gray-700 text-white'
-                : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-200'
-            }`}
-          >
-            Try Again
-          </button>
-        </div>
+          }`}
+        >
+          {fetchError?.response?.data?.message ??
+            fetchError?.message ??
+            'An unexpected error occurred. Please try refreshing the page.'}
+        </p>
       </div>
     );
   }
 
-  // Show loading skeleton
-  if (isLoading) {
-    return <LoadingSkeleton variant="detail" theme={theme} message="Loading profile..." />;
-  }
-
-  const profile = profileData?.data;
-  if (!profile) return null;
-
-  const fullName = profile.display_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'User';
-
-  const isPending = updateProfile.isPending || uploadPhoto.isPending;
-
+  /* ════════════════════════════════════════════════════════════════════════ */
+  /*  MAIN RENDER                                                            */
+  /* ════════════════════════════════════════════════════════════════════════ */
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <div className="container mx-auto p-4 lg:p-8 max-w-5xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${
-              isDark ? 'bg-gray-800' : 'bg-white shadow-sm'
-            }`}>
-              <User className={`w-5 h-5 ${isDark ? 'text-cyan-400' : 'text-blue-600'}`} />
-            </div>
-            <div>
-              <h1 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Profile
-              </h1>
-              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Manage your personal information
-              </p>
-            </div>
+    <div
+      className={`min-h-screen transition-colors ${
+        isDark ? 'bg-gray-1000 text-gray-100' : 'bg-gray-50 text-gray-900'
+      }`}
+    >
+      <div className="max-w-4xl mx-auto p-4 lg:p-8 space-y-6">
+
+        {/* ── Page Header ─────────────────────────────────────────────────── */}
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold">My Profile</h1>
+            <p
+              className={`text-sm mt-1 ${
+                isDark ? 'text-gray-400' : 'text-gray-500'
+              }`}
+            >
+              Manage your personal information and settings.
+            </p>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-2">
-            {isEditing ? (
+          {/* Edit / Save / Cancel controls */}
+          <div className="flex items-center gap-3">
+            {editMode ? (
               <>
                 <button
-                  onClick={handleCancel}
-                  disabled={isPending}
-                  className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  type="button"
+                  onClick={handleCancelEdit}
+                  disabled={isSaving || isUploading}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-colors disabled:opacity-50 ${
                     isDark
-                      ? 'bg-gray-800 hover:bg-gray-700 text-gray-300 disabled:opacity-50'
-                      : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 disabled:opacity-50'
+                      ? 'border-gray-700 text-gray-300 hover:bg-gray-800'
+                      : 'border-gray-300 text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   <X className="w-4 h-4" />
                   Cancel
                 </button>
+
                 <button
+                  type="button"
                   onClick={handleSave}
-                  disabled={!hasChanges || isPending}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  disabled={isSaving || isUploading}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-60 ${
                     isDark
-                      ? 'bg-cyan-600 hover:bg-cyan-700 text-white disabled:opacity-50 disabled:cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed'
+                      ? 'bg-cyan-600 hover:bg-cyan-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  {isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                  {isSaving ? (
+                    <>
+                      <svg
+                        className="animate-spin w-4 h-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v8z"
+                        />
+                      </svg>
+                      Saving…
+                    </>
                   ) : (
-                    <Save className="w-4 h-4" />
+                    <>
+                      <Save className="w-4 h-4" />
+                      Save Changes
+                    </>
                   )}
-                  Save Changes
                 </button>
               </>
             ) : (
               <button
-                onClick={handleEdit}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                type="button"
+                onClick={() => setEditMode(true)}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors cursor-pointer ${
                   isDark
-                    ? 'bg-gray-800 hover:bg-gray-700 text-white'
-                    : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-200'
+                    ? 'bg-blue-500 hover:bg-blue-700'
+                    : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
-                <Edit2 className="w-4 h-4" />
+                <Edit3 className="w-4 h-4" />
                 Edit Profile
               </button>
             )}
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className={`rounded-xl border overflow-hidden ${
-          isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-        }`}>
-          {/* Profile Header with Photo */}
-          <div className={`p-6 border-b ${
-            isDark ? 'border-gray-700' : 'border-gray-200'
-          }`}>
-            <div className="flex items-start gap-6">
-              <ProfilePhoto
-                photoPath={profile.profile_photo_path}
-                fullName={fullName}
-                isEditing={isEditing}
-                onPhotoChange={handlePhotoChange}
-                isUploading={uploadPhoto.isPending}
-                uploadProgress={uploadProgress}
-                theme={theme}
-              />
+        {/* ── Hero Card (Avatar + display name + title) ────────────────────── */}
+        <div className={cardBase}>
+          <div className="flex items-center gap-6 flex-wrap">
+            <PhotoHeader
+              profile={profile}
+              previewUrl={previewUrl}
+              isUploading={isUploading}
+              isEditing={editMode}
+              isDark={isDark}
+              fileInputRef={fileInputRef}
+              onFileChange={handleFileChange}
+            />
 
-              <div className="flex-1">
-                <h2 className={`text-2xl font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {fullName}
-                </h2>
-                <p className={`text-sm mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {profile.title || 'No title specified'}
-                </p>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className={`px-2 py-1 rounded-full ${
-                    isDark
-                      ? 'bg-gray-700 text-gray-300'
-                      : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    ID: {profile.id}
-                  </span>
+            <div className="flex-1 min-w-0 space-y-1">
+              {editMode ? (
+                <div className="space-y-3">
+                  {/* Display name */}
+                  <div>
+                    <label
+                      className={`block text-xs font-semibold uppercase tracking-wider mb-1 ${
+                        isDark ? 'text-gray-400' : 'text-gray-500'
+                      }`}
+                    >
+                      Display Name
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={150}
+                      value={form.display_name}
+                      onChange={(e) =>
+                        handleField('display_name', e.target.value)
+                      }
+                      className={inputBase(isDark)}
+                      placeholder="How should we address you?"
+                    />
+                    {fieldErrors.display_name && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {fieldErrors.display_name}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Title */}
+                  <div>
+                    <label
+                      className={`block text-xs font-semibold uppercase tracking-wider mb-1 ${
+                        isDark ? 'text-gray-400' : 'text-gray-500'
+                      }`}
+                    >
+                      Job Title
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={50}
+                      value={form.title}
+                      onChange={(e) => handleField('title', e.target.value)}
+                      className={inputBase(isDark)}
+                      placeholder="e.g. Senior Software Engineer"
+                    />
+                    {fieldErrors.title && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {fieldErrors.title}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Profile Content */}
-          <div className="p-6">
-            {/* Personal Information */}
-            <SectionHeader
-              title="Personal Information"
-              icon={<User className={`w-4 h-4 ${isDark ? 'text-cyan-400' : 'text-blue-600'}`} />}
-              theme={theme}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <EditableField
-                label="First Name"
-                value={profile.first_name}
-                fieldName="first_name"
-                icon={<User className="w-3.5 h-3.5" />}
-                isEditing={isEditing}
-                formData={formData}
-                onChange={handleFieldChange}
-                theme={theme}
-              />
-
-              <EditableField
-                label="Last Name"
-                value={profile.last_name}
-                fieldName="last_name"
-                icon={<User className="w-3.5 h-3.5" />}
-                isEditing={isEditing}
-                formData={formData}
-                onChange={handleFieldChange}
-                theme={theme}
-              />
-
-              <EditableField
-                label="Display Name"
-                value={profile.display_name}
-                fieldName="display_name"
-                icon={<Users className="w-3.5 h-3.5" />}
-                isEditing={isEditing}
-                formData={formData}
-                onChange={handleFieldChange}
-                theme={theme}
-                className="md:col-span-2"
-              />
-
-              <EditableField
-                label="Professional Title"
-                value={profile.title}
-                fieldName="title"
-                icon={<Briefcase className="w-3.5 h-3.5" />}
-                isEditing={isEditing}
-                formData={formData}
-                onChange={handleFieldChange}
-                theme={theme}
-                placeholder="e.g., Senior Software Engineer"
-              />
-
-              <EditableField
-                label="Date of Birth"
-                value={profile.dob}
-                fieldName="dob"
-                icon={<Calendar className="w-3.5 h-3.5" />}
-                type="date"
-                isEditing={isEditing}
-                formData={formData}
-                onChange={handleFieldChange}
-                theme={theme}
-              />
-
-              <EditableField
-                label="Gender"
-                value={profile.gender}
-                fieldName="gender"
-                icon={<Users className="w-3.5 h-3.5" />}
-                type="select"
-                options={GENDER_OPTIONS}
-                isEditing={isEditing}
-                formData={formData}
-                onChange={handleFieldChange}
-                theme={theme}
-              />
+              ) : (
+                <>
+                  <h2 className="text-2xl font-bold truncate">
+                    {profile.display_name}
+                  </h2>
+                  {profile.title && (
+                    <p
+                      className={`text-sm font-medium ${
+                        isDark ? 'text-cyan-400' : 'text-blue-600'
+                      }`}
+                    >
+                      {profile.title}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    {profile.gender && (
+                      <span
+                        className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${
+                          isDark
+                            ? 'bg-gray-800 text-gray-300'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {profile.gender}
+                      </span>
+                    )}
+                    {profile.dob && (
+                      <span
+                        className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                          isDark
+                            ? 'bg-gray-800 text-gray-300'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {new Date(profile.dob).toLocaleDateString(undefined, {
+                          year:  'numeric',
+                          month: 'long',
+                          day:   'numeric',
+                        })}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
-            {/* Contact Information */}
-            <SectionHeader
-              title="Contact Information"
-              icon={<Phone className={`w-4 h-4 ${isDark ? 'text-cyan-400' : 'text-blue-600'}`} />}
-              theme={theme}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <EditableField
-                label="Phone Number"
-                value={profile.phone}
-                fieldName="phone"
-                icon={<Phone className="w-3.5 h-3.5" />}
-                type="tel"
-                isEditing={isEditing}
-                formData={formData}
-                onChange={handleFieldChange}
-                theme={theme}
-                placeholder="+1234567890"
+            {/* Always-visible success badge in view mode */}
+            {!editMode && (
+              <CheckCircle
+                className={`w-6 h-6 flex-shrink-0 ${
+                  isDark ? 'text-cyan-500' : 'text-blue-500'
+                }`}
+                title="Profile complete"
               />
-            </div>
-
-            {/* Address Information */}
-            <SectionHeader
-              title="Address"
-              icon={<MapPin className={`w-4 h-4 ${isDark ? 'text-cyan-400' : 'text-blue-600'}`} />}
-              theme={theme}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <EditableField
-                label="Address Line 1"
-                value={profile.address_line1}
-                fieldName="address_line1"
-                icon={<Home className="w-3.5 h-3.5" />}
-                isEditing={isEditing}
-                formData={formData}
-                onChange={handleFieldChange}
-                theme={theme}
-                placeholder="Street address"
-              />
-
-              <EditableField
-                label="Address Line 2"
-                value={profile.address_line2}
-                fieldName="address_line2"
-                icon={<Building className="w-3.5 h-3.5" />}
-                isEditing={isEditing}
-                formData={formData}
-                onChange={handleFieldChange}
-                theme={theme}
-                placeholder="Apt, suite, etc."
-              />
-
-              <EditableField
-                label="City"
-                value={profile.city}
-                fieldName="city"
-                icon={<Building className="w-3.5 h-3.5" />}
-                isEditing={isEditing}
-                formData={formData}
-                onChange={handleFieldChange}
-                theme={theme}
-              />
-
-              <EditableField
-                label="State/Province"
-                value={profile.state}
-                fieldName="state"
-                icon={<Map className="w-3.5 h-3.5" />}
-                isEditing={isEditing}
-                formData={formData}
-                onChange={handleFieldChange}
-                theme={theme}
-              />
-
-              <EditableField
-                label="Country"
-                value={profile.country}
-                fieldName="country"
-                icon={<Flag className="w-3.5 h-3.5" />}
-                isEditing={isEditing}
-                formData={formData}
-                onChange={handleFieldChange}
-                theme={theme}
-              />
-
-              <EditableField
-                label="Postal Code"
-                value={profile.postal_code}
-                fieldName="postal_code"
-                icon={<Hash className="w-3.5 h-3.5" />}
-                isEditing={isEditing}
-                formData={formData}
-                onChange={handleFieldChange}
-                theme={theme}
-              />
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className={`p-4 border-t text-xs ${
-            isDark ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-500'
-          }`}>
-            <div className="flex items-center gap-2">
-              <span>Profile last updated: {new Date().toLocaleString()}</span>
-              <ChevronRight className="w-3 h-3" />
-            </div>
+            )}
           </div>
         </div>
+
+        {/* ════════════════════════════════════════════════════════════════ */}
+        {/*  CONTENT GRID  (2/3 main | 1/3 sidebar)                       */}
+        {/* ════════════════════════════════════════════════════════════════ */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* ── Left / main (2 cols) ────────────────────────────────────── */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* Personal Information */}
+            <section className={cardBase}>
+              <SectionHeading
+                icon={<User className="w-4 h-4" />}
+                title="Personal Information"
+                isDark={isDark}
+              />
+
+              <div className={`mt-4 ${divider}`}>
+                {editMode ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+                    <FieldGroup label="First Name" isDark={isDark}>
+                      <input
+                        type="text"
+                        maxLength={100}
+                        value={form.first_name}
+                        onChange={(e) =>
+                          handleField('first_name', e.target.value)
+                        }
+                        className={inputBase(isDark)}
+                        placeholder="First name"
+                      />
+                      {fieldErrors.first_name && (
+                        <FieldError msg={fieldErrors.first_name} />
+                      )}
+                    </FieldGroup>
+
+                    <FieldGroup label="Last Name" isDark={isDark}>
+                      <input
+                        type="text"
+                        maxLength={100}
+                        value={form.last_name}
+                        onChange={(e) =>
+                          handleField('last_name', e.target.value)
+                        }
+                        className={inputBase(isDark)}
+                        placeholder="Last name"
+                      />
+                      {fieldErrors.last_name && (
+                        <FieldError msg={fieldErrors.last_name} />
+                      )}
+                    </FieldGroup>
+
+                    <FieldGroup label="Date of Birth" isDark={isDark}>
+                      <input
+                        type="date"
+                        value={form.dob}
+                        max={new Date().toISOString().split('T')[0]}
+                        onChange={(e) => handleField('dob', e.target.value)}
+                        className={inputBase(isDark)}
+                      />
+                      {fieldErrors.dob && (
+                        <FieldError msg={fieldErrors.dob} />
+                      )}
+                    </FieldGroup>
+
+                    <FieldGroup label="Gender" isDark={isDark}>
+                      <div className="relative">
+                        <select
+                          value={form.gender}
+                          onChange={(e) =>
+                            handleField('gender', e.target.value)
+                          }
+                          className={`${inputBase(isDark)} appearance-none pr-8`}
+                        >
+                          <option value="">— Select —</option>
+                          <option value={Gender.MALE}>Male</option>
+                          <option value={Gender.FEMALE}>Female</option>
+                          <option value={Gender.OTHER}>Other</option>
+                        </select>
+                        <ChevronDown
+                          className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 ${
+                            isDark ? 'text-gray-400' : 'text-gray-500'
+                          }`}
+                        />
+                      </div>
+                      {fieldErrors.gender && (
+                        <FieldError msg={fieldErrors.gender} />
+                      )}
+                    </FieldGroup>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-inherit pt-2">
+                    <div
+                      className={`divide-y ${
+                        isDark ? 'divide-gray-800' : 'divide-gray-100'
+                      }`}
+                    >
+                      <ViewRow
+                        label="First Name"
+                        value={profile.first_name}
+                        isDark={isDark}
+                      />
+                      <ViewRow
+                        label="Last Name"
+                        value={profile.last_name}
+                        isDark={isDark}
+                      />
+                      <ViewRow
+                        label="Date of Birth"
+                        value={
+                          profile.dob
+                            ? new Date(profile.dob).toLocaleDateString(
+                                undefined,
+                                {
+                                  year:  'numeric',
+                                  month: 'long',
+                                  day:   'numeric',
+                                },
+                              )
+                            : null
+                        }
+                        isDark={isDark}
+                      />
+                      <ViewRow
+                        label="Gender"
+                        value={
+                          profile.gender
+                            ? profile.gender.charAt(0).toUpperCase() +
+                              profile.gender.slice(1)
+                            : null
+                        }
+                        isDark={isDark}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Contact Information */}
+            <section className={cardBase}>
+              <SectionHeading
+                icon={<Phone className="w-4 h-4" />}
+                title="Contact Information"
+                isDark={isDark}
+              />
+
+              <div className={`mt-4 ${divider}`}>
+                {editMode ? (
+                  <div className="grid grid-cols-1 gap-4 pt-4">
+                    <FieldGroup label="Phone Number" isDark={isDark}>
+                      <input
+                        type="tel"
+                        maxLength={30}
+                        value={form.phone}
+                        onChange={(e) => handleField('phone', e.target.value)}
+                        className={inputBase(isDark)}
+                        placeholder="+1 234 567 8900"
+                      />
+                      <p
+                        className={`text-xs mt-1 flex items-center gap-1 ${
+                          isDark ? 'text-gray-500' : 'text-gray-400'
+                        }`}
+                      >
+                        <Lock className="w-3 h-3" />
+                        Encrypted at rest
+                      </p>
+                      {fieldErrors.phone && (
+                        <FieldError msg={fieldErrors.phone} />
+                      )}
+                    </FieldGroup>
+                  </div>
+                ) : (
+                  <div
+                    className={`divide-y pt-2 ${
+                      isDark ? 'divide-gray-800' : 'divide-gray-100'
+                    }`}
+                  >
+                    <ViewRow
+                      label="Phone"
+                      value={parsePhone(profile.phone)}
+                      isDark={isDark}
+                      icon={<Phone className="w-4 h-4" />}
+                    />
+                    <ViewRow
+                      label="Display Name"
+                      value={profile.display_name}
+                      isDark={isDark}
+                      icon={<Mail className="w-4 h-4" />}
+                    />
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+
+          {/* ── Right / sidebar (1 col) ─────────────────────────────────── */}
+          <div className="space-y-6">
+
+            {/* Address */}
+            <section className={cardBase}>
+              <SectionHeading
+                icon={<MapPin className="w-4 h-4" />}
+                title="Address"
+                isDark={isDark}
+              />
+
+              <div className={`mt-4 ${divider}`}>
+                {editMode ? (
+                  <div className="space-y-3 pt-4">
+                    {(
+                      [
+                        {
+                          key: 'address_line1' as const,
+                          label: 'Address Line 1',
+                          placeholder: '123 Main Street',
+                          max: 200,
+                        },
+                        {
+                          key: 'address_line2' as const,
+                          label: 'Address Line 2',
+                          placeholder: 'Apt 4B (optional)',
+                          max: 200,
+                        },
+                        {
+                          key: 'city' as const,
+                          label: 'City',
+                          placeholder: 'New York',
+                          max: 100,
+                        },
+                        {
+                          key: 'state' as const,
+                          label: 'State / Province',
+                          placeholder: 'NY',
+                          max: 100,
+                        },
+                        {
+                          key: 'country' as const,
+                          label: 'Country',
+                          placeholder: 'USA',
+                          max: 100,
+                        },
+                        {
+                          key: 'postal_code' as const,
+                          label: 'Postal Code',
+                          placeholder: '10001',
+                          max: 20,
+                        },
+                      ] as const
+                    ).map(({ key, label, placeholder, max }) => (
+                      <FieldGroup key={key} label={label} isDark={isDark}>
+                        <input
+                          type="text"
+                          maxLength={max}
+                          value={form[key]}
+                          onChange={(e) => handleField(key, e.target.value)}
+                          className={inputBase(isDark)}
+                          placeholder={placeholder}
+                        />
+                        {fieldErrors[key] && (
+                          <FieldError msg={fieldErrors[key]} />
+                        )}
+                      </FieldGroup>
+                    ))}
+                  </div>
+                ) : (
+                  <div
+                    className={`divide-y pt-2 ${
+                      isDark ? 'divide-gray-800' : 'divide-gray-100'
+                    }`}
+                  >
+                    {[
+                      {
+                        label: 'Line 1',
+                        value: profile.address_line1,
+                      },
+                      {
+                        label: 'Line 2',
+                        value: profile.address_line2,
+                      },
+                      { label: 'City',        value: profile.city },
+                      { label: 'State',       value: profile.state },
+                      { label: 'Country',     value: profile.country },
+                      { label: 'Postal Code', value: profile.postal_code },
+                    ].map(({ label, value }) => (
+                      <ViewRow
+                        key={label}
+                        label={label}
+                        value={value}
+                        isDark={isDark}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Account meta (read-only) */}
+            <section className={cardBase}>
+              <SectionHeading
+                icon={<Lock className="w-4 h-4" />}
+                title="Account"
+                isDark={isDark}
+              />
+              <div
+                className={`mt-4 divide-y pt-2 ${
+                  isDark ? 'divide-gray-800' : 'divide-gray-100'
+                }`}
+              >
+                <ViewRow
+                  label="User ID"
+                  value={String(profile.id)}
+                  isDark={isDark}
+                />
+              </div>
+            </section>
+          </div>
+        </div>
+        {/* End content grid */}
+
       </div>
+      {/* End container */}
     </div>
   );
 };
 
-export default Profile;
+/* -------------------------------------------------------------------------- */
+/*                       SMALL REUSABLE UI HELPERS                            */
+/* -------------------------------------------------------------------------- */
+
+const SectionHeading: React.FC<{
+  icon:   React.ReactNode;
+  title:  string;
+  isDark: boolean;
+}> = ({ icon, title, isDark }) => (
+  <div className="flex items-center gap-2">
+    <span
+      className={`p-1.5 rounded-lg ${
+        isDark
+          ? 'bg-cyan-500/15 text-cyan-400'
+          : 'bg-blue-50 text-blue-600'
+      }`}
+    >
+      {icon}
+    </span>
+    <h3 className="text-sm font-semibold uppercase tracking-wider">
+      {title}
+    </h3>
+  </div>
+);
+
+const FieldError: React.FC<{ msg: string }> = ({ msg }) => (
+  <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+    <XCircle className="w-3 h-3 flex-shrink-0" />
+    {msg}
+  </p>
+);
+
+/* -------------------------------------------------------------------------- */
+
+UserProfile.displayName = 'UserProfile';
+export default UserProfile;

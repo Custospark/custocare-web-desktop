@@ -1,247 +1,185 @@
 /**
  * ============================================================================
- * PROFILE TYPE DEFINITIONS
+ * USER PROFILE TYPE DEFINITIONS
  * ============================================================================
- * 
- * This file contains all TypeScript type declarations for user profile
- * operations. Handles profile data structure, API request/response types,
- * and utility types for type-safe interactions.
- * 
+ *
+ * All TypeScript type declarations for user-profile read / update operations.
+ * Mirrors the shape returned by GET /{user}/profile and accepted by
+ * PUT /{user}/profile, including the separate photo-upload flow.
+ *
  * @module profileTypes
- * @description Comprehensive type definitions for user profile management
  */
 
 /* -------------------------------------------------------------------------- */
-/*                               ENUMS & CONSTANTS                            */
+/*                                   ENUMS                                    */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Gender options for user profile
+ * Allowed gender values. Must match Laravel validation: in:male,female,other
  */
 export enum Gender {
-  MALE = 'male',
+  MALE   = 'male',
   FEMALE = 'female',
-  OTHER = 'other',
+  OTHER  = 'other',
 }
 
-/**
- * Available gender options as a union type for flexibility
- */
-export type GenderType = 'male' | 'female' | 'other';
-
 /* -------------------------------------------------------------------------- */
-/*                              CORE PROFILE TYPE                             */
+/*                             CORE PROFILE ENTITY                            */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Complete user profile entity as returned by the API.
- * Includes all fields from the backend response structure.
+ * Full user-profile shape as returned by the API.
+ *
+ * Notes:
+ *  - `phone` may arrive as a PHP-serialised string  (e.g. `s:11:"+123…";`)
+ *    when the backend hasn't stripped the serialisation wrapper.
+ *    Use `parsePhone()` from profileUtils to extract the plain number.
+ *  - `profile_photo_path` is a storage-relative path; build the full URL
+ *    with your CDN / storage base URL in the component.
  */
 export interface UserProfile {
-  id: number;
-  first_name: string;
-  last_name: string;
-  display_name: string;
-  title: string | null;
-  dob: string | null; // Date in YYYY-MM-DD format
-  gender: GenderType | null;
-  phone: string | null; // Encrypted in storage, decrypted on retrieval
-  address_line1: string | null;
-  address_line2: string | null;
-  city: string | null;
-  state: string | null;
-  country: string | null;
-  postal_code: string | null;
-  profile_photo_path: string | null;
-}
-
-/**
- * Extended profile type with computed properties for UI display
- */
-export interface UserProfileDisplay extends UserProfile {
-  full_name: string;
-  formatted_phone?: string;
-  profile_photo_url?: string;
-  address_formatted?: string;
-  age?: number;
+  id:                  number;
+  first_name:          string;
+  last_name:           string;
+  display_name:        string;
+  title:               string | null;
+  dob:                 string | null;   // ISO date: "YYYY-MM-DD"
+  gender:              Gender | null;
+  phone:               string | null;   // may be PHP-serialised
+  address_line1:       string | null;
+  address_line2:       string | null;
+  city:                string | null;
+  state:               string | null;
+  country:             string | null;
+  postal_code:         string | null;
+  profile_photo_path:  string | null;   // storage-relative path
 }
 
 /* -------------------------------------------------------------------------- */
-/*                          REQUEST/RESPONSE TYPES                            */
+/*                          REQUEST / PAYLOAD TYPES                           */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Request payload for updating user profile.
- * All fields are optional - only provided fields will be updated.
- * Matches the validation rules from UpdateUserProfileRequest.
+ * Payload for PUT /{user}/profile.
+ * All fields are optional – only sent fields are updated (Laravel `sometimes`).
  */
-export interface UpdateProfileRequest {
-  first_name?: string;
-  last_name?: string;
-  display_name?: string;
-  title?: string | null;
-  dob?: string | null; // Format: YYYY-MM-DD
-  gender?: GenderType | null;
-  phone?: string | null; // Plain text (will be encrypted on server)
-  address_line1?: string | null;
-  address_line2?: string | null;
-  city?: string | null;
-  state?: string | null;
-  country?: string | null;
-  postal_code?: string | null;
-  profile_photo_path?: string | null; // Path to already-uploaded photo
+export interface UpdateUserProfileRequest {
+  first_name?:         string;
+  last_name?:          string;
+  display_name?:       string;
+  title?:              string | null;
+  dob?:                string | null;   // "YYYY-MM-DD"
+  gender?:             Gender | null;
+  phone?:              string | null;   // plain text – backend encrypts it
+  address_line1?:      string | null;
+  address_line2?:      string | null;
+  city?:               string | null;
+  state?:              string | null;
+  country?:            string | null;
+  postal_code?:        string | null;
+  profile_photo_path?: string | null;
 }
 
 /**
- * Parameters for profile photo upload
+ * Params passed to the updateProfile mutation.
+ * Bundles the user ID (route param) with the request body.
  */
-export interface ProfilePhotoUploadParams {
-  photo: File;
-  onProgress?: (percentage: number) => void;
+export interface UpdateUserProfileParams {
+  userId:  number | string;
+  data:    UpdateUserProfileRequest;
 }
 
 /**
- * Response from profile photo upload endpoint
+ * Params for the uploadProfilePhoto mutation.
+ * The file is sent as multipart/form-data.
  */
-export interface ProfilePhotoUploadResponse {
-  success: boolean;
-  message: string;
-  data: {
-    profile_photo_path: string;
-    profile_photo_url: string;
-  };
+export interface UploadProfilePhotoParams {
+  userId: number | string;
+  file:   File;
 }
 
 /* -------------------------------------------------------------------------- */
-/*                            API RESPONSE TYPES                              */
+/*                             API RESPONSE TYPES                             */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Standard API success response structure
+ * Generic success envelope shared across this module.
  */
 export interface ApiSuccessResponse<T> {
   success: true;
   message: string;
-  data: T;
+  data:    T;
+  meta?:   Record<string, unknown>;
 }
 
 /**
- * Standard API error response structure
+ * Generic error envelope. Matches the Laravel failedValidation structure.
  */
 export interface ApiErrorResponse {
   success: false;
   message: string;
   errors?: Record<string, string[]>;
+  error?:  string; // debug-only, development mode
 }
 
-/**
- * Response for GET profile endpoint
- */
-export type GetProfileResponse = ApiSuccessResponse<UserProfile>;
+/** Response for GET /{user}/profile */
+export type GetUserProfileResponse = ApiSuccessResponse<UserProfile>;
+
+/** Response for PUT /{user}/profile */
+export type UpdateUserProfileResponse = ApiSuccessResponse<UserProfile>;
 
 /**
- * Response for PUT profile update endpoint
+ * Response for the photo-upload endpoint.
+ * The `data` object returns the persisted storage path so we can
+ * patch the profile immediately after a successful upload.
  */
-export type UpdateProfileResponse = ApiSuccessResponse<UserProfile>;
-
-/* -------------------------------------------------------------------------- */
-/*                              PARAMETER TYPES                               */
-/* -------------------------------------------------------------------------- */
-
-/**
- * User identifier parameter for API calls
- */
-export interface UserParams {
-  user: number | string; // User ID or 'me' for current user
+export interface UploadProfilePhotoResponseData {
+  profile_photo_path: string;
+  url?:               string; // optional full CDN URL if backend returns it
 }
-
-/**
- * Combined params for profile update
- */
-export interface UpdateProfileParams extends UserParams {
-  data: UpdateProfileRequest;
-}
-
-/* -------------------------------------------------------------------------- */
-/*                              QUERY KEY TYPES                               */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Profile query key structure for React Query
- */
-export interface ProfileQueryKey {
-  user: number | string;
-}
+export type UploadProfilePhotoResponse =
+  ApiSuccessResponse<UploadProfilePhotoResponseData>;
 
 /* -------------------------------------------------------------------------- */
 /*                              UTILITY TYPES                                 */
 /* -------------------------------------------------------------------------- */
 
+/** Reusable callback options for all mutations. */
+export interface MutationCallbacks<TData, TError = AxiosApiError> {
+  onSuccess?: (data: TData) => void;
+  onError?:   (error: TError) => void;
+}
+
 /**
- * Type guard to check if response is an error
+ * Convenience alias – imported where needed so callers don't have to
+ * import AxiosError directly alongside these types.
+ */
+export type AxiosApiError = import('axios').AxiosError<ApiErrorResponse>;
+
+/* -------------------------------------------------------------------------- */
+/*                             TYPE GUARDS / UTILS                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Returns true when the response is an error envelope.
+ *
+ * @example
+ * if (isApiErrorResponse(res)) console.error(res.message);
  */
 export function isApiErrorResponse(
-  response: ApiSuccessResponse<unknown> | ApiErrorResponse
+  response: ApiSuccessResponse<unknown> | ApiErrorResponse,
 ): response is ApiErrorResponse {
   return response.success === false;
 }
 
 /**
- * Options for mutation callbacks
+ * Extracts a plain phone number from a PHP-serialised string.
+ * e.g.  `s:11:"+1234567890";`  →  `+1234567890`
+ * Falls back to the raw value when the format is not recognised.
  */
-export interface MutationCallbacks<TData, TError = ApiErrorResponse> {
-  onSuccess?: (data: TData) => void;
-  onError?: (error: TError) => void;
-  onSettled?: () => void;
+export function parsePhone(raw: string | null | undefined): string {
+  if (!raw) return '';
+  // PHP serialize format for strings: s:<len>:"<value>";
+  const match = raw.match(/^s:\d+:"(.+)";$/);
+  return match ? match[1] : raw;
 }
-
-/**
- * Helper function to format full name from profile
- */
-export const formatFullName = (profile: Partial<UserProfile>): string => {
-  if (profile.display_name) return profile.display_name;
-  if (profile.first_name && profile.last_name) {
-    return `${profile.first_name} ${profile.last_name}`.trim();
-  }
-  if (profile.first_name) return profile.first_name;
-  if (profile.last_name) return profile.last_name;
-  return 'Unknown User';
-};
-
-/**
- * Helper function to format address from profile fields
- */
-export const formatAddress = (profile: Partial<UserProfile>): string | null => {
-  const parts = [
-    profile.address_line1,
-    profile.address_line2,
-    profile.city,
-    profile.state,
-    profile.postal_code,
-    profile.country,
-  ].filter(Boolean);
-  
-  return parts.length > 0 ? parts.join(', ') : null;
-};
-
-/**
- * Helper function to calculate age from date of birth
- */
-export const calculateAge = (dob: string | null): number | null => {
-  if (!dob) return null;
-  
-  try {
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    
-    return age;
-  } catch {
-    return null;
-  }
-};
