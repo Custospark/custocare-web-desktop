@@ -3,17 +3,10 @@
  * USER PROFILE REACT QUERY HOOKS
  * ============================================================================
  *
- * Query and mutation hooks for all user-profile API operations:
- *   • useGetUserProfile   – GET  /{user}/profile
- *   • useUpdateUserProfile – PUT  /{user}/profile
- *   • useUploadProfilePhoto – POST /{user}/profile/photo  (multipart)
- *
- * Toast notifications are emitted internally; callers receive clean
- * onSuccess / onError callbacks for navigation or extra side-effects.
- *
- * @module useProfileQueries
- * @requires @tanstack/react-query
- * @requires axios
+ * Endpoints (baseURL = API_BASE_URL):
+ *   GET  /users/{user}/profile
+ *   PUT  /users/{user}/profile
+ *   POST /users/{user}/profile/photo
  */
 
 import {
@@ -25,6 +18,7 @@ import {
 import type { AxiosError } from 'axios';
 import { axiosInstance } from '../../../../../app/api/axiosConfig';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
+
 import type {
   ApiErrorResponse,
   GetUserProfileResponse,
@@ -35,216 +29,22 @@ import type {
   UploadProfilePhotoResponse,
 } from './ProfileTypes';
 
-
 /* -------------------------------------------------------------------------- */
-/*                               QUERY KEYS                                   */
+/*                                  Keys                                      */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Centralised query-key factory for the profile domain.
- *
- * @example
- * // Invalidate after a successful update
- * queryClient.invalidateQueries({ queryKey: profileKeys.detail(userId) });
- */
 export const profileKeys = {
-  all:    ['profile'] as const,
+  all: ['profile'] as const,
   details: () => [...profileKeys.all, 'detail'] as const,
-  detail:  (userId: number | string) =>
-    [...profileKeys.details(), userId] as const,
+  detail: (userId: number | string) => [...profileKeys.details(), userId] as const,
 };
 
 /* -------------------------------------------------------------------------- */
-/*                              QUERY HOOKS                                   */
+/*                                Helpers                                     */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Fetches the full profile for a given user.
- *
- * @param userId  - Numeric or string user identifier (route segment `{user}`)
- * @param options - Additional React Query options
- *
- * @example
- * const { data, isLoading, isError } = useGetUserProfile(42);
- * const profile = data?.data;
- */
-export const useGetUserProfile = (
-  userId: number | string,
-  options?: Omit<
-    UseQueryOptions<GetUserProfileResponse, AxiosError<ApiErrorResponse>>,
-    'queryKey' | 'queryFn'
-  >,
-) => {
-  return useQuery<GetUserProfileResponse, AxiosError<ApiErrorResponse>>({
-    queryKey: profileKeys.detail(userId),
-    queryFn:  async () => {
-      const response = await axiosInstance.get<GetUserProfileResponse>(
-        `users/${userId}/profile`,
-      );
-      return response.data;
-    },
-    enabled: !!userId, // guard against undefined / 0 user IDs
-    ...options,
-  });
-};
-
-/* -------------------------------------------------------------------------- */
-/*                             MUTATION HOOKS                                 */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Updates any subset of the authenticated user's profile fields.
- * Automatically invalidates the cached profile on success.
- *
- * @param callbacks - Optional `onSuccess` / `onError` callbacks
- *
- * @example
- * const { mutate, isPending } = useUpdateUserProfile({
- *   onSuccess: () => setEditMode(false),
- * });
- *
- * mutate({
- *   userId: 42,
- *   data: { first_name: 'Jane', city: 'London' },
- * });
- */
-export const useUpdateUserProfile = (
-  callbacks: MutationCallbacks<
-    UpdateUserProfileResponse,
-    AxiosError<ApiErrorResponse>
-  > = {},
-) => {
-  const { showToast }  = useToast();
-  const queryClient    = useQueryClient();
-
-  return useMutation<
-    UpdateUserProfileResponse,
-    AxiosError<ApiErrorResponse>,
-    UpdateUserProfileParams
-  >({
-    mutationFn: async ({ userId, data }: UpdateUserProfileParams) => {
-      const response = await axiosInstance.put<UpdateUserProfileResponse>(
-        `users/${userId}/profile`,
-        data,
-      );
-      return response.data;
-    },
-
-    onSuccess: (data, variables) => {
-      const msg = data.message || 'Profile updated successfully!';
-      showToast('success', msg, 8000);
-
-      // Refresh the cached profile so the UI stays in sync
-      queryClient.invalidateQueries({
-        queryKey: profileKeys.detail(variables.userId),
-      });
-
-      callbacks.onSuccess?.(data);
-    },
-
-    onError: (error: AxiosError<ApiErrorResponse>) => {
-      const apiMessage =
-        error.response?.data?.message ||
-        error.message ||
-        'Failed to update profile.';
-
-      const errorDetails = _formatValidationErrors(
-        error.response?.data?.errors,
-      );
-
-      const displayMessage = errorDetails
-        ? `${apiMessage} (${errorDetails})`
-        : apiMessage;
-
-      showToast('error', displayMessage, 8000);
-      callbacks.onError?.(error);
-    },
-  });
-};
-
-/**
- * Uploads a profile photo as multipart/form-data.
- * On success it invalidates the profile cache so the new photo is reflected
- * immediately without a manual refetch.
- *
- * The backend is expected to:
- *   1. Store the file.
- *   2. Return `{ data: { profile_photo_path, url? } }`.
- *
- * Endpoint assumed: POST /{user}/profile/photo
- *
- * @param callbacks - Optional `onSuccess` / `onError` callbacks
- *
- * @example
- * const { mutate: uploadPhoto, isPending: isUploading } =
- *   useUploadProfilePhoto({
- *     onSuccess: (res) => console.log('Stored at', res.data.profile_photo_path),
- *   });
- *
- * uploadPhoto({ userId: 42, file: selectedFile });
- */
-export const useUploadProfilePhoto = (
-  callbacks: MutationCallbacks<
-    UploadProfilePhotoResponse,
-    AxiosError<ApiErrorResponse>
-  > = {},
-) => {
-  const { showToast } = useToast();
-  const queryClient   = useQueryClient();
-
-  return useMutation<
-    UploadProfilePhotoResponse,
-    AxiosError<ApiErrorResponse>,
-    UploadProfilePhotoParams
-  >({
-    mutationFn: async ({ userId, file }: UploadProfilePhotoParams) => {
-      const form = new FormData();
-      form.append('photo', file);
-
-      const response = await axiosInstance.post<UploadProfilePhotoResponse>(
-        `users/${userId}/profile/photo`,
-        form,
-        { headers: { 'Content-Type': 'multipart/form-data' } },
-      );
-      return response.data;
-    },
-
-    onSuccess: (data, variables) => {
-      showToast('success', data.message || 'Photo updated!', 5000);
-
-      queryClient.invalidateQueries({
-        queryKey: profileKeys.detail(variables.userId),
-      });
-
-      callbacks.onSuccess?.(data);
-    },
-
-    onError: (error: AxiosError<ApiErrorResponse>) => {
-      const apiMessage =
-        error.response?.data?.message ||
-        error.message ||
-        'Photo upload failed.';
-
-      showToast('error', apiMessage, 8000);
-      callbacks.onError?.(error);
-    },
-  });
-};
-
-/* -------------------------------------------------------------------------- */
-/*                           UTILITY FUNCTIONS                                */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Formats a Laravel validation-errors map into a readable inline string.
- *
- * @internal
- */
-export const _formatValidationErrors = (
-  errors?: Record<string, string[]>,
-): string => {
+export const formatValidationErrors = (errors?: Record<string, string[]>): string => {
   if (!errors || Object.keys(errors).length === 0) return '';
-
   return Object.entries(errors)
     .map(([field, messages]) => {
       const label = field
@@ -255,34 +55,136 @@ export const _formatValidationErrors = (
     .join(' | ');
 };
 
-/**
- * Extracts a human-readable message from an Axios error.
- *
- * @param error           - Axios error
- * @param fallbackMessage - Used when the API response is absent
- */
 export const extractErrorMessage = (
   error: AxiosError<ApiErrorResponse>,
-  fallbackMessage = 'An unexpected error occurred.',
-): string =>
-  error.response?.data?.message || error.message || fallbackMessage;
+  fallback = 'An unexpected error occurred.',
+): string => error.response?.data?.message || error.message || fallback;
 
 /* -------------------------------------------------------------------------- */
-/*                            DEFAULT EXPORT                                  */
+/*                                  Queries                                   */
 /* -------------------------------------------------------------------------- */
 
-export default {
-  // Query hooks
-  useGetUserProfile,
+export const useGetUserProfile = (
+  userId: number | string,
+  options?: Omit<
+    UseQueryOptions<GetUserProfileResponse, AxiosError<ApiErrorResponse>>,
+    'queryKey' | 'queryFn'
+  >,
+) => {
+  return useQuery<GetUserProfileResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: profileKeys.detail(userId),
+    enabled: !!userId,
+    queryFn: async () => {
+      // NOTE: includes /users here (per your request)
+      const res = await axiosInstance.get<GetUserProfileResponse>(`/users/${userId}/profile`);
+      return res.data;
+    },
+    ...options,
+  });
+};
 
-  // Mutation hooks
-  useUpdateUserProfile,
-  useUploadProfilePhoto,
+/* -------------------------------------------------------------------------- */
+/*                                Mutations                                   */
+/* -------------------------------------------------------------------------- */
 
-  // Query keys
-  profileKeys,
+export const useUpdateUserProfile = (
+  callbacks: MutationCallbacks<
+    UpdateUserProfileResponse,
+    AxiosError<ApiErrorResponse>
+  > = {},
+) => {
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
 
-  // Utilities
-  extractErrorMessage,
-  _formatValidationErrors,
+  return useMutation<
+    UpdateUserProfileResponse,
+    AxiosError<ApiErrorResponse>,
+    UpdateUserProfileParams
+  >({
+    mutationFn: async ({ userId, data }) => {
+      const res = await axiosInstance.put<UpdateUserProfileResponse>(
+        `/users/${userId}/profile`,
+        data,
+      );
+      return res.data;
+    },
+
+    onSuccess: (data, vars) => {
+      showToast('success', data.message || 'Profile updated successfully!', 6000);
+
+      queryClient.invalidateQueries({ queryKey: profileKeys.detail(vars.userId) });
+      callbacks.onSuccess?.(data);
+    },
+
+    onError: (error) => {
+      const base = extractErrorMessage(error, 'Failed to update profile.');
+      const details = formatValidationErrors(error.response?.data?.errors);
+      showToast('error', details ? `${base} (${details})` : base, 9000);
+      callbacks.onError?.(error);
+    },
+  });
+};
+
+export const useUploadProfilePhoto = (
+  callbacks: MutationCallbacks<
+    UploadProfilePhotoResponse,
+    AxiosError<ApiErrorResponse>
+  > = {},
+) => {
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    UploadProfilePhotoResponse,
+    AxiosError<ApiErrorResponse>,
+    UploadProfilePhotoParams
+  >({
+    mutationFn: async ({ userId, file }) => {
+      const form = new FormData();
+        form.append('photo', file);
+
+        // DEBUG: verify content
+        for (const [k, v] of form.entries()) {
+        console.log('FormData entry:', k, v);
+        }
+
+
+      // IMPORTANT:
+      // Do NOT force Content-Type. Axios sets the multipart boundary correctly.
+      const res = await axiosInstance.post<UploadProfilePhotoResponse>(
+        `/users/${userId}/profile/photo`,
+        form,
+      );
+
+      return res.data;
+    },
+
+    onSuccess: (data, vars) => {
+      showToast('success', data.message || 'Photo updated!', 5000);
+
+      // Patch cache immediately so UI reflects the new path without waiting.
+      queryClient.setQueryData(profileKeys.detail(vars.userId), (prev: any) => {
+        if (!prev?.data) return prev;
+        return {
+          ...prev,
+          data: {
+            ...prev.data,
+            profile_photo_path: data.data.profile_photo_path,
+          },
+        };
+      });
+
+      // Also refetch to sync any backend-side computed fields.
+      queryClient.invalidateQueries({ queryKey: profileKeys.detail(vars.userId) });
+
+      callbacks.onSuccess?.(data);
+    },
+
+    onError: (error) => {
+      const msg = extractErrorMessage(error, 'Photo upload failed.');
+      const details = formatValidationErrors(error.response?.data?.errors);
+      showToast('error', details ? `${msg} (${details})` : msg, 9000);
+      callbacks.onError?.(error);
+    },
+  });
 };

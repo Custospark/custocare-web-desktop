@@ -10,129 +10,93 @@ import { QueryClient } from '@tanstack/react-query';
 import { store } from '../store/store';
 import { API_BASE_URL, API_TIMEOUT } from './apiConfig';
 
-/* -------------------------------------------------------------------------- */
-/*                                AXIOS INSTANCE                               */
-/* -------------------------------------------------------------------------- */
-
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: API_TIMEOUT,
   headers: {
     Accept: 'application/json',
-    'Content-Type': 'application/json',
+    // IMPORTANT: do NOT set Content-Type globally
   },
 });
-
-/* -------------------------------------------------------------------------- */
-/*                             REQUEST INTERCEPTOR                             */
-/* -------------------------------------------------------------------------- */
 
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const state = store.getState();
 
-    /* ---------------------------- Authorization ---------------------------- */
-    // Token is retrieved from the auth slice, which is populated after
-    // login, email verification, or MFA, and persisted to localStorage.
+    // ---------------- Authorization ----------------
     const token = state.auth.token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    /* ---------------------------- Active Context ---------------------------- */
-    const {
-      activeFacilityId,
-      isPatient,
-      isStaffWithFacility,
-      capabilities,
-    } = state.activeContext;
+    // ---------------- Context Headers ----------------
+    const { activeFacilityId, isPatient, isStaffWithFacility, capabilities } =
+      state.activeContext;
 
-    /**
-     * STAFF MODE
-     * Facility + Role headers are mandatory for staff-with-facility requests
-     */
     if (isStaffWithFacility && activeFacilityId) {
       config.headers['X-Active-Facility-Id'] = String(activeFacilityId);
-    }
-    if (isStaffWithFacility && activeFacilityId) {
       config.headers['X-Facility-Id'] = String(activeFacilityId);
     }
 
-    /**
-     * PATIENT MODE
-     * No role code, only patient identity
-     */
     if (isPatient) {
       const patientId = capabilities.patient?.patient_id;
-      if (patientId) {
-        config.headers['X-Patient-Id'] = String(patientId);
-      }
+      if (patientId) config.headers['X-Patient-Id'] = String(patientId);
     }
 
-    /**
-     * OPTIONAL STAFF ID
-     * Useful for auditing & backend tracing
-     */
     const staffId = capabilities.staff?.staff_id;
-    if (staffId) {
-      config.headers['X-Staff-Id'] = String(staffId);
+    if (staffId) config.headers['X-Staff-Id'] = String(staffId);
+
+    // ---------------- Content-Type Strategy ----------------
+    const isFormData =
+      typeof FormData !== 'undefined' && config.data instanceof FormData;
+
+    if (isFormData) {
+      // Let the browser set: multipart/form-data; boundary=....
+      // Remove any forced JSON content-type if present.
+      // Axios v1 headers can be AxiosHeaders, so support both delete styles.
+      (config.headers as any)?.delete?.('Content-Type');
+      delete (config.headers as any)['Content-Type'];
+    } else {
+      // For JSON requests, set application/json when there's a body.
+      const method = (config.method || 'get').toLowerCase();
+      const hasBody = ['post', 'put', 'patch', 'delete'].includes(method);
+
+      if (hasBody && config.data !== undefined) {
+        (config.headers as any)?.set?.('Content-Type', 'application/json');
+        if (!(config.headers as any)?.set) {
+          (config.headers as any)['Content-Type'] = 'application/json';
+        }
+      }
     }
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
-
-/* -------------------------------------------------------------------------- */
-/*                            RESPONSE INTERCEPTOR                             */
-/* -------------------------------------------------------------------------- */
 
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
       console.warn('[API] Unauthorized (401)');
-      /**
-       * ❗ DO NOT logout here
-       * Let:
-       * - authSlice
-       * - React Query
-       * - AppInitializer
-       * decide what to do
-       */
     }
-
     return Promise.reject(error);
-  }
+  },
 );
-
-/* -------------------------------------------------------------------------- */
-/*                           REACT QUERY CLIENT                                */
-/* -------------------------------------------------------------------------- */
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 10,   // 10 minutes
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 10,
       retry: 1,
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
       refetchOnMount: false,
     },
-    mutations: {
-      retry: 1,
-    },
+    mutations: { retry: 1 },
   },
 });
 
-/* -------------------------------------------------------------------------- */
-/*                                   EXPORTS                                  */
-/* -------------------------------------------------------------------------- */
-
-/**
- * ✅ BOTH exports supported
- * Prevents ESM import errors across the app
- */
 export { axiosInstance };
 export default axiosInstance;

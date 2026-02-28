@@ -1,17 +1,11 @@
-/**
- * ============================================================================
- * PROFILE HEADER COMPONENT
- * ============================================================================
- *
- * Displays the profile header with avatar, display name, title, and edit controls.
- */
-
 import React from 'react';
 import { Camera, CheckCircle, User } from 'lucide-react';
-import { type UserProfile, type ProfileFormState } from './ProfileTypes';
+import type { UserProfile } from './ProfileTypes';
+import type { ProfileFormState } from './ProfileTypes';
+import { resolveStorageUrl } from '../../../../api/settings/profile/profileUtils';
 
 /* -------------------------------------------------------------------------- */
-/*                               SUB-COMPONENTS                               */
+/*                               Sub-components                               */
 /* -------------------------------------------------------------------------- */
 
 const PhotoHeader: React.FC<{
@@ -22,48 +16,9 @@ const PhotoHeader: React.FC<{
   isDark: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}> = ({
-  profile,
-  previewUrl,
-  isUploading,
-  isEditing,
-  isDark,
-  fileInputRef,
-  onFileChange,
-}) => {
- 
-    const resolvePhotoUrl = (path: string | null): string | null => {
-    if (!path) return null;
-    
-    // If it's already a blob URL (for preview) or full URL, return as is
-    if (path.startsWith('blob:') || path.startsWith('http')) return path;
-    
-    // Get base URL from environment or use default
-    const base = (import.meta as Record<string, unknown> & {
-      env: Record<string, string>;
-    }).env?.VITE_STORAGE_BASE_URL ?? '';
-    
-    // If we have a base URL, use it
-    if (base) {
-        return `${base}/storage/${path}`;
-    }
-    
-    // Fallback to API base URL
-    // You can import API_BASE_URL from your apiConfig
-    const API_BASE_URL = 'http://127.0.0.1:8000'; // or import from config
-    
-    // Handle different path formats
-    if (path.startsWith('profile-photos/')) {
-        return `${API_BASE_URL}/storage/${path}`;
-    }
-    
-    return `${API_BASE_URL}/storage/${path}`;
-};
-
-  const photoUrl = previewUrl ?? resolvePhotoUrl(profile.profile_photo_path);
-  const initials = `${profile.first_name?.[0] ?? ''}${
-    profile.last_name?.[0] ?? ''
-  }`.toUpperCase();
+}> = ({ profile, previewUrl, isUploading, isEditing, isDark, fileInputRef, onFileChange }) => {
+  const initials = `${profile.first_name?.[0] ?? ''}${profile.last_name?.[0] ?? ''}`.toUpperCase();
+  const photoUrl = previewUrl ?? resolveStorageUrl(profile.profile_photo_path);
 
   return (
     <div className="relative group w-28 h-28 shrink-0">
@@ -75,13 +30,16 @@ const PhotoHeader: React.FC<{
         }`}
       >
         {photoUrl ? (
-       <img
-            src={previewUrl || (profile.profile_photo_path ? resolvePhotoUrl(profile.profile_photo_path) : undefined)}
+          <img
+            src={photoUrl}
             alt={profile.display_name || 'Profile photo'}
             className="w-full h-full object-cover"
-/>
+            draggable={false}
+          />
         ) : (
-          <span>{initials || <User className="w-12 h-12" />}</span>
+          <span className="flex items-center justify-center w-full h-full">
+            {initials ? initials : <User className="w-12 h-12" />}
+          </span>
         )}
       </div>
 
@@ -92,12 +50,9 @@ const PhotoHeader: React.FC<{
             disabled={isUploading}
             onClick={() => fileInputRef.current?.click()}
             className={`absolute inset-0 rounded-2xl flex flex-col items-center justify-center gap-1
-              text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer
-              ${
-                isDark
-                  ? 'bg-black/60 text-cyan-300'
-                  : 'bg-black/50 text-white'
-              }`}
+              text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity
+              ${isDark ? 'bg-black/60 text-cyan-300' : 'bg-black/50 text-white'}
+              ${isUploading ? 'cursor-not-allowed' : 'cursor-pointer'}`}
           >
             {isUploading ? (
               <>
@@ -128,9 +83,7 @@ const PhotoHeader: React.FC<{
       {isEditing && !isUploading && (
         <span
           className={`absolute -bottom-2 -right-2 p-1.5 rounded-full border-2 shadow ${
-            isDark
-              ? 'bg-cyan-600 border-gray-900 text-white'
-              : 'bg-blue-600 border-white text-white'
+            isDark ? 'bg-cyan-600 border-gray-900 text-white' : 'bg-blue-600 border-white text-white'
           }`}
         >
           <Camera className="w-3.5 h-3.5" />
@@ -153,14 +106,14 @@ const EditModeFields: React.FC<{
         : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500/20'
     }`;
 
+  const labelBase = `block text-xs font-semibold uppercase tracking-wider mb-1 ${
+    isDark ? 'text-gray-400' : 'text-gray-500'
+  }`;
+
   return (
     <div className="space-y-3">
       <div>
-        <label className={`block text-xs font-semibold uppercase tracking-wider mb-1 ${
-          isDark ? 'text-gray-400' : 'text-gray-500'
-        }`}>
-          Display Name
-        </label>
+        <label className={labelBase}>Display Name</label>
         <input
           type="text"
           maxLength={150}
@@ -175,11 +128,7 @@ const EditModeFields: React.FC<{
       </div>
 
       <div>
-        <label className={`block text-xs font-semibold uppercase tracking-wider mb-1 ${
-          isDark ? 'text-gray-400' : 'text-gray-500'
-        }`}>
-          Job Title
-        </label>
+        <label className={labelBase}>Job Title</label>
         <input
           type="text"
           maxLength={50}
@@ -188,37 +137,39 @@ const EditModeFields: React.FC<{
           className={inputBase}
           placeholder="e.g. Senior Software Engineer"
         />
-        {fieldErrors.title && (
-          <p className="text-xs text-red-500 mt-1">{fieldErrors.title}</p>
-        )}
+        {fieldErrors.title && <p className="text-xs text-red-500 mt-1">{fieldErrors.title}</p>}
       </div>
     </div>
   );
 };
 
-const ViewModeFields: React.FC<{
-  profile: UserProfile;
-  isDark: boolean;
-}> = ({ profile, isDark }) => (
+const ViewModeFields: React.FC<{ profile: UserProfile; isDark: boolean }> = ({ profile, isDark }) => (
   <>
     <h2 className="text-2xl font-bold truncate">{profile.display_name}</h2>
+
     {profile.title && (
       <p className={`text-sm font-medium ${isDark ? 'text-cyan-400' : 'text-blue-600'}`}>
         {profile.title}
       </p>
     )}
+
     <div className="flex items-center gap-2 mt-2 flex-wrap">
       {profile.gender && (
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${
-          isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'
-        }`}>
+        <span
+          className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${
+            isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'
+          }`}
+        >
           {profile.gender}
         </span>
       )}
+
       {profile.dob && (
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-          isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'
-        }`}>
+        <span
+          className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+            isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'
+          }`}
+        >
           {new Date(profile.dob).toLocaleDateString(undefined, {
             year: 'numeric',
             month: 'long',
@@ -231,7 +182,7 @@ const ViewModeFields: React.FC<{
 );
 
 /* -------------------------------------------------------------------------- */
-/*                              MAIN COMPONENT                                */
+/*                              Main component                                */
 /* -------------------------------------------------------------------------- */
 
 interface ProfileHeaderProps {
@@ -245,10 +196,7 @@ interface ProfileHeaderProps {
   fieldErrors: Record<string, string>;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleField: (key: keyof ProfileFormState, value: string) => void;
-  handleSave: () => void;
-  handleCancelEdit: () => void;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  setEditMode: (mode: boolean) => void;
 }
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -295,9 +243,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
         {!editMode && (
           <CheckCircle
-            className={`w-6 h-6 flex-shrink-0 ${
-              isDark ? 'text-cyan-500' : 'text-blue-500'
-            }`}
+            className={`w-6 h-6 flex-shrink-0 ${isDark ? 'text-cyan-500' : 'text-blue-500'}`}
             title="Profile complete"
           />
         )}
