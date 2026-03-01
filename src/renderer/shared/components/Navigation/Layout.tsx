@@ -17,8 +17,8 @@ import DecorativeBackground from './DecorativeBackground';
 import { LayoutSidebarSection } from './layout-components/LayoutSidebarSection';
 import { LayoutContentSection } from './layout-components/LayoutContentSection';
 import { 
-  ThemeMode, 
-  SidebarPosition, 
+  type ThemeMode, 
+  type SidebarPosition, 
   type LayoutThemeClasses,
   STORAGE_KEYS,
   ANIMATION_CONFIG,
