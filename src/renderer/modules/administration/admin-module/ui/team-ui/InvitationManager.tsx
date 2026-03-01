@@ -740,33 +740,173 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
           </button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {(['pending', 'accepted', 'declined', 'expired'] as InvitationStatus[]).map(
-            (status) => (
+       {/* Stats Cards - Enhanced with gradients, icons, and better visual hierarchy */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+        {(['pending', 'accepted', 'declined', 'expired'] as InvitationStatus[]).map(
+          (status) => {
+            // Define color schemes for each status
+            const colorSchemes = {
+              pending: {
+                gradient: isDark 
+                  ? 'from-yellow-900/30 to-gray-900' 
+                  : 'from-yellow-50/80 to-white',
+                border: isDark ? 'border-yellow-500/30' : 'border-yellow-200',
+                hoverBorder: isDark ? 'hover:border-yellow-500/50' : 'hover:border-yellow-400',
+                shadow: isDark ? 'hover:shadow-yellow-500/20' : 'hover:shadow-yellow-500/20',
+                bgBlur: isDark ? 'bg-yellow-500/10' : 'bg-yellow-500/5',
+                iconBg: isDark ? 'bg-yellow-500/20' : 'bg-yellow-100',
+                iconBgHover: isDark ? 'group-hover:bg-yellow-500/30' : 'group-hover:bg-yellow-200',
+                iconColor: isDark ? 'text-yellow-400' : 'text-yellow-600',
+                badge: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
+              },
+              accepted: {
+                gradient: isDark 
+                  ? 'from-green-900/30 to-gray-900' 
+                  : 'from-green-50/80 to-white',
+                border: isDark ? 'border-green-500/30' : 'border-green-200',
+                hoverBorder: isDark ? 'hover:border-green-500/50' : 'hover:border-green-400',
+                shadow: isDark ? 'hover:shadow-green-500/20' : 'hover:shadow-green-500/20',
+                bgBlur: isDark ? 'bg-green-500/10' : 'bg-green-500/5',
+                iconBg: isDark ? 'bg-green-500/20' : 'bg-green-100',
+                iconBgHover: isDark ? 'group-hover:bg-green-500/30' : 'group-hover:bg-green-200',
+                iconColor: isDark ? 'text-green-400' : 'text-green-600',
+                badge: 'bg-green-500/20 text-green-500 border-green-500/30'
+              },
+              declined: {
+                gradient: isDark 
+                  ? 'from-red-900/30 to-gray-900' 
+                  : 'from-red-50/80 to-white',
+                border: isDark ? 'border-red-500/30' : 'border-red-200',
+                hoverBorder: isDark ? 'hover:border-red-500/50' : 'hover:border-red-400',
+                shadow: isDark ? 'hover:shadow-red-500/20' : 'hover:shadow-red-500/20',
+                bgBlur: isDark ? 'bg-red-500/10' : 'bg-red-500/5',
+                iconBg: isDark ? 'bg-red-500/20' : 'bg-red-100',
+                iconBgHover: isDark ? 'group-hover:bg-red-500/30' : 'group-hover:bg-red-200',
+                iconColor: isDark ? 'text-red-400' : 'text-red-600',
+                badge: 'bg-red-500/20 text-red-500 border-red-500/30'
+              },
+              expired: {
+                gradient: isDark 
+                  ? 'from-gray-700 to-gray-900' 
+                  : 'from-gray-100/80 to-white',
+                border: isDark ? 'border-gray-600/30' : 'border-gray-300',
+                hoverBorder: isDark ? 'hover:border-gray-500/50' : 'hover:border-gray-400',
+                shadow: isDark ? 'hover:shadow-gray-500/20' : 'hover:shadow-gray-500/20',
+                bgBlur: isDark ? 'bg-gray-500/10' : 'bg-gray-500/5',
+                iconBg: isDark ? 'bg-gray-600/30' : 'bg-gray-200',
+                iconBgHover: isDark ? 'group-hover:bg-gray-500/30' : 'group-hover:bg-gray-300',
+                iconColor: isDark ? 'text-gray-400' : 'text-gray-600',
+                badge: 'bg-gray-500/20 text-gray-500 border-gray-500/30'
+              }
+            };
+
+            const scheme = colorSchemes[status];
+
+            return (
               <div
                 key={status}
-                className={`p-3 rounded-lg border ${
-                  isDark
-                    ? 'bg-gray-800/50 border-gray-700'
-                    : 'bg-gray-50 border-gray-200'
-                }`}
+                className={cn(
+                  'relative overflow-hidden rounded-xl p-4 transition-all duration-300',
+                  'border-2',
+                  `bg-gradient-to-br ${scheme.gradient}`,
+                  scheme.border,
+                  scheme.hoverBorder,
+                  scheme.shadow,
+                  'group cursor-pointer transform hover:-translate-y-1'
+                )}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span
-                    className={`text-xs font-medium capitalize ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}
-                  >
+                {/* Background decoration */}
+                <div className={cn(
+                  'absolute top-0 right-0 w-20 h-20 rounded-full blur-3xl transition-opacity',
+                  scheme.bgBlur,
+                  'opacity-0 group-hover:opacity-100'
+                )} />
+
+                {/* Icon and Status */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className={cn(
+                    'p-2 rounded-lg transition-all duration-300',
+                    scheme.iconBg,
+                    scheme.iconBgHover,
+                    'group-hover:scale-110'
+                  )}>
+                    {getStatusIcon(status, {
+                      className: cn('w-5 h-5', scheme.iconColor)
+                    })}
+                  </div>
+                  <span className={cn(
+                    'text-xs font-medium px-2 py-1 rounded-full capitalize border',
+                    scheme.badge
+                  )}>
                     {status}
                   </span>
-                  {getStatusIcon(status)}
                 </div>
-                <div className="text-2xl font-bold">{statusStats[status] || 0}</div>
+
+                {/* Count */}
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className={cn(
+                      'text-2xl sm:text-3xl font-bold',
+                      isDark ? 'text-white' : 'text-gray-900'
+                    )}>
+                      {statusStats[status] || 0}
+                    </p>
+                    <p className={cn(
+                      'text-xs font-medium mt-1',
+                      isDark ? 'text-gray-400' : 'text-gray-600'
+                    )}>
+                      {status === 'pending' && 'Awaiting response'}
+                      {status === 'accepted' && 'Successfully accepted'}
+                      {status === 'declined' && 'Rejected invitations'}
+                      {status === 'expired' && 'Past response time'}
+                    </p>
+                  </div>
+
+                  {/* Mini indicator based on status */}
+                  {status === 'pending' && statusStats[status] > 0 && (
+                    <div className="absolute bottom-3 right-3">
+                      <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+                    </div>
+                  )}
+                  
+                  {status === 'accepted' && statusStats[status] > 0 && (
+                    <div className="absolute bottom-3 right-3">
+                      <div className="flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3 text-green-500" />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {status === 'declined' && statusStats[status] > 0 && (
+                    <div className="absolute bottom-3 right-3">
+                      <div className="flex items-center gap-1">
+                        <XCircle className="w-3 h-3 text-red-500" />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {status === 'expired' && statusStats[status] > 0 && (
+                    <div className="absolute bottom-3 right-3">
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-gray-500" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Small progress/trend indicator for pending */}
+                {status === 'pending' && (
+                  <div className="absolute top-3 right-3">
+                    <span className="text-[10px] font-medium text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded-full">
+                      {statusStats[status] > 0 ? 'Action needed' : 'All clear'}
+                    </span>
+                  </div>
+                )}
               </div>
-            )
-          )}
-        </div>
+            );
+          }
+        )}
+      </div>
       </div>
 
       {/* Filters Bar */}
