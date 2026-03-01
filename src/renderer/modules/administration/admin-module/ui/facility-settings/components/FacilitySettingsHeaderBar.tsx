@@ -24,7 +24,7 @@ const FacilitySettingsHeaderBar: React.FC<FacilitySettingsHeaderBarProps> = ({
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Building2 className={isDark ? 'text-cyan-400' : 'text-blue-600'} />
-          Facility Settings
+          Facility Identity
         </h1>
         <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           {activeFacilityName ? (
@@ -86,7 +86,7 @@ const FacilitySettingsHeaderBar: React.FC<FacilitySettingsHeaderBarProps> = ({
             }`}
           >
             <Edit3 className="w-4 h-4" />
-            Edit Settings
+            Edit Identity
           </button>
         )}
       </div>
