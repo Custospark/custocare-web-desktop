@@ -23,6 +23,7 @@ import {
   Building2,
   ChevronDown,
   Calendar,
+  CheckCircle,
 } from 'lucide-react';
 import { useUpdateFacilityStaffRole } from '../../api/team-management/queries/facilityStaffRoleQueries';
 import { useGetDepartmentsByFacility } from '../../api/department-managment/useDepartmentQueries';
@@ -34,6 +35,8 @@ import type {
   UpdateFacilityStaffRoleRequest,
 } from '../../api/team-management/types/facilityStaffRoleTypes';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
+import { cn } from '../../../../../shared/utils/classNameUtils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface StaffInfoForDrawer {
   staff_id: number;
@@ -43,7 +46,6 @@ interface StaffInfoForDrawer {
   current_role_code: string;
   current_assignment_status: string;
 }
-
 
 interface StaffPermissionDrawerProps {
   theme: 'light' | 'dark';
@@ -186,16 +188,15 @@ export const StaffPermissionDrawer: React.FC<StaffPermissionDrawerProps> = ({
     }
   }, [open, staffKey, getInitialFormData, staffInfo]);
 
-const hasAtLeastOneField =
-  formData.assignment_status !== '' ||
-  formData.role_code !== '' ||
-  formData.department_ids.length > 0 ||
-  formData.module_code.length > 0 ||
-  formData.shift_type !== null ||
-  formData.employment_status !== '' ||
-  formData.employment_type !== '' ||
-  (formData.effective_from !== '' && formData.effective_from !== getCurrentDate());
-
+  const hasAtLeastOneField =
+    formData.assignment_status !== '' ||
+    formData.role_code !== '' ||
+    formData.department_ids.length > 0 ||
+    formData.module_code.length > 0 ||
+    formData.shift_type !== null ||
+    formData.employment_status !== '' ||
+    formData.employment_type !== '' ||
+    (formData.effective_from !== '' && formData.effective_from !== getCurrentDate());
 
   // Auto-focus on first field when drawer opens
   useEffect(() => {
@@ -291,62 +292,60 @@ const hasAtLeastOneField =
       console.error('At least one field must be filled');
       return;
     }
-const baseModuleCodes = formData.module_code ?? [];
 
-const moduleCodesWithAccount =
-  baseModuleCodes.length > 0
-    ? Array.from(new Set([...baseModuleCodes, 'account']))
-    : [];
+    const baseModuleCodes = formData.module_code ?? [];
 
-const updateData: UpdateFacilityStaffRoleRequest = {
-  facility_id: facilityId,
-  staff_id: staffInfo.staff_id,
+    const moduleCodesWithAccount =
+      baseModuleCodes.length > 0
+        ? Array.from(new Set([...baseModuleCodes, 'account']))
+        : [];
 
-  ...(formData.assignment_status
-    ? { assignment_status: formData.assignment_status as AssignmentStatus }
-    : {}),
+    const updateData: UpdateFacilityStaffRoleRequest = {
+      facility_id: facilityId,
+      staff_id: staffInfo.staff_id,
 
-  ...(formData.role_code
-    ? { role_code: formData.role_code }
-    : {}),
+      ...(formData.assignment_status
+        ? { assignment_status: formData.assignment_status as AssignmentStatus }
+        : {}),
 
-  ...(formData.department_ids.length > 0
-    ? { department_ids: formData.department_ids }
-    : {}),
+      ...(formData.role_code
+        ? { role_code: formData.role_code }
+        : {}),
 
-  ...(moduleCodesWithAccount.length > 0
-    ? { module_code: moduleCodesWithAccount }
-    : {}),
+      ...(formData.department_ids.length > 0
+        ? { department_ids: formData.department_ids }
+        : {}),
 
-  ...(formData.shift_schedule !== null
-    ? { shift_schedule: formData.shift_schedule }
-    : {}),
+      ...(moduleCodesWithAccount.length > 0
+        ? { module_code: moduleCodesWithAccount }
+        : {}),
 
-  ...(formData.shift_type !== null
-    ? { shift_type: formData.shift_type }
-    : {}),
+      ...(formData.shift_schedule !== null
+        ? { shift_schedule: formData.shift_schedule }
+        : {}),
 
-  ...(formData.employment_status
-    ? {
-        employment_status:
-          formData.employment_status as UpdateFacilityStaffRoleRequest['employment_status'],
-      }
-    : {}),
+      ...(formData.shift_type !== null
+        ? { shift_type: formData.shift_type }
+        : {}),
 
-  ...(formData.employment_type
-    ? {
-        employment_type:
-          formData.employment_type as UpdateFacilityStaffRoleRequest['employment_type'],
-      }
-    : {}),
+      ...(formData.employment_status
+        ? {
+            employment_status:
+              formData.employment_status as UpdateFacilityStaffRoleRequest['employment_status'],
+          }
+        : {}),
 
-  ...(formData.effective_from
-    ? { effective_from: formData.effective_from }
-    : {}),
-};
+      ...(formData.employment_type
+        ? {
+            employment_type:
+              formData.employment_type as UpdateFacilityStaffRoleRequest['employment_type'],
+          }
+        : {}),
 
-
-
+      ...(formData.effective_from
+        ? { effective_from: formData.effective_from }
+        : {}),
+    };
 
     updateMutation.mutate({
       id: staffInfo.staff_id,
@@ -425,16 +424,6 @@ const updateData: UpdateFacilityStaffRoleRequest = {
     }
   }, [onClose, updateMutation.isPending, handleSubmit, hasAtLeastOneField]);
 
-  // Styling helpers
-  const inputBase = `w-full px-3 py-2 rounded-lg border outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-transparent`;
-  const inputTheme = isDark
-    ? 'bg-gray-900 border-gray-800 text-white placeholder:text-gray-500'
-    : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400';
-  const labelTheme = isDark ? 'text-gray-300' : 'text-gray-700';
-  const hintTheme = isDark ? 'text-gray-500' : 'text-gray-600';
-  const sectionCard = isDark ? 'bg-gray-950 border-gray-800' : 'bg-white border-gray-200';
-  const subtleDivider = isDark ? 'border-gray-800' : 'border-gray-200';
-
   // Don't render if not open
   if (!open) {
     return null;
@@ -449,111 +438,228 @@ const updateData: UpdateFacilityStaffRoleRequest = {
       aria-labelledby="drawer-title"
     >
       {/* Backdrop with animation */}
-      <div
-        onClick={handleBackdropClick}
-        className={`absolute inset-0 bg-black transition-opacity duration-300 ${
-          open ? 'opacity-50' : 'opacity-0'
-        }`}
-        aria-hidden="true"
-      />
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.5 }}
+            exit={{ opacity: 0 }}
+            onClick={handleBackdropClick}
+            className="absolute inset-0 bg-black"
+            aria-hidden="true"
+          />
+        )}
+      </AnimatePresence>
 
       {/* Panel - Slide in from right */}
-      <div
+      <motion.div
         ref={drawerRef}
-        className={`relative h-full w-full sm:w-[640px] max-w-full overflow-y-auto border-l transform transition-transform duration-300 ease-out shadow-2xl ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        } ${
-          isDark ? 'bg-gray-950 border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'
-        }`}
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ type: "spring", damping: 30, stiffness: 300 }}
+        className={cn(
+          'relative h-full w-full sm:w-[640px] max-w-full overflow-y-auto',
+          'border-l-2 shadow-2xl',
+          isDark 
+            ? 'bg-gradient-to-br from-gray-900 to-gray-950 border-blue-500/30' 
+            : 'bg-gradient-to-br from-white to-blue-50/50 border-blue-200'
+        )}
       >
+        {/* Background decoration */}
+        <div className={cn(
+          'absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-30 pointer-events-none',
+          isDark ? 'bg-blue-500/10' : 'bg-blue-500/5'
+        )} />
+
         {/* Header - Sticky */}
-        <div className={`sticky top-0 z-20 p-4 sm:p-5 border-b ${subtleDivider} backdrop-blur-md ${
-          isDark ? 'bg-gray-950/95' : 'bg-white/95'
-        }`}>
+        <div className={cn(
+          'sticky top-0 z-20 p-5 border-b-2 backdrop-blur-md',
+          isDark ? 'border-gray-800 bg-gray-900/95' : 'border-gray-200 bg-white/95'
+        )}>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <h3 id="drawer-title" className="text-base sm:text-lg font-semibold leading-6 flex items-center gap-2">
-                <Shield className="w-5 h-5 flex-shrink-0" />
-                Edit Staff Permissions
-              </h3>
-              {/* <p className={`text-xs sm:text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Update role, P, and employment details
-              </p> */}
-              <p className={`text-xs mt-1 ${hintTheme}`}>
-                Tip: Press <kbd className={`px-1 rounded ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>Ctrl/⌘ + Enter</kbd> to save
+              <div className="flex items-center gap-3 mb-1">
+                <div className={cn(
+                  'p-2 rounded-xl',
+                  isDark ? 'bg-blue-500/20' : 'bg-blue-100'
+                )}>
+                  <Shield className={cn(
+                    'w-5 h-5',
+                    isDark ? 'text-blue-400' : 'text-blue-600'
+                  )} />
+                </div>
+                <h3 id="drawer-title" className="text-lg font-bold">
+                  Edit Staff Permissions
+                </h3>
+              </div>
+              <p className={cn(
+                'text-xs flex items-center gap-2',
+                isDark ? 'text-gray-400' : 'text-gray-600'
+              )}>
+                <span>Update role, permissions, and employment details</span>
+                <span className="w-1 h-1 rounded-full bg-gray-400" />
+                <kbd className={cn(
+                  'px-1.5 py-0.5 rounded text-[10px] font-mono border',
+                  isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'
+                )}>
+                  ⌘/Ctrl + Enter
+                </kbd>
               </p>
             </div>
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
               onClick={onClose}
               disabled={updateMutation.isPending}
-              className={`p-2 rounded-lg border transition-colors flex-shrink-0 ${
-                isDark ? 'border-gray-800 hover:bg-gray-900' : 'border-gray-200 hover:bg-gray-100'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={cn(
+                'p-2 rounded-lg border-2 transition-colors flex-shrink-0',
+                isDark 
+                  ? 'border-gray-700 hover:bg-gray-800 text-gray-400' 
+                  : 'border-gray-200 hover:bg-gray-100 text-gray-600',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                !updateMutation.isPending && 'cursor-pointer'
+              )}
               aria-label="Close drawer"
               type="button"
             >
               <X className="w-5 h-5" />
-            </button>
+            </motion.button>
           </div>
         </div>
 
         {/* Body */}
         {isFormLoading ? (
-          <div className="p-5">
+          <div className="p-6">
             <LoadingSkeleton variant='form' theme={theme} message='Loading permissions...' />
           </div>
         ) : (
-          <div className="p-4 sm:p-5 space-y-4 sm:space-y-5">
-            {/* Staff Info Display */}
-            <div className={`rounded-xl border p-4 ${
-              isDark ? 'bg-blue-900/10 border-blue-800' : 'bg-blue-50 border-blue-200'
-            }`}>
-              <div className="flex items-center gap-3 mb-3">
-                <UserCheck className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                <h4 className="font-medium text-sm sm:text-base">Current Staff Information</h4>
+          <div className="relative p-5 space-y-5">
+            {/* Staff Info Display - Enhanced Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className={cn(
+                'relative overflow-hidden rounded-xl border-2 p-5',
+                isDark 
+                  ? 'bg-gradient-to-br from-blue-900/20 to-gray-900 border-blue-500/30' 
+                  : 'bg-gradient-to-br from-blue-50/80 to-white border-blue-200'
+              )}
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-20 bg-blue-500" />
+              
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className={cn(
+                    'p-2 rounded-lg',
+                    isDark ? 'bg-blue-500/20' : 'bg-blue-100'
+                  )}>
+                    <UserCheck className={cn(
+                      'w-4 h-4',
+                      isDark ? 'text-blue-400' : 'text-blue-600'
+                    )} />
+                  </div>
+                  <h4 className="font-semibold text-sm">Current Staff Information</h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className={cn(
+                    'p-3 rounded-lg border',
+                    isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/50 border-gray-200'
+                  )}>
+                    <div className={cn(
+                      'text-xs mb-1',
+                      isDark ? 'text-gray-500' : 'text-gray-500'
+                    )}>
+                      Name
+                    </div>
+                    <div className="font-semibold truncate">
+                      {staffInfo.staff_name || 'Not specified'}
+                    </div>
+                  </div>
+
+                  <div className={cn(
+                    'p-3 rounded-lg border',
+                    isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/50 border-gray-200'
+                  )}>
+                    <div className={cn(
+                      'text-xs mb-1',
+                      isDark ? 'text-gray-500' : 'text-gray-500'
+                    )}>
+                      Staff Number
+                    </div>
+                    <div className="font-mono text-sm truncate">
+                      {staffInfo.staff_uuid || 'Not specified'}
+                    </div>
+                  </div>
+
+                  <div className={cn(
+                    'p-3 rounded-lg border',
+                    isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/50 border-gray-200'
+                  )}>
+                    <div className={cn(
+                      'text-xs mb-1',
+                      isDark ? 'text-gray-500' : 'text-gray-500'
+                    )}>
+                      Current Role
+                    </div>
+                    <div className="font-medium capitalize truncate">
+                      {staffInfo.current_role_code?.replace(/_/g, ' ') || 'Not specified'}
+                    </div>
+                  </div>
+
+                  <div className={cn(
+                    'p-3 rounded-lg border',
+                    isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/50 border-gray-200'
+                  )}>
+                    <div className={cn(
+                      'text-xs mb-1',
+                      isDark ? 'text-gray-500' : 'text-gray-500'
+                    )}>
+                      Current Status
+                    </div>
+                    <div className="font-medium capitalize">
+                      {staffInfo.current_assignment_status?.replace(/_/g, ' ') || 'Not specified'}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm ${
-                isDark ? 'text-gray-300' : 'text-gray-700'
-              }`}>
-                <div>
-                  <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Name</div>
-                  <div className="font-medium truncate">
-                    {staffInfo.staff_name || 'Not specified'}
-                  </div>
-                </div>
-                <div>
-                  <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Employee Number</div>
-                  <div className="font-medium font-mono text-xs truncate">
-                    {staffInfo.employee_number || 'Not specified'}
-                  </div>
-                </div>
-                <div>
-                  <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Current Role</div>
-                  <div className="font-medium capitalize truncate">
-                    {staffInfo.current_role_code?.replace(/_/g, ' ') || 'Not specified'}
-                  </div>
-                </div>
-                <div>
-                  <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Current Status</div>
-                  <div className="font-medium capitalize">
-                    {staffInfo.current_assignment_status?.replace(/_/g, ' ') || 'Not specified'}
-                  </div>
-                </div>
-              </div>
-            </div>
+            </motion.div>
 
             {/* Effective Date */}
-            <div className={`rounded-xl border ${sectionCard}`}>
-              <div className={`px-4 py-3 border-b ${subtleDivider}`}>
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Effective Date
-                </h4>
-                <p className={`text-xs mt-1 ${hintTheme}`}>When should these changes take effect?</p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className={cn(
+                'relative overflow-hidden rounded-xl border-2 p-5',
+                isDark 
+                  ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700' 
+                  : 'bg-gradient-to-br from-white to-gray-50/50 border-gray-200'
+              )}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <div className={cn(
+                  'p-2 rounded-lg',
+                  isDark ? 'bg-indigo-500/20' : 'bg-indigo-100'
+                )}>
+                  <Calendar className={cn(
+                    'w-4 h-4',
+                    isDark ? 'text-indigo-400' : 'text-indigo-600'
+                  )} />
+                </div>
+                <h4 className="font-semibold text-sm">Effective Date</h4>
+                <span className={cn(
+                  'text-xs px-2 py-0.5 rounded-full ml-auto',
+                  isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+                )}>
+                  Optional
+                </span>
               </div>
 
-              <div className="p-4">
+              <div className="relative">
                 <input
                   type="date"
                   value={formData.effective_from}
@@ -565,279 +671,407 @@ const updateData: UpdateFacilityStaffRoleRequest = {
                       return newErrors;
                     });
                   }}
-                  className={`${inputBase} ${inputTheme} ${
-                    formErrors.effective_from ? 'border-red-500' : ''
-                  }`}
+                  className={cn(
+                    'w-full px-4 py-2.5 rounded-lg border-2',
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                    'transition-all',
+                    formErrors.effective_from ? 'border-red-500' : '',
+                    isDark
+                      ? 'bg-gray-800 border-gray-700 text-white'
+                      : 'bg-white border-gray-300 text-gray-900',
+                    updateMutation.isPending && 'opacity-50 cursor-not-allowed'
+                  )}
                   disabled={updateMutation.isPending}
                 />
                 {formErrors.effective_from && (
-                  <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+                  <motion.p
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-2 text-sm text-red-500 flex items-center gap-1"
+                  >
                     <AlertCircle className="w-3 h-3" />
                     {formErrors.effective_from}
-                  </p>
+                  </motion.p>
                 )}
-                <p className={`mt-2 text-xs ${hintTheme}`}>
+                <p className={cn(
+                  'mt-2 text-xs',
+                  isDark ? 'text-gray-500' : 'text-gray-500'
+                )}>
                   If not provided, defaults to today's date
                 </p>
               </div>
-            </div>
+            </motion.div>
 
             {/* Section: Assignment Status & Role */}
-            <div className={`rounded-xl border ${sectionCard}`}>
-              <div className={`px-4 py-3 border-b ${subtleDivider}`}>
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <Shield className="w-4 h-4" />
-                  Assignment Status & Role
-                </h4>
-                <p className={`text-xs mt-1 ${hintTheme}`}>Core assignment configuration</p>
-              </div>
-
-              <div className="p-4 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Assignment Status */}
-                  <div>
-                    <label htmlFor="assignment-status" className={`block text-sm font-medium mb-1 ${labelTheme}`}>
-                      Assignment Status
-                    </label>
-                    <div className="relative">
-                      <select
-                        id="assignment-status"
-                        ref={firstFieldRef}
-                        value={formData.assignment_status}
-                        onChange={(e) => {
-                          set({ assignment_status: e.target.value as AssignmentStatus | '' });
-                          setFormErrors(prev => {
-                            const newErrors = { ...prev };
-                            delete newErrors.assignment_status;
-                            return newErrors;
-                          });
-                        }}
-                        className={`${inputBase} ${inputTheme} ${
-                          formErrors.assignment_status ? 'border-red-500' : ''
-                        } appearance-none pr-10`}
-                        disabled={updateMutation.isPending}
-                      >
-                        <option value="">Select status...</option>
-                        <option value="active">Active</option>
-                        <option value="on_leave">On Leave</option>
-                        <option value="suspended">Suspended</option>
-                        <option value="terminated">Terminated</option>
-                      </select>
-                      <ChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none ${
-                        isDark ? 'text-gray-500' : 'text-gray-400'
-                      }`} />
-                    </div>
-                    {formErrors.assignment_status && (
-                      <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {formErrors.assignment_status}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Facility Role */}
-                  <div>
-                    <label htmlFor="facility-role" className={`block text-sm font-medium mb-1 ${labelTheme}`}>
-                      Facility Role
-                    </label>
-                    <div className="relative">
-                      <select
-                        id="facility-role"
-                        value={formData.role_code}
-                        onChange={(e) => {
-                          set({ role_code: e.target.value });
-                          setFormErrors(prev => {
-                            const newErrors = { ...prev };
-                            delete newErrors.role_code;
-                            return newErrors;
-                          });
-                        }}
-                        className={`${inputBase} ${inputTheme} ${
-                          formErrors.role_code ? 'border-red-500' : ''
-                        } appearance-none pr-10`}
-                        disabled={updateMutation.isPending}
-                      >
-                        <option value="">Select a role...</option>
-                        {roles.map((role) => (
-                          <option key={role.id} value={role.code}>
-                            {role.name} {role.is_system_role ? '(System)' : '(Custom)'}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none ${
-                        isDark ? 'text-gray-500' : 'text-gray-400'
-                      }`} />
-                    </div>
-                    {formErrors.role_code && (
-                      <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {formErrors.role_code}
-                      </p>
-                    )}
-                  </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className={cn(
+                'relative overflow-hidden rounded-xl border-2 p-5',
+                isDark 
+                  ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700' 
+                  : 'bg-gradient-to-br from-white to-gray-50/50 border-gray-200'
+              )}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <div className={cn(
+                  'p-2 rounded-lg',
+                  isDark ? 'bg-blue-500/20' : 'bg-blue-100'
+                )}>
+                  <Shield className={cn(
+                    'w-4 h-4',
+                    isDark ? 'text-blue-400' : 'text-blue-600'
+                  )} />
                 </div>
-              </div>
-            </div>
-
-            {/* Section: Employment Details */}
-            <div className={`rounded-xl border ${sectionCard}`}>
-              <div className={`px-4 py-3 border-b ${subtleDivider}`}>
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <Briefcase className="w-4 h-4" />
-                  Employment Details
-                </h4>
-                <p className={`text-xs mt-1 ${hintTheme}`}>Employment status and type</p>
+                <h4 className="font-semibold text-sm">Assignment Status & Role</h4>
               </div>
 
-              <div className="p-4 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Employment Status */}
-                  <div>
-                    <label htmlFor="employment-status" className={`block text-sm font-medium mb-1 ${labelTheme}`}>
-                      Employment Status
-                    </label>
-                    <div className="relative">
-                      <select
-                        id="employment-status"
-                        value={formData.employment_status}
-                        onChange={(e) => {
-                          set({ employment_status: e.target.value });
-                          setFormErrors(prev => {
-                            const newErrors = { ...prev };
-                            delete newErrors.employment_status;
-                            return newErrors;
-                          });
-                        }}
-                        className={`${inputBase} ${inputTheme} ${
-                          formErrors.employment_status ? 'border-red-500' : ''
-                        } appearance-none pr-10`}
-                        disabled={updateMutation.isPending}
-                      >
-                        <option value="">Select status...</option>
-                        <option value="employed">Employed</option>
-                        <option value="suspended">Suspended</option>
-                        <option value="unemployed">Unemployed</option>
-                        <option value="terminated">Terminated</option>
-                        <option value="retired">Retired</option>
-                        <option value="credentialing_pending">Credentialing Pending</option>
-                      </select>
-                      <ChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none ${
-                        isDark ? 'text-gray-500' : 'text-gray-400'
-                      }`} />
-                    </div>
-                    {formErrors.employment_status && (
-                      <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {formErrors.employment_status}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Employment Type */}
-                  <div>
-                    <label htmlFor="employment-type" className={`block text-sm font-medium mb-1 ${labelTheme}`}>
-                      Employment Type
-                    </label>
-                    <div className="relative">
-                      <select
-                        id="employment-type"
-                        value={formData.employment_type}
-                        onChange={(e) => {
-                          set({ employment_type: e.target.value });
-                          setFormErrors(prev => {
-                            const newErrors = { ...prev };
-                            delete newErrors.employment_type;
-                            return newErrors;
-                          });
-                        }}
-                        className={`${inputBase} ${inputTheme} ${
-                          formErrors.employment_type ? 'border-red-500' : ''
-                        } appearance-none pr-10`}
-                        disabled={updateMutation.isPending}
-                      >
-                        <option value="">Select type...</option>
-                        <option value="full_time">Full Time</option>
-                        <option value="part_time">Part Time</option>
-                        <option value="contract">Contract</option>
-                        <option value="locum_tenens">Locum Tenens</option>
-                        <option value="volunteer">Volunteer</option>
-                      </select>
-                      <ChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none ${
-                        isDark ? 'text-gray-500' : 'text-gray-400'
-                      }`} />
-                    </div>
-                    {formErrors.employment_type && (
-                      <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {formErrors.employment_type}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Section: Shift Details */}
-            <div className={`rounded-xl border ${sectionCard}`}>
-              <div className={`px-4 py-3 border-b ${subtleDivider}`}>
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  Shift Details
-                </h4>
-                <p className={`text-xs mt-1 ${hintTheme}`}>Shift type and schedule</p>
-              </div>
-
-              <div className="p-4 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Assignment Status */}
                 <div>
-                  <label htmlFor="shift-type" className={`block text-sm font-medium mb-1 ${labelTheme}`}>
-                    Shift Type
+                  <label className={cn(
+                    'block text-sm font-medium mb-2',
+                    isDark ? 'text-gray-300' : 'text-gray-700'
+                  )}>
+                    Assignment Status
                   </label>
                   <div className="relative">
                     <select
-                      id="shift-type"
-                      value={formData.shift_type || ''}
-                      onChange={(e) => set({ shift_type: (e.target.value as ShiftType) || null })}
-                      className={`${inputBase} ${inputTheme} appearance-none pr-10`}
+                      ref={firstFieldRef}
+                      value={formData.assignment_status}
+                      onChange={(e) => {
+                        set({ assignment_status: e.target.value as AssignmentStatus | '' });
+                        setFormErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.assignment_status;
+                          return newErrors;
+                        });
+                      }}
+                      className={cn(
+                        'w-full px-4 py-2.5 rounded-lg border-2 appearance-none',
+                        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                        'transition-all cursor-pointer',
+                        formErrors.assignment_status ? 'border-red-500' : '',
+                        isDark
+                          ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
+                          : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50',
+                        updateMutation.isPending && 'opacity-50 cursor-not-allowed'
+                      )}
                       disabled={updateMutation.isPending}
                     >
-                      <option value="">No specific shift</option>
-                      <option value="day">Day Shift</option>
-                      <option value="night">Night Shift</option>
-                      <option value="rotating">Rotating Shift</option>
-                      <option value="on_call">On Call</option>
-                      <option value="flexible">Flexible</option>
+                      <option value="">Select status...</option>
+                      <option value="active">Active</option>
+                      <option value="on_leave">On Leave</option>
+                      <option value="suspended">Suspended</option>
+                      <option value="terminated">Terminated</option>
                     </select>
-                    <ChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none ${
+                    <ChevronDown className={cn(
+                      'absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none',
                       isDark ? 'text-gray-500' : 'text-gray-400'
-                    }`} />
+                    )} />
                   </div>
-                  <p className={`mt-1 text-xs ${hintTheme}`}>
-                    Select the primary shift type for this staff member.
-                  </p>
+                  {formErrors.assignment_status && (
+                    <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {formErrors.assignment_status}
+                    </p>
+                  )}
+                </div>
+
+                {/* Facility Role */}
+                <div>
+                  <label className={cn(
+                    'block text-sm font-medium mb-2',
+                    isDark ? 'text-gray-300' : 'text-gray-700'
+                  )}>
+                    Facility Role
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={formData.role_code}
+                      onChange={(e) => {
+                        set({ role_code: e.target.value });
+                        setFormErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.role_code;
+                          return newErrors;
+                        });
+                      }}
+                      className={cn(
+                        'w-full px-4 py-2.5 rounded-lg border-2 appearance-none',
+                        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                        'transition-all cursor-pointer',
+                        formErrors.role_code ? 'border-red-500' : '',
+                        isDark
+                          ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
+                          : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50',
+                        updateMutation.isPending && 'opacity-50 cursor-not-allowed'
+                      )}
+                      disabled={updateMutation.isPending}
+                    >
+                      <option value="">Select a role...</option>
+                      {roles.map((role) => (
+                        <option key={role.id} value={role.code}>
+                          {role.name} {role.is_system_role ? '(System)' : '(Custom)'}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className={cn(
+                      'absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none',
+                      isDark ? 'text-gray-500' : 'text-gray-400'
+                    )} />
+                  </div>
+                  {formErrors.role_code && (
+                    <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {formErrors.role_code}
+                    </p>
+                  )}
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            {/* Section: Departments */}
-            <div className={`rounded-xl border ${sectionCard}`}>
-              <div className={`px-4 py-3 border-b ${subtleDivider}`}>
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <Building2 className="w-4 h-4" />
-                  Department Access
-                </h4>
-                <p className={`text-xs mt-1 ${hintTheme}`}>
-                  Select departments this staff member can access
-                </p>
+            {/* Section: Employment Details */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className={cn(
+                'relative overflow-hidden rounded-xl border-2 p-5',
+                isDark 
+                  ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700' 
+                  : 'bg-gradient-to-br from-white to-gray-50/50 border-gray-200'
+              )}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <div className={cn(
+                  'p-2 rounded-lg',
+                  isDark ? 'bg-green-500/20' : 'bg-green-100'
+                )}>
+                  <Briefcase className={cn(
+                    'w-4 h-4',
+                    isDark ? 'text-green-400' : 'text-green-600'
+                  )} />
+                </div>
+                <h4 className="font-semibold text-sm">Employment Details</h4>
               </div>
 
-              <div className="p-4 space-y-2 max-h-60 overflow-y-auto">
-                {departments.length === 0 ? (
-                  <div
-                    className={`p-4 rounded-lg text-center text-sm ${
-                      isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-50 text-gray-600'
-                    }`}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Employment Status */}
+                <div>
+                  <label className={cn(
+                    'block text-sm font-medium mb-2',
+                    isDark ? 'text-gray-300' : 'text-gray-700'
+                  )}>
+                    Employment Status
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={formData.employment_status}
+                      onChange={(e) => {
+                        set({ employment_status: e.target.value });
+                        setFormErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.employment_status;
+                          return newErrors;
+                        });
+                      }}
+                      className={cn(
+                        'w-full px-4 py-2.5 rounded-lg border-2 appearance-none',
+                        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                        'transition-all cursor-pointer',
+                        formErrors.employment_status ? 'border-red-500' : '',
+                        isDark
+                          ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
+                          : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50',
+                        updateMutation.isPending && 'opacity-50 cursor-not-allowed'
+                      )}
+                      disabled={updateMutation.isPending}
+                    >
+                      <option value="">Select status...</option>
+                      <option value="employed">Employed</option>
+                      <option value="suspended">Suspended</option>
+                      <option value="unemployed">Unemployed</option>
+                      <option value="terminated">Terminated</option>
+                      <option value="retired">Retired</option>
+                      <option value="credentialing_pending">Credentialing Pending</option>
+                    </select>
+                    <ChevronDown className={cn(
+                      'absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none',
+                      isDark ? 'text-gray-500' : 'text-gray-400'
+                    )} />
+                  </div>
+                  {formErrors.employment_status && (
+                    <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {formErrors.employment_status}
+                    </p>
+                  )}
+                </div>
+
+                {/* Employment Type */}
+                <div>
+                  <label className={cn(
+                    'block text-sm font-medium mb-2',
+                    isDark ? 'text-gray-300' : 'text-gray-700'
+                  )}>
+                    Employment Type
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={formData.employment_type}
+                      onChange={(e) => {
+                        set({ employment_type: e.target.value });
+                        setFormErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.employment_type;
+                          return newErrors;
+                        });
+                      }}
+                      className={cn(
+                        'w-full px-4 py-2.5 rounded-lg border-2 appearance-none',
+                        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                        'transition-all cursor-pointer',
+                        formErrors.employment_type ? 'border-red-500' : '',
+                        isDark
+                          ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
+                          : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50',
+                        updateMutation.isPending && 'opacity-50 cursor-not-allowed'
+                      )}
+                      disabled={updateMutation.isPending}
+                    >
+                      <option value="">Select type...</option>
+                      <option value="full_time">Full Time</option>
+                      <option value="part_time">Part Time</option>
+                      <option value="contract">Contract</option>
+                      <option value="locum_tenens">Locum Tenens</option>
+                      <option value="volunteer">Volunteer</option>
+                    </select>
+                    <ChevronDown className={cn(
+                      'absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none',
+                      isDark ? 'text-gray-500' : 'text-gray-400'
+                    )} />
+                  </div>
+                  {formErrors.employment_type && (
+                    <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {formErrors.employment_type}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Section: Shift Details */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className={cn(
+                'relative overflow-hidden rounded-xl border-2 p-5',
+                isDark 
+                  ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700' 
+                  : 'bg-gradient-to-br from-white to-gray-50/50 border-gray-200'
+              )}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <div className={cn(
+                  'p-2 rounded-lg',
+                  isDark ? 'bg-amber-500/20' : 'bg-amber-100'
+                )}>
+                  <Clock className={cn(
+                    'w-4 h-4',
+                    isDark ? 'text-amber-400' : 'text-amber-600'
+                  )} />
+                </div>
+                <h4 className="font-semibold text-sm">Shift Details</h4>
+              </div>
+
+              <div>
+                <label className={cn(
+                  'block text-sm font-medium mb-2',
+                  isDark ? 'text-gray-300' : 'text-gray-700'
+                )}>
+                  Shift Type
+                </label>
+                <div className="relative">
+                  <select
+                    value={formData.shift_type || ''}
+                    onChange={(e) => set({ shift_type: (e.target.value as ShiftType) || null })}
+                    className={cn(
+                      'w-full px-4 py-2.5 rounded-lg border-2 appearance-none',
+                      'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                      'transition-all cursor-pointer',
+                      isDark
+                        ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
+                        : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50',
+                      updateMutation.isPending && 'opacity-50 cursor-not-allowed'
+                    )}
+                    disabled={updateMutation.isPending}
                   >
-                    No departments available
+                    <option value="">No specific shift</option>
+                    <option value="day">Day Shift</option>
+                    <option value="night">Night Shift</option>
+                    <option value="rotating">Rotating Shift</option>
+                    <option value="on_call">On Call</option>
+                    <option value="flexible">Flexible</option>
+                  </select>
+                  <ChevronDown className={cn(
+                    'absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none',
+                    isDark ? 'text-gray-500' : 'text-gray-400'
+                  )} />
+                </div>
+                <p className={cn(
+                  'mt-2 text-xs',
+                  isDark ? 'text-gray-500' : 'text-gray-500'
+                )}>
+                  Select the primary shift type for this staff member.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Section: Departments */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className={cn(
+                'relative overflow-hidden rounded-xl border-2 p-5',
+                isDark 
+                  ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700' 
+                  : 'bg-gradient-to-br from-white to-gray-50/50 border-gray-200'
+              )}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <div className={cn(
+                  'p-2 rounded-lg',
+                  isDark ? 'bg-blue-500/20' : 'bg-blue-100'
+                )}>
+                  <Building2 className={cn(
+                    'w-4 h-4',
+                    isDark ? 'text-blue-400' : 'text-blue-600'
+                  )} />
+                </div>
+                <h4 className="font-semibold text-sm">Department Access</h4>
+                {formData.department_ids.length > 0 && (
+                  <span className={cn(
+                    'text-xs px-2 py-0.5 rounded-full ml-auto',
+                    isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'
+                  )}>
+                    {formData.department_ids.length} selected
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                {departments.length === 0 ? (
+                  <div className={cn(
+                    'p-6 rounded-lg text-center border-2',
+                    isDark ? 'bg-gray-800/50 border-gray-700 text-gray-400' : 'bg-gray-50 border-gray-200 text-gray-600'
+                  )}>
+                    <Building2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No departments available</p>
                   </div>
                 ) : (
                   departments.map((dept) => {
@@ -845,24 +1079,27 @@ const updateData: UpdateFacilityStaffRoleRequest = {
                     const isChecked = formData.department_ids.includes(deptId);
 
                     return (
-                      <label
+                      <motion.label
                         key={deptId}
-                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                        whileHover={{ scale: 1.01, x: 4 }}
+                        className={cn(
+                          'flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all',
                           isChecked
                             ? isDark
                               ? 'bg-blue-900/20 border-blue-700'
                               : 'bg-blue-50 border-blue-300'
                             : isDark
-                            ? 'bg-gray-800 border-gray-700 hover:border-gray-600'
-                            : 'bg-gray-50 border-gray-300 hover:border-gray-400'
-                        } ${updateMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              ? 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                              : 'bg-gray-50 border-gray-300 hover:border-gray-400',
+                          updateMutation.isPending && 'opacity-50 cursor-not-allowed'
+                        )}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => handleToggleDepartment(deptId)}
                           disabled={updateMutation.isPending}
-                          className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0"
+                          className="mt-0.5 w-4 h-4 rounded border-2 border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0"
                           aria-label={`Toggle ${dept.department_name}`}
                         />
 
@@ -872,152 +1109,217 @@ const updateData: UpdateFacilityStaffRoleRequest = {
 
                             {dept.department_code && (
                               <code
-                                className={`px-2 py-0.5 rounded text-xs ${
+                                className={cn(
+                                  'px-2 py-0.5 rounded text-xs border',
                                   isDark
-                                    ? 'bg-gray-900 text-gray-400'
-                                    : 'bg-white text-gray-600'
-                                }`}
+                                    ? 'bg-gray-900 text-gray-400 border-gray-700'
+                                    : 'bg-white text-gray-600 border-gray-200'
+                                )}
                               >
                                 {dept.department_code}
                               </code>
                             )}
                           </div>
                         </div>
-                      </label>
+
+                        {isChecked && (
+                          <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        )}
+                      </motion.label>
                     );
                   })
                 )}
               </div>
 
-              <div className={`px-4 pb-4 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                {formData.department_ids.length > 0
-                  ? `${formData.department_ids.length} department${
-                      formData.department_ids.length !== 1 ? 's' : ''
-                    } selected`
-                  : 'No departments selected'}
-              </div>
-
               {formErrors.department_ids && (
-                <div className="px-4 pb-4">
-                  <p className="text-sm text-red-500 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    {formErrors.department_ids}
-                  </p>
-                </div>
+                <p className="mt-3 text-sm text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {formErrors.department_ids}
+                </p>
               )}
-            </div>
+            </motion.div>
 
             {/* Section: Module Access */}
-            <div className={`rounded-xl border ${sectionCard}`}>
-              <div className={`px-4 py-3 border-b ${subtleDivider}`}>
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <Package className="w-4 h-4" />
-                  Grant Access
-                </h4>
-                <p className={`text-xs mt-1 ${hintTheme}`}>
-                  Select the access level this staff member
-                </p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className={cn(
+                'relative overflow-hidden rounded-xl border-2 p-5',
+                isDark 
+                  ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700' 
+                  : 'bg-gradient-to-br from-white to-gray-50/50 border-gray-200'
+              )}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <div className={cn(
+                  'p-2 rounded-lg',
+                  isDark ? 'bg-indigo-500/20' : 'bg-indigo-100'
+                )}>
+                  <Package className={cn(
+                    'w-4 h-4',
+                    isDark ? 'text-indigo-400' : 'text-indigo-600'
+                  )} />
+                </div>
+                <h4 className="font-semibold text-sm">Permissions</h4>
+                {formData.module_code.length > 0 && (
+                  <span className={cn(
+                    'text-xs px-2 py-0.5 rounded-full ml-auto',
+                    isDark ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-100 text-indigo-700'
+                  )}>
+                    {formData.module_code.length} selected
+                  </span>
+                )}
               </div>
 
-              <div className="p-4 space-y-2 max-h-80 overflow-y-auto">
+              <p className={cn(
+                'text-xs mb-4',
+                isDark ? 'text-gray-500' : 'text-gray-500'
+              )}>
+                Select the access level this staff member should have
+              </p>
+
+              <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
                 {selectableModules.length === 0 ? (
-                  <div className={`p-4 rounded-lg text-center text-sm ${
-                    isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-50 text-gray-600'
-                  }`}>
-                    No modules available
+                  <div className={cn(
+                    'p-6 rounded-lg text-center border-2',
+                    isDark ? 'bg-gray-800/50 border-gray-700 text-gray-400' : 'bg-gray-50 border-gray-200 text-gray-600'
+                  )}>
+                    <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No modules available</p>
                   </div>
                 ) : (
                   selectableModules.map((module) => {
                     const isChecked = formData.module_code.includes(module.code);
 
                     return (
-                      <label
+                      <motion.label
                         key={module.id}
-                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                        whileHover={{ scale: 1.01, x: 4 }}
+                        className={cn(
+                          'flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all',
                           isChecked
-                            ? (isDark ? 'bg-blue-900/20 border-blue-700' : 'bg-blue-50 border-blue-300')
-                            : (isDark ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-gray-50 border-gray-300 hover:border-gray-400')
-                        } ${updateMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            ? isDark
+                              ? 'bg-indigo-900/20 border-indigo-700'
+                              : 'bg-indigo-50 border-indigo-300'
+                            : isDark
+                              ? 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                              : 'bg-gray-50 border-gray-300 hover:border-gray-400',
+                          updateMutation.isPending && 'opacity-50 cursor-not-allowed'
+                        )}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => handleToggleModule(module.code)}
                           disabled={updateMutation.isPending}
-                          className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0"
+                          className="mt-0.5 w-4 h-4 rounded border-2 border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer flex-shrink-0"
                           aria-label={`Toggle ${module.name}`}
                         />
+
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <div className="font-medium text-sm">{module.name}</div>
-                            <code className={`px-2 py-0.5 rounded text-xs ${
-                              isDark ? 'bg-gray-900 text-gray-400' : 'bg-white text-gray-600'
-                            }`}>
+                            <code
+                              className={cn(
+                                'px-2 py-0.5 rounded text-xs border',
+                                isDark
+                                  ? 'bg-gray-900 text-gray-400 border-gray-700'
+                                  : 'bg-white text-gray-600 border-gray-200'
+                              )}
+                            >
                               {module.code}
                             </code>
                           </div>
                           {module.description && (
-                            <div className={`text-xs mt-1 ${
+                            <div className={cn(
+                              'text-xs mt-1',
                               isDark ? 'text-gray-400' : 'text-gray-600'
-                            }`}>
+                            )}>
                               {module.description}
                             </div>
                           )}
                         </div>
-                      </label>
+
+                        {isChecked && (
+                          <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        )}
+                      </motion.label>
                     );
                   })
                 )}
               </div>
 
               {formErrors.module_code && (
-                <div className="px-4 pb-4">
-                  <p className="text-sm text-red-500 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    {formErrors.module_code}
-                  </p>
-                </div>
+                <p className="mt-3 text-sm text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {formErrors.module_code}
+                </p>
               )}
-
-              {formData.module_code.length > 0 && (
-                <div className={`px-4 pb-4 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {formData.module_code.length} module{formData.module_code.length !== 1 ? 's' : ''} selected
-                </div>
-              )}
-            </div>
+            </motion.div>
           </div>
         )}
 
         {/* Footer - Sticky */}
-        <div className={`sticky bottom-0 p-4 sm:p-5 border-t ${subtleDivider} backdrop-blur-md ${
-          isDark ? 'bg-gray-950/95' : 'bg-white/95'
-        }`}>
+        <div className={cn(
+          'sticky bottom-0 p-5 border-t-2 backdrop-blur-md',
+          isDark ? 'border-gray-800 bg-gray-900/95' : 'border-gray-200 bg-white/95'
+        )}>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <p className={`text-xs ${hintTheme}`}>
-              At least one field must be filled to enable save.
-            </p>
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                'w-2 h-2 rounded-full',
+                hasAtLeastOneField ? 'bg-green-500' : 'bg-gray-400'
+              )} />
+              <p className={cn(
+                'text-xs',
+                isDark ? 'text-gray-400' : 'text-gray-600'
+              )}>
+                {hasAtLeastOneField
+                  ? 'Ready to save changes'
+                  : 'At least one field must be filled'}
+              </p>
+            </div>
 
             <div className="flex items-center gap-3">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onClose}
                 disabled={updateMutation.isPending}
                 type="button"
-                className={`flex-1 sm:flex-none px-4 py-2 rounded-lg font-medium transition-colors border cursor-pointer ${
+                className={cn(
+                  'flex-1 sm:flex-none px-4 py-2.5 rounded-lg font-medium',
+                  'border-2 transition-all',
                   isDark
-                    ? 'bg-gray-950 hover:bg-gray-900 text-gray-300 border-gray-800'
-                    : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    ? 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600'
+                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                  !updateMutation.isPending && 'cursor-pointer'
+                )}
               >
                 Cancel
-              </button>
+              </motion.button>
 
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleSubmit}
                 disabled={updateMutation.isPending || !hasAtLeastOneField}
                 type="button"
-                className={`flex-1 sm:flex-none px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  isDark ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
-                } ${!(updateMutation.isPending || !hasAtLeastOneField) ? 'cursor-pointer' : ''}`}
+                className={cn(
+                  'flex-1 sm:flex-none px-6 py-2.5 rounded-lg font-medium',
+                  'border-2 transition-all',
+                  updateMutation.isPending || !hasAtLeastOneField
+                    ? isDark
+                      ? 'bg-gray-800 border-gray-700 text-gray-500 cursor-not-allowed'
+                      : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                    : isDark
+                      ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500/50 text-white hover:shadow-xl hover:shadow-blue-500/30'
+                      : 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-300 text-white hover:shadow-xl hover:shadow-blue-500/30',
+                  'transform hover:-translate-y-0.5',
+                  !(updateMutation.isPending || !hasAtLeastOneField) && 'cursor-pointer'
+                )}
               >
                 {updateMutation.isPending ? (
                   <span className="flex items-center justify-center gap-2">
@@ -1025,13 +1327,13 @@ const updateData: UpdateFacilityStaffRoleRequest = {
                     Saving...
                   </span>
                 ) : (
-                  'Save'
+                  'Save Changes'
                 )}
-              </button>
+              </motion.button>
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

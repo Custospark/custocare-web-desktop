@@ -1359,7 +1359,7 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                 onClick={() => setShowCreateModal(true)}
                 disabled={isAnyMutationPending}
                 className={cn(
-                  'inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium',
+                  'inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium cursor-pointer',
                   'border-2 transition-all',
                   isDark
                     ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500/50 text-white hover:shadow-xl hover:shadow-blue-500/30'
