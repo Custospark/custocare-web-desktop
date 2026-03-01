@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, Search, X, ArrowRightCircle } from 'lucide-react';
+import { AlertCircle, Search, X, ArrowRightCircle, UserPlus, Calendar, Phone, Hash, Filter, ChevronDown, ChevronUp, User, Activity } from 'lucide-react';
 import type { AxiosError } from 'axios';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 import { useConfirm } from '../../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
@@ -69,18 +70,30 @@ function statusBadgeClasses(theme: Theme, status: PatientStatus): string {
   const isDark = theme === 'dark';
   switch (status) {
     case PatientStatus.ACTIVE:
-      return isDark ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700';
+      return isDark 
+        ? 'bg-gradient-to-r from-green-500/20 to-green-600/10 text-green-300 border border-green-500/30' 
+        : 'bg-gradient-to-r from-green-100 to-green-50 text-green-700 border border-green-200';
     case PatientStatus.INACTIVE:
-      return isDark ? 'bg-yellow-900/30 text-yellow-300' : 'bg-yellow-100 text-yellow-700';
+      return isDark 
+        ? 'bg-gradient-to-r from-yellow-500/20 to-yellow-600/10 text-yellow-300 border border-yellow-500/30' 
+        : 'bg-gradient-to-r from-yellow-100 to-yellow-50 text-yellow-700 border border-yellow-200';
     case PatientStatus.DECEASED:
-      return isDark ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-700';
+      return isDark 
+        ? 'bg-gradient-to-r from-red-500/20 to-red-600/10 text-red-300 border border-red-500/30' 
+        : 'bg-gradient-to-r from-red-100 to-red-50 text-red-700 border border-red-200';
     case PatientStatus.MERGED:
-      return isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700';
+      return isDark 
+        ? 'bg-gradient-to-r from-blue-500/20 to-blue-600/10 text-blue-300 border border-blue-500/30' 
+        : 'bg-gradient-to-r from-blue-100 to-blue-50 text-blue-700 border border-blue-200';
     case PatientStatus.TEST_PATIENT:
     case PatientStatus.SYSTEM_PATIENT:
-      return isDark ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800';
+      return isDark 
+        ? 'bg-gradient-to-r from-gray-600/20 to-gray-700/10 text-gray-300 border border-gray-600/30' 
+        : 'bg-gradient-to-r from-gray-100 to-gray-50 text-gray-700 border border-gray-200';
     default:
-      return isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700';
+      return isDark 
+        ? 'bg-gradient-to-r from-gray-700/20 to-gray-800/10 text-gray-300 border border-gray-700/30' 
+        : 'bg-gradient-to-r from-gray-100 to-gray-50 text-gray-700 border border-gray-200';
   }
 }
 
@@ -103,6 +116,8 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
 }) => {
   const isDark = theme === 'dark';
   const { confirm } = useConfirm();
+  const [isFocused, setIsFocused] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const [searchText, setSearchText] = useState<string>(initialSearchText);
   const [submittedText, setSubmittedText] = useState<string>('');
@@ -234,273 +249,648 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
   return (
     <div className={cn('p-6', className)}>
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <h2 className={cn('text-2xl font-bold mb-2', colors.textPrimary)}>{title}</h2>
-          <p className={colors.textSecondary}>{subtitle}</p>
-        </div>
+        {/* Header with Gradient */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={cn(
+            'relative overflow-hidden rounded-xl border-2 transition-all duration-300 mb-6',
+            isDark 
+              ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-blue-500/30 hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-500/20' 
+              : 'bg-gradient-to-br from-white to-blue-50/50 border-blue-200 hover:border-blue-400 hover:shadow-2xl hover:shadow-blue-500/20',
+            'group'
+          )}
+        >
+          {/* Background decoration */}
+          <div className={cn(
+            'absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl transition-opacity',
+            isDark ? 'bg-blue-500/10 group-hover:opacity-100' : 'bg-blue-500/5 group-hover:opacity-100',
+            'opacity-0'
+          )} />
 
-        {/* Search Controls */}
-        <div className="flex gap-3 mb-4">
-          <div className="flex-1 relative">
-            <Search
-              className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5', isDark ? 'text-gray-400' : 'text-gray-500')}
-            />
-            <input
-              type="text"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder={placeholder}
-              autoFocus={autoFocus}
-              className={cn(
-                'w-full pl-10 pr-10 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
-                colors.inputBg,
-                colors.inputBorder,
-                colors.inputText,
-                colors.placeholder
-              )}
-            />
-            {searchText.trim().length > 0 && (
-              <button
-                type="button"
-                onClick={clearResults}
-                className={cn(
-                  'absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded',
-                  isDark ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                )}
-                aria-label="Clear search and results"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => void submitSearch()}
-            disabled={!searchText.trim() || isLoading}
-            className={cn(
-              'px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2',
-              'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
-            )}
-          >
-            {isLoading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Searching...
-              </>
-            ) : (
-              <>
-                <Search className="w-5 h-5" />
-                Search
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Clear results button - Only show when search has been performed */}
-        {hasSearched && (
-          <div className="flex justify-end mb-6">
-            <button
-              type="button"
-              onClick={clearResults}
-              className={cn('text-sm font-medium cursor-pointer', isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900')}
-            >
-              Clear results
-            </button>
-          </div>
-        )}
-
-        {/* Initial State - Blank canvas before search */}
-        {!hasSearched && (
-          <div className={cn('rounded-xl border p-12 text-center mt-6', colors.cardBg, colors.cardBorder)}>
-            <div className={cn('inline-flex items-center justify-center w-20 h-20 rounded-full mb-4', isDark ? 'bg-gray-700' : 'bg-gray-100')}>
-              <Search className={cn('w-10 h-10', isDark ? 'text-gray-400' : 'text-gray-500')} />
-            </div>
-
-            <h3 className={cn('text-xl font-semibold mb-2', colors.textPrimary)}>Search for a Patient</h3>
-            <p className={cn('mb-4 max-w-md mx-auto', colors.textSecondary)}>
-              Enter a patient number, name, date of birth, or phone number to search for a patient record.
-            </p>
-            
-            {/* Quick tips */}
-            <div className={cn('mt-8 pt-6 border-t', isDark ? 'border-gray-700' : 'border-gray-200')}>
-              <h4 className={cn('text-sm font-semibold mb-3', colors.textPrimary)}>Search Tips:</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left max-w-2xl mx-auto">
-                <div className={cn('p-3 rounded-lg', isDark ? 'bg-gray-700/30' : 'bg-gray-50')}>
-                  <div className={cn('text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>Patient Number</div>
-                  <div className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>Use the exact patient number eg PT-12GD4...</div>
-                </div>
-                <div className={cn('p-3 rounded-lg', isDark ? 'bg-gray-700/30' : 'bg-gray-50')}>
-                  <div className={cn('text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>Name</div>
-                  <div className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>Full name or partial name matches</div>
-                </div>
-                <div className={cn('p-3 rounded-lg', isDark ? 'bg-gray-700/30' : 'bg-gray-50')}>
-                  <div className={cn('text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>Date of Birth</div>
-                  <div className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>YYYY-MM-DD format</div>
-                </div>
-                <div className={cn('p-3 rounded-lg', isDark ? 'bg-gray-700/30' : 'bg-gray-50')}>
-                  <div className={cn('text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>Phone Number</div>
-                  <div className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>format [Country code][other digits] eg +256756666...</div>
-                </div>
+          <div className="relative p-6">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                'p-3 rounded-xl transition-all duration-300',
+                isDark 
+                  ? 'bg-blue-500/20 group-hover:bg-blue-500/30 group-hover:scale-110' 
+                  : 'bg-blue-100 group-hover:bg-blue-200 group-hover:scale-110'
+              )}>
+                <User className={cn(
+                  'w-6 h-6',
+                  isDark ? 'text-blue-400' : 'text-blue-600'
+                )} />
+              </div>
+              <div>
+                <h1 className={cn('text-2xl font-bold', colors.textPrimary)}>{title}</h1>
+                <p className={colors.textSecondary}>{subtitle}</p>
               </div>
             </div>
           </div>
+        </motion.div>
+
+        {/* Search Controls with Premium Animation */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className={cn(
+            'relative overflow-hidden rounded-xl border-2 transition-all duration-300 mb-4',
+            isDark 
+              ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700/50 hover:border-gray-600' 
+              : 'bg-gradient-to-br from-white to-gray-50/50 border-gray-200 hover:border-gray-300'
+          )}
+        >
+          <div className="p-4">
+            <div className="flex flex-col gap-4">
+              {/* Search Bar with Animated Gradient Border */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 relative">
+                  <motion.div
+                    className="absolute inset-0 rounded-lg z-0"
+                    style={{
+                      background: 'linear-gradient(90deg, #3b82f6, #10b981, #6366f1, #3b82f6)',
+                      backgroundSize: '300% 100%',
+                    }}
+                    animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+                    transition={{
+                      duration: isFocused ? 2 : 6,
+                      repeat: Infinity,
+                      ease: 'linear',
+                    }}
+                  />
+                  <div className="relative z-10 m-[2px] rounded-[6px] overflow-hidden">
+                    <Search
+                      className={cn(
+                        'absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200',
+                        isFocused 
+                          ? 'text-blue-500' 
+                          : isDark 
+                            ? 'text-gray-500' 
+                            : 'text-gray-400'
+                      )}
+                    />
+                    <input
+                      type="text"
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                      onKeyDown={onKeyDown}
+                      onFocus={() => setIsFocused(true)}
+                      onBlur={() => setIsFocused(false)}
+                      placeholder={placeholder}
+                      autoFocus={autoFocus}
+                      className={cn(
+                        'w-full pl-10 pr-10 py-3 text-sm border-transparent',
+                        'focus:outline-none focus:ring-0',
+                        'transition-colors placeholder:text-sm',
+                        colors.inputBg,
+                        colors.inputText,
+                        colors.placeholder
+                      )}
+                    />
+                    {searchText.trim().length > 0 && (
+                      <motion.button
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        type="button"
+                        onClick={clearResults}
+                        className={cn(
+                          'absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full',
+                          'transition-colors cursor-pointer',
+                          isDark
+                            ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                        )}
+                        aria-label="Clear search and results"
+                      >
+                        <X className="w-4 h-4" />
+                      </motion.button>
+                    )}
+                  </div>
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  type="button"
+                  onClick={() => void submitSearch()}
+                  disabled={!searchText.trim() || isLoading}
+                  className={cn(
+                    'px-6 py-3 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2',
+                    'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl hover:shadow-blue-500/30',
+                    'transform hover:-translate-y-0.5 cursor-pointer border border-blue-400/30'
+                  )}
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Searching...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-5 h-5" />
+                      <span>Search</span>
+                    </>
+                  )}
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={cn(
+                    'px-4 py-3 rounded-lg font-medium transition-all flex items-center gap-2',
+                    'border-2',
+                    showFilters
+                      ? isDark
+                        ? 'bg-blue-900/30 border-blue-700 text-blue-300'
+                        : 'bg-blue-50 border-blue-300 text-blue-700'
+                      : isDark
+                        ? 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
+                        : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100',
+                    'cursor-pointer'
+                  )}
+                >
+                  <Filter className="w-4 h-4" />
+                  <span className="hidden sm:inline">Filters</span>
+                  {showFilters ? (
+                    <ChevronUp className="w-3 h-3" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3" />
+                  )}
+                </motion.button>
+              </div>
+
+              {/* Filter Options */}
+              <AnimatePresence>
+                {showFilters && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t-2 overflow-hidden"
+                    style={{
+                      borderColor: isDark ? 'rgb(31, 41, 55)' : 'rgb(229, 231, 235)'
+                    }}
+                  >
+                    <div>
+                      <label className={cn(
+                        'block text-sm font-medium mb-2',
+                        isDark ? 'text-gray-300' : 'text-gray-700'
+                      )}>
+                        Status Filter
+                      </label>
+                      <select
+                        className={cn(
+                          'w-full px-3 py-2 rounded-lg border-2 text-sm appearance-none',
+                          'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                          'transition-all cursor-pointer',
+                          isDark 
+                            ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700' 
+                            : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
+                        )}
+                      >
+                        <option value="">All Statuses</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="INACTIVE">Inactive</option>
+                        <option value="DECEASED">Deceased</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className={cn(
+                        'block text-sm font-medium mb-2',
+                        isDark ? 'text-gray-300' : 'text-gray-700'
+                      )}>
+                        Biological Sex
+                      </label>
+                      <select
+                        className={cn(
+                          'w-full px-3 py-2 rounded-lg border-2 text-sm appearance-none',
+                          'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                          'transition-all cursor-pointer',
+                          isDark 
+                            ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700' 
+                            : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
+                        )}
+                      >
+                        <option value="">All</option>
+                        <option value="MALE">Male</option>
+                        <option value="FEMALE">Female</option>
+                        <option value="OTHER">Other</option>
+                      </select>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Clear results button */}
+        {hasSearched && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex justify-end mb-6"
+          >
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              type="button"
+              onClick={clearResults}
+              className={cn(
+                'text-sm font-medium cursor-pointer px-4 py-2 rounded-lg transition-all',
+                'border-2',
+                isDark 
+                  ? 'border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-200 hover:bg-gray-800' 
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-900 hover:bg-gray-50'
+              )}
+            >
+              Clear results
+            </motion.button>
+          </motion.div>
+        )}
+
+        {/* Initial State - Premium Blank Canvas */}
+        {!hasSearched && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className={cn(
+              'relative overflow-hidden rounded-xl border-2 p-12 text-center mt-6',
+              colors.cardBg,
+              colors.cardBorder
+            )}
+          >
+            {/* Background decoration */}
+            <div className={cn(
+              'absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-30',
+              isDark ? 'bg-blue-500/10' : 'bg-blue-500/5'
+            )} />
+
+            <div className="relative">
+              <motion.div
+                animate={{ 
+                  scale: [1, 1.1, 1],
+                  rotate: [0, 5, -5, 0]
+                }}
+                transition={{ 
+                  duration: 4,
+                  repeat: Infinity,
+                  repeatType: "reverse"
+                }}
+                className={cn(
+                  'inline-flex items-center justify-center w-24 h-24 rounded-full mb-6 mx-auto',
+                  isDark ? 'bg-gradient-to-br from-blue-500/20 to-blue-600/10' : 'bg-gradient-to-br from-blue-100 to-blue-50'
+                )}
+              >
+                <Search className={cn(
+                  'w-12 h-12',
+                  isDark ? 'text-blue-400' : 'text-blue-600'
+                )} />
+              </motion.div>
+
+              <h3 className={cn('text-2xl font-bold mb-3', colors.textPrimary)}>Search for a Patient</h3>
+              <p className={cn('mb-8 max-w-md mx-auto text-lg', colors.textSecondary)}>
+                Enter patient details to find and manage their records
+              </p>
+              
+              {/* Quick Tips Grid */}
+              <div className={cn('mt-8 pt-8 border-t', isDark ? 'border-gray-700' : 'border-gray-200')}>
+                <h4 className={cn('text-sm font-semibold mb-4', colors.textPrimary)}>Search Tips:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                  {[
+                    { icon: Hash, label: 'Patient Number', tip: 'PT-12GD4...' },
+                    { icon: User, label: 'Name', tip: 'Full or partial name' },
+                    { icon: Calendar, label: 'Date of Birth', tip: 'YYYY-MM-DD' },
+                    { icon: Phone, label: 'Phone Number', tip: '+256756666...' }
+                  ].map((item, index) => (
+                    <motion.div
+                      key={index}
+                      whileHover={{ scale: 1.02, y: -2 }}
+                      className={cn(
+                        'p-4 rounded-xl border-2 transition-all',
+                        isDark 
+                          ? 'bg-gray-800/50 border-gray-700 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/10' 
+                          : 'bg-gray-50/50 border-gray-200 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10'
+                      )}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <item.icon className={cn(
+                          'w-5 h-5',
+                          isDark ? 'text-blue-400' : 'text-blue-600'
+                        )} />
+                        <span className={cn('font-medium', colors.textPrimary)}>{item.label}</span>
+                      </div>
+                      <p className={cn('text-sm', colors.textSecondary)}>{item.tip}</p>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
         )}
 
         {/* Loading State */}
         {hasSearched && (isLoading || isFetching) && (
-          <div className="mb-6">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mb-6"
+          >
             <LoadingSkeleton variant="default" theme={theme} message="Searching patients..." />
-          </div>
+          </motion.div>
         )}
 
         {/* Error State */}
         {hasSearched && error && (
-          <div className={cn('rounded-xl border p-6 mb-6', isDark ? 'bg-red-900/10 border-red-800' : 'bg-red-50 border-red-200')}>
-            <div className="flex items-center gap-3">
-              <AlertCircle className={cn('w-5 h-5', isDark ? 'text-red-400' : 'text-red-600')} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={cn(
+              'relative overflow-hidden rounded-xl border-2 p-8 mb-6',
+              isDark ? 'bg-gradient-to-br from-red-900/20 to-red-900/5 border-red-500/30' : 'bg-gradient-to-br from-red-50 to-red-50/50 border-red-200'
+            )}
+          >
+            <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl bg-red-500/10" />
+            <div className="relative flex items-center gap-4">
+              <div className={cn(
+                'p-3 rounded-xl',
+                isDark ? 'bg-red-500/20' : 'bg-red-100'
+              )}>
+                <AlertCircle className={cn(
+                  'w-6 h-6',
+                  isDark ? 'text-red-400' : 'text-red-600'
+                )} />
+              </div>
               <div>
-                <h3 className={cn('font-semibold mb-1', colors.textPrimary)}>Search Error</h3>
+                <h3 className={cn('text-lg font-semibold mb-1', colors.textPrimary)}>Search Error</h3>
                 <p className={colors.textSecondary}>{getAxiosErrorMessage(error)}</p>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Results State */}
         {hasSearched && results.length > 0 && (
-          <div className="space-y-3">
-            {results.map((patient) => {
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-4"
+          >
+            {results.map((patient, index) => {
               const isSelected = selectedPatientId === patient.patient_number;
               const initials = getPatientInitials(patient);
               const age = calculateAge(patient.date_of_birth);
               const sexText = patient.biological_sex ? getBiologicalSexDisplayText(patient.biological_sex) : null;
 
               return (
-                <div
+                <motion.div
                   key={patient.patient_number}
-                  role="button"
-                  tabIndex={0}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ scale: 1.01, y: -2 }}
                   onClick={() => handleSelect(patient)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') handleSelect(patient);
-                  }}
                   className={cn(
-                    'rounded-xl border p-4 transition-all cursor-pointer',
+                    'relative overflow-hidden rounded-xl border-2 p-5 transition-all cursor-pointer',
                     colors.cardBg,
                     colors.cardBorder,
                     isSelected
                       ? isDark
-                        ? 'ring-2 ring-blue-500'
-                        : 'ring-2 ring-blue-500 bg-blue-50'
+                        ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg shadow-blue-500/20'
+                        : 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/50 shadow-lg shadow-blue-500/20'
                       : isDark
-                        ? 'hover:bg-gray-700'
-                        : 'hover:bg-gray-50'
+                        ? 'hover:bg-gray-700/50 hover:border-gray-600 hover:shadow-xl'
+                        : 'hover:bg-gray-50/80 hover:border-gray-300 hover:shadow-xl'
                   )}
                 >
-                  <div className="flex">
-                    {/* Patient Information - Left Side */}
-                    <div className="flex items-start gap-3 flex-1">
-                      <div className={cn('w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0', isDark ? 'bg-blue-900/30' : 'bg-blue-100')}>
-                        <span className={cn('font-semibold', isDark ? 'text-blue-300' : 'text-blue-700')}>{initials}</span>
+                  {/* Selected indicator */}
+                  {isSelected && (
+                    <motion.div
+                      layoutId="selectedIndicator"
+                      className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-blue-600"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    />
+                  )}
+
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                    {/* Avatar with gradient */}
+                    <motion.div
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                      className={cn(
+                        'w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0',
+                        isDark 
+                          ? 'bg-gradient-to-br from-blue-500/20 to-purple-500/20' 
+                          : 'bg-gradient-to-br from-blue-100 to-purple-100'
+                      )}
+                    >
+                      <span className={cn(
+                        'text-xl font-bold',
+                        isDark ? 'text-blue-300' : 'text-blue-700'
+                      )}>
+                        {initials}
+                      </span>
+                    </motion.div>
+
+                    {/* Patient Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h3 className={cn('text-xl font-bold', colors.textPrimary)}>
+                          {formatPatientName(patient)}
+                        </h3>
+                        <span className={cn(
+                          'px-3 py-1 rounded-full text-xs font-medium',
+                          statusBadgeClasses(theme, patient.status)
+                        )}>
+                          {getStatusDisplayText(patient.status)}
+                        </span>
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <div className={cn('text-lg font-semibold truncate', colors.textPrimary)}>{formatPatientName(patient)}</div>
-                          <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', statusBadgeClasses(theme, patient.status))}>
-                            {getStatusDisplayText(patient.status)}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="flex items-center gap-2">
+                          <Hash className={cn('w-4 h-4', isDark ? 'text-gray-500' : 'text-gray-400')} />
+                          <span className={cn('text-sm', colors.textSecondary)}>
+                            {patient.patient_number}
                           </span>
                         </div>
 
-                        <div className={cn('text-sm space-y-1 mt-1', colors.textSecondary)}>
-                          <div>Patient Number: {patient.patient_number}</div>
-                          {patient.date_of_birth ? (
-                            <div>
-                              DOB: {new Date(patient.date_of_birth).toLocaleDateString()}
-                              {age !== null ? ` • Age: ${age}` : null}
-                            </div>
-                          ) : null}
-                          {sexText ? <div>Sex: {sexText}</div> : null}
-                          <div>Account: {patient.global_user_uuid ? 'Linked' : 'Unlinked'}</div>
+                        {patient.date_of_birth && (
+                          <div className="flex items-center gap-2">
+                            <Calendar className={cn('w-4 h-4', isDark ? 'text-gray-500' : 'text-gray-400')} />
+                            <span className={cn('text-sm', colors.textSecondary)}>
+                              {new Date(patient.date_of_birth).toLocaleDateString()}
+                              {age !== null && ` (${age} years)`}
+                            </span>
+                          </div>
+                        )}
+
+                        {sexText && (
+                          <div className="flex items-center gap-2">
+                            <Activity className={cn('w-4 h-4', isDark ? 'text-gray-500' : 'text-gray-400')} />
+                            <span className={cn('text-sm', colors.textSecondary)}>
+                              {sexText}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                          <User className={cn('w-4 h-4', isDark ? 'text-gray-500' : 'text-gray-400')} />
+                          <span className={cn('text-sm', colors.textSecondary)}>
+                            Account: {patient.global_user_uuid ? 'Linked' : 'Unlinked'}
+                          </span>
                         </div>
                       </div>
+
+                      {patient.requires_isolation && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={cn(
+                            'mt-3 text-sm rounded-lg border-2 p-3 flex items-center gap-2',
+                            isDark 
+                              ? 'bg-gradient-to-r from-yellow-900/20 to-yellow-900/5 border-yellow-500/30 text-yellow-200' 
+                              : 'bg-gradient-to-r from-yellow-50 to-yellow-50/50 border-yellow-200 text-yellow-800'
+                          )}
+                        >
+                          <AlertCircle className="w-4 h-4" />
+                          <span className="font-medium">Isolation required</span>
+                        </motion.div>
+                      )}
                     </div>
 
-                    {/* Take Action Button - Right Side */}
-                    <div className="flex items-center justify-center pl-4">
-                      {processAction && (processAction.onlyWhenSelected ?? true ? isSelected : true) ? (
-                        <button
+                    {/* Action Buttons */}
+                    <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                      {processAction && (processAction.onlyWhenSelected ?? true ? isSelected : true) && (
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             void handleProcess(patient);
                           }}
-                          className={cn('px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 flex-shrink-0 cursor-pointer', 'bg-blue-600 hover:bg-blue-700 text-white')}
+                          className={cn(
+                            'px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2',
+                            'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl hover:shadow-blue-500/30',
+                            'transform hover:-translate-y-0.5 cursor-pointer border border-blue-400/30'
+                          )}
                         >
                           {processAction.icon}
                           {processAction.label}
-                        </button>
-                      ) : null}
+                        </motion.button>
+                      )}
                       
                       {takeAction && (
-                        <div className="flex items-center justify-center h-full">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void handleTakeAction(patient);
-                            }}
-                            className={cn('px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer', 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-shadow')}
-                          >
-                            <ArrowRightCircle className="w-4 h-4" />
-                            {takeAction.label ?? 'Take Action'}
-                          </button>
-                        </div>
+                       <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleTakeAction(patient);
+                          }}
+                          className={cn(
+                            'px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2',
+                            'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl hover:shadow-blue-500/30',
+                            'transform hover:-translate-y-0.5 cursor-pointer border border-blue-400/30'
+                          )}
+                        >
+                          <ArrowRightCircle className="w-4 h-4" />
+                          {takeAction.label ?? 'Take Action'}
+                        </motion.button>
                       )}
                     </div>
                   </div>
-
-                  {patient.requires_isolation ? (
-                    <div
-                      className={cn(
-                        'mt-3 text-sm rounded-lg border p-3',
-                        isDark ? 'bg-yellow-900/20 border-yellow-800/50 text-yellow-200' : 'bg-yellow-50 border-yellow-100 text-yellow-800'
-                      )}
-                    >
-                      Isolation required
-                    </div>
-                  ) : null}
-                </div>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         )}
 
         {/* Not Found State */}
         {hasSearched && notFound && (
-          <div className={cn('rounded-xl border p-8 text-center mt-6', colors.cardBg, colors.cardBorder)}>
-            <div className={cn('inline-flex items-center justify-center w-16 h-16 rounded-full mb-4', isDark ? 'bg-red-900/30' : 'bg-red-100')}>
-              <Search className={cn('w-8 h-8', isDark ? 'text-red-400' : 'text-red-600')} />
-            </div>
-
-            <h3 className={cn('text-lg font-semibold mb-2', colors.textPrimary)}>Patient Not Found</h3>
-            <p className={cn('mb-6', colors.textSecondary)}>
-              No patient found for: <strong>{submittedText}</strong>
-            </p>
-
-            {onCreateNewPatient && (
-              <button
-                type="button"
-                onClick={() => void handleCreateFromNotFound()}
-                className={cn('inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer', 'bg-blue-600 hover:bg-blue-700 text-white')}
-              >
-                <ArrowRightCircle className="w-5 h-5" />
-                Create New Patient
-              </button>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={cn(
+              'relative overflow-hidden rounded-xl border-2 p-12 text-center mt-6',
+              colors.cardBg,
+              colors.cardBorder
             )}
-          </div>
+          >
+            {/* Background decoration */}
+            <div className={cn(
+              'absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-30',
+              isDark ? 'bg-orange-500/10' : 'bg-orange-500/5'
+            )} />
+
+            <div className="relative">
+              <motion.div
+                animate={{ 
+                  scale: [1, 1.1, 1],
+                  rotate: [0, 5, -5, 0]
+                }}
+                transition={{ 
+                  duration: 4,
+                  repeat: Infinity,
+                  repeatType: "reverse"
+                }}
+                className={cn(
+                  'inline-flex items-center justify-center w-24 h-24 rounded-full mb-6 mx-auto',
+                  isDark ? 'bg-gradient-to-br from-orange-500/20 to-orange-600/10' : 'bg-gradient-to-br from-orange-100 to-orange-50'
+                )}
+              >
+                <Search className={cn(
+                  'w-12 h-12',
+                  isDark ? 'text-orange-400' : 'text-orange-600'
+                )} />
+              </motion.div>
+
+              <h3 className={cn('text-2xl font-bold mb-3', colors.textPrimary)}>Patient Not Found</h3>
+              <p className={cn('mb-8 text-lg', colors.textSecondary)}>
+                No patient found for: <span className="font-bold text-blue-500">{submittedText}</span>
+              </p>
+
+              {onCreateNewPatient && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  type="button"
+                  onClick={() => void handleCreateFromNotFound()}
+                  className={cn(
+                    'inline-flex items-center gap-3 px-8 py-4 rounded-xl font-medium transition-all',
+                    'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-xl hover:shadow-2xl hover:shadow-blue-500/30',
+                    'transform hover:-translate-y-1 cursor-pointer border border-blue-400/30 text-lg'
+                  )}
+                >
+                  <UserPlus className="w-5 h-5" />
+                  Create New Patient
+                </motion.button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Results Summary */}
+        {hasSearched && results.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className={cn(
+              'mt-4 text-sm text-center p-4 rounded-lg border-2',
+              isDark 
+                ? 'bg-gray-800/30 border-gray-700 text-gray-400' 
+                : 'bg-gray-50/50 border-gray-200 text-gray-600'
+            )}
+          >
+            Found {results.length} patient{results.length !== 1 ? 's' : ''}
+          </motion.div>
         )}
       </div>
     </div>
