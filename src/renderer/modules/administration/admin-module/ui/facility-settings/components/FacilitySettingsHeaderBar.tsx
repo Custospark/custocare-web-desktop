@@ -26,24 +26,27 @@ const FacilitySettingsHeaderBar: React.FC<FacilitySettingsHeaderBarProps> = ({
 
   return (
     <div className="flex items-start justify-between gap-4 flex-wrap">
-      <div>
+      <div className="flex-1 min-w-[240px]">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Building2 className={isDark ? 'text-cyan-400' : 'text-blue-600'} />
           Facility Settings
         </h1>
 
-        <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+        <div className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
           {activeFacilityName ? (
-            <>
-              Managing settings for: <span className="font-semibold">{activeFacilityName}</span>
-            </>
+            <div className="flex items-center flex-wrap gap-1">
+              <span className="font-medium">Currently managing:</span>
+              <span className={`font-semibold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+                {activeFacilityName}
+              </span>
+            </div>
           ) : (
-            'Manage facility configuration, branding, and operational settings.'
+            <p>Manage facility configuration, branding, and operational settings.</p>
           )}
-        </p>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-shrink-0">
         {editMode ? (
           <>
             <button
