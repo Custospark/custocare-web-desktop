@@ -24,7 +24,6 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   sidebarPosition,
   isTransitioning,
   onToggleSidebarPosition,
-  onToggleTheme,
   appVersion,
   unreadCount,
   onNotificationClick,
@@ -65,11 +64,9 @@ export const StatusBar: React.FC<StatusBarProps> = ({
 
         {/* RIGHT: Quick Actions */}
         <QuickActions
-          theme={theme}
           sidebarPosition={sidebarPosition}
           isTransitioning={isTransitioning}
           onToggleSidebarPosition={onToggleSidebarPosition}
-          onToggleTheme={onToggleTheme}
           unreadCount={unreadCount}
           onNotificationClick={onNotificationClick}
         />

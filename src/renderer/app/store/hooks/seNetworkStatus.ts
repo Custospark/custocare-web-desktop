@@ -1,6 +1,6 @@
 // hooks/useNetworkStatus.ts
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { SystemStatus } from '../../../shared/components/Navigation/StatusBar';
+import type { SystemStatus } from '../../../shared/components/Navigation/status-bar-components/StatusBarTypes';
 
 interface NetworkStatusResult {
   systemStatus: SystemStatus;

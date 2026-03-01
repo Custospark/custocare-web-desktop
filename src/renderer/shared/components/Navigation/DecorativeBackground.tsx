@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '../../types/cn';
-import type { SidebarPosition, ThemeMode } from './StatusBar';
+import type { SidebarPosition, ThemeMode } from './layout-components/LayoutTypes';
 
 export interface DecorativeBackgroundProps {
   theme: ThemeMode;
@@ -16,8 +16,8 @@ export const DecorativeBackground: React.FC<DecorativeBackgroundProps> = ({ them
           'transition-all duration-700 ease-in-out',
           sidebarPosition === 'left' ? 'left-1/4' : 'right-1/4',
           theme === 'dark'
-            ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 opacity-15'
-            : 'bg-gradient-to-r from-blue-200/20 to-cyan-200/20 opacity-15'
+            ? 'bg-linear-to-r from-blue-500/20 to-cyan-500/20 opacity-15'
+            : 'bg-linear-to-r from-blue-200/20 to-cyan-200/20 opacity-15'
         )}
         style={{ animation: 'pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}
       />
@@ -28,8 +28,8 @@ export const DecorativeBackground: React.FC<DecorativeBackgroundProps> = ({ them
           'transition-all duration-700 ease-in-out',
           sidebarPosition === 'left' ? 'right-1/4' : 'left-1/4',
           theme === 'dark'
-            ? 'bg-gradient-to-l from-purple-500/20 to-pink-500/20 opacity-10'
-            : 'bg-gradient-to-l from-purple-200/20 to-pink-200/20 opacity-10'
+            ? 'bg-linear-to-l from-purple-500/20 to-pink-500/20 opacity-10'
+            : 'bg-linear-to-l from-purple-200/20 to-pink-200/20 opacity-10'
         )}
         style={{ animation: 'pulse 10s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}
       />

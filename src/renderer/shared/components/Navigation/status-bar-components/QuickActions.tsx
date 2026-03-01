@@ -1,6 +1,6 @@
 // components/statusbar/QuickActions.tsx
 import React, { useMemo, useCallback } from 'react';
-import { Settings, Sun, Moon, PanelRight, Bell } from 'lucide-react';
+import { Settings, Sun, Moon, PanelRight, Mail } from 'lucide-react';
 import { cn } from '../../../utils/classNameUtils';
 import { useNavigate } from 'react-router-dom';
 import { ACCOUNT_ROUTES } from '../../../../app/routes/routeConstants';
@@ -85,7 +85,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   }, [sidebarPosition, theme]);
 
   return (
-    <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
+    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
       {/* 1. NOTIFICATIONS - High priority, time-sensitive */}
       <button
         onClick={handleNotificationClick}
@@ -102,7 +102,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
             : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100/80 focus:ring-blue-500/50'
         )}
       >
-        <Bell className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+        <Mail className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         {unreadCount > 0 && (
           <span
             className={cn(
