@@ -140,7 +140,7 @@ const FacilitySettings: React.FC = () => {
 
   const cardBase = cn(
     "rounded-xl border p-6 transition-colors w-full",
-    isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200 shadow-sm'
+    isDark ? 'bg-gray-1000 border-gray-800' : 'bg-white border-gray-50 shadow-sm'
   );
 
   /* ------------------------------ UI States ------------------------------ */
