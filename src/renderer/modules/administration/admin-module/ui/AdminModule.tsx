@@ -9,6 +9,7 @@ import {
   Layers,
   Boxes,
   MapIcon,
+  Settings2,
 } from 'lucide-react';
 import AdminOverview from './admin-overview-ui/AdminOverview';
 import AdminTeam from './team-ui/AdminTeam';
@@ -16,6 +17,7 @@ import AdminFacilitySetup from './facility-setup-ui/AdminFacilitySetup';
 import AdminServiceCatalog from './service-catalog-ui/AdminServiceCatalog';
 import AdminInventory from './inventory/AdminInventoryItems';
 import ClinicalSpaceManagement from './clinical-space/ClinicalSpaceManagement';
+import FacilitySettings from './facility-settings/FacilitySettings';
 
 /**
  * ============================================================================
@@ -95,7 +97,12 @@ const ADMIN_OPERATIONS: Operation[] = [
     icon: <Users className="w-4 h-4" />,
     description: 'Manage staff, invitations, and roles',
   },
-  
+    {
+    id: 'facility-settings',
+    label: 'Enterprise Facility Settings',
+    icon: <Settings2 className="w-4 h-4" />,
+    description: 'Manage facility identity, regulatory parameters, and operational policies',
+  },
 ];
 
 /* ============================================================================
@@ -109,6 +116,7 @@ export type AdminOperationId =
   | 'service-catalog'
   | 'inventory'
   | 'space-governance'
+  |'facility-settings'
   ;
 
 /* ============================================================================
@@ -161,20 +169,18 @@ export const AdminModule: React.FC = () => {
     switch (activeOperation) {
       case 'overview':
         return <AdminOverview theme={theme} />;
-
       case 'team':
         return <AdminTeam theme={theme} />;
-
       case 'facility-setup':
         return <AdminFacilitySetup theme={theme} />;
-
       case 'inventory':
         return <AdminInventory theme={theme} />;
       case 'service-catalog':
         return <AdminServiceCatalog theme={theme} />;
       case 'space-governance':
         return <ClinicalSpaceManagement theme={theme} />;
-
+      case 'facility-settings':
+        return <FacilitySettings theme={theme} />;
       default:
         return <AdminOverview theme={theme} />;
     }

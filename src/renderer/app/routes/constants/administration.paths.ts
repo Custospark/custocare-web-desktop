@@ -25,3 +25,14 @@ export const ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES = {
   SPACE_ALLOCATION_ASSIGN: `${ROUTES.ADMINISTRATION}/clinical-space-management/space-allocation/assign`,
   SPACE_ALLOCATION_HISTORY: `${ROUTES.ADMINISTRATION}/clinical-space-management/space-allocation/history`,
 } as const;
+
+
+export const ADMINISTRATION_FACILITY_SETTINGS_ROUTES = {
+  ROOT: `${ROUTES.ADMINISTRATION}/facility-settings`,
+
+  // Facility Identity (branding, currency, tax)
+  FACILITY_IDENTITY: `${ROUTES.ADMINISTRATION}/facility-settings/identity`,
+
+  // Operational Policies (rules, billing policies, guidelines)
+  OPERATIONAL_POLICIES: `${ROUTES.ADMINISTRATION}/facility-settings/policies`,
+} as const;
