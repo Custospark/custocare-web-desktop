@@ -1,85 +1,21 @@
 import React, { useMemo } from 'react';
-import { Building2, Upload, ShieldCheck, Stethoscope, DollarSign, Clock } from 'lucide-react';
-
-import type { FacilitySettingsFormState, FacilitySettingsOnField } from '../FacilitySettings';
+import { Upload, Building2, Clock, Zap } from 'lucide-react';
+import { Label, FieldError, inputBase, textareaBase, divider } from './FormUtils';
 import { OperationalStatus } from '../../../api/facility-settings/FacilitySettingsTypes';
-
-const FieldError: React.FC<{ msg: string }> = ({ msg }) => (
-  <p className="text-xs text-red-500 mt-1">{msg}</p>
-);
-
-const Label: React.FC<{ isDark: boolean; children: React.ReactNode }> = ({ isDark, children }) => (
-  <label
-    className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${
-      isDark ? 'text-gray-400' : 'text-gray-500'
-    }`}
-  >
-    {children}
-  </label>
-);
-
-const inputBase = (isDark: boolean) =>
-  `w-full px-3 py-2 rounded-lg text-sm border outline-none transition-colors focus:ring-2 ${
-    isDark
-      ? 'bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-cyan-500 focus:ring-cyan-500/20'
-      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500/20'
-  }`;
-
-const textareaBase = (isDark: boolean) =>
-  `${inputBase(isDark)} min-h-[96px] resize-y`;
-
-const splitLines = (raw: string): string[] =>
-  raw
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-const joinLines = (items: string[]): string => (items?.length ? items.join('\n') : '');
-
-const BulletList: React.FC<{ items: string[]; isDark: boolean }> = ({ items, isDark }) => {
-  if (!items?.length) return <span className={isDark ? 'text-gray-500' : 'text-gray-500'}>—</span>;
-  return (
-    <ul className={`list-disc pl-5 space-y-1 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-      {items.map((v, idx) => (
-        <li key={`${v}-${idx}`} className="text-sm break-words">
-          {v}
-        </li>
-      ))}
-    </ul>
-  );
-};
-
-const SectionTitle: React.FC<{ isDark: boolean; icon: React.ReactNode; title: string }> = ({
-  isDark,
-  icon,
-  title,
-}) => (
-  <div className="flex items-center gap-2">
-    <span
-      className={`p-1.5 rounded-lg ${
-        isDark ? 'bg-cyan-500/15 text-cyan-400' : 'bg-blue-50 text-blue-600'
-      }`}
-    >
-      {icon}
-    </span>
-    <h4 className="text-xs font-semibold uppercase tracking-wider">{title}</h4>
-  </div>
-);
+import { cn } from '../../../../../../shared/types/cn';
 
 interface FacilityBrandingAndOpsCardProps {
-  cardBase: string;
   isDark: boolean;
   editMode: boolean;
-  form: FacilitySettingsFormState;
+  form: any;
   fieldErrors: Record<string, string>;
-  onField: FacilitySettingsOnField;
+  onField: <K extends keyof any>(key: K, value: any) => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   isUploadingLogo: boolean;
   onLogoFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-const FacilityBrandingAndOpsCard: React.FC<FacilityBrandingAndOpsCardProps> = ({
-  cardBase,
+export const FacilityBrandingAndOpsCard: React.FC<FacilityBrandingAndOpsCardProps> = ({
   isDark,
   editMode,
   form,
@@ -89,389 +25,402 @@ const FacilityBrandingAndOpsCard: React.FC<FacilityBrandingAndOpsCardProps> = ({
   isUploadingLogo,
   onLogoFileChange,
 }) => {
-  const divider = useMemo(() => `border-t ${isDark ? 'border-gray-800' : 'border-gray-100'}`, [isDark]);
+  // Helper to format hours for display
+  const formatOperatingHours = useMemo(() => {
+    try {
+      const hours = JSON.parse(form.operating_hours_json);
+      if (!hours || !Array.isArray(hours) || hours.length === 0) {
+        return form.is_24_7 ? 'Open 24/7' : 'Not specified';
+      }
+      
+      // If it's a simple array of strings, join them
+      if (hours.every((item: any) => typeof item === 'string')) {
+        return hours.join(', ');
+      }
+      
+      // If it's an array of objects with day/hour info
+      return 'Custom schedule';
+    } catch {
+      return form.operating_hours_json || 'Not specified';
+    }
+  }, [form.operating_hours_json, form.is_24_7]);
+
+  // Format operational status
+  const formatOperationalStatus = (status: string) => {
+    if (!status) return '—';
+    return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
 
   return (
-    <section className={cardBase}>
-      <SectionTitle isDark={isDark} icon={<Upload className="w-4 h-4" />} title="Branding & Operations" />
+    <section className={cn(
+      "rounded-xl border p-6",
+      isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200 shadow-sm'
+    )}>
+      <div className="flex items-center gap-2 mb-4">
+        <span className={cn(
+          "p-1.5 rounded-lg",
+          isDark ? 'bg-cyan-500/15 text-cyan-400' : 'bg-blue-50 text-blue-600'
+        )}>
+          <Upload className="w-4 h-4" />
+        </span>
+        <h3 className="text-sm font-semibold uppercase tracking-wider">Branding & Operations</h3>
+      </div>
 
-      <div className={`mt-4 ${divider}`}>
-        <div className="pt-4 space-y-6">
-          {/* Branding */}
-          <div className="space-y-3">
-            <SectionTitle isDark={isDark} icon={<Building2 className="w-4 h-4" />} title="Branding" />
+      <div className={divider(isDark)} />
 
-            <div>
-              <Label isDark={isDark}>Facility Logo</Label>
+      <div className="pt-4 space-y-6">
+        {/* Branding Section */}
+        <div>
+          <h4 className={cn(
+            "text-xs font-semibold uppercase tracking-wider mb-3",
+            isDark ? 'text-gray-300' : 'text-gray-700'
+          )}>
+            Branding
+          </h4>
+          
+          {/* Logo */}
+          <div className="mb-4">
+            <Label isDark={isDark}>Facility Logo</Label>
 
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-16 h-16 rounded-xl overflow-hidden border flex items-center justify-center ${
-                    isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'
-                  }`}
-                >
-                  {form.facility_logo_url ? (
-                    <img
-                      src={form.facility_logo_url}
-                      alt="Facility logo"
-                      className="w-full h-full object-cover"
-                      draggable={false}
-                    />
-                  ) : (
-                    <Building2 className={isDark ? 'text-gray-600' : 'text-gray-400'} />
-                  )}
-                </div>
-
-                {editMode ? (
-                  <>
-                    <button
-                      type="button"
-                      disabled={isUploadingLogo}
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${
-                        isUploadingLogo ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-opacity-80'
-                      } ${
-                        isDark
-                          ? 'border-gray-700 text-gray-300 hover:bg-gray-800'
-                          : 'border-gray-300 text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      {isUploadingLogo ? 'Uploading…' : 'Upload Logo'}
-                    </button>
-
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp"
-                      className="hidden"
-                      onChange={onLogoFileChange}
-                    />
-                  </>
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  "w-16 h-16 rounded-xl overflow-hidden border flex items-center justify-center",
+                  isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'
+                )}
+              >
+                {form.facility_logo_url ? (
+                  <img
+                    src={form.facility_logo_url}
+                    alt="Facility logo"
+                    className="w-full h-full object-cover"
+                    draggable={false}
+                  />
                 ) : (
-                  <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                    Logo updates are available in edit mode.
-                  </p>
+                  <Building2 className={cn(
+                    "w-8 h-8",
+                    isDark ? 'text-gray-600' : 'text-gray-400'
+                  )} />
                 )}
               </div>
 
-              {fieldErrors.facility_logo && <FieldError msg={fieldErrors.facility_logo} />}
+              {editMode ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={isUploadingLogo}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={cn(
+                      "inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border transition-colors",
+                      isUploadingLogo ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-opacity-80',
+                      isDark ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                    )}
+                  >
+                    {isUploadingLogo ? (
+                      <>
+                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                        </svg>
+                        Uploading…
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        Upload Logo
+                      </>
+                    )}
+                  </button>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp"
+                    className="hidden"
+                    onChange={onLogoFileChange}
+                  />
+                </>
+              ) : (
+                <p className={cn("text-xs", isDark ? 'text-gray-500' : 'text-gray-500')}>
+                  {form.facility_logo_url ? 'Logo uploaded' : 'No logo uploaded'}
+                </p>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 gap-3">
-              <div>
-                <Label isDark={isDark}>Primary Brand Color</Label>
-                <input
-                  className={inputBase(isDark)}
-                  value={form.primary_brand_color}
-                  onChange={(e) => onField('primary_brand_color', e.target.value)}
-                  placeholder="#0EA5E9"
-                  disabled={!editMode}
-                />
-                {fieldErrors.primary_brand_color && <FieldError msg={fieldErrors.primary_brand_color} />}
-              </div>
-
-              <div>
-                <Label isDark={isDark}>Secondary Brand Color</Label>
-                <input
-                  className={inputBase(isDark)}
-                  value={form.secondary_brand_color}
-                  onChange={(e) => onField('secondary_brand_color', e.target.value)}
-                  placeholder="#22C55E"
-                  disabled={!editMode}
-                />
-                {fieldErrors.secondary_brand_color && <FieldError msg={fieldErrors.secondary_brand_color} />}
-              </div>
-            </div>
+            {fieldErrors.facility_logo && <FieldError msg={fieldErrors.facility_logo} />}
           </div>
 
-          {/* Operations */}
-          <div className={`pt-4 ${divider} space-y-3`}>
-            <SectionTitle isDark={isDark} icon={<Clock className="w-4 h-4" />} title="Operations" />
+          {/* Brand Colors */}
+          <div className="grid grid-cols-1 gap-3">
+            <div>
+              <Label isDark={isDark}>Primary Brand Color</Label>
+              {editMode ? (
+                <>
+                  <div className="flex gap-2 items-center">
+                    <div 
+                      className="w-8 h-8 rounded border"
+                      style={{ backgroundColor: form.primary_brand_color || '#0EA5E9' }}
+                    />
+                    <input
+                      className={inputBase(isDark)}
+                      value={form.primary_brand_color}
+                      onChange={(e) => onField('primary_brand_color', e.target.value)}
+                      placeholder="#0EA5E9"
+                      disabled={!editMode}
+                    />
+                  </div>
+                  {fieldErrors.primary_brand_color && <FieldError msg={fieldErrors.primary_brand_color} />}
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-6 h-6 rounded border"
+                    style={{ backgroundColor: form.primary_brand_color || '#0EA5E9' }}
+                  />
+                  <span className={cn("text-sm", isDark ? 'text-gray-300' : 'text-gray-700')}>
+                    {form.primary_brand_color || '#0EA5E9'}
+                  </span>
+                </div>
+              )}
+            </div>
 
+            <div>
+              <Label isDark={isDark}>Secondary Brand Color</Label>
+              {editMode ? (
+                <>
+                  <div className="flex gap-2 items-center">
+                    <div 
+                      className="w-8 h-8 rounded border"
+                      style={{ backgroundColor: form.secondary_brand_color || '#22C55E' }}
+                    />
+                    <input
+                      className={inputBase(isDark)}
+                      value={form.secondary_brand_color}
+                      onChange={(e) => onField('secondary_brand_color', e.target.value)}
+                      placeholder="#22C55E"
+                      disabled={!editMode}
+                    />
+                  </div>
+                  {fieldErrors.secondary_brand_color && <FieldError msg={fieldErrors.secondary_brand_color} />}
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-6 h-6 rounded border"
+                    style={{ backgroundColor: form.secondary_brand_color || '#22C55E' }}
+                  />
+                  <span className={cn("text-sm", isDark ? 'text-gray-300' : 'text-gray-700')}>
+                    {form.secondary_brand_color || '#22C55E'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Operations Section */}
+        <div className={divider(isDark)}>
+          <h4 className={cn(
+            "text-xs font-semibold uppercase tracking-wider mt-4 mb-3",
+            isDark ? 'text-gray-300' : 'text-gray-700'
+          )}>
+            <Clock className="inline w-3 h-3 mr-1" />
+            Operations
+          </h4>
+
+          {/* 24/7 Toggle */}
+          <div className="mb-4">
             <div className="flex items-center justify-between">
               <Label isDark={isDark}>24/7 Facility</Label>
-              <input
-                type="checkbox"
-                checked={form.is_24_7}
-                disabled={!editMode}
-                onChange={(e) => onField('is_24_7', e.target.checked)}
-                className="w-4 h-4"
-              />
-            </div>
-
-            <div>
-              <Label isDark={isDark}>Operational Status</Label>
-              <select
-                className={inputBase(isDark)}
-                value={form.operational_status}
-                disabled={!editMode}
-                onChange={(e) => onField('operational_status', e.target.value)}
-              >
-                <option value="">—</option>
-                {Object.values(OperationalStatus).map((v) => (
-                  <option key={v} value={v}>
-                    {v.replace(/_/g, ' ')}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <Label isDark={isDark}>Operating Hours</Label>
               {editMode ? (
-                <textarea
-                  className={textareaBase(isDark)}
-                  value={joinLines(form.operating_hours)}
-                  placeholder="One line per entry (e.g. Mon–Fri: 8am–5pm)"
-                  onChange={(e) => onField('operating_hours', splitLines(e.target.value))}
+                <input
+                  type="checkbox"
+                  checked={form.is_24_7}
+                  onChange={(e) => onField('is_24_7', e.target.checked)}
+                  className="w-4 h-4 rounded cursor-pointer"
                 />
               ) : (
-                <div className="mt-2">
-                  <BulletList items={form.operating_hours} isDark={isDark} />
-                </div>
+                <span className={cn(
+                  "text-sm font-medium",
+                  form.is_24_7 ? 'text-emerald-500' : (isDark ? 'text-gray-400' : 'text-gray-500')
+                )}>
+                  {form.is_24_7 ? 'Yes' : 'No'}
+                </span>
               )}
-            </div>
-
-            <div>
-              <Label isDark={isDark}>Emergency Services Hours (optional)</Label>
-              {editMode ? (
-                <textarea
-                  className={textareaBase(isDark)}
-                  value={joinLines(form.emergency_services_hours)}
-                  placeholder="One line per entry (leave empty if not applicable)"
-                  onChange={(e) => onField('emergency_services_hours', splitLines(e.target.value))}
-                />
-              ) : (
-                <div className="mt-2">
-                  <BulletList items={form.emergency_services_hours} isDark={isDark} />
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 gap-3">
-              <div>
-                <Label isDark={isDark}>Average Wait Time (minutes)</Label>
-                <input
-                  className={inputBase(isDark)}
-                  value={form.average_wait_time_minutes}
-                  disabled={!editMode}
-                  onChange={(e) => onField('average_wait_time_minutes', e.target.value)}
-                  inputMode="decimal"
-                  placeholder="e.g. 45"
-                />
-                {fieldErrors.average_wait_time_minutes && <FieldError msg={fieldErrors.average_wait_time_minutes} />}
-              </div>
-
-              <div>
-                <Label isDark={isDark}>Monthly Patient Volume</Label>
-                <input
-                  className={inputBase(isDark)}
-                  value={form.monthly_patient_volume}
-                  disabled={!editMode}
-                  onChange={(e) => onField('monthly_patient_volume', e.target.value)}
-                  inputMode="numeric"
-                  placeholder="e.g. 1200"
-                />
-                {fieldErrors.monthly_patient_volume && <FieldError msg={fieldErrors.monthly_patient_volume} />}
-              </div>
             </div>
           </div>
 
-          {/* Licensing & Compliance */}
-          <div className={`pt-4 ${divider} space-y-3`}>
-            <SectionTitle isDark={isDark} icon={<ShieldCheck className="w-4 h-4" />} title="Licensing & Compliance" />
-
-            <div>
-              <Label isDark={isDark}>License Number</Label>
-              <input
-                className={inputBase(isDark)}
-                value={form.license_number}
-                disabled={!editMode}
-                onChange={(e) => onField('license_number', e.target.value)}
-              />
-              {fieldErrors.license_number && <FieldError msg={fieldErrors.license_number} />}
-            </div>
-
-            <div>
-              <Label isDark={isDark}>License Issuing Authority</Label>
-              <input
-                className={inputBase(isDark)}
-                value={form.license_issuing_authority}
-                disabled={!editMode}
-                onChange={(e) => onField('license_issuing_authority', e.target.value)}
-              />
-              {fieldErrors.license_issuing_authority && <FieldError msg={fieldErrors.license_issuing_authority} />}
-            </div>
-
-            <div>
-              <Label isDark={isDark}>License Expiry Date</Label>
-              <input
-                className={inputBase(isDark)}
-                type="date"
-                value={form.license_expiry_date}
-                disabled={!editMode}
-                onChange={(e) => onField('license_expiry_date', e.target.value)}
-              />
-              {fieldErrors.license_expiry_date && <FieldError msg={fieldErrors.license_expiry_date} />}
-            </div>
-
-            <div>
-              <Label isDark={isDark}>Regulatory Identifiers (optional)</Label>
-              {editMode ? (
-                <textarea
-                  className={textareaBase(isDark)}
-                  value={joinLines(form.regulatory_identifiers)}
-                  placeholder="One identifier per line"
-                  onChange={(e) => onField('regulatory_identifiers', splitLines(e.target.value))}
-                />
-              ) : (
-                <div className="mt-2">
-                  <BulletList items={form.regulatory_identifiers} isDark={isDark} />
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 gap-2">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={form.participates_in_medicare}
-                  disabled={!editMode}
-                  onChange={(e) => onField('participates_in_medicare', e.target.checked)}
-                />
-                Participates in Medicare
-              </label>
-
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={form.participates_in_medicaid}
-                  disabled={!editMode}
-                  onChange={(e) => onField('participates_in_medicaid', e.target.checked)}
-                />
-                Participates in Medicaid
-              </label>
-            </div>
+          {/* Operational Status */}
+          <div className="mb-4">
+            <Label isDark={isDark}>Operational Status</Label>
+            {editMode ? (
+              <>
+                <select
+                  className={inputBase(isDark)}
+                  value={form.operational_status}
+                  onChange={(e) => onField('operational_status', e.target.value)}
+                >
+                  <option value="">Select status</option>
+                  {Object.values(OperationalStatus).map((v) => (
+                    <option key={v} value={v}>
+                      {v.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Zap className={cn(
+                  "w-4 h-4",
+                  form.operational_status === 'fully_operational' ? 'text-emerald-500' : 'text-amber-500'
+                )} />
+                <span className={cn("text-sm", isDark ? 'text-gray-300' : 'text-gray-700')}>
+                  {formatOperationalStatus(form.operational_status)}
+                </span>
+              </div>
+            )}
           </div>
 
-          {/* Clinical Capabilities */}
-          <div className={`pt-4 ${divider} space-y-3`}>
-            <SectionTitle isDark={isDark} icon={<Stethoscope className="w-4 h-4" />} title="Clinical Capabilities" />
+          {/* Operating Hours */}
+          <div className="mb-4">
+            <Label isDark={isDark}>Operating Hours</Label>
+            {editMode ? (
+              <>
+                <textarea
+                  className={textareaBase(isDark)}
+                  value={form.operating_hours_json}
+                  onChange={(e) => onField('operating_hours_json', e.target.value)}
+                  placeholder='e.g., ["Mon-Fri: 8:00-20:00", "Sat: 9:00-17:00"]'
+                  rows={3}
+                />
+                <p className={cn(
+                  "text-xs mt-1",
+                  isDark ? 'text-gray-500' : 'text-gray-400'
+                )}>
+                  Enter as JSON array or plain text
+                </p>
+                {fieldErrors.operating_hours_json && <FieldError msg={fieldErrors.operating_hours_json} />}
+              </>
+            ) : (
+              <div className={cn(
+                "text-sm p-2 rounded",
+                isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-50 text-gray-700'
+              )}>
+                {form.is_24_7 ? 'Open 24 hours a day, 7 days a week' : formatOperatingHours}
+              </div>
+            )}
+          </div>
 
-            <div className="grid grid-cols-1 gap-2">
-              {[
-                { key: 'has_emergency_department', label: 'Has Emergency Department' },
-                { key: 'has_trauma_center', label: 'Has Trauma Center' },
-                { key: 'has_intensive_care', label: 'Has Intensive Care' },
-                { key: 'has_neonatal_icu', label: 'Has Neonatal ICU' },
-                { key: 'has_cardiac_cath_lab', label: 'Has Cardiac Cath Lab' },
-              ].map((row) => (
-                <label key={row.key} className="flex items-center gap-2 text-sm">
+          {/* Emergency Hours */}
+          <div className="mb-4">
+            <Label isDark={isDark}>Emergency Services Hours (Optional)</Label>
+            {editMode ? (
+              <>
+                <textarea
+                  className={textareaBase(isDark)}
+                  value={form.emergency_services_hours_json}
+                  onChange={(e) => onField('emergency_services_hours_json', e.target.value)}
+                  placeholder='e.g., ["24/7 Emergency Department"] or null'
+                  rows={3}
+                />
+                {fieldErrors.emergency_services_hours_json && <FieldError msg={fieldErrors.emergency_services_hours_json} />}
+              </>
+            ) : (
+              (() => {
+                try {
+                  const hours = JSON.parse(form.emergency_services_hours_json);
+                  if (hours && hours.length > 0) {
+                    return (
+                      <div className={cn(
+                        "text-sm p-2 rounded",
+                        isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-50 text-gray-700'
+                      )}>
+                        {Array.isArray(hours) ? hours.join(', ') : String(hours)}
+                      </div>
+                    );
+                  }
+                } catch {
+                  if (form.emergency_services_hours_json && form.emergency_services_hours_json !== 'null') {
+                    return (
+                      <div className={cn(
+                        "text-sm p-2 rounded",
+                        isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-50 text-gray-700'
+                      )}>
+                        {form.emergency_services_hours_json}
+                      </div>
+                    );
+                  }
+                }
+                return (
+                  <p className={cn("text-sm", isDark ? 'text-gray-500' : 'text-gray-400')}>
+                    Not specified
+                  </p>
+                );
+              })()
+            )}
+          </div>
+
+          {/* Wait Time & Volume */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label isDark={isDark}>Avg. Wait Time (mins)</Label>
+              {editMode ? (
+                <>
                   <input
-                    type="checkbox"
-                    checked={(form as any)[row.key]}
-                    disabled={!editMode}
-                    onChange={(e) => onField(row.key as any, e.target.checked as any)}
+                    className={inputBase(isDark)}
+                    value={form.average_wait_time_minutes}
+                    onChange={(e) => onField('average_wait_time_minutes', e.target.value)}
+                    inputMode="decimal"
+                    placeholder="e.g., 45"
                   />
-                  {row.label}
-                </label>
-              ))}
+                  {fieldErrors.average_wait_time_minutes && <FieldError msg={fieldErrors.average_wait_time_minutes} />}
+                </>
+              ) : (
+                <p className={cn("text-sm", isDark ? 'text-gray-300' : 'text-gray-700')}>
+                  {form.average_wait_time_minutes ? `${form.average_wait_time_minutes} minutes` : '—'}
+                </p>
+              )}
             </div>
 
             <div>
-              <Label isDark={isDark}>Trauma Center Level (1–5)</Label>
-              <input
-                className={inputBase(isDark)}
-                value={form.trauma_center_level}
-                disabled={!editMode}
-                onChange={(e) => onField('trauma_center_level', e.target.value)}
-                inputMode="numeric"
-                placeholder="e.g. 2"
-              />
-              {fieldErrors.trauma_center_level && <FieldError msg={fieldErrors.trauma_center_level} />}
+              <Label isDark={isDark}>Monthly Patient Volume</Label>
+              {editMode ? (
+                <>
+                  <input
+                    className={inputBase(isDark)}
+                    value={form.monthly_patient_volume}
+                    onChange={(e) => onField('monthly_patient_volume', e.target.value)}
+                    inputMode="numeric"
+                    placeholder="e.g., 1200"
+                  />
+                  {fieldErrors.monthly_patient_volume && <FieldError msg={fieldErrors.monthly_patient_volume} />}
+                </>
+              ) : (
+                <p className={cn("text-sm", isDark ? 'text-gray-300' : 'text-gray-700')}>
+                  {form.monthly_patient_volume ? Number(form.monthly_patient_volume).toLocaleString() : '—'}
+                </p>
+              )}
             </div>
           </div>
+        </div>
 
-          {/* Financial */}
-          <div className={`pt-4 ${divider} space-y-3`}>
-            <SectionTitle isDark={isDark} icon={<DollarSign className="w-4 h-4" />} title="Financial" />
+        {/* Licensing Section - Brief */}
+        <div className={divider(isDark)}>
+          <h4 className={cn(
+            "text-xs font-semibold uppercase tracking-wider mt-4 mb-3",
+            isDark ? 'text-gray-300' : 'text-gray-700'
+          )}>
+            Licensing
+          </h4>
 
-            <div>
-              <Label isDark={isDark}>Currency (ISO code)</Label>
-              <input
-                className={inputBase(isDark)}
-                value={form.currency}
-                disabled={!editMode}
-                onChange={(e) => onField('currency', e.target.value.toUpperCase())}
-                placeholder="USD"
-              />
-              {fieldErrors.currency && <FieldError msg={fieldErrors.currency} />}
-            </div>
-
-            <label className="flex items-center justify-between text-sm">
-              <span>Tax Enabled</span>
-              <input
-                type="checkbox"
-                checked={form.tax_enabled}
-                disabled={!editMode}
-                onChange={(e) => onField('tax_enabled', e.target.checked)}
-                className="w-4 h-4"
-              />
-            </label>
-
-            <div>
-              <Label isDark={isDark}>Tax Name (optional)</Label>
-              <input
-                className={inputBase(isDark)}
-                value={form.tax_name}
-                disabled={!editMode}
-                onChange={(e) => onField('tax_name', e.target.value)}
-                placeholder="VAT"
-              />
-              {fieldErrors.tax_name && <FieldError msg={fieldErrors.tax_name} />}
-            </div>
-
-            <div>
-              <Label isDark={isDark}>Tax Rate (%)</Label>
-              <input
-                className={inputBase(isDark)}
-                value={form.tax_rate}
-                disabled={!editMode}
-                onChange={(e) => onField('tax_rate', e.target.value)}
-                inputMode="decimal"
-                placeholder="e.g. 7.5"
-              />
-              {fieldErrors.tax_rate && <FieldError msg={fieldErrors.tax_rate} />}
-            </div>
-          </div>
-
-          {/* System */}
-          <div className={`pt-4 ${divider} space-y-3`}>
-            <SectionTitle isDark={isDark} icon={<Clock className="w-4 h-4" />} title="System" />
-
-            <div>
-              <Label isDark={isDark}>Timezone</Label>
-              <input
-                className={inputBase(isDark)}
-                value={form.timezone}
-                disabled={!editMode}
-                onChange={(e) => onField('timezone', e.target.value)}
-                placeholder="Africa/Nairobi"
-              />
-              {fieldErrors.timezone && <FieldError msg={fieldErrors.timezone} />}
-            </div>
-
-            <div>
-              <Label isDark={isDark}>Data Residency Region (optional)</Label>
-              <input
-                className={inputBase(isDark)}
-                value={form.data_residency_region}
-                disabled={!editMode}
-                onChange={(e) => onField('data_residency_region', e.target.value)}
-                placeholder="e.g. EU"
-              />
-              {fieldErrors.data_residency_region && <FieldError msg={fieldErrors.data_residency_region} />}
-            </div>
+          <div className="space-y-2">
+            {!editMode && form.license_number && (
+              <>
+                <InfoRow label="License #" value={form.license_number} isDark={isDark} />
+                <InfoRow label="Issuing Authority" value={form.license_issuing_authority} isDark={isDark} />
+                <InfoRow label="Expiry Date" value={form.license_expiry_date} isDark={isDark} />
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -479,4 +428,24 @@ const FacilityBrandingAndOpsCard: React.FC<FacilityBrandingAndOpsCardProps> = ({
   );
 };
 
-export default FacilityBrandingAndOpsCard;
+// Helper component for displaying info rows
+const InfoRow: React.FC<{ label: string; value: any; isDark: boolean }> = ({ label, value, isDark }) => {
+  if (!value || value === '') return null;
+  
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+      <span className={cn(
+        "text-xs font-semibold uppercase tracking-wider sm:w-24 shrink-0",
+        isDark ? 'text-gray-400' : 'text-gray-500'
+      )}>
+        {label}
+      </span>
+      <span className={cn(
+        "text-sm",
+        isDark ? 'text-gray-200' : 'text-gray-700'
+      )}>
+        {value}
+      </span>
+    </div>
+  );
+};

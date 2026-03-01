@@ -1,6 +1,6 @@
 import React from 'react';
-import { Building2, Edit3, Save, X } from 'lucide-react';
-
+import { Edit3, Save, X, Building2 } from 'lucide-react';
+import { cn } from '../../../../../../shared/utils/classNameUtils';
 interface FacilitySettingsHeaderBarProps {
   isDark: boolean;
   activeFacilityName: string | null;
@@ -12,7 +12,7 @@ interface FacilitySettingsHeaderBarProps {
   isUploadingLogo: boolean;
 }
 
-const FacilitySettingsHeaderBar: React.FC<FacilitySettingsHeaderBarProps> = ({
+export const FacilitySettingsHeaderBar: React.FC<FacilitySettingsHeaderBarProps> = ({
   isDark,
   activeFacilityName,
   editMode,
@@ -22,44 +22,43 @@ const FacilitySettingsHeaderBar: React.FC<FacilitySettingsHeaderBarProps> = ({
   isSaving,
   isUploadingLogo,
 }) => {
-  const busy = isSaving || isUploadingLogo;
-
   return (
     <div className="flex items-start justify-between gap-4 flex-wrap">
-      <div className="flex-1 min-w-[240px]">
+      <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Building2 className={isDark ? 'text-cyan-400' : 'text-blue-600'} />
           Facility Settings
         </h1>
-
-        <div className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <p className={cn(
+          "text-sm mt-1",
+          isDark ? 'text-gray-400' : 'text-gray-500'
+        )}>
           {activeFacilityName ? (
-            <div className="flex items-center flex-wrap gap-1">
-              <span className="font-medium">Currently managing:</span>
-              <span className={`font-semibold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-                {activeFacilityName}
-              </span>
-            </div>
+            <>
+              Managing settings for: <span className="font-semibold">{activeFacilityName}</span>
+            </>
           ) : (
-            <p>Manage facility configuration, branding, and operational settings.</p>
+            'Manage facility configuration, branding, and operational settings.'
           )}
-        </div>
+        </p>
       </div>
 
-      <div className="flex items-center gap-3 flex-shrink-0">
+      <div className="flex items-center gap-3">
         {editMode ? (
           <>
             <button
               type="button"
               onClick={onCancel}
-              disabled={busy}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
-                busy ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-opacity-80'
-              } ${
-                isDark
-                  ? 'border-gray-700 text-gray-300 hover:bg-gray-800'
+              disabled={isSaving || isUploadingLogo}
+              className={cn(
+                "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-colors",
+                (isSaving || isUploadingLogo) 
+                  ? 'cursor-not-allowed opacity-50' 
+                  : 'cursor-pointer hover:bg-opacity-80',
+                isDark 
+                  ? 'border-gray-700 text-gray-300 hover:bg-gray-800' 
                   : 'border-gray-300 text-gray-600 hover:bg-gray-100'
-              }`}
+              )}
             >
               <X className="w-4 h-4" />
               Cancel
@@ -68,10 +67,14 @@ const FacilitySettingsHeaderBar: React.FC<FacilitySettingsHeaderBarProps> = ({
             <button
               type="button"
               onClick={onSave}
-              disabled={busy}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors ${
-                busy ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-blue-700'
-              } bg-blue-600`}
+              disabled={isSaving || isUploadingLogo}
+              className={cn(
+                "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors",
+                (isSaving || isUploadingLogo) 
+                  ? 'cursor-not-allowed opacity-60' 
+                  : 'cursor-pointer hover:bg-blue-700',
+                'bg-blue-600'
+              )}
             >
               {isSaving ? (
                 <>
@@ -93,9 +96,10 @@ const FacilitySettingsHeaderBar: React.FC<FacilitySettingsHeaderBarProps> = ({
           <button
             type="button"
             onClick={() => setEditMode(true)}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors cursor-pointer hover:bg-blue-700 ${
+            className={cn(
+              "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors cursor-pointer hover:bg-blue-700",
               isDark ? 'bg-blue-500' : 'bg-blue-600'
-            }`}
+            )}
           >
             <Edit3 className="w-4 h-4" />
             Edit Settings
@@ -105,5 +109,3 @@ const FacilitySettingsHeaderBar: React.FC<FacilitySettingsHeaderBarProps> = ({
     </div>
   );
 };
-
-export default FacilitySettingsHeaderBar;

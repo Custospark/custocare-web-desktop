@@ -4,6 +4,7 @@ import { XCircle } from 'lucide-react';
 
 import type { RootState } from '../../../../../app/store/rootReducer';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
+import { cn } from '../../../../../shared/utils/classNameUtils';
 
 import {
   useGetFacilitySettings,
@@ -12,22 +13,26 @@ import {
 } from '../../api/facility-settings/FacilitySettingsQuery';
 
 import {
+  FacilityTier,
+  FacilityType,
+  NatureOfFacility,
+  OperationalStatus,
   isProbablyUrl,
   isValidHexColor,
   type FacilitySettingsSnapshot,
   type UpdateFacilitySettingsRequest,
 } from '../../api/facility-settings/FacilitySettingsTypes';
 
-import FacilitySettingsHeaderBar from './components/FacilitySettingsHeaderBar';
-import FacilityBasicsCard from './components/FacilityBasicsCard';
-import FacilityLocationContactCard from './components/FacilityLocationContactCard';
-import FacilityBrandingAndOpsCard from './components/FacilityBrandingAndOpsCard';
+import { FacilitySettingsHeaderBar } from './components/FacilitySettingsHeaderBar';
+import { FacilityBasicsCard } from './components/FacilityBasicsCard';
+import { FacilityLocationContactCard } from './components/FacilityLocationContactCard';
+import { FacilityBrandingAndOpsCard } from './components/FacilityBrandingAndOpsCard';
 
 /* -------------------------------------------------------------------------- */
-/*                         Shared types exported (type-only)                   */
+/*                               Form State Types                             */
 /* -------------------------------------------------------------------------- */
 
-export type FacilitySettingsFormState = {
+type FacilitySettingsFormState = {
   // Branding (read + editable colors)
   facility_logo_url: string | null;
   primary_brand_color: string;
@@ -43,11 +48,11 @@ export type FacilitySettingsFormState = {
   facility_type: string;
   facility_tier: string;
 
-  // CapacityAndServices (user-friendly lists)
+  // CapacityAndServices (JSON text for arrays)
   bed_capacity: string;
-  available_services: string[];
-  specialty_services: string[];
-  equipment_inventory_summary: string[];
+  available_services_json: string;
+  specialty_services_json: string;
+  equipment_inventory_summary_json: string;
 
   // Location
   address_line1: string;
@@ -66,9 +71,9 @@ export type FacilitySettingsFormState = {
   email: string;
   website: string;
 
-  // Operations (user-friendly lists)
-  operating_hours: string[];
-  emergency_services_hours: string[];
+  // Operations
+  operating_hours_json: string;
+  emergency_services_hours_json: string;
   is_24_7: boolean;
   operational_status: string;
   average_wait_time_minutes: string;
@@ -78,7 +83,7 @@ export type FacilitySettingsFormState = {
   license_number: string;
   license_issuing_authority: string;
   license_expiry_date: string;
-  regulatory_identifiers: string[];
+  regulatory_identifiers_json: string;
   participates_in_medicare: boolean;
   participates_in_medicaid: boolean;
 
@@ -101,52 +106,18 @@ export type FacilitySettingsFormState = {
   data_residency_region: string;
 };
 
-export type FacilitySettingsOnField = <K extends keyof FacilitySettingsFormState>(
-  key: K,
-  value: FacilitySettingsFormState[K],
-) => void;
-
 /* -------------------------------------------------------------------------- */
-/*                            Helpers (no JSON UI)                             */
+/*                               Helper Functions                             */
 /* -------------------------------------------------------------------------- */
 
-const normalizeArrayToStrings = (arr: unknown[] | null | undefined): string[] => {
-  if (!arr || !Array.isArray(arr)) return [];
-  return arr
-    .map((item) => (typeof item === 'string' ? item : JSON.stringify(item)))
-    .map((s) => s.trim())
-    .filter(Boolean);
-};
-
-const parseNullableNumber = (raw: string): number | null => {
-  const v = raw.trim();
-  if (!v) return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-};
-
-const parseNullableInt = (raw: string): number | null => {
-  const v = raw.trim();
-  if (!v) return null;
-  const n = Number(v);
-  if (!Number.isFinite(n)) return null;
-  return Math.trunc(n);
-};
-
-/** Convert string[] back to unknown[]; tries JSON.parse when it looks like JSON */
-const parseStringListToUnknownArray = (items: string[]): unknown[] => {
-  return items
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((s) => {
-      const looksJson = (s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'));
-      if (!looksJson) return s;
-      try {
-        return JSON.parse(s);
-      } catch {
-        return s;
-      }
-    });
+const prettyJson = (v: unknown, fallback = '[]'): string => {
+  try {
+    if (v === null || v === undefined) return fallback;
+    if (Array.isArray(v) && v.length === 0) return '[]';
+    return JSON.stringify(v, null, 2);
+  } catch {
+    return fallback;
+  }
 };
 
 const settingsToFormState = (s: FacilitySettingsSnapshot): FacilitySettingsFormState => ({
@@ -163,9 +134,9 @@ const settingsToFormState = (s: FacilitySettingsSnapshot): FacilitySettingsFormS
   facility_tier: s.Classification.facility_tier ?? '',
 
   bed_capacity: s.CapacityAndServices.bed_capacity === null ? '' : String(s.CapacityAndServices.bed_capacity),
-  available_services: normalizeArrayToStrings(s.CapacityAndServices.available_services),
-  specialty_services: normalizeArrayToStrings(s.CapacityAndServices.specialty_services),
-  equipment_inventory_summary: normalizeArrayToStrings(s.CapacityAndServices.equipment_inventory_summary),
+  available_services_json: prettyJson(s.CapacityAndServices.available_services, '[]'),
+  specialty_services_json: prettyJson(s.CapacityAndServices.specialty_services, 'null'),
+  equipment_inventory_summary_json: prettyJson(s.CapacityAndServices.equipment_inventory_summary, 'null'),
 
   address_line1: s.Location.address_line1 ?? '',
   address_line2: s.Location.address_line2 ?? '',
@@ -182,23 +153,26 @@ const settingsToFormState = (s: FacilitySettingsSnapshot): FacilitySettingsFormS
   email: s.ContactInformation.email ?? '',
   website: s.ContactInformation.website ?? '',
 
-  operating_hours: normalizeArrayToStrings(s.Operations.operating_hours),
-  emergency_services_hours: normalizeArrayToStrings(s.Operations.emergency_services_hours),
+  operating_hours_json: prettyJson(s.Operations.operating_hours, '[]'),
+  emergency_services_hours_json: prettyJson(s.Operations.emergency_services_hours, 'null'),
   is_24_7: Boolean(s.Operations.is_24_7),
   operational_status: s.Operations.operational_status ?? '',
-  average_wait_time_minutes: s.Operations.average_wait_time_minutes === null ? '' : String(s.Operations.average_wait_time_minutes),
-  monthly_patient_volume: s.Operations.monthly_patient_volume === null ? '' : String(s.Operations.monthly_patient_volume),
+  average_wait_time_minutes:
+    s.Operations.average_wait_time_minutes === null ? '' : String(s.Operations.average_wait_time_minutes),
+  monthly_patient_volume:
+    s.Operations.monthly_patient_volume === null ? '' : String(s.Operations.monthly_patient_volume),
 
   license_number: s.LicensingAndCompliance.license_number ?? '',
   license_issuing_authority: s.LicensingAndCompliance.license_issuing_authority ?? '',
   license_expiry_date: s.LicensingAndCompliance.license_expiry_date ?? '',
-  regulatory_identifiers: normalizeArrayToStrings(s.LicensingAndCompliance.regulatory_identifiers),
+  regulatory_identifiers_json: prettyJson(s.LicensingAndCompliance.regulatory_identifiers, 'null'),
   participates_in_medicare: Boolean(s.LicensingAndCompliance.participates_in_medicare),
   participates_in_medicaid: Boolean(s.LicensingAndCompliance.participates_in_medicaid),
 
   has_emergency_department: Boolean(s.ClinicalCapabilities.has_emergency_department),
   has_trauma_center: Boolean(s.ClinicalCapabilities.has_trauma_center),
-  trauma_center_level: s.ClinicalCapabilities.trauma_center_level === null ? '' : String(s.ClinicalCapabilities.trauma_center_level),
+  trauma_center_level:
+    s.ClinicalCapabilities.trauma_center_level === null ? '' : String(s.ClinicalCapabilities.trauma_center_level),
   has_intensive_care: Boolean(s.ClinicalCapabilities.has_intensive_care),
   has_neonatal_icu: Boolean(s.ClinicalCapabilities.has_neonatal_icu),
   has_cardiac_cath_lab: Boolean(s.ClinicalCapabilities.has_cardiac_cath_lab),
@@ -212,183 +186,281 @@ const settingsToFormState = (s: FacilitySettingsSnapshot): FacilitySettingsFormS
   data_residency_region: s.SystemConfiguration.data_residency_region ?? '',
 });
 
+const parseNullableNumber = (raw: string): number | null => {
+  const v = raw.trim();
+  if (!v) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+const parseNullableInt = (raw: string): number | null => {
+  const v = raw.trim();
+  if (!v) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return Math.trunc(n);
+};
+
+const parseJsonField = (raw: string): unknown => {
+  const t = raw.trim();
+  // allow explicit "null"
+  if (t === 'null') return null;
+  if (!t) return [];
+  // Try to parse as JSON, if it fails, treat as string array
+  try {
+    return JSON.parse(t);
+  } catch {
+    // If it's a comma-separated list, convert to array
+    if (t.includes(',')) {
+      return t.split(',').map(item => item.trim());
+    }
+    return [t];
+  }
+};
+
+const flattenSnapshotForDiff = (s: FacilitySettingsSnapshot) => ({
+  primary_brand_color: s.Branding.primary_brand_color ?? null,
+  secondary_brand_color: s.Branding.secondary_brand_color ?? null,
+
+  facility_name: s.CoreIdentity.facility_name ?? '',
+  legal_entity_name: s.CoreIdentity.legal_entity_name ?? '',
+  health_system_name: s.CoreIdentity.health_system_name ?? null,
+
+  nature_of_facility: s.Classification.nature_of_facility ?? null,
+  facility_type: s.Classification.facility_type ?? null,
+  facility_tier: s.Classification.facility_tier ?? null,
+
+  bed_capacity: s.CapacityAndServices.bed_capacity ?? null,
+  available_services: s.CapacityAndServices.available_services ?? [],
+  specialty_services: s.CapacityAndServices.specialty_services ?? null,
+  equipment_inventory_summary: s.CapacityAndServices.equipment_inventory_summary ?? null,
+
+  address_line1: s.Location.address_line1 ?? '',
+  address_line2: s.Location.address_line2 ?? null,
+  city: s.Location.city ?? '',
+  state_province: s.Location.state_province ?? '',
+  postal_code: s.Location.postal_code ?? '',
+  country_code: s.Location.country_code ?? '',
+  latitude: s.Location.latitude ?? null,
+  longitude: s.Location.longitude ?? null,
+
+  main_phone: s.ContactInformation.main_phone ?? '',
+  emergency_phone: s.ContactInformation.emergency_phone ?? null,
+  fax: s.ContactInformation.fax ?? null,
+  email: s.ContactInformation.email ?? null,
+  website: s.ContactInformation.website ?? null,
+
+  operating_hours: s.Operations.operating_hours ?? [],
+  emergency_services_hours: s.Operations.emergency_services_hours ?? null,
+  is_24_7: Boolean(s.Operations.is_24_7),
+  operational_status: s.Operations.operational_status ?? null,
+  average_wait_time_minutes: s.Operations.average_wait_time_minutes ?? null,
+  monthly_patient_volume: s.Operations.monthly_patient_volume ?? null,
+
+  license_number: s.LicensingAndCompliance.license_number ?? null,
+  license_issuing_authority: s.LicensingAndCompliance.license_issuing_authority ?? null,
+  license_expiry_date: s.LicensingAndCompliance.license_expiry_date ?? null,
+  regulatory_identifiers: s.LicensingAndCompliance.regulatory_identifiers ?? null,
+  participates_in_medicare: Boolean(s.LicensingAndCompliance.participates_in_medicare),
+  participates_in_medicaid: Boolean(s.LicensingAndCompliance.participates_in_medicaid),
+
+  has_emergency_department: Boolean(s.ClinicalCapabilities.has_emergency_department),
+  has_trauma_center: Boolean(s.ClinicalCapabilities.has_trauma_center),
+  trauma_center_level: s.ClinicalCapabilities.trauma_center_level ?? null,
+  has_intensive_care: Boolean(s.ClinicalCapabilities.has_intensive_care),
+  has_neonatal_icu: Boolean(s.ClinicalCapabilities.has_neonatal_icu),
+  has_cardiac_cath_lab: Boolean(s.ClinicalCapabilities.has_cardiac_cath_lab),
+
+  currency: s.FinancialConfiguration.currency ?? '',
+  tax_enabled: Boolean(s.FinancialConfiguration.tax_enabled),
+  tax_name: s.FinancialConfiguration.tax_name ?? null,
+  tax_rate: s.FinancialConfiguration.tax_rate ?? null,
+
+  timezone: s.SystemConfiguration.timezone ?? '',
+  data_residency_region: s.SystemConfiguration.data_residency_region ?? null,
+});
+
 const buildUpdatePayload = (
   form: FacilitySettingsFormState,
   original: FacilitySettingsSnapshot,
 ): { payload: UpdateFacilitySettingsRequest; fieldErrors: Record<string, string> } => {
+  const orig = flattenSnapshotForDiff(original);
   const errs: Record<string, string> = {};
   const payload: UpdateFacilitySettingsRequest = {};
 
-  const setIfChanged = <K extends keyof UpdateFacilitySettingsRequest>(key: K, next: any, prev: any) => {
+  const setIfChanged = <K extends keyof UpdateFacilitySettingsRequest>(key: K, next: any) => {
+    const prev = (orig as any)[key];
     const same = JSON.stringify(prev) === JSON.stringify(next);
     if (!same) (payload as any)[key] = next;
   };
 
-  // Branding colors
+  // ---------------- Branding colors ----------------
   if (form.primary_brand_color && !isValidHexColor(form.primary_brand_color)) {
-    errs.primary_brand_color = 'Invalid color. Use a hex value like #FFFFFF.';
+    errs.primary_brand_color = 'Invalid hex (e.g. #FFFFFF or #FFF).';
   }
   if (form.secondary_brand_color && !isValidHexColor(form.secondary_brand_color)) {
-    errs.secondary_brand_color = 'Invalid color. Use a hex value like #FFFFFF.';
+    errs.secondary_brand_color = 'Invalid hex (e.g. #FFFFFF or #FFF).';
   }
-  setIfChanged('primary_brand_color', form.primary_brand_color.trim() || null, original.Branding.primary_brand_color ?? null);
-  setIfChanged('secondary_brand_color', form.secondary_brand_color.trim() || null, original.Branding.secondary_brand_color ?? null);
+  setIfChanged('primary_brand_color', form.primary_brand_color.trim() || null);
+  setIfChanged('secondary_brand_color', form.secondary_brand_color.trim() || null);
 
-  // CoreIdentity
+  // ---------------- CoreIdentity ----------------
   if (!form.facility_name.trim()) errs.facility_name = 'Facility name is required.';
   if (form.facility_name.length > 200) errs.facility_name = 'Max 200 characters.';
   if (form.legal_entity_name.length > 200) errs.legal_entity_name = 'Max 200 characters.';
   if (form.health_system_name.length > 200) errs.health_system_name = 'Max 200 characters.';
 
-  setIfChanged('facility_name', form.facility_name.trim(), original.CoreIdentity.facility_name ?? '');
-  setIfChanged('legal_entity_name', form.legal_entity_name.trim(), original.CoreIdentity.legal_entity_name ?? '');
-  setIfChanged('health_system_name', form.health_system_name.trim() || null, original.CoreIdentity.health_system_name ?? null);
+  setIfChanged('facility_name', form.facility_name.trim());
+  setIfChanged('legal_entity_name', form.legal_entity_name.trim());
+  setIfChanged('health_system_name', form.health_system_name.trim() || null);
 
-  // Classification
-  setIfChanged('nature_of_facility', (form.nature_of_facility || null) as any, original.Classification.nature_of_facility ?? null);
-  setIfChanged('facility_type', (form.facility_type || null) as any, original.Classification.facility_type ?? null);
-  setIfChanged('facility_tier', (form.facility_tier || null) as any, original.Classification.facility_tier ?? null);
+  // ---------------- Classification ----------------
+  setIfChanged('nature_of_facility', (form.nature_of_facility || null) as any);
+  setIfChanged('facility_type', (form.facility_type || null) as any);
+  setIfChanged('facility_tier', (form.facility_tier || null) as any);
 
-  // CapacityAndServices
+  // ---------------- CapacityAndServices ----------------
   const bed = parseNullableInt(form.bed_capacity);
-  if (form.bed_capacity.trim() && bed === null) errs.bed_capacity = 'Bed capacity must be a valid number.';
-  if (bed !== null && (bed < 0 || bed > 65535)) errs.bed_capacity = 'Bed capacity must be between 0 and 65535.';
-  setIfChanged('bed_capacity', bed, original.CapacityAndServices.bed_capacity ?? null);
+  if (form.bed_capacity.trim() && bed === null) errs.bed_capacity = 'Must be a valid integer.';
+  if (bed !== null && (bed < 0 || bed > 65535)) errs.bed_capacity = 'Must be between 0 and 65535.';
+  setIfChanged('bed_capacity', bed);
 
-  // arrays (user-friendly lists)
-  const nextAvailable = parseStringListToUnknownArray(form.available_services);
-  setIfChanged(
-    'available_services',
-    nextAvailable,
-    original.CapacityAndServices.available_services ?? [],
-  );
+  try {
+    const available = parseJsonField(form.available_services_json);
+    setIfChanged('available_services', Array.isArray(available) ? available : []);
+  } catch {
+    errs.available_services_json = 'Invalid format.';
+  }
 
-  // nullable arrays: if originally null and user leaves empty, keep null
-  const origSpecNull = original.CapacityAndServices.specialty_services === null;
-  const nextSpec = form.specialty_services.length === 0 && origSpecNull
-    ? null
-    : (parseStringListToUnknownArray(form.specialty_services) as any[]);
-  setIfChanged('specialty_services', nextSpec, original.CapacityAndServices.specialty_services ?? null);
+  try {
+    const spec = parseJsonField(form.specialty_services_json);
+    setIfChanged('specialty_services', spec);
+  } catch {
+    errs.specialty_services_json = 'Invalid format.';
+  }
 
-  const origEquipNull = original.CapacityAndServices.equipment_inventory_summary === null;
-  const nextEquip = form.equipment_inventory_summary.length === 0 && origEquipNull
-    ? null
-    : (parseStringListToUnknownArray(form.equipment_inventory_summary) as any[]);
-  setIfChanged('equipment_inventory_summary', nextEquip, original.CapacityAndServices.equipment_inventory_summary ?? null);
+  try {
+    const equip = parseJsonField(form.equipment_inventory_summary_json);
+    setIfChanged('equipment_inventory_summary', equip);
+  } catch {
+    errs.equipment_inventory_summary_json = 'Invalid format.';
+  }
 
-  // Location
+  // ---------------- Location ----------------
   if (form.address_line1.length > 200) errs.address_line1 = 'Max 200 characters.';
   if (form.address_line2.length > 200) errs.address_line2 = 'Max 200 characters.';
   if (form.city.length > 100) errs.city = 'Max 100 characters.';
   if (form.state_province.length > 100) errs.state_province = 'Max 100 characters.';
   if (form.postal_code.length > 20) errs.postal_code = 'Max 20 characters.';
-  if (form.country_code && form.country_code.length !== 2) errs.country_code = 'Country code must be 2 letters.';
+  if (form.country_code && form.country_code.length !== 2) errs.country_code = 'Must be 2 characters (ISO2).';
 
-  setIfChanged('address_line1', form.address_line1.trim(), original.Location.address_line1 ?? '');
-  setIfChanged('address_line2', form.address_line2.trim() || null, original.Location.address_line2 ?? null);
-  setIfChanged('city', form.city.trim(), original.Location.city ?? '');
-  setIfChanged('state_province', form.state_province.trim(), original.Location.state_province ?? '');
-  setIfChanged('postal_code', form.postal_code.trim(), original.Location.postal_code ?? '');
-  setIfChanged('country_code', form.country_code.trim(), original.Location.country_code ?? '');
+  setIfChanged('address_line1', form.address_line1.trim());
+  setIfChanged('address_line2', form.address_line2.trim() || null);
+  setIfChanged('city', form.city.trim());
+  setIfChanged('state_province', form.state_province.trim());
+  setIfChanged('postal_code', form.postal_code.trim());
+  setIfChanged('country_code', form.country_code.trim());
 
   const lat = parseNullableNumber(form.latitude);
   const lng = parseNullableNumber(form.longitude);
-  if (form.latitude.trim() && lat === null) errs.latitude = 'Latitude must be a valid number.';
-  if (form.longitude.trim() && lng === null) errs.longitude = 'Longitude must be a valid number.';
-  if (lat !== null && (lat < -90 || lat > 90)) errs.latitude = 'Latitude must be between -90 and 90.';
-  if (lng !== null && (lng < -180 || lng > 180)) errs.longitude = 'Longitude must be between -180 and 180.';
+  if (form.latitude.trim() && lat === null) errs.latitude = 'Must be a number.';
+  if (form.longitude.trim() && lng === null) errs.longitude = 'Must be a number.';
+  if (lat !== null && (lat < -90 || lat > 90)) errs.latitude = 'Must be between -90 and 90.';
+  if (lng !== null && (lng < -180 || lng > 180)) errs.longitude = 'Must be between -180 and 180.';
+  setIfChanged('latitude', lat);
+  setIfChanged('longitude', lng);
 
-  setIfChanged('latitude', lat, original.Location.latitude ?? null);
-  setIfChanged('longitude', lng, original.Location.longitude ?? null);
-
-  // Contact
+  // ---------------- Contact ----------------
   if (form.main_phone.length > 50) errs.main_phone = 'Max 50 characters.';
   if (form.emergency_phone.length > 50) errs.emergency_phone = 'Max 50 characters.';
   if (form.fax.length > 50) errs.fax = 'Max 50 characters.';
   if (form.email.length > 200) errs.email = 'Max 200 characters.';
   if (form.website.length > 255) errs.website = 'Max 255 characters.';
-  if (form.website.trim() && !isProbablyUrl(form.website.trim())) errs.website = 'Website must be a valid URL.';
+  if (form.website.trim() && !isProbablyUrl(form.website.trim())) errs.website = 'Must be a valid URL.';
 
-  setIfChanged('main_phone', form.main_phone.trim(), original.ContactInformation.main_phone ?? '');
-  setIfChanged('emergency_phone', form.emergency_phone.trim() || null, original.ContactInformation.emergency_phone ?? null);
-  setIfChanged('fax', form.fax.trim() || null, original.ContactInformation.fax ?? null);
-  setIfChanged('email', form.email.trim() || null, original.ContactInformation.email ?? null);
-  setIfChanged('website', form.website.trim() || null, original.ContactInformation.website ?? null);
+  setIfChanged('main_phone', form.main_phone.trim());
+  setIfChanged('emergency_phone', form.emergency_phone.trim() || null);
+  setIfChanged('fax', form.fax.trim() || null);
+  setIfChanged('email', form.email.trim() || null);
+  setIfChanged('website', form.website.trim() || null);
 
-  // Operations
-  setIfChanged('is_24_7', Boolean(form.is_24_7), Boolean(original.Operations.is_24_7));
-  setIfChanged('operational_status', (form.operational_status || null) as any, original.Operations.operational_status ?? null);
+  // ---------------- Operations ----------------
+  try {
+    const op = parseJsonField(form.operating_hours_json);
+    setIfChanged('operating_hours', op);
+  } catch {
+    errs.operating_hours_json = 'Invalid format.';
+  }
 
-  const nextOpHours = parseStringListToUnknownArray(form.operating_hours);
-  setIfChanged('operating_hours', nextOpHours, original.Operations.operating_hours ?? []);
+  try {
+    const em = parseJsonField(form.emergency_services_hours_json);
+    setIfChanged('emergency_services_hours', em);
+  } catch {
+    errs.emergency_services_hours_json = 'Invalid format.';
+  }
 
-  const origEmergNull = original.Operations.emergency_services_hours === null;
-  const nextEmerg = form.emergency_services_hours.length === 0 && origEmergNull
-    ? null
-    : (parseStringListToUnknownArray(form.emergency_services_hours) as any[]);
-  setIfChanged('emergency_services_hours', nextEmerg, original.Operations.emergency_services_hours ?? null);
+  setIfChanged('is_24_7', Boolean(form.is_24_7));
+  setIfChanged('operational_status', (form.operational_status || null) as any);
 
   const wait = parseNullableNumber(form.average_wait_time_minutes);
-  if (form.average_wait_time_minutes.trim() && wait === null) errs.average_wait_time_minutes = 'Must be a valid number.';
+  if (form.average_wait_time_minutes.trim() && wait === null) errs.average_wait_time_minutes = 'Must be a number.';
   if (wait !== null && (wait < 0 || wait > 999.99)) errs.average_wait_time_minutes = 'Must be between 0 and 999.99.';
-  setIfChanged('average_wait_time_minutes', wait, original.Operations.average_wait_time_minutes ?? null);
+  setIfChanged('average_wait_time_minutes', wait);
 
   const vol = parseNullableInt(form.monthly_patient_volume);
-  if (form.monthly_patient_volume.trim() && vol === null) errs.monthly_patient_volume = 'Must be a valid number.';
-  if (vol !== null && vol < 0) errs.monthly_patient_volume = 'Must be 0 or more.';
-  setIfChanged('monthly_patient_volume', vol, original.Operations.monthly_patient_volume ?? null);
+  if (form.monthly_patient_volume.trim() && vol === null) errs.monthly_patient_volume = 'Must be an integer.';
+  if (vol !== null && vol < 0) errs.monthly_patient_volume = 'Must be ≥ 0.';
+  setIfChanged('monthly_patient_volume', vol);
 
-  // Licensing
+  // ---------------- Licensing ----------------
   if (form.license_number.length > 100) errs.license_number = 'Max 100 characters.';
   if (form.license_issuing_authority.length > 200) errs.license_issuing_authority = 'Max 200 characters.';
 
-  setIfChanged('license_number', form.license_number.trim() || null, original.LicensingAndCompliance.license_number ?? null);
-  setIfChanged(
-    'license_issuing_authority',
-    form.license_issuing_authority.trim() || null,
-    original.LicensingAndCompliance.license_issuing_authority ?? null,
-  );
-  setIfChanged('license_expiry_date', form.license_expiry_date.trim() || null, original.LicensingAndCompliance.license_expiry_date ?? null);
+  setIfChanged('license_number', form.license_number.trim() || null);
+  setIfChanged('license_issuing_authority', form.license_issuing_authority.trim() || null);
+  setIfChanged('license_expiry_date', form.license_expiry_date.trim() || null);
 
-  const origRegNull = original.LicensingAndCompliance.regulatory_identifiers === null;
-  const nextRegs = form.regulatory_identifiers.length === 0 && origRegNull
-    ? null
-    : (parseStringListToUnknownArray(form.regulatory_identifiers) as any[]);
-  setIfChanged('regulatory_identifiers', nextRegs, original.LicensingAndCompliance.regulatory_identifiers ?? null);
+  try {
+    const regs = parseJsonField(form.regulatory_identifiers_json);
+    setIfChanged('regulatory_identifiers', regs);
+  } catch {
+    errs.regulatory_identifiers_json = 'Invalid format.';
+  }
 
-  setIfChanged('participates_in_medicare', Boolean(form.participates_in_medicare), Boolean(original.LicensingAndCompliance.participates_in_medicare));
-  setIfChanged('participates_in_medicaid', Boolean(form.participates_in_medicaid), Boolean(original.LicensingAndCompliance.participates_in_medicaid));
+  setIfChanged('participates_in_medicare', Boolean(form.participates_in_medicare));
+  setIfChanged('participates_in_medicaid', Boolean(form.participates_in_medicaid));
 
-  // Clinical
-  setIfChanged('has_emergency_department', Boolean(form.has_emergency_department), Boolean(original.ClinicalCapabilities.has_emergency_department));
-  setIfChanged('has_trauma_center', Boolean(form.has_trauma_center), Boolean(original.ClinicalCapabilities.has_trauma_center));
+  // ---------------- Clinical ----------------
+  setIfChanged('has_emergency_department', Boolean(form.has_emergency_department));
+  setIfChanged('has_trauma_center', Boolean(form.has_trauma_center));
 
-  const trauma = parseNullableInt(form.trauma_center_level);
-  if (form.trauma_center_level.trim() && trauma === null) errs.trauma_center_level = 'Must be a valid number.';
-  if (trauma !== null && (trauma < 1 || trauma > 5)) errs.trauma_center_level = 'Must be between 1 and 5.';
-  setIfChanged('trauma_center_level', trauma, original.ClinicalCapabilities.trauma_center_level ?? null);
+  const tLevel = parseNullableInt(form.trauma_center_level);
+  if (form.trauma_center_level.trim() && tLevel === null) errs.trauma_center_level = 'Must be an integer.';
+  if (tLevel !== null && (tLevel < 1 || tLevel > 5)) errs.trauma_center_level = 'Must be between 1 and 5.';
+  setIfChanged('trauma_center_level', tLevel);
 
-  setIfChanged('has_intensive_care', Boolean(form.has_intensive_care), Boolean(original.ClinicalCapabilities.has_intensive_care));
-  setIfChanged('has_neonatal_icu', Boolean(form.has_neonatal_icu), Boolean(original.ClinicalCapabilities.has_neonatal_icu));
-  setIfChanged('has_cardiac_cath_lab', Boolean(form.has_cardiac_cath_lab), Boolean(original.ClinicalCapabilities.has_cardiac_cath_lab));
+  setIfChanged('has_intensive_care', Boolean(form.has_intensive_care));
+  setIfChanged('has_neonatal_icu', Boolean(form.has_neonatal_icu));
+  setIfChanged('has_cardiac_cath_lab', Boolean(form.has_cardiac_cath_lab));
 
-  // Financial
-  if (form.currency.trim() && form.currency.trim().length !== 3) errs.currency = 'Currency must be 3 letters (e.g. USD).';
-  setIfChanged('currency', form.currency.trim(), original.FinancialConfiguration.currency ?? '');
-  setIfChanged('tax_enabled', Boolean(form.tax_enabled), Boolean(original.FinancialConfiguration.tax_enabled));
-  setIfChanged('tax_name', form.tax_name.trim() || null, original.FinancialConfiguration.tax_name ?? null);
+  // ---------------- Financial ----------------
+  if (form.currency.trim() && form.currency.trim().length !== 3) errs.currency = 'Must be exactly 3 characters (e.g. USD).';
+  setIfChanged('currency', form.currency.trim());
+
+  setIfChanged('tax_enabled', Boolean(form.tax_enabled));
+  setIfChanged('tax_name', form.tax_name.trim() || null);
 
   const taxRate = parseNullableNumber(form.tax_rate);
-  if (form.tax_rate.trim() && taxRate === null) errs.tax_rate = 'Tax rate must be a valid number.';
-  if (taxRate !== null && (taxRate < 0 || taxRate > 100)) errs.tax_rate = 'Tax rate must be between 0 and 100.';
-  setIfChanged('tax_rate', taxRate, original.FinancialConfiguration.tax_rate ?? null);
+  if (form.tax_rate.trim() && taxRate === null) errs.tax_rate = 'Must be a number.';
+  if (taxRate !== null && (taxRate < 0 || taxRate > 100)) errs.tax_rate = 'Must be between 0 and 100.';
+  setIfChanged('tax_rate', taxRate);
 
-  // System
+  // ---------------- System ----------------
   if (form.timezone.length > 50) errs.timezone = 'Max 50 characters.';
   if (form.data_residency_region.length > 10) errs.data_residency_region = 'Max 10 characters.';
 
-  setIfChanged('timezone', form.timezone.trim(), original.SystemConfiguration.timezone ?? '');
-  setIfChanged('data_residency_region', form.data_residency_region.trim() || null, original.SystemConfiguration.data_residency_region ?? null);
+  setIfChanged('timezone', form.timezone.trim());
+  setIfChanged('data_residency_region', form.data_residency_region.trim() || null);
 
   return { payload, fieldErrors: errs };
 };
@@ -411,66 +483,51 @@ const FacilitySettings: React.FC = () => {
   });
 
   const { data: settingsResponse, isLoading, isError, error } = useGetFacilitySettings();
+
   const settings = settingsResponse?.data ?? null;
 
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState<FacilitySettingsFormState | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   // logo upload
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { mutate: uploadLogo, isPending: isUploadingLogo } = useUploadFacilityLogo();
 
   // save
-  const { mutate: saveSettings, isPending: isSaving } = useUpdateFacilitySettings({
+  const { mutate: saveSettings } = useUpdateFacilitySettings({
     onSuccess: () => {
       setEditMode(false);
+      setIsSaving(false);
     },
+    onError: () => {
+      setIsSaving(false);
+    }
   });
 
-  /**
-   * CRITICAL FIX:
-   * Do NOT overwrite the form while the user is editing.
-   * React Query can refetch (focus/interval/invalidate) and your old effect
-   * was resetting form + editMode, making Save look like it "does nothing".
-   */
-  const prevFacilityIdRef = useRef<number | null>(null);
+  // Sync form when facility/settings change
   useEffect(() => {
-    const facilityChanged = prevFacilityIdRef.current !== activeFacilityId;
-    prevFacilityIdRef.current = activeFacilityId;
-
-    if (!settings) {
+    if (settings) {
+      setForm(settingsToFormState(settings));
+      setFieldErrors({});
+      setEditMode(false);
+    } else {
       setForm(null);
-      setEditMode(false);
-      setFieldErrors({});
-      return;
     }
+  }, [activeFacilityId, settingsResponse?.data]);
 
-    // If facility changed: always reset form + exit edit mode
-    if (facilityChanged) {
-      setForm(settingsToFormState(settings));
-      setEditMode(false);
-      setFieldErrors({});
-      return;
-    }
-
-    // If NOT editing: keep form synced to server
-    if (!editMode) {
-      setForm(settingsToFormState(settings));
-      setFieldErrors({});
-    }
-
-    // If editing: do nothing (preserve user input)
-  }, [activeFacilityId, settings, editMode]);
-
-  const handleField: FacilitySettingsOnField = useCallback((key, value) => {
-    setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
-    setFieldErrors((prev) => {
-      const next = { ...prev };
-      delete next[String(key)];
-      return next;
-    });
-  }, []);
+  const handleField = useCallback(
+    <K extends keyof FacilitySettingsFormState>(key: K, value: FacilitySettingsFormState[K]) => {
+      setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[String(key)];
+        return next;
+      });
+    },
+    [],
+  );
 
   const handleCancel = useCallback(() => {
     if (!settings) return;
@@ -482,14 +539,18 @@ const FacilitySettings: React.FC = () => {
   const handleSave = useCallback(() => {
     if (!form || !settings) return;
 
+    setIsSaving(true);
     const { payload, fieldErrors: errs } = buildUpdatePayload(form, settings);
     setFieldErrors(errs);
 
-    if (Object.keys(errs).length > 0) return;
+    if (Object.keys(errs).length > 0) {
+      setIsSaving(false);
+      return;
+    }
 
     if (Object.keys(payload).length === 0) {
-      // nothing changed
       setEditMode(false);
+      setIsSaving(false);
       return;
     }
 
@@ -519,26 +580,19 @@ const FacilitySettings: React.FC = () => {
     [uploadLogo],
   );
 
-  const cardBase = useMemo(
-    () =>
-      `rounded-xl border p-6 ${
-        isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200 shadow-sm'
-      }`,
-    [isDark],
-  );
-
   /* ------------------------------ UI States ------------------------------ */
 
   if (!activeFacilityId) {
     return (
       <div
-        className={`flex flex-col items-center justify-center min-h-[400px] gap-4 p-8 ${
+        className={cn(
+          "flex flex-col items-center justify-center min-h-[400px] gap-4 p-8",
           isDark ? 'text-gray-100 bg-gray-1000' : 'text-gray-900 bg-gray-50'
-        }`}
+        )}
       >
-        <XCircle className={`w-16 h-16 ${isDark ? 'text-yellow-400' : 'text-yellow-500'}`} />
+        <XCircle className={cn("w-16 h-16", isDark ? 'text-yellow-400' : 'text-yellow-500')} />
         <h2 className="text-xl font-bold">No active facility selected</h2>
-        <p className={`text-sm text-center max-w-md ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <p className={cn("text-sm text-center max-w-md", isDark ? 'text-gray-400' : 'text-gray-600')}>
           Please select a facility (staff mode) to view and edit facility settings.
         </p>
       </div>
@@ -552,27 +606,25 @@ const FacilitySettings: React.FC = () => {
   if (isError || !settings || !form) {
     return (
       <div
-        className={`flex flex-col items-center justify-center min-h-[400px] gap-4 p-8 ${
+        className={cn(
+          "flex flex-col items-center justify-center min-h-[400px] gap-4 p-8",
           isDark ? 'text-gray-100 bg-gray-1000' : 'text-gray-900 bg-gray-50'
-        }`}
+        )}
       >
-        <XCircle className={`w-16 h-16 ${isDark ? 'text-red-400' : 'text-red-500'}`} />
+        <XCircle className={cn("w-16 h-16", isDark ? 'text-red-400' : 'text-red-500')} />
         <h2 className="text-xl font-bold">Failed to load facility settings</h2>
-        <p className={`text-sm text-center max-w-md ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-          {(error as any)?.response?.data?.message ??
-            (error as any)?.message ??
-            'An unexpected error occurred.'}
+        <p className={cn("text-sm text-center max-w-md", isDark ? 'text-gray-400' : 'text-gray-600')}>
+          {(error as any)?.response?.data?.message ?? (error as any)?.message ?? 'An unexpected error occurred.'}
         </p>
       </div>
     );
   }
 
   return (
-    <div
-      className={`min-h-screen transition-colors ${
-        isDark ? 'bg-gray-1000 text-gray-100' : 'bg-gray-50 text-gray-900'
-      }`}
-    >
+    <div className={cn(
+      "min-h-screen transition-colors",
+      isDark ? 'bg-gray-1000 text-gray-100' : 'bg-gray-50 text-gray-900'
+    )}>
       <div className="max-w-5xl mx-auto p-4 lg:p-8 space-y-6">
         <FacilitySettingsHeaderBar
           isDark={isDark}
@@ -586,9 +638,9 @@ const FacilitySettings: React.FC = () => {
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left column */}
           <div className="lg:col-span-2 space-y-6">
             <FacilityBasicsCard
-              cardBase={cardBase}
               isDark={isDark}
               editMode={editMode}
               form={form}
@@ -597,7 +649,6 @@ const FacilitySettings: React.FC = () => {
             />
 
             <FacilityLocationContactCard
-              cardBase={cardBase}
               isDark={isDark}
               editMode={editMode}
               form={form}
@@ -606,9 +657,9 @@ const FacilitySettings: React.FC = () => {
             />
           </div>
 
+          {/* Right column */}
           <div className="space-y-6">
             <FacilityBrandingAndOpsCard
-              cardBase={cardBase}
               isDark={isDark}
               editMode={editMode}
               form={form}
