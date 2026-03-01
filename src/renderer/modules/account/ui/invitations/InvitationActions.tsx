@@ -13,7 +13,7 @@
  */
 
 import React, { useCallback } from 'react';
-import { Check, X, Loader2} from 'lucide-react';
+import { Check, X, Loader2, Eye } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useConfirm } from '../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
@@ -34,6 +34,8 @@ import {
 import { axiosInstance } from '../../../../app/api/axiosConfig';
 import { ROUTES } from '../../../administration/onboarding/routes/onboardingRouteConstants';
 import { getRoleDisplayName } from '../../../../shared/utils/facilityRoleFormator';
+import { cn } from '../../../../shared/utils/classNameUtils';
+import { motion } from 'framer-motion';
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
@@ -226,13 +228,6 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
 
   /* ---------------------------- Cursor Utilities --------------------------- */
 
-  const getCursorClass = (isActionDisabled: boolean = false) => {
-    if (isGlobalDisabled || isActionDisabled) {
-      return 'cursor-not-allowed';
-    }
-    return 'cursor-pointer hover:cursor-pointer active:cursor-pointer';
-  };
-
   const getTooltipContent = (action: 'accept' | 'decline' | 'view') => {
     if (isGlobalDisabled) return 'Actions are currently disabled';
     
@@ -302,6 +297,12 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
     }
   }, [confirm, invitation, theme, declineMutation, isGlobalDisabled]);
 
+  const handleViewDetails = useCallback(() => {
+    if (onViewDetails) {
+      onViewDetails(invitation);
+    }
+  }, [onViewDetails, invitation]);
+
   /* --------------------------- Button Styling ----------------------------- */
 
   const getButtonClasses = (
@@ -309,52 +310,52 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
     isActionAvailable: boolean = true
   ) => {
     const isActionDisabled = !isActionAvailable || isGlobalDisabled;
+    
     const baseClasses = [
-      'inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md',
+      'inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg',
       'text-xs font-medium transition-all duration-200',
+      'border-2',
       'focus:outline-none focus:ring-2 focus:ring-offset-2',
-      'disabled:opacity-50 disabled:transform-none disabled:shadow-none',
-      getCursorClass(isActionDisabled),
+      'disabled:opacity-50',
     ];
-
-    const stateClasses = isActionDisabled
-      ? [
-          'opacity-50',
-          'cursor-not-allowed',
-          'hover:transform-none',
-          'active:transform-none',
-        ]
-      : [
-          'hover:scale-[1.02]',
-          'active:scale-[0.98]',
-          'hover:shadow-md',
-          'focus:shadow-lg',
-        ];
 
     const typeClasses = {
       accept: [
-        'bg-green-600 hover:bg-green-700 active:bg-green-800',
-        'text-white shadow-sm',
-        'focus:ring-green-500 focus:ring-offset-2',
-        isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
+        isActionDisabled
+          ? isDark
+            ? 'bg-gray-800 border-gray-700 text-gray-500'
+            : 'bg-gray-100 border-gray-200 text-gray-400'
+          : isDark
+            ? 'bg-green-900/30 border-green-500/30 text-green-300 hover:bg-green-900/50 hover:border-green-500/50 hover:shadow-lg hover:shadow-green-500/20'
+            : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300 hover:shadow-lg hover:shadow-green-500/20',
+        'transform hover:-translate-y-0.5',
+        isActionDisabled ? 'cursor-not-allowed' : 'cursor-pointer',
       ],
       decline: [
-        'bg-red-600 hover:bg-red-700 active:bg-red-800',
-        'text-white shadow-sm',
-        'focus:ring-red-500 focus:ring-offset-2',
-        isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
+        isActionDisabled
+          ? isDark
+            ? 'bg-gray-800 border-gray-700 text-gray-500'
+            : 'bg-gray-100 border-gray-200 text-gray-400'
+          : isDark
+            ? 'bg-red-900/30 border-red-500/30 text-red-300 hover:bg-red-900/50 hover:border-red-500/50 hover:shadow-lg hover:shadow-red-500/20'
+            : 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300 hover:shadow-lg hover:shadow-red-500/20',
+        'transform hover:-translate-y-0.5',
+        isActionDisabled ? 'cursor-not-allowed' : 'cursor-pointer',
       ],
       view: [
-        isDark
-          ? 'bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-gray-300'
-          : 'bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700',
-        'shadow-sm',
-        'focus:ring-gray-500 focus:ring-offset-2',
-        isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
+        isActionDisabled
+          ? isDark
+            ? 'bg-gray-800 border-gray-700 text-gray-500'
+            : 'bg-gray-100 border-gray-200 text-gray-400'
+          : isDark
+            ? 'bg-blue-900/30 border-blue-500/30 text-blue-300 hover:bg-blue-900/50 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/20'
+            : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/20',
+        'transform hover:-translate-y-0.5',
+        isActionDisabled ? 'cursor-not-allowed' : 'cursor-pointer',
       ],
     };
 
-    return [...baseClasses, ...stateClasses, ...typeClasses[type]].join(' ');
+    return cn(...baseClasses, ...typeClasses[type]);
   };
 
   /* --------------------------- Conditional Rendering ---------------------- */
@@ -367,17 +368,40 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
   }
 
   const containerClasses = layout === 'horizontal' 
-    ? 'flex items-center gap-1.5' 
-    : 'flex flex-col gap-1.5';
+    ? 'flex items-center gap-2' 
+    : 'flex flex-col gap-2';
 
   /* ------------------------------- Render --------------------------------- */
 
   return (
-    <div className={containerClasses}>
+    <motion.div 
+      className={containerClasses}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      {/* View Details Button */}
+      {onViewDetails && (
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleViewDetails}
+          disabled={isGlobalDisabled}
+          className={getButtonClasses('view', true)}
+          aria-label={getTooltipContent('view')}
+          title={getTooltipContent('view')}
+          aria-disabled={isGlobalDisabled}
+        >
+          <Eye className="w-3.5 h-3.5" aria-hidden="true" />
+          {showLabels && <span>Details</span>}
+        </motion.button>
+      )}
+
       {/* Decline Button */}
-      {/* {invitation.can_be_declined && ( Note:To be enforced for all Invitations,we currently showing only pending invitations.*/}
       {(
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleDecline}
           disabled={isGlobalDisabled}
           className={getButtonClasses('decline', invitation.can_be_declined)}
@@ -389,24 +413,22 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
           {declineMutation.isPending ? (
             <>
               <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
-              <span className={showLabels ? 'hidden sm:inline' : 'sr-only'}>
-                Declining...
-              </span>
+              {showLabels && <span>Declining...</span>}
             </>
           ) : (
             <>
               <X className="w-3.5 h-3.5" aria-hidden="true" />
-              <span className={showLabels ? 'hidden sm:inline' : 'sr-only'}>
-                Decline
-              </span>
+              {showLabels && <span>Decline</span>}
             </>
           )}
-        </button>
+        </motion.button>
       )} 
 
       {/* Accept Button */}
       {invitation.can_be_accepted && (
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleAccept}
           disabled={isGlobalDisabled}
           className={getButtonClasses('accept', invitation.can_be_accepted)}
@@ -418,21 +440,17 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
           {acceptMutation.isPending ? (
             <>
               <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
-              <span className={showLabels ? 'hidden sm:inline' : 'sr-only'}>
-                Accepting...
-              </span>
+              {showLabels && <span>Accepting...</span>}
             </>
           ) : (
             <>
               <Check className="w-3.5 h-3.5" aria-hidden="true" />
-              <span className={showLabels ? 'hidden sm:inline' : 'sr-only'}>
-                Accept
-              </span>
+              {showLabels && <span>Accept</span>}
             </>
           )}
-        </button>
+        </motion.button>
       )}
-    </div>
+    </motion.div>
   );
 };
 

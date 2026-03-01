@@ -21,10 +21,15 @@ import {
   User,
   Mail,
   Phone,
+  Shield,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 
 import type { StaffInvitation } from '../../../administration/admin-module/api/team-management/types/staffInvitationTypes';
 import { cn } from '../../../../shared/utils/classNameUtils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
@@ -89,7 +94,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
     }
   }, []);
 
-  const getExpiryStatus = useCallback((): ExpiryStatus => {
+  const expiryStatus = useMemo((): ExpiryStatus => {
     if (!invitation.expires_at) {
       return { 
         text: 'No Expiry', 
@@ -135,336 +140,544 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
       urgent: false
     };
   }, [invitation.expires_at, invitation.days_until_expiry, isDark]);
-  const getStatusStyles = (status?: string) => {
-  switch (status) {
-    case 'pending':
-      return {
-        label: 'Pending',
-        classes: isDark
-          ? 'bg-amber-900/30 text-amber-300 border border-amber-800'
-          : 'bg-amber-100 text-amber-800 border border-amber-200',
-      };
 
-    case 'accepted':
-      return {
-        label: 'Accepted',
-        classes: isDark
-          ? 'bg-green-900/30 text-green-300 border border-green-800'
-          : 'bg-green-100 text-green-800 border border-green-200',
-      };
+  const statusConfig = useMemo(() => {
+    switch (invitation.status) {
+      case 'pending':
+        return {
+          label: 'Pending',
+          classes: isDark
+            ? 'bg-amber-900/30 text-amber-300 border border-amber-800'
+            : 'bg-amber-100 text-amber-800 border border-amber-200',
+          icon: <Clock className="w-3 h-3" />
+        };
+      case 'accepted':
+        return {
+          label: 'Accepted',
+          classes: isDark
+            ? 'bg-green-900/30 text-green-300 border border-green-800'
+            : 'bg-green-100 text-green-800 border border-green-200',
+          icon: <CheckCircle className="w-3 h-3" />
+        };
+      case 'declined':
+        return {
+          label: 'Declined',
+          classes: isDark
+            ? 'bg-red-900/30 text-red-300 border border-red-800'
+            : 'bg-red-100 text-red-800 border border-red-200',
+          icon: <XCircle className="w-3 h-3" />
+        };
+      case 'expired':
+        return {
+          label: 'Expired',
+          classes: isDark
+            ? 'bg-gray-800 text-gray-300 border border-gray-700'
+            : 'bg-gray-200 text-gray-700 border border-gray-300',
+          icon: <AlertCircle className="w-3 h-3" />
+        };
+      default:
+        return {
+          label: 'Unknown',
+          classes: isDark
+            ? 'bg-gray-800 text-gray-300 border border-gray-700'
+            : 'bg-gray-100 text-gray-700 border border-gray-300',
+          icon: <AlertCircle className="w-3 h-3" />
+        };
+    }
+  }, [invitation.status, isDark]);
 
-    case 'declined':
-    case 'cancelled':
-      return {
-        label: 'Cancelled',
-        classes: isDark
-          ? 'bg-red-900/30 text-red-300 border border-red-800'
-          : 'bg-red-100 text-red-800 border border-red-200',
-      };
-
-    case 'expired':
-      return {
-        label: 'Expired',
-        classes: isDark
-          ? 'bg-gray-800 text-gray-300 border border-gray-700'
-          : 'bg-gray-200 text-gray-700 border border-gray-300',
-      };
-
-    default:
-      return {
-        label: 'Unknown',
-        classes: isDark
-          ? 'bg-gray-800 text-gray-300 border border-gray-700'
-          : 'bg-gray-100 text-gray-700 border border-gray-300',
-      };
-  }
-};
-
-
-const getRoleDisplayName = useCallback((roleCode?: string | null): string => {
-      if (!roleCode) return '—';
-
-      return roleCode
-        .replace(/[_-]+/g, ' ')
-        .toUpperCase();
-    }, []);
-
+  const getRoleDisplayName = useCallback((roleCode?: string | null): string => {
+    if (!roleCode) return '—';
+    return roleCode
+      .replace(/[_-]+/g, ' ')
+      .toUpperCase();
+  }, []);
 
   const toggleExpanded = useCallback((): void => {
     setIsExpanded(prev => !prev);
   }, []);
 
-  const expiryStatus = useMemo(() => getExpiryStatus(), [getExpiryStatus]);
-
   /* ------------------------------- Render --------------------------------- */
 
   return (
-    <div
-      className={`rounded-xl border overflow-hidden transition-all duration-200 ${
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -2 }}
+      transition={{ type: "spring", stiffness: 400, damping: 17 }}
+      className={cn(
+        'relative overflow-hidden rounded-xl border-2 transition-all duration-300',
         isDark 
-          ? 'bg-gray-900 border-gray-800 hover:border-gray-700' 
-          : 'bg-white border-gray-200 hover:border-gray-300'
-      } ${expiryStatus.urgent ? 'ring-2 ring-opacity-50 ' + (isDark ? 'ring-blue-400/20' : 'ring-blue-500/20') : ''}`}
+          ? 'bg-linear-to-br from-gray-800 to-gray-900 border-gray-700/50 hover:border-gray-600' 
+          : 'bg-linear-to-br from-white to-gray-50/50 border-gray-200 hover:border-gray-300',
+        expiryStatus.urgent && (isDark ? 'ring-2 ring-orange-500/20' : 'ring-2 ring-orange-500/20')
+      )}
     >
-      {/* Card Header */}
-    <div className="p-5">
-      {/* Top Row: Facility + Status */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3 min-w-0">
-          <Building2
-            className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
-              isDark ? 'text-blue-400' : 'text-blue-600'
-            }`}
-          />
+      {/* Background decoration */}
+      <div className={cn(
+        'absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl transition-opacity opacity-0 group-hover:opacity-100',
+        isDark ? 'bg-blue-500/10' : 'bg-blue-500/5'
+      )} />
 
-          <div className="min-w-0">
-            <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              Inviting Facility
+      <div className="relative p-5">
+        {/* Top Row: Facility + Status */}
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className={cn(
+              'p-2 rounded-lg transition-all',
+              isDark ? 'bg-blue-500/20' : 'bg-blue-100'
+            )}>
+              <Building2 className={cn(
+                'w-5 h-5',
+                isDark ? 'text-blue-400' : 'text-blue-600'
+              )} />
             </div>
 
-            <h3 className="text-lg font-semibold truncate">
-              {invitation.facility?.facility_name || 'Unknown Facility'}
-            </h3>
-
-            {/* Invited as */}
-            {invitation.role_code && (
-              <div className="flex items-center gap-2 mt-2">
-                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Invited as
-                </span>
-
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                    isDark
-                      ? 'bg-indigo-900/30 text-indigo-300 border border-indigo-800'
-                      : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
-                  }`}
-                >
-                  {getRoleDisplayName(invitation.role_code)}
-                </span>
+            <div className="min-w-0">
+              <div className={cn(
+                'text-xs mb-1',
+                isDark ? 'text-gray-500' : 'text-gray-500'
+              )}>
+                Inviting Facility
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Status Badge */}
-        {(() => {
-          const statusConfig = getStatusStyles(invitation.status);
-          return (
-            <span
-              className={cn(
-                'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold flex-shrink-0',
-                statusConfig.classes
+              <h3 className="text-lg font-bold truncate">
+                {invitation.facility?.facility_name || 'Unknown Facility'}
+              </h3>
+
+              {/* Invited as */}
+              {invitation.role_code && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className={cn(
+                    'text-xs',
+                    isDark ? 'text-gray-400' : 'text-gray-600'
+                  )}>
+                    Invited as
+                  </span>
+
+                  <span
+                    className={cn(
+                      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border',
+                      isDark
+                        ? 'bg-indigo-900/30 text-indigo-300 border-indigo-800'
+                        : 'bg-indigo-100 text-indigo-800 border-indigo-200'
+                    )}
+                  >
+                    {getRoleDisplayName(invitation.role_code)}
+                  </span>
+                </div>
               )}
-            >
-              {statusConfig.label}
-            </span>
-          );
-        })()}
-      </div>
+            </div>
+          </div>
 
-      {/* Timestamp Info */}
-      <div
-        className={cn(
-          'flex flex-wrap items-center gap-4 mt-4 pt-4 border-t',
-          isDark ? 'border-gray-800' : 'border-gray-200'
-        )}
-      >
-        <div className="flex items-center gap-1.5">
-          <Calendar className={`w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-          <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Sent: {formatDate(invitation.sent_at)}
+          {/* Status Badge */}
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border-2',
+              statusConfig.classes
+            )}
+          >
+            {statusConfig.icon}
+            {statusConfig.label}
           </span>
         </div>
 
-        {invitation.expires_at && (
-          <>
-            <span className={isDark ? 'text-gray-700' : 'text-gray-300'}>•</span>
-            <div className="flex items-center gap-1.5">
-              <Clock className={`w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-              <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Expires: {formatDate(invitation.expires_at)}
-              </span>
-            </div>
-          </>
+        {/* Timestamp Info */}
+        <div className={cn(
+          'flex flex-wrap items-center gap-4 py-3 px-4 rounded-lg',
+          isDark ? 'bg-gray-800/50' : 'bg-gray-50'
+        )}>
+          <div className="flex items-center gap-1.5">
+            <Calendar className={cn(
+              'w-4 h-4',
+              isDark ? 'text-gray-500' : 'text-gray-400'
+            )} />
+            <span className={cn(
+              'text-sm',
+              isDark ? 'text-gray-300' : 'text-gray-700'
+            )}>
+              {formatDate(invitation.sent_at)}
+            </span>
+          </div>
+
+          {/* {invitation.expires_at && (
+            <>
+              <span className={isDark ? 'text-gray-700' : 'text-gray-300'}>•</span>
+              <div className="flex items-center gap-1.5">
+                <Clock className={cn(
+                  'w-4 h-4',
+                  expiryStatus.urgent
+                    ? isDark ? 'text-orange-400' : 'text-orange-600'
+                    : isDark ? 'text-gray-500' : 'text-gray-400'
+                )} />
+                <span className={cn(
+                  'text-sm font-medium',
+                  expiryStatus.color
+                )}>
+                  {expiryStatus.text}
+                </span>
+              </div>
+            </>
+          )} */}
+        </div>
+
+        {/* Action Buttons Slot */}
+        {actionSlot && (
+          <div className="mt-4 flex justify-end">
+            {actionSlot}
+          </div>
         )}
+
+        {/* Expand/Collapse Button */}
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          type="button"
+          onClick={toggleExpanded}
+          className={cn(
+            'mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all',
+            'border-2',
+            isDark
+              ? 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600'
+              : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300',
+            'cursor-pointer'
+          )}
+          aria-expanded={isExpanded}
+        >
+          <span className="text-sm font-medium">
+            {isExpanded ? 'Show Less Details' : 'View Full Details'}
+          </span>
+          <motion.div
+            animate={{ rotate: isExpanded ? 180 : 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </motion.div>
+        </motion.button>
       </div>
 
-      {/* Action Buttons Slot */}
-      {actionSlot && <div className="mt-4">{actionSlot}</div>}
-
-      {/* Expand/Collapse Button */}
-      <button
-        type="button"
-        onClick={toggleExpanded}
-        className={cn(
-          'mt-4 w-full flex items-center justify-center gap-2 py-2 rounded-lg transition-colors cursor-pointer',
-          isDark
-            ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-        )}
-        aria-expanded={isExpanded}
-        aria-label={isExpanded ? 'Show less details' : 'View details'}
-      >
-        <span className="text-sm font-medium">{isExpanded ? 'Show Less' : 'View Details'}</span>
-        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-      </button>
-    </div>
       {/* Expanded Details */}
-      {isExpanded && (
-        <div className={`border-t px-5 py-4 ${isDark ? 'bg-gray-900/50 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Invitation Details */}
-            <div>
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Invitation Details
-              </h4>
-              <dl className="space-y-2">
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className={cn(
+              'border-t-2 overflow-hidden',
+              isDark ? 'border-gray-700' : 'border-gray-200'
+            )}
+          >
+            <div className="p-5 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Invitation Details */}
                 <div>
-                  <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                    Status
-                  </dt>
-                  <dd className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    {invitation.status.charAt(0).toUpperCase() + invitation.status.slice(1)}
-                  </dd>
+                  <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
+                    <div className={cn(
+                      'p-1.5 rounded-lg',
+                      isDark ? 'bg-blue-500/20' : 'bg-blue-100'
+                    )}>
+                      <Mail className={cn(
+                        'w-4 h-4',
+                        isDark ? 'text-blue-400' : 'text-blue-600'
+                      )} />
+                    </div>
+                    Invitation Details
+                  </h4>
+                  <div className={cn(
+                    'space-y-3 p-4 rounded-lg border-2',
+                    isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'
+                  )}>
+                    <div className="flex justify-between">
+                      <span className={cn(
+                        'text-xs',
+                        isDark ? 'text-gray-500' : 'text-gray-500'
+                      )}>
+                        Status
+                      </span>
+                      <span className={cn(
+                        'text-sm font-medium flex items-center gap-1',
+                        statusConfig.classes.split(' ').slice(0, 2).join(' ')
+                      )}>
+                        {statusConfig.icon}
+                        {invitation.status.charAt(0).toUpperCase() + invitation.status.slice(1)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className={cn(
+                        'text-xs',
+                        isDark ? 'text-gray-500' : 'text-gray-500'
+                      )}>
+                        Sent At
+                      </span>
+                      <span className={cn(
+                        'text-sm',
+                        isDark ? 'text-gray-300' : 'text-gray-700'
+                      )}>
+                        {formatDateTime(invitation.sent_at)}
+                      </span>
+                    </div>
+                    {invitation.reminder_sent_at && (
+                      <div className="flex justify-between">
+                        <span className={cn(
+                          'text-xs',
+                          isDark ? 'text-gray-500' : 'text-gray-500'
+                        )}>
+                          Last Reminder
+                        </span>
+                        <span className={cn(
+                          'text-sm',
+                          isDark ? 'text-gray-300' : 'text-gray-700'
+                        )}>
+                          {formatDateTime(invitation.reminder_sent_at)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                    Sent At
-                  </dt>
-                  <dd className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    {formatDateTime(invitation.sent_at)}
-                  </dd>
-                </div>
-                {invitation.reminder_sent_at && (
+
+                {/* Invited By */}
+                {invitation.invited_by && (
                   <div>
-                    <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                      Last Reminder
-                    </dt>
-                    <dd className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {formatDateTime(invitation.reminder_sent_at)}
-                    </dd>
+                    <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
+                      <div className={cn(
+                        'p-1.5 rounded-lg',
+                        isDark ? 'bg-green-500/20' : 'bg-green-100'
+                      )}>
+                        <User className={cn(
+                          'w-4 h-4',
+                          isDark ? 'text-green-400' : 'text-green-600'
+                        )} />
+                      </div>
+                      Invited By
+                    </h4>
+                    <div className={cn(
+                      'space-y-3 p-4 rounded-lg border-2',
+                      isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'
+                    )}>
+                      <div className="flex justify-between">
+                        <span className={cn(
+                          'text-xs',
+                          isDark ? 'text-gray-500' : 'text-gray-500'
+                        )}>
+                          Professional Title
+                        </span>
+                        <span className={cn(
+                          'text-sm',
+                          isDark ? 'text-gray-300' : 'text-gray-700'
+                        )}>
+                          {invitation.invited_by.professional_title || 'Staff Member'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className={cn(
+                          'text-xs',
+                          isDark ? 'text-gray-500' : 'text-gray-500'
+                        )}>
+                          Staff Number
+                        </span>
+                        <span className={cn(
+                          'text-sm font-mono',
+                          isDark ? 'text-gray-300' : 'text-gray-700'
+                        )}>
+                          {invitation.invited_by.staff_uuid}
+                        </span>
+                      </div>
+                      {invitation.role_code && (
+                        <div className="flex justify-between">
+                          <span className={cn(
+                            'text-xs',
+                            isDark ? 'text-gray-500' : 'text-gray-500'
+                          )}>
+                            Role
+                          </span>
+                          <span className={cn(
+                            'text-sm',
+                            isDark ? 'text-gray-300' : 'text-gray-700'
+                          )}>
+                            {getRoleDisplayName(invitation.role_code)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
-              </dl>
-            </div>
 
-            {/* Invited By */}
-            {invitation.invited_by && (
-              <div>
-                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  Invited By
-                </h4>
-                <dl className="space-y-2">
+                {/* Role Details */}
+                {invitation.role && (
                   <div>
-                    <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                      Professional Title
-                    </dt>
-                    <dd className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {invitation.invited_by.professional_title || 'Staff Member'}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                      Staff Number
-                    </dt>
-                    <dd className={`text-sm font-mono ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {invitation.invited_by.staff_uuid}
-                    </dd>
-                  </div>
-                  {invitation.role_code && (
-                    <div>
-                      <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                        Role
-                      </dt>
-                      <dd className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                        {getRoleDisplayName(invitation.role_code)}
-                      </dd>
+                    <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
+                      <div className={cn(
+                        'p-1.5 rounded-lg',
+                        isDark ? 'bg-purple-500/20' : 'bg-purple-100'
+                      )}>
+                        <Briefcase className={cn(
+                          'w-4 h-4',
+                          isDark ? 'text-purple-400' : 'text-purple-600'
+                        )} />
+                      </div>
+                      Role Details
+                    </h4>
+                    <div className={cn(
+                      'space-y-3 p-4 rounded-lg border-2',
+                      isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'
+                    )}>
+                      <div className="flex justify-between">
+                        <span className={cn(
+                          'text-xs',
+                          isDark ? 'text-gray-500' : 'text-gray-500'
+                        )}>
+                          Role Name
+                        </span>
+                        <span className={cn(
+                          'text-sm font-medium',
+                          isDark ? 'text-gray-300' : 'text-gray-700'
+                        )}>
+                          {invitation.role.name}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className={cn(
+                          'text-xs',
+                          isDark ? 'text-gray-500' : 'text-gray-500'
+                        )}>
+                          Role Code
+                        </span>
+                        <code className={cn(
+                          'text-sm font-mono px-2 py-0.5 rounded',
+                          isDark ? 'bg-gray-900 text-gray-300' : 'bg-gray-100 text-gray-700'
+                        )}>
+                          {invitation.role.code}
+                        </code>
+                      </div>
+                      {invitation.role.description && (
+                        <div>
+                          <span className={cn(
+                            'text-xs block mb-1',
+                            isDark ? 'text-gray-500' : 'text-gray-500'
+                          )}>
+                            Description
+                          </span>
+                          <span className={cn(
+                            'text-sm',
+                            isDark ? 'text-gray-400' : 'text-gray-600'
+                          )}>
+                            {invitation.role.description}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </dl>
-              </div>
-            )}
-
-            {/* Role Details */}
-            {invitation.role && (
-              <div>
-                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <Briefcase className="w-4 h-4" />
-                  Role Details
-                </h4>
-                <dl className="space-y-2">
-                  <div>
-                    <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                      Role Name
-                    </dt>
-                    <dd className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {invitation.role.name}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                      Role Code
-                    </dt>
-                    <dd className={`text-sm font-mono ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {invitation.role.code}
-                    </dd>
-                  </div>
-                  {invitation.role.description && (
-                    <div>
-                      <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                        Description
-                      </dt>
-                      <dd className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                        {invitation.role.description}
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-              </div>
-            )}
-
-            {/* Facility Information */}
-            <div>
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                Facility Information
-              </h4>
-              <dl className="space-y-2">
-                <div>
-                  <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                    Facility Name
-                  </dt>
-                  <dd className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    {invitation.facility?.facility_name || 'Unknown Facility'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                    Facility Number
-                  </dt>
-                  <dd className={`text-sm font-mono ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    {invitation.facility?.facility_code || 'N/A'}
-                  </dd>
-                </div>
-                {invitation.department && (
-                  <div>
-                    <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                      Department
-                    </dt>
-                    <dd className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {invitation.department.department_name}
-                    </dd>
                   </div>
                 )}
-              </dl>
+
+                {/* Facility Information */}
+                <div>
+                  <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
+                    <div className={cn(
+                      'p-1.5 rounded-lg',
+                      isDark ? 'bg-amber-500/20' : 'bg-amber-100'
+                    )}>
+                      <Phone className={cn(
+                        'w-4 h-4',
+                        isDark ? 'text-amber-400' : 'text-amber-600'
+                      )} />
+                    </div>
+                    Facility Information
+                  </h4>
+                  <div className={cn(
+                    'space-y-3 p-4 rounded-lg border-2',
+                    isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'
+                  )}>
+                    <div className="flex justify-between">
+                      <span className={cn(
+                        'text-xs',
+                        isDark ? 'text-gray-500' : 'text-gray-500'
+                      )}>
+                        Facility Name
+                      </span>
+                      <span className={cn(
+                        'text-sm font-medium',
+                        isDark ? 'text-gray-300' : 'text-gray-700'
+                      )}>
+                        {invitation.facility?.facility_name || 'Unknown Facility'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className={cn(
+                        'text-xs',
+                        isDark ? 'text-gray-500' : 'text-gray-500'
+                      )}>
+                        Facility Number
+                      </span>
+                      <code className={cn(
+                        'text-sm font-mono',
+                        isDark ? 'text-gray-300' : 'text-gray-700'
+                      )}>
+                        {invitation.facility?.facility_code || 'N/A'}
+                      </code>
+                    </div>
+                    {invitation.department && (
+                      <div className="flex justify-between">
+                        <span className={cn(
+                          'text-xs',
+                          isDark ? 'text-gray-500' : 'text-gray-500'
+                        )}>
+                          Department
+                        </span>
+                        <span className={cn(
+                          'text-sm',
+                          isDark ? 'text-gray-300' : 'text-gray-700'
+                        )}>
+                          {invitation.department.department_name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Module Tags (if any) */}
+              {invitation.module_code && Array.isArray(invitation.module_code) && invitation.module_code.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
+                    <div className={cn(
+                      'p-1.5 rounded-lg',
+                      isDark ? 'bg-indigo-500/20' : 'bg-indigo-100'
+                    )}>
+                      <Shield className={cn(
+                        'w-4 h-4',
+                        isDark ? 'text-indigo-400' : 'text-indigo-600'
+                      )} />
+                    </div>
+                    Access Permissions
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {invitation.module_code.map((code) => (
+                      <span
+                        key={code}
+                        className={cn(
+                          'px-3 py-1.5 rounded-lg text-xs font-medium border-2',
+                          isDark
+                            ? 'bg-gray-800 border-gray-700 text-gray-300'
+                            : 'bg-gray-100 border-gray-200 text-gray-700'
+                        )}
+                      >
+                        {code}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
-      )}
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 };
 
