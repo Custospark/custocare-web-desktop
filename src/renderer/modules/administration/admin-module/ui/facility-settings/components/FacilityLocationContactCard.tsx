@@ -5,7 +5,8 @@ import {
 } from 'lucide-react';
 
 import type { FacilitySettingsFormState } from './FacilitySettingsHelpers';
-import { Label, FieldError, inputBase, InfoRow } from './FacilitySettingsSharedUI';
+import { Label, FieldError, InfoRow } from './FacilitySettingsSharedUI';
+import { inputBase } from './styleHelpers';
 
 /* ── Minimal country list (extend or import your full list) ──────────── */
 const COUNTRIES: { code: string; name: string; flag: string }[] = [

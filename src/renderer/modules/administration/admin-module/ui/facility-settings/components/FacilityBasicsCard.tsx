@@ -15,9 +15,9 @@ import {
   HEALTHCARE_SERVICES,
 } from './FacilitySettingsHelpers';
 import {
-  Label, FieldError, inputBase, selectBase, InfoRow,
-  ServiceTagSelector, ToggleRow, SectionDivider, RegulatoryIdentifierEditor,
+  ServiceTagSelector, ToggleRow, SectionDivider, RegulatoryIdentifierEditor,Label, FieldError,  InfoRow,
 } from './FacilitySettingsSharedUI';
+import { inputBase,selectBase } from './styleHelpers';  
 
 /* ── nature-of-facility icon map ──────────────────────────────────────── */
 const NATURE_ICONS: Record<string, React.ReactNode> = {

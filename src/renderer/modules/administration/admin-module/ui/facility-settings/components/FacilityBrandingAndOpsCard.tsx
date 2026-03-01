@@ -5,9 +5,10 @@ import { OperationalStatus } from '../../../api/facility-settings/FacilitySettin
 import type { FacilitySettingsFormState } from './FacilitySettingsHelpers';
 import { OPERATIONAL_STATUS_LABELS } from './FacilitySettingsHelpers';
 import {
-  Label, FieldError, inputBase, selectBase,
+  Label, FieldError,
   ColorSwatch, OperatingHoursEditor, ToggleRow, StatusBadge,
 } from './FacilitySettingsSharedUI';
+import {inputBase, selectBase} from  './styleHelpers';
 
 interface FacilityBrandingAndOpsCardProps {
   cardBase: string;
