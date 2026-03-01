@@ -1,7 +1,7 @@
 import React from 'react';
 import { cx } from '../../../utils';
 import type { RefundableLineItem } from '../../../../../../api/refund/RefundTypes';
-import { ThemeColors } from '../../Modals';
+import { type ThemeColors } from '../../Modals';
 
 interface LineItemsTableProps {
   lineItems: RefundableLineItem[];

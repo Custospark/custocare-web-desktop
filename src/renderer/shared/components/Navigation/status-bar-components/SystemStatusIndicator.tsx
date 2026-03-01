@@ -1,7 +1,7 @@
 // components/statusbar/SystemStatusIndicator.tsx
 import React, { useMemo } from 'react';
 import { Activity, AlertTriangle, WifiOff, RefreshCw, Zap } from 'lucide-react';
-import { SystemStatus, ThemeMode } from './StatusBarTypes';
+import type { SystemStatus, ThemeMode } from './StatusBarTypes';
 import { cn } from '../../../utils/classNameUtils';
 
 interface SystemStatusIndicatorProps {

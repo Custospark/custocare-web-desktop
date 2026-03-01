@@ -39,7 +39,7 @@ import { useFinalizeBilling } from '../../../api/billable-items/BillableItemsQue
 import { useGetFacilityIdentity } from '../../../api/facility/FacilityQueries';
 import type { BillingSubmissionPayload } from '../../../api/billable-items/BillingItemsTypes';
 import { PaymentStatus, DiscountType, type Tax, type PaymentMethod } from '../../../api/billing-review/BillingReviewTypes';
-import { ChargeItem } from './billing-types';
+import { type ChargeItem } from './billing-types';
 
 // Import the modular components
 import { BillingControlsSection } from './billing-summary/BillingControlsSection';

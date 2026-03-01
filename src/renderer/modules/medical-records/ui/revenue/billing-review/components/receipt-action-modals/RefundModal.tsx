@@ -3,7 +3,7 @@ import type { BillingReviewItem } from '../../../../../api/billing-review/Billin
 import { 
   RefundReason, 
   RefundMethodType,
-  RefundableLineItem 
+  type RefundableLineItem 
 } from '../../../../../api/refund/RefundTypes';
 import { isRefundable } from '../../../../../api/refund/RefundTypes';
 import { useRefundTransaction } from '../../../../../api/refund/RefundQueries';

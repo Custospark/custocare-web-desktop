@@ -1,4 +1,4 @@
-import { RefObject } from 'react';
+import { type RefObject } from 'react';
 
 export type SidebarPosition = 'left' | 'right';
 export type SystemStatus = 'online' | 'slow' | 'offline';

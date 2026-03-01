@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Phone, Mail, Globe, CheckCircle2, ChevronDown, X, Search, AlertCircle } from 'lucide-react';
 import { FormInput } from './FormElements';
 import { countryCodes } from '../../auth/countryCodes';
-import { FacilityFormData } from './types';
+import { type FacilityFormData } from './types';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 
 interface Step2LocationProps {

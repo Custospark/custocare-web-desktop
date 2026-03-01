@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/useApp';
 import LogoImage from '../../../../../shared/assets/LogoImage';
-import { FacilityTier, FacilityType, NatureOfFacility, OperatingHours, OperationalStatus, RegisterFacilityRequest } from '../../api/queries/facility-owner/registerFacilityTypes'
+import type { FacilityTier, FacilityType, NatureOfFacility, OperatingHours, OperationalStatus, RegisterFacilityRequest } from '../../api/queries/facility-owner/registerFacilityTypes'
 import { useRegisterFacility } from '../../api/queries/facility-owner/registerFacilityQuery';
 import { ROUTES } from '../../routes/onboardingRouteConstants';
 import { toggleTheme } from '../../../../../app/store/slices/uiSlice';
@@ -42,7 +42,7 @@ import { SuccessScreen } from './facility-onboarding/SuccessScreen';
 
 // Import types and constants
 import { 
-  FacilityFormData,
+  type FacilityFormData,
   DEFAULT_OPERATING_HOURS
 } from  './facility-onboarding/types';
 

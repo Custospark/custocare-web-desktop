@@ -19,7 +19,7 @@ import { LayoutContentSection } from './layout-components/LayoutContentSection';
 import { 
   ThemeMode, 
   SidebarPosition, 
-  LayoutThemeClasses,
+  type LayoutThemeClasses,
   STORAGE_KEYS,
   ANIMATION_CONFIG,
   TOP_BARS_TOTAL_H,

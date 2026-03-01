@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { BadgeCheck, Sparkles, ArrowRight } from 'lucide-react';
-import { FACILITY_TYPE_LABELS, FacilityFormData } from './types';
+import { FACILITY_TYPE_LABELS, type FacilityFormData } from './types';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 
 interface SuccessScreenProps {

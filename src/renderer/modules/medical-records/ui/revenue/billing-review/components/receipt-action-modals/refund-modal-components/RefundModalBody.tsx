@@ -1,7 +1,7 @@
 import React from 'react';
 import { Undo2, AlertTriangle } from 'lucide-react';
 import { BillingReviewItem } from '../../Modals';
-import { RefundReason, RefundableLineItem } from '../../../../../../api/refund/RefundTypes';
+import { type RefundReason, type RefundableLineItem } from '../../../../../../api/refund/RefundTypes';
 import type { ThemeColors } from '../RefundModal';
 import { cx } from '../../../utils';
 // Import sub-components

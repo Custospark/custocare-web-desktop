@@ -2,7 +2,7 @@ import React, { useMemo, useCallback } from 'react';
 import { Coins, AlertCircle, Plus, Trash2, CheckCircle, Percent } from 'lucide-react';
 import { cx } from '../../../utils';
 import { REFUND_METHOD_LABELS, RefundMethodType } from '../../../../../../api/refund/RefundTypes';
-import { BillingReviewItem, ThemeColors } from '../../Modals';
+import { type BillingReviewItem, type ThemeColors } from '../../Modals';
 import type { RefundableLineItem } from '../../../../../../api/refund/RefundTypes';
 
 export interface RefundMethod {

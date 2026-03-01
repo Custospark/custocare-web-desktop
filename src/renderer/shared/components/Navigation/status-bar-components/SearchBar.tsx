@@ -8,7 +8,7 @@ import { selectAccessibleModuleCodes } from '../../../../app/store/slices/active
 import { useSelector } from 'react-redux';
 import { isInPatientMode } from '../../../../app/store/utils/contextSelectors';
 import { ACCOUNT_ROUTES,ROUTES } from '../../../../app/routes/routeConstants';
-import { SearchableModule, ThemeMode } from './StatusBarTypes';
+import type { SearchableModule, ThemeMode } from './StatusBarTypes';
 
 interface SearchBarProps {
   searchQuery: string;

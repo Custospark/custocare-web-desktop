@@ -6,7 +6,7 @@ import {
   OPERATIONAL_STATUS_OPTIONS, 
   OPERATIONAL_STATUS_LABELS,
   HEALTHCARE_SERVICES,
-  FacilityFormData 
+  type FacilityFormData 
 } from './types';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 

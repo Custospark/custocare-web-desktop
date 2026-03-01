@@ -1,7 +1,7 @@
 import React from 'react';
 import { Percent } from 'lucide-react';
 import { cx } from '../../../utils';
-import { ThemeColors } from '../../Modals';
+import { type ThemeColors } from '../../Modals';
 
 interface RefundPercentagePresetsProps {
   refundPercentage: number;

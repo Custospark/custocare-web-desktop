@@ -3,7 +3,7 @@ import React from 'react';
 import { Banknote, ArrowLeftRight } from 'lucide-react';
 import PaymentIcon from './PaymentIcon';
 import type { PaymentMethod } from '../../../../../../api/billing-review/BillingReviewTypes';
-import { CashBreakdown } from './ReceiptTypes';
+import { type CashBreakdown } from './ReceiptTypes';
 import { formatCurrency } from '../../../../../../api/billing-review/BillingReviewTypes';
 import { cx } from './ReceiptTypes';
 

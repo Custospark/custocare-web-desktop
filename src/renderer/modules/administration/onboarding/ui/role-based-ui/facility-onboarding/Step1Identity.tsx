@@ -10,7 +10,7 @@ import {
   FACILITY_TYPE_LABELS,
   FACILITY_TIER_OPTIONS,
   FACILITY_TIER_LABELS,
-  FacilityFormData 
+  type FacilityFormData 
 } from './types';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 

@@ -2,7 +2,7 @@
 import React from 'react';
 import { cn } from '../../../utils/classNameUtils';
 import { Sidebar } from './../Sidebar';
-import { LayoutThemeClasses, SidebarPosition } from './LayoutTypes';
+import type{ LayoutThemeClasses, SidebarPosition } from './LayoutTypes';
 
 interface LayoutSidebarSectionProps {
   mobileSidebarOpen: boolean;

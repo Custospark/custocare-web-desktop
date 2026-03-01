@@ -3,7 +3,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { cn } from '../../../utils/classNameUtils';
 import { Footer } from './../Footer';
-import { LayoutThemeClasses, SidebarPosition } from './LayoutTypes';
+import type { LayoutThemeClasses, SidebarPosition } from './LayoutTypes';
 
 interface LayoutContentSectionProps {
   sidebarOpen: boolean;

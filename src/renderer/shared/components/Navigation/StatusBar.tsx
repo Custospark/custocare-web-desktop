@@ -2,7 +2,7 @@
 import React from 'react';
 import { cn } from '../../types/cn';
 import { SystemStatusIndicator } from './status-bar-components/SystemStatusIndicator';
-import { StatusBarProps } from './status-bar-components/StatusBarTypes';
+import { type StatusBarProps } from './status-bar-components/StatusBarTypes';
 import { QuickActions } from './status-bar-components/QuickActions';
 import { SearchBar } from './status-bar-components/SearchBar';
 

@@ -32,7 +32,6 @@ import {
   AlertTriangle,
   Users,
   RefreshCw,
-  ChevronUp,
 } from 'lucide-react';
 
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';

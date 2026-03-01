@@ -379,6 +379,7 @@ const buttonVisibility = useMemo(() => {
 
 // Helper function to provide contextual hints
 const getActionHint = (status: BillingCycleStatus, visibility: any): string => {
+  console.log(status);
   if (visibility.showRefund && visibility.showVoid) {
     return 'Print, refund, or void this transaction';
   }

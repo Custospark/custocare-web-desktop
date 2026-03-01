@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Undo2 } from 'lucide-react';
-import { ThemeColors } from '../../Modals';
+import { type ThemeColors } from '../../Modals';
 import { cx } from '../../../utils';
 
 interface RefundModalHeaderProps {

@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, LucideIcon } from 'lucide-react';
+import { ArrowRight, type LucideIcon } from 'lucide-react';
 import { cn } from '../../../../../../shared/types/cn';
 import { cardVariants } from '../../../../../../shared/components/animations/motionVariants';
 
