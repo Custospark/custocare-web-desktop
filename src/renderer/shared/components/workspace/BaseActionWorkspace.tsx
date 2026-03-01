@@ -88,13 +88,25 @@ export function BaseActionWorkspace<TActionId extends string>({
 
   if (!actions?.length) {
     return (
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
-        className={`rounded-xl p-6 border ${shellBg} ${className}`} data-testid={testId} role="region" aria-label={ariaLabel || title}>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ duration: 0.3 }}
+        className={`rounded-xl p-6 border ${shellBg} ${className}`} 
+        data-testid={testId} 
+        role="region" 
+        aria-label={ariaLabel || title}
+      >
         <h2 className={`text-xl font-bold ${titleColor} flex items-center gap-2`}>
           {icon && <span className={iconColor}>{icon}</span>}
           <span>{title}</span>
         </h2>
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="mt-4 p-4 text-center text-gray-500">
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          transition={{ delay: 0.2 }} 
+          className="mt-4 p-4 text-center text-gray-500"
+        >
           No actions available.
         </motion.div>
       </motion.div>
@@ -102,19 +114,34 @@ export function BaseActionWorkspace<TActionId extends string>({
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}
-      className={`space-y-2 ${className}`} data-testid={testId} role="region" aria-label={ariaLabel || title}>
-      
-      <motion.div className={`rounded-xl border ${shellBg} overflow-hidden`} whileHover={{ scale: 1.01 }} transition={{ type: "spring", stiffness: 300, damping: 30 }}>
-        
-        {/* Header - Removed hover color change */}
-        <div className={cx(
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      transition={{ duration: 0.3 }}
+      className={`space-y-2 ${className}`} 
+      data-testid={testId} 
+      role="region" 
+      aria-label={ariaLabel || title}
+    >
+      <motion.div 
+        className={`rounded-xl border ${shellBg} overflow-hidden`} 
+        whileHover={{ scale: 1.01 }} 
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      >
+        {/* Header */}
+        <div 
+          className={cx(
             'flex items-center justify-between p-3 cursor-pointer select-none',
             isCollapsed ? 'border-b-0' : `border-b ${isDark ? 'border-gray-800' : 'border-gray-200'}`
-          )} onClick={toggleCollapse}
-          role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCollapse(); } }}
-          aria-expanded={!isCollapsed} aria-controls="actions-panel" title={isCollapsed ? 'Expand task bar' : 'Collapse task bar'}>
-          
+          )} 
+          onClick={toggleCollapse}
+          role="button" 
+          tabIndex={0} 
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCollapse(); } }}
+          aria-expanded={!isCollapsed} 
+          aria-controls="actions-panel" 
+          title={isCollapsed ? 'Expand task bar' : 'Collapse task bar'}
+        >
           <div className="flex items-center gap-3">
             <h2 className={`text-xl font-bold ${titleColor} flex items-center gap-2`}>
               {icon && <span className={iconColor}>{icon}</span>}
@@ -122,11 +149,17 @@ export function BaseActionWorkspace<TActionId extends string>({
             </h2>
             
             {isCollapsed && activeAction && (
-              <span className={cx('text-xs px-2 py-1 rounded-full cursor-pointer',
+              <span 
+                className={cx(
+                  'text-xs px-2 py-1 rounded-full cursor-pointer',
                   isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'
-                )} title={`Current: ${activeAction.label}`}
+                )} 
+                title={`Current: ${activeAction.label}`}
                 onClick={(e) => { e.stopPropagation(); handleActionClick(activeAction.to); }}
-                role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); handleActionClick(activeAction.to); } }}>
+                role="button" 
+                tabIndex={0} 
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); handleActionClick(activeAction.to); } }}
+              >
                 {activeAction.label}
               </span>
             )}
@@ -139,9 +172,20 @@ export function BaseActionWorkspace<TActionId extends string>({
 
         <AnimatePresence initial={false}>
           {!isCollapsed && (
-            <motion.div id="actions-panel" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="overflow-hidden">
-              <motion.div className="p-4" initial={{ y: -20 }} animate={{ y: 0 }} transition={{ delay: 0.1 }}>
+            <motion.div 
+              id="actions-panel" 
+              initial={{ height: 0, opacity: 0 }} 
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }} 
+              transition={{ duration: 0.3, ease: 'easeInOut' }} 
+              className="overflow-hidden"
+            >
+              <motion.div 
+                className="p-4" 
+                initial={{ y: -20 }} 
+                animate={{ y: 0 }} 
+                transition={{ delay: 0.1 }}
+              >
                 <div className="flex flex-wrap gap-2">
                   {actions.map((action, idx) => {
                     const isActive = activeAction?.key === action.key;
@@ -153,15 +197,28 @@ export function BaseActionWorkspace<TActionId extends string>({
                       : 'bg-gray-100/50 text-gray-400 cursor-not-allowed';
 
                     return (
-                      <motion.div key={String(action.key)} initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: idx * 0.05, type: "spring", stiffness: 400, damping: 25 }}
-                        whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <button type="button" onClick={() => handleActionClick(action.to, disabled)}
-                          className={cx('inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
+                      <motion.div 
+                        key={String(action.key)} 
+                        initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }} 
+                        transition={{ delay: idx * 0.05, type: "spring", stiffness: 400, damping: 25 }}
+                        whileHover={{ scale: 1.05 }} 
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <button 
+                          type="button" 
+                          onClick={() => handleActionClick(action.to, disabled)}
+                          className={cx(
+                            'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
                             'transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
                             isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
-                            disabled ? disabledClass : 'cursor-pointer', disabled ? '' : activeClass
-                          )} aria-pressed={isActive} aria-disabled={disabled} title={getActionTitle(action)}>
+                            disabled ? disabledClass : 'cursor-pointer', 
+                            disabled ? '' : activeClass
+                          )} 
+                          aria-pressed={isActive} 
+                          aria-disabled={disabled} 
+                          title={getActionTitle(action)}
+                        >
                           {action.icon && (
                             <span className={!isActive && !disabled ? iconColor : ''}>
                               {action.icon}
@@ -179,8 +236,12 @@ export function BaseActionWorkspace<TActionId extends string>({
         </AnimatePresence>
       </motion.div>
 
-      <motion.div className={`rounded-xl p-6 border min-h-75 ${shellBg}`}
-        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+      <motion.div 
+        className={`rounded-xl p-6 border min-h-75 ${shellBg}`}
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ delay: 0.2 }}
+      >
         <Outlet context={{ theme, defaultActionTo }} />
       </motion.div>
     </motion.div>
