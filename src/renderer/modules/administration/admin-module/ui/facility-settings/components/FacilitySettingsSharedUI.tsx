@@ -23,13 +23,6 @@ const textSizes = {
   badge: 'text-[10px] xs:text-xs sm:text-xs',
 };
 
-// Responsive spacing utilities
-const spacing = {
-  section: 'space-y-4 xs:space-y-5 sm:space-y-6',
-  card: 'p-4 xs:p-5 sm:p-6',
-  gap: 'gap-2 xs:gap-3 sm:gap-4',
-  grid: 'grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3',
-};
 
 /* ─────────────────── atoms ───────────────────────────────────────────── */
 
@@ -612,12 +605,12 @@ export const SectionDivider: React.FC<{
 /* ─────────────────── StatusBadge ────────────────────────────────────── */
 
 const STATUS_COLORS: Record<string, string> = {
-  fully_operational: 'bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800',
-  limited_services: 'bg-yellow-100 text-yellow-800 border border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-800',
-  emergency_only: 'bg-orange-100 text-orange-800 border border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800',
-  temporarily_closed: 'bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800',
-  permanently_closed: 'bg-gray-200 text-gray-800 border border-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600',
-  under_construction: 'bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800',
+  fully_operational: 'bg-emerald-600 text-white border border-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200 dark:border-emerald-800',
+  limited_services: 'bg-amber-600 text-white border border-amber-700 dark:bg-amber-900/60 dark:text-amber-200 dark:border-amber-800',
+  emergency_only: 'bg-orange-600 text-white border border-orange-700 dark:bg-orange-900/60 dark:text-orange-200 dark:border-orange-800',
+  temporarily_closed: 'bg-red-600 text-white border border-red-700 dark:bg-red-900/60 dark:text-red-200 dark:border-red-800',
+  permanently_closed: 'bg-gray-700 text-white border border-gray-800 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
+  under_construction: 'bg-blue-600 text-white border border-blue-700 dark:bg-blue-900/60 dark:text-blue-200 dark:border-blue-800',
 };
 
 export const StatusBadge: React.FC<{ status: string; label: string }> = ({ status, label }) => (

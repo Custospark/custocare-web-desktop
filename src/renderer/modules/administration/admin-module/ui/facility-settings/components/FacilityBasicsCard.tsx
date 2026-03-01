@@ -18,6 +18,8 @@ import {
   ServiceTagSelector, ToggleRow, SectionDivider, RegulatoryIdentifierEditor,Label, FieldError,  InfoRow,
 } from './FacilitySettingsSharedUI';
 import { inputBase,selectBase } from './styleHelpers';  
+import { CurrencySelect } from './CurrencySelect';
+import { POPULAR_CURRENCIES } from './currencyUtils';
 
 /* ── nature-of-facility icon map ──────────────────────────────────────── */
 const NATURE_ICONS: Record<string, React.ReactNode> = {
@@ -383,26 +385,29 @@ const FacilityBasicsCard: React.FC<FacilityBasicsCardProps> = ({
         {/* ═══════════════ FINANCIAL ════════════════ */}
         <SectionDivider isDark={isDark} label="Financial Configuration" icon={<DollarSign className="w-3.5 h-3.5" />} />
 
+
         {editMode ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-            <div>
-              <Label isDark={isDark}>Currency (ISO 4217)</Label>
-              <input className={inputBase(isDark)} value={form.currency} maxLength={3}
-                onChange={(e) => onField('currency', e.target.value.toUpperCase())} placeholder="USD" />
-              {fieldErrors.currency && <FieldError msg={fieldErrors.currency} />}
+            <div className="col-span-2 sm:col-span-1">
+              <CurrencySelect
+                isDark={isDark}
+                value={form.currency}
+                onChange={(code) => onField('currency', code)}
+                error={fieldErrors.currency}
+              />
             </div>
-            <div className="col-span-2 flex items-end">
+            <div className="col-span-2 sm:col-span-1 flex items-end">
               <ToggleRow isDark={isDark} label="Tax Enabled" checked={form.tax_enabled}
                 onChange={(v) => onField('tax_enabled', v)} />
             </div>
             {form.tax_enabled && (
               <>
-                <div>
+                <div className="col-span-2 sm:col-span-1">
                   <Label isDark={isDark}>Tax Name</Label>
                   <input className={inputBase(isDark)} value={form.tax_name}
                     onChange={(e) => onField('tax_name', e.target.value)} placeholder="e.g. VAT" />
                 </div>
-                <div>
+                <div className="col-span-2 sm:col-span-1">
                   <Label isDark={isDark}>Tax Rate (%)</Label>
                   <input className={inputBase(isDark)} value={form.tax_rate}
                     onChange={(e) => onField('tax_rate', e.target.value)}
@@ -414,7 +419,20 @@ const FacilityBasicsCard: React.FC<FacilityBasicsCardProps> = ({
           </div>
         ) : (
           <div className="pt-2 space-y-0.5">
-            {form.currency && <InfoRow isDark={isDark} label="Currency" value={form.currency} />}
+            {form.currency && (
+              <InfoRow 
+                isDark={isDark} 
+                label="Currency" 
+                value={
+                  <span className="flex items-center gap-2">
+                    <span className="font-mono font-medium">{form.currency}</span>
+                    <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {POPULAR_CURRENCIES.find(c => c.code === form.currency)?.name || ''}
+                    </span>
+                  </span>
+                } 
+              />
+            )}
             {form.tax_enabled && (
               <InfoRow isDark={isDark} label="Tax"
                 value={`${form.tax_name || 'Tax'} @ ${form.tax_rate}%`} />
