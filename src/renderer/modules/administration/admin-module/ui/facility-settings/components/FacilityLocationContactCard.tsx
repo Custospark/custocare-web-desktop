@@ -1,43 +1,14 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import {
   MapPin, Phone, Mail, Globe, Navigation,
-  Search, X, ChevronDown, CheckCircle2,
+  Search, X, ChevronDown, CheckCircle2, AlertCircle
 } from 'lucide-react';
 
 import type { FacilitySettingsFormState } from './FacilitySettingsHelpers';
 import { Label, FieldError, InfoRow } from './FacilitySettingsSharedUI';
 import { inputBase } from './styleHelpers';
-
-/* ── Minimal country list (extend or import your full list) ──────────── */
-const COUNTRIES: { code: string; name: string; flag: string }[] = [
-  { code: 'AF', name: 'Afghanistan', flag: '🇦🇫' },
-  { code: 'AU', name: 'Australia', flag: '🇦🇺' },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦' },
-  { code: 'CN', name: 'China', flag: '🇨🇳' },
-  { code: 'EG', name: 'Egypt', flag: '🇪🇬' },
-  { code: 'ET', name: 'Ethiopia', flag: '🇪🇹' },
-  { code: 'FR', name: 'France', flag: '🇫🇷' },
-  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
-  { code: 'GH', name: 'Ghana', flag: '🇬🇭' },
-  { code: 'IN', name: 'India', flag: '🇮🇳' },
-  { code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
-  { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
-  { code: 'KE', name: 'Kenya', flag: '🇰🇪' },
-  { code: 'MW', name: 'Malawi', flag: '🇲🇼' },
-  { code: 'MX', name: 'Mexico', flag: '🇲🇽' },
-  { code: 'PK', name: 'Pakistan', flag: '🇵🇰' },
-  { code: 'PH', name: 'Philippines', flag: '🇵🇭' },
-  { code: 'RW', name: 'Rwanda', flag: '🇷🇼' },
-  { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
-  { code: 'TZ', name: 'Tanzania', flag: '🇹🇿' },
-  { code: 'UG', name: 'Uganda', flag: '🇺🇬' },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
-  { code: 'US', name: 'United States', flag: '🇺🇸' },
-  { code: 'ZM', name: 'Zambia', flag: '🇿🇲' },
-  { code: 'ZW', name: 'Zimbabwe', flag: '🇿🇼' },
-];
-
-/* ── CountrySelect ───────────────────────────────────────────────────── */
+import { countryCodes } from '../../../../onboarding/ui/auth/countryCodes';
+/* ── Country select for address ───────────────────────────────────── */
 const CountrySelect: React.FC<{
   isDark: boolean;
   value: string;
@@ -58,11 +29,11 @@ const CountrySelect: React.FC<{
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
     return q
-      ? COUNTRIES.filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q))
-      : COUNTRIES;
+      ? countryCodes.filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q))
+      : countryCodes;
   }, [query]);
 
-  const selected = COUNTRIES.find((c) => c.code === value);
+  const selected = countryCodes.find((c) => c.code === value);
 
   return (
     <div ref={ref} className="relative">
@@ -140,6 +111,95 @@ const CountrySelect: React.FC<{
   );
 };
 
+/* ── Phone country code selector (new component) ─────────────────── */
+const PhoneCountrySelect: React.FC<{
+  isDark: boolean;
+  value: string;
+  onChange: (dialCode: string) => void;
+}> = ({ isDark, value, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!search) return countryCodes;
+    const q = search.toLowerCase();
+    return countryCodes.filter(c => 
+      c.name.toLowerCase().includes(q) || 
+      c.code.toLowerCase().includes(q) ||
+      c.dial_code.includes(q)
+    );
+  }, [search]);
+
+  const selected = countryCodes.find(c => c.dial_code === value) || countryCodes.find(c => c.code === 'UG');
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm border outline-none transition-colors ${
+          isDark
+            ? 'bg-gray-800 border-gray-700 text-gray-100 hover:border-gray-600'
+            : 'bg-white border-gray-300 text-gray-900 hover:border-gray-400'
+        }`}
+      >
+        <span className="flex items-center gap-1.5 truncate">
+          <span className="text-base">{selected?.flag}</span>
+          <span className="font-medium">{selected?.dial_code}</span>
+        </span>
+        <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''} ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+      </button>
+
+      {open && (
+        <div className={`absolute z-50 w-72 mt-1 rounded-xl border-2 shadow-xl overflow-hidden ${
+          isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+        }`}>
+          <div className={`p-2 border-b ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+            <input
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search country..."
+              className={`w-full px-3 py-1.5 text-xs rounded-lg border outline-none ${
+                isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200 text-gray-900'
+              }`}
+            />
+          </div>
+          <div className="max-h-64 overflow-y-auto">
+            {filtered.map((c) => (
+              <button
+                key={c.code}
+                type="button"
+                onClick={() => { onChange(c.dial_code); setOpen(false); setSearch(''); }}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors text-left ${
+                  value === c.dial_code
+                    ? isDark ? 'bg-cyan-900/30 text-cyan-200' : 'bg-blue-50 text-blue-800'
+                    : isDark ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-50 text-gray-800'
+                }`}
+              >
+                <span className="text-base">{c.flag}</span>
+                <span className="flex-1 truncate">{c.name}</span>
+                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {c.dial_code}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ── Main component ──────────────────────────────────────────────────── */
 interface FacilityLocationContactCardProps {
   cardBase: string;
@@ -153,14 +213,41 @@ interface FacilityLocationContactCardProps {
 const FacilityLocationContactCard: React.FC<FacilityLocationContactCardProps> = ({
   cardBase, isDark, editMode, form, fieldErrors, onField,
 }) => {
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [phoneCountryCode, setPhoneCountryCode] = useState('+256'); // Default to Uganda
+
   const divider = `border-t ${isDark ? 'border-gray-800' : 'border-gray-100'}`;
-  const selectedCountry = COUNTRIES.find((c) => c.code === form.country_code);
+  const selectedCountry = countryCodes.find((c) => c.code === form.country_code);
 
   const formattedAddress = [
     form.address_line1, form.address_line2, form.city,
     form.state_province, form.postal_code,
     selectedCountry ? selectedCountry.name : form.country_code,
   ].filter(Boolean).join(', ') || '—';
+
+  // Phone validation
+  const validatePhone = (phone: string) => {
+    if (!phone) return { isValid: true, error: '' }; // Phone is optional
+    const digitsOnly = phone.replace(/\D/g, '');
+    if (digitsOnly.length < 6) return { isValid: false, error: 'Phone number too short' };
+    if (digitsOnly.length > 12) return { isValid: false, error: 'Phone number too long' };
+    return { isValid: true, error: '' };
+  };
+
+  const phoneValidation = validatePhone(form.main_phone);
+
+  // Handlers
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^\d\s\-()]/g, '');
+    onField('main_phone', value);
+    if (touched.phone) {
+      setTouched(prev => ({ ...prev, phone: false }));
+    }
+  };
+
+  const handleBlur = (field: string) => () => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
 
   return (
     <section className={cardBase}>
@@ -255,16 +342,61 @@ const FacilityLocationContactCard: React.FC<FacilityLocationContactCardProps> = 
               </span>
             </div>
 
-            <div>
+            {/* Phone with country code */}
+            <div className="sm:col-span-2">
               <Label isDark={isDark}>Main Phone</Label>
-              <div className="relative">
-                <Phone className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-                <input className={inputBase(isDark, 'pl-9')} value={form.main_phone} maxLength={50}
-                  onChange={(e) => onField('main_phone', e.target.value)} placeholder="+256 712 345 678" />
+              <div className="flex gap-2">
+                {/* Country Code Selector */}
+                <div className="relative shrink-0 w-36">
+                  <PhoneCountrySelect 
+                    isDark={isDark} 
+                    value={phoneCountryCode}
+                    onChange={setPhoneCountryCode}
+                  />
+                </div>
+
+                {/* Phone Input */}
+                <div className="relative flex-1">
+                  <Phone className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+                  <input
+                    type="tel"
+                    value={form.main_phone}
+                    onChange={handlePhoneChange}
+                    onBlur={handleBlur('phone')}
+                    placeholder="e.g., 712 345 678"
+                    className={`${inputBase(isDark, 'pl-9')} ${
+                      touched.phone && !phoneValidation.isValid && form.main_phone
+                        ? isDark ? 'border-red-500' : 'border-red-400'
+                        : phoneValidation.isValid && form.main_phone
+                          ? isDark ? 'border-emerald-500' : 'border-emerald-400'
+                          : ''
+                    }`}
+                  />
+                  {phoneValidation.isValid && form.main_phone && (
+                    <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                  )}
+                </div>
               </div>
-              {fieldErrors.main_phone && <FieldError msg={fieldErrors.main_phone} />}
+
+              {/* Show full number with country code */}
+              {form.main_phone && (
+                <p className={`text-xs mt-1.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Full number: <span className="font-mono text-cyan-600 dark:text-cyan-400">
+                    {phoneCountryCode}{form.main_phone}
+                  </span>
+                </p>
+              )}
+
+              {/* Validation Error */}
+              {touched.phone && !phoneValidation.isValid && form.main_phone && (
+                <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {phoneValidation.error}
+                </p>
+              )}
             </div>
 
+            {/* Emergency Phone (keeping original for now) */}
             <div>
               <Label isDark={isDark}>Emergency Phone (optional)</Label>
               <div className="relative">
@@ -314,7 +446,7 @@ const FacilityLocationContactCard: React.FC<FacilityLocationContactCardProps> = 
             <div className={`border-t pt-3 mt-3 ${isDark ? 'border-gray-800' : 'border-gray-100'}`}>
               {form.main_phone && (
                 <InfoRow isDark={isDark} label="Main Phone"
-                  value={<a href={`tel:${form.main_phone}`} className="hover:underline">{form.main_phone}</a>} />
+                  value={<a href={`tel:${phoneCountryCode}${form.main_phone}`} className="hover:underline">{phoneCountryCode} {form.main_phone}</a>} />
               )}
               {form.emergency_phone && (
                 <InfoRow isDark={isDark} label="Emergency"
