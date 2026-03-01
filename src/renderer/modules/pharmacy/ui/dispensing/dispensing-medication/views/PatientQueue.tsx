@@ -16,6 +16,7 @@ import {
   ChevronUp,
   Inbox,
   TrendingUp,
+  Calendar,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -408,54 +409,58 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     filterState.searchTerm !== '' || 
     filterState.sortBy !== 'wait_time_desc' || 
     filterState.filterBy !== 'all';
+const renderVisitRow = (visit: QueueVisitItem) => {
+  const p = visit.patient;
+  const isSelected = selectedVisitUuid === visit.visit_uuid;
+  const waitTime = calculateWaitTime(visit.waiting_since);
+  const overdue = isVisitOverdue(visit.acuity_score, visit.waiting_since);
+  const acuity = getAcuityDisplay(visit.acuity_score);
 
-  const renderVisitRow = (visit: QueueVisitItem) => {
-    const p = visit.patient;
-    const isSelected = selectedVisitUuid === visit.visit_uuid;
-    const waitTime = calculateWaitTime(visit.waiting_since);
-    const overdue = isVisitOverdue(visit.acuity_score, visit.waiting_since);
-    const acuity = getAcuityDisplay(visit.acuity_score);
+  return (
+    <motion.div
+      key={visit.visit_uuid}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.01 }}
+      transition={{ duration: 0.2 }}
+      className={cn(
+        'relative overflow-hidden rounded-xl border-2 transition-all duration-300 cursor-pointer',
+        'w-full p-4',
+        isSelected
+          ? isDark
+            ? 'border-blue-500 bg-gradient-to-br from-blue-900/20 to-gray-800'
+            : 'border-blue-500 bg-gradient-to-br from-blue-50 to-white'
+          : isDark
+            ? 'border-gray-700/50 bg-gradient-to-br from-gray-800 to-gray-900 hover:border-gray-600 hover:shadow-2xl hover:shadow-blue-500/10'
+            : 'border-gray-200 bg-gradient-to-br from-white to-gray-50/50 hover:border-gray-300 hover:shadow-2xl hover:shadow-blue-500/10',
+        'transform hover:-translate-y-0.5'
+      )}
+      onClick={() => handleVisitSelect(visit)}
+      role="button"
+      tabIndex={0}
+      onKeyPress={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleVisitSelect(visit);
+        }
+      }}
+    >
+      {/* Background decoration */}
+      <div className={cn(
+        'absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl transition-opacity',
+        isDark ? 'bg-blue-500/5' : 'bg-blue-500/5',
+        'opacity-0 group-hover:opacity-100'
+      )} />
 
-    return (
-      <motion.div
-        key={visit.visit_uuid}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        whileHover={{ scale: 1.01 }}
-        transition={{ duration: 0.2 }}
-        className={cn(
-          'relative overflow-hidden rounded-xl border-2 transition-all duration-300 cursor-pointer',
-          isSelected
-            ? isDark
-              ? 'border-blue-500 bg-gradient-to-br from-blue-900/20 to-gray-800'
-              : 'border-blue-500 bg-gradient-to-br from-blue-50 to-white'
-            : isDark
-              ? 'border-gray-700/50 bg-gradient-to-br from-gray-800 to-gray-900 hover:border-gray-600 hover:shadow-2xl hover:shadow-blue-500/10'
-              : 'border-gray-200 bg-gradient-to-br from-white to-gray-50/50 hover:border-gray-300 hover:shadow-2xl hover:shadow-blue-500/10',
-          'transform hover:-translate-y-0.5'
-        )}
-        onClick={() => handleVisitSelect(visit)}
-        role="button"
-        tabIndex={0}
-        onKeyPress={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleVisitSelect(visit);
-          }
-        }}
-      >
-        {/* Background decoration */}
-        <div className={cn(
-          'absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl transition-opacity',
-          isDark ? 'bg-blue-500/5 group-hover:opacity-100' : 'bg-blue-500/5 group-hover:opacity-100',
-          'opacity-0 group-hover:opacity-100'
-        )} />
-
-        <div className="relative p-5">
-          <div className="flex items-center gap-4">
+      <div className="relative">
+        {/* Desktop: Row Layout | Mobile: Column Layout */}
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+          {/* Left Section: Avatar + Basic Info - Always visible */}
+          <div className="flex items-start gap-3 flex-1 min-w-0">
             {/* Patient Avatar */}
             <div className={cn(
-              'flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300',
+              'flex-shrink-0 rounded-xl flex items-center justify-center transition-all duration-300',
+              'w-12 h-12',
               isSelected
                 ? isDark
                   ? 'bg-blue-500/30 scale-110'
@@ -472,16 +477,18 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
               )} />
             </div>
 
-            {/* Patient Info */}
+            {/* Patient Name and Details */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <h3 className={cn(
-                  'font-semibold text-base truncate',
+                  'font-semibold truncate',
+                  'text-base lg:text-lg',
                   isDark ? 'text-white' : 'text-gray-900'
                 )}>
                   {p?.name || 'Unknown Patient'}
                 </h3>
 
+                {/* Tags - Visible on all screens */}
                 {p?.requires_isolation && (
                   <span className={cn(
                     'inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium',
@@ -508,6 +515,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                 )}
               </div>
 
+              {/* Patient Details - Responsive grid */}
               <div className={cn(
                 'text-sm flex flex-wrap gap-x-4 gap-y-1',
                 isDark ? 'text-gray-400' : 'text-gray-600'
@@ -515,25 +523,31 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                 {p?.patient_number && (
                   <span className="flex items-center gap-1">
                     <Hash className="w-3 h-3" />
-                    #{p.patient_number}
+                    <span className="truncate max-w-[150px]">#{p.patient_number}</span>
                   </span>
                 )}
 
                 {p?.date_of_birth && (
-                  <span>DOB: {new Date(p.date_of_birth).toLocaleDateString()}</span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3 lg:hidden" />
+                    <span>DOB: {new Date(p.date_of_birth).toLocaleDateString()}</span>
+                  </span>
                 )}
                 
                 {p?.biological_sex && (
-                  <span className="capitalize">{p.biological_sex.toLowerCase()}</span>
+                  <span className="capitalize hidden lg:inline">{p.biological_sex.toLowerCase()}</span>
                 )}
               </div>
             </div>
+          </div>
 
-            {/* Status Badges and Action */}
-            <div className="flex items-center gap-3">
+          {/* Right Section: Badges and Action Button */}
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4 flex-shrink-0">
+            {/* Badges - Row on mobile, kept together on desktop */}
+            <div className="flex flex-wrap items-center gap-2">
               {/* Phase Badge */}
               <div className={cn(
-                'px-3 py-1.5 rounded-lg text-xs font-medium',
+                'px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap',
                 'border transition-all',
                 isDark
                   ? 'bg-purple-900/30 text-purple-300 border-purple-800/50'
@@ -544,7 +558,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
 
               {/* Acuity Badge */}
               <div
-                className="px-3 py-1.5 rounded-lg text-xs font-medium border"
+                className="px-3 py-1.5 rounded-lg text-xs font-medium border whitespace-nowrap"
                 style={{ 
                   backgroundColor: `${acuity.color}20`,
                   color: acuity.color,
@@ -560,7 +574,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
 
               {/* Wait Time Badge */}
               <div className={cn(
-                'px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1',
+                'px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 whitespace-nowrap',
                 'border transition-all',
                 overdue
                   ? isDark
@@ -574,30 +588,33 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                 {formatWaitTime(waitTime)}
                 {overdue && <AlertCircle className="w-3 h-3 ml-1" />}
               </div>
-
-              {/* Action Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={(e) => handleTakeActionClick(visit, e)}
-                className={cn(
-                  'px-4 py-2 rounded-lg font-medium transition-all duration-200',
-                  'flex items-center gap-2 border-2',
-                  isDark
-                    ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500/50 text-white hover:shadow-xl hover:shadow-blue-500/30'
-                    : 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-300 text-white hover:shadow-xl hover:shadow-blue-500/30',
-                  'transform hover:-translate-y-0.5 cursor-pointer'
-                )}
-              >
-                <span className="hidden sm:inline">{actionButtonText}</span>
-                {actionButtonIcon}
-              </motion.button>
             </div>
+
+            {/* Action Button - Full width on mobile, auto on desktop */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={(e) => handleTakeActionClick(visit, e)}
+              className={cn(
+                'rounded-lg font-medium transition-all duration-200',
+                'flex items-center justify-center gap-2',
+                'w-full lg:w-auto px-4 py-2.5 lg:py-2',
+                'text-sm',
+                isDark
+                  ? 'bg-gradient-to-br from-blue-600 to-blue-700 border border-blue-500/50 text-white hover:shadow-xl hover:shadow-blue-500/30'
+                  : 'bg-gradient-to-br from-blue-500 to-blue-600 border border-blue-300 text-white hover:shadow-xl hover:shadow-blue-500/30',
+                'transform hover:-translate-y-0.5 cursor-pointer'
+              )}
+            >
+              <span>{actionButtonText}</span>
+              {actionButtonIcon}
+            </motion.button>
           </div>
         </div>
-      </motion.div>
-    );
-  };
+      </div>
+    </motion.div>
+  );
+};
 
   return (
     <div className={cn(
@@ -982,7 +999,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                       />
                       <input
                         type="text"
-                        placeholder="Search patients by name, ID, DOB, or visit details..."
+                        placeholder="Search patients by patient number,name, DOB, or visit details..."
                         value={filterState.searchTerm}
                         onChange={handleSearchChange}
                         onKeyDown={handleKeyDown}

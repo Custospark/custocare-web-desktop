@@ -48,7 +48,7 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({ theme, className }) =
         onCancel={handleCancel} 
       />
 
-      <div className="max-w-3xl mx-auto px-6 pb-8">
+      <div>
         <div className={cn(
           'mt-6 rounded-xl border p-4 flex items-center justify-between gap-3 transition-colors cursor-pointer',
           theme === 'dark' 

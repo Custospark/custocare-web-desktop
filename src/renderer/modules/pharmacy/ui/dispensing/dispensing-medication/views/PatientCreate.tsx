@@ -1331,9 +1331,9 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={cn('p-6', className)}
+        className={cn(className)}
       >
-        <div className="max-w-3xl mx-auto space-y-6">
+      <div className="w-full mx-auto space-y-6 lg:px-8">
           {/* Header with gradient card */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}

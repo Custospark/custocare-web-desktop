@@ -247,8 +247,8 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
   );
 
   return (
-    <div className={cn('p-6', className)}>
-      <div className="max-w-4xl mx-auto">
+    <div className={cn(className)}>
+        <div className="w-full">
         {/* Header with Gradient */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -634,183 +634,221 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
           </motion.div>
         )}
 
-        {/* Results State */}
-        {hasSearched && results.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-4"
-          >
-            {results.map((patient, index) => {
-              const isSelected = selectedPatientId === patient.patient_number;
-              const initials = getPatientInitials(patient);
-              const age = calculateAge(patient.date_of_birth);
-              const sexText = patient.biological_sex ? getBiologicalSexDisplayText(patient.biological_sex) : null;
+       {/* Results State */}
+      {hasSearched && results.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="w-full space-y-3 sm:space-y-4"
+        >
+          {results.map((patient, index) => {
+            const isSelected = selectedPatientId === patient.patient_number;
+            const initials = getPatientInitials(patient);
+            const age = calculateAge(patient.date_of_birth);
+            const sexText = patient.biological_sex ? getBiologicalSexDisplayText(patient.biological_sex) : null;
 
-              return (
-                <motion.div
-                  key={patient.patient_number}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  whileHover={{ scale: 1.01, y: -2 }}
-                  onClick={() => handleSelect(patient)}
-                  className={cn(
-                    'relative overflow-hidden rounded-xl border-2 p-5 transition-all cursor-pointer',
-                    colors.cardBg,
-                    colors.cardBorder,
-                    isSelected
-                      ? isDark
-                        ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg shadow-blue-500/20'
-                        : 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/50 shadow-lg shadow-blue-500/20'
-                      : isDark
-                        ? 'hover:bg-gray-700/50 hover:border-gray-600 hover:shadow-xl'
-                        : 'hover:bg-gray-50/80 hover:border-gray-300 hover:shadow-xl'
-                  )}
-                >
-                  {/* Selected indicator */}
-                  {isSelected && (
-                    <motion.div
-                      layoutId="selectedIndicator"
-                      className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-blue-600"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                    />
-                  )}
+            return (
+              <motion.div
+                key={patient.patient_number}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ scale: 1.01, y: -2 }}
+                onClick={() => handleSelect(patient)}
+                className={cn(
+                  'relative overflow-hidden rounded-xl border-2 transition-all cursor-pointer',
+                  'w-full p-3 sm:p-4 md:p-5',
+                  colors.cardBg,
+                  colors.cardBorder,
+                  isSelected
+                    ? isDark
+                      ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg shadow-blue-500/20'
+                      : 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/50 shadow-lg shadow-blue-500/20'
+                    : isDark
+                      ? 'hover:bg-gray-700/50 hover:border-gray-600 hover:shadow-xl'
+                      : 'hover:bg-gray-50/80 hover:border-gray-300 hover:shadow-xl'
+                )}
+              >
+                {/* Selected indicator */}
+                {isSelected && (
+                  <motion.div
+                    layoutId="selectedIndicator"
+                    className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-blue-600"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  />
+                )}
 
-                  <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                    {/* Avatar with gradient */}
+                {/* Mobile: Columnar Layout | Desktop: Row Layout */}
+                <div className="flex flex-col md:flex-row md:items-start gap-3 sm:gap-4">
+                  {/* Top Row: Avatar + Name + Status (Mobile) */}
+                  <div className="flex items-start gap-3 w-full md:w-auto">
+                    {/* Avatar */}
                     <motion.div
                       whileHover={{ scale: 1.1, rotate: 5 }}
                       className={cn(
-                        'w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0',
+                        'rounded-xl flex items-center justify-center flex-shrink-0',
+                        'w-12 h-12 sm:w-14 sm:h-14',
                         isDark 
                           ? 'bg-gradient-to-br from-blue-500/20 to-purple-500/20' 
                           : 'bg-gradient-to-br from-blue-100 to-purple-100'
                       )}
                     >
                       <span className={cn(
-                        'text-xl font-bold',
+                        'font-bold',
+                        'text-base sm:text-lg',
                         isDark ? 'text-blue-300' : 'text-blue-700'
                       )}>
                         {initials}
                       </span>
                     </motion.div>
 
-                    {/* Patient Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <h3 className={cn('text-xl font-bold', colors.textPrimary)}>
+                    {/* Name and Status - Visible on mobile */}
+                    <div className="flex-1 min-w-0 md:hidden">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className={cn(
+                          'font-bold truncate',
+                          'text-base sm:text-lg',
+                          colors.textPrimary
+                        )}>
                           {formatPatientName(patient)}
                         </h3>
                         <span className={cn(
-                          'px-3 py-1 rounded-full text-xs font-medium',
+                          'px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap',
                           statusBadgeClasses(theme, patient.status)
                         )}>
                           {getStatusDisplayText(patient.status)}
                         </span>
                       </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="flex items-center gap-2">
-                          <Hash className={cn('w-4 h-4', isDark ? 'text-gray-500' : 'text-gray-400')} />
-                          <span className={cn('text-sm', colors.textSecondary)}>
-                            {patient.patient_number}
-                          </span>
-                        </div>
-
-                        {patient.date_of_birth && (
-                          <div className="flex items-center gap-2">
-                            <Calendar className={cn('w-4 h-4', isDark ? 'text-gray-500' : 'text-gray-400')} />
-                            <span className={cn('text-sm', colors.textSecondary)}>
-                              {new Date(patient.date_of_birth).toLocaleDateString()}
-                              {age !== null && ` (${age} years)`}
-                            </span>
-                          </div>
-                        )}
-
-                        {sexText && (
-                          <div className="flex items-center gap-2">
-                            <Activity className={cn('w-4 h-4', isDark ? 'text-gray-500' : 'text-gray-400')} />
-                            <span className={cn('text-sm', colors.textSecondary)}>
-                              {sexText}
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-2">
-                          <User className={cn('w-4 h-4', isDark ? 'text-gray-500' : 'text-gray-400')} />
-                          <span className={cn('text-sm', colors.textSecondary)}>
-                            Account: {patient.global_user_uuid ? 'Linked' : 'Unlinked'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {patient.requires_isolation && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className={cn(
-                            'mt-3 text-sm rounded-lg border-2 p-3 flex items-center gap-2',
-                            isDark 
-                              ? 'bg-gradient-to-r from-yellow-900/20 to-yellow-900/5 border-yellow-500/30 text-yellow-200' 
-                              : 'bg-gradient-to-r from-yellow-50 to-yellow-50/50 border-yellow-200 text-yellow-800'
-                          )}
-                        >
-                          <AlertCircle className="w-4 h-4" />
-                          <span className="font-medium">Isolation required</span>
-                        </motion.div>
-                      )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                      {processAction && (processAction.onlyWhenSelected ?? true ? isSelected : true) && (
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void handleProcess(patient);
-                          }}
-                          className={cn(
-                            'px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2',
-                            'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl hover:shadow-blue-500/30',
-                            'transform hover:-translate-y-0.5 cursor-pointer border border-blue-400/30'
-                          )}
-                        >
-                          {processAction.icon}
-                          {processAction.label}
-                        </motion.button>
-                      )}
-                      
-                      {takeAction && (
-                       <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void handleTakeAction(patient);
-                          }}
-                          className={cn(
-                            'px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2',
-                            'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl hover:shadow-blue-500/30',
-                            'transform hover:-translate-y-0.5 cursor-pointer border border-blue-400/30'
-                          )}
-                        >
-                          <ArrowRightCircle className="w-4 h-4" />
-                          {takeAction.label ?? 'Take Action'}
-                        </motion.button>
-                      )}
                     </div>
                   </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        )}
+
+                  {/* Desktop Name and Status - Hidden on mobile */}
+                  <div className="hidden md:block flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className={cn(
+                        'font-bold truncate',
+                        'text-lg md:text-xl',
+                        colors.textPrimary
+                      )}>
+                        {formatPatientName(patient)}
+                      </h3>
+                      <span className={cn(
+                        'px-3 py-1 rounded-full text-xs font-medium',
+                        statusBadgeClasses(theme, patient.status)
+                      )}>
+                        {getStatusDisplayText(patient.status)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Patient Details Grid - Full width on mobile */}
+                  <div className="w-full md:flex-1 md:min-w-0">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Hash className={cn('w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0', isDark ? 'text-gray-500' : 'text-gray-400')} />
+                        <span className={cn('text-xs sm:text-sm truncate', colors.textSecondary)} title={patient.patient_number}>
+                          {patient.patient_number}
+                        </span>
+                      </div>
+
+                      {patient.date_of_birth && (
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Calendar className={cn('w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0', isDark ? 'text-gray-500' : 'text-gray-400')} />
+                          <span className={cn('text-xs sm:text-sm truncate', colors.textSecondary)}>
+                            {new Date(patient.date_of_birth).toLocaleDateString()}
+                            {age !== null && ` (${age}y)`}
+                          </span>
+                        </div>
+                      )}
+
+                      {sexText && (
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Activity className={cn('w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0', isDark ? 'text-gray-500' : 'text-gray-400')} />
+                          <span className={cn('text-xs sm:text-sm truncate', colors.textSecondary)}>
+                            {sexText}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 min-w-0">
+                        <User className={cn('w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0', isDark ? 'text-gray-500' : 'text-gray-400')} />
+                        <span className={cn('text-xs sm:text-sm truncate', colors.textSecondary)}>
+                          {patient.global_user_uuid ? 'Linked' : 'Unlinked'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Isolation Warning */}
+                    {patient.requires_isolation && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={cn(
+                          'mt-2 sm:mt-3 text-xs sm:text-sm rounded-lg border-2 p-2 sm:p-3 flex items-center gap-2',
+                          isDark 
+                            ? 'bg-gradient-to-r from-yellow-900/20 to-yellow-900/5 border-yellow-500/30 text-yellow-200' 
+                            : 'bg-gradient-to-r from-yellow-50 to-yellow-50/50 border-yellow-200 text-yellow-800'
+                        )}
+                      >
+                        <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                        <span className="font-medium">Isolation required</span>
+                      </motion.div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons - Always visible, stacked on mobile, row on desktop */}
+                  <div className="flex flex-col sm:flex-row md:flex-col gap-2 mt-2 md:mt-0 md:ml-4 flex-shrink-0 w-full sm:w-auto">
+                    {processAction && (processAction.onlyWhenSelected ?? true ? isSelected : true) && (
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleProcess(patient);
+                        }}
+                        className={cn(
+                          'rounded-lg font-medium transition-all flex items-center justify-center gap-2',
+                          'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl hover:shadow-blue-500/30',
+                          'transform hover:-translate-y-0.5 cursor-pointer border border-blue-400/30',
+                          'px-3 sm:px-4 py-2 text-xs sm:text-sm',
+                          'w-full sm:w-auto'
+                        )}
+                      >
+                        {processAction.icon}
+                        <span>{processAction.label}</span>
+                      </motion.button>
+                    )}
+                    
+                    {takeAction && (
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleTakeAction(patient);
+                        }}
+                        className={cn(
+                          'rounded-lg font-medium transition-all flex items-center justify-center gap-2',
+                          'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl hover:shadow-blue-500/30',
+                          'transform hover:-translate-y-0.5 cursor-pointer border border-blue-400/30',
+                          'px-3 sm:px-4 py-2 text-xs sm:text-sm',
+                          'w-full sm:w-auto'
+                        )}
+                      >
+                        <ArrowRightCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span>{takeAction.label ?? 'Take Action'}</span>
+                      </motion.button>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      )}
 
         {/* Not Found State */}
         {hasSearched && notFound && (
