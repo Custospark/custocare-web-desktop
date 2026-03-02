@@ -11,13 +11,15 @@ import { toggleTheme } from '../../../../app/store/slices/uiSlice';
 import { mapUIThemeToBackend } from '../../../../modules/account/api/settings/preferences/PreferencesTypes';
 import { useUpdateSinglePreference } from '../../../../modules/account/api/settings/preferences/PreferencesQueries';
 
+// Import message hooks for real-time unread count
+import { useGetMessageStats } from '../../../../modules/account/api/messages/MessageQueries';
+
 export type SidebarPosition = 'left' | 'right';
 
 interface QuickActionsProps {
   sidebarPosition: SidebarPosition;
   onToggleSidebarPosition: () => void; // External handler
   isTransitioning: boolean;
-  unreadCount?: number;
   onNotificationClick?: () => void;
 }
 
@@ -25,13 +27,16 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   sidebarPosition,
   onToggleSidebarPosition,
   isTransitioning,
-  unreadCount = 0,
   onNotificationClick,
 }) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { theme } = useAppSelector((state) => state.ui);
   const { updateTheme } = useUpdateSinglePreference();
+
+  // Get real-time unread count from message stats
+  const { data: statsData } = useGetMessageStats();
+  const unreadCount = statsData?.inbox?.unread ?? 0;
 
   const handleNotificationClick = useCallback(() => {
     if (onNotificationClick) {
@@ -86,7 +91,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
   return (
     <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-      {/* 1. NOTIFICATIONS - High priority, time-sensitive */}
+      {/* 1. NOTIFICATIONS - High priority, time-sensitive with real-time unread count */}
       <button
         onClick={handleNotificationClick}
         aria-label="Notifications"
@@ -110,7 +115,9 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
               'min-w-[18px] h-[18px] px-1',
               'text-[10px] font-bold text-white rounded-full',
               'bg-gradient-to-r from-red-500 to-pink-500',
-              'shadow-lg shadow-red-500/50'
+              'shadow-lg shadow-red-500/50',
+              // Add subtle animation for new messages
+              'animate-in zoom-in duration-300'
             )}
           >
             {unreadCount > 99 ? '99+' : unreadCount}
