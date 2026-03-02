@@ -12,10 +12,11 @@
  *  - Priority, labels, read-receipt, delivery confirmation
  *  - Schedule send (presets + custom picker)
  *  - Discard confirmation guard
+ *  - FIXED: Proper flex layout prevents footer cropping
  */
 
 import React from 'react';
-import {motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Send, X, Maximize2, Save, Paperclip,
 } from 'lucide-react';
@@ -181,7 +182,7 @@ export const Compose: React.FC<ComposeProps> = props => {
   }
 
   /* ═══════════════════════════════════════════════════════════
-     FULL COMPOSE
+     FULL COMPOSE - FIXED: Proper flex layout prevents footer cropping
   ═══════════════════════════════════════════════════════════ */
   return (
     <>
@@ -197,6 +198,7 @@ export const Compose: React.FC<ComposeProps> = props => {
             : 'inset-3 md:inset-8 lg:inset-12',
           isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
         )}
+        style={{ maxHeight: windowState === 'maximized' ? '100vh' : 'calc(100vh - 48px)' }} // FIXED: Constrain height
       >
         {/* ── Header ──────────────────────────────────────────── */}
         <ComposeHeader
@@ -213,12 +215,12 @@ export const Compose: React.FC<ComposeProps> = props => {
           onDiscard={handleDiscard}
         />
 
-        {/* ── Scrollable compose area ──────────────────────────── */}
-        <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
-          {/* Subject */}
+        {/* ── Scrollable compose area - FIXED: flex-1 with min-height 0 for proper scrolling */}
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {/* Subject - non-scrollable */}
           <div
             className={cn(
-              'flex items-center gap-2 px-4 py-2 border-b',
+              'flex items-center gap-2 px-4 py-2 border-b flex-shrink-0',
               validationErrors.subject
                 ? 'border-red-400'
                 : isDark ? 'border-gray-700' : 'border-gray-200',
@@ -251,7 +253,7 @@ export const Compose: React.FC<ComposeProps> = props => {
             )}
           </div>
 
-          {/* Recipients */}
+          {/* Recipients - non-scrollable */}
           <ComposeRecipients
             theme={theme}
             to={message.to}
@@ -266,8 +268,8 @@ export const Compose: React.FC<ComposeProps> = props => {
             onToggleBcc={() => setShowBcc(v => !v)}
           />
 
-          {/* Editor — takes remaining vertical space */}
-          <div className="flex flex-col flex-1 min-h-0">
+          {/* Editor — takes remaining vertical space and scrolls */}
+          <div className="flex-1 min-h-0 overflow-hidden">
             <ComposeEditor
               theme={theme}
               body={message.body}
@@ -285,7 +287,7 @@ export const Compose: React.FC<ComposeProps> = props => {
           </div>
         </div>
 
-        {/* ── Footer ──────────────────────────────────────────── */}
+        {/* ── Footer - FIXED: flex-shrink-0 prevents cropping */}
         <ComposeFooter
           theme={theme}
           message={message}

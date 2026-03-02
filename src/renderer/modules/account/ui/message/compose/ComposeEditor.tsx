@@ -13,6 +13,7 @@
  *  - Drag-and-drop overlay
  *  - Link insertion dialog
  *  - Emoji picker (categorized)
+ *  - FIXED: Text selection no longer blocked by toolbar
  */
 
 import React, {
@@ -77,11 +78,11 @@ interface TBtnProps {
 }
 const TBtn: React.FC<TBtnProps> = ({ onClick, title, active, isDark, disabled, children }) => (
   <button
-    onMouseDown={e => { e.preventDefault(); onClick(); }}
+    onClick={onClick} // Changed from onMouseDown to onClick to prevent selection blocking
     title={title}
     disabled={disabled}
     className={cn(
-      'p-1.5 rounded transition-colors cursor-pointer shrink-0',
+      'p-1.5 rounded transition-colors cursor-pointer shrink-0 select-none', // Added select-none
       disabled && 'opacity-40 cursor-not-allowed',
       active
         ? isDark
@@ -200,7 +201,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ isDark, onSelect, onClose, ti
       {TEXT_COLORS.map(c => (
         <button
           key={c}
-          onMouseDown={e => { e.preventDefault(); onSelect(c); onClose(); }}
+          onClick={() => { onSelect(c); onClose(); }} // Changed from onMouseDown to onClick
           style={{ background: c }}
           className="w-5 h-5 rounded cursor-pointer border border-gray-300/30 hover:scale-125 transition-transform"
           title={c}
@@ -257,14 +258,15 @@ export const ComposeEditor: React.FC<ComposeEditorProps> = ({
   const [showHeading, setShowHeading] = useState(false);
   const savedSelection = useRef<Range | null>(null);
 
-  /* Sync body → rich editor on mode switch */
+  /* Sync body → rich editor on mode switch and body changes */
   useEffect(() => {
     if (editorMode === 'rich' && richRef.current) {
+      // Only update if content actually changed to avoid cursor jumping
       if (richRef.current.innerHTML !== body) {
         richRef.current.innerHTML = body;
       }
     }
-  }, [editorMode]); // eslint-disable-line
+  }, [body, editorMode]);
 
   const saveSelection = () => {
     const sel = window.getSelection();
@@ -274,7 +276,7 @@ export const ComposeEditor: React.FC<ComposeEditorProps> = ({
   };
 
   const restoreSelection = () => {
-    if (savedSelection.current) {
+    if (savedSelection.current && richRef.current) {
       const sel = window.getSelection();
       sel?.removeAllRanges();
       sel?.addRange(savedSelection.current);
@@ -283,11 +285,22 @@ export const ComposeEditor: React.FC<ComposeEditorProps> = ({
 
   const exec = useCallback((cmd: string, value?: string) => {
     if (editorMode !== 'rich') return;
-    restoreSelection();
+    
+    // Save selection before executing command
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      savedSelection.current = sel.getRangeAt(0).cloneRange();
+    }
+    
     document.execCommand(cmd, false, value);
-    if (richRef.current) onChange(richRef.current.innerHTML);
+    
+    if (richRef.current) {
+      onChange(richRef.current.innerHTML);
+    }
+    
+    // Restore focus but don't steal selection
     richRef.current?.focus();
-  }, [editorMode, onChange]); // eslint-disable-line
+  }, [editorMode, onChange]);
 
   /* ── Insert link into rich editor ─────────────────────────────── */
   const handleInsertLink = useCallback((url: string, text: string) => {
@@ -298,6 +311,7 @@ export const ComposeEditor: React.FC<ComposeEditorProps> = ({
         : `<a href="${url}" target="_blank" rel="noopener">${url}</a>`;
       document.execCommand('insertHTML', false, linkHtml);
       if (richRef.current) onChange(richRef.current.innerHTML);
+      richRef.current?.focus();
     } else {
       const ta = plainRef.current;
       if (!ta) return;
@@ -305,8 +319,15 @@ export const ComposeEditor: React.FC<ComposeEditorProps> = ({
       const insert = text ? `[${text}](${url})` : url;
       const newVal = ta.value.substring(0, s) + insert + ta.value.substring(e);
       onChange(newVal);
+      // Restore cursor position
+      setTimeout(() => {
+        if (ta) {
+          ta.selectionStart = ta.selectionEnd = s + insert.length;
+          ta.focus();
+        }
+      }, 0);
     }
-  }, [editorMode, onChange]); // eslint-disable-line
+  }, [editorMode, onChange]);
 
   /* ── Insert emoji ──────────────────────────────────────────────── */
   const insertEmoji = useCallback((emoji: string) => {
@@ -314,16 +335,22 @@ export const ComposeEditor: React.FC<ComposeEditorProps> = ({
       restoreSelection();
       document.execCommand('insertText', false, emoji);
       if (richRef.current) onChange(richRef.current.innerHTML);
+      richRef.current?.focus();
     } else {
       const ta = plainRef.current;
       if (!ta) return;
       const s = ta.selectionStart;
       const newVal = ta.value.substring(0, s) + emoji + ta.value.substring(ta.selectionEnd);
       onChange(newVal);
-      setTimeout(() => { if (ta) { ta.selectionStart = ta.selectionEnd = s + emoji.length; ta.focus(); } }, 0);
+      setTimeout(() => { 
+        if (ta) { 
+          ta.selectionStart = ta.selectionEnd = s + emoji.length; 
+          ta.focus(); 
+        } 
+      }, 0);
     }
     setShowEmojiPicker(false);
-  }, [editorMode, onChange]); // eslint-disable-line
+  }, [editorMode, onChange]);
 
   /* ── Insert markdown shortcut ──────────────────────────────────── */
   const insertMarkdown = useCallback((syntax: string, wrapSelection = true) => {
@@ -345,20 +372,20 @@ export const ComposeEditor: React.FC<ComposeEditorProps> = ({
   }, [onChange]);
 
   /* ── Markdown toolbar buttons ─────────────────────────────────── */
-const mdToolbar = [
-  { title: 'Bold', icon: <Bold className="w-3.5 h-3.5" />, syntax: '**', wrap: true },
-  { title: 'Italic', icon: <Italic className="w-3.5 h-3.5" />, syntax: '_', wrap: true },
-  { title: 'Code', icon: <Code className="w-3.5 h-3.5" />, syntax: '`', wrap: true },
-  { title: 'Quote', icon: <Quote className="w-3.5 h-3.5" />, syntax: '> ', wrap: false },
-  { title: 'Bullet list', icon: <List className="w-3.5 h-3.5" />, syntax: '- ', wrap: false },
-  { title: 'Ordered list', icon: <ListOrdered className="w-3.5 h-3.5" />, syntax: '1. ', wrap: false },
-  { title: 'Heading', icon: <Type className="w-3.5 h-3.5" />, syntax: '## ', wrap: false },
-  { title: 'Horizontal rule', icon: <Minus className="w-3.5 h-3.5" />, syntax: '\n---\n', wrap: false },
-];
-
+  const mdToolbar = [
+    { title: 'Bold', icon: <Bold className="w-3.5 h-3.5" />, syntax: '**', wrap: true },
+    { title: 'Italic', icon: <Italic className="w-3.5 h-3.5" />, syntax: '_', wrap: true },
+    { title: 'Code', icon: <Code className="w-3.5 h-3.5" />, syntax: '`', wrap: true },
+    { title: 'Quote', icon: <Quote className="w-3.5 h-3.5" />, syntax: '> ', wrap: false },
+    { title: 'Bullet list', icon: <List className="w-3.5 h-3.5" />, syntax: '- ', wrap: false },
+    { title: 'Ordered list', icon: <ListOrdered className="w-3.5 h-3.5" />, syntax: '1. ', wrap: false },
+    { title: 'Heading', icon: <Type className="w-3.5 h-3.5" />, syntax: '## ', wrap: false },
+    { title: 'Horizontal rule', icon: <Minus className="w-3.5 h-3.5" />, syntax: '\n---\n', wrap: false },
+  ];
 
   /* ── Rendered Markdown Preview ─────────────────────────────────── */
   const renderPreview = (md: string) => {
+    if (!md) return '';
     const html = md
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/^#{4} (.+)$/gm, '<h4>$1</h4>')
@@ -399,75 +426,96 @@ const mdToolbar = [
             {/* Heading dropdown */}
             <div className="relative">
               <button
-                onMouseDown={e => { e.preventDefault(); saveSelection(); setShowHeading(s => !s); }}
+                onClick={() => { saveSelection(); setShowHeading(s => !s); }}
                 className={cn(
-                  'flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer transition-colors',
+                  'flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer transition-colors select-none',
                   isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700',
                 )}
               >
                 <Type className="w-3.5 h-3.5" /> <ChevronDown className="w-3 h-3" />
               </button>
-              {showHeading && (
-                <div className={cn('absolute top-full left-0 z-50 rounded-lg border shadow-lg overflow-hidden mt-1 w-40', isDark ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200')}>
-                  {HEADING_OPTIONS.map(h => (
-                    <button
-                      key={h.value}
-                      onMouseDown={e => { e.preventDefault(); restoreSelection(); exec('formatBlock', h.tag); setShowHeading(false); }}
-                      className={cn('w-full text-left px-3 py-1.5 text-sm cursor-pointer', isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100')}
-                      style={{ fontSize: h.value === 'h1' ? '1.2em' : h.value === 'h2' ? '1.1em' : h.value === 'h3' ? '1em' : '0.9em' }}
-                    >
-                      {h.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <AnimatePresence>
+                {showHeading && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    className={cn('absolute top-full left-0 z-50 rounded-lg border shadow-lg overflow-hidden mt-1 w-40', isDark ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200')}
+                  >
+                    {HEADING_OPTIONS.map(h => (
+                      <button
+                        key={h.value}
+                        onClick={() => { restoreSelection(); exec('formatBlock', h.tag); setShowHeading(false); }}
+                        className={cn('w-full text-left px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700', isDark ? 'text-gray-200' : 'text-gray-700')}
+                        style={{ fontSize: h.value === 'h1' ? '1.2em' : h.value === 'h2' ? '1.1em' : h.value === 'h3' ? '1em' : '0.9em' }}
+                      >
+                        {h.label}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Font family */}
             <div className="relative">
               <button
-                onMouseDown={e => { e.preventDefault(); saveSelection(); setShowFontFamily(s => !s); }}
-                className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer transition-colors', isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700')}
+                onClick={() => { saveSelection(); setShowFontFamily(s => !s); }}
+                className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer transition-colors select-none', isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700')}
               >
                 Font <ChevronDown className="w-3 h-3" />
               </button>
-              {showFontFamily && (
-                <div className={cn('absolute top-full left-0 z-50 rounded-lg border shadow-lg overflow-hidden mt-1 w-44', isDark ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200')}>
-                  {FONT_FAMILIES.map(f => (
-                    <button
-                      key={f}
-                      onMouseDown={e => { e.preventDefault(); restoreSelection(); exec('fontName', f === 'Default' ? 'inherit' : f); setShowFontFamily(false); }}
-                      className={cn('w-full text-left px-3 py-1.5 text-sm cursor-pointer', isDark ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700')}
-                      style={{ fontFamily: f === 'Default' ? 'inherit' : f }}
-                    >
-                      {f}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <AnimatePresence>
+                {showFontFamily && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    className={cn('absolute top-full left-0 z-50 rounded-lg border shadow-lg overflow-hidden mt-1 w-44', isDark ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200')}
+                  >
+                    {FONT_FAMILIES.map(f => (
+                      <button
+                        key={f}
+                        onClick={() => { restoreSelection(); exec('fontName', f === 'Default' ? 'inherit' : f); setShowFontFamily(false); }}
+                        className={cn('w-full text-left px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700', isDark ? 'text-gray-200' : 'text-gray-700')}
+                        style={{ fontFamily: f === 'Default' ? 'inherit' : f }}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Font size */}
             <div className="relative">
               <button
-                onMouseDown={e => { e.preventDefault(); saveSelection(); setShowFontSize(s => !s); }}
-                className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer transition-colors', isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700')}
+                onClick={() => { saveSelection(); setShowFontSize(s => !s); }}
+                className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer transition-colors select-none', isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700')}
               >
                 Size <ChevronDown className="w-3 h-3" />
               </button>
-              {showFontSize && (
-                <div className={cn('absolute top-full left-0 z-50 rounded-lg border shadow-lg overflow-hidden mt-1 w-24 max-h-52 overflow-y-auto', isDark ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200')}>
-                  {FONT_SIZES.map(s => (
-                    <button
-                      key={s}
-                      onMouseDown={e => { e.preventDefault(); restoreSelection(); exec('fontSize', '7'); /* then update via style */ setShowFontSize(false); }}
-                      className={cn('w-full text-left px-3 py-1 text-sm cursor-pointer', isDark ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700')}
-                    >
-                      {s}px
-                    </button>
-                  ))}
-                </div>
-              )}
+              <AnimatePresence>
+                {showFontSize && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    className={cn('absolute top-full left-0 z-50 rounded-lg border shadow-lg overflow-hidden mt-1 w-24 max-h-52 overflow-y-auto', isDark ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200')}
+                  >
+                    {FONT_SIZES.map(s => (
+                      <button
+                        key={s}
+                        onClick={() => { restoreSelection(); exec('fontSize', '7'); setShowFontSize(false); }}
+                        className={cn('w-full text-left px-3 py-1 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700', isDark ? 'text-gray-200' : 'text-gray-700')}
+                      >
+                        {s}px
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             <Sep isDark={isDark} />
@@ -483,35 +531,39 @@ const mdToolbar = [
             {/* Text color */}
             <div className="relative">
               <button
-                onMouseDown={e => { e.preventDefault(); saveSelection(); setShowTextColor(s => !s); setShowBgColor(false); }}
+                onClick={() => { saveSelection(); setShowTextColor(s => !s); setShowBgColor(false); }}
                 title="Text Color"
-                className={cn('p-1.5 rounded cursor-pointer transition-colors', isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-600')}
+                className={cn('p-1.5 rounded cursor-pointer transition-colors select-none', isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-600')}
               >
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="font-bold text-xs leading-none">A</span>
                   <div className="w-3.5 h-1 rounded-sm bg-red-500" />
                 </div>
               </button>
-              {showTextColor && (
-                <ColorPicker isDark={isDark} title="Text Color" onSelect={c => exec('foreColor', c)} onClose={() => setShowTextColor(false)} />
-              )}
+              <AnimatePresence>
+                {showTextColor && (
+                  <ColorPicker isDark={isDark} title="Text Color" onSelect={c => exec('foreColor', c)} onClose={() => setShowTextColor(false)} />
+                )}
+              </AnimatePresence>
             </div>
 
             {/* BG color */}
             <div className="relative">
               <button
-                onMouseDown={e => { e.preventDefault(); saveSelection(); setShowBgColor(s => !s); setShowTextColor(false); }}
+                onClick={() => { saveSelection(); setShowBgColor(s => !s); setShowTextColor(false); }}
                 title="Highlight Color"
-                className={cn('p-1.5 rounded cursor-pointer transition-colors', isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-600')}
+                className={cn('p-1.5 rounded cursor-pointer transition-colors select-none', isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-600')}
               >
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="text-xs font-bold leading-none">A</span>
                   <div className="w-3.5 h-1 rounded-sm bg-yellow-400" />
                 </div>
               </button>
-              {showBgColor && (
-                <ColorPicker isDark={isDark} title="Highlight" onSelect={c => exec('hiliteColor', c)} onClose={() => setShowBgColor(false)} />
-              )}
+              <AnimatePresence>
+                {showBgColor && (
+                  <ColorPicker isDark={isDark} title="Highlight" onSelect={c => exec('hiliteColor', c)} onClose={() => setShowBgColor(false)} />
+                )}
+              </AnimatePresence>
             </div>
 
             <Sep isDark={isDark} />
@@ -554,15 +606,15 @@ const mdToolbar = [
           </>
         )}
 
-      {editorMode === 'markdown' && mdToolbar.map(t => (
-        <TBtn 
+        {editorMode === 'markdown' && mdToolbar.map(t => (
+          <TBtn 
             key={t.title} 
             onClick={() => insertMarkdown(t.syntax, t.wrap)} 
             title={t.title} 
             isDark={isDark}
-        >
+          >
             {t.icon}
-        </TBtn>
+          </TBtn>
         ))}
 
         {/* Link (both modes) */}
@@ -706,8 +758,8 @@ const mdToolbar = [
             contentEditable
             suppressContentEditableWarning
             onInput={e => onChange((e.target as HTMLDivElement).innerHTML)}
-            onMouseUp={saveSelection}
             onKeyUp={saveSelection}
+            onMouseUp={saveSelection}
             data-placeholder="Write your message…"
             className={cn(
               'min-h-[280px] p-4 outline-none text-sm',
@@ -725,6 +777,8 @@ const mdToolbar = [
             ref={plainRef}
             value={body}
             onChange={e => onChange(e.target.value)}
+            onKeyUp={saveSelection}
+            onMouseUp={saveSelection}
             placeholder="Write your message…"
             className={cn(
               'w-full min-h-[280px] p-4 bg-transparent outline-none resize-none text-sm font-mono',

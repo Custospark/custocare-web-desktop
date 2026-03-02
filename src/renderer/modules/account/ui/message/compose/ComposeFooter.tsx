@@ -1,33 +1,38 @@
 /**
  * ============================================================================
- * COMPOSE FOOTER COMPONENT
+ * COMPOSE FOOTER — ACTIONS, PRIORITY, LABELS, ATTACHMENTS
  * ============================================================================
- * Houses:
- *  - Priority selector menu
- *  - Attach-file button + attachment list with progress bars
- *  - Options menu (read receipt, delivery confirmation, schedule, labels)
- *  - Label chips
- *  - Discard / Save Draft / Send actions
+ * Features:
+ *  - Priority selector (low, normal, high)
+ *  - Labels (add/remove)
+ *  - Read receipt & delivery confirmation toggles
+ *  - Attachment list with progress/error states
+ *  - Schedule send button
+ *  - Save draft, send, discard actions
+ *  - FIXED: Footer no longer cropped, proper flex layout
  */
 
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-  Send, Paperclip, AlertCircle, CheckCircle, ChevronDown,
-  MoreHorizontal, Clock, Tag, Save, X, Loader2, Phone,
-  Check,
+  Paperclip, Send, Save, X, AlertCircle, CheckCircle,
+  Clock, Tag, Flag, MailCheck, BellRing, Trash2,
+  ChevronUp, ChevronDown, Plus,
 } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
-import type { Attachment, ComposeMessage } from './composeTypes';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../../../../shared/utils/classNameUtils';
+import type { ComposeMessage } from './composeTypes';
+import type { MessagePriority } from '../../../api/messages/MessageTypes';
 
 interface ComposeFooterProps {
   theme: 'light' | 'dark';
   message: ComposeMessage;
   isSending: boolean;
   isSaving: boolean;
-  onPriorityChange: (p: 'low' | 'normal' | 'high') => void;
-  onReadReceiptChange: (v: boolean) => void;
-  onDeliveryConfirmChange: (v: boolean) => void;
+  fileInputRef: React.RefObject<HTMLInputElement | null>; // FIXED: Added null to type
+  onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onPriorityChange: (priority: MessagePriority) => void;
+  onReadReceiptChange: (value: boolean) => void;
+  onDeliveryConfirmChange: (value: boolean) => void;
   onScheduleClick: () => void;
   onAddLabel: (label: string) => void;
   onRemoveLabel: (label: string) => void;
@@ -36,222 +41,189 @@ interface ComposeFooterProps {
   onSaveDraft: () => void;
   onSend: () => void;
   onDiscard: () => void;
-  fileInputRef: React.RefObject<HTMLInputElement | null>; 
-  onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-/* ── Attachment chip ─────────────────────────────────────────────── */
-const getFileIcon = (type: string) => {
-  if (type.startsWith('image/')) return '🖼️';
-  if (type.startsWith('video/')) return '🎬';
-  if (type.startsWith('audio/')) return '🎵';
-  if (type.includes('pdf')) return '📄';
-  if (type.includes('word') || type.includes('doc')) return '📝';
-  if (type.includes('sheet') || type.includes('csv') || type.includes('excel')) return '📊';
-  if (type.includes('zip') || type.includes('rar') || type.includes('archive')) return '🗜️';
-  return '📎';
-};
+const PRIORITY_OPTIONS: Array<{ value: MessagePriority; label: string; icon: any; color: string }> = [
+  { value: 'low', label: 'Low', icon: ChevronDown, color: 'text-green-500' },
+  { value: 'normal', label: 'Normal', icon: Flag, color: 'text-blue-500' },
+  { value: 'high', label: 'High', icon: ChevronUp, color: 'text-red-500' },
+];
 
-const AttachmentChip: React.FC<{
-  att: Attachment;
-  isDark: boolean;
-  onRemove: () => void;
-}> = ({ att, isDark, onRemove }) => (
-  <div
-    className={cn(
-      'relative group flex items-center gap-2 p-2 pr-7 rounded-lg border-2 min-w-0 max-w-[180px]',
-      att.error
-        ? isDark ? 'bg-red-900/20 border-red-500/30' : 'bg-red-50 border-red-200'
-        : isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200',
-    )}
-  >
-    <span className="text-base shrink-0">{getFileIcon(att.type)}</span>
-    <div className="min-w-0">
-      <p className="text-xs font-medium truncate">{att.name}</p>
-      <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>{att.size}</p>
-      {att.error && <p className="text-xs text-red-500">{att.error}</p>}
-      {att.progress !== undefined && att.progress < 100 && !att.error && (
-        <p className="text-xs text-blue-500">{att.progress}%</p>
-      )}
-    </div>
+const COMMON_LABELS = ['Work', 'Personal', 'Invoice', 'Meeting', 'Urgent', 'Follow-up'];
 
-    {/* Progress bar */}
-    {att.progress !== undefined && att.progress < 100 && !att.error && (
-      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-300 rounded-b-lg overflow-hidden">
-        <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${att.progress}%` }} />
-      </div>
-    )}
-
-    <button
-      onClick={onRemove}
-      className={cn(
-        'absolute right-1 top-1 p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer',
-        isDark ? 'hover:bg-gray-600 text-gray-400 hover:text-white' : 'hover:bg-gray-200 text-gray-500',
-      )}
-    >
-      <X className="w-3 h-3" />
-    </button>
-  </div>
-);
-
-/* ── Priority button ─────────────────────────────────────────────── */
-const PRIORITY_CONFIG = {
-  high: { label: 'High', color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-500/30', icon: <AlertCircle className="w-4 h-4" /> },
-  normal: { label: 'Normal', color: '', bg: '', border: '', icon: null },
-  low: { label: 'Low', color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-500/30', icon: <CheckCircle className="w-4 h-4" /> },
-};
-
-/* ── Main component ──────────────────────────────────────────────── */
 export const ComposeFooter: React.FC<ComposeFooterProps> = ({
-  theme, message, isSending, isSaving,
-  onPriorityChange, onReadReceiptChange, onDeliveryConfirmChange,
-  onScheduleClick, onAddLabel, onRemoveLabel,
-  onAttachClick, onRemoveAttachment,
-  onSaveDraft, onSend, onDiscard,
-  fileInputRef, onFileSelect,
+  theme, message, isSending, isSaving, fileInputRef,
+  onFileSelect, onPriorityChange, onReadReceiptChange, onDeliveryConfirmChange,
+  onScheduleClick, onAddLabel, onRemoveLabel, onAttachClick,
+  onRemoveAttachment, onSaveDraft, onSend, onDiscard,
 }) => {
   const isDark = theme === 'dark';
-  const [showPriorityMenu, setShowPriorityMenu] = useState(false);
-  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
-  const [labelInput, setLabelInput] = useState('');
-  const [showLabelInput, setShowLabelInput] = useState(false);
-  const labelInputRef = useRef<HTMLInputElement>(null);
+  const [showLabels, setShowLabels] = useState(false);
+  const [newLabel, setNewLabel] = useState('');
+  const [showPriority, setShowPriority] = useState(false);
+  const labelsRef = useRef<HTMLDivElement>(null);
+  const priorityRef = useRef<HTMLDivElement>(null);
 
-  const hasPhoneOnly = [...message.to, ...message.cc, ...message.bcc]
-    .some(r => r.contactType === 'phone');
+  // Click outside handlers
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (labelsRef.current && !labelsRef.current.contains(e.target as Node)) {
+        setShowLabels(false);
+      }
+      if (priorityRef.current && !priorityRef.current.contains(e.target as Node)) {
+        setShowPriority(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  const priorityCfg = PRIORITY_CONFIG[message.priority];
-
-  const submitLabel = useCallback(() => {
-    if (labelInput.trim()) {
-      onAddLabel(labelInput.trim().toLowerCase());
-      setLabelInput('');
+  const handleAddNewLabel = () => {
+    if (newLabel.trim() && !message.labels.includes(newLabel.trim())) {
+      onAddLabel(newLabel.trim());
+      setNewLabel('');
     }
-    setShowLabelInput(false);
-  }, [labelInput, onAddLabel]);
+  };
+
+  const currentPriority = PRIORITY_OPTIONS.find(p => p.value === message.priority) || PRIORITY_OPTIONS[1];
+  const PriorityIcon = currentPriority.icon;
 
   return (
-    <div
-      className={cn(
-        'border-t-2',
-        isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50',
-      )}
-    >
-      {/* Attachments area */}
+    <div className={cn(
+      'border-t-2 flex-shrink-0', // FIXED: Added flex-shrink-0 to prevent cropping
+      isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-200 bg-gray-50'
+    )}>
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={onFileSelect}
+        multiple
+        className="hidden"
+      />
+
+      {/* Attachments list - scrollable if many */}
       {message.attachments.length > 0 && (
-        <div className="px-4 pt-3 flex flex-wrap gap-2">
-          {message.attachments.map(att => (
-            <AttachmentChip
-              key={att.id}
-              att={att}
-              isDark={isDark}
-              onRemove={() => onRemoveAttachment(att.id)}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Labels */}
-      {(message.labels.length > 0 || showLabelInput) && (
-        <div className="px-4 pt-2 flex flex-wrap items-center gap-1.5">
-          {message.labels.map(label => (
-            <span
-              key={label}
-              className={cn(
-                'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border',
-                isDark ? 'bg-purple-900/20 text-purple-300 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200',
-              )}
-            >
-              <Tag className="w-2.5 h-2.5" />
-              {label}
-              <button
-                onClick={() => onRemoveLabel(label)}
-                className="ml-0.5 cursor-pointer hover:text-red-500"
+        <div className={cn(
+          'px-4 py-2 border-b overflow-x-auto flex gap-2',
+          isDark ? 'border-gray-700' : 'border-gray-200',
+        )}>
+          <AnimatePresence>
+            {message.attachments.map(att => (
+              <motion.div
+                key={att.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className={cn(
+                  'flex items-center gap-2 px-2 py-1 rounded-lg border text-sm whitespace-nowrap',
+                  att.error 
+                    ? isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'
+                    : att.progress === 100
+                      ? isDark ? 'bg-green-900/20 border-green-800' : 'bg-green-50 border-green-200'
+                      : isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
+                )}
               >
-                <X className="w-2.5 h-2.5" />
-              </button>
-            </span>
-          ))}
-          {showLabelInput && (
-            <input
-              ref={labelInputRef}
-              type="text"
-              value={labelInput}
-              onChange={e => setLabelInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') submitLabel();
-                if (e.key === 'Escape') setShowLabelInput(false);
-              }}
-              onBlur={submitLabel}
-              placeholder="Label name…"
-              autoFocus
-              className={cn(
-                'px-2 py-0.5 rounded-full text-xs border outline-none w-24',
-                isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900',
-              )}
-            />
-          )}
+                <Paperclip className={cn(
+                  'w-3.5 h-3.5',
+                  att.error ? 'text-red-500' : att.progress === 100 ? 'text-green-500' : 'text-gray-400'
+                )} />
+                <span className="max-w-[150px] truncate">{att.name}</span>
+                <span className="text-xs text-gray-500">({att.size})</span>
+                
+                {att.progress !== undefined && att.progress < 100 && (
+                  <div className="flex items-center gap-1">
+                    <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-blue-500 transition-all duration-300"
+                        style={{ width: `${att.progress}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-500">{att.progress}%</span>
+                  </div>
+                )}
+
+                {att.error && (
+                  <AlertCircle className="w-3.5 h-3.5 text-red-500" title={att.error} />
+                )}
+
+                {att.progress === 100 && !att.error && (
+                  <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                )}
+
+                <button
+                  onClick={() => onRemoveAttachment(att.id)}
+                  className={cn(
+                    'p-0.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer',
+                    isDark ? 'text-gray-400' : 'text-gray-500'
+                  )}
+                  title="Remove attachment"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       )}
 
-      {/* Phone warning */}
-      {hasPhoneOnly && (
-        <div className={cn('mx-4 mt-2 flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border',
-          isDark ? 'bg-amber-900/10 border-amber-700/30 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-700')}>
-          <Phone className="w-3 h-3 shrink-0" />
-          Some recipients are phone-only. Email will be sent to email recipients only.
-        </div>
-      )}
+      {/* Main footer bar - FIXED: Now uses flex-wrap to prevent overflow */}
+      <div className="flex flex-wrap items-center gap-1 p-2">
+        {/* Left side actions */}
+        <div className="flex items-center gap-1 flex-wrap">
+          {/* Attach button */}
+          <button
+            onClick={onAttachClick}
+            className={cn(
+              'flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm transition-colors cursor-pointer',
+              isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-600',
+            )}
+            title="Attach files"
+          >
+            <Paperclip className="w-4 h-4" />
+            <span className="hidden sm:inline">Attach</span>
+          </button>
 
-      {/* Action bar */}
-      <div className="flex items-center justify-between p-3 gap-2">
-        {/* Left tools */}
-        <div className="flex items-center gap-1">
-          {/* Priority */}
-          <div className="relative">
+          {/* Priority dropdown */}
+          <div className="relative" ref={priorityRef}>
             <button
-              onClick={() => setShowPriorityMenu(s => !s)}
+              onClick={() => setShowPriority(v => !v)}
               className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border-2 cursor-pointer transition-colors',
-                message.priority !== 'normal'
-                  ? `${priorityCfg.color} ${priorityCfg.bg} ${priorityCfg.border}`
-                  : isDark
-                    ? 'border-gray-700 text-gray-300 hover:bg-gray-700'
-                    : 'border-gray-200 text-gray-600 hover:bg-gray-100',
+                'flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm transition-colors cursor-pointer',
+                isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-600',
               )}
+              title="Set priority"
             >
-              {priorityCfg.icon}
-              <span className="hidden sm:inline">{priorityCfg.label}</span>
-              <ChevronDown className="w-3 h-3" />
+              <PriorityIcon className={cn('w-4 h-4', currentPriority.color)} />
+              <span className="hidden sm:inline">{currentPriority.label}</span>
             </button>
 
             <AnimatePresence>
-              {showPriorityMenu && (
+              {showPriority && (
                 <motion.div
-                  initial={{ opacity: 0, y: -8 }}
+                  initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
+                  exit={{ opacity: 0, y: -5 }}
                   className={cn(
-                    'absolute bottom-full mb-2 left-0 w-40 rounded-xl border-2 shadow-xl overflow-hidden z-20',
+                    'absolute bottom-full left-0 mb-1 rounded-lg border shadow-lg overflow-hidden z-10',
                     isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
                   )}
                 >
-                  {(['high', 'normal', 'low'] as const).map(p => {
-                    const cfg = PRIORITY_CONFIG[p];
+                  {PRIORITY_OPTIONS.map(p => {
+                    const Icon = p.icon;
                     return (
                       <button
-                        key={p}
-                        onClick={() => { onPriorityChange(p); setShowPriorityMenu(false); }}
+                        key={p.value}
+                        onClick={() => { onPriorityChange(p.value); setShowPriority(false); }}
                         className={cn(
-                          'w-full text-left px-3 py-2 text-sm flex items-center gap-2 cursor-pointer',
-                          cfg.color,
-                          isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
-                          message.priority === p && (isDark ? 'bg-gray-700' : 'bg-gray-100'),
+                          'flex items-center gap-2 px-3 py-2 text-sm w-full whitespace-nowrap transition-colors cursor-pointer',
+                          message.priority === p.value
+                            ? isDark ? 'bg-blue-600/20 text-blue-300' : 'bg-blue-50 text-blue-700'
+                            : isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-700',
                         )}
                       >
-                        {cfg.icon}
-                        {cfg.label} Priority
-                        {message.priority === p && <Check className="w-3.5 h-3.5 ml-auto" />}
+                        <Icon className={cn('w-4 h-4', p.color)} />
+                        {p.label}
                       </button>
                     );
                   })}
@@ -260,176 +232,223 @@ export const ComposeFooter: React.FC<ComposeFooterProps> = ({
             </AnimatePresence>
           </div>
 
-          {/* Attach */}
-          <button
-            onClick={onAttachClick}
-            className={cn(
-              'p-2 rounded-lg cursor-pointer transition-colors',
-              isDark ? 'hover:bg-gray-700 text-gray-300 hover:text-white' : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900',
-            )}
-            title="Attach file"
-          >
-            <Paperclip className="w-4 h-4" />
-          </button>
-
-          {/* Add Label */}
-          <button
-            onClick={() => { setShowLabelInput(true); setTimeout(() => labelInputRef.current?.focus(), 50); }}
-            className={cn(
-              'p-2 rounded-lg cursor-pointer transition-colors',
-              isDark ? 'hover:bg-gray-700 text-gray-300 hover:text-white' : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900',
-            )}
-            title="Add label"
-          >
-            <Tag className="w-4 h-4" />
-          </button>
-
-          {/* Options menu */}
-          <div className="relative">
+          {/* Labels dropdown */}
+          <div className="relative" ref={labelsRef}>
             <button
-              onClick={() => setShowOptionsMenu(s => !s)}
+              onClick={() => setShowLabels(v => !v)}
               className={cn(
-                'p-2 rounded-lg cursor-pointer transition-colors',
-                isDark ? 'hover:bg-gray-700 text-gray-300 hover:text-white' : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900',
+                'flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm transition-colors cursor-pointer',
+                isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-600',
               )}
-              title="More options"
+              title="Add labels"
             >
-              <MoreHorizontal className="w-4 h-4" />
+              <Tag className="w-4 h-4" />
+              {message.labels.length > 0 && (
+                <span className="bg-blue-500 text-white text-xs rounded-full px-1.5 min-w-[20px] text-center">
+                  {message.labels.length}
+                </span>
+              )}
             </button>
 
             <AnimatePresence>
-              {showOptionsMenu && (
+              {showLabels && (
                 <motion.div
-                  initial={{ opacity: 0, y: -8 }}
+                  initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
+                  exit={{ opacity: 0, y: -5 }}
                   className={cn(
-                    'absolute bottom-full mb-2 right-0 w-64 rounded-xl border-2 shadow-xl overflow-hidden z-20',
+                    'absolute bottom-full left-0 mb-1 rounded-lg border shadow-lg overflow-hidden z-10 w-64',
                     isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
                   )}
                 >
                   <div className="p-2">
-                    {/* Read receipt */}
-                    <label className={cn('flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer select-none', isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100')}>
+                    <p className={cn('text-xs font-semibold mb-2', isDark ? 'text-gray-400' : 'text-gray-600')}>
+                      Current labels
+                    </p>
+                    {message.labels.length === 0 ? (
+                      <p className={cn('text-xs italic mb-2', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                        No labels yet
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {message.labels.map(label => (
+                          <span
+                            key={label}
+                            className={cn(
+                              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs',
+                              isDark ? 'bg-blue-900/30 text-blue-300 border border-blue-800' : 'bg-blue-100 text-blue-700 border border-blue-200',
+                            )}
+                          >
+                            {label}
+                            <button
+                              onClick={() => onRemoveLabel(label)}
+                              className="hover:text-red-500 cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <p className={cn('text-xs font-semibold mb-2', isDark ? 'text-gray-400' : 'text-gray-600')}>
+                      Add label
+                    </p>
+                    <div className="flex gap-1">
                       <input
-                        type="checkbox"
-                        checked={message.readReceipt ?? false}
-                        onChange={e => onReadReceiptChange(e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer"
+                        type="text"
+                        value={newLabel}
+                        onChange={e => setNewLabel(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleAddNewLabel()}
+                        placeholder="New label..."
+                        className={cn(
+                          'flex-1 px-2 py-1 text-xs rounded border outline-none',
+                          isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900',
+                        )}
                       />
-                      <span className={cn('text-sm', isDark ? 'text-gray-300' : 'text-gray-700')}>Request read receipt</span>
-                    </label>
+                      <button
+                        onClick={handleAddNewLabel}
+                        disabled={!newLabel.trim()}
+                        className={cn(
+                          'p-1 rounded cursor-pointer disabled:opacity-50',
+                          isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
+                        )}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
 
-                    {/* Delivery confirmation */}
-                    <label className={cn('flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer select-none', isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100')}>
-                      <input
-                        type="checkbox"
-                        checked={message.deliveryConfirmation ?? false}
-                        onChange={e => onDeliveryConfirmChange(e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer"
-                      />
-                      <span className={cn('text-sm', isDark ? 'text-gray-300' : 'text-gray-700')}>Request delivery confirmation</span>
-                    </label>
-
-                    <div className={cn('h-px my-1', isDark ? 'bg-gray-700' : 'bg-gray-200')} />
-
-                    {/* Schedule send */}
-                    <button
-                      onClick={() => { onScheduleClick(); setShowOptionsMenu(false); }}
-                      className={cn('w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer', isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-700')}
-                    >
-                      <Clock className="w-4 h-4" />
-                      {message.scheduledSend ? 'Change schedule' : 'Schedule send'}
-                      {message.scheduledSend && (
-                        <span className="ml-auto text-xs text-blue-500">Scheduled</span>
-                      )}
-                    </button>
-
-                    {/* Save draft now */}
-                    <button
-                      onClick={() => { onSaveDraft(); setShowOptionsMenu(false); }}
-                      className={cn('w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer', isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-700')}
-                    >
-                      <Save className="w-4 h-4" />
-                      Save draft now
-                    </button>
+                    <div className="mt-2">
+                      <p className={cn('text-xs font-semibold mb-1', isDark ? 'text-gray-400' : 'text-gray-600')}>
+                        Common labels
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {COMMON_LABELS.filter(l => !message.labels.includes(l)).map(label => (
+                          <button
+                            key={label}
+                            onClick={() => onAddLabel(label)}
+                            className={cn(
+                              'px-2 py-0.5 rounded-full text-xs cursor-pointer transition-colors',
+                              isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700',
+                            )}
+                          >
+                            + {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
+
+          {/* Schedule button */}
+          <button
+            onClick={onScheduleClick}
+            className={cn(
+              'flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm transition-colors cursor-pointer',
+              message.scheduledSend
+                ? isDark ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-50 text-purple-700'
+                : isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-600',
+            )}
+            title="Schedule send"
+          >
+            <Clock className="w-4 h-4" />
+            {message.scheduledSend ? (
+              <span className="hidden sm:inline">
+                {message.scheduledSend.toLocaleDateString()} {message.scheduledSend.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            ) : (
+              <span className="hidden sm:inline">Schedule</span>
+            )}
+          </button>
+
+          {/* Read receipt toggle */}
+          <button
+            onClick={() => onReadReceiptChange(!message.readReceipt)}
+            className={cn(
+              'p-1.5 rounded-lg transition-colors cursor-pointer',
+              message.readReceipt
+                ? isDark ? 'bg-blue-600/30 text-blue-300' : 'bg-blue-100 text-blue-700'
+                : isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-500',
+            )}
+            title="Request read receipt"
+          >
+            <MailCheck className="w-4 h-4" />
+          </button>
+
+          {/* Delivery confirmation toggle */}
+          <button
+            onClick={() => onDeliveryConfirmChange(!message.deliveryConfirmation)}
+            className={cn(
+              'p-1.5 rounded-lg transition-colors cursor-pointer',
+              message.deliveryConfirmation
+                ? isDark ? 'bg-blue-600/30 text-blue-300' : 'bg-blue-100 text-blue-700'
+                : isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-500',
+            )}
+            title="Request delivery confirmation"
+          >
+            <BellRing className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* Right: action buttons */}
-        <div className="flex items-center gap-2">
+        {/* Right side actions */}
+        <div className="flex items-center gap-1 ml-auto flex-wrap">
+          {/* Save status */}
+          {isSaving && (
+            <span className={cn('text-xs mr-2', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              Saving...
+            </span>
+          )}
+
+          {/* Save draft button */}
+          <button
+            onClick={onSaveDraft}
+            disabled={isSaving}
+            className={cn(
+              'flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm transition-colors cursor-pointer disabled:opacity-50',
+              isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-600',
+            )}
+            title="Save draft"
+          >
+            <Save className="w-4 h-4" />
+            <span className="hidden sm:inline">Save</span>
+          </button>
+
+          {/* Discard button */}
           <button
             onClick={onDiscard}
             className={cn(
-              'px-3 py-2 rounded-lg text-sm font-medium border-2 cursor-pointer transition-colors',
-              isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-700 hover:bg-gray-100',
+              'flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm transition-colors cursor-pointer',
+              isDark ? 'hover:bg-red-900/30 text-gray-300' : 'hover:bg-red-50 text-gray-600',
             )}
+            title="Discard"
           >
-            Discard
+            <Trash2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Discard</span>
           </button>
 
+          {/* Send button */}
           <button
-            onClick={onSaveDraft}
-            className={cn(
-              'px-3 py-2 rounded-lg text-sm font-medium border-2 cursor-pointer transition-colors',
-              isDark ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-700 hover:bg-gray-100',
-            )}
-          >
-            {isSaving ? (
-              <span className="flex items-center gap-1.5">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
-              </span>
-            ) : (
-              'Save Draft'
-            )}
-          </button>
-
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
             onClick={onSend}
             disabled={isSending}
-            className={cn(
-              'px-5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors',
-              'bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60 disabled:cursor-not-allowed',
-            )}
+            className="flex items-center gap-1 px-4 py-1.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer disabled:opacity-60 transition-colors"
           >
             {isSending ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Sending…
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Sending...</span>
               </>
             ) : (
               <>
                 <Send className="w-4 h-4" />
-                {message.scheduledSend ? 'Schedule' : 'Send'}
+                <span>{message.scheduledSend ? 'Schedule' : 'Send'}</span>
               </>
             )}
-          </motion.button>
+          </button>
         </div>
       </div>
-
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        onChange={onFileSelect}
-        className="hidden"
-        accept="*/*"
-      />
-
-      {/* Click-away for menus */}
-      {(showPriorityMenu || showOptionsMenu) && (
-        <div
-          className="fixed inset-0 z-10"
-          onClick={() => { setShowPriorityMenu(false); setShowOptionsMenu(false); }}
-        />
-      )}
     </div>
   );
 };
