@@ -139,7 +139,6 @@
   }
 }
 
-
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -157,7 +156,21 @@
   .animate-ping-delay {
     animation-delay: 0.3s;
   }
+
+  /* NEW UTILITIES - Add these */
+  .animate-spin-slow {
+    animation: spin-slow 3s linear infinite;
+  }
+  
+  .animate-spin-reverse {
+    animation: spin-reverse 2.5s linear infinite;
+  }
+  
+  .animate-float {
+    animation: float 2s ease-in-out infinite;
+  }
 }
+
 @keyframes gradient {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -300,6 +313,7 @@
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.5);
 }
+
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);
@@ -325,6 +339,7 @@
 .animate-refresh-pulse {
   animation: refresh-pulse 2.2s ease-in-out infinite;
 }
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -363,4 +378,3 @@
 .animate-slideIn {
   animation: slideIn 0.3s ease-out;
 }
-
