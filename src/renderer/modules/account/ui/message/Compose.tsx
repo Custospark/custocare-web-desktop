@@ -1,18 +1,27 @@
 /**
  * ============================================================================
- * COMPOSE — MAIN ENTRY POINT
+ * COMPOSE — MAIN ENTRY POINT  (REWRITE)
  * ============================================================================
- * Orchestrates all sub-components via useComposeState hook.
- * Supports:
- *  - Normal / Minimized / Maximized window states
- *  - Optimistic draft saves & sends
- *  - Email + phone recipients with auto-suggestions
- *  - Super-rich text editor (WYSIWYG / plain / markdown / preview)
- *  - Attachment drag-and-drop with upload progress
- *  - Priority, labels, read-receipt, delivery confirmation
- *  - Schedule send (presets + custom picker)
- *  - Discard confirmation guard
- *  - FIXED: Proper flex layout prevents footer cropping
+ * Fixes applied:
+ *  1. Outer modal no longer hides footer content.
+ *     `overflow-hidden` is kept for rounded-corner clipping but the
+ *     footer is now wrapped in `shrink-0 overflow-x-auto` so its action
+ *     bar scrolls horizontally instead of being clipped when the compose
+ *     window is narrower than the full button row.
+ *
+ *  2. The scrollable body area uses `flex-1 min-h-0 overflow-y-auto`
+ *     which correctly yields space to the fixed-height footer — without
+ *     `min-h-0` a flex child refuses to shrink below its content height,
+ *     potentially pushing the footer off screen.
+ *
+ *  3. `onEditorModeChange` is wired to the new `handleEditorModeChange`
+ *     (exposed as `setEditorMode` from the hook) so body_type is always
+ *     correct even after switching to preview mode.
+ *
+ *  4. All footer / dialog dropdowns that must escape the overflow-hidden
+ *     boundary should use `position: fixed` in their own implementations
+ *     (ComposeFooter, ComposeDialogs).  The layout here makes no further
+ *     assumptions about those internals.
  */
 
 import React from 'react';
@@ -22,11 +31,11 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../../shared/utils/classNameUtils';
 
-import { useComposeState } from './compose/useComposeState';
-import { ComposeHeader }    from './compose/ComposeHeader';
+import { useComposeState }   from './compose/useComposeState';
+import { ComposeHeader }     from './compose/ComposeHeader';
 import { ComposeRecipients } from './compose/ComposeRecipients';
-import { ComposeEditor }    from './compose/ComposeEditor';
-import { ComposeFooter }    from './compose/ComposeFooter';
+import { ComposeEditor }     from './compose/ComposeEditor';
+import { ComposeFooter }     from './compose/ComposeFooter';
 import { DiscardDialog, ScheduleDialog } from './compose/ComposeDialogs';
 
 import type { ComposeProps } from './compose/composeTypes';
@@ -38,7 +47,6 @@ export const Compose: React.FC<ComposeProps> = props => {
   const { theme, replyTo, forwardOf } = props;
   const isDark = theme === 'dark';
 
-  /* ── All state & handlers come from the hook ──────────────── */
   const {
     message,
     setMessage,
@@ -48,7 +56,7 @@ export const Compose: React.FC<ComposeProps> = props => {
     showBcc,
     setShowBcc,
     editorMode,
-    setEditorMode,
+    setEditorMode,       // ← this is now handleEditorModeChange (FIX 3)
     isSaving,
     lastSaved,
     validationErrors,
@@ -77,7 +85,7 @@ export const Compose: React.FC<ComposeProps> = props => {
   } = useComposeState(props);
 
   /* ═══════════════════════════════════════════════════════════
-     MINIMIZED STATE
+     MINIMISED STATE
   ═══════════════════════════════════════════════════════════ */
   if (windowState === 'minimized') {
     return (
@@ -91,12 +99,7 @@ export const Compose: React.FC<ComposeProps> = props => {
         )}
       >
         {/* Mini header */}
-        <div
-          className={cn(
-            'flex items-center justify-between px-3 py-2.5 border-b',
-            isDark ? 'border-gray-700' : 'border-gray-200',
-          )}
-        >
+        <div className={cn('flex items-center justify-between px-3 py-2.5 border-b', isDark ? 'border-gray-700' : 'border-gray-200')}>
           <div className="flex items-center gap-2 min-w-0">
             <h3 className="text-sm font-semibold truncate">
               {message.subject || 'New Message'}
@@ -111,20 +114,14 @@ export const Compose: React.FC<ComposeProps> = props => {
             <button
               onClick={handleRestore}
               title="Restore"
-              className={cn(
-                'p-1.5 rounded-lg cursor-pointer transition-colors',
-                isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500',
-              )}
+              className={cn('p-1.5 rounded-lg cursor-pointer transition-colors', isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500')}
             >
               <Maximize2 className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={handleDiscard}
               title="Close"
-              className={cn(
-                'p-1.5 rounded-lg cursor-pointer transition-colors',
-                isDark ? 'hover:bg-red-900/30 text-gray-400' : 'hover:bg-red-50 text-gray-500',
-              )}
+              className={cn('p-1.5 rounded-lg cursor-pointer transition-colors', isDark ? 'hover:bg-red-900/30 text-gray-400' : 'hover:bg-red-50 text-gray-500')}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -133,10 +130,7 @@ export const Compose: React.FC<ComposeProps> = props => {
 
         {/* Body preview */}
         <div
-          className={cn(
-            'px-3 py-2 text-xs cursor-pointer',
-            isDark ? 'text-gray-400' : 'text-gray-500',
-          )}
+          className={cn('px-3 py-2 text-xs cursor-pointer', isDark ? 'text-gray-400' : 'text-gray-500')}
           onClick={handleRestore}
         >
           {message.body
@@ -145,18 +139,10 @@ export const Compose: React.FC<ComposeProps> = props => {
         </div>
 
         {/* Mini footer */}
-        <div
-          className={cn(
-            'flex items-center justify-between px-2 py-2 border-t',
-            isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-100 bg-gray-50',
-          )}
-        >
+        <div className={cn('flex items-center justify-between px-2 py-2 border-t', isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-100 bg-gray-50')}>
           <button
-            onClick={() => { saveDraft(); }}
-            className={cn(
-              'flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer transition-colors',
-              isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-600',
-            )}
+            onClick={saveDraft}
+            className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer transition-colors', isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-600')}
           >
             <Save className="w-3 h-3" /> Save
           </button>
@@ -182,7 +168,7 @@ export const Compose: React.FC<ComposeProps> = props => {
   }
 
   /* ═══════════════════════════════════════════════════════════
-     FULL COMPOSE - FIXED: Proper flex layout prevents footer cropping
+     FULL COMPOSE
   ═══════════════════════════════════════════════════════════ */
   return (
     <>
@@ -192,15 +178,21 @@ export const Compose: React.FC<ComposeProps> = props => {
         exit={{ opacity: 0, y: 30 }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         className={cn(
+          /*
+           * FIX 1 — `overflow-hidden` is intentionally kept here so that
+           * border-radius clips the inner content to the rounded shape.
+           * All pop-ups that must escape this clipping context (toolbar
+           * dropdowns, footer menus) use z-[9999] with position:fixed or
+           * the document-level mousedown handler, not position:absolute.
+           */
           'fixed flex flex-col rounded-2xl border-2 shadow-2xl overflow-hidden z-50',
           windowState === 'maximized'
             ? 'inset-0 rounded-none'
             : 'inset-3 md:inset-8 lg:inset-12',
           isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
         )}
-        style={{ maxHeight: windowState === 'maximized' ? '100vh' : 'calc(100vh - 48px)' }} // FIXED: Constrain height
       >
-        {/* ── Header ──────────────────────────────────────────── */}
+        {/* ── Header (fixed height) ────────────────────────────── */}
         <ComposeHeader
           theme={theme}
           windowState={windowState}
@@ -215,31 +207,30 @@ export const Compose: React.FC<ComposeProps> = props => {
           onDiscard={handleDiscard}
         />
 
-        {/* ── Scrollable compose area - FIXED: flex-1 with min-height 0 for proper scrolling */}
-        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          {/* Subject - non-scrollable */}
+        {/*
+         * ── Scrollable compose area ────────────────────────────
+         * FIX 2 — `flex-1 min-h-0` forces this section to shrink
+         * when the window is short so the footer is never pushed
+         * off screen.  `overflow-y-auto` lets the user scroll
+         * through long content.
+         */}
+        <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
+          {/* Subject row */}
           <div
             className={cn(
-              'flex items-center gap-2 px-4 py-2 border-b flex-shrink-0',
+              'flex items-center gap-2 px-4 py-2 border-b shrink-0',
               validationErrors.subject
                 ? 'border-red-400'
                 : isDark ? 'border-gray-700' : 'border-gray-200',
             )}
           >
-            <span
-              className={cn(
-                'text-xs font-semibold uppercase tracking-wide w-14 shrink-0',
-                isDark ? 'text-gray-400' : 'text-gray-500',
-              )}
-            >
+            <span className={cn('text-xs font-semibold uppercase tracking-wide w-14 shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>
               Subject
             </span>
             <input
               type="text"
               value={message.subject}
-              onChange={e =>
-                setMessage(prev => ({ ...prev, subject: e.target.value }))
-              }
+              onChange={e => setMessage(prev => ({ ...prev, subject: e.target.value }))}
               placeholder="Enter subject…"
               className={cn(
                 'flex-1 bg-transparent outline-none text-sm',
@@ -247,13 +238,11 @@ export const Compose: React.FC<ComposeProps> = props => {
               )}
             />
             {validationErrors.subject && (
-              <span className="text-xs text-red-500 shrink-0">
-                {validationErrors.subject}
-              </span>
+              <span className="text-xs text-red-500 shrink-0">{validationErrors.subject}</span>
             )}
           </div>
 
-          {/* Recipients - non-scrollable */}
+          {/* Recipients */}
           <ComposeRecipients
             theme={theme}
             to={message.to}
@@ -268,8 +257,8 @@ export const Compose: React.FC<ComposeProps> = props => {
             onToggleBcc={() => setShowBcc(v => !v)}
           />
 
-          {/* Editor — takes remaining vertical space and scrolls */}
-          <div className="flex-1 min-h-0 overflow-hidden">
+          {/* Editor — flex-1 so it fills remaining vertical space */}
+          <div className="flex flex-col flex-1 min-h-0">
             <ComposeEditor
               theme={theme}
               body={message.body}
@@ -277,7 +266,7 @@ export const Compose: React.FC<ComposeProps> = props => {
               validationError={validationErrors.body}
               dragActive={dragActive}
               onChange={body => setMessage(prev => ({ ...prev, body }))}
-              onEditorModeChange={setEditorMode}
+              onEditorModeChange={setEditorMode}  // ← FIX 3
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
               onDragOver={handleDragOver}
@@ -287,47 +276,49 @@ export const Compose: React.FC<ComposeProps> = props => {
           </div>
         </div>
 
-        {/* ── Footer - FIXED: flex-shrink-0 prevents cropping */}
-        <ComposeFooter
-          theme={theme}
-          message={message}
-          isSending={isSending}
-          isSaving={isSaving}
-          fileInputRef={fileInputRef}
-          onFileSelect={handleFileSelect}
-          onPriorityChange={p =>
-            setMessage(prev => ({ ...prev, priority: p }))
-          }
-          onReadReceiptChange={v =>
-            setMessage(prev => ({ ...prev, readReceipt: v }))
-          }
-          onDeliveryConfirmChange={v =>
-            setMessage(prev => ({ ...prev, deliveryConfirmation: v }))
-          }
-          onScheduleClick={() => setShowSchedulePicker(true)}
-          onAddLabel={label =>
-            setMessage(prev => ({
-              ...prev,
-              labels: prev.labels.includes(label)
-                ? prev.labels
-                : [...prev.labels, label],
-            }))
-          }
-          onRemoveLabel={label =>
-            setMessage(prev => ({
-              ...prev,
-              labels: prev.labels.filter(l => l !== label),
-            }))
-          }
-          onAttachClick={() => fileInputRef.current?.click()}
-          onRemoveAttachment={handleRemoveAttachment}
-          onSaveDraft={saveDraft}
-          onSend={handleSend}
-          onDiscard={handleDiscard}
-        />
+        {/*
+         * ── Footer ──────────────────────────────────────────────
+         * FIX 1 — `shrink-0` prevents the footer from being
+         * compressed by the scrollable area above.
+         * `overflow-x-auto` lets the footer's action row scroll
+         * horizontally when the compose window is narrow instead
+         * of being silently cropped by the outer overflow-hidden.
+         *
+         * If ComposeFooter contains dropdowns that open upward,
+         * those should use `position: fixed` internally so they
+         * escape the overflow-hidden clip boundary.
+         */}
+        <div className="shrink-0 overflow-x-auto">
+          <ComposeFooter
+            theme={theme}
+            message={message}
+            isSending={isSending}
+            isSaving={isSaving}
+            fileInputRef={fileInputRef}
+            onFileSelect={handleFileSelect}
+            onPriorityChange={p   => setMessage(prev => ({ ...prev, priority: p }))}
+            onReadReceiptChange={v => setMessage(prev => ({ ...prev, readReceipt: v }))}
+            onDeliveryConfirmChange={v => setMessage(prev => ({ ...prev, deliveryConfirmation: v }))}
+            onScheduleClick={() => setShowSchedulePicker(true)}
+            onAddLabel={label =>
+              setMessage(prev => ({
+                ...prev,
+                labels: prev.labels.includes(label) ? prev.labels : [...prev.labels, label],
+              }))
+            }
+            onRemoveLabel={label =>
+              setMessage(prev => ({ ...prev, labels: prev.labels.filter(l => l !== label) }))
+            }
+            onAttachClick={() => fileInputRef.current?.click()}
+            onRemoveAttachment={handleRemoveAttachment}
+            onSaveDraft={saveDraft}
+            onSend={handleSend}
+            onDiscard={handleDiscard}
+          />
+        </div>
       </motion.div>
 
-      {/* ── Discard confirmation dialog ──────────────────────── */}
+      {/* ── Discard confirmation ─────────────────────────────── */}
       <DiscardDialog
         theme={theme}
         open={showDiscardConfirm}
@@ -335,7 +326,7 @@ export const Compose: React.FC<ComposeProps> = props => {
         onCancel={() => setShowDiscardConfirm(false)}
       />
 
-      {/* ── Schedule picker dialog ───────────────────────────── */}
+      {/* ── Schedule picker ──────────────────────────────────── */}
       <ScheduleDialog
         theme={theme}
         open={showSchedulePicker}

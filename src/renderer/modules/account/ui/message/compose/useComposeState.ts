@@ -2,9 +2,35 @@
  * ============================================================================
  * COMPOSE MODULE — CENTRAL STATE HOOK
  * ============================================================================
- * Manages all business logic: drafts, sends, attachments, validation,
- * optimistic updates, and auto-save.
+ * Fix applied (mirrors the simple Compose component's approach):
+ *
+ *  ROOT CAUSE: ComposeEditor fires onChange(div.innerHTML), so message.body
+ *  holds raw HTML like `<p><b>Hello</b></p>`. buildPayload was shipping this
+ *  verbatim with body_type:'html'. The recipient viewer renders it as plain
+ *  text → the user sees literal HTML tags.
+ *
+ *  THE FIX (same concept as the simple Compose's getBodyType returning
+ *  'markdown' / 'plain' and capturing textarea value, never raw markup):
+ *
+ *  1.  htmlToPlainText() — converts rich innerHTML to structured plain text
+ *      (preserves line-breaks, paragraphs, bullet points) by using a throw-
+ *      away DOM element before stripping tags.
+ *
+ *  2.  buildPayload / buildUpdatePayload now call htmlToPlainText() when
+ *      bodyType is 'html', and send body_type:'plain' to the API.
+ *      Non-HTML modes (plain, markdown) pass through unchanged exactly as
+ *      the simple Compose does.
+ *
+ *  3.  bodyType is now initialised to 'plain' and handleEditorModeChange
+ *      maps 'rich' → 'plain' (matching the simple Compose's logic of
+ *      always sending a renderable, tag-free body to the backend).
+ *
+ *  The rich contentEditable editor continues to work normally — it still
+ *  stores HTML in message.body for its own display needs. The conversion
+ *  only happens at the moment of API serialisation.
+ * ============================================================================
  */
+
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ACCOUNT_ROUTES } from '../../../../../app/routes/routeConstants';
@@ -14,13 +40,13 @@ import {
   useSendDraftMessage,
   useUploadMessageAttachment,
   useRemoveMessageAttachment,
-}   from '../../../api/messages/MessageQueries';
+} from '../../../api/messages/MessageQueries';
 import type {
   StoreMessageRequest,
   UpdateMessageRequest,
   MessageBodyType,
   MessagePriority,
-}  from '../../../api/messages/MessageTypes';
+} from '../../../api/messages/MessageTypes';
 import type {
   ComposeMessage,
   ComposeProps,
@@ -29,14 +55,14 @@ import type {
   EditorMode,
   WindowState,
   StoredContact,
-}  from './composeTypes';
+} from './composeTypes';
 
 /* ─── helpers ─────────────────────────────────────────────────── */
 const generateId = () =>
   `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 const formatFileSize = (bytes: number): string => {
-  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024)    return bytes + ' B';
   if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / 1048576).toFixed(1) + ' MB';
 };
@@ -46,6 +72,53 @@ const validateEmail = (email: string) =>
 
 const validatePhone = (phone: string) =>
   /^\+?[\d\s\-().]{7,20}$/.test(phone.trim());
+
+/**
+ * htmlToPlainText
+ * ───────────────
+ * Mirrors the simple Compose's approach of always sending clean, tag-free
+ * text to the API instead of raw HTML markup.
+ *
+ * Steps:
+ *  1. Quick-exit if the string contains no HTML tags (already plain/markdown).
+ *  2. Pre-process common block elements into visible newline / bullet chars
+ *     so the plain-text output retains paragraph & list structure.
+ *  3. Assign to a throw-away div and read innerText, which the browser
+ *     de-entities and trims for us.
+ */
+const htmlToPlainText = (html: string): string => {
+  if (!html) return '';
+
+  // Already plain text or markdown — pass through untouched
+  if (!/<[a-zA-Z][\s\S]*?>/i.test(html)) return html;
+
+  const withLineBreaks = html
+    // Hard line-breaks
+    .replace(/<br\s*\/?>/gi, '\n')
+    // Paragraph / block close → double newline (visual paragraph gap)
+    .replace(/<\/p>/gi,          '\n\n')
+    .replace(/<\/div>/gi,        '\n')
+    .replace(/<\/h[1-6]>/gi,     '\n\n')
+    .replace(/<\/blockquote>/gi, '\n')
+    .replace(/<\/pre>/gi,        '\n')
+    // List items → bullet prefix + newline
+    .replace(/<li[^>]*>/gi,  '• ')
+    .replace(/<\/li>/gi,     '\n')
+    .replace(/<\/ul>/gi,     '\n')
+    .replace(/<\/ol>/gi,     '\n')
+    // Table cells → tab-separated
+    .replace(/<\/td>/gi,     '\t')
+    .replace(/<\/tr>/gi,     '\n');
+
+  const div = document.createElement('div');
+  div.innerHTML = withLineBreaks;
+
+  // innerText handles entity decoding (&amp; → &, &nbsp; → space, etc.)
+  const plain = (div.innerText ?? div.textContent ?? '');
+
+  // Collapse 3+ consecutive newlines down to 2 (keep paragraph spacing tidy)
+  return plain.replace(/\n{3,}/g, '\n\n').trim();
+};
 
 /* ─── contact storage helpers ─────────────────────────────────── */
 const CONTACTS_KEY = 'compose_contacts_v1';
@@ -67,9 +140,7 @@ export const saveStoredContacts = (contacts: StoredContact[]): void => {
 
 export const recordContactUse = (recipient: Recipient): void => {
   const contacts = loadStoredContacts();
-  const existing = contacts.find(
-    c => c.email && c.email === recipient.email,
-  );
+  const existing = contacts.find(c => c.email && c.email === recipient.email);
   if (existing) {
     existing.useCount += 1;
     existing.lastUsed = Date.now();
@@ -84,7 +155,6 @@ export const recordContactUse = (recipient: Recipient): void => {
       lastUsed: Date.now(),
     });
   }
-  // keep top 200 by use count
   contacts.sort((a, b) => b.useCount - a.useCount);
   saveStoredContacts(contacts.slice(0, 200));
 };
@@ -101,9 +171,9 @@ export const useComposeState = ({
   const navigate = useNavigate();
 
   /* ── API mutations ─────────────────────────────────────────── */
-  const storeMessage = useStoreMessage();
-  const updateMessage = useUpdateMessage();
-  const sendDraft = useSendDraftMessage();
+  const storeMessage     = useStoreMessage();
+  const updateMessage    = useUpdateMessage();
+  const sendDraft        = useSendDraftMessage();
   const uploadAttachment = useUploadMessageAttachment();
   const removeAttachment = useRemoveMessageAttachment();
 
@@ -160,39 +230,91 @@ export const useComposeState = ({
   });
 
   /* ── UI state ─────────────────────────────────────────────── */
-  const [windowState, setWindowState] = useState<WindowState>('normal');
-  const [showCc, setShowCc] = useState(false);
-  const [showBcc, setShowBcc] = useState(false);
-  const [editorMode, setEditorMode] = useState<EditorMode>('rich');
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [isSending, setIsSending] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
-  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
-  const [showSchedulePicker, setShowSchedulePicker] = useState(false);
-  const [scheduleDate, setScheduleDate] = useState<Date | null>(null);
-  const [scheduleTime, setScheduleTime] = useState('09:00');
-  const [, setOptimisticSent] = useState(false);
+  const [windowState,          setWindowState]          = useState<WindowState>('normal');
+  const [showCc,               setShowCc]               = useState(false);
+  const [showBcc,              setShowBcc]              = useState(false);
+  const [editorMode,           setEditorMode]           = useState<EditorMode>('rich');
+  const [isSaving,             setIsSaving]             = useState(false);
+  const [lastSaved,            setLastSaved]            = useState<Date | null>(null);
+  const [validationErrors,     setValidationErrors]     = useState<Record<string, string>>({});
+  const [isSending,            setIsSending]            = useState(false);
+  const [dragActive,           setDragActive]           = useState(false);
+  const [showDiscardConfirm,   setShowDiscardConfirm]   = useState(false);
+  const [showSchedulePicker,   setShowSchedulePicker]   = useState(false);
+  const [scheduleDate,         setScheduleDate]         = useState<Date | null>(null);
+  const [scheduleTime,         setScheduleTime]         = useState('09:00');
+  const [,                     setOptimisticSent]       = useState(false);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  /*
+   * bodyType — tracks the body format independently from the current view
+   * mode so that switching to "preview" never corrupts what gets sent.
+   *
+   * FIX: Initialised to 'plain' (not 'html') to match the simple Compose's
+   * philosophy of always shipping clean, renderable text to the backend.
+   * The rich editor still stores HTML in message.body for its own display;
+   * htmlToPlainText() converts it at serialisation time (buildPayload).
+   */
+  const [bodyType, setBodyType] = useState<MessageBodyType>('plain');
+
+  const fileInputRef     = useRef<HTMLInputElement>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  /* ── body type helper ─────────────────────────────────────── */
-  const getBodyType = useCallback((): MessageBodyType => {
-    if (editorMode === 'plain') return 'plain';
-    if (editorMode === 'rich') return 'html';
-    return 'markdown';
-  }, [editorMode]);
+  /* ── editor mode change ───────────────────────────────────── */
+  /*
+   * handleEditorModeChange — mirrors the simple Compose's getBodyType():
+   *   plain   → 'plain'
+   *   rich    → 'plain'    (body will be de-HTMLed before API call)
+   *   markdown→ 'markdown'
+   *   preview → unchanged  (read-only; body content was not re-encoded)
+   */
+  const handleEditorModeChange = useCallback((mode: EditorMode) => {
+    setEditorMode(mode);
+    if (mode === 'rich')         setBodyType('plain');
+    else if (mode === 'plain')   setBodyType('plain');
+    else if (mode === 'markdown')setBodyType('markdown');
+    // 'preview' intentionally leaves bodyType unchanged
+  }, []);
+
 
   /* ── payload builders ─────────────────────────────────────── */
+  /*
+   * Concept borrowed from the simple Compose component:
+   *   The simple Compose always sends a clean, tag-free body with a
+   *   renderable body_type ('plain' or 'markdown'), never raw HTML.
+   *
+   * Here we do the same: if the current bodyType is 'plain' AND the
+   * stored body looks like HTML (rich editor innerHTML), we call
+   * htmlToPlainText() to strip markup before sending.  Markdown and
+   * already-plain bodies pass through untouched.
+   */
+  const getApiBody = useCallback((): string | null => {
+    if (!message.body) return null;
+    // If body contains HTML tags (rich editor output) convert to plain text
+    if (/<[a-zA-Z][\s\S]*?>/i.test(message.body)) {
+      return htmlToPlainText(message.body) || null;
+    }
+    return message.body;
+  }, [message.body]);
+
+  const getApiBodyType = useCallback((): MessageBodyType => {
+    // If body has HTML tags we normalise to 'plain' regardless of bodyType
+    if (/<[a-zA-Z][\s\S]*?>/i.test(message.body || '')) return 'plain';
+    return bodyType;
+  }, [message.body, bodyType]);
+
   const buildPayload = useCallback(
     (saveDraftFlag?: boolean): StoreMessageRequest => ({
       save_draft: saveDraftFlag,
-      subject: message.subject || null,
-      body: message.body || null,
-      body_type: getBodyType(),
-      priority: message.priority as MessagePriority,
+      subject:    message.subject || null,
+      /*
+       * THE CORE FIX:
+       * Use getApiBody() instead of message.body directly.
+       * This strips HTML tags when the rich editor produced markup,
+       * ensuring the recipient never sees raw `<p><b>…</b></p>` text.
+       */
+      body:       getApiBody(),
+      body_type:  getApiBodyType(),
+      priority:   message.priority as MessagePriority,
       to: message.to
         .filter(r => r.email && validateEmail(r.email))
         .map(r => ({ name: r.name, email: r.email })),
@@ -202,20 +324,20 @@ export const useComposeState = ({
       bcc: message.bcc
         .filter(r => r.email && validateEmail(r.email))
         .map(r => ({ name: r.name, email: r.email })),
-      labels: message.labels,
-      scheduled_send_at: message.scheduledSend?.toISOString() ?? null,
-      read_receipt: message.readReceipt,
+      labels:               message.labels,
+      scheduled_send_at:    message.scheduledSend?.toISOString() ?? null,
+      read_receipt:         message.readReceipt,
       delivery_confirmation: message.deliveryConfirmation,
-      parent_id: replyTo ? parseInt(replyTo.id, 10) : null,
+      parent_id:            replyTo ? parseInt(replyTo.id, 10) : null,
     }),
-    [message, getBodyType, replyTo],
+    [message, getApiBody, getApiBodyType, replyTo],
   );
 
   const buildUpdatePayload = useCallback((): UpdateMessageRequest => ({
-    subject: message.subject || null,
-    body: message.body || null,
-    body_type: getBodyType(),
-    priority: message.priority as MessagePriority,
+    subject:    message.subject || null,
+    body:       getApiBody(),       // same fix — strip HTML before API call
+    body_type:  getApiBodyType(),
+    priority:   message.priority as MessagePriority,
     to: message.to
       .filter(r => r.email && validateEmail(r.email))
       .map(r => ({ name: r.name, email: r.email })),
@@ -225,11 +347,11 @@ export const useComposeState = ({
     bcc: message.bcc
       .filter(r => r.email && validateEmail(r.email))
       .map(r => ({ name: r.name, email: r.email })),
-    labels: message.labels,
-    scheduled_send_at: message.scheduledSend?.toISOString() ?? null,
-    read_receipt: message.readReceipt,
+    labels:               message.labels,
+    scheduled_send_at:    message.scheduledSend?.toISOString() ?? null,
+    read_receipt:         message.readReceipt,
     delivery_confirmation: message.deliveryConfirmation,
-  }), [message, getBodyType]);
+  }), [message, getApiBody, getApiBodyType]);
 
   /* ── validation ───────────────────────────────────────────── */
   const validateMessage = useCallback((): boolean => {
@@ -244,7 +366,9 @@ export const useComposeState = ({
         errors[`phone_${r.id}`] = 'Invalid phone';
     });
     if (!message.subject.trim()) errors.subject = 'Subject is required';
-    if (!message.body.trim()) errors.body = 'Message body is required';
+    // Strip HTML tags when checking if body is empty (rich editor stores HTML)
+    const bodyText = message.body.replace(/<[^>]*>/g, '').trim();
+    if (!bodyText) errors.body = 'Message body is required';
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   }, [message]);
@@ -259,7 +383,6 @@ export const useComposeState = ({
       !message.body
     ) return;
 
-    // Optimistic update
     setIsSaving(true);
     setLastSaved(new Date());
 
@@ -267,14 +390,8 @@ export const useComposeState = ({
       updateMessage.mutate(
         { id: draftMessageId, data: buildUpdatePayload() },
         {
-          onSuccess: () => {
-            setIsSaving(false);
-            setLastSaved(new Date());
-            onSaveDraft?.(message);
-          },
-          onError: () => {
-            setIsSaving(false);
-          },
+          onSuccess: () => { setIsSaving(false); setLastSaved(new Date()); onSaveDraft?.(message); },
+          onError:   () => setIsSaving(false),
         },
       );
     } else {
@@ -288,18 +405,13 @@ export const useComposeState = ({
         onError: () => setIsSaving(false),
       });
     }
-  }, [
-    message, draftMessageId, buildPayload, buildUpdatePayload,
-    storeMessage, updateMessage, onSaveDraft,
-  ]);
+  }, [message, draftMessageId, buildPayload, buildUpdatePayload, storeMessage, updateMessage, onSaveDraft]);
 
   /* ── auto-save every 30 s ─────────────────────────────────── */
   useEffect(() => {
     if (autoSaveTimerRef.current) clearInterval(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setInterval(saveDraft, 30_000);
-    return () => {
-      if (autoSaveTimerRef.current) clearInterval(autoSaveTimerRef.current);
-    };
+    return () => { if (autoSaveTimerRef.current) clearInterval(autoSaveTimerRef.current); };
   }, [saveDraft]);
 
   /* save on unmount */
@@ -313,18 +425,12 @@ export const useComposeState = ({
     }
 
     setIsSending(true);
-
-    // Optimistic navigation
     setOptimisticSent(true);
 
-    const rollback = () => {
-      setIsSending(false);
-      setOptimisticSent(false);
-    };
+    const rollback = () => { setIsSending(false); setOptimisticSent(false); };
 
     const onSuccess = () => {
       setIsSending(false);
-      // Record all recipients for future suggestions
       [...message.to, ...message.cc, ...message.bcc].forEach(recordContactUse);
       onSend?.(message);
       navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
@@ -343,10 +449,7 @@ export const useComposeState = ({
     } else {
       storeMessage.mutate(buildPayload(false), { onSuccess, onError: rollback });
     }
-  }, [
-    message, draftMessageId, validateMessage, buildPayload, buildUpdatePayload,
-    storeMessage, updateMessage, sendDraft, onSend, navigate,
-  ]);
+  }, [message, draftMessageId, validateMessage, buildPayload, buildUpdatePayload, storeMessage, updateMessage, sendDraft, onSend, navigate]);
 
   /* ── schedule send ────────────────────────────────────────── */
   const handleScheduleSend = useCallback(() => {
@@ -369,28 +472,17 @@ export const useComposeState = ({
       const newR: Recipient = isPhone
         ? {
             id: `r_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-            name: name || trimmed,
-            email: '',
-            phone: trimmed,
-            contactType: 'phone',
-            isValid: true,
+            name: name || trimmed, email: '', phone: trimmed,
+            contactType: 'phone', isValid: true,
           }
         : {
             id: `r_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-            name: name || trimmed.split('@')[0],
-            email: trimmed,
-            contactType: 'email',
-            isValid: validateEmail(trimmed),
+            name: name || trimmed.split('@')[0], email: trimmed,
+            contactType: 'email', isValid: validateEmail(trimmed),
           };
 
-      // Optimistic update
       setMessage(prev => ({ ...prev, [type]: [...prev[type], newR] }));
-      // Clear validation error for this field
-      setValidationErrors(prev => {
-        const next = { ...prev };
-        delete next.recipients;
-        return next;
-      });
+      setValidationErrors(prev => { const next = { ...prev }; delete next.recipients; return next; });
     },
     [],
   );
@@ -418,8 +510,7 @@ export const useComposeState = ({
           setMessage(prev => ({
             ...prev,
             attachments: prev.attachments.map(a =>
-              a.id === attachmentId ? { ...a, error: 'Could not create draft' } : a,
-            ),
+              a.id === attachmentId ? { ...a, error: 'Could not create draft' } : a),
           }));
           return;
         }
@@ -427,33 +518,26 @@ export const useComposeState = ({
 
       uploadAttachment.mutate(
         {
-          id: msgId,
-          file,
-          onProgress: pct =>
-            setMessage(prev => ({
-              ...prev,
-              attachments: prev.attachments.map(a =>
-                a.id === attachmentId ? { ...a, progress: pct } : a,
-              ),
-            })),
+          id: msgId, file,
+          onProgress: pct => setMessage(prev => ({
+            ...prev,
+            attachments: prev.attachments.map(a =>
+              a.id === attachmentId ? { ...a, progress: pct } : a),
+          })),
         },
         {
-          onSuccess: data =>
-            setMessage(prev => ({
-              ...prev,
-              attachments: prev.attachments.map(a =>
-                a.id === attachmentId
-                  ? { ...a, progress: 100, uploadedAttachmentId: data.attachment.id }
-                  : a,
-              ),
-            })),
-          onError: () =>
-            setMessage(prev => ({
-              ...prev,
-              attachments: prev.attachments.map(a =>
-                a.id === attachmentId ? { ...a, error: 'Upload failed' } : a,
-              ),
-            })),
+          onSuccess: data => setMessage(prev => ({
+            ...prev,
+            attachments: prev.attachments.map(a =>
+              a.id === attachmentId
+                ? { ...a, progress: 100, uploadedAttachmentId: data.attachment.id }
+                : a),
+          })),
+          onError: () => setMessage(prev => ({
+            ...prev,
+            attachments: prev.attachments.map(a =>
+              a.id === attachmentId ? { ...a, error: 'Upload failed' } : a),
+          })),
         },
       );
     },
@@ -465,13 +549,9 @@ export const useComposeState = ({
       Array.from(e.target.files ?? []).forEach(file => {
         const newAtt: Attachment = {
           id: `att_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-          name: file.name,
-          size: formatFileSize(file.size),
-          type: file.type || 'unknown',
-          file,
-          progress: 0,
+          name: file.name, size: formatFileSize(file.size),
+          type: file.type || 'unknown', file, progress: 0,
         };
-        // Optimistic add
         setMessage(prev => ({ ...prev, attachments: [...prev.attachments, newAtt] }));
         uploadFile(file, newAtt.id);
       });
@@ -483,7 +563,6 @@ export const useComposeState = ({
   const handleRemoveAttachment = useCallback(
     (id: string) => {
       const att = message.attachments.find(a => a.id === id);
-      // Optimistic remove
       setMessage(prev => ({ ...prev, attachments: prev.attachments.filter(a => a.id !== id) }));
       if (att?.uploadedAttachmentId) {
         removeAttachment.mutate({ attachmentId: att.uploadedAttachmentId });
@@ -539,18 +618,18 @@ export const useComposeState = ({
   /* ── window control ───────────────────────────────────────── */
   const handleMinimize = useCallback(() => setWindowState('minimized'), []);
   const handleMaximize = useCallback(
-    () => setWindowState(s => (s === 'maximized' ? 'normal' : 'maximized')),
-    [],
-  );
-  const handleRestore = useCallback(() => setWindowState('normal'), []);
+    () => setWindowState(s => (s === 'maximized' ? 'normal' : 'maximized')), []);
+  const handleRestore  = useCallback(() => setWindowState('normal'), []);
 
+  /* ── return ───────────────────────────────────────────────── */
   return {
     /* state */
     message, setMessage,
     windowState,
     showCc, setShowCc,
     showBcc, setShowBcc,
-    editorMode, setEditorMode,
+    editorMode,
+    setEditorMode: handleEditorModeChange,
     isSaving, lastSaved,
     validationErrors, setValidationErrors,
     isSending,
