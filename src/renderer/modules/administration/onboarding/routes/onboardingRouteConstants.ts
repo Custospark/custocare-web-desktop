@@ -1,7 +1,7 @@
 // src/routes/routeConstants.ts
 export const ROUTES = {
   HOME: '/',
-  LANDING: '/landing',
+  LANDING: '/home',
   LOGIN: '/login',
   SIGNUP: '/signup',
   FORGOT_PASSWORD: '/forgot-password',
