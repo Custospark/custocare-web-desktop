@@ -6,8 +6,7 @@
  */
 
 import React from 'react';
-import { Inbox, SendIcon, Notebook, Trash, MessageCircleMore } from 'lucide-react';
-import { FaVirus } from 'react-icons/fa';
+import { Inbox, SendIcon, Notebook, Trash, MessageCircleMore, Edit3 } from 'lucide-react';
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
 import { ACCOUNT_ROUTES } from '../../../../app/routes/routeConstants';
 
@@ -23,6 +22,12 @@ const Message: React.FC<MessageProps> = ({ theme }) => {
       theme={theme}
       defaultActionTo={ACCOUNT_ROUTES.MESSAGES_INBOX}
       actions={[
+        { 
+          key: 'compose', 
+          label: 'Compose', 
+          icon: <Edit3 className="w-4 h-4" />, 
+          to: ACCOUNT_ROUTES.MESSAGES_COMPOSE 
+        },
         { 
           key: 'inbox', 
           label: 'Inbox', 
@@ -46,12 +51,6 @@ const Message: React.FC<MessageProps> = ({ theme }) => {
           label: 'Trash', 
           icon: <Trash className="w-4 h-4" />, 
           to: ACCOUNT_ROUTES.MESSAGES_TRASH 
-        },
-        { 
-          key: 'spam', 
-          label: 'Spam', 
-          icon: <FaVirus className="w-4 h-4" />, 
-          to: ACCOUNT_ROUTES.MESSAGES_SPAM 
         },
       ]}
     />

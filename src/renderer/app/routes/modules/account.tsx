@@ -32,7 +32,7 @@ import Inbox from "../../../modules/account/ui/message/Inbox";
 import Sent from "../../../modules/account/ui/message/Sent";
 import Draft from "../../../modules/account/ui/message/Draft";
 import Trash from "../../../modules/account/ui/message/Trash";
-import Spam from "../../../modules/account/ui/message/Spam";
+import Compose from "../../../modules/account/ui/message/Compose";
 
 // ============================================================================
 // LAZY IMPORTS
@@ -61,7 +61,7 @@ export const accountRoutes = [
       key="account-invitations"
       path="invitations"
       element={
-        <SuspenseWrapper variant="table">
+        <SuspenseWrapper variant="detail">
           <MyInvitations />
         </SuspenseWrapper>
       }
@@ -77,7 +77,7 @@ export const accountRoutes = [
       key="account-messages"
       path="messages"
       element={
-        <SuspenseWrapper variant="table">
+        <SuspenseWrapper variant="detail">
           <WithThemeProp Component={Message} />
         </SuspenseWrapper>
       }
@@ -92,7 +92,7 @@ export const accountRoutes = [
       <Route 
         path={ACCOUNT_ROUTES.MESSAGES_INBOX}   
         element={
-          <SuspenseWrapper variant="table">
+          <SuspenseWrapper variant="detail">
             <WithThemeProp Component={Inbox} />
           </SuspenseWrapper>
         } 
@@ -101,7 +101,7 @@ export const accountRoutes = [
       <Route 
         path={ACCOUNT_ROUTES.MESSAGES_SENT}  
         element={
-          <SuspenseWrapper variant="table">
+          <SuspenseWrapper variant="detail">
             <WithThemeProp Component={Sent} />
           </SuspenseWrapper>
         } 
@@ -110,7 +110,7 @@ export const accountRoutes = [
       <Route 
         path={ACCOUNT_ROUTES.MESSAGES_DRAFT}   
         element={
-          <SuspenseWrapper variant="table">
+          <SuspenseWrapper variant="detail">
             <WithThemeProp Component={Draft} />
           </SuspenseWrapper>
         } 
@@ -119,17 +119,17 @@ export const accountRoutes = [
       <Route 
         path={ACCOUNT_ROUTES.MESSAGES_TRASH}   
         element={
-          <SuspenseWrapper variant="table">
+          <SuspenseWrapper variant="detail">
             <WithThemeProp Component={Trash} />
           </SuspenseWrapper>
         } 
       />
       
       <Route 
-        path={ACCOUNT_ROUTES.MESSAGES_SPAM} 
+        path={ACCOUNT_ROUTES.MESSAGES_COMPOSE} 
         element={
-          <SuspenseWrapper variant="table">
-            <WithThemeProp Component={Spam} />
+          <SuspenseWrapper variant="detail">
+            <WithThemeProp Component={Compose} />
           </SuspenseWrapper>
         } 
       />
@@ -147,7 +147,7 @@ export const accountRoutes = [
       key="account-settings"
       path="settings"
       element={
-        <SuspenseWrapper variant="table">
+        <SuspenseWrapper variant="detail">
           <WithThemeProp Component={Settings} />
         </SuspenseWrapper>
       }
