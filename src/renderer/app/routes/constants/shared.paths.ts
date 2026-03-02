@@ -49,7 +49,7 @@ export const ROUTES = {
   PHARMACY: '/pharmacy',
   BILLING: '/billing',
   ADMINISTRATION: '/administration',
-  ACCOUNT: '/acount',
+  ACCOUNT: '/account',
 } as const;
 
 
