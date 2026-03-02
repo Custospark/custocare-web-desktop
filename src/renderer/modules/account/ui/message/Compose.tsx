@@ -5,7 +5,8 @@
  * 
  * Compose component for creating new messages with rich text editing,
  * recipient management, attachments, and auto-save functionality.
- * Includes navigation to inbox on close/discard and manual save draft option.
+ * Includes window state management (normal/minimized/maximized) and
+ * navigation to inbox on close/discard.
  * 
  * @component Compose
  */
@@ -34,7 +35,6 @@ import {
   MoreHorizontal,
   ChevronDown,
   Tag,
-  ChevronLeft,
 } from 'lucide-react';
 import { cn } from '../../../../shared/utils/classNameUtils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -133,6 +133,9 @@ export const Compose: React.FC<ComposeProps> = ({
   
   /* -------------------------------- State --------------------------------- */
   
+  // Window state
+  const [windowState, setWindowState] = useState<'normal' | 'minimized' | 'maximized'>('normal');
+  
   // Generate a unique ID for new messages
   const generateId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
@@ -204,7 +207,6 @@ export const Compose: React.FC<ComposeProps> = ({
   // UI state
   const [showCc, setShowCc] = useState(false);
   const [showBcc, setShowBcc] = useState(false);
-  const [isMaximized, setIsMaximized] = useState(false);
   const [editorMode, setEditorMode] = useState<EditorMode>('rich');
   const [showPriorityMenu, setShowPriorityMenu] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
@@ -227,6 +229,63 @@ export const Compose: React.FC<ComposeProps> = ({
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const bodyInputRef = useRef<HTMLTextAreaElement>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout>(null);
+  const composeRef = useRef<HTMLDivElement>(null);
+  
+  /* ---------------------------- Navigation Handlers ---------------------------- */
+  
+  const handleClose = useCallback(() => {
+    // Save draft before closing if there's content
+    if (message.to.length > 0 || message.subject || message.body) {
+      saveDraft();
+    }
+    
+    // Navigate to inbox
+    navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
+    
+    // Call onClose prop if provided
+    if (onClose) {
+      onClose();
+    }
+  }, [message, navigate, onClose]);
+  
+  const handleDiscard = useCallback(() => {
+    // Check if there's unsaved content
+    const hasContent = message.to.length > 0 || message.subject || message.body || message.attachments.length > 0;
+    
+    if (hasContent) {
+      setShowDiscardConfirm(true);
+    } else {
+      // Navigate to inbox without saving
+      navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
+      
+      // Call onClose prop if provided
+      if (onClose) {
+        onClose();
+      }
+    }
+  }, [message, navigate, onClose]);
+  
+  const handleConfirmDiscard = useCallback(() => {
+    setShowDiscardConfirm(false);
+    navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
+    if (onClose) {
+      onClose();
+    }
+  }, [navigate, onClose]);
+  
+  /* ---------------------------- Window Control Handlers ---------------------------- */
+  
+  const handleMinimize = useCallback(() => {
+    setWindowState('minimized');
+  }, []);
+  
+  const handleMaximize = useCallback(() => {
+    setWindowState(windowState === 'maximized' ? 'normal' : 'maximized');
+  }, [windowState]);
+  
+  const handleRestore = useCallback(() => {
+    setWindowState('normal');
+  }, []);
   
   /* ---------------------------- Auto-save Logic ---------------------------- */
   
@@ -278,10 +337,6 @@ export const Compose: React.FC<ComposeProps> = ({
   const validateEmail = (email: string): boolean => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
-  };
-  
-  const validateRecipient = (recipient: Recipient): boolean => {
-    return validateEmail(recipient.email);
   };
   
   const validateMessage = useCallback((): boolean => {
@@ -478,7 +533,7 @@ export const Compose: React.FC<ComposeProps> = ({
       console.log('Message sent:', message);
       handleClose();
     }, 1500);
-  }, [message, onSend, validateMessage]);
+  }, [message, onSend, validateMessage, handleClose]);
   
   const handleScheduleSend = useCallback(() => {
     if (!scheduleDate) return;
@@ -532,34 +587,6 @@ export const Compose: React.FC<ComposeProps> = ({
     setLinkUrl('');
     setLinkText('');
   }, [linkUrl, linkText, insertTextAtCursor]);
-  
-  const handleManualSaveDraft = useCallback(() => {
-    saveDraft();
-  }, [saveDraft]);
-  
-  const handleClose = useCallback(() => {
-    if (onClose) {
-      onClose();
-    } else {
-      navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
-    }
-  }, [onClose, navigate]);
-  
-  const handleDiscard = useCallback(() => {
-    // Check if there's unsaved content
-    const hasContent = message.to.length > 0 || message.subject || message.body || message.attachments.length > 0;
-    
-    if (hasContent) {
-      setShowDiscardConfirm(true);
-    } else {
-      handleClose();
-    }
-  }, [message, handleClose]);
-  
-  const handleConfirmDiscard = useCallback(() => {
-    setShowDiscardConfirm(false);
-    handleClose();
-  }, [handleClose]);
   
   /* ---------------------------- Helper Functions ---------------------------- */
   
@@ -938,7 +965,7 @@ export const Compose: React.FC<ComposeProps> = ({
               
               <button
                 onClick={() => {
-                  handleManualSaveDraft();
+                  saveDraft();
                   setShowOptionsMenu(false);
                 }}
                 className={cn(
@@ -1033,15 +1060,106 @@ export const Compose: React.FC<ComposeProps> = ({
   /*                                 RENDER                                     */
   /* -------------------------------------------------------------------------- */
   
-  return (
-    <>
+  // If minimized, show a compact version
+  if (windowState === 'minimized') {
+    return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
         className={cn(
+          'fixed bottom-4 right-4 w-80 rounded-xl border-2 shadow-2xl overflow-hidden z-50',
+          isDark
+            ? 'bg-gray-800 border-gray-700'
+            : 'bg-white border-gray-200'
+        )}
+      >
+        <div className={cn(
+          'flex items-center justify-between p-3 border-b-2',
+          isDark ? 'border-gray-700' : 'border-gray-200'
+        )}>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold truncate max-w-[150px]">
+              {message.subject || 'New Message'}
+            </h3>
+            {message.to.length > 0 && (
+              <span className="text-xs text-gray-500">
+                To: {message.to.length} recipient(s)
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleRestore}
+              className={cn(
+                'p-1.5 rounded-lg transition-colors',
+                isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+              )}
+              title="Restore"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleDiscard}
+              className={cn(
+                'p-1.5 rounded-lg transition-colors',
+                isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+              )}
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        
+        <div className="p-3 text-sm text-gray-500">
+          {message.body ? (
+            <p className="truncate">{message.body.substring(0, 100)}</p>
+          ) : (
+            <p className="italic">No content</p>
+          )}
+        </div>
+        
+        <div className={cn(
+          'flex items-center justify-between p-2 border-t-2',
+          isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-100'
+        )}>
+          <button
+            onClick={saveDraft}
+            className={cn(
+              'px-2 py-1 rounded text-xs font-medium flex items-center gap-1',
+              isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-200'
+            )}
+          >
+            <Save className="w-3 h-3" />
+            Save
+          </button>
+          <button
+            onClick={handleSend}
+            className={cn(
+              'px-2 py-1 rounded text-xs font-medium flex items-center gap-1 bg-blue-600 text-white',
+              isDark ? 'hover:bg-blue-700' : 'hover:bg-blue-700'
+            )}
+          >
+            <Send className="w-3 h-3" />
+            Send
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+  
+  return (
+    <>
+      <motion.div
+        ref={composeRef}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        className={cn(
           'fixed inset-4 md:inset-10 flex flex-col rounded-xl border-2 shadow-2xl overflow-hidden z-50',
-          isMaximized ? 'md:inset-0' : 'md:inset-10',
+          windowState === 'maximized' ? 'md:inset-0' : 'md:inset-10',
           isDark
             ? 'bg-gray-800 border-gray-700'
             : 'bg-white border-gray-200'
@@ -1053,16 +1171,6 @@ export const Compose: React.FC<ComposeProps> = ({
           isDark ? 'border-gray-700' : 'border-gray-200'
         )}>
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleDiscard}
-              className={cn(
-                'p-2 rounded-lg transition-colors md:hidden',
-                isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-              )}
-              title="Back to inbox"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
             <h2 className="text-lg font-semibold">
               {replyTo ? 'Reply' : forwardOf ? 'Forward' : 'New Message'}
             </h2>
@@ -1093,28 +1201,28 @@ export const Compose: React.FC<ComposeProps> = ({
               </span>
             )}
             
-            {/* Save Draft button */}
+            {/* Minimize button */}
             <button
-              onClick={handleManualSaveDraft}
-              className={cn(
-                'p-2 rounded-lg transition-colors',
-                isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700'
-              )}
-              title="Save as draft"
-            >
-              <Save className="w-5 h-5" />
-            </button>
-            
-            {/* Minimize/Maximize button */}
-            <button
-              onClick={() => setIsMaximized(!isMaximized)}
+              onClick={handleMinimize}
               className={cn(
                 'p-2 rounded-lg transition-colors',
                 isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
               )}
-              title={isMaximized ? 'Minimize' : 'Maximize'}
+              title="Minimize"
             >
-              {isMaximized ? (
+              <Minimize2 className="w-5 h-5" />
+            </button>
+            
+            {/* Maximize/Restore button */}
+            <button
+              onClick={handleMaximize}
+              className={cn(
+                'p-2 rounded-lg transition-colors',
+                isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+              )}
+              title={windowState === 'maximized' ? 'Restore' : 'Maximize'}
+            >
+              {windowState === 'maximized' ? (
                 <Minimize2 className="w-5 h-5" />
               ) : (
                 <Maximize2 className="w-5 h-5" />
@@ -1488,6 +1596,19 @@ export const Compose: React.FC<ComposeProps> = ({
               Discard
             </button>
             
+            {/* Save Draft button */}
+            <button
+              onClick={saveDraft}
+              className={cn(
+                'px-4 py-2 rounded-lg text-sm font-medium border-2',
+                isDark
+                  ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                  : 'border-gray-200 text-gray-700 hover:bg-gray-100'
+              )}
+            >
+              Save Draft
+            </button>
+            
             {/* Send button */}
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -1557,7 +1678,7 @@ export const Compose: React.FC<ComposeProps> = ({
                 'mb-6',
                 isDark ? 'text-gray-300' : 'text-gray-700'
               )}>
-                You have unsaved changes. Do you want to save this message as a draft before leaving?
+                You have unsaved changes. Are you sure you want to discard this message?
               </p>
               
               <div className="flex justify-end gap-3">
@@ -1572,21 +1693,6 @@ export const Compose: React.FC<ComposeProps> = ({
                   )}
                 >
                   Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    saveDraft();
-                    handleConfirmDiscard();
-                  }}
-                  className={cn(
-                    'px-4 py-2 rounded-lg text-sm font-medium',
-                    isDark
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white',
-                    'cursor-pointer'
-                  )}
-                >
-                  Save Draft
                 </button>
                 <button
                   onClick={handleConfirmDiscard}
