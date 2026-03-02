@@ -5,8 +5,7 @@
  * 
  * Compose component for creating new messages with rich text editing,
  * recipient management, attachments, and auto-save functionality.
- * Includes window state management (normal/minimized/maximized) and
- * navigation to inbox on close/discard.
+ * Integrates with real backend API.
  * 
  * @component Compose
  */
@@ -40,6 +39,27 @@ import { cn } from '../../../../shared/utils/classNameUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ACCOUNT_ROUTES } from '../../../../app/routes/routeConstants';
+import { useToast } from '../../../../app/store/contexts/toast/useToast';
+
+/* -------------------------------------------------------------------------- */
+/*                              QUERY IMPORTS                                 */
+/* -------------------------------------------------------------------------- */
+
+import {
+  useStoreMessage,
+  useUpdateMessage,
+  useSendDraftMessage,
+  useUploadMessageAttachment,
+  useRemoveMessageAttachment,
+}  from '../../api/messages/MessageQueries';
+import type {
+  RecipientInput,
+  StoreMessageRequest,
+  UpdateMessageRequest,
+  MessageBodyType,
+  MessagePriority,
+} from  '../../api/messages/MessageTypes';
+
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
 /* -------------------------------------------------------------------------- */
@@ -47,10 +67,9 @@ import { ACCOUNT_ROUTES } from '../../../../app/routes/routeConstants';
 interface ComposeProps {
   theme: 'light' | 'dark';
   onClose?: () => void;
-  onSend?: (message: ComposeMessage) => void;
-  onSaveDraft?: (message: ComposeMessage) => void;
+  draftId?: number; // For editing existing draft
   replyTo?: {
-    id: string;
+    id: number;
     subject: string;
     sender: {
       name: string;
@@ -63,7 +82,7 @@ interface ComposeProps {
     body: string;
   };
   forwardOf?: {
-    id: string;
+    id: number;
     subject: string;
     sender: {
       name: string;
@@ -71,26 +90,27 @@ interface ComposeProps {
     };
     body: string;
     attachments?: Array<{
+      id: number;
       name: string;
       size: string;
       type: string;
+      download_url?: string;
     }>;
   };
-  draft?: ComposeMessage;
 }
 
 interface ComposeMessage {
-  id: string;
+  id?: number;
+  uuid?: string;
   to: Recipient[];
   cc: Recipient[];
   bcc: Recipient[];
   subject: string;
   body: string;
   attachments: Attachment[];
-  priority: 'low' | 'normal' | 'high';
+  priority: MessagePriority;
   labels: string[];
-  isHtml?: boolean;
-  saveDraft?: boolean;
+  bodyType: MessageBodyType;
   scheduledSend?: Date | null;
   readReceipt?: boolean;
   deliveryConfirmation?: boolean;
@@ -101,16 +121,20 @@ interface Recipient {
   name: string;
   email: string;
   isValid?: boolean;
+  userId?: number | null;
 }
 
 interface Attachment {
-  id: string;
+  id: number | string; // temporary ID or backend ID
   name: string;
   size: string;
+  sizeBytes?: number;
   type: string;
   file?: File;
   progress?: number;
   error?: string;
+  disk?: string;
+  download_url?: string;
 }
 
 type EditorMode = 'rich' | 'plain' | 'preview';
@@ -122,32 +146,60 @@ type EditorMode = 'rich' | 'plain' | 'preview';
 export const Compose: React.FC<ComposeProps> = ({ 
   theme, 
   onClose, 
-  onSend, 
-  onSaveDraft,
+  draftId,
   replyTo,
   forwardOf,
-  draft 
 }) => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const isDark = theme === 'dark';
+  
+  /* ------------------------------ Mutations ------------------------------- */
+  
+  const storeMessage = useStoreMessage({
+    onSuccess: (data) => {
+      if (data.status === 'draft_saved') {
+        showToast('success', 'Draft saved successfully', 3000);
+      } else if (data.status === 'sent') {
+        showToast('success', 'Message sent successfully', 3000);
+        handleClose();
+      } else if (data.status === 'scheduled') {
+        showToast('success', 'Message scheduled successfully', 3000);
+        handleClose();
+      }
+    },
+  });
+
+  const updateMessage = useUpdateMessage({
+    onSuccess: () => {
+      showToast('success', 'Draft updated', 2000);
+    },
+  });
+
+  const sendDraft = useSendDraftMessage({
+    onSuccess: () => {
+      showToast('success', 'Draft sent successfully', 3000);
+      handleClose();
+    },
+  });
+
+  const uploadAttachment = useUploadMessageAttachment();
+  const removeAttachment = useRemoveMessageAttachment();
   
   /* -------------------------------- State --------------------------------- */
   
   // Window state
   const [windowState, setWindowState] = useState<'normal' | 'minimized' | 'maximized'>('normal');
   
-  // Generate a unique ID for new messages
-  const generateId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  // Generate a unique client-side ID for new recipients/attachments
+  const generateClientId = () => `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
   // Message state
   const [message, setMessage] = useState<ComposeMessage>(() => {
-    if (draft) return draft;
-    
     if (replyTo) {
       return {
-        id: generateId(),
         to: [{
-          id: `recipient_${Date.now()}_1`,
+          id: generateClientId(),
           name: replyTo.sender.name,
           email: replyTo.sender.email,
           isValid: true
@@ -159,6 +211,7 @@ export const Compose: React.FC<ComposeProps> = ({
         attachments: [],
         priority: 'normal',
         labels: [],
+        bodyType: 'plain',
         readReceipt: false,
         deliveryConfirmation: false,
         scheduledSend: null,
@@ -167,20 +220,21 @@ export const Compose: React.FC<ComposeProps> = ({
     
     if (forwardOf) {
       return {
-        id: generateId(),
         to: [],
         cc: [],
         bcc: [],
         subject: `Fwd: ${forwardOf.subject}`,
         body: `\n\n--- Forwarded Message ---\nFrom: ${forwardOf.sender.name} <${forwardOf.sender.email}>\nSubject: ${forwardOf.subject}\n\n${forwardOf.body}`,
         attachments: forwardOf.attachments?.map(att => ({
-          id: `att_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+          id: att.id,
           name: att.name,
           size: att.size,
           type: att.type,
+          download_url: att.download_url,
         })) || [],
         priority: 'normal',
         labels: [],
+        bodyType: 'plain',
         readReceipt: false,
         deliveryConfirmation: false,
         scheduledSend: null,
@@ -189,7 +243,6 @@ export const Compose: React.FC<ComposeProps> = ({
     
     // New message
     return {
-      id: generateId(),
       to: [],
       cc: [],
       bcc: [],
@@ -198,6 +251,7 @@ export const Compose: React.FC<ComposeProps> = ({
       attachments: [],
       priority: 'normal',
       labels: [],
+      bodyType: 'plain',
       readReceipt: false,
       deliveryConfirmation: false,
       scheduledSend: null,
@@ -227,18 +281,12 @@ export const Compose: React.FC<ComposeProps> = ({
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLTextAreaElement>(null);
-  const bodyInputRef = useRef<HTMLTextAreaElement>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout>(null);
   const composeRef = useRef<HTMLDivElement>(null);
   
   /* ---------------------------- Navigation Handlers ---------------------------- */
   
   const handleClose = useCallback(() => {
-    // Save draft before closing if there's content
-    if (message.to.length > 0 || message.subject || message.body) {
-      saveDraft();
-    }
-    
     // Navigate to inbox
     navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
     
@@ -246,7 +294,7 @@ export const Compose: React.FC<ComposeProps> = ({
     if (onClose) {
       onClose();
     }
-  }, [message, navigate, onClose]);
+  }, [navigate, onClose]);
   
   const handleDiscard = useCallback(() => {
     // Check if there's unsaved content
@@ -255,23 +303,14 @@ export const Compose: React.FC<ComposeProps> = ({
     if (hasContent) {
       setShowDiscardConfirm(true);
     } else {
-      // Navigate to inbox without saving
-      navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
-      
-      // Call onClose prop if provided
-      if (onClose) {
-        onClose();
-      }
+      handleClose();
     }
-  }, [message, navigate, onClose]);
+  }, [message, handleClose]);
   
   const handleConfirmDiscard = useCallback(() => {
     setShowDiscardConfirm(false);
-    navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
-    if (onClose) {
-      onClose();
-    }
-  }, [navigate, onClose]);
+    handleClose();
+  }, [handleClose]);
   
   /* ---------------------------- Window Control Handlers ---------------------------- */
   
@@ -289,7 +328,7 @@ export const Compose: React.FC<ComposeProps> = ({
   
   /* ---------------------------- Auto-save Logic ---------------------------- */
   
-  const saveDraft = useCallback(() => {
+  const saveDraft = useCallback(async () => {
     if (message.to.length === 0 && !message.subject && !message.body) {
       // Don't save empty drafts
       return;
@@ -297,16 +336,74 @@ export const Compose: React.FC<ComposeProps> = ({
     
     setIsSaving(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsSaving(false);
-      setLastSaved(new Date());
-      if (onSaveDraft) {
-        onSaveDraft(message);
+    try {
+      // Prepare recipients
+      const toRecipients: RecipientInput[] = message.to.map(r => ({
+        email: r.email,
+        name: r.name !== r.email ? r.name : undefined,
+      }));
+      
+      const ccRecipients: RecipientInput[] = message.cc.map(r => ({
+        email: r.email,
+        name: r.name !== r.email ? r.name : undefined,
+      }));
+      
+      const bccRecipients: RecipientInput[] = message.bcc.map(r => ({
+        email: r.email,
+        name: r.name !== r.email ? r.name : undefined,
+      }));
+      
+      const payload: StoreMessageRequest = {
+        save_draft: true,
+        subject: message.subject || undefined,
+        body: message.body || undefined,
+        body_type: message.bodyType,
+        priority: message.priority,
+        read_receipt: message.readReceipt,
+        delivery_confirmation: message.deliveryConfirmation,
+        to: toRecipients.length > 0 ? toRecipients : undefined,
+        cc: ccRecipients.length > 0 ? ccRecipients : undefined,
+        bcc: bccRecipients.length > 0 ? bccRecipients : undefined,
+        labels: message.labels.length > 0 ? message.labels : undefined,
+      };
+      
+      if (message.scheduledSend) {
+        payload.scheduled_send_at = message.scheduledSend.toISOString();
       }
-      console.log('Draft saved:', message.id);
-    }, 500);
-  }, [message, onSaveDraft]);
+      
+      if (draftId) {
+        // Update existing draft
+        const updatePayload: UpdateMessageRequest = {
+          subject: payload.subject,
+          body: payload.body,
+          body_type: payload.body_type,
+          priority: payload.priority,
+          read_receipt: payload.read_receipt,
+          delivery_confirmation: payload.delivery_confirmation,
+          scheduled_send_at: payload.scheduled_send_at,
+          to: payload.to,
+          cc: payload.cc,
+          bcc: payload.bcc,
+          labels: payload.labels,
+        };
+        
+        await updateMessage.mutateAsync({ id: draftId, data: updatePayload });
+      } else {
+        // Create new draft
+        const result = await storeMessage.mutateAsync(payload);
+        if (result.message?.id) {
+          // Update message with real ID
+          setMessage(prev => ({ ...prev, id: result.message.id }));
+        }
+      }
+      
+      setLastSaved(new Date());
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [message, draftId, storeMessage, updateMessage]);
   
   // Auto-save every 30 seconds if there are changes
   useEffect(() => {
@@ -359,11 +456,6 @@ export const Compose: React.FC<ComposeProps> = ({
       errors.subject = 'Subject is required';
     }
     
-    // Validate body
-    if (!message.body.trim()) {
-      errors.body = 'Message body is required';
-    }
-    
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   }, [message]);
@@ -374,7 +466,7 @@ export const Compose: React.FC<ComposeProps> = ({
     if (!email.trim()) return;
     
     const newRecipient: Recipient = {
-      id: `recipient_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      id: generateClientId(),
       name: name || email.split('@')[0],
       email: email.trim(),
       isValid: validateEmail(email.trim()),
@@ -418,59 +510,108 @@ export const Compose: React.FC<ComposeProps> = ({
     }
   }, [handleAddRecipient]);
   
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    if (files.length === 0 || !draftId) {
+      if (!draftId) {
+        showToast('warning', 'Please save draft first before attaching files', 3000);
+      }
+      return;
+    }
     
-    files.forEach(file => {
+    for (const file of files) {
+      const tempId = generateClientId();
+      
+      // Add optimistic attachment
       const newAttachment: Attachment = {
-        id: `att_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        id: tempId,
         name: file.name,
         size: formatFileSize(file.size),
-        type: file.type || 'unknown',
+        sizeBytes: file.size,
+        type: file.type || 'application/octet-stream',
         file,
         progress: 0,
       };
       
-      // Simulate upload progress
       setMessage(prev => ({
         ...prev,
         attachments: [...prev.attachments, newAttachment],
       }));
       
-      // Simulate upload progress updates
-      simulateUpload(newAttachment.id);
-    });
+      try {
+        // Upload to backend
+        const result = await uploadAttachment.mutateAsync({
+          id: draftId,
+          file,
+          onProgress: (pct) => {
+            setMessage(prev => ({
+              ...prev,
+              attachments: prev.attachments.map(att =>
+                att.id === tempId ? { ...att, progress: pct } : att
+              ),
+            }));
+          },
+        });
+        
+        // Replace temp attachment with real one
+        setMessage(prev => ({
+          ...prev,
+          attachments: prev.attachments.map(att =>
+            att.id === tempId
+              ? {
+                  id: result.attachment.id,
+                  name: result.attachment.original_name,
+                  size: result.attachment.size_formatted || formatFileSize(result.attachment.size_bytes),
+                  sizeBytes: result.attachment.size_bytes,
+                  type: result.attachment.mime_type || 'unknown',
+                  disk: result.attachment.disk,
+                  download_url: result.attachment.download_url,
+                  progress: 100,
+                }
+              : att
+          ),
+        }));
+      } catch (error) {
+        console.log(error);
+        // Mark as failed
+        setMessage(prev => ({
+          ...prev,
+          attachments: prev.attachments.map(att =>
+            att.id === tempId ? { ...att, error: 'Upload failed', progress: undefined } : att
+          ),
+        }));
+      }
+    }
     
     // Clear input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, []);
+  }, [draftId, uploadAttachment, showToast]);
   
-  const simulateUpload = useCallback((attachmentId: string) => {
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 30;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-      }
-      
+  const handleRemoveAttachment = useCallback(async (id: number | string) => {
+    // If it's a temporary ID (client-generated), just remove from state
+    if (typeof id === 'string' && id.startsWith('client_')) {
       setMessage(prev => ({
         ...prev,
-        attachments: prev.attachments.map(att =>
-          att.id === attachmentId ? { ...att, progress } : att
-        ),
+        attachments: prev.attachments.filter(a => a.id !== id),
       }));
-    }, 200);
-  }, []);
-  
-  const handleRemoveAttachment = useCallback((id: string) => {
-    setMessage(prev => ({
-      ...prev,
-      attachments: prev.attachments.filter(a => a.id !== id),
-    }));
-  }, []);
+      return;
+    }
+    
+    // Otherwise, delete from backend
+    try {
+      await removeAttachment.mutateAsync({ attachmentId: id as number });
+      setMessage(prev => ({
+        ...prev,
+        attachments: prev.attachments.filter(a => a.id !== id),
+      }));
+      showToast('success', 'Attachment removed', 2000);
+    } catch (error) {
+      console.log(error);
+      showToast('error', 'Failed to remove attachment', 3000);
+    }
+  }, [removeAttachment, showToast]);
   
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -489,18 +630,29 @@ export const Compose: React.FC<ComposeProps> = ({
     e.stopPropagation();
   }, []);
   
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
     
     const files = Array.from(e.dataTransfer.files);
-    files.forEach(file => {
+    if (files.length === 0 || !draftId) {
+      if (!draftId) {
+        showToast('warning', 'Please save draft first before attaching files', 3000);
+      }
+      return;
+    }
+    
+    for (const file of files) {
+      const tempId = generateClientId();
+      
+      // Add optimistic attachment
       const newAttachment: Attachment = {
-        id: `att_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        id: tempId,
         name: file.name,
         size: formatFileSize(file.size),
-        type: file.type || 'unknown',
+        sizeBytes: file.size,
+        type: file.type || 'application/octet-stream',
         file,
         progress: 0,
       };
@@ -510,11 +662,53 @@ export const Compose: React.FC<ComposeProps> = ({
         attachments: [...prev.attachments, newAttachment],
       }));
       
-      simulateUpload(newAttachment.id);
-    });
-  }, [simulateUpload]);
+      try {
+        // Upload to backend
+        const result = await uploadAttachment.mutateAsync({
+          id: draftId,
+          file,
+          onProgress: (pct) => {
+            setMessage(prev => ({
+              ...prev,
+              attachments: prev.attachments.map(att =>
+                att.id === tempId ? { ...att, progress: pct } : att
+              ),
+            }));
+          },
+        });
+        
+        // Replace temp attachment with real one
+        setMessage(prev => ({
+          ...prev,
+          attachments: prev.attachments.map(att =>
+            att.id === tempId
+              ? {
+                  id: result.attachment.id,
+                  name: result.attachment.original_name,
+                  size: result.attachment.size_formatted || formatFileSize(result.attachment.size_bytes),
+                  sizeBytes: result.attachment.size_bytes,
+                  type: result.attachment.mime_type || 'unknown',
+                  disk: result.attachment.disk,
+                  download_url: result.attachment.download_url,
+                  progress: 100,
+                }
+              : att
+          ),
+        }));
+      } catch (error) {
+        console.log(error);
+        // Mark as failed
+        setMessage(prev => ({
+          ...prev,
+          attachments: prev.attachments.map(att =>
+            att.id === tempId ? { ...att, error: 'Upload failed', progress: undefined } : att
+          ),
+        }));
+      }
+    }
+  }, [draftId, uploadAttachment, showToast]);
   
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     if (!validateMessage()) {
       // Scroll to first error
       const firstError = document.querySelector('.border-red-500');
@@ -524,16 +718,53 @@ export const Compose: React.FC<ComposeProps> = ({
     
     setIsSending(true);
     
-    // Simulate sending
-    setTimeout(() => {
-      setIsSending(false);
-      if (onSend) {
-        onSend(message);
+    try {
+      // Prepare recipients
+      const toRecipients: RecipientInput[] = message.to.map(r => ({
+        email: r.email,
+        name: r.name !== r.email ? r.name : undefined,
+      }));
+      
+      const ccRecipients: RecipientInput[] = message.cc.map(r => ({
+        email: r.email,
+        name: r.name !== r.email ? r.name : undefined,
+      }));
+      
+      const bccRecipients: RecipientInput[] = message.bcc.map(r => ({
+        email: r.email,
+        name: r.name !== r.email ? r.name : undefined,
+      }));
+      
+      const payload: StoreMessageRequest = {
+        save_draft: false,
+        subject: message.subject,
+        body: message.body,
+        body_type: message.bodyType,
+        priority: message.priority,
+        read_receipt: message.readReceipt,
+        delivery_confirmation: message.deliveryConfirmation,
+        to: toRecipients,
+        cc: ccRecipients.length > 0 ? ccRecipients : undefined,
+        bcc: bccRecipients.length > 0 ? bccRecipients : undefined,
+        labels: message.labels.length > 0 ? message.labels : undefined,
+      };
+      
+      if (message.scheduledSend) {
+        payload.scheduled_send_at = message.scheduledSend.toISOString();
       }
-      console.log('Message sent:', message);
-      handleClose();
-    }, 1500);
-  }, [message, onSend, validateMessage, handleClose]);
+      
+      if (draftId) {
+        // If it's a draft, send it
+        await sendDraft.mutateAsync({ id: draftId });
+      } else {
+        // New message, send directly
+        await storeMessage.mutateAsync(payload);
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      setIsSending(false);
+    }
+  }, [message, draftId, validateMessage, sendDraft, storeMessage]);
   
   const handleScheduleSend = useCallback(() => {
     if (!scheduleDate) return;
@@ -754,7 +985,7 @@ export const Compose: React.FC<ComposeProps> = ({
         <Link className="w-4 h-4" />
       </button>
       <button
-        onClick={() => {/* Simulate image upload */}}
+        onClick={() => {/* Image upload would go here */}}
         className={cn(
           'p-2 rounded-lg transition-colors',
           isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700'
@@ -948,10 +1179,7 @@ export const Compose: React.FC<ComposeProps> = ({
               
               <button
                 onClick={() => {
-                  setMessage(prev => ({
-                    ...prev,
-                    labels: [...prev.labels, 'important']
-                  }));
+                  // Label management would go here
                   setShowOptionsMenu(false);
                 }}
                 className={cn(
@@ -960,7 +1188,7 @@ export const Compose: React.FC<ComposeProps> = ({
                 )}
               >
                 <Tag className="w-4 h-4" />
-                Add label
+                Manage labels
               </button>
               
               <button
@@ -991,9 +1219,13 @@ export const Compose: React.FC<ComposeProps> = ({
             key={attachment.id}
             className={cn(
               'relative group p-2 pr-8 rounded-lg border-2',
-              isDark
-                ? 'bg-gray-700 border-gray-600'
-                : 'bg-gray-50 border-gray-200'
+              attachment.error
+                ? isDark
+                  ? 'bg-red-900/20 border-red-500/30'
+                  : 'bg-red-50 border-red-200'
+                : isDark
+                  ? 'bg-gray-700 border-gray-600'
+                  : 'bg-gray-50 border-gray-200'
             )}
           >
             <div className="flex items-center gap-2">
@@ -1003,7 +1235,7 @@ export const Compose: React.FC<ComposeProps> = ({
                   {attachment.name}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {attachment.size}
+                  {attachment.error || attachment.size}
                 </p>
               </div>
             </div>
@@ -1030,17 +1262,43 @@ export const Compose: React.FC<ComposeProps> = ({
             >
               <X className="w-3 h-3" />
             </button>
+            
+            {/* Download link for existing attachments */}
+            {attachment.download_url && !attachment.file && (
+              <a
+                href={attachment.download_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  'absolute -top-1 -right-1 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity',
+                  isDark
+                    ? 'hover:bg-gray-600 text-blue-400'
+                    : 'hover:bg-gray-200 text-blue-600'
+                )}
+                onClick={(e) => e.stopPropagation()}
+                title="Download"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </a>
+            )}
           </div>
         ))}
         
         <button
           onClick={() => fileInputRef.current?.click()}
+          disabled={!draftId && message.attachments.length === 0}
           className={cn(
             'p-2 rounded-lg border-2 border-dashed flex items-center gap-2 text-sm',
+            !draftId && message.attachments.length === 0
+              ? 'opacity-50 cursor-not-allowed'
+              : 'cursor-pointer',
             isDark
               ? 'border-gray-600 text-gray-400 hover:bg-gray-700'
               : 'border-gray-300 text-gray-600 hover:bg-gray-50'
           )}
+          title={!draftId ? 'Save draft first to attach files' : 'Add attachment'}
         >
           <Plus className="w-4 h-4" />
           Add attachment
@@ -1127,23 +1385,27 @@ export const Compose: React.FC<ComposeProps> = ({
         )}>
           <button
             onClick={saveDraft}
+            disabled={isSaving}
             className={cn(
               'px-2 py-1 rounded text-xs font-medium flex items-center gap-1',
-              isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-200'
+              isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-200',
+              'disabled:opacity-50'
             )}
           >
             <Save className="w-3 h-3" />
-            Save
+            {isSaving ? 'Saving...' : 'Save'}
           </button>
           <button
             onClick={handleSend}
+            disabled={isSending}
             className={cn(
               'px-2 py-1 rounded text-xs font-medium flex items-center gap-1 bg-blue-600 text-white',
-              isDark ? 'hover:bg-blue-700' : 'hover:bg-blue-700'
+              isDark ? 'hover:bg-blue-700' : 'hover:bg-blue-700',
+              'disabled:opacity-50'
             )}
           >
             <Send className="w-3 h-3" />
-            Send
+            {isSending ? 'Sending...' : 'Send'}
           </button>
         </div>
       </motion.div>
@@ -1269,6 +1531,9 @@ export const Compose: React.FC<ComposeProps> = ({
                 )}>
                   <Paperclip className="w-8 h-8 mx-auto mb-2 text-blue-500" />
                   <p className="font-medium">Drop files to attach</p>
+                  {!draftId && (
+                    <p className="text-xs mt-1 text-gray-500">Save draft first to attach files</p>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -1569,11 +1834,14 @@ export const Compose: React.FC<ComposeProps> = ({
             {/* Attach file button */}
             <button
               onClick={() => fileInputRef.current?.click()}
+              disabled={!draftId && message.attachments.length === 0}
               className={cn(
                 'p-2 rounded-lg transition-colors',
-                isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700'
+                !draftId && message.attachments.length === 0
+                  ? 'opacity-50 cursor-not-allowed'
+                  : isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700'
               )}
-              title="Attach file"
+              title={!draftId ? 'Save draft first to attach files' : 'Attach file'}
             >
               <Paperclip className="w-5 h-5" />
             </button>
@@ -1599,14 +1867,16 @@ export const Compose: React.FC<ComposeProps> = ({
             {/* Save Draft button */}
             <button
               onClick={saveDraft}
+              disabled={isSaving}
               className={cn(
                 'px-4 py-2 rounded-lg text-sm font-medium border-2',
                 isDark
                   ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
-                  : 'border-gray-200 text-gray-700 hover:bg-gray-100'
+                  : 'border-gray-200 text-gray-700 hover:bg-gray-100',
+                'disabled:opacity-50'
               )}
             >
-              Save Draft
+              {isSaving ? 'Saving...' : 'Save Draft'}
             </button>
             
             {/* Send button */}
