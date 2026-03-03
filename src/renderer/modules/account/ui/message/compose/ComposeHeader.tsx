@@ -3,10 +3,11 @@
  * COMPOSE HEADER COMPONENT
  * ============================================================================
  * Displays the window title-bar with:
- *  - Message type label (New / Reply / Forward)
+ *  - Brand logo and name (left)
+ *  - Message type label (New / Reply / Forward) - CENTERED
  *  - Scheduled-send badge
  *  - Auto-save indicator
- *  - Window controls: minimize / maximize / close
+ *  - Window controls: minimize / maximize / close (right)
  */
 
 import React from 'react';
@@ -15,6 +16,8 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../../../shared/utils/classNameUtils';
 import { type WindowState } from './composeTypes';
+import LogoImage from '../../../../../shared/assets/LogoImage'; 
+
 interface ComposeHeaderProps {
   theme: 'light' | 'dark';
   windowState: WindowState;
@@ -49,12 +52,26 @@ export const ComposeHeader: React.FC<ComposeHeaderProps> = ({
   return (
     <div
       className={cn(
-        'flex items-center justify-between px-4 py-3 border-b-2 select-none',
+        'flex items-center justify-between px-4 py-2 border-b-2 select-none',
         isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white',
       )}
     >
-      {/* Left: title + badges */}
-      <div className="flex items-center gap-3 min-w-0">
+      {/* Left: brand logo and name */}
+      <div className="flex items-center gap-2 shrink-0">
+        <LogoImage />
+        <div className="hidden sm:block">
+          <span
+            className={cn(
+              'text-sm font-bold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent',
+            )}
+          >
+            Custocare AI
+          </span>
+        </div>
+      </div>
+
+      {/* Center: message title and badges */}
+      <div className="flex-1 flex items-center justify-center gap-3 min-w-0 px-4">
         <h2 className="text-base font-semibold truncate">{title}</h2>
 
         {subject && (
