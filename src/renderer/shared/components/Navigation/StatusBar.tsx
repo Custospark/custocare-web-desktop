@@ -25,7 +25,6 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   isTransitioning,
   onToggleSidebarPosition,
   appVersion,
-  unreadCount,
   onNotificationClick,
 }) => {
   return (
@@ -67,7 +66,6 @@ export const StatusBar: React.FC<StatusBarProps> = ({
           sidebarPosition={sidebarPosition}
           isTransitioning={isTransitioning}
           onToggleSidebarPosition={onToggleSidebarPosition}
-          unreadCount={unreadCount}
           onNotificationClick={onNotificationClick}
         />
       </div>
