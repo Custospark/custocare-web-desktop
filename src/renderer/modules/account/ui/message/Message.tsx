@@ -17,7 +17,7 @@ interface MessageProps {
 const Message: React.FC<MessageProps> = ({ theme }) => {
   return (
     <BaseActionWorkspace
-      title="Messages"
+      title="Message Center"
       icon={<MessageCircleMore className="w-6 h-6" />}
       theme={theme}
       defaultActionTo={ACCOUNT_ROUTES.MESSAGES_INBOX}

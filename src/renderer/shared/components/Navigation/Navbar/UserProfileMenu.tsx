@@ -9,6 +9,7 @@ import React, { useRef, useEffect } from 'react';
 import {
   ChevronDown,User, Shield, Palette,
   LogOut,
+  Inbox,
 } from 'lucide-react';
 
 import { useSelector } from 'react-redux';
@@ -111,27 +112,37 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
       onLogout();
     }
   };
-
-  const menuItems: MenuItem[] = [
-    { 
-      icon: User,           
-      label: 'Profile Management',       
-      shortcut: '⌘P', 
-      route: ACCOUNT_ROUTES.SETTINGS_PROFILE 
-    },
-    { 
-      icon: Shield,           
-      label: 'Security & Authentication',   
-      shortcut: '⌘K', 
-      route: ACCOUNT_ROUTES.SETTINGS_SECURITY 
-    },
-    { 
-      icon: Palette,       
-      label: 'User Preferences',       
-      shortcut: '⌘E', 
-      route: ACCOUNT_ROUTES.SETTINGS_PREFERENCES 
-    },
-  ];
+const menuItems: MenuItem[] = [
+  // PRIMARY IDENTITY & SECURITY (Self-preservation & Trust)
+  { 
+    icon: User,           
+    label: 'My Profile',       
+    shortcut: '⌘P', 
+    route: ACCOUNT_ROUTES.SETTINGS_PROFILE 
+  },
+  { 
+    icon: Shield,           
+    label: 'Account Security',   
+    shortcut: '⌘K', 
+    route: ACCOUNT_ROUTES.SETTINGS_SECURITY 
+  },
+  
+  // SOCIAL CONNECTION (Belonging & Communication)
+  { 
+    icon: Inbox,           
+    label: 'Message Center',       
+    shortcut: '⌘M', 
+    route: ACCOUNT_ROUTES.MESSAGES_INBOX,
+  },
+  
+  // PERSONALIZATION (Autonomy & Control)
+  { 
+    icon: Palette,       
+    label: 'User Preferences',       
+    shortcut: '⌘E', 
+    route: ACCOUNT_ROUTES.SETTINGS_PREFERENCES 
+  },
+];
 
   const handleMenuItemClick = (route: string) => {
     onNavigate(route);

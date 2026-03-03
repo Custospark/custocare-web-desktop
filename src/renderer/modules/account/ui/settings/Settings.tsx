@@ -17,21 +17,21 @@ interface SettingsProps {
 const Settings: React.FC<SettingsProps> = ({ theme }) => {
   return (
     <BaseActionWorkspace
-      title="Account Administration"
+      title="Account Center"
       icon={<SettingsIcon className="w-6 h-6" />}
       theme={theme}
       defaultActionTo={ACCOUNT_ROUTES.SETTINGS_PROFILE}
       actions={[
         { 
           key: 'profile', 
-          label: 'Profile Management', 
+          label: 'My Profile', 
           icon: <User className="w-4 h-4" />, 
           to: ACCOUNT_ROUTES.SETTINGS_PROFILE,
           description: 'Maintain and update your account identity information'
         },
         { 
           key: 'security', 
-          label: 'Security & Authentication', 
+          label: 'Account Security', 
           icon: <Shield className="w-4 h-4" />, 
           to: ACCOUNT_ROUTES.SETTINGS_SECURITY,
           description: 'Configure password policies and multi-factor authentication'

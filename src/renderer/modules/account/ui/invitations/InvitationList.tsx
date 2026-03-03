@@ -12,7 +12,6 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { 
-  Mail, 
   Search, 
   RefreshCw, 
   AlertCircle,
@@ -24,6 +23,7 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  DoorOpen,
 } from 'lucide-react';
 import { useGetMyPendingInvitations } from '../../../administration/admin-module/api/team-management/queries/useStaffInvitationQueries';
 import { InvitationCard } from './InvitationCard';
@@ -250,7 +250,7 @@ export const InvitationList: React.FC<InvitationListProps> = ({
                   ? 'bg-blue-500/20 group-hover:bg-blue-500/30 group-hover:scale-110' 
                   : 'bg-blue-100 group-hover:bg-blue-200 group-hover:scale-110'
               )}>
-                <Mail className={cn(
+                <DoorOpen className={cn(
                   'w-6 h-6',
                   isDark ? 'text-blue-400' : 'text-blue-600'
                 )} />
