@@ -9,7 +9,7 @@
  *  - Attachment list with progress/error states
  *  - Schedule send button
  *  - Save draft, send, discard actions
- *  - FIXED: Footer no longer cropped, proper flex layout
+ *  - FIXED: Footer dropdowns no longer blocked by editor (z-index fix)
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -28,7 +28,7 @@ interface ComposeFooterProps {
   message: ComposeMessage;
   isSending: boolean;
   isSaving: boolean;
-  fileInputRef: React.RefObject<HTMLInputElement | null>; // FIXED: Added null to type
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPriorityChange: (priority: MessagePriority) => void;
   onReadReceiptChange: (value: boolean) => void;
@@ -90,7 +90,7 @@ export const ComposeFooter: React.FC<ComposeFooterProps> = ({
 
   return (
     <div className={cn(
-      'border-t-2 flex-shrink-0', // FIXED: Added flex-shrink-0 to prevent cropping
+      'border-t-2 flex-shrink-0 relative', // FIXED: Added relative positioning
       isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-200 bg-gray-50'
     )}>
       {/* Hidden file input */}
@@ -144,7 +144,7 @@ export const ComposeFooter: React.FC<ComposeFooterProps> = ({
                 )}
 
                 {att.error && (
-                  <AlertCircle className="w-3.5 h-3.5 text-red-500" title={att.error} />
+                  <AlertCircle className="w-3.5 h-3.5 text-red-500" />
                 )}
 
                 {att.progress === 100 && !att.error && (
@@ -184,8 +184,8 @@ export const ComposeFooter: React.FC<ComposeFooterProps> = ({
             <span className="hidden sm:inline">Attach</span>
           </button>
 
-          {/* Priority dropdown */}
-          <div className="relative" ref={priorityRef}>
+          {/* Priority dropdown - FIXED z-index and positioning */}
+          <div className="relative" ref={priorityRef} style={{ zIndex: 50 }}>
             <button
               onClick={() => setShowPriority(v => !v)}
               className={cn(
@@ -205,9 +205,13 @@ export const ComposeFooter: React.FC<ComposeFooterProps> = ({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -5 }}
                   className={cn(
-                    'absolute bottom-full left-0 mb-1 rounded-lg border shadow-lg overflow-hidden z-10',
+                    'absolute bottom-full left-0 mb-1 rounded-lg border shadow-lg overflow-hidden',
                     isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
                   )}
+                  style={{ 
+                    zIndex: 100,
+                    minWidth: '120px'
+                  }}
                 >
                   {PRIORITY_OPTIONS.map(p => {
                     const Icon = p.icon;
@@ -232,8 +236,8 @@ export const ComposeFooter: React.FC<ComposeFooterProps> = ({
             </AnimatePresence>
           </div>
 
-          {/* Labels dropdown */}
-          <div className="relative" ref={labelsRef}>
+          {/* Labels dropdown - FIXED z-index and positioning */}
+          <div className="relative" ref={labelsRef} style={{ zIndex: 50 }}>
             <button
               onClick={() => setShowLabels(v => !v)}
               className={cn(
@@ -257,9 +261,14 @@ export const ComposeFooter: React.FC<ComposeFooterProps> = ({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -5 }}
                   className={cn(
-                    'absolute bottom-full left-0 mb-1 rounded-lg border shadow-lg overflow-hidden z-10 w-64',
+                    'absolute bottom-full left-0 mb-1 rounded-lg border shadow-lg overflow-hidden w-64',
                     isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
                   )}
+                  style={{ 
+                    zIndex: 100,
+                    maxHeight: '400px',
+                    overflowY: 'auto'
+                  }}
                 >
                   <div className="p-2">
                     <p className={cn('text-xs font-semibold mb-2', isDark ? 'text-gray-400' : 'text-gray-600')}>

@@ -288,7 +288,7 @@ export const Compose: React.FC<ComposeProps> = props => {
          * those should use `position: fixed` internally so they
          * escape the overflow-hidden clip boundary.
          */}
-        <div className="shrink-0 overflow-x-auto">
+        <div className="shrink-0">
           <ComposeFooter
             theme={theme}
             message={message}
