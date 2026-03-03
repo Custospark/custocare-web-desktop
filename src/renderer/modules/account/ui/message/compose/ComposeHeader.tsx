@@ -14,7 +14,7 @@ import {
   X, Minimize2, Maximize2, Save, Clock,
 } from 'lucide-react';
 import { cn } from '../../../../../shared/utils/classNameUtils';
-import { WindowState } from './composeTypes';
+import { type WindowState } from './composeTypes';
 interface ComposeHeaderProps {
   theme: 'light' | 'dark';
   windowState: WindowState;

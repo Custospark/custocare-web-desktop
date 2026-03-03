@@ -16,7 +16,6 @@ import {
   Trash2,
   Archive,
   AlertCircle,
-  CheckCircle,
   X,
   ChevronLeft,
   Tag,
