@@ -366,13 +366,30 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
   };
 
   /* ── Route helpers ── */
-  const isRouteActive = useCallback(
-    (route: string) => {
-      if (route === ROUTES.DASHBOARD) return location.pathname === ROUTES.DASHBOARD;
-      return location.pathname.startsWith(route);
-    },
-    [location.pathname],
-  );
+const isRouteActive = useCallback(
+  (route: string) => {
+    // Exact match for dashboard
+    if (route === ROUTES.DASHBOARD) return location.pathname === ROUTES.DASHBOARD;
+    
+    // Get the base path (first two segments for platform-admin, first segment for others)
+    const pathSegments = location.pathname.split('/').filter(Boolean);
+    
+    // For platform-admin routes, match the two segments (/platform-admin/facilities/*)
+    if (route.includes('/platform-admin/')) {
+      const basePath = `/${pathSegments.slice(0, 1).join('/')}`;
+      return route.startsWith(basePath);
+    }
+    
+    // For account routes, match the first two segments (/account/*)
+    if (route === ROUTES.ACCOUNT) {
+      return pathSegments[0] === 'account';
+    }
+    
+    // For other routes, use startsWith
+    return location.pathname.startsWith(route);
+  },
+  [location.pathname],
+);
 
   const activeItemId = useMemo(() => {
     const activeItem = currentMenuItems.find((item) => isRouteActive(item.route));

@@ -130,7 +130,7 @@ export const ProtectedRoutes = () => [
 
           <Route
             key="platform-administration"
-            path={PLATFORM_ADMIN_ROUTES.ROOT}
+            path={ROUTES.PLATFORM_ADMINISTRATION}
             element={
               <SuspenseWrapper variant="table">
                 <WithThemeProp Component={PlatformAdministrationModule} />
