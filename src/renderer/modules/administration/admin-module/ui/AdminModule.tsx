@@ -10,6 +10,7 @@ import {
   Boxes,
   MapIcon,
   Settings2,
+  CreditCard,
 } from 'lucide-react';
 import AdminOverview from './admin-overview-ui/AdminOverview';
 import AdminTeam from './team-ui/AdminTeam';
@@ -18,6 +19,7 @@ import AdminServiceCatalog from './service-catalog-ui/AdminServiceCatalog';
 import AdminInventory from './inventory/AdminInventoryItems';
 import ClinicalSpaceManagement from './clinical-space/ClinicalSpaceManagement';
 import FacilitySettings from './facility-settings/FacilitySettings';
+import PlansAndSubscriptions from './plans-and-subscriptions/PlansAndSubscriptions';
 
 /**
  * ============================================================================
@@ -31,6 +33,7 @@ import FacilitySettings from './facility-settings/FacilitySettings';
  * - Team (staff, invitations, roles)
  * - Facility structure
  * - Service catalog & pricing
+ * - Plans & subscriptions
  *
  * Architecture Highlights:
  * -----------------------
@@ -46,6 +49,10 @@ import FacilitySettings from './facility-settings/FacilitySettings';
  * 2. AdminTeam
  * 3. AdminFacilitySetup
  * 4. AdminServiceCatalog
+ * 5. AdminInventory
+ * 6. ClinicalSpaceManagement
+ * 7. AdminPlansSubscriptions
+ * 8. FacilitySettings
  *
  * @example
  * ```tsx
@@ -74,30 +81,36 @@ const ADMIN_OPERATIONS: Operation[] = [
     description: 'Configure departments and facility structure',
   },
   {
-  id: 'space-governance',
-  label: 'Clinical Space Management',
-  icon: <MapIcon className="w-4 h-4" />,
-  description: 'Define rooms, floors, buildings, and manage staff space assignments',
-},
+    id: 'space-governance',
+    label: 'Clinical Space Management',
+    icon: <MapIcon className="w-4 h-4" />,
+    description: 'Define rooms, floors, buildings, and manage staff space assignments',
+  },
   {
     id: 'service-catalog',
     label: 'Clinical & Billing Services',
     icon: <Layers className="w-4 h-4" />,
     description: 'Manage services and pricing versions',
   },
-   {
+  {
     id: 'inventory',
     label: 'Supply & Inventory Management',
     icon: <Boxes className="w-4 h-4" />,
     description: 'Manage stock items, locations, and inventory controls',
   },
- {
+  {
     id: 'team',
     label: 'Workforce Administration',
     icon: <Users className="w-4 h-4" />,
     description: 'Manage staff, invitations, and roles',
   },
-    {
+  {
+    id: 'plans-subscriptions',
+    label: 'Plans & Subscriptions',
+    icon: <CreditCard className="w-4 h-4" />,
+    description: 'Manage facility plans, subscriptions, and billing',
+  },
+  {
     id: 'facility-settings',
     label: 'Enterprise Facility Settings',
     icon: <Settings2 className="w-4 h-4" />,
@@ -116,13 +129,12 @@ export type AdminOperationId =
   | 'service-catalog'
   | 'inventory'
   | 'space-governance'
-  |'facility-settings'
-  ;
+  | 'plans-subscriptions'
+  | 'facility-settings';
 
 /* ============================================================================
    SUBCOMPONENT IMPORTS
 ============================================================================ */
-
 
 /* ============================================================================
    MAIN COMPONENT
@@ -179,6 +191,8 @@ export const AdminModule: React.FC = () => {
         return <AdminServiceCatalog theme={theme} />;
       case 'space-governance':
         return <ClinicalSpaceManagement theme={theme} />;
+      case 'plans-subscriptions':
+        return <PlansAndSubscriptions theme={theme} />;
       case 'facility-settings':
         return <FacilitySettings theme={theme} />;
       default:
@@ -199,7 +213,6 @@ export const AdminModule: React.FC = () => {
       onOperationChange={handleOperationChange}
       defaultOperation="overview"
       contextTitle="Facility Governance"
-
     >
       {renderWorkspaceContent()}
     </ContentLayout>

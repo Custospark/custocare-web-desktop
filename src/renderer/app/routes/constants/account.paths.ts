@@ -16,4 +16,6 @@ export const ACCOUNT_ROUTES = {
   SETTINGS_PROFILE: `${ROUTES.ACCOUNT}/settings/profile`,
   SETTINGS_SECURITY: `${ROUTES.ACCOUNT}/settings/security`,
   SETTINGS_PREFERENCES: `${ROUTES.ACCOUNT}/settings/preferences`,
+
+  
 } as const;

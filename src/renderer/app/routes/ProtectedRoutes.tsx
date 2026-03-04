@@ -13,6 +13,7 @@ import { medicalRecordsRoutes } from './modules/medical-records';
 import { clinicalSpaceManagementRoutes } from './modules/adminstration/clinicalspace';
 import { facilitySettingsRoutes } from './modules/adminstration/facility-settings';
 import { platformAdminRoutes } from './modules/PlatformAdministration';
+import { plansSubscriptionsRoutes } from './modules/adminstration/plans-and-subscriptions';
 
 // Lazy load modules
 const MedicalRecordsModule = React.lazy(
@@ -113,6 +114,7 @@ export const ProtectedRoutes = () => [
           >
             {clinicalSpaceManagementRoutes}
             {facilitySettingsRoutes}
+            {plansSubscriptionsRoutes}
           </Route>
 
           <Route
