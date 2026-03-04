@@ -83,7 +83,7 @@ const ADMIN_OPERATIONS = [
     description: 'Manage facility plans, subscriptions, and billing'
   },
   { 
-    id: 'clinical-space-management', 
+    id: 'settings', 
     label: 'Enterprise Facility Settings', 
     icon: <Settings2 className="w-4 h-4" />,
     description: 'Manage facility identity, regulatory parameters, and operational policies'
