@@ -36,7 +36,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
         {/* ── Animated gradient border wrapper ── */}
         <div className="relative">
           <motion.div
-            className="absolute inset-0 rounded-xl"
+            className="absolute inset-0 rounded-xl cursor-pointer"
             style={{
               background: GRADIENT_FAST,
               backgroundSize: '300% 100%',
@@ -75,7 +75,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
               onFocus={onFocus}
               onBlur={onBlur}
               autoFocus
-              placeholder="Search modules, pages, actions…"
+              placeholder="Search modules, pages, actions, or settings..."              
               aria-label="Global module search"
               aria-autocomplete="list"
               className={cn(

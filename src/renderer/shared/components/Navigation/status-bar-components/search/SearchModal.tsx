@@ -266,7 +266,7 @@ const SearchModalInner: React.FC<SearchModalProps> = ({ isOpen, onClose, theme }
               </div>
 
               {/* ── Keyboard hints footer ── */}
-              <div
+             <div
                 className={cn(
                   'flex items-center justify-between px-4 py-2.5 border-t',
                   isDark ? 'border-gray-800 bg-gray-900/80' : 'border-gray-100 bg-gray-50/80'
@@ -290,8 +290,13 @@ const SearchModalInner: React.FC<SearchModalProps> = ({ isOpen, onClose, theme }
                     </span>
                   ))}
                 </div>
-                <span className={cn('text-[10px]', isDark ? 'text-gray-700' : 'text-gray-400')}>
-                  HMS Search
+                
+                {/* Gradient text for Custocare AI Search */}
+                <span className={cn(
+                  'text-[10px] font-medium bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent',
+                  isDark ? 'opacity-90' : 'opacity-100'
+                )}>
+                  Custocare AI Search
                 </span>
               </div>
             </div>
