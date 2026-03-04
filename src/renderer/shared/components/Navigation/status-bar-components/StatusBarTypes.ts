@@ -16,6 +16,8 @@ export interface SearchableModule {
   moduleCode: string;
   keywords: string[];
   category: string;
+  requiredCapability?: string; // Optional: specific capability required
+
 }
 
 export interface StatusBarProps {

@@ -6,9 +6,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../../../app/store/hooks/useApp';
 import { selectAccessibleModuleCodes } from '../../../../app/store/slices/activeContextSlice';
 import { useSelector } from 'react-redux';
-import { isInPatientMode } from '../../../../app/store/utils/contextSelectors';
-import { ACCOUNT_ROUTES,ROUTES } from '../../../../app/routes/routeConstants';
+import { isInPatientMode, getAvailableCapabilities } from '../../../../app/store/utils/contextSelectors';
+import { ACCOUNT_ROUTES, ROUTES } from '../../../../app/routes/routeConstants';
+import { PLATFORM_ADMIN_ROUTES } from '../../../../app/routes/constants/platform-administration.paths';
+import { MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
 import type { SearchableModule, ThemeMode } from './StatusBarTypes';
+import { ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from '../../../../app/routes/constants/administration.paths';
+import { ADMINISTRATION_FACILITY_SETTINGS_ROUTES } from '../../../../app/routes/constants/administration.paths';
+import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../app/routes/constants/administration.paths';
 
 interface SearchBarProps {
   searchQuery: string;
@@ -39,6 +44,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   // Redux state for accessible modules
   const accessibleModuleCodes = useAppSelector(selectAccessibleModuleCodes);
   const inPatientMode = useSelector(isInPatientMode);
+  const availableCapabilities = useSelector(getAvailableCapabilities);
 
   // Patient accessible modules
   const accessiblePatientModuleCodes = useMemo(
@@ -46,114 +52,439 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     []
   );
 
-  // Define all searchable modules
-  const allModules: SearchableModule[] = useMemo(() => [
-    {
-      id: 'patient-dashboard',
-      label: 'My Health',
-      route: ROUTES.DASHBOARD,
-      description: 'Personal health overview',
-      moduleCode: 'patient_dashboard',
-      keywords: ['health', 'patient', 'dashboard', 'overview', 'personal'],
-      category: 'Patient Portal',
-    },
-    {
-      id: 'staff-dashboard',
-      label: 'Staff Portal',
-      route: '/staff-dashboard',
-      description: 'Staff workspace',
-      moduleCode: 'staff_dashboard',
-      keywords: ['staff', 'portal', 'dashboard', 'workspace', 'employee'],
-      category: 'Administration',
-    },
-    {
-      id: 'medical-records',
-      label: 'Front Desk',
-      route: '/medical-records',
-      description: 'Medical Records',
-      moduleCode: 'medical_records',
-      keywords: ['front', 'desk', 'reception', 'records', 'medical', 'registration'],
-      category: 'Clinical',
-    },
-    {
-      id: 'nursing-care',
-      label: 'Nursing Care',
-      route: '/nursing',
-      description: 'Vitals & ward care',
-      moduleCode: 'nursing',
-      keywords: ['nursing', 'vitals', 'ward', 'care', 'nurse'],
-      category: 'Clinical',
-    },
-    {
-      id: 'clinical',
-      label: 'Clinical Workspace',
-      route: '/clinical',
-      description: 'Doctor Consultation & diagnosis',
-      moduleCode: 'clinical',
-      keywords: ['clinical', 'doctor', 'consultation', 'diagnosis', 'physician'],
-      category: 'Clinical',
-    },
-    {
-      id: 'laboratory',
-      label: 'Laboratory',
-      route: '/laboratory',
-      description: 'Lab tests, results & specimens',
-      moduleCode: 'laboratory',
-      keywords: ['lab', 'laboratory', 'tests', 'results', 'specimens', 'pathology'],
-      category: 'Clinical',
-    },
-    {
-      id: 'pharmacy',
-      label: 'Pharmacy',
-      route: '/pharmacy',
-      description: 'Medication dispensing',
-      moduleCode: 'pharmacy',
-      keywords: ['pharmacy', 'medication', 'drugs', 'dispensing', 'prescriptions'],
-      category: 'Clinical',
-    },
-    {
-      id: 'billing',
-      label: 'Billing & Finance',
-      route: '/billing',
-      description: 'Invoices & payments',
-      moduleCode: 'billing',
-      keywords: ['billing', 'finance', 'invoices', 'payments', 'accounts'],
-      category: 'Finance',
-    },
-    {
-      id: 'administration',
-      label: 'Facility Governance',
-      route: '/administration',
-      description: 'Configure facilities, manage workforce access, services, and operational controls',
-      moduleCode: 'administration',
-      keywords: ['admin', 'administration', 'governance', 'facilities', 'management', 'settings'],
-      category: 'Administration',
-    },
-    {
-      id: 'account',
-      label: 'Account',
-      route: ACCOUNT_ROUTES.SETTINGS_PROFILE,
-      description: 'Manage your profile, security, and preferences',
-      moduleCode: 'account',
-      keywords: ['account', 'profile', 'security', 'preferences', 'settings', 'user'],
-      category: 'System',
-    },
-  ], []);
+  // Define all searchable modules including Spatie roles
+// Define all searchable modules
+const allModules: SearchableModule[] = useMemo(() => [
+  // ============================================================================
+  // PATIENT PORTAL
+  // ============================================================================
+  {
+    id: 'patient-dashboard',
+    label: 'My Health',
+    route: ROUTES.PATIENT_DASHBOARD,
+    description: 'Personal health overview',
+    moduleCode: 'patient_dashboard',
+    keywords: ['health', 'patient', 'dashboard', 'overview', 'personal'],
+    category: 'Patient Portal',
+  },
 
-  // Filter accessible modules
+  // ============================================================================
+  // STAFF PORTAL
+  // ============================================================================
+  {
+    id: 'staff-dashboard',
+    label: 'Staff Portal',
+    route: ROUTES.STAFF_DASHBOARD,
+    description: 'Staff workspace',
+    moduleCode: 'staff_dashboard',
+    keywords: ['staff', 'portal', 'dashboard', 'workspace', 'employee'],
+    category: 'Administration',
+  },
+
+  // ============================================================================
+  // CLINICAL MODULES
+  // ============================================================================
+  
+  // Front Desk / Medical Records
+  {
+    id: 'medical-records',
+    label: 'Front Desk',
+    route: ROUTES.MEDICAL_RECORDS,
+    description: 'Medical Records & Patient Registration',
+    moduleCode: 'medical_records',
+    keywords: ['front desk', 'reception', 'records', 'medical', 'registration', 'patient intake'],
+    category: 'Clinical',
+  },
+  {
+    id: 'patient-search',
+    label: 'Search Patient',
+    route: MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH,
+    description: 'Search and find patient records',
+    moduleCode: 'medical_records',
+    keywords: ['search', 'find', 'patient', 'records', 'lookup'],
+    category: 'Clinical',
+  },
+  {
+    id: 'new-patient',
+    label: 'New Patient Registration',
+    route: MEDICAL_RECORDS_ROUTES.PATIENTS_REGISTER,
+    description: 'Register a new patient',
+    moduleCode: 'medical_records',
+    keywords: ['new', 'register', 'create', 'patient', 'enroll'],
+    category: 'Clinical',
+  },
+  {
+    id: 'patient-queue',
+    label: 'Patient Queue',
+    route: MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE,
+    description: 'Manage patient waiting queue',
+    moduleCode: 'medical_records',
+    keywords: ['queue', 'waiting', 'line', 'patients', 'triage'],
+    category: 'Clinical',
+  },
+  {
+    id: 'walk-in-patient',
+    label: 'Walk-In Patient',
+    route: MEDICAL_RECORDS_ROUTES.WALKIN_PATIENT,
+    description: 'Process walk-in patient registration',
+    moduleCode: 'medical_records',
+    keywords: ['walk-in', 'urgent', 'unscheduled', 'drop-in'],
+    category: 'Clinical',
+  },
+  {
+    id: 'get-complaints',
+    label: 'Get Complaints',
+    route: MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS,
+    description: 'Record patient complaints and symptoms',
+    moduleCode: 'medical_records',
+    keywords: ['complaints', 'symptoms', 'issues', 'problems', 'chief complaint'],
+    category: 'Clinical',
+  },
+  {
+    id: 'forward-patient',
+    label: 'Forward Patient',
+    route: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT,
+    description: 'Forward patient to another department',
+    moduleCode: 'medical_records',
+    keywords: ['forward', 'transfer', 'refer', 'department', 'specialist'],
+    category: 'Clinical',
+  },
+  {
+    id: 'patient-billing-space',
+    label: 'Patient Billing Space',
+    route: MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SPACE,
+    description: 'View patient billing and payment information',
+    moduleCode: 'medical_records',
+    keywords: ['billing', 'payment', 'invoice', 'charges', 'patient billing'],
+    category: 'Clinical',
+  },
+  {
+    id: 'visit-status',
+    label: 'Visit Status',
+    route: MEDICAL_RECORDS_ROUTES.VISIT_STATUS,
+    description: 'Track and update patient visit status',
+    moduleCode: 'medical_records',
+    keywords: ['visit', 'status', 'tracking', 'encounter', 'appointment'],
+    category: 'Clinical',
+  },
+
+  // Nursing Care
+  {
+    id: 'nursing-care',
+    label: 'Nursing Care',
+    route: ROUTES.NURSING,
+    description: 'Vitals & ward care',
+    moduleCode: 'nursing',
+    keywords: ['nursing', 'vitals', 'ward', 'care', 'nurse'],
+    category: 'Clinical',
+  },
+
+  // Clinical Workspace
+  {
+    id: 'clinical',
+    label: 'Clinical Workspace',
+    route: ROUTES.CLINICAL,
+    description: 'Doctor Consultation & diagnosis',
+    moduleCode: 'clinical',
+    keywords: ['clinical', 'doctor', 'consultation', 'diagnosis', 'physician'],
+    category: 'Clinical',
+  },
+
+  // Laboratory
+  {
+    id: 'laboratory',
+    label: 'Laboratory',
+    route: ROUTES.LABORATORY,
+    description: 'Lab tests, results & specimens',
+    moduleCode: 'laboratory',
+    keywords: ['lab', 'laboratory', 'tests', 'results', 'specimens', 'pathology'],
+    category: 'Clinical',
+  },
+
+  // Pharmacy
+  {
+    id: 'pharmacy',
+    label: 'Pharmacy',
+    route: ROUTES.PHARMACY,
+    description: 'Medication dispensing',
+    moduleCode: 'pharmacy',
+    keywords: ['pharmacy', 'medication', 'drugs', 'dispensing', 'prescriptions'],
+    category: 'Clinical',
+  },
+
+  // ============================================================================
+  // FINANCE MODULE
+  // ============================================================================
+  {
+    id: 'billing',
+    label: 'Billing & Finance',
+    route: ROUTES.BILLING,
+    description: 'Invoices & payments',
+    moduleCode: 'billing',
+    keywords: ['billing', 'finance', 'invoices', 'payments', 'accounts'],
+    category: 'Finance',
+  },
+
+  // ============================================================================
+  // ADMINISTRATION MODULES
+  // ============================================================================
+  
+  // Facility Governance (Main Admin)
+  {
+    id: 'administration',
+    label: 'Facility Governance',
+    route: ROUTES.ADMINISTRATION,
+    description: 'Configure facilities, manage workforce access, services, and operational controls',
+    moduleCode: 'administration',
+    keywords: ['admin', 'administration', 'governance', 'facilities', 'management', 'settings'],
+    category: 'Administration',
+  },
+
+  // Clinical Space Management
+  {
+    id: 'clinical-rooms',
+    label: 'Clinical Rooms',
+    route: ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.CLINICAL_ROOMS,
+    description: 'Manage clinical rooms and spaces',
+    moduleCode: 'administration',
+    keywords: ['rooms', 'clinical', 'space', 'facility', 'consultation'],
+    category: 'Administration',
+  },
+  {
+    id: 'ward-management',
+    label: 'Ward Management',
+    route: ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.WARD_MANAGEMENT,
+    description: 'Manage hospital wards and bed allocation',
+    moduleCode: 'administration',
+    keywords: ['ward', 'beds', 'inpatient', 'unit', 'nursing unit'],
+    category: 'Administration',
+  },
+  {
+    id: 'facility-zones',
+    label: 'Facility Zones',
+    route: ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.FACILITY_ZONES,
+    description: 'Define and manage facility zones',
+    moduleCode: 'administration',
+    keywords: ['zones', 'areas', 'sections', 'departments', 'facility layout'],
+    category: 'Administration',
+  },
+  {
+    id: 'space-allocation',
+    label: 'Space Allocation',
+    route: ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.SPACE_ALLOCATION,
+    description: 'Allocate staff to spaces and rooms',
+    moduleCode: 'administration',
+    keywords: ['allocation', 'assignment', 'staff', 'space', 'room assignment'],
+    category: 'Administration',
+  },
+
+  // Facility Settings
+  {
+    id: 'facility-identity',
+    label: 'Facility Identity',
+    route: ADMINISTRATION_FACILITY_SETTINGS_ROUTES.FACILITY_IDENTITY,
+    description: 'Manage facility profile and branding',
+    moduleCode: 'administration',
+    keywords: ['identity', 'profile', 'branding', 'facility info', 'details'],
+    category: 'Administration',
+  },
+  {
+    id: 'operational-policies',
+    label: 'Operational Policies',
+    route: ADMINISTRATION_FACILITY_SETTINGS_ROUTES.OPERATIONAL_POLICIES,
+    description: 'Configure facility operational policies',
+    moduleCode: 'administration',
+    keywords: ['policies', 'rules', 'guidelines', 'procedures', 'operations'],
+    category: 'Administration',
+  },
+
+  // Plans & Subscriptions
+  {
+    id: 'available-plans',
+    label: 'Available Plans',
+    route: ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS,
+    description: 'Browse and manage available subscription plans',
+    moduleCode: 'administration',
+    keywords: ['plans', 'subscriptions', 'pricing', 'tiers', 'packages'],
+    category: 'Administration',
+  },
+  {
+    id: 'facility-subscriptions',
+    label: 'Facility Subscriptions',
+    route: ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.SUBSCRIPTIONS,
+    description: 'Manage facility subscriptions',
+    moduleCode: 'administration',
+    keywords: ['subscriptions', 'facility', 'plans', 'enrollment'],
+    category: 'Administration',
+  },
+  {
+    id: 'payments',
+    label: 'Payments',
+    route: ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS,
+    description: 'Manage payment methods and history',
+    moduleCode: 'administration',
+    keywords: ['payments', 'billing', 'credit card', 'payment method'],
+    category: 'Administration',
+  },
+
+  // ============================================================================
+  // PLATFORM ADMINISTRATION (Super Admin Only)
+  // ============================================================================
+  {
+    id: 'platform-admin-facilities',
+    label: 'Platform Administration - Facilities',
+    route: PLATFORM_ADMIN_ROUTES.FACILITIES,
+    description: 'Manage all facilities across the platform',
+    moduleCode: 'platform_administration',
+    keywords: ['platform', 'admin', 'facilities', 'global', 'system', 'management'],
+    category: 'Platform Administration',
+    requiredCapability: 'super_admin',
+  },
+  {
+    id: 'platform-admin-users',
+    label: 'Platform Administration - Users',
+    route: PLATFORM_ADMIN_ROUTES.USERS,
+    description: 'Manage all users across the platform',
+    moduleCode: 'platform_administration',
+    keywords: ['platform', 'admin', 'users', 'global', 'accounts', 'management'],
+    category: 'Platform Administration',
+    requiredCapability: 'super_admin',
+  },
+  {
+    id: 'platform-admin-plans',
+    label: 'Platform Plans & Subscriptions',
+    route: PLATFORM_ADMIN_ROUTES.FACILITIES_PLANS,
+    description: 'Manage global subscription plans and pricing',
+    moduleCode: 'platform_administration',
+    keywords: ['platform', 'plans', 'subscriptions', 'global', 'pricing'],
+    category: 'Platform Administration',
+    requiredCapability: 'super_admin',
+  },
+
+  // ============================================================================
+  // ACCOUNT MODULES (Always Accessible)
+  // ============================================================================
+  
+  // Account Settings
+  {
+    id: 'account-profile',
+    label: 'My Profile',
+    route: ACCOUNT_ROUTES.SETTINGS_PROFILE,
+    description: 'Maintain and update your account identity information',
+    moduleCode: 'account',
+    keywords: ['profile', 'personal', 'information', 'details', 'name', 'contact'],
+    category: 'Account',
+  },
+  {
+    id: 'account-security',
+    label: 'Account Security',
+    route: ACCOUNT_ROUTES.SETTINGS_SECURITY,
+    description: 'Configure password policies and multi-factor authentication',
+    moduleCode: 'account',
+    keywords: ['security', 'password', 'mfa', 'authentication', 'login', '2fa'],
+    category: 'Account',
+  },
+  {
+    id: 'account-preferences',
+    label: 'User Preferences',
+    route: ACCOUNT_ROUTES.SETTINGS_PREFERENCES,
+    description: 'Customize interface behavior and system experience',
+    moduleCode: 'account',
+    keywords: ['preferences', 'settings', 'theme', 'language', 'notifications'],
+    category: 'Account',
+  },
+  {
+    id: 'account-invitations',
+    label: 'Invitations',
+    route: ACCOUNT_ROUTES.INVITATIONS,
+    description: 'Manage facility and team invitations',
+    moduleCode: 'account',
+    keywords: ['invitations', 'facility', 'team', 'join', 'access', 'invites'],
+    category: 'Account',
+  },
+
+  // Message Center
+  {
+    id: 'message-center',
+    label: 'Message Center',
+    route: ACCOUNT_ROUTES.MESSAGES,
+    description: 'Inbox and message center',
+    moduleCode: 'account',
+    keywords: ['messages', 'inbox', 'communication', 'notifications', 'chat'],
+    category: 'Account',
+  },
+  {
+    id: 'compose-message',
+    label: 'Compose Message',
+    route: ACCOUNT_ROUTES.MESSAGES_COMPOSE,
+    description: 'Write and send new messages',
+    moduleCode: 'account',
+    keywords: ['compose', 'write', 'send', 'new message', 'email'],
+    category: 'Account',
+  },
+  {
+    id: 'message-inbox',
+    label: 'Message Inbox',
+    route: ACCOUNT_ROUTES.MESSAGES_INBOX,
+    description: 'View received messages',
+    moduleCode: 'account',
+    keywords: ['inbox', 'received', 'messages', 'unread'],
+    category: 'Account',
+  },
+  {
+    id: 'sent-messages',
+    label: 'Sent Messages',
+    route: ACCOUNT_ROUTES.MESSAGES_SENT,
+    description: 'View sent messages',
+    moduleCode: 'account',
+    keywords: ['sent', 'outbox', 'sent items'],
+    category: 'Account',
+  },
+  {
+    id: 'draft-messages',
+    label: 'Draft Messages',
+    route: ACCOUNT_ROUTES.MESSAGES_DRAFT,
+    description: 'View and edit draft messages',
+    moduleCode: 'account',
+    keywords: ['draft', 'unsent', 'saved'],
+    category: 'Account',
+  },
+  {
+    id: 'trash-messages',
+    label: 'Trash',
+    route: ACCOUNT_ROUTES.MESSAGES_TRASH,
+    description: 'View deleted messages',
+    moduleCode: 'account',
+    keywords: ['trash', 'deleted', 'bin', 'recycle'],
+    category: 'Account',
+  },
+], []);
+  // Filter accessible modules based on user's permissions
   const accessibleModules = useMemo(() => {
     if (inPatientMode) {
+      // Patient mode: only patient dashboard and account
       return allModules.filter(module => {
         if (module.moduleCode === 'account') return true;
         return accessiblePatientModuleCodes.includes(module.moduleCode);
       });
     } else {
+      // Staff or Spatie role mode
       return allModules.filter(module => {
+        // Account module is always accessible
         if (module.moduleCode === 'account') return true;
+        
+        // Check if module requires a specific capability
+        if (module.requiredCapability) {
+          // Only show if user has that capability AND the module code is accessible
+          return availableCapabilities.includes(module.requiredCapability) && 
+                 accessibleModuleCodes.includes(module.moduleCode);
+        }
+        
+        // Regular modules: check if accessible via module codes
         return accessibleModuleCodes.includes(module.moduleCode);
       });
     }
-  }, [allModules, accessibleModuleCodes, accessiblePatientModuleCodes, inPatientMode]);
+  }, [allModules, accessibleModuleCodes, accessiblePatientModuleCodes, inPatientMode, availableCapabilities]);
 
   // Comprehensive search filtering with debounce
   useEffect(() => {
@@ -333,8 +664,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                               'text-xs px-2 py-0.5 rounded-full inline-flex items-center justify-center',
                               'w-fit',
                               theme === 'dark'
-                                ? 'bg-blue-900/30 text-blue-300 border border-blue-700/30'
-                                : 'bg-blue-50 text-blue-700 border border-blue-200/50'
+                                ? module.category === 'Platform Administration'
+                                  ? 'bg-purple-900/30 text-purple-300 border border-purple-700/30'
+                                  : 'bg-blue-900/30 text-blue-300 border border-blue-700/30'
+                                : module.category === 'Platform Administration'
+                                  ? 'bg-purple-50 text-purple-700 border border-purple-200/50'
+                                  : 'bg-blue-50 text-blue-700 border border-blue-200/50'
                             )}
                           >
                             {module.category}
