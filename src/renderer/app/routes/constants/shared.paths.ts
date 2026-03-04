@@ -50,6 +50,8 @@ export const ROUTES = {
   BILLING: '/billing',
   ADMINISTRATION: '/administration',
   ACCOUNT: '/account',
+  PLATFORM_ADMINISTRATION: '/platform-admin',
+  SYSTEM_SETTINGS: '/system-settings',
 } as const;
 
 

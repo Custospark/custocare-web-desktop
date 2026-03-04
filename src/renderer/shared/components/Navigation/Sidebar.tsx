@@ -13,10 +13,12 @@ import {
   MonitorCheckIcon,
   HeadphonesIcon,
   X,
+  Globe,
 } from 'lucide-react';
 import { type SidebarProps } from '../../types/index';
 import { cn } from '../../types/cn';
 import { ROUTES } from '../../../app/routes/routeConstants';
+import { PLATFORM_ADMIN_ROUTES } from '../../../app/routes/constants/platform-administration.paths';
 import { useAppSelector } from '../../../app/store/hooks/useApp';
 import {
   selectAccessibleModuleCodes,
@@ -31,6 +33,9 @@ import {
   getStaffUuid,
   isInPatientMode,
   isInStaffMode,
+  getActiveCapability,
+  getStaffFacilities,
+  getActiveFacilityId,
 } from '../../../app/store/utils/contextSelectors';
 import { getRoleDisplayName as formatName } from '../../utils/facilityRoleFormator';
 import LogoImage from '../../assets/LogoImage';
@@ -50,10 +55,10 @@ interface MenuItem {
   stats?: string;
   shortcut?: string;
   glowColor?: string;
-  badge?: string | number;
-  badgeVariant?: 'urgent' | 'pro' | 'default';
   moduleCode: string;
-  category?: 'clinical' | 'admin' | 'patient' | 'system' | 'finance';
+  category?: 'clinical' | 'admin' | 'patient' | 'system' | 'finance' | 'platform';
+  // Which capabilities this menu item belongs to
+  allowedCapabilities: string[];
 }
 
 interface SidebarExtendedProps extends SidebarProps {
@@ -68,41 +73,54 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
   className,
   theme = 'dark',
 }) => {
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeHover, setActiveHover] = useState<string | null>(null);
-  const [touchStart, setTouchStart]   = useState<number | null>(null);
-  const sidebarRef       = useRef<HTMLDivElement>(null);
-  const navContainerRef  = useRef<HTMLElement>(null);
-  const activeItemRef    = useRef<HTMLAnchorElement | null>(null);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const navContainerRef = useRef<HTMLElement>(null);
+  const activeItemRef = useRef<HTMLAnchorElement | null>(null);
   const user = useSelector(selectUser);
+  
   const displayName = 
     user?.profile?.last_name && user?.profile?.first_name
-        ? `${user.profile.last_name} ${user.profile.first_name}`
-        : user?.profile?.display_name || 'User';
-  
+      ? `${user.profile.last_name} ${user.profile.first_name}`
+      : user?.profile?.display_name || 'User';
 
   /* ── Context selectors ── */
-  const accessibleModuleCodes  = useAppSelector(selectAccessibleModuleCodes);
-  const currentCapabilityName  = useAppSelector(selectCurrentCapabilityName);
-  const activeFacilityName     = useAppSelector(selectActiveFacilityName);
-  const activeRoleCode         = useAppSelector(selectActiveRoleCode);
-
+  const accessibleModuleCodes = useAppSelector(selectAccessibleModuleCodes);
+  const currentCapabilityName = useAppSelector(selectCurrentCapabilityName);
+  const activeFacilityName = useAppSelector(selectActiveFacilityName);
+  const activeRoleCode = useAppSelector(selectActiveRoleCode);
+  
+  /* ── Get current capability ── */
+  const activeCapability = useSelector(getActiveCapability);
+  const staffFacilities = useSelector(getStaffFacilities);
+  const activeFacilityId = useSelector(getActiveFacilityId);
 
   /* ── UUID helpers ── */
-  const staffNumber  = useSelector(getStaffUuid);
+  const staffNumber = useSelector(getStaffUuid);
   const patientNumber = useSelector(getPatientUuid);
 
   /* ── Mode flags ── */
   const inPatientMode = useSelector(isInPatientMode);
-  const inStaffMode   = useSelector(isInStaffMode);
+  const inStaffMode = useSelector(isInStaffMode);
 
   const isDark = theme === 'dark';
 
-  /* ── Master menu configuration ── */
+  /* ── Get modules for current facility (if in staff mode with facility) ── */
+  const currentFacilityModules = useMemo(() => {
+    if (inStaffMode && activeFacilityId && staffFacilities.length > 0) {
+      const facility = staffFacilities.find(f => f.facility_id === activeFacilityId);
+      return facility?.modules?.filter(m => m.is_active).map(m => m.code) || [];
+    }
+    return [];
+  }, [inStaffMode, activeFacilityId, staffFacilities]);
+
+  /* ── Master menu configuration with capability ownership ── */
   const menuConfig: MenuItem[] = useMemo(
     () => [
-      // Dashboard Modules
+      // Patient Module - ONLY patient capability
       {
         id: 'patient-dashboard',
         label: 'My Health',
@@ -115,7 +133,10 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         glowColor: 'from-emerald-500 to-teal-400',
         moduleCode: 'patient_dashboard',
         category: 'patient',
+        allowedCapabilities: ['patient'],
       },
+      
+      // Staff Dashboard - ONLY staff capability
       {
         id: 'staff-dashboard',
         label: 'Staff Portal',
@@ -128,11 +149,12 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         glowColor: 'from-purple-500 to-pink-400',
         moduleCode: 'staff_dashboard',
         category: 'admin',
+        allowedCapabilities: ['staff'],
       },
 
-      // Clinical Modules
+      // Clinical Modules - ONLY staff capability (facility-based)
       {
-        id: 'Front Desk',
+        id: 'front-desk',
         label: 'Front Desk',
         icon: <FileText className="w-5 h-5" />,
         href: ROUTES.MEDICAL_RECORDS,
@@ -142,6 +164,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         glowColor: 'from-purple-500 to-pink-400',
         moduleCode: 'medical_records',
         category: 'clinical',
+        allowedCapabilities: ['staff'],
       },
       {
         id: 'nursing-care',
@@ -154,6 +177,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         glowColor: 'from-green-500 to-emerald-400',
         moduleCode: 'nursing',
         category: 'clinical',
+        allowedCapabilities: ['staff'],
       },
       {
         id: 'clinical',
@@ -166,10 +190,11 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         glowColor: 'from-indigo-500 to-purple-400',
         moduleCode: 'clinical',
         category: 'clinical',
+        allowedCapabilities: ['staff'],
       },
       {
-        id: 'laboatory',
-        label: 'Laboaratory',
+        id: 'laboratory',
+        label: 'Laboratory',
         icon: <MicroscopeIcon className="w-5 h-5" />,
         href: ROUTES.LABORATORY,
         route: ROUTES.LABORATORY,
@@ -178,6 +203,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         glowColor: 'from-rose-500 to-pink-400',
         moduleCode: 'laboratory',
         category: 'clinical',
+        allowedCapabilities: ['staff'],
       },
       {
         id: 'pharmacy',
@@ -190,9 +216,10 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         glowColor: 'from-orange-500 to-amber-400',
         moduleCode: 'pharmacy',
         category: 'clinical',
+        allowedCapabilities: ['staff'],
       },
 
-      // Finance Module
+      // Finance Module - ONLY staff capability (facility-based)
       {
         id: 'billing',
         label: 'Billing & Finance',
@@ -204,24 +231,56 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         glowColor: 'from-yellow-500 to-orange-400',
         moduleCode: 'billing',
         category: 'finance',
+        allowedCapabilities: ['staff'],
       },
 
-      // Administration Module
+      // Administration Module - ONLY staff capability (facility-based)
       {
         id: 'administration',
         label: 'Facility Governance',
         icon: <MonitorCheckIcon className="w-5 h-5" />,
         href: ROUTES.ADMINISTRATION,
         route: ROUTES.ADMINISTRATION,
-        description:
-          'Configure facilities, manage workforce access, services, and operational controls',
+        description: 'Configure facilities, manage workforce access, services, and operational controls',
         stats: 'Governance',
         glowColor: 'from-slate-600 to-slate-500',
         moduleCode: 'administration',
         category: 'admin',
+        allowedCapabilities: ['staff'],
       },
 
-      // Account Module - ALWAYS ACCESSIBLE
+      // Platform Administration - ONLY super_admin capability
+      {
+        id: 'platform-admin',
+        label: 'Platform Administration',
+        icon: <Globe className="w-5 h-5" />,
+        href: PLATFORM_ADMIN_ROUTES.FACILITIES,
+        route: PLATFORM_ADMIN_ROUTES.FACILITIES,
+        description: 'Global platform settings, system configuration, user management across all facilities',
+        stats: 'Platform',
+        shortcut: '⌘P',
+        glowColor: 'from-slate-600 to-slate-500',
+        moduleCode: 'platform_administration',
+        category: 'platform',
+        allowedCapabilities: ['super_admin'],
+      },
+
+      // System Settings - ONLY super_admin capability//Note: To be added later
+      // {
+      //   id: 'system-settings',
+      //   label: 'System Settings',
+      //   icon: <Settings className="w-5 h-5" />,
+      //   href: ROUTES.SYSTEM_SETTINGS,
+      //   route: ROUTES.SYSTEM_SETTINGS,
+      //   description: 'System-wide configuration and maintenance',
+      //   stats: 'System',
+      //   glowColor: 'from-slate-600 to-slate-500',
+      //   moduleCode: 'platform_administration',
+      //   category: 'platform',
+      //   allowedCapabilities: ['super_admin'],
+      // },
+
+      // Account Module - Available to ALL capabilities
       {
         id: 'account',
         label: 'Account',
@@ -233,35 +292,67 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         glowColor: 'from-emerald-500 to-teal-400',
         moduleCode: 'account',
         category: 'system',
+        allowedCapabilities: ['patient', 'staff', 'super_admin'], // Add any new capabilities here
       },
     ],
     [],
   );
 
-  /* ── Patient-only accessible module codes ── */
-  const accessiblePatientModuleCodes = useMemo(() => ['patient_dashboard', 'account'], []);
-
-  /* ── Filter menu items based on accessible module codes ── */
+  /* ── Filter menu items based on active capability and module access ── */
   const currentMenuItems = useMemo(() => {
-    if (inPatientMode) {
-      return menuConfig.filter(
-        (item) => item.moduleCode === 'account' || accessiblePatientModuleCodes.includes(item.moduleCode),
-      );
-    }
-    return menuConfig.filter(
-      (item) => item.moduleCode === 'account' || accessibleModuleCodes.includes(item.moduleCode),
-    );
-  }, [accessibleModuleCodes, accessiblePatientModuleCodes, inPatientMode, menuConfig]);
+    if (!activeCapability) return [];
 
-  /* ── Group menu items by category ── */
+    return menuConfig.filter((item) => {
+      // First check if this item is allowed for the current capability
+      if (!item.allowedCapabilities.includes(activeCapability)) {
+        return false;
+      }
+
+      // For staff capability, we must also check module access permissions
+      if (activeCapability === 'staff') {
+        // Staff with facilities: check facility-specific modules
+        if (inStaffMode && activeFacilityId && currentFacilityModules.length > 0) {
+          return currentFacilityModules.includes(item.moduleCode);
+        }
+        // Staff without facilities: check standard accessible modules
+        return accessibleModuleCodes.includes(item.moduleCode);
+      }
+
+      // For non-staff capabilities (patient, super_admin, etc.), 
+      // we don't need to check module codes - if they're allowed in the capability,
+      // they have access
+      return true;
+    });
+  }, [activeCapability, menuConfig, inStaffMode, activeFacilityId, currentFacilityModules, accessibleModuleCodes]);
+
+  /* ── Group menu items by category (preserving original order) ── */
   const groupedMenuItems = useMemo(() => {
     const groups: Record<string, MenuItem[]> = {};
+    
+    // Define category order (matching original)
+    const categoryOrder = ['patient','clinical', 'finance', 'admin', 'platform', 'system'];
+    
+    // Initialize empty arrays for each category
+    categoryOrder.forEach(category => {
+      groups[category] = [];
+    });
+    
+    // Group items by category
     currentMenuItems.forEach((item) => {
       const category = item.category || 'other';
       if (!groups[category]) groups[category] = [];
       groups[category].push(item);
     });
-    return groups;
+    
+    // Remove empty categories
+    const filteredGroups: Record<string, MenuItem[]> = {};
+    categoryOrder.forEach(category => {
+      if (groups[category] && groups[category].length > 0) {
+        filteredGroups[category] = groups[category];
+      }
+    });
+    
+    return filteredGroups;
   }, [currentMenuItems]);
 
   const categoryNames: Record<string, string> = {
@@ -270,6 +361,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     patient: 'Patient Portal',
     system: 'System',
     finance: 'Finance',
+    platform: 'Platform',
     other: 'Other',
   };
 
@@ -290,13 +382,13 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
   /* ── Scroll active item into view ── */
   useEffect(() => {
     if (activeItemRef.current && navContainerRef.current) {
-      const container    = navContainerRef.current;
+      const container = navContainerRef.current;
       const activeElement = activeItemRef.current;
 
       const containerRect = container.getBoundingClientRect();
-      const activeRect    = activeElement.getBoundingClientRect();
+      const activeRect = activeElement.getBoundingClientRect();
 
-      const isAboveViewport = activeRect.top    < containerRect.top;
+      const isAboveViewport = activeRect.top < containerRect.top;
       const isBelowViewport = activeRect.bottom > containerRect.bottom;
 
       if (isAboveViewport) {
@@ -311,7 +403,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         });
       }
     }
-  }, [activeItemId, location.pathname, currentMenuItems]);
+  }, [activeItemId]);
 
   /* ── Navigation handler ── */
   const handleNavigation = useCallback(
@@ -332,7 +424,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
     (e: React.TouchEvent) => {
       if (touchStart === null || !isOpen) return;
       const touchEnd = e.touches[0].clientX;
-      const diff     = touchStart - touchEnd;
+      const diff = touchStart - touchEnd;
       if (diff > 50) onClose?.();
     },
     [touchStart, isOpen, onClose],
@@ -350,20 +442,32 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         });
 
         const route = shortcutMap[e.key];
-        if (route) { e.preventDefault(); navigate(route); }
+        if (route) {
+          e.preventDefault();
+          navigate(route);
+        }
 
-        if (e.key === ',') { e.preventDefault(); navigate(ROUTES.SETTINGS); }
+        // Special shortcut for platform admin (⌘P) - only works if in super_admin capability
+        if (e.key === 'p' && activeCapability === 'super_admin') {
+          e.preventDefault();
+          navigate(ROUTES.PLATFORM_ADMINISTRATION);
+        }
+
+        if (e.key === ',') {
+          e.preventDefault();
+          navigate(ROUTES.SETTINGS);
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, navigate, currentMenuItems]);
+  }, [isOpen, onClose, navigate, currentMenuItems, activeCapability]);
 
-  /* ── Render a single menu item ── */
+  /* ── Render a single menu item (original styling preserved) ── */
   const renderMenuItem = useCallback(
     (item: MenuItem) => {
-      const isActive  = isRouteActive(item.route);
+      const isActive = isRouteActive(item.route);
       const isHovered = activeHover === item.id;
 
       return (
@@ -430,22 +534,6 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
                 {item.icon}
               </div>
             </div>
-
-            {collapsed && item.badge && (
-              <span
-                className={cn(
-                  'absolute -top-1 -right-1 w-5 h-5 text-xs font-bold rounded-full border-2 flex items-center justify-center',
-                  isDark ? 'border-gray-900' : 'border-white',
-                  item.badgeVariant === 'urgent'
-                    ? 'bg-red-500 text-white'
-                    : item.badgeVariant === 'pro'
-                    ? 'bg-purple-500 text-white'
-                    : 'bg-blue-500 text-white',
-                )}
-              >
-                {item.badge}
-              </span>
-            )}
           </div>
 
           {!collapsed && (
@@ -465,21 +553,6 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
                 >
                   {item.label}
                 </span>
-
-                {item.badge && (
-                  <span
-                    className={cn(
-                      'px-2 py-0.5 text-xs font-bold rounded-full border shrink-0',
-                      item.badgeVariant === 'urgent'
-                        ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                        : item.badgeVariant === 'pro'
-                        ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                        : 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-                    )}
-                  >
-                    {item.badge}
-                  </span>
-                )}
               </div>
 
               <p
@@ -537,9 +610,17 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
 
   /* ── Context subtitle for header ── */
   const getContextSubtitle = useCallback(() => {
-    if (activeFacilityName && activeRoleCode) return activeFacilityName;
+    // When in super_admin capability, show "Platform Administrator"
+    if (activeCapability === 'super_admin') {
+      return 'Platform Administrator';
+    }
+    // When in staff capability with facility, show facility name
+    if (activeFacilityName && activeRoleCode) {
+      return activeFacilityName;
+    }
+    // Default to capability name
     return currentCapabilityName;
-  }, [activeFacilityName, activeRoleCode, currentCapabilityName]);
+  }, [activeFacilityName, activeRoleCode, currentCapabilityName, activeCapability]);
 
   /* ── Render ── */
   return (

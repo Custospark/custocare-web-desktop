@@ -2,92 +2,102 @@
  * ============================================================================
  * WELCOME SECTION COMPONENT
  * ============================================================================
- * Time-based greeting with context-aware subtitle
  */
 
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { Sparkles, Globe, Sun, Sunrise, Sunset } from 'lucide-react';
 import { cn } from '../../../../../../shared/types/cn';
+
 interface WelcomeSectionProps {
   userName?: string;
   isStaffWithFacility: boolean;
   isStaffWithoutFacility: boolean;
   isPatient: boolean;
   isPatientOnly: boolean;
+  hasGlobalCapabilities: boolean;
   theme: 'light' | 'dark';
 }
-
-interface Greeting {
-  text: string;
-  emoji: string;
-}
-
-const getTimeGreeting = (): Greeting => {
-  const hour = new Date().getHours();
-
-  if (hour < 12) {
-    return { text: 'Good morning', emoji: '👋' };
-  }
-  if (hour < 18) {
-    return { text: 'Good afternoon', emoji: '🤝' };
-  }
-  return { text: 'Good evening', emoji: '🙌' };
-};
-
-const capitalizeName = (name?: string): string => {
-  if (!name) return 'User';
-  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-};
 
 export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
   userName,
   isStaffWithFacility,
   isStaffWithoutFacility,
   isPatient,
-  isPatientOnly,
+  hasGlobalCapabilities,
   theme,
 }) => {
-  const { text, emoji } = useMemo(() => getTimeGreeting(), []);
-
-  const subtitle = useMemo(() => {
-    if (isStaffWithFacility && isPatient) {
-      return 'Select a professional workspace or access your personal patient portal.';
+  // Get time-based greeting
+  const timeGreeting = useMemo(() => {
+    const hour = new Date().getHours();
+    
+    if (hour >= 5 && hour < 12) {
+      return { text: 'Good Morning', emoji: '☀️', icon: Sunrise };
     }
+    if (hour >= 12 && hour < 17) {
+      return { text: 'Good Afternoon', emoji: '🌤️', icon: Sun };
+    }
+    return { text: 'Good Evening', emoji: '🌙', icon: Sunset };
+  }, []);
+
+  const getWelcomeMessage = () => {
     if (isStaffWithFacility) {
-      return 'Please select a workspace to continue.';
+      return 'You have access to professional workspaces. Select a facility to continue.';
     }
     if (isStaffWithoutFacility) {
-      return 'Manage your invitations, profile, and register new facilities.';
+      return 'You are registered as medical staff. Access your dashboard to manage invitations.';
     }
-    if (isPatientOnly) {
-      return 'Access your personal health portal below.';
+    if (isPatient) {
+      return 'Your patient portal is active. View your health records and appointments.';
     }
-    return 'Please complete your account setup to get started.';
-  }, [isStaffWithFacility, isStaffWithoutFacility, isPatient, isPatientOnly]);
+    if (hasGlobalCapabilities) {
+      return 'You have platform capabilities. Select a workspace to continue.';
+    }
+    return 'Complete your profile to access healthcare services.';
+  };
+
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="mb-2 sm:mb-4"
+      className="mb-6 sm:mb-8"
     >
-      <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 flex flex-wrap items-center gap-2">
-        <span className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>
-          {text}
-        </span>
-        <span className="text-emerald-500">{capitalizeName(userName)}</span>
-        <span className="text-xl sm:text-2xl leading-none">{emoji}</span>
-      </h1>
-
-      <p
-        className={cn(
-          'text-sm sm:text-base',
-          theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-        )}
-      >
-        {subtitle}
-      </p>
+      <div className="flex items-start gap-3 sm:gap-4">
+        <div
+          className={cn(
+            'p-2 sm:p-3 rounded-xl',
+            'bg-gradient-to-br from-blue-500/10 to-cyan-500/10',
+            'border border-blue-500/20'
+          )}
+        >
+          {hasGlobalCapabilities ? (
+            <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
+          ) : (
+            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h1
+            className={cn(
+              'text-xl sm:text-2xl font-bold mb-1 flex items-center gap-2',
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            )}
+          >
+            <span>{timeGreeting.text}, {userName || 'User'}</span>
+            <span className="text-2xl">{timeGreeting.emoji}</span>
+          </h1>
+          <p
+            className={cn(
+              'text-xs sm:text-sm',
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            )}
+          >
+            {getWelcomeMessage()}
+          </p>
+        </div>
+      </div>
     </motion.div>
   );
 };

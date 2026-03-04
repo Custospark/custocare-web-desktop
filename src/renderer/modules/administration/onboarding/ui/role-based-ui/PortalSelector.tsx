@@ -4,6 +4,7 @@
  * ============================================================================
  * 
  * Fully integrated with activeContextSlice
+ * ✅ Handles patient, staff, and Spatie role capabilities
  * ✅ Refactored into 5 functional components
  * ✅ Responsive design for all devices
  * ✅ Type-safe without 'any'
@@ -11,7 +12,7 @@
  * ✅ Maintains all functionality
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../../../app/routes/routeConstants';
 import { ROUTES as ONBOARDING_ROUTES } from '../../routes/onboardingRouteConstants';
@@ -33,6 +34,7 @@ import { FooterActions } from './port-selector-components/FooterActions';
 import { WelcomeSection } from './port-selector-components/WelcomeSection';
 import { ProfessionalWorkspaces } from './port-selector-components/ProfessionalWorkspaces';
 import { PersonalAccessSection } from './port-selector-components/PersonalAccessSection';
+import { GlobalCapabilities } from './port-selector-components/GlobalCapabilities';
 
 
 export const PortalSelector: React.FC = () => {
@@ -52,7 +54,24 @@ export const PortalSelector: React.FC = () => {
     isStaffWithFacility,
     isStaffWithoutFacility,
     isPatientOnly,
+    availableCapabilities,
   } = activeContext;
+
+  /**
+   * Get all capabilities that are NOT patient or staff (i.e., Spatie roles)
+   */
+  const globalCapabilities = useMemo(() => {
+    return availableCapabilities.filter(
+      cap => cap !== 'patient' && cap !== 'staff'
+    );
+  }, [availableCapabilities]);
+
+  /**
+   * Check if there are any global capabilities
+   */
+  const hasGlobalCapabilities = useMemo(() => {
+    return globalCapabilities.length > 0;
+  }, [globalCapabilities]);
 
   /**
    * Handle workspace selection for staff with facility
@@ -113,6 +132,30 @@ export const PortalSelector: React.FC = () => {
 
     showToast('success', 'Welcome to your patient portal', 3000);
   }, [dispatch, navigate, showToast, user]);
+
+  /**
+   * Handle global capability selection (Spatie roles)
+   */
+  const handleGlobalCapabilitySelect = useCallback(
+    (capabilityName: string): void => {
+      dispatch(switchCapability(capabilityName));
+
+      navigate(ROUTES.DASHBOARD, {
+        state: {
+          user,
+          capability: capabilityName,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      showToast(
+        'success',
+        `Switched to ${getRoleDisplayName(capabilityName)}`,
+        3000
+      );
+    },
+    [dispatch, navigate, showToast, user]
+  );
 
   /**
    * Handle facility registration
@@ -179,8 +222,18 @@ export const PortalSelector: React.FC = () => {
           isStaffWithoutFacility={isStaffWithoutFacility}
           isPatient={isPatient}
           isPatientOnly={isPatientOnly}
+          hasGlobalCapabilities={hasGlobalCapabilities}
           theme={theme}
         />
+
+        {/* Global Capabilities (Spatie Roles) */}
+        {hasGlobalCapabilities && (
+          <GlobalCapabilities
+            capabilities={globalCapabilities}
+            theme={theme}
+            onSelectCapability={handleGlobalCapabilitySelect}
+          />
+        )}
 
         {/* Professional Workspaces */}
         <ProfessionalWorkspaces

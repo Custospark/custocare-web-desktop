@@ -33,8 +33,8 @@ interface NotFoundProps {
  * ============================================================================
  */
 const NotFound: React.FC<NotFoundProps> = ({
-  title = 'Page Not Found',
-  message = 'The page you are looking for does not exist, has been moved, or you may not have permission to access it.',
+  title = 'Resource Not Found',
+  message = 'The resource you are looking for does not exist, has been moved, or you may not have permission to access it.',
   showBackButton = true,
 }) => {
   const navigate = useNavigate();

@@ -3,17 +3,21 @@ import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import type { RootState } from '../../app/store/store';
 import { ROUTES, MEDICAL_RECORDS_ROUTES, CLINICAL_ROUTES } from '../../app/routes/routeConstants';
+import { PLATFORM_ADMIN_ROUTES } from '../../app/routes/constants/platform-administration.paths';
 import { 
   selectAccessibleModuleCodes,
 } from '../../app/store/slices/activeContextSlice';
 import LoadingSkeleton from '../components/Loading/LoadingSkeletons';
-import { isInPatientMode } from '../../app/store/utils/contextSelectors'; // Import the selector
+import { 
+  isInPatientMode,
+  getActiveCapability,
+} from '../../app/store/utils/contextSelectors';
 
 /**
  * Dashboard Component - Redirect to first accessible module
  */
 
-// Module priority order (if you want to maintain some hierarchy)
+// Module priority order (maintains hierarchy)
 const MODULE_PRIORITY = [
   'medical_records',
   'clinical',
@@ -22,6 +26,7 @@ const MODULE_PRIORITY = [
   'pharmacy',
   'billing',
   'administration',
+  'platform_administration', // Added for super_admin
   'patient_dashboard',
   'account' // Always last as fallback
 ] as const;
@@ -35,6 +40,7 @@ const MODULE_ROUTES: Record<string, string> = {
   pharmacy: ROUTES.PHARMACY,
   billing: ROUTES.BILLING,
   administration: ROUTES.ADMINISTRATION,
+  platform_administration: PLATFORM_ADMIN_ROUTES.FACILITIES_FIN_STATS,
   patient_dashboard: ROUTES.PATIENT_DASHBOARD,
   account: ROUTES.ACCOUNT,
 };
@@ -43,9 +49,25 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const theme = useSelector((state: RootState) => state.ui.theme);
   const accessibleModuleCodes = useSelector(selectAccessibleModuleCodes);
-  const isPatientMode = useSelector(isInPatientMode); // Get patient mode status
+  const isPatientMode = useSelector(isInPatientMode);
+  const activeCapability = useSelector(getActiveCapability);
   
-  // ✅ Check if user is in patient mode
+  // ✅ DEBUG: Log what's coming from the backend
+  useEffect(() => {
+    console.log('[Dashboard DEBUG] ================');
+    console.log('[Dashboard DEBUG] Active Capability:', activeCapability);
+    console.log('[Dashboard DEBUG] Accessible Module Codes:', accessibleModuleCodes);
+    console.log('[Dashboard DEBUG] Includes platform_administration:', accessibleModuleCodes.includes('platform_administration'));
+    console.log('[Dashboard DEBUG] Is Spatie Role:', activeCapability && activeCapability !== 'patient' && activeCapability !== 'staff');
+    console.log('[Dashboard DEBUG] ================');
+  }, [activeCapability, accessibleModuleCodes]);
+  
+  // Check if current capability is a Spatie role (not patient or staff)
+  const isSpatieRole = activeCapability && 
+                       activeCapability !== 'patient' && 
+                       activeCapability !== 'staff';
+  
+  // ✅ Handle patient mode redirect
   useEffect(() => {
     if (isPatientMode) {
       console.log('[Dashboard] Patient mode detected, redirecting to patient dashboard');
@@ -54,25 +76,41 @@ export const Dashboard: React.FC = () => {
     }
   }, [isPatientMode, navigate]);
   
-  // Find first accessible module in priority order (only for staff mode)
+  // Find first accessible module based on priority
   const getTargetModule = () => {
     // Skip priority logic if in patient mode (should have already redirected)
     if (isPatientMode) {
       return 'patient_dashboard';
     }
     
+    // For Spatie roles, use their specific modules
+    if (isSpatieRole) {
+      // Check if platform_administration is accessible for super_admin
+      if (activeCapability === 'super_admin' && accessibleModuleCodes.includes('platform_administration')) {
+        console.log('[Dashboard] Super admin with platform_administration access, redirecting there');
+        return 'platform_administration';
+      }
+      
+      console.log('[Dashboard] Spatie role but no platform_administration access, falling back to priority');
+      // For other Spatie roles, fall back to first accessible module
+    }
+    
+    // Standard priority-based selection
     for (const moduleCode of MODULE_PRIORITY) {
       if (accessibleModuleCodes.includes(moduleCode)) {
+        console.log(`[Dashboard] Found accessible module: ${moduleCode}`);
         return moduleCode;
       }
     }
+    
+    console.log('[Dashboard] No accessible modules found, defaulting to account');
     return 'account'; // Default fallback
   };
   
   const targetModule = getTargetModule();
   const targetRoute = MODULE_ROUTES[targetModule] || ROUTES.ACCOUNT;
   
-  // Loading message based on target module
+  // Loading messages based on target module
   const loadingMessages: Record<string, string> = {
     medical_records: 'Loading front desk...',
     clinical: 'Loading clinical workspace...',
@@ -81,11 +119,20 @@ export const Dashboard: React.FC = () => {
     pharmacy: 'Loading pharmacy...',
     billing: 'Loading billing & finance...',
     administration: 'Loading administration...',
+    platform_administration: 'Loading platform administration...',
     patient_dashboard: 'Loading health dashboard...',
     account: 'Loading account settings...',
   };
   
-  const loadingMessage = loadingMessages[targetModule] || 'Loading workspace...';
+  // Get capability-specific loading message
+  const getCapabilityLoadingMessage = () => {
+    if (activeCapability && activeCapability !== 'patient' && activeCapability !== 'staff') {
+      return `Loading ${activeCapability.replace('_', ' ')} workspace...`;
+    }
+    return loadingMessages[targetModule] || 'Loading workspace...';
+  };
+  
+  const loadingMessage = getCapabilityLoadingMessage();
   
   useEffect(() => {
     // Skip redirection timer if in patient mode (already redirected)
@@ -94,15 +141,28 @@ export const Dashboard: React.FC = () => {
     }
     
     const redirectTimer = setTimeout(() => {
-      console.log(`Redirecting to: ${targetRoute} (module: ${targetModule})`);
-      console.log(`All accessible modules: ${accessibleModuleCodes.join(', ')}`);
-      navigate(targetRoute, { replace: true });
+      console.log(`[Dashboard] FINAL - Redirecting to: ${targetRoute} (module: ${targetModule})`);
+      console.log(`[Dashboard] FINAL - Active capability: ${activeCapability}`);
+      console.log(`[Dashboard] FINAL - Accessible modules: ${accessibleModuleCodes.join(', ')}`);
+      
+      // For Spatie roles, we might want to pass capability info in state
+      if (isSpatieRole) {
+        navigate(targetRoute, { 
+          replace: true,
+          state: {
+            capability: activeCapability,
+            timestamp: new Date().toISOString()
+          }
+        });
+      } else {
+        navigate(targetRoute, { replace: true });
+      }
     }, 800);
     
     return () => clearTimeout(redirectTimer);
-  }, [targetRoute, navigate, accessibleModuleCodes, targetModule, isPatientMode]);
+  }, [targetRoute, navigate, accessibleModuleCodes, targetModule, isPatientMode, activeCapability, isSpatieRole]);
   
-  // Show different loading message for patient mode (though they should redirect immediately)
+  // Patient mode loading
   if (isPatientMode) {
     return (
       <div className="min-h-screen">
@@ -116,6 +176,21 @@ export const Dashboard: React.FC = () => {
     );
   }
   
+  // Spatie role loading
+  if (isSpatieRole) {
+    return (
+      <div className="min-h-screen">
+        <LoadingSkeleton
+          variant="dashboard"
+          message={loadingMessage}
+          theme={theme}
+          className="h-screen"
+        />
+      </div>
+    );
+  }
+  
+  // Staff/Default loading
   return (
     <div className="min-h-screen">
       <LoadingSkeleton

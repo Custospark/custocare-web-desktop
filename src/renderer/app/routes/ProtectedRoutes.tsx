@@ -4,6 +4,7 @@ import { Navigate, Route } from 'react-router-dom';
 import AuthMiddlewareRoute from './middleware/AuthMiddlwareRoute';
 import Layout from '../../shared/components/Navigation/Layout';
 import { ROUTES, ACCOUNT_ROUTES } from './routeConstants';
+import { PLATFORM_ADMIN_ROUTES } from './constants/platform-administration.paths';
 import { ProtectedThemeOutlet, SuspenseWrapper, WithThemeProp } from './modules/shared/routeUtils';
 import { accountRoutes } from './modules/account';
 import { onboardingAndDashboardRoutes } from './modules/shared/OnboardingAndDashboard';
@@ -11,6 +12,7 @@ import { pharmacyRoutes } from './modules/pharmacy';
 import { medicalRecordsRoutes } from './modules/medical-records';
 import { clinicalSpaceManagementRoutes } from './modules/adminstration/clinicalspace';
 import { facilitySettingsRoutes } from './modules/adminstration/facility-settings';
+import { platformAdminRoutes } from './modules/PlatformAdministration';
 
 // Lazy load modules
 const MedicalRecordsModule = React.lazy(
@@ -26,6 +28,7 @@ const ClinicalModule = React.lazy(() => import('../../modules/clinical/ui/Clinic
 const LaboratoryModule = React.lazy(() => import('../../modules/laboratory/ui/LaboratoryModule'));
 const BillingModule = React.lazy(() => import('../../modules/billling/ui/BillingModule'));
 const ModuleAccessMiddleware = React.lazy(() => import('./middleware/ModuleAccessMiddleware'));
+const PlatformAdministrationModule = React.lazy(() => import('../../modules/platform-administration/PlatformAdministrationModule'));
 
 export const ProtectedRoutes = () => [
   <Route key="protected-routes" element={<AuthMiddlewareRoute />}>
@@ -123,6 +126,19 @@ export const ProtectedRoutes = () => [
           >
             <Route index element={<Navigate to={ACCOUNT_ROUTES.SETTINGS_PROFILE} replace />} />
             {accountRoutes}
+          </Route>
+
+          <Route
+            key="platform-administration"
+            path={PLATFORM_ADMIN_ROUTES.ROOT}
+            element={
+              <SuspenseWrapper variant="table">
+                <WithThemeProp Component={PlatformAdministrationModule} />
+              </SuspenseWrapper>
+            }
+          >
+            <Route index element={<Navigate to={PLATFORM_ADMIN_ROUTES.FACILITIES} replace />} />
+            {platformAdminRoutes}
           </Route>
         </Route>
       </Route>

@@ -456,7 +456,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                     'text-sm font-semibold',
                     theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
                   )}>
-                    Care Actions
+                    Take Actions
                   </span>
                   {/* <span className={cn(
                     'text-xs leading-relaxed',
