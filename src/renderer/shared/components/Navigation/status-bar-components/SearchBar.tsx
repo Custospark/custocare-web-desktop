@@ -14,6 +14,7 @@ import type { SearchableModule, ThemeMode } from './StatusBarTypes';
 import { ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from '../../../../app/routes/constants/administration.paths';
 import { ADMINISTRATION_FACILITY_SETTINGS_ROUTES } from '../../../../app/routes/constants/administration.paths';
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../app/routes/constants/administration.paths';
+import { ADMIN_ROUTES } from '../../../../app/routes/constants/administration.paths';
 
 interface SearchBarProps {
   searchQuery: string;
@@ -458,6 +459,65 @@ const allModules: SearchableModule[] = useMemo(() => [
     keywords: ['trash', 'deleted', 'bin', 'recycle'],
     category: 'Account',
   },
+  
+// ============================================================================
+// ADMINISTRATION MODULES (continued)
+// ============================================================================
+
+// Admin Overview
+{
+  id: 'admin-overview',
+  label: 'Command Center',
+  route: ADMIN_ROUTES.OVERVIEW,
+  description: 'Administrative overview and setup status dashboard',
+  moduleCode: 'administration',
+  keywords: ['overview', 'dashboard', 'command center', 'stats', 'metrics', 'setup'],
+  category: 'Administration',
+},
+
+// Team Management
+{
+  id: 'admin-team',
+  label: 'Workforce Administration',
+  route: ADMIN_ROUTES.TEAM,
+  description: 'Manage staff, invitations, roles, and team members',
+  moduleCode: 'administration',
+  keywords: ['team', 'staff', 'employees', 'workforce', 'invitations', 'roles', 'permissions'],
+  category: 'Administration',
+},
+
+// Facility Setup
+{
+  id: 'admin-facility-setup',
+  label: 'Clinical Departments',
+  route: ADMIN_ROUTES.FACILITY_SETUP,
+  description: 'Configure departments and facility structure',
+  moduleCode: 'administration',
+  keywords: ['facility', 'departments', 'structure', 'organization', 'clinical departments'],
+  category: 'Administration',
+},
+
+// Service Catalog
+{
+  id: 'admin-service-catalog',
+  label: 'Clinical & Billing Services',
+  route: ADMIN_ROUTES.SERVICE_CATALOG,
+  description: 'Manage services, procedures, and pricing versions',
+  moduleCode: 'administration',
+  keywords: ['services', 'catalog', 'pricing', 'procedures', 'billing services', 'clinical services'],
+  category: 'Administration',
+},
+
+// Inventory Management
+{
+  id: 'admin-inventory',
+  label: 'Supply & Inventory Management',
+  route: ADMIN_ROUTES.INVENTORY,
+  description: 'Manage stock items, locations, and inventory controls',
+  moduleCode: 'administration',
+  keywords: ['inventory', 'supplies', 'stock', 'items', 'locations', 'warehouse'],
+  category: 'Administration',
+},
 ], []);
   // Filter accessible modules based on user's permissions
   const accessibleModules = useMemo(() => {

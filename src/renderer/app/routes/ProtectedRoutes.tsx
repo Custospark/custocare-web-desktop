@@ -14,6 +14,12 @@ import { clinicalSpaceManagementRoutes } from './modules/adminstration/clinicals
 import { facilitySettingsRoutes } from './modules/adminstration/facility-settings';
 import { platformAdminRoutes } from './modules/PlatformAdministration';
 import { plansSubscriptionsRoutes } from './modules/adminstration/plans-and-subscriptions';
+import { adminRoutes } from './modules/adminstration/admin.routes';
+import PlansAndSubscriptions from '../../modules/administration/admin-module/ui/plans-and-subscriptions/PlansAndSubscriptions';
+import FacilitySettings from '../../modules/administration/admin-module/ui/facility-settings/FacilitySettings';
+import ClinicalSpaceManagement from '../../modules/administration/admin-module/ui/clinical-space/ClinicalSpaceManagement';
+import { ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from './constants/administration.paths';
+
 
 // Lazy load modules
 const MedicalRecordsModule = React.lazy(
@@ -112,9 +118,38 @@ export const ProtectedRoutes = () => [
               </SuspenseWrapper>
             }
           >
-            {clinicalSpaceManagementRoutes}
-            {facilitySettingsRoutes}
+            {adminRoutes}
+          <Route
+            path={ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.ROOT}
+            element={
+              <SuspenseWrapper variant="detail">
+                <WithThemeProp Component={ClinicalSpaceManagement} />
+              </SuspenseWrapper>
+            }
+          >
+              {clinicalSpaceManagementRoutes}
+          </Route>      
+          <Route
+            path="settings"
+            element={
+              <SuspenseWrapper variant="detail">
+                <WithThemeProp Component={FacilitySettings} />
+              </SuspenseWrapper>
+            }
+          >
+              {facilitySettingsRoutes}
+          </Route>      
+          <Route
+            path="plans-subscriptions"
+            element={
+              <SuspenseWrapper variant="detail">
+                <WithThemeProp Component={PlansAndSubscriptions} />
+              </SuspenseWrapper>
+            }
+          >
             {plansSubscriptionsRoutes}
+          </Route>      
+
           </Route>
 
           <Route

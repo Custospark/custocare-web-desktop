@@ -1,7 +1,27 @@
-import React, { useState, useCallback } from 'react';
-import { useSelector } from 'react-redux';
-import type { RootState } from '../../../../app/store/rootReducer';
-import { ContentLayout, type Operation } from '../../../../shared/components/content/ContentLayout';
+/**
+ * ============================================================================
+ * ADMIN MODULE (ROUTER-DRIVEN)
+ * ============================================================================
+ * 
+ * Centralized administrative control panel for managing:
+ * - System overview & setup health
+ * - Team (staff, invitations, roles)
+ * - Facility structure
+ * - Service catalog & pricing
+ * - Plans & subscriptions
+ * - Clinical space management
+ * - Inventory management
+ * - Facility settings
+ * 
+ * Architecture:
+ * ------------
+ * - Uses BaseModuleWorkspace for consistent layout
+ * - Router-driven navigation with nested routes
+ * - Theme-aware rendering
+ * - Scalable operation-based architecture
+ */
+
+import React from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -12,210 +32,84 @@ import {
   Settings2,
   CreditCard,
 } from 'lucide-react';
-import AdminOverview from './admin-overview-ui/AdminOverview';
-import AdminTeam from './team-ui/AdminTeam';
-import AdminFacilitySetup from './facility-setup-ui/AdminFacilitySetup';
-import AdminServiceCatalog from './service-catalog-ui/AdminServiceCatalog';
-import AdminInventory from './inventory/AdminInventoryItems';
-import ClinicalSpaceManagement from './clinical-space/ClinicalSpaceManagement';
-import FacilitySettings from './facility-settings/FacilitySettings';
-import PlansAndSubscriptions from './plans-and-subscriptions/PlansAndSubscriptions';
-
+import { BaseModuleWorkspace } from '../../../../shared/components/workspace/BaseModuleWorkspace';
+import { ADMIN_ROUTES } from '../../../../app/routes/constants/administration.paths';
+import { ROUTES } from '../../../../app/routes/routeConstants';
 /**
- * ============================================================================
- * ADMIN MODULE - MAIN INTEGRATION COMPONENT
- * ============================================================================
- *
- * Purpose:
- * --------
- * Centralized administrative control panel for managing:
- * - System overview & setup health
- * - Team (staff, invitations, roles)
- * - Facility structure
- * - Service catalog & pricing
- * - Plans & subscriptions
- *
- * Architecture Highlights:
- * -----------------------
- * - Mirrors PatientModule integration pattern
- * - Stateless workspace (theme-only components)
- * - Clean domain boundaries
- * - Scalable admin navigation
- * - Theme-aware rendering (light/dark)
- *
- * Module Structure:
- * ----------------
- * 1. AdminOverview
- * 2. AdminTeam
- * 3. AdminFacilitySetup
- * 4. AdminServiceCatalog
- * 5. AdminInventory
- * 6. ClinicalSpaceManagement
- * 7. AdminPlansSubscriptions
- * 8. FacilitySettings
- *
- * @example
- * ```tsx
- * <Route path="/admin" element={<AdminModule />} />
- * ```
+ * Admin module operations configuration
+ * Each operation corresponds to a nested route under /admin
  */
-
-/* ============================================================================
-   OPERATIONS CONFIGURATION
-============================================================================ */
-
-/**
- * Admin module operations (right sidebar)
- */
-const ADMIN_OPERATIONS: Operation[] = [
-  {
-    id: 'overview',
-    label: 'Command Center',
+const ADMIN_OPERATIONS = [
+  { 
+    id: 'overview', 
+    label: 'Command Center', 
     icon: <LayoutDashboard className="w-4 h-4" />,
-    description: 'Administrative overview and setup status',
+    description: 'Administrative overview and setup status'
   },
-  {
-    id: 'facility-setup',
-    label: 'Clinical Departments',
+  { 
+    id: 'facility-setup', 
+    label: 'Clinical Departments', 
     icon: <Building2 className="w-4 h-4" />,
-    description: 'Configure departments and facility structure',
+    description: 'Configure departments and facility structure'
   },
-  {
-    id: 'space-governance',
-    label: 'Clinical Space Management',
+  { 
+    id: 'clinical-space-management', 
+    label: 'Clinical Space Management', 
     icon: <MapIcon className="w-4 h-4" />,
-    description: 'Define rooms, floors, buildings, and manage staff space assignments',
+    description: 'Define rooms, floors, buildings, and manage staff space assignments'
   },
-  {
-    id: 'service-catalog',
-    label: 'Clinical & Billing Services',
+  { 
+    id: 'service-catalog', 
+    label: 'Clinical & Billing Services', 
     icon: <Layers className="w-4 h-4" />,
-    description: 'Manage services and pricing versions',
+    description: 'Manage services and pricing versions'
   },
-  {
-    id: 'inventory',
-    label: 'Supply & Inventory Management',
+  { 
+    id: 'inventory', 
+    label: 'Supply & Inventory Management', 
     icon: <Boxes className="w-4 h-4" />,
-    description: 'Manage stock items, locations, and inventory controls',
+    description: 'Manage stock items, locations, and inventory controls'
   },
-  {
-    id: 'team',
-    label: 'Workforce Administration',
+  { 
+    id: 'team', 
+    label: 'Workforce Administration', 
     icon: <Users className="w-4 h-4" />,
-    description: 'Manage staff, invitations, and roles',
+    description: 'Manage staff, invitations, and roles'
   },
-  {
-    id: 'plans-subscriptions',
-    label: 'Plans & Subscriptions',
+  { 
+    id: 'plans-subscriptions', 
+    label: 'Plans & Subscriptions', 
     icon: <CreditCard className="w-4 h-4" />,
-    description: 'Manage facility plans, subscriptions, and billing',
+    description: 'Manage facility plans, subscriptions, and billing'
   },
-  {
-    id: 'facility-settings',
-    label: 'Enterprise Facility Settings',
+  { 
+    id: 'clinical-space-management', 
+    label: 'Enterprise Facility Settings', 
     icon: <Settings2 className="w-4 h-4" />,
-    description: 'Manage facility identity, regulatory parameters, and operational policies',
+    description: 'Manage facility identity, regulatory parameters, and operational policies'
   },
 ];
 
-/* ============================================================================
-   TYPES
-============================================================================ */
-
-export type AdminOperationId =
-  | 'overview'
-  | 'team'
-  | 'facility-setup'
-  | 'service-catalog'
-  | 'inventory'
-  | 'space-governance'
-  | 'plans-subscriptions'
-  | 'facility-settings';
-
-/* ============================================================================
-   SUBCOMPONENT IMPORTS
-============================================================================ */
-
-/* ============================================================================
-   MAIN COMPONENT
-============================================================================ */
-
-export const AdminModule: React.FC = () => {
-  /**
-   * =========================================================================
-   * REDUX STATE
-   * =========================================================================
-   */
-
-  const theme = useSelector((state: RootState) => state.ui.theme);
-
-  /**
-   * =========================================================================
-   * LOCAL STATE
-   * =========================================================================
-   */
-
-  const [activeOperation, setActiveOperation] =
-    useState<AdminOperationId>('overview');
-
-  /**
-   * =========================================================================
-   * EVENT HANDLERS
-   * =========================================================================
-   */
-
-  /**
-   * Handle sidebar operation change
-   */
-  const handleOperationChange = useCallback((operationId: string) => {
-    setActiveOperation(operationId as AdminOperationId);
-  }, []);
-
-  /**
-   * =========================================================================
-   * WORKSPACE CONTENT RENDERER
-   * =========================================================================
-   */
-
-  const renderWorkspaceContent = () => {
-    switch (activeOperation) {
-      case 'overview':
-        return <AdminOverview theme={theme} />;
-      case 'team':
-        return <AdminTeam theme={theme} />;
-      case 'facility-setup':
-        return <AdminFacilitySetup theme={theme} />;
-      case 'inventory':
-        return <AdminInventory theme={theme} />;
-      case 'service-catalog':
-        return <AdminServiceCatalog theme={theme} />;
-      case 'space-governance':
-        return <ClinicalSpaceManagement theme={theme} />;
-      case 'plans-subscriptions':
-        return <PlansAndSubscriptions theme={theme} />;
-      case 'facility-settings':
-        return <FacilitySettings theme={theme} />;
-      default:
-        return <AdminOverview theme={theme} />;
-    }
-  };
-
-  /**
-   * =========================================================================
-   * MAIN RENDER
-   * =========================================================================
-   */
-
+/**
+ * Admin Module
+ * 
+ * Provides a workspace with operation-based navigation for all
+ * administrative functions. Each operation maps to a nested route
+ * under the /admin base path.
+ * 
+ * @example
+ * ```tsx
+ * <Route path="/admin/*" element={<AdminModule />} />
+ * ```
+ */
+const AdminModule: React.FC = () => {
   return (
-    <ContentLayout
-      operations={ADMIN_OPERATIONS}
-      activeOperation={activeOperation}
-      onOperationChange={handleOperationChange}
-      defaultOperation="overview"
+    <BaseModuleWorkspace
       contextTitle="Facility Governance"
-    >
-      {renderWorkspaceContent()}
-    </ContentLayout>
+      operations={ADMIN_OPERATIONS}
+      basePath={ROUTES.ADMINISTRATION}
+      defaultOperationPath={ADMIN_ROUTES.OVERVIEW}
+    />
   );
 };
 
