@@ -599,7 +599,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="mb-6"
+            className="mb-0"
           >
             <LoadingSkeleton variant="default" theme={theme} message="Searching patients..." />
           </motion.div>

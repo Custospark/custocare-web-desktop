@@ -20,7 +20,7 @@ interface SearchBarProps {
 }
 
 /**
- * SearchBar — status-bar trigger button only.
+ * SearchBar — status-bar trigger button with sharp animated border.
  *
  * This component is intentionally a thin trigger. It reads `isOpen` from the
  * shared singleton in useSearchKeyboard so the active-state ring stays in sync
@@ -39,58 +39,93 @@ export const SearchBar: React.FC<SearchBarProps> = ({ theme }) => {
     openSearch();
   }, [openSearch]);
 
+  // Detect if user is on Mac
+  const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+
   return (
     <div className="flex-1 min-w-0 max-w-full sm:max-w-lg mx-1 sm:mx-3">
-      <motion.button
-        type="button"
-        onClick={handleTriggerClick}
-        whileHover={{ scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
-        aria-label="Open global search (⌘K)"
-        className={cn(
-          'relative w-full flex items-center gap-1.5 sm:gap-2.5 px-2 sm:px-3 py-1.5',
-          'rounded-lg border text-xs sm:text-sm transition-all duration-200',
-          'focus:outline-none focus-visible:ring-2',
-          isOpen
-            ? isDark
-              ? 'border-cyan-500/40 ring-2 ring-cyan-500/20 bg-gray-800/70'
-              : 'border-blue-500/40 ring-2 ring-blue-500/20 bg-white/70'
-            : isDark
-              ? 'bg-gray-800/50 border-gray-700/50 hover:border-gray-600/60 hover:bg-gray-800/70'
-              : 'bg-white/50 border-gray-300/50 hover:border-gray-400/50 hover:bg-white/70',
-          isDark
-            ? 'focus-visible:ring-cyan-500/30'
-            : 'focus-visible:ring-blue-500/30'
-        )}
-      >
-        {/* Search icon */}
-        <Search
-          className={cn(
-            'w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 transition-colors duration-200',
-            isOpen
-              ? isDark ? 'text-cyan-400' : 'text-blue-500'
-              : isDark ? 'text-gray-500' : 'text-gray-400'
-          )}
+      <div className="relative">
+        {/* Sharp animated gradient border - always visible */}
+        <motion.div
+          className="absolute inset-0 rounded-lg pointer-events-none"
+          style={{
+            background: 'linear-gradient(90deg, #2563eb, #059669, #7c3aed, #2563eb)',
+            backgroundSize: '300% 100%',
+            padding: '2px',
+            WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+            WebkitMaskComposite: 'xor',
+            maskComposite: 'exclude',
+          }}
+          animate={{
+            backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+          }}
+          transition={{
+            duration: 2.5,
+            repeat: Infinity,
+            ease: 'linear',
+          }}
         />
 
-        {/* Placeholder text */}
-        <span className={cn('flex-1 text-left truncate', isDark ? 'text-gray-500' : 'text-gray-400')}>
-          Search for anything you need...
-        </span>
-
-        {/* ⌘K badge */}
-        <div
+        {/* Main button with cursor pointer */}
+        <motion.button
+          type="button"
+          onClick={handleTriggerClick}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          aria-label="Open global search (⌘K)"
           className={cn(
-            'flex items-center gap-0.5 sm:gap-1 px-1 sm:px-1.5 py-0.5 rounded text-[10px] sm:text-xs shrink-0 border',
+            'relative w-full flex items-center gap-1.5 sm:gap-2.5 px-2 sm:px-3 py-1.5',
+            'rounded-lg text-xs sm:text-sm transition-all duration-200',
+            'focus:outline-none focus-visible:ring-2',
+            'cursor-pointer', // Explicit cursor pointer
+            
+            // Clean background - slightly transparent
             isDark
-              ? 'bg-gray-800/40 border-gray-700/50 text-gray-500'
-              : 'bg-gray-100/40 border-gray-300/50 text-gray-500'
+              ? 'bg-gray-800/70 hover:bg-gray-800/90'
+              : 'bg-white/70 hover:bg-white/90',
+            
+            // Focus ring with sharper colors
+            isDark
+              ? 'focus-visible:ring-cyan-500/40'
+              : 'focus-visible:ring-blue-500/40',
+            
+            // Subtle inner shadow for depth
+            'shadow-inner',
+            
+            // Z-index to stay above the gradient border
+            'z-10'
           )}
         >
-          <Command className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-          <span className="hidden xs:inline">K</span>
-        </div>
-      </motion.button>
+          {/* Search icon - sharper colors when open */}
+          <Search
+            className={cn(
+              'w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 transition-colors duration-200',
+              isOpen
+                ? isDark ? 'text-cyan-400' : 'text-blue-600'
+                : isDark ? 'text-gray-500' : 'text-gray-400'
+            )}
+          />
+
+          {/* Original placeholder text with keyboard shortcut hint */}
+          <span className={cn('flex-1 text-left truncate', isDark ? 'text-gray-500' : 'text-gray-400')}>
+            Search for anything you need... {isMac ? '⌘K' : 'Ctrl+K'}
+          </span>
+
+          {/* ⌘K badge - hidden now since we show the shortcut in text */}
+          <div
+            className={cn(
+              'flex items-center gap-0.5 sm:gap-1 px-1 sm:px-1.5 py-0.5 rounded text-[10px] sm:text-xs shrink-0',
+              isDark
+                ? 'text-gray-500'
+                : 'text-gray-500',
+              'sm:flex' // Keep it in the DOM but maybe make it less prominent
+            )}
+          >
+            <Command className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+            <span className="hidden xs:inline">K</span>
+          </div>
+        </motion.button>
+      </div>
 
       {/*
        * ⚠️  SearchModal has been intentionally removed from here.

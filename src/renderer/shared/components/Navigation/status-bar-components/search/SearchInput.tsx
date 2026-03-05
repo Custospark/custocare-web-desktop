@@ -75,7 +75,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
               onFocus={onFocus}
               onBlur={onBlur}
               autoFocus
-              placeholder="Search modules, pages, actions, or settings..."              
+              placeholder="Search resources, functionalities, actions, or settings..."              
               aria-label="Global module search"
               aria-autocomplete="list"
               className={cn(
