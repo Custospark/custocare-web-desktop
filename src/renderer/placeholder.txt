@@ -1,4 +1,4 @@
-“Custocare AI is a simple system that helps clinics register patients, guide clinicians/doctors during diagnosis using AI support, and manage the patient flow until billing — without complexity.
+“Custocare is a simple system that helps clinics register patients, guide clinicians/doctors during diagnosis using AI support, and manage the patient flow until billing — without complexity.
 Right now, the focus is on making a small version that actually works in real clinics/hospitals, not a perfect or complete system.
 The AI will help suggest and guide, but it won’t be perfect at first — the value is that it keeps getting better with use.
 So for now, I’ll focus on a small working version around X, I’ll send weekly progress updates, and we’ll review feedback together.

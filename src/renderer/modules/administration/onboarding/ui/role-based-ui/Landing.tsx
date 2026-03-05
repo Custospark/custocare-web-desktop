@@ -30,6 +30,7 @@ import { cardHoverVariants} from '../../../../../shared/components/animations/mo
 import { floatingVariants} from '../../../../../shared/components/animations/motionVariants'
 import TrustBadges from '../shared/TrustBadges'
 import LogoImage from '../../../../../shared/assets/LogoImage';
+import { BRAND_NAME_LCASE, BrandName } from '../../../../../shared/utils/BrandName';
 
 /* ==========================================================================
    PROFESSIONAL HEALTHCARE IMAGES
@@ -151,9 +152,7 @@ export const Landing: React.FC = () => {
             <LogoImage/>  
    
               <div className="hidden sm:block">
-                <div className="text-base sm:text-lg font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-                  Custocare AI
-                </div>
+                <BrandName></BrandName>
                 <div className={cn(
                   "text-[11px] font-bold tracking-wide uppercase",
                   theme === 'dark' ? "text-slate-500" : "text-slate-500"
@@ -182,7 +181,7 @@ export const Landing: React.FC = () => {
                       : "bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100 hover:border-blue-400 hover:shadow-blue-200/50"
                   )}
                   aria-label="Download Windows version"
-                  title="Download Custocare AI for Windows"
+                  title="Download Custocare for Windows"
                 >
                   <Monitor className="w-4 h-4" aria-hidden="true" />
                   <span className="hidden sm:inline">Windows</span>
@@ -665,7 +664,7 @@ export const Landing: React.FC = () => {
                 <span className={cn(
                   "text-base sm:text-lg font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent",
                 )}>
-                  Custocare AI
+                  Custocare
                 </span>
               </div>
                 <p
@@ -682,9 +681,7 @@ export const Landing: React.FC = () => {
             
            <div className="flex items-center gap-4">
                <span className="text-xs text-gray-500 dark:text-gray-400">
-                <span className="text-base sm:text-lg font-bold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-                  Custocare AI
-                </span>{' '}
+                <BrandName></BrandName>{' '}
                 is a product of{' '}
                 <a
                   href="https://www.custospark.com"
@@ -705,7 +702,7 @@ export const Landing: React.FC = () => {
               : "border-slate-200 text-slate-500"
           )}>
             <p>
-              © {new Date().getFullYear()} Custocare AI Health Operations Platform. HIPAA-compliant healthcare data protection. 
+              © {new Date().getFullYear()} Custocare Health Operations Platform. HIPAA-compliant healthcare data protection. 
               For authorized healthcare use only.
             </p>
           </div>
@@ -866,7 +863,7 @@ const AccessPanel: React.FC<AccessPanelProps> = ({
             "text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-3 tracking-tight",
             theme === 'dark' ? "text-white" : "text-slate-900"
           )}>
-            Welcome to Custocare AI
+            Welcome to {BRAND_NAME_LCASE}
           </h2>
           <p className={cn(
             "text-sm sm:text-base font-medium",

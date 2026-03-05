@@ -3,6 +3,7 @@ import { Shield, Zap, Cpu, Database, Activity, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppSelector } from '../../../app/store/hooks/useApp';
 import { cn } from '../../utils/classNameUtils';
+import { BrandName } from '../../utils/BrandName';
 
 interface LoadingPhase {
   icon: React.ComponentType<{ className: string }>;
@@ -230,7 +231,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ message }) => {
               ? "from-white via-cyan-200 to-blue-200"
               : "from-slate-900 via-blue-700 to-cyan-700"
           )}>
-            Custocare AI
+           <BrandName></BrandName>
           </h1>
           <p className={cn(
             "text-sm font-medium tracking-wide",
@@ -381,7 +382,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ message }) => {
           {[
             { label: 'API Connected', color: 'emerald', delay: 0 },
             { label: 'Database Synced', color: 'cyan', delay: 500 },
-            { label: 'AI Ready', color: 'blue', delay: 1000 },
+            { label: 'AIReady', color: 'blue', delay: 1000 },
           ].map((status, index) => (
             <motion.div 
               key={index}

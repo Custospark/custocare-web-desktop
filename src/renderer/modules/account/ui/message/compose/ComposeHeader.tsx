@@ -17,6 +17,7 @@ import {
 import { cn } from '../../../../../shared/utils/classNameUtils';
 import { type WindowState } from './composeTypes';
 import LogoImage from '../../../../../shared/assets/LogoImage'; 
+import { BrandName } from '../../../../../shared/utils/BrandName';
 
 interface ComposeHeaderProps {
   theme: 'light' | 'dark';
@@ -60,13 +61,7 @@ export const ComposeHeader: React.FC<ComposeHeaderProps> = ({
       <div className="flex items-center gap-2 shrink-0">
         <LogoImage />
         <div className="hidden sm:block">
-          <span
-            className={cn(
-              'text-sm font-bold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent',
-            )}
-          >
-            Custocare AI
-          </span>
+         <BrandName></BrandName>
         </div>
       </div>
 

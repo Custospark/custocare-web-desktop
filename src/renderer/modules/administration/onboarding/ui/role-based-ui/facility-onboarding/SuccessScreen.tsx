@@ -54,7 +54,7 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
             theme === 'dark' ? "text-slate-400" : "text-slate-600"
           )}
         >
-          Your healthcare facility is now registered on Custocare AI.
+          Your healthcare facility is now registered on Custocare.
         </motion.p>
       </div>
 

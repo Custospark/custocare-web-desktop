@@ -33,6 +33,7 @@ import { toggleTheme } from '../../../../../app/store/slices/uiSlice';
 import { ROUTES } from '../../routes/onboardingRouteConstants';
 import { itemVariants, containerVariants } from  '../../../../../shared/components/animations/motionVariants';
 import LogoImage from '../../../../../shared/assets/LogoImage';
+import { BrandName } from '../../../../../shared/utils/BrandName';
 
 /* ==========================================================================
    ROLE DATA - SIMPLIFIED
@@ -164,7 +165,7 @@ export const RoleSelection: React.FC = () => {
               <LogoImage />
               <div>
                 <div className="text-xl font-bold tracking-tight bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-                  Custocare AI
+                  <BrandName></BrandName>
                 </div>
                 <div className={cn(
                   "text-[11px] font-semibold tracking-wide uppercase",

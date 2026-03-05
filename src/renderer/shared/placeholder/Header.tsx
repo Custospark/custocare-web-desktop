@@ -9,6 +9,7 @@ import { useAppDispatch, useAppSelector } from '../../app/store/hooks/useApp';
 import { toggleSidebar } from '../../app/store/slices/uiSlice';
 import { logout } from '../../app/store/slices/authSlice';
 import { ROUTES } from '../../app/routes/routeConstants';
+import { BrandName } from '../utils/BrandName';
 
 function Header() {
   const dispatch = useAppDispatch();
@@ -30,9 +31,7 @@ function Header() {
         >
           <Menu className="w-6 h-6 text-gray-600 dark:text-gray-400" />
         </button>
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
-          Custocare AI
-        </h1>
+        <BrandName/>
       </div>
 
       <div className="flex items-center gap-6">

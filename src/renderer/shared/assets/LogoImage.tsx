@@ -26,7 +26,7 @@ export default function LogoImage({
   return (
     <img
       src={logo}
-      alt="Custocare AI"
+      alt="Custocare"
       className={`
         ${sizeClasses[size]} 
         w-auto 
@@ -41,9 +41,9 @@ export default function LogoImage({
         active:scale-95 
         ${className}
       `}
-      title="Custocare AI"
+      title="Custocare"
       loading="lazy"
-      aria-label="Custocare AI Logo"
+      aria-label="Custocare Logo"
     />
   );
 }

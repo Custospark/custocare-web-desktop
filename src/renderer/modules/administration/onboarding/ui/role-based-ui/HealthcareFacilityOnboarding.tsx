@@ -45,6 +45,7 @@ import {
   type FacilityFormData,
   DEFAULT_OPERATING_HOURS
 } from  './facility-onboarding/types';
+import { BrandName } from '../../../../../shared/utils/BrandName';
 
 /* ==========================================================================
    MAIN COMPONENT
@@ -289,9 +290,7 @@ export const Index: React.FC = () => {
             <div className="flex items-center gap-2">
               <LogoImage />
               <div>
-                <div className="text-base font-black tracking-tight bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-                  Custocare AI
-                </div>
+              <BrandName></BrandName>
                 <div className={cn(
                   "text-[9px] font-bold tracking-wider uppercase",
                   theme === 'dark' ? "text-slate-500" : "text-slate-500"
@@ -487,7 +486,7 @@ export const Index: React.FC = () => {
             "text-[10px]",
             theme === 'dark' ? "text-slate-500" : "text-slate-500"
           )}>
-            © {new Date().getFullYear()} Custocare AI. All data encrypted and protected.
+            © {new Date().getFullYear()} <BrandName/>. All data encrypted and protected.
           </p>
         </div>
       </footer>

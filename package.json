@@ -2,7 +2,7 @@
   "name": "custocare-ai",
   "private": false,
   "version": "2.11.4",
-  "description": "Custocare AI",
+  "description": "Custocare",
   "author": "Custospark Company Ltd info@custospark.com",
   "type": "module",
   "main": "dist/desktop/main/main.js",
@@ -74,7 +74,7 @@
   },
   "build": {
     "appId": "com.custospark.custocare-ai",
-    "productName": "Custocare AI",
+    "productName": "Custocare",
     "directories": {
       "output": "dist/releases/",
       "buildResources": "assets"

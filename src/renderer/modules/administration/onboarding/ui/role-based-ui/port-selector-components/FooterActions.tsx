@@ -87,7 +87,7 @@ export const FooterActions: React.FC<FooterActionsProps> = ({
 
       {/* Copyright */}
       <div className="text-xs text-center sm:text-left text-gray-500 dark:text-gray-600 sm:ml-auto">
-        © {new Date().getFullYear()} Custocare AI. All rights reserved.
+        © {new Date().getFullYear()} Custocare. All rights reserved.
       </div>
     </motion.div>
   );

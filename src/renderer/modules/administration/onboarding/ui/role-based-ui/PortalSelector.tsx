@@ -192,7 +192,7 @@ export const PortalSelector: React.FC = () => {
     dispatch(logout());
     showToast(
       'info',
-      "You've been logged out successfully. Thank you for using Custocare AI — see you again soon!",
+      "You've been logged out successfully. Thank you for using Custocare — see you again soon!",
       5000
     );
     navigate(ROUTES.LANDING);

@@ -114,7 +114,7 @@ export const useLoginMutation = () => {
           // Success toast
           showToast(
             'success',
-            'Login successful. Welcome back to Custocare AI.',
+            'Login successful. Welcome back to Custocare.',
             5000
           );
           

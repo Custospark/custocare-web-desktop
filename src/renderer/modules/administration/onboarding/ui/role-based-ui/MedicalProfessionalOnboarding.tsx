@@ -41,6 +41,7 @@ import { ROUTES } from '../../routes/onboardingRouteConstants';
 import { useRegisterStaff } from '../../api/queries/register-staff/registerStaffQuery';
 import { type RegisterStaffRequest } from '../../api/queries/register-staff/registerStaffTypes';
 import LogoImage from '../../../../../shared/assets/LogoImage';
+import { BrandName } from '../../../../../shared/utils/BrandName';
 
 /* ==========================================================================
    TYPE DEFINITIONS
@@ -818,9 +819,7 @@ export const MedicalProfessionalOnboarding: React.FC = () => {
             <div className="flex items-center gap-3">
              <LogoImage></LogoImage>
               <div>
-                <div className="text-xl font-bold tracking-tight bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-                  Custocare AI
-                </div>
+              <BrandName></BrandName>
                 <div className={cn(
                   "text-[11px] font-semibold tracking-wide uppercase",
                   theme === 'dark' ? "text-slate-500" : "text-slate-500"
@@ -891,7 +890,7 @@ export const MedicalProfessionalOnboarding: React.FC = () => {
             "text-xs",
             theme === 'dark' ? "text-slate-500" : "text-slate-500"
           )}>
-            © {new Date().getFullYear()} Custocare AI. All professional information is encrypted and protected.
+            © {new Date().getFullYear()} Custocare. All professional information is encrypted and protected.
           </p>
         </div>
       </footer>

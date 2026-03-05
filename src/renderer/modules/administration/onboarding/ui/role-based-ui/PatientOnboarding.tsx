@@ -42,6 +42,7 @@ import { ROUTES } from '../../routes/onboardingRouteConstants';
 import { useRegisterPatient } from '../../api/queries/register-patient/queries/registerpatientQuery';
 import type { RegisterPatientRequest } from '../../api/queries/register-patient/queries/registerPatientTypes';
 import LogoImage from '../../../../../shared/assets/LogoImage';
+import { BrandName } from '../../../../../shared/utils/BrandName';
 
 /* ==========================================================================
    TYPE DEFINITIONS
@@ -651,7 +652,7 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
       theme === 'dark' ? "text-slate-500" : "text-slate-500"
     )}
   >
-    Please keep this ID for your records. You may be asked for it when visiting any health facility using CustoCare&nbsp;AI.
+    Please keep this ID for your records. You may be asked for it when visiting any health facility using Custocare.
   </p>
 </div>
 
@@ -721,7 +722,7 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
               <LogoImage></LogoImage>
               <div>
                 <div className="text-xl font-bold tracking-tight bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-                  Custocare AI
+                  <BrandName></BrandName>
                 </div>
                 <div className={cn(
                   "text-[11px] font-semibold tracking-wide uppercase",
@@ -793,7 +794,7 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
             "text-xs",
             theme === 'dark' ? "text-slate-500" : "text-slate-500"
           )}>
-            © {new Date().getFullYear()} Custocare AI. All information is encrypted and protected.
+            © {new Date().getFullYear()} Custocare. All information is encrypted and protected.
           </p>
         </div>
       </footer>

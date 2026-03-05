@@ -372,7 +372,7 @@ const ForgotPassword: React.FC = () => {
             </h4>
             <ol className="space-y-3 text-sm">
               {[
-                'Check your email inbox for a message from Custocare AI',
+                'Check your email inbox for a message from Custocare',
                 'Click the secure reset link (valid for 24 hours)',
                 'Create and confirm your new password',
                 'Sign in with your new credentials',
@@ -427,7 +427,7 @@ const ForgotPassword: React.FC = () => {
       subtitle="Enter your email to receive reset instructions"
       heroImage="https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=1200&q=80"
       heroHeadline="Secure Account Recovery"
-      heroSubtext="Quickly and securely regain access to your Custocare AI account. We'll guide you through every step."
+      heroSubtext="Quickly and securely regain access to your Custocare account. We'll guide you through every step."
       showBackToLogin
     >
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>

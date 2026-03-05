@@ -14,7 +14,7 @@ export const PrintableReceiptFooter: React.FC = () => {
       <p className="text-[10px] text-gray-500 mt-2">
         Thank you for choosing{' '}
         <span className="font-semibold text-gray-700">
-          {facilityName || 'Custocare AI'}
+          {facilityName || 'Custocare'}
         </span>
       </p>
       
@@ -30,14 +30,14 @@ export const PrintableReceiptFooter: React.FC = () => {
           
           <img
             src={logo}
-            alt="Custocare AI"
+            alt="Custocare"
             className="h-4 w-auto relative z-10 filter drop-shadow-sm group-hover:drop-shadow-md transition-all duration-300"
           />
         </div>
         
         <div className="relative">
           <span className="text-[9px] font-black bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent relative z-10">
-            CUSTOCARE AI
+            CUSTOCARE 
           </span>
           <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-linear-to-r from-blue-400 to-emerald-400 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
         </div>

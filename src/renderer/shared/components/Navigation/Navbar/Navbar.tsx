@@ -46,6 +46,7 @@ import ContextSwitcher from './ContextSwitcher';
 import StaffPresence from './StaffPresence';
 import MySpace from './MySpace';
 import Subscription from './Subscription';
+import { BrandName } from '../../../utils/BrandName';
 
 export interface NavbarProps {
   theme: 'light' | 'dark';
@@ -208,7 +209,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       // 1. First show toast (immediate feedback to user)
       showToast(
         'info',
-        "You've been logged out successfully. Thank you for using Custocare AI — see you again soon!",
+        "You've been logged out successfully. Thank you for using Custocare — see you again soon!",
         5000
       );
       
@@ -281,14 +282,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   <LogoImage/>
     <div className="hidden md:block">
       <div className="flex items-center gap-2">
-        <span
-          className={cn(
-            'text-base sm:text-lg font-bold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent',
-          )}
-        >
-          Custocare AI
-        </span>
-
+      <BrandName></BrandName>
         <span
           className={cn(
             'px-2 py-0.5 text-xs font-bold rounded-full border',

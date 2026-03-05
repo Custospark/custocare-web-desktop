@@ -6,6 +6,7 @@ import { type FooterProps } from '../../types/index';
 import { cn } from '../../types/cn';
 import LogoImage from '../../assets/LogoImage';
 import type { RootState } from '../../../app/store/store';
+import { BrandName } from '../../utils/BrandName';
 
 export const Footer: React.FC<FooterProps> = ({
   className,
@@ -33,9 +34,7 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Brand with logo */}
           <div className="flex items-center gap-1.5">
             <LogoImage />
-            <span className="text-base sm:text-lg font-bold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent leading-none whitespace-nowrap">
-              Custocare AI
-            </span>
+           <BrandName/>
           </div>
           <span className={cn(
             'text-xs sm:text-sm whitespace-nowrap',
@@ -69,7 +68,7 @@ export const Footer: React.FC<FooterProps> = ({
             'text-sm sm:text-base font-medium tabular-nums',
             isDark ? 'text-gray-600' : 'text-gray-400'
           )}>
-            © {currentYear} Custocare AI
+            © {currentYear} Custocare
           </p>
         )}
       </div>

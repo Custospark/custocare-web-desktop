@@ -19,6 +19,7 @@ import { selectUser } from '../../../../../../app/store/slices/authSlice';
 import { resolveStorageUrl } from '../../../../../account/api/settings/profile/profileUtils';
 import { useGetUserProfile } from '../../../../../account/api/settings/profile/ProfileQueries';
 import { useConfirm } from '../../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
+import { BrandName } from '../../../../../../shared/utils/BrandName';
 
 /* -------------------------------------------------------------------------- */
 /*                         Internal Avatar Sub-component                       */
@@ -151,9 +152,7 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <div className="flex flex-col items-start shrink-0">
               <LogoImage />
-              <span className="text-xs sm:text-sm font-medium bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-                Custocare AI
-              </span>
+             <BrandName></BrandName>
             </div>
           </div>
 

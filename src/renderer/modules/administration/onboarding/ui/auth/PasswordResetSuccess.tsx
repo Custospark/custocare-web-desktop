@@ -67,7 +67,7 @@ export const PasswordResetSuccess: React.FC = () => {
     {
       id: 'browser',
       title: 'Continue on Browser',
-      description: 'Use Custocare AI on your mobile or desktop browser',
+      description: 'Use Custocare on your mobile or desktop browser',
       icon: <Globe className="w-6 h-6" />,
       action: handleContinueInBrowser,
       primary: true,
@@ -75,7 +75,7 @@ export const PasswordResetSuccess: React.FC = () => {
     {
       id: 'desktop',
       title: 'Continue on Desktop App',
-      description: 'Switch to your Custocare AI desktop application',
+      description: 'Switch to your Custocare desktop application',
       icon: <Monitor className="w-6 h-6" />,
       action: handleDesktopApp,
     },
@@ -94,7 +94,7 @@ export const PasswordResetSuccess: React.FC = () => {
       subtitle="Choose where you'd like to continue"
       heroImage="https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=1200&q=80"
       heroHeadline="Your password has been updated"
-      heroSubtext="Your account is now secure. Continue using Custocare AI on your preferred platform."
+      heroSubtext="Your account is now secure. Continue using Custocare on your preferred platform."
       showBackToLogin={false}
     >
       <div className="space-y-6">

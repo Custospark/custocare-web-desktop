@@ -19,6 +19,7 @@ import { ChargeEntryStep } from './ChargeEntryStep';
 import { BillingSummaryStep } from './BillingSummaryStep';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import LogoImage from '../../../../../shared/assets/LogoImage';
+import { BrandName } from '../../../../../shared/utils/BrandName';
 
 interface BillingTrayProps {
   theme?: 'light' | 'dark';
@@ -188,9 +189,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <LogoImage size="sm" />
               <div className="hidden sm:flex sm:items-center sm:gap-2">
-                <span className="text-base sm:text-lg font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-                  Custocare AI
-                </span>
+                <BrandName/>
                 <LucideCreditCard className="w-4 h-4 text-blue-500" />
                 <span className="text-sm font-medium text-blue-500">
                   Billing

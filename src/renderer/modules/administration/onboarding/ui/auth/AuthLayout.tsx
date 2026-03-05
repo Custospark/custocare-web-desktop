@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/u
 import { toggleTheme } from '../../../../../app/store/slices/uiSlice';
 import { cn } from '../../../../../shared/types/cn';
 import LogoImage from '../../../../../shared/assets/LogoImage';
+import { BrandName } from '../../../../../shared/utils/BrandName';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -171,7 +172,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
             transition={{ duration: 0.6, delay: 1 }}
             className="text-xs text-cyan-100/60 font-medium"
           >
-            © {new Date().getFullYear()} Custocare AI. All rights reserved.
+            © {new Date().getFullYear()} <BrandName/>. All rights reserved.
           </motion.p>
         </div>
       </div>
@@ -193,13 +194,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           {/* Mobile Logo */}
             <div className="flex items-center gap-2">
             <LogoImage/>
-                <span
-                  className={cn(
-                    'text-base sm:text-lg font-bold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent',
-                  )}
-                >
-                  Custocare AI
-                </span>
+             <BrandName></BrandName>
 
               </div>
 

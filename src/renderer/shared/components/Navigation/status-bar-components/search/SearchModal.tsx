@@ -15,6 +15,7 @@ import { SearchInput }   from './SearchInput';
 import { SearchResults } from './SearchResults';
 import { useSearchFilter } from './hooks/useSearchFilter';
 import { useSearchCache }   from './hooks/useSearchCache';
+import { BRAND_NAME_LCASE } from '../../../../utils/BrandName';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface SearchModalProps {
@@ -302,7 +303,7 @@ const SearchModalInner: React.FC<SearchModalProps> = ({ isOpen, onClose, theme }
                   'text-[10px] font-medium bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent',
                   isDark ? 'opacity-90' : 'opacity-100'
                 )}>
-                  Custocare AI Search
+                  {BRAND_NAME_LCASE} Search
                 </span>
               </div>
             </div>
