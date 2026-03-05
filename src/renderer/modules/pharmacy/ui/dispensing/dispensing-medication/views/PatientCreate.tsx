@@ -1398,12 +1398,13 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                     exit={{ opacity: 0, height: 0 }}
                     className="mb-6"
                   >
-                    <div className={cn(
-                      'rounded-xl border-2 p-6',
-                      isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                    )}>
-                      <LoadingSkeleton variant="default" theme={theme} message="Creating patient record..." />
-                    </div>
+                      <div className={cn(
+                        'rounded-xl border-2 py-3 px-5',
+                        isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                      )}>
+                        <LoadingSkeleton variant="default" theme={theme} message="Creating patient record..." />
+                      </div>
+
                   </motion.div>
                 )}
               </AnimatePresence>

@@ -493,7 +493,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex justify-end mb-6"
+            className="flex justify-end mb-1"
           >
             <motion.button
               whileHover={{ scale: 1.05 }}

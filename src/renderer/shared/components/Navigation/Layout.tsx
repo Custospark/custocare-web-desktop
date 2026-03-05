@@ -27,6 +27,16 @@ import {
 } from './layout-components/LayoutTypes';
 import { useNetworkStatus } from '../../../app/store/hooks/seNetworkStatus';
 
+// ── Search: always-mounted modal + shared keyboard hook ──────────────────────
+// SearchModal is rendered here (not inside SearchBar) so ⌘K continues to work
+// even when the StatusBar / SearchBar are not in the DOM (topBarsVisible=false).
+// useSearchKeyboard is a module-level singleton — this instance shares state
+// with every other call site (e.g. the trigger button in SearchBar).
+import { SearchModal } from './status-bar-components/search/SearchModal';
+import { useSearchKeyboard } from './status-bar-components/search/hooks/useSearchKeyboard';
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface LocalLayoutState {
   mobileSidebarOpen: boolean;
   sidebarPosition: SidebarPosition;
@@ -34,11 +44,6 @@ interface LocalLayoutState {
   topBarsVisible: boolean;
 }
 
-/**
- * ============================================================================
- * STORAGE HELPERS
- * ============================================================================
- */
 const loadSidebarPosition = (): SidebarPosition => {
   const saved = localStorage.getItem(STORAGE_KEYS.SIDEBAR_POSITION);
   return saved === 'left' || saved === 'right' ? saved : 'left';
@@ -68,13 +73,11 @@ export const Layout: React.FC = () => {
     sidebarOpen: state.ui.sidebarOpen as boolean,
   }));
 
-  const {
-    systemStatus,
-    isOnline,
-    latency,
-    lastChecked,
-    retryConnection,
-  } = useNetworkStatus();
+  const { systemStatus, isOnline, latency, lastChecked, retryConnection } = useNetworkStatus();
+
+  // ── Always-mounted search modal ───────────────────────────────────────────
+  // Reads from the same singleton as SearchBar's trigger button.
+  const { isOpen: searchOpen, closeSearch } = useSearchKeyboard();
 
   const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -85,30 +88,21 @@ export const Layout: React.FC = () => {
     topBarsVisible: loadTopBarsVisible(),
   });
 
-  /**
-   * ============================================================================
-   * COMPUTED VALUES
-   * ============================================================================
-   */
+  // ── Computed values ───────────────────────────────────────────────────────
   const themeClasses = useMemo((): LayoutThemeClasses => {
     const isDark = theme === 'dark';
     return {
       background: isDark
         ? 'bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-gray-100'
         : 'bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900',
-
       sidebarBorder: isDark ? 'border-gray-800/50' : 'border-gray-200/60',
-
       contentArea: isDark
         ? 'bg-gradient-to-b from-transparent to-gray-950/50'
         : 'bg-gradient-to-b from-transparent to-gray-50/50',
-
       backdrop: isDark ? 'bg-gray-900/80 backdrop-blur-xl' : 'bg-white/80 backdrop-blur-xl',
-
       glass: isDark
         ? 'bg-gray-900/95 backdrop-blur-xl border-gray-800/50'
         : 'bg-white/95 backdrop-blur-xl border-gray-200/60',
-
       accent: isDark ? 'from-cyan-500 to-blue-600' : 'from-blue-500 to-indigo-600',
     };
   }, [theme]);
@@ -117,8 +111,8 @@ export const Layout: React.FC = () => {
     const isLeft = localState.sidebarPosition === 'left';
     if (isLeft) {
       return sidebarOpen
-        ? <PanelLeftClose className="w-4 h-4" />
-        : <PanelLeftOpen  className="w-4 h-4" />;
+        ? <PanelLeftClose  className="w-4 h-4" />
+        : <PanelLeftOpen   className="w-4 h-4" />;
     }
     return sidebarOpen
       ? <PanelRightClose className="w-4 h-4" />
@@ -140,15 +134,10 @@ export const Layout: React.FC = () => {
     [localState.topBarsVisible]
   );
 
-  /**
-   * ============================================================================
-   * HANDLERS
-   * ============================================================================
-   */
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleToggleSidebar = useCallback(() => {
     setLocalState(prev => ({ ...prev, isTransitioning: true }));
     dispatch(toggleSidebar());
-
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
     transitionTimeoutRef.current = setTimeout(() => {
       setLocalState(prev => ({ ...prev, isTransitioning: false }));
@@ -173,7 +162,6 @@ export const Layout: React.FC = () => {
       saveSidebarPosition(next);
       return { ...prev, sidebarPosition: next, isTransitioning: true };
     });
-
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
     transitionTimeoutRef.current = setTimeout(() => {
       setLocalState(prev => ({ ...prev, isTransitioning: false }));
@@ -182,7 +170,6 @@ export const Layout: React.FC = () => {
 
   const handleToggleTopBarsVisible = useCallback(() => {
     if (!isDesktopNow()) return;
-
     setLocalState(prev => {
       const next = !prev.topBarsVisible;
       saveTopBarsVisible(next);
@@ -190,18 +177,7 @@ export const Layout: React.FC = () => {
     });
   }, []);
 
-  /**
-   * ============================================================================
-   * EFFECTS
-   * ============================================================================
-   */
-
-  // ── NOTE: ⌘K / Escape handling has been intentionally removed from here.
-  //    The new SearchBar owns its own global ⌘K listener via useSearchKeyboard,
-  //    and SearchModal owns its Escape listener. Keeping a duplicate handler
-  //    here caused double-preventDefault and pointed at a dead searchInputRef.
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024 && localState.mobileSidebarOpen) {
@@ -211,7 +187,6 @@ export const Layout: React.FC = () => {
         setLocalState(prev => ({ ...prev, topBarsVisible: true }));
       }
     };
-
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [localState.mobileSidebarOpen, localState.topBarsVisible, handleCloseMobileSidebar]);
@@ -238,11 +213,7 @@ export const Layout: React.FC = () => {
     };
   }, []);
 
-  /**
-   * ============================================================================
-   * RENDER
-   * ============================================================================
-   */
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div
       className={cn(
@@ -251,7 +222,7 @@ export const Layout: React.FC = () => {
         themeClasses.background
       )}
     >
-      {/* TOP BARS (Status + Navbar) */}
+      {/* TOP BARS — conditionally rendered based on topBarsVisible */}
       <LayoutTopBars
         theme={theme}
         themeClasses={{
@@ -281,7 +252,6 @@ export const Layout: React.FC = () => {
 
       {/* MAIN LAYOUT */}
       <div style={{ paddingTop: topPaddingPx }}>
-        {/* Sidebar Section */}
         <LayoutSidebarSection
           mobileSidebarOpen={localState.mobileSidebarOpen}
           sidebarOpen={sidebarOpen}
@@ -295,7 +265,6 @@ export const Layout: React.FC = () => {
           onToggleSidebar={handleToggleSidebar}
         />
 
-        {/* Content Section */}
         <LayoutContentSection
           sidebarOpen={sidebarOpen}
           sidebarPosition={localState.sidebarPosition}
@@ -307,6 +276,27 @@ export const Layout: React.FC = () => {
       <DecorativeBackground
         theme={theme}
         sidebarPosition={localState.sidebarPosition}
+      />
+
+      {/*
+       * ── Global Search Modal ──────────────────────────────────────────────
+       * Rendered unconditionally here so it is ALWAYS mounted, regardless of
+       * whether the StatusBar (and therefore SearchBar) is visible.
+       *
+       * Uses the same module-level singleton as SearchBar's trigger button
+       * (useSearchKeyboard) so the two are always in sync:
+       *  • ⌘K toggles the modal even when StatusBar is hidden.
+       *  • Clicking the SearchBar trigger opens this same modal.
+       *  • SearchBar's active-ring state also syncs because it reads from the
+       *    same singleton.
+       *
+       * SearchModal renders via createPortal → document.body, so its position
+       * in this JSX tree has no visual impact.
+       */}
+      <SearchModal
+        isOpen={searchOpen}
+        onClose={closeSearch}
+        theme={theme}
       />
     </div>
   );
