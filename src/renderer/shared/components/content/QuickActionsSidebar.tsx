@@ -450,22 +450,16 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                 )}
               </button>
 
-           {!collapsedSide && (
-                <div className="flex flex-col">
-                  <span className={cn(
-                    'text-sm font-semibold',
-                    theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
-                  )}>
-                    Take Actions
-                  </span>
-                  {/* <span className={cn(
-                    'text-xs leading-relaxed',
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                  )}>
-                    Execute patient-centered actions within the current workflow.
-                  </span> */}
-                </div>
-              )}
+        {!collapsedSide && (
+              <div className="flex flex-col">
+                <span className={cn(
+                  'text-xs font-mono',
+                  theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                )}>
+                  Press ⌘K or Ctrl+K to search for anything
+                </span>
+              </div>
+            )}
             </div>
           )}
 

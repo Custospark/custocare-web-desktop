@@ -714,7 +714,7 @@ export const ModuleAccessMiddleware: React.FC = () => {
   
   // IMMEDIATE BYPASS RENDER for account/auth routes
   if (shouldBypass) {
-    console.log('[ModuleAccess] Bypassing middleware for route:', currentPath);
+    // console.log('[ModuleAccess] Bypassing middleware for route:', currentPath);
     return <Outlet />;
   }
   

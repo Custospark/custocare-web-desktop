@@ -298,7 +298,6 @@ const SearchModalInner: React.FC<SearchModalProps> = ({ isOpen, onClose, theme }
                     </span>
                   ))}
                 </div>
-
                 <span className={cn(
                   'text-[10px] font-medium bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent',
                   isDark ? 'opacity-90' : 'opacity-100'

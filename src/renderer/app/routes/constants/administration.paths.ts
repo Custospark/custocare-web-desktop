@@ -32,12 +32,13 @@ export const ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES = {
 
 export const ADMINISTRATION_FACILITY_SETTINGS_ROUTES = {
   ROOT: `${ROUTES.ADMINISTRATION}/facility-settings`,
-
-  // Facility Identity (branding, currency, tax)
-  FACILITY_IDENTITY: `${ROUTES.ADMINISTRATION}/facility-settings/identity`,
-
-  // Operational Policies (rules, billing policies, guidelines)
-  OPERATIONAL_POLICIES: `${ROUTES.ADMINISTRATION}/facility-settings/policies`,
+  
+  // Facility Identity - nested under settings
+  FACILITY_IDENTITY: `${ROUTES.ADMINISTRATION}/settings/identity`,
+  
+  // Operational Policies - nested under settings
+  OPERATIONAL_POLICIES: `${ROUTES.ADMINISTRATION}/settings/policies`,
+  
 } as const;
 
 export const ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES = {
@@ -54,4 +55,43 @@ export const ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES = {
   // Invoices & Billing
   INVOICES: `${ROUTES.ADMINISTRATION}/plans-subscriptions/invoices`,
   BILLING_DETAILS: `${ROUTES.ADMINISTRATION}/plans-subscriptions/billing-details`,
+} as const;
+
+
+export const ADMIN_ROUTES = {
+  // Base
+  ROOT: ROUTES.ADMINISTRATION,
+  
+  // Overview
+  OVERVIEW: `${ROUTES.ADMINISTRATION}/overview`,
+  
+  // Team Management
+  TEAM: `${ROUTES.ADMINISTRATION}/team`,
+  
+  // Facility Setup
+  FACILITY_SETUP: `${ROUTES.ADMINISTRATION}/facility-setup`,
+  
+  // Service Catalog
+  SERVICE_CATALOG: `${ROUTES.ADMINISTRATION}/service-catalog`,
+  
+  // Inventory
+  INVENTORY: `${ROUTES.ADMINISTRATION}/inventory`,
+  
+  // Clinical Space Management
+  SPACE_GOVERNANCE: `${ROUTES.ADMINISTRATION}/space-governance`,
+  CLINICAL_ROOMS: `${ROUTES.ADMINISTRATION}/space-governance/clinical-rooms`,
+  WARD_MANAGEMENT: `${ROUTES.ADMINISTRATION}/space-governance/ward-management`,
+  FACILITY_ZONES: `${ROUTES.ADMINISTRATION}/space-governance/facility-zones`,
+  SPACE_ALLOCATION: `${ROUTES.ADMINISTRATION}/space-governance/space-allocation`,
+  
+  // Plans & Subscriptions
+  PLANS_SUBSCRIPTIONS: `${ROUTES.ADMINISTRATION}/plans-subscriptions`,
+  AVAILABLE_PLANS: `${ROUTES.ADMINISTRATION}/plans-subscriptions/available-plans`,
+  SUBSCRIPTIONS: `${ROUTES.ADMINISTRATION}/plans-subscriptions/subscriptions`,
+  PAYMENTS: `${ROUTES.ADMINISTRATION}/plans-subscriptions/payments`,
+  
+  // Facility Settings
+  FACILITY_SETTINGS: `${ROUTES.ADMINISTRATION}/settings`,
+  FACILITY_IDENTITY: `${ROUTES.ADMINISTRATION}/settings/identity`,
+  OPERATIONAL_POLICIES: `${ROUTES.ADMINISTRATION}/settings/policies`,
 } as const;

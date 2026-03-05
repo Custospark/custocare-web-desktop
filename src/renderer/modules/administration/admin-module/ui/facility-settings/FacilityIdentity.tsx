@@ -27,7 +27,7 @@ import FacilityBrandingAndOpsCard from './components/FacilityBrandingAndOpsCard'
 /*                               Main Component                               */
 /* -------------------------------------------------------------------------- */
 
-const FacilitySettings: React.FC = () => {
+const FacilityIdentity: React.FC = () => {
   const theme = useSelector((state: RootState) => state.ui.theme);
   const isDark = theme === 'dark';
 
@@ -242,5 +242,5 @@ const FacilitySettings: React.FC = () => {
   );
 };
 
-FacilitySettings.displayName = 'FacilitySettings';
-export default FacilitySettings;
+FacilityIdentity.displayName = 'FacilityIdentity';
+export default FacilityIdentity;

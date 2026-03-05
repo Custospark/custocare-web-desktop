@@ -16,6 +16,7 @@ export interface SearchableModule {
   keywords: string[];
   category: string;
   requiredCapability?:string;
+
 }
 
 // In your StatusBar component file
