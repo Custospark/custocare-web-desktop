@@ -1,13 +1,14 @@
 // search/searchModules.ts
 // NOTE: import paths are one level deeper than the original SearchBar.tsx
 import { ACCOUNT_ROUTES, ROUTES }       from '../../../../../app/routes/routeConstants';
-import { PLATFORM_ADMIN_ROUTES }         from '../../../../../app/routes/constants/platform-administration.paths';
+import { PLATFORM_ADMIN_ROUTES} from '../../../../../app/routes/constants/platform-administration.paths';
 import { MEDICAL_RECORDS_ROUTES }        from '../../../../../app/routes/routeConstants';
 import {
   ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES,
   ADMINISTRATION_FACILITY_SETTINGS_ROUTES,
   ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES,
 } from '../../../../../app/routes/constants/administration.paths';
+import { ADMIN_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import type { SearchableModule } from '../StatusBarTypes';
 
 export const allModules: SearchableModule[] = [

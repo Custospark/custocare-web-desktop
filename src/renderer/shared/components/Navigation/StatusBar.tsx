@@ -18,9 +18,6 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   isSearchFocused,
   onSearchChange,
   onSearchFocus,
-  onSearchBlur,
-  onClearSearch,
-  searchInputRef,
   sidebarPosition,
   isTransitioning,
   onToggleSidebarPosition,
@@ -55,9 +52,6 @@ export const StatusBar: React.FC<StatusBarProps> = ({
           isSearchFocused={isSearchFocused}
           onSearchChange={onSearchChange}
           onSearchFocus={onSearchFocus}
-          onSearchBlur={onSearchBlur}
-          onClearSearch={onClearSearch}
-          searchInputRef={searchInputRef}
           theme={theme}
         />
 

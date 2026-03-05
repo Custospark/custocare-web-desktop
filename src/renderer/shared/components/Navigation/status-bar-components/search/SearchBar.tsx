@@ -12,7 +12,7 @@ interface SearchBarProps {
   // Legacy props — accepted but ignored
   searchQuery?: string;
   isSearchFocused?: boolean;
-  onSearchChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSearchChange?: ((query: string) => void) | ((e: React.ChangeEvent<HTMLInputElement>) => void);
   onSearchFocus?: () => void;
   onSearchBlur?: () => void;
   onClearSearch?: () => void;
