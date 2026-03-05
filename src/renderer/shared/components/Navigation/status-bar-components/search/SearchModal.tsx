@@ -38,19 +38,6 @@ const KbdHint: React.FC<{ label: string; theme: ThemeMode }> = ({ label, theme }
 );
 
 // ─── Component ────────────────────────────────────────────────────────────────
-/**
- * SearchModal — Component 2
- *
- * The full spotlight-style command-palette experience.
- * Rendered via a React portal so it sits above every other element.
- *
- * Responsibilities:
- *  - Backdrop + modal card animation
- *  - Query state
- *  - Keyboard navigation (↑ ↓ ↵ Esc)
- *  - Orchestrates SearchInput + SearchResults
- *  - Calls cache helpers on navigate
- */
 const SearchModalInner: React.FC<SearchModalProps> = ({ isOpen, onClose, theme }) => {
   const isDark = theme === 'dark';
 
@@ -101,11 +88,33 @@ const SearchModalInner: React.FC<SearchModalProps> = ({ isOpen, onClose, theme }
     }
   }, [activeIndex]);
 
-  // ── Prevent body scroll while modal is open ───────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // ✅ FIX: Gate body-scroll lock on isOpen.
+  //
+  // Previously this had an empty dependency array [], which caused
+  // document.body.style.overflow = 'hidden' to fire unconditionally on mount
+  // and never be cleaned up (because SearchModalInner is always mounted via
+  // the portal wrapper, AnimatePresence only hides the inner motion divs).
+  // Result: the entire app body was permanently non-scrollable.
+  // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
+    if (!isOpen) {
+      document.body.style.overflow = '';
+      return;
+    }
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  // ── Reset query when modal closes ─────────────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) {
+      setQuery('');
+      setActiveIndex(-1);
+    }
+  }, [isOpen]);
 
   // ── Modal-scoped keyboard handling (Esc, arrows, Enter) ───────────────────
   useEffect(() => {
@@ -219,7 +228,6 @@ const SearchModalInner: React.FC<SearchModalProps> = ({ isOpen, onClose, theme }
             className={cn(
               'fixed z-[9999] top-[10%] left-1/2 -translate-x-1/2',
               'w-full max-w-2xl mx-auto px-4',
-              // prevents the card from covering everything on tiny viewports
               'max-h-[80vh]'
             )}
           >
@@ -266,7 +274,7 @@ const SearchModalInner: React.FC<SearchModalProps> = ({ isOpen, onClose, theme }
               </div>
 
               {/* ── Keyboard hints footer ── */}
-             <div
+              <div
                 className={cn(
                   'flex items-center justify-between px-4 py-2.5 border-t',
                   isDark ? 'border-gray-800 bg-gray-900/80' : 'border-gray-100 bg-gray-50/80'
@@ -274,9 +282,9 @@ const SearchModalInner: React.FC<SearchModalProps> = ({ isOpen, onClose, theme }
               >
                 <div className="flex items-center gap-3 flex-wrap">
                   {[
-                    { keys: ['↑', '↓'],   hint: 'navigate'  },
-                    { keys: ['↵'],         hint: 'open'      },
-                    { keys: ['Esc'],       hint: 'close'     },
+                    { keys: ['↑', '↓'], hint: 'navigate' },
+                    { keys: ['↵'],      hint: 'open'     },
+                    { keys: ['Esc'],    hint: 'close'    },
                   ].map(({ keys, hint }) => (
                     <span
                       key={hint}
@@ -290,8 +298,7 @@ const SearchModalInner: React.FC<SearchModalProps> = ({ isOpen, onClose, theme }
                     </span>
                   ))}
                 </div>
-                
-                {/* Gradient text for Custocare AI Search */}
+
                 <span className={cn(
                   'text-[10px] font-medium bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent',
                   isDark ? 'opacity-90' : 'opacity-100'

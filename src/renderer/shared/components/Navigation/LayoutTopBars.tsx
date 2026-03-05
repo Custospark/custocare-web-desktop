@@ -1,15 +1,16 @@
 // LayoutTopBars.tsx
 import React, { useMemo } from 'react';
-// import {Maximize2, Minimize2 ,PanelTop} from 'lucide-react';
-import {PanelTopClose } from 'lucide-react';
+import { PanelTopClose } from 'lucide-react';
 import { cn } from '../../types/cn';
 import Navbar from './Navbar/Navbar';
-import { type SidebarPosition, type SystemStatus, type ThemeMode } from './status-bar-components/StatusBarTypes';
-
+import {
+  type SidebarPosition,
+  type SystemStatus,
+  type ThemeMode,
+} from './status-bar-components/StatusBarTypes';
 import { useNavigate } from 'react-router-dom';
 import { ACCOUNT_ROUTES } from '../../../app/routes/routeConstants';
 import StatusBar from './StatusBar';
-
 
 export interface LayoutTopBarsThemeClasses {
   backdrop: string;
@@ -29,14 +30,6 @@ export interface LayoutTopBarsProps {
   latency: number | null;
   lastChecked: Date | null;
   onRetryConnection: () => void;
-
-  searchQuery: string;
-  isSearchFocused: boolean;
-  onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSearchFocus: () => void;
-  onSearchBlur: () => void;
-  onClearSearch: () => void;
-  searchInputRef: React.RefObject<HTMLInputElement | null>;
 
   sidebarPosition: SidebarPosition;
   sidebarOpen: boolean;
@@ -67,13 +60,6 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
   latency,
   lastChecked,
   onRetryConnection,
-  searchQuery,
-  isSearchFocused,
-  onSearchChange,
-  onSearchFocus,
-  onSearchBlur,
-  onClearSearch,
-  searchInputRef,
   sidebarPosition,
   sidebarOpen,
   isTransitioning,
@@ -88,7 +74,6 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
 }) => {
   const navbarTopPx = useMemo(() => (topBarsVisible ? STATUS_BAR_H : 0), [topBarsVisible]);
   const navigate = useNavigate();
-  
 
   return (
     <>
@@ -101,21 +86,13 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
           latency={latency}
           lastChecked={lastChecked}
           onRetryConnection={onRetryConnection}
-          searchQuery={searchQuery}
-          isSearchFocused={isSearchFocused}
-          onSearchChange={onSearchChange}
-          onSearchFocus={onSearchFocus}
-          onSearchBlur={onSearchBlur}
-          onClearSearch={onClearSearch}
-          searchInputRef={searchInputRef}
           sidebarPosition={sidebarPosition}
           isTransitioning={isTransitioning}
           onToggleSidebarPosition={onToggleSidebarPosition}
           onToggleTheme={onToggleTheme}
           appVersion={appVersion}
           unreadCount={3}
-          onNotificationClick={() => navigate(ACCOUNT_ROUTES.MESSAGES_INBOX)} // NEW: Optional custom handler
-
+          onNotificationClick={() => navigate(ACCOUNT_ROUTES.MESSAGES_INBOX)}
         />
       )}
 
@@ -130,8 +107,13 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
         )}
         style={{ top: navbarTopPx }}
       >
-        <div className={cn('flex items-center px-4 py-2.5', sidebarPosition === 'right' && 'flex-row-reverse')}>
-          {/* Desktop Sidebar Toggle (collapse/expand) */}
+        <div
+          className={cn(
+            'flex items-center px-4 py-2.5',
+            sidebarPosition === 'right' && 'flex-row-reverse'
+          )}
+        >
+          {/* Desktop Sidebar Toggle */}
           <button
             onClick={onToggleSidebar}
             aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
@@ -165,7 +147,9 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
                   ].join(' ')
             )}
           >
-            <div className={cn('transition-all duration-300 ease-out', 'group-hover:scale-110')}>{collapseIcon}</div>
+            <div className={cn('transition-all duration-300 ease-out', 'group-hover:scale-110')}>
+              {collapseIcon}
+            </div>
             <div
               className={cn(
                 'absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100',
@@ -183,29 +167,29 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
           </div>
 
           {/* Desktop-only TopBars Toggle */}
-        <div className={cn('hidden lg:flex items-center', sidebarPosition === 'left' ? 'ml-3' : 'mr-3')}>
-          <button
-            onClick={onToggleTopBarsVisible}
-            aria-label={topBarsVisible ? 'Hide top bars' : 'Show top bars'}
-            title={topBarsVisible ? 'Hide top bars' : 'Show top bars'}
-            className={cn(
-              'p-2 rounded-xl border backdrop-blur-xl cursor-pointer',
-              'transition-all duration-200',
-              'hover:scale-105 active:scale-95',
-              'focus:outline-none focus:ring-2 focus:ring-offset-2',
-              theme === 'dark'
-                ? 'bg-gray-900/60 border-gray-700/40 text-gray-300 hover:text-white hover:border-cyan-500/50 focus:ring-cyan-500/50 focus:ring-offset-gray-950'
-                : 'bg-white/70 border-gray-300/40 text-gray-700 hover:text-gray-900 hover:border-blue-500/50 focus:ring-blue-500/50 focus:ring-offset-white'
-            )}
-          >
-            <PanelTopClose 
+          <div className={cn('hidden lg:flex items-center', sidebarPosition === 'left' ? 'ml-3' : 'mr-3')}>
+            <button
+              onClick={onToggleTopBarsVisible}
+              aria-label={topBarsVisible ? 'Hide top bars' : 'Show top bars'}
+              title={topBarsVisible ? 'Hide top bars' : 'Show top bars'}
               className={cn(
-                "w-4 h-4 stroke-[2] transition-transform duration-300",
-                !topBarsVisible && "rotate-180"
-              )} 
-            />
-          </button>
-        </div>
+                'p-2 rounded-xl border backdrop-blur-xl cursor-pointer',
+                'transition-all duration-200',
+                'hover:scale-105 active:scale-95',
+                'focus:outline-none focus:ring-2 focus:ring-offset-2',
+                theme === 'dark'
+                  ? 'bg-gray-900/60 border-gray-700/40 text-gray-300 hover:text-white hover:border-cyan-500/50 focus:ring-cyan-500/50 focus:ring-offset-gray-950'
+                  : 'bg-white/70 border-gray-300/40 text-gray-700 hover:text-gray-900 hover:border-blue-500/50 focus:ring-blue-500/50 focus:ring-offset-white'
+              )}
+            >
+              <PanelTopClose
+                className={cn(
+                  'w-4 h-4 stroke-[2] transition-transform duration-300',
+                  !topBarsVisible && 'rotate-180'
+                )}
+              />
+            </button>
+          </div>
         </div>
       </div>
     </>

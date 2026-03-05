@@ -16,24 +16,22 @@ import LayoutTopBars from './LayoutTopBars';
 import DecorativeBackground from './DecorativeBackground';
 import { LayoutSidebarSection } from './layout-components/LayoutSidebarSection';
 import { LayoutContentSection } from './layout-components/LayoutContentSection';
-import { 
-  type ThemeMode, 
-  type SidebarPosition, 
+import {
+  type ThemeMode,
+  type SidebarPosition,
   type LayoutThemeClasses,
   STORAGE_KEYS,
   ANIMATION_CONFIG,
   TOP_BARS_TOTAL_H,
-  NAVBAR_H 
+  NAVBAR_H,
 } from './layout-components/LayoutTypes';
 import { useNetworkStatus } from '../../../app/store/hooks/seNetworkStatus';
 
 interface LocalLayoutState {
   mobileSidebarOpen: boolean;
-  searchQuery: string;
-  isSearchFocused: boolean;
   sidebarPosition: SidebarPosition;
   isTransitioning: boolean;
-  topBarsVisible: boolean; // statusbar + navbar together
+  topBarsVisible: boolean;
 }
 
 /**
@@ -52,7 +50,6 @@ const saveSidebarPosition = (position: SidebarPosition): void => {
 
 const loadTopBarsVisible = (): boolean => {
   const saved = localStorage.getItem(STORAGE_KEYS.TOP_BARS_VISIBLE);
-  // visible by default
   if (saved === null) return true;
   return saved === 'true';
 };
@@ -71,22 +68,18 @@ export const Layout: React.FC = () => {
     sidebarOpen: state.ui.sidebarOpen as boolean,
   }));
 
-  // Real network status hook
-  const { 
-    systemStatus, 
-    isOnline, 
-    latency, 
+  const {
+    systemStatus,
+    isOnline,
+    latency,
     lastChecked,
-    retryConnection 
+    retryConnection,
   } = useNetworkStatus();
 
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [localState, setLocalState] = useState<LocalLayoutState>({
     mobileSidebarOpen: false,
-    searchQuery: '',
-    isSearchFocused: false,
     sidebarPosition: loadSidebarPosition(),
     isTransitioning: false,
     topBarsVisible: loadTopBarsVisible(),
@@ -122,8 +115,14 @@ export const Layout: React.FC = () => {
 
   const collapseIcon = useMemo(() => {
     const isLeft = localState.sidebarPosition === 'left';
-    if (isLeft) return sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />;
-    return sidebarOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />;
+    if (isLeft) {
+      return sidebarOpen
+        ? <PanelLeftClose className="w-4 h-4" />
+        : <PanelLeftOpen  className="w-4 h-4" />;
+    }
+    return sidebarOpen
+      ? <PanelRightClose className="w-4 h-4" />
+      : <PanelRightOpen  className="w-4 h-4" />;
   }, [localState.sidebarPosition, sidebarOpen]);
 
   const navbarPositionClasses = useMemo(() => {
@@ -136,9 +135,10 @@ export const Layout: React.FC = () => {
     };
   }, [localState.sidebarPosition, sidebarOpen]);
 
-  const topPaddingPx = useMemo(() => {
-    return localState.topBarsVisible ? TOP_BARS_TOTAL_H : NAVBAR_H;
-  }, [localState.topBarsVisible]);
+  const topPaddingPx = useMemo(
+    () => (localState.topBarsVisible ? TOP_BARS_TOTAL_H : NAVBAR_H),
+    [localState.topBarsVisible]
+  );
 
   /**
    * ============================================================================
@@ -161,15 +161,6 @@ export const Layout: React.FC = () => {
 
   const handleCloseMobileSidebar = useCallback(() => {
     setLocalState(prev => ({ ...prev, mobileSidebarOpen: false }));
-  }, []);
-
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalState(prev => ({ ...prev, searchQuery: e.target.value }));
-  }, []);
-
-  const handleClearSearch = useCallback(() => {
-    setLocalState(prev => ({ ...prev, searchQuery: '' }));
-    searchInputRef.current?.blur();
   }, []);
 
   const handleToggleTheme = useCallback(() => {
@@ -204,27 +195,18 @@ export const Layout: React.FC = () => {
    * EFFECTS
    * ============================================================================
    */
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-      if (e.key === 'Escape' && localState.searchQuery) {
-        handleClearSearch();
-      }
-    };
 
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [localState.searchQuery, handleClearSearch]);
+  // ── NOTE: ⌘K / Escape handling has been intentionally removed from here.
+  //    The new SearchBar owns its own global ⌘K listener via useSearchKeyboard,
+  //    and SearchModal owns its Escape listener. Keeping a duplicate handler
+  //    here caused double-preventDefault and pointed at a dead searchInputRef.
+  // ─────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024 && localState.mobileSidebarOpen) {
         handleCloseMobileSidebar();
       }
-
       if (window.innerWidth < 1024 && localState.topBarsVisible === false) {
         setLocalState(prev => ({ ...prev, topBarsVisible: true }));
       }
@@ -262,11 +244,21 @@ export const Layout: React.FC = () => {
    * ============================================================================
    */
   return (
-    <div className={cn('min-h-screen', 'transition-colors duration-500 ease-in-out', themeClasses.background)}>
+    <div
+      className={cn(
+        'min-h-screen',
+        'transition-colors duration-500 ease-in-out',
+        themeClasses.background
+      )}
+    >
       {/* TOP BARS (Status + Navbar) */}
       <LayoutTopBars
         theme={theme}
-        themeClasses={{ backdrop: themeClasses.backdrop, glass: themeClasses.glass, accent: themeClasses.accent }}
+        themeClasses={{
+          backdrop: themeClasses.backdrop,
+          glass: themeClasses.glass,
+          accent: themeClasses.accent,
+        }}
         topBarsVisible={localState.topBarsVisible}
         onToggleTopBarsVisible={handleToggleTopBarsVisible}
         systemStatus={systemStatus}
@@ -274,13 +266,6 @@ export const Layout: React.FC = () => {
         latency={latency}
         lastChecked={lastChecked}
         onRetryConnection={retryConnection}
-        searchQuery={localState.searchQuery}
-        isSearchFocused={localState.isSearchFocused}
-        onSearchChange={handleSearchChange}
-        onSearchFocus={() => setLocalState(prev => ({ ...prev, isSearchFocused: true }))}
-        onSearchBlur={() => setLocalState(prev => ({ ...prev, isSearchFocused: false }))}
-        onClearSearch={handleClearSearch}
-        searchInputRef={searchInputRef}
         sidebarPosition={localState.sidebarPosition}
         sidebarOpen={sidebarOpen}
         isTransitioning={localState.isTransitioning}
@@ -319,7 +304,10 @@ export const Layout: React.FC = () => {
       </div>
 
       {/* Decorative */}
-      <DecorativeBackground theme={theme} sidebarPosition={localState.sidebarPosition} />
+      <DecorativeBackground
+        theme={theme}
+        sidebarPosition={localState.sidebarPosition}
+      />
     </div>
   );
 };

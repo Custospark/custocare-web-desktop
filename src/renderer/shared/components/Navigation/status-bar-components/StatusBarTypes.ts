@@ -1,4 +1,3 @@
-import { type RefObject } from 'react';
 
 export type SidebarPosition = 'left' | 'right';
 export type SystemStatus = 'online' | 'slow' | 'offline';
@@ -19,26 +18,26 @@ export interface SearchableModule {
   requiredCapability?:string;
 }
 
+// In your StatusBar component file
 export interface StatusBarProps {
   theme: ThemeMode;
-  themeClasses: StatusBarThemeClasses;
+  themeClasses: { backdrop: string; };
   systemStatus: SystemStatus;
   isOnline: boolean;
   latency: number | null;
   lastChecked: Date | null;
   onRetryConnection: () => void;
-  searchQuery: string;
-  isSearchFocused: boolean;
-  onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSearchFocus: () => void;
-  onSearchBlur: () => void;
-  onClearSearch: () => void;
-  searchInputRef: RefObject<HTMLInputElement | null>;
-  sidebarPosition: SidebarPosition;
+  sidebarPosition: 'left' | 'right';
   isTransitioning: boolean;
   onToggleSidebarPosition: () => void;
   onToggleTheme: () => void;
   appVersion: string;
-  unreadCount?: number;
-  onNotificationClick?: () => void;
+  unreadCount: number;
+  onNotificationClick: () => void;
+  
+  // Make search props optional if they're not always needed
+  searchQuery?: string;
+  isSearchFocused?: boolean;
+  onSearchChange?: (query: string) => void;
+  onSearchFocus?: () => void;
 }
