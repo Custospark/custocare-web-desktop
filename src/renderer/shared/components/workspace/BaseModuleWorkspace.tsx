@@ -84,14 +84,12 @@ export function BaseModuleWorkspace({
   currentTier = 'essential',
   onRequestUpgrade,
 
-  moduleRequiredTier,
   moduleDisabledReason,
 }: ModuleWorkspaceProps) {
   const theme = useSelector((state: RootState) => state.ui.theme);
   const location = useLocation();
   const navigate = useNavigate();
 
-  const moduleTierBlocked = moduleRequiredTier ? !hasTier(currentTier, moduleRequiredTier) : false;
 
   const activeOperationId = useMemo(() => {
     const path = location.pathname;
@@ -106,13 +104,13 @@ export function BaseModuleWorkspace({
     return operations.map((op) => {
       const opTierBlocked = op.requiredTier ? !hasTier(currentTier, op.requiredTier) : false;
 
-      const effectiveDisabled = moduleTierBlocked || !!op.disabled || opTierBlocked;
+      // const effectiveDisabled = moduleTierBlocked || !!op.disabled || opTierBlocked;
+      const effectiveDisabled = !!op.disabled || opTierBlocked;
 
       const effectiveReason =
         moduleDisabledReason ??
         op.disabledReason ??
-        (moduleTierBlocked && moduleRequiredTier ? `Requires ${tierLabel(moduleRequiredTier)} tier` : undefined) ??
-        (opTierBlocked && op.requiredTier ? `Requires ${tierLabel(op.requiredTier)} tier` : undefined);
+        (opTierBlocked && op.requiredTier ? `Requires ${tierLabel(op.requiredTier)} Plan` : undefined);
 
       const statusBadges = buildStatusBadges(op.status);
 
@@ -128,17 +126,6 @@ export function BaseModuleWorkspace({
           ]
         : [];
 
-      const moduleBadge: BadgeSpec[] = moduleRequiredTier
-        ? [
-            {
-              text: `${tierLabel(moduleRequiredTier)} Module`,
-              tone: 'premium',
-              icon: <Crown className="w-3 h-3" />,
-              title: `This module requires ${tierLabel(moduleRequiredTier)} tier`,
-              onClick: moduleTierBlocked ? () => onRequestUpgrade?.(moduleRequiredTier!) : undefined,
-            },
-          ]
-        : [];
 
       const customBadges = normalizeCustomBadges(op.badges);
 
@@ -151,16 +138,13 @@ export function BaseModuleWorkspace({
         disabled: effectiveDisabled,
         disabledReason: effectiveReason,
         badge: badgeProp,
-        // optionally keep full list for any consumer that supports it
-        badges: [...moduleBadge, ...badgesForUI],
+      
       };
     });
   }, [
     operations,
     currentTier,
     onRequestUpgrade,
-    moduleRequiredTier,
-    moduleTierBlocked,
     moduleDisabledReason,
   ]);
 
@@ -188,11 +172,6 @@ export function BaseModuleWorkspace({
       const op = uiOperations.find((x) => x.id === operationId);
       if (!op) return;
 
-      // If module is tier-blocked, prefer upgrading module-tier
-      if (moduleTierBlocked && moduleRequiredTier) {
-        onRequestUpgrade?.(moduleRequiredTier);
-        return;
-      }
 
       // If operation is tier-blocked, prefer upgrading op-tier
       const opTierBlocked = op.requiredTier ? !hasTier(currentTier, op.requiredTier) : false;
@@ -205,7 +184,7 @@ export function BaseModuleWorkspace({
 
       navigate(`${basePath}/${operationId}`);
     },
-    [uiOperations, navigate, basePath, moduleTierBlocked, moduleRequiredTier, onRequestUpgrade, currentTier]
+    [uiOperations, navigate, basePath, onRequestUpgrade, currentTier]
   );
 
   return (

@@ -18,7 +18,7 @@ import {
 import { BaseModuleWorkspace } from '../../../../shared/components/workspace/BaseModuleWorkspace';
 import { ADMIN_ROUTES } from '../../../../app/routes/constants/administration.paths';
 import { ROUTES } from '../../../../app/routes/routeConstants';
-import type { PlanTier } from '../../../../shared/entitlements/entitlements';
+import { tierLabel, type PlanTier } from '../../../../shared/entitlements/entitlements';
 
 /**
  * Admin module operations configuration
@@ -96,13 +96,12 @@ const AdminModule: React.FC = () => {
   return (
     <BaseModuleWorkspace
       contextTitle="Facility Governance"
-      operations={ADMIN_OPERATIONS as any}
+      operations={ADMIN_OPERATIONS}
       basePath={ROUTES.ADMINISTRATION}
       defaultOperationPath={ADMIN_ROUTES.OVERVIEW}
       currentTier={currentTier}
       onRequestUpgrade={onRequestUpgrade}
-      moduleRequiredTier="essential"
-      moduleDisabledReason="Admin is available on Enterprise tier"
+      // No moduleRequiredTier prop - let each operation handle its own tier requirements
     />
   );
 };

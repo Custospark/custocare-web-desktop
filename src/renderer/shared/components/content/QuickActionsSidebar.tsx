@@ -18,6 +18,7 @@ import {
   PanelLeft,
 } from 'lucide-react';
 import { cn } from '../../utils/classNameUtils';
+import { useNavigate } from 'react-router-dom';
 
 // NEW: optional gating helpers (UI-first; backend later)
 import { hasTier, tierLabel, type FeatureStatus, type PlanTier } from '../../entitlements/entitlements';
@@ -100,6 +101,11 @@ export interface QuickActionsSidebarProps {
    * NEW: upgrade hook (optional)
    */
   onRequestUpgrade?: (requiredTier: PlanTier) => void;
+  
+  /**
+   * NEW: plans page URL for upgrade redirect
+   */
+  plansPageUrl?: string;
 }
 
 const tierShort = (tier: PlanTier) => {
@@ -130,12 +136,59 @@ const isTierLikeText = (value: string) => {
   );
 };
 
-const statusBadgeText = (status?: FeatureStatus) => {
-  if (!status) return undefined;
-  if (status === 'beta') return 'BETA';
-  if (status === 'new') return 'NEW';
-  if (status === 'deprecated') return 'DEPRECATED';
-  return undefined;
+// Updated statusBadgeText with background colors
+const statusBadgeConfig = (status?: FeatureStatus) => {
+  if (!status) return null;
+  
+  switch (status) {
+    case 'beta':
+      return {
+        text: 'BETA',
+        bgColor: 'bg-purple-500',
+        textColor: 'text-white',
+        darkBgColor: 'bg-purple-600',
+      };
+    case 'new':
+      return {
+        text: 'NEW',
+        bgColor: 'bg-green-500',
+        textColor: 'text-white',
+        darkBgColor: 'bg-green-600',
+      };
+    case 'deprecated':
+      return {
+        text: 'DEPRECATED',
+        bgColor: 'bg-amber-500',
+        textColor: 'text-white',
+        darkBgColor: 'bg-amber-600',
+      };
+    default:
+      return null;
+  }
+};
+
+// Tier badge configuration
+const tierBadgeConfig = (tier: PlanTier) => {
+  switch (tier) {
+    case 'professional':
+      return {
+        bgColor: 'bg-blue-500',
+        textColor: 'text-white',
+        darkBgColor: 'bg-blue-600',
+      };
+    case 'enterprise':
+      return {
+        bgColor: 'bg-amber-500',
+        textColor: 'text-white',
+        darkBgColor: 'bg-amber-600',
+      };
+    default:
+      return {
+        bgColor: 'bg-gray-500',
+        textColor: 'text-white',
+        darkBgColor: 'bg-gray-600',
+      };
+  }
 };
 
 export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
@@ -161,8 +214,10 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
   currentTier = 'essential',
   moduleRequiredTier,
   onRequestUpgrade,
+  plansPageUrl = '/plans', // Default plans page URL
 }) => {
   const theme = useSelector((state: RootState) => state.ui.theme);
+  const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -187,11 +242,18 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
     }
   }, [collapsedSide, collapsedUp, onToggleCollapsedSide, onToggleCollapsedUp, showMenu]);
 
+  // Updated requestUpgrade to handle redirect to plans page
   const requestUpgrade = useCallback(
     (tier: PlanTier) => {
+      // First call the provided onRequestUpgrade if it exists
       onRequestUpgrade?.(tier);
+      
+      // Then navigate to plans page
+      navigate(plansPageUrl, { 
+        state: { requiredTier: tier, returnUrl: window.location.pathname } 
+      });
     },
-    [onRequestUpgrade]
+    [onRequestUpgrade, navigate, plansPageUrl]
   );
 
   /**
@@ -203,9 +265,18 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
    * - If op is tier-blocked (and module is NOT tier-blocked), show PRO/ENT short badge.
    */
   const getEffectiveBadge = useCallback(
-    (op: Operation): number | string | undefined => {
+    (op: Operation): { text: string | number; config: any } | undefined => {
       // Preserve numeric badges always (counts)
-      if (typeof op.badge === 'number') return op.badge;
+      if (typeof op.badge === 'number') {
+        return {
+          text: op.badge,
+          config: {
+            bgColor: 'bg-red-500',
+            textColor: 'text-white',
+            darkBgColor: 'bg-red-600',
+          }
+        };
+      }
 
       const opTierBlocked = !!op.requiredTier && !hasTier(currentTier, op.requiredTier);
       const effectiveTierBlocked = moduleTierBlocked || opTierBlocked;
@@ -216,8 +287,24 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
         if (isTierLikeText(op.badge)) {
           if (moduleTierBlocked) return undefined; // avoid repetition on module lock
           if (!opTierBlocked) return undefined; // user already has tier -> don't repeat
+          
+          // Show tier badge with proper colors
+          const tier = op.requiredTier || 
+            (op.badge.toLowerCase().includes('pro') ? 'professional' : 
+             op.badge.toLowerCase().includes('ent') ? 'enterprise' : 'essential');
+          const config = tierBadgeConfig(tier as PlanTier);
+          return { text: op.badge.toUpperCase(), config };
         }
-        return op.badge;
+        
+        // Regular string badge
+        return {
+          text: op.badge,
+          config: {
+            bgColor: 'bg-gray-500',
+            textColor: 'text-white',
+            darkBgColor: 'bg-gray-600',
+          }
+        };
       }
 
       // No badge supplied: decide derived badge
@@ -227,11 +314,23 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
       }
 
       // If op is tier-blocked, show tier short label
-      if (opTierBlocked && op.requiredTier) return tierShort(op.requiredTier);
+      if (opTierBlocked && op.requiredTier) {
+        const config = tierBadgeConfig(op.requiredTier);
+        return { text: tierShort(op.requiredTier), config };
+      }
 
       // Otherwise show status badge if present
-      const statusText = statusBadgeText(op.status);
-      if (statusText) return statusText;
+      const statusConfig = statusBadgeConfig(op.status);
+      if (statusConfig) {
+        return { 
+          text: statusConfig.text, 
+          config: {
+            bgColor: statusConfig.bgColor,
+            textColor: statusConfig.textColor,
+            darkBgColor: statusConfig.darkBgColor,
+          }
+        };
+      }
 
       return undefined;
     },
@@ -247,7 +346,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
 
       if (effectiveTierBlocked) {
         const required = moduleTierBlocked ? moduleRequiredTier : op.requiredTier;
-        if (required) return `Requires ${tierLabel(required)} tier`;
+        if (required) return `Requires ${tierLabel(required)} tier - Click to upgrade`;
       }
 
       return op.description || op.label;
@@ -443,7 +542,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
           // UI disabled state includes gating, but we do NOT set `disabled` for gating (so click can trigger upgrade)
           const isDisabledUI = isHardDisabled || isGated;
 
-          const badge = getEffectiveBadge(operation);
+          const badgeData = getEffectiveBadge(operation);
 
           return (
             <button
@@ -471,15 +570,17 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
               )}
             >
               {operation.icon}
-              {badge !== undefined && badge !== null && badge !== '' && (
+              {badgeData !== undefined && (
                 <span
                   className={cn(
                     'absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full flex items-center justify-center',
-                    'bg-red-500 text-white ring-2',
+                    badgeData.config.bgColor,
+                    badgeData.config.textColor,
+                    'ring-2',
                     theme === 'dark' ? 'ring-gray-900' : 'ring-white'
                   )}
                 >
-                  {badge}
+                  {badgeData.text}
                 </span>
               )}
             </button>
@@ -728,7 +829,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
 
                     const isDisabledUI = isHardDisabled || isGated;
 
-                    const badge = getEffectiveBadge(operation);
+                    const badgeData = getEffectiveBadge(operation);
 
                     return (
                       <li key={operation.id} className="relative">
@@ -808,21 +909,18 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                             <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
                               <span className="truncate text-left">{operation.label}</span>
 
-                              {badge !== undefined && badge !== null && badge !== '' && (
+                              {badgeData !== undefined && (
                                 <span
                                   className={cn(
                                     'px-2 py-0.5 rounded-full text-xs font-bold transition-all duration-200 shrink-0',
-                                    isActive &&
-                                      (theme === 'dark'
-                                        ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 ring-1 ring-cyan-500/40'
-                                        : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-700 ring-1 ring-blue-500/40'),
-                                    !isActive &&
-                                      (theme === 'dark'
-                                        ? 'bg-gray-800 text-gray-400 ring-1 ring-gray-700/30 group-hover:bg-gray-700 group-hover:text-gray-300'
-                                        : 'bg-gray-200 text-gray-600 ring-1 ring-gray-300/30 group-hover:bg-gray-300 group-hover:text-gray-700')
+                                    badgeData.config.bgColor,
+                                    badgeData.config.textColor,
+                                    theme === 'dark' ? badgeData.config.darkBgColor : '',
+                                    isActive && 'ring-2 ring-offset-1',
+                                    theme === 'dark' ? 'ring-offset-gray-900' : 'ring-offset-white'
                                   )}
                                 >
-                                  {badge}
+                                  {badgeData.text}
                                 </span>
                               )}
                             </div>
