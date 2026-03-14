@@ -292,6 +292,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
               Manage your personal information and settings.
             </p>
           </div>
+       
 
           <div className="flex items-center gap-3">
             {editMode ? (
