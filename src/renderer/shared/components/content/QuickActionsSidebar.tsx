@@ -1,3 +1,4 @@
+// QuickActionsSidebar.tsx
 import React, { useMemo, type ReactNode, useState, useRef, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../app/store/store';
@@ -17,8 +18,9 @@ import {
   PanelLeft,
 } from 'lucide-react';
 import { cn } from '../../utils/classNameUtils';
-import { Badge } from '../../utils/Badge'
-import type { BadgeStatus, BadgeTier } from '../../utils/Badge';
+
+// NEW: optional gating helpers (UI-first; backend later)
+import { hasTier, tierLabel, type FeatureStatus, type PlanTier } from '../../entitlements/entitlements';
 
 export type DockSide = 'left' | 'right';
 
@@ -27,10 +29,34 @@ export interface Operation {
   label: string;
   icon?: ReactNode;
   description?: string;
+
+  /**
+   * Hard-disable (non-entitlement reasons).
+   * If true, item becomes inert (no upgrade click).
+   */
   disabled?: boolean;
+
+  /**
+   * Original badge API (kept EXACTLY).
+   * Used for counts or short labels.
+   */
   badge?: number | string;
-  tierBadge?: BadgeTier;
-  status?: BadgeStatus;
+
+  /**
+   * NEW: entitlement gating (optional)
+   */
+  requiredTier?: PlanTier;
+
+  /**
+   * NEW: feature status (optional)
+   * If badge is not provided, we can show a small status label like BETA/NEW.
+   */
+  status?: FeatureStatus;
+
+  /**
+   * NEW: tooltip reason for disabled state (optional)
+   */
+  disabledReason?: string;
 }
 
 export interface QuickActionsSidebarProps {
@@ -57,7 +83,60 @@ export interface QuickActionsSidebarProps {
   isFloating?: boolean;
   onAutoHide?: () => void;
   isAutoHidden?: boolean;
+
+  /**
+   * NEW: gating inputs (optional; default keeps current behavior)
+   */
+  currentTier?: PlanTier;
+
+  /**
+   * NEW: module-level gating (optional)
+   * If set and user tier is below it, the module remains visible but all operations appear locked.
+   * We intentionally avoid repeating "Enterprise/Professional" badges on every operation for cleanliness.
+   */
+  moduleRequiredTier?: PlanTier;
+
+  /**
+   * NEW: upgrade hook (optional)
+   */
+  onRequestUpgrade?: (requiredTier: PlanTier) => void;
 }
+
+const tierShort = (tier: PlanTier) => {
+  switch (tier) {
+    case 'essential':
+      return 'ESS';
+    case 'professional':
+      return 'PRO';
+    case 'enterprise':
+      return 'ENT';
+    default:
+      return tier.toUpperCase();
+  }
+};
+
+const isTierLikeText = (value: string) => {
+  const v = value.trim().toLowerCase();
+  return (
+    v === 'essential' ||
+    v === 'professional' ||
+    v === 'enterprise' ||
+    v === 'ess' ||
+    v === 'pro' ||
+    v === 'ent' ||
+    v === 'essentials' ||
+    v === 'professionals' ||
+    v === 'enterprises'
+  );
+};
+
+const statusBadgeText = (status?: FeatureStatus) => {
+  if (!status) return undefined;
+  if (status === 'beta') return 'BETA';
+  if (status === 'new') return 'NEW';
+  if (status === 'deprecated') return 'DEPRECATED';
+  return undefined;
+};
 
 export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
   operations,
@@ -77,10 +156,15 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
   isPinned = true,
   onFloat,
   isFloating = false,
+
+  // NEW (optional)
+  currentTier = 'essential',
+  moduleRequiredTier,
+  onRequestUpgrade,
 }) => {
   const theme = useSelector((state: RootState) => state.ui.theme);
   const [showMenu, setShowMenu] = useState(false);
-  
+
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isDockLeft = dockSide === 'left';
@@ -88,16 +172,109 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
   const bgClass = theme === 'dark' ? 'bg-gray-900/95' : 'bg-white/95';
   const menuBgClass = theme === 'dark' ? 'bg-gray-800/95 backdrop-blur-xl' : 'bg-white/95 backdrop-blur-xl';
 
+  const moduleTierBlocked = !!moduleRequiredTier && !hasTier(currentTier, moduleRequiredTier);
+
   // Master toggle - handles opening sidebar when fully collapsed
   const handleMenuToggle = useCallback(() => {
+    // If fully collapsed, open the sidebar
     if (collapsedSide && collapsedUp) {
       onToggleCollapsedSide();
       onToggleCollapsedUp();
       setShowMenu(false);
     } else {
+      // Otherwise, show menu
       setShowMenu(!showMenu);
     }
   }, [collapsedSide, collapsedUp, onToggleCollapsedSide, onToggleCollapsedUp, showMenu]);
+
+  const requestUpgrade = useCallback(
+    (tier: PlanTier) => {
+      onRequestUpgrade?.(tier);
+    },
+    [onRequestUpgrade]
+  );
+
+  /**
+   * Badge cleanliness rules (to stop repeated Pro/Enterprise everywhere):
+   * - If module is tier-blocked, DO NOT show tier badges per operation (just lock styling + tooltip + upgrade on click).
+   * - If an operation provides a tier-like badge string but user already has access, hide it.
+   * - If an operation provides a tier-like badge string but module is tier-blocked, hide it.
+   * - If no explicit badge, optionally show status (BETA/NEW/DEPRECATED).
+   * - If op is tier-blocked (and module is NOT tier-blocked), show PRO/ENT short badge.
+   */
+  const getEffectiveBadge = useCallback(
+    (op: Operation): number | string | undefined => {
+      // Preserve numeric badges always (counts)
+      if (typeof op.badge === 'number') return op.badge;
+
+      const opTierBlocked = !!op.requiredTier && !hasTier(currentTier, op.requiredTier);
+      const effectiveTierBlocked = moduleTierBlocked || opTierBlocked;
+
+      // Normalize provided badge (string)
+      if (typeof op.badge === 'string') {
+        // If it's a tier label, suppress in clean UI scenarios
+        if (isTierLikeText(op.badge)) {
+          if (moduleTierBlocked) return undefined; // avoid repetition on module lock
+          if (!opTierBlocked) return undefined; // user already has tier -> don't repeat
+        }
+        return op.badge;
+      }
+
+      // No badge supplied: decide derived badge
+      if (moduleTierBlocked) {
+        // Clean UI: don't repeat module tier badge on every row
+        return undefined;
+      }
+
+      // If op is tier-blocked, show tier short label
+      if (opTierBlocked && op.requiredTier) return tierShort(op.requiredTier);
+
+      // Otherwise show status badge if present
+      const statusText = statusBadgeText(op.status);
+      if (statusText) return statusText;
+
+      return undefined;
+    },
+    [currentTier, moduleTierBlocked]
+  );
+
+  const getEffectiveTitle = useCallback(
+    (op: Operation) => {
+      const opTierBlocked = !!op.requiredTier && !hasTier(currentTier, op.requiredTier);
+      const effectiveTierBlocked = moduleTierBlocked || opTierBlocked;
+
+      if (op.disabled && op.disabledReason) return op.disabledReason;
+
+      if (effectiveTierBlocked) {
+        const required = moduleTierBlocked ? moduleRequiredTier : op.requiredTier;
+        if (required) return `Requires ${tierLabel(required)} tier`;
+      }
+
+      return op.description || op.label;
+    },
+    [currentTier, moduleTierBlocked, moduleRequiredTier]
+  );
+
+  const handleOperationClick = useCallback(
+    (op: Operation) => {
+      if (op.disabled) return;
+
+      const opTierBlocked = !!op.requiredTier && !hasTier(currentTier, op.requiredTier);
+
+      if (moduleTierBlocked && moduleRequiredTier) {
+        requestUpgrade(moduleRequiredTier);
+        return;
+      }
+
+      if (opTierBlocked && op.requiredTier) {
+        requestUpgrade(op.requiredTier);
+        return;
+      }
+
+      onSelectOperation(op.id);
+    },
+    [currentTier, moduleTierBlocked, moduleRequiredTier, onSelectOperation, requestUpgrade]
+  );
 
   // Header component
   const headerNode = useMemo(() => {
@@ -136,83 +313,113 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
   }, [collapsedSide, contextTitle, sidebarHeader, theme]);
 
   // Compact header (when collapsed sideways)
-  const compactHeaderNode = useMemo(() => (
-    <div className="flex flex-col items-center py-3">
-      <div
-        className={cn(
-          'w-10 h-10 rounded-xl flex items-center justify-center',
-          theme === 'dark'
-            ? 'bg-gradient-to-br from-cyan-500/20 to-blue-500/20 ring-2 ring-cyan-500/30'
-            : 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 ring-2 ring-blue-500/30'
-        )}
-      >
-        <Sparkles className={cn('w-5 h-5', theme === 'dark' ? 'text-cyan-400' : 'text-blue-600')} />
+  const compactHeaderNode = useMemo(
+    () => (
+      <div className="flex flex-col items-center py-3">
+        <div
+          className={cn(
+            'w-10 h-10 rounded-xl flex items-center justify-center',
+            theme === 'dark'
+              ? 'bg-gradient-to-br from-cyan-500/20 to-blue-500/20 ring-2 ring-cyan-500/30'
+              : 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 ring-2 ring-blue-500/30'
+          )}
+        >
+          <Sparkles className={cn('w-5 h-5', theme === 'dark' ? 'text-cyan-400' : 'text-blue-600')} />
+        </div>
       </div>
-    </div>
-  ), [theme]);
+    ),
+    [theme]
+  );
 
   // Menu options
-  const menuOptions = useMemo(() => [
-    {
-      id: 'toggle-sidebar',
-      label: collapsedSide ? 'Expand Sidebar Width' : 'Collapse Sidebar Width',
-      icon: collapsedSide ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />,
-      action: () => {
-        onToggleCollapsedSide();
-        setShowMenu(false);
-      }
-    },
-    {
-      id: 'toggle-list',
-      label: collapsedUp ? 'Expand Operations List' : 'Collapse Operations List',
-      icon: collapsedUp ? <Minimize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />,
-      action: () => {
-        onToggleCollapsedUp();
-        setShowMenu(false);
-      }
-    },
-    {
-      id: 'divider-1',
-      isDivider: true
-    },
-    ...(onFloat ? [{
-      id: 'float',
-      label: isFloating ? 'Dock Sidebar' : 'Float Sidebar',
-      icon: <Maximize2 className="w-4 h-4" />,
-      action: () => {
-        onFloat();
-        setShowMenu(false);
-      }
-    }] : []),
-    ...(onTogglePin ? [{
-      id: 'pin',
-      label: isPinned ? 'Unpin Sidebar' : 'Pin Sidebar',
-      icon: isPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />,
-      action: () => {
-        onTogglePin();
-        setShowMenu(false);
-      }
-    }] : []),
-    ...(onClose ? [{
-      id: 'divider-2',
-      isDivider: true
-    }, {
-      id: 'close',
-      label: 'Close Sidebar',
-      icon: <X className="w-4 h-4" />,
-      action: () => {
-        onClose();
-        setShowMenu(false);
+  const menuOptions = useMemo(
+    () => [
+      {
+        id: 'toggle-sidebar',
+        label: collapsedSide ? 'Expand Sidebar Width' : 'Collapse Sidebar Width',
+        icon: collapsedSide ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />,
+        action: () => {
+          onToggleCollapsedSide();
+          setShowMenu(false);
+        },
       },
-      className: theme === 'dark' ? 'text-red-400 hover:bg-red-500/10' : 'text-red-600 hover:bg-red-100'
-    }] : []),
-  ], [collapsedSide, collapsedUp, onToggleCollapsedSide, onToggleCollapsedUp, onFloat, isFloating, onTogglePin, isPinned, onClose, theme]);
+      {
+        id: 'toggle-list',
+        label: collapsedUp ? 'Expand Operations List' : 'Collapse Operations List',
+        icon: collapsedUp ? <Minimize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />,
+        action: () => {
+          onToggleCollapsedUp();
+          setShowMenu(false);
+        },
+      },
+      {
+        id: 'divider-1',
+        isDivider: true,
+      },
+      ...(onFloat
+        ? [
+            {
+              id: 'float',
+              label: isFloating ? 'Dock Sidebar' : 'Float Sidebar',
+              icon: <Maximize2 className="w-4 h-4" />,
+              action: () => {
+                onFloat();
+                setShowMenu(false);
+              },
+            },
+          ]
+        : []),
+      ...(onTogglePin
+        ? [
+            {
+              id: 'pin',
+              label: isPinned ? 'Unpin Sidebar' : 'Pin Sidebar',
+              icon: isPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />,
+              action: () => {
+                onTogglePin();
+                setShowMenu(false);
+              },
+            },
+          ]
+        : []),
+      ...(onClose
+        ? [
+            {
+              id: 'divider-2',
+              isDivider: true,
+            },
+            {
+              id: 'close',
+              label: 'Close Sidebar',
+              icon: <X className="w-4 h-4" />,
+              action: () => {
+                onClose();
+                setShowMenu(false);
+              },
+              className: theme === 'dark' ? 'text-red-400 hover:bg-red-500/10' : 'text-red-600 hover:bg-red-100',
+            },
+          ]
+        : []),
+    ],
+    [
+      collapsedSide,
+      collapsedUp,
+      onToggleCollapsedSide,
+      onToggleCollapsedUp,
+      onFloat,
+      isFloating,
+      onTogglePin,
+      isPinned,
+      onClose,
+      theme,
+    ]
+  );
 
   // Handle click outside to close menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      
+
       if (menuRef.current && !menuRef.current.contains(target) && showMenu) {
         setShowMenu(false);
       }
@@ -223,98 +430,111 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
   }, [showMenu]);
 
   // Compact operations (icon-only mode)
-  const compactOperations = useMemo(() => (
-    <div className="flex-1 flex flex-col items-center py-2 gap-2 overflow-auto">
-      {operations.map((operation) => {
-        const isActive = operation.id === activeOperation;
-        const isDisabled = !!operation.disabled;
+  const compactOperations = useMemo(
+    () => (
+      <div className="flex-1 flex flex-col items-center py-2 gap-2 overflow-auto">
+        {operations.map((operation) => {
+          const isActive = operation.id === activeOperation;
 
-        return (
-          <div key={operation.id} className="relative">
+          const opTierBlocked = !!operation.requiredTier && !hasTier(currentTier, operation.requiredTier);
+          const isGated = moduleTierBlocked || opTierBlocked;
+          const isHardDisabled = !!operation.disabled;
+
+          // UI disabled state includes gating, but we do NOT set `disabled` for gating (so click can trigger upgrade)
+          const isDisabledUI = isHardDisabled || isGated;
+
+          const badge = getEffectiveBadge(operation);
+
+          return (
             <button
+              key={operation.id}
               type="button"
-              onClick={() => !isDisabled && onSelectOperation(operation.id)}
-              disabled={isDisabled}
-              title={operation.label}
+              onClick={() => handleOperationClick(operation)}
+              disabled={isHardDisabled}
+              title={getEffectiveTitle(operation)}
               aria-label={operation.label}
+              aria-disabled={isDisabledUI}
               className={cn(
                 'relative w-11 h-11 rounded-lg flex items-center justify-center transition-all duration-200 cursor-pointer',
                 'focus:outline-none focus:ring-2 focus:ring-offset-0',
                 theme === 'dark' ? 'focus:ring-cyan-500/50' : 'focus:ring-blue-500/50',
-                isActive && (theme === 'dark' 
-                  ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 text-cyan-300 shadow-lg shadow-cyan-500/30' 
-                  : 'bg-blue-500/20 ring-2 ring-blue-500/40 text-blue-600 shadow-lg shadow-blue-500/30'),
-                !isActive && !isDisabled && (theme === 'dark' 
-                  ? 'hover:bg-gray-800/60 text-gray-400 hover:text-cyan-300 hover:ring-1 hover:ring-gray-700' 
-                  : 'hover:bg-gray-100/70 text-gray-600 hover:text-blue-700 hover:ring-1 hover:ring-gray-300'),
-                isDisabled && 'opacity-40 cursor-not-allowed'
+                isActive &&
+                  (theme === 'dark'
+                    ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 text-cyan-300 shadow-lg shadow-cyan-500/30'
+                    : 'bg-blue-500/20 ring-2 ring-blue-500/40 text-blue-600 shadow-lg shadow-blue-500/30'),
+                !isActive &&
+                  !isDisabledUI &&
+                  (theme === 'dark'
+                    ? 'hover:bg-gray-800/60 text-gray-400 hover:text-cyan-300 hover:ring-1 hover:ring-gray-700'
+                    : 'hover:bg-gray-100/70 text-gray-600 hover:text-blue-700 hover:ring-1 hover:ring-gray-300'),
+                isDisabledUI && 'opacity-40 cursor-not-allowed'
               )}
             >
               {operation.icon}
-              
-              {/* Badge for compact mode */}
-              {operation.badge && (
-                <span className={cn(
-                  'absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full flex items-center justify-center',
-                  'bg-red-500 text-white ring-2',
-                  theme === 'dark' ? 'ring-gray-900' : 'ring-white'
-                )}>
-                  {operation.badge}
+              {badge !== undefined && badge !== null && badge !== '' && (
+                <span
+                  className={cn(
+                    'absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full flex items-center justify-center',
+                    'bg-red-500 text-white ring-2',
+                    theme === 'dark' ? 'ring-gray-900' : 'ring-white'
+                  )}
+                >
+                  {badge}
                 </span>
               )}
             </button>
-            
-            {/* Tier or status badge for compact mode - positioned below button */}
-            {(operation.tierBadge || operation.status) && (
-              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
-                <Badge
-                  type={operation.tierBadge || operation.status!}
-                  size="sm"
-                  theme={theme}
-                  showIcon={false}
-                  className="text-[8px] px-1 py-0"
-                />
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  ), [operations, activeOperation, onSelectOperation, theme]);
+          );
+        })}
+      </div>
+    ),
+    [
+      operations,
+      activeOperation,
+      currentTier,
+      moduleTierBlocked,
+      getEffectiveBadge,
+      getEffectiveTitle,
+      handleOperationClick,
+      theme,
+    ]
+  );
 
   // Ultra-compact mode (both collapsed)
-  const ultraCompactMode = useMemo(() => (
-    <div className="h-full flex flex-col items-center justify-between py-4">
-      <div
-        className={cn(
-          'w-11 h-11 rounded-xl flex items-center justify-center',
-          theme === 'dark'
-            ? 'bg-gradient-to-br from-cyan-500/20 to-blue-500/20 ring-2 ring-cyan-500/30'
-            : 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 ring-2 ring-blue-500/30'
-        )}
-      >
-        <Sparkles className={cn('w-5 h-5', theme === 'dark' ? 'text-cyan-400' : 'text-blue-600')} />
+  const ultraCompactMode = useMemo(
+    () => (
+      <div className="h-full flex flex-col items-center justify-between py-4">
+        <div
+          className={cn(
+            'w-11 h-11 rounded-xl flex items-center justify-center',
+            theme === 'dark'
+              ? 'bg-gradient-to-br from-cyan-500/20 to-blue-500/20 ring-2 ring-cyan-500/30'
+              : 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 ring-2 ring-blue-500/30'
+          )}
+        >
+          <Sparkles className={cn('w-5 h-5', theme === 'dark' ? 'text-cyan-400' : 'text-blue-600')} />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleMenuToggle}
+          aria-label="Open sidebar"
+          title="Open sidebar"
+          className={cn(
+            'w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200',
+            'hover:scale-110 active:scale-95',
+            theme === 'dark'
+              ? 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 ring-2 ring-cyan-500/40'
+              : 'bg-blue-500/20 text-blue-600 hover:bg-blue-500/30 ring-2 ring-blue-500/40'
+          )}
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        <div className="w-10 h-10" /> {/* Spacer for balance */}
       </div>
-
-      <button
-        type="button"
-        onClick={handleMenuToggle}
-        aria-label="Open sidebar"
-        title="Open sidebar"
-        className={cn(
-          'w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200',
-          'hover:scale-110 active:scale-95',
-          theme === 'dark'
-            ? 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 ring-2 ring-cyan-500/40'
-            : 'bg-blue-500/20 text-blue-600 hover:bg-blue-500/30 ring-2 ring-blue-500/40'
-        )}
-      >
-        <Menu className="w-5 h-5" />
-      </button>
-
-      <div className="w-10 h-10" />
-    </div>
-  ), [theme, handleMenuToggle]);
+    ),
+    [theme, handleMenuToggle]
+  );
 
   return (
     <aside
@@ -332,6 +552,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
       role="complementary"
       aria-label="Quick actions sidebar"
     >
+      {/* Ultra-compact mode */}
       {collapsedSide && collapsedUp ? (
         ultraCompactMode
       ) : (
@@ -350,13 +571,12 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                   title="Dock left"
                   className={cn(
                     'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 cursor-pointer',
-                    theme === 'dark'
-                      ? 'hover:bg-gray-800/60 focus:ring-cyan-500/40'
-                      : 'hover:bg-gray-100/70 focus:ring-blue-500/40',
+                    theme === 'dark' ? 'hover:bg-gray-800/60 focus:ring-cyan-500/40' : 'hover:bg-gray-100/70 focus:ring-blue-500/40',
                     theme === 'dark' ? 'text-cyan-400' : 'text-blue-600',
-                    dockSide === 'left' && (theme === 'dark' 
-                      ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 shadow-lg shadow-cyan-500/30' 
-                      : 'bg-blue-500/20 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/30')
+                    dockSide === 'left' &&
+                      (theme === 'dark'
+                        ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 shadow-lg shadow-cyan-500/30'
+                        : 'bg-blue-500/20 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/30')
                   )}
                 >
                   <PanelLeft className="w-4 h-4" />
@@ -370,13 +590,12 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                   title="Dock right"
                   className={cn(
                     'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 cursor-pointer',
-                    theme === 'dark'
-                      ? 'hover:bg-gray-800/60 focus:ring-cyan-500/40'
-                      : 'hover:bg-gray-100/70 focus:ring-blue-500/40',
+                    theme === 'dark' ? 'hover:bg-gray-800/60 focus:ring-cyan-500/40' : 'hover:bg-gray-100/70 focus:ring-blue-500/40',
                     theme === 'dark' ? 'text-cyan-400' : 'text-blue-600',
-                    dockSide === 'right' && (theme === 'dark' 
-                      ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 shadow-lg shadow-cyan-500/30' 
-                      : 'bg-blue-500/20 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/30')
+                    dockSide === 'right' &&
+                      (theme === 'dark'
+                        ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 shadow-lg shadow-cyan-500/30'
+                        : 'bg-blue-500/20 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/30')
                   )}
                 >
                   <PanelRight className="w-4 h-4" />
@@ -413,13 +632,11 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                               'w-full flex items-center gap-3 px-3 py-2.5 text-sm',
                               'transition-colors duration-150 hover:bg-gray-500/10',
                               theme === 'dark' ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900',
-                              option.className
+                              (option as any).className
                             )}
                           >
-                            <span className="w-4 h-4 flex items-center justify-center shrink-0">
-                              {option.icon}
-                            </span>
-                            <span className="flex-1 text-left">{option.label}</span>
+                            <span className="w-4 h-4 flex items-center justify-center shrink-0">{(option as any).icon}</span>
+                            <span className="flex-1 text-left">{(option as any).label}</span>
                           </button>
                         );
                       })}
@@ -430,13 +647,15 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
             )}
           </div>
 
-          {/* Collapse/Expand Control Row */}
+          {/* Collapse/Expand Control Row - NEW SECTION */}
           {!collapsedUp && (
-            <div className={cn(
-              'flex items-center gap-2 px-3 py-2 border-b',
-              borderClass,
-              theme === 'dark' ? 'bg-gray-800/30' : 'bg-gray-50/50'
-            )}>
+            <div
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 border-b',
+                borderClass,
+                theme === 'dark' ? 'bg-gray-800/30' : 'bg-gray-50/50'
+              )}
+            >
               <button
                 type="button"
                 onClick={onToggleCollapsedSide}
@@ -453,7 +672,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                 {collapsedSide ? (
                   <>
                     <ChevronsRight className="w-3.5 h-3.5" />
-                    <span>Expand</span>
+                    {!collapsedSide && <span>Expand</span>}
                   </>
                 ) : (
                   <>
@@ -465,11 +684,8 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
 
               {!collapsedSide && (
                 <div className="flex flex-col">
-                  <span className={cn(
-                    'text-xs font-mono',
-                    theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                  )}>
-                    Press ⌘K or Ctrl+K to search
+                  <span className={cn('text-xs font-mono', theme === 'dark' ? 'text-gray-500' : 'text-gray-400')}>
+                    Press ⌘K or Ctrl+K to search for anything
                   </span>
                 </div>
               )}
@@ -480,6 +696,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
           <div className={cn('flex-1 min-h-0', collapsedUp ? 'hidden' : 'block')}>
             {collapsedSide ? (
               <>
+                {/* Collapse button for compact mode */}
                 <div className="flex justify-center py-2 px-2">
                   <button
                     type="button"
@@ -504,7 +721,14 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                 <ul className="space-y-1.5">
                   {operations.map((operation, index) => {
                     const isActive = operation.id === activeOperation;
-                    const isDisabled = !!operation.disabled;
+
+                    const opTierBlocked = !!operation.requiredTier && !hasTier(currentTier, operation.requiredTier);
+                    const isGated = moduleTierBlocked || opTierBlocked;
+                    const isHardDisabled = !!operation.disabled;
+
+                    const isDisabledUI = isHardDisabled || isGated;
+
+                    const badge = getEffectiveBadge(operation);
 
                     return (
                       <li key={operation.id} className="relative">
@@ -523,103 +747,89 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                         <div
                           className={cn(
                             'relative transition-all duration-200',
-                            isActive && (theme === 'dark'
-                              ? 'ring-2 ring-cyan-500/80 rounded-xl shadow-lg shadow-cyan-500/30'
-                              : 'ring-2 ring-blue-500/80 rounded-xl shadow-lg shadow-blue-500/30')
+                            isActive &&
+                              (theme === 'dark'
+                                ? 'ring-2 ring-cyan-500/80 rounded-xl shadow-lg shadow-cyan-500/30'
+                                : 'ring-2 ring-blue-500/80 rounded-xl shadow-lg shadow-blue-500/30')
                           )}
                           style={{
-                            animation: `slideInRight 0.2s ease-out ${index * 0.02}s both`
+                            animation: `slideInRight 0.2s ease-out ${index * 0.02}s both`,
                           }}
                         >
                           <button
                             type="button"
-                            onClick={() => !isDisabled && onSelectOperation(operation.id)}
-                            disabled={isDisabled}
+                            onClick={() => handleOperationClick(operation)}
+                            disabled={isHardDisabled}
                             aria-label={operation.description || operation.label}
                             aria-current={isActive ? 'page' : undefined}
-                            title={operation.description || operation.label}
+                            aria-disabled={isDisabledUI}
+                            title={getEffectiveTitle(operation)}
                             className={cn(
                               'w-full flex items-center gap-3 px-3.5 py-2.5 relative z-10 cursor-pointer',
                               'text-sm font-medium transition-all duration-200',
                               'focus:outline-none focus:ring-2 focus:ring-offset-0 group',
                               theme === 'dark' ? 'focus:ring-cyan-500/50' : 'focus:ring-blue-500/50',
-                              isActive && (theme === 'dark'
-                                ? 'bg-gray-900 text-cyan-300 rounded-xl border-r-4 border-cyan-500/90 shadow-inner shadow-cyan-500/10'
-                                : 'bg-white text-blue-700 rounded-xl border-r-4 border-blue-500/90 shadow-inner shadow-blue-500/10'),
-                              !isActive && !isDisabled && (theme === 'dark'
-                                ? 'text-gray-400 bg-gray-900/30 hover:text-gray-200 hover:bg-gray-800/40 rounded-lg hover:ring-1 hover:ring-gray-700/40'
-                                : 'text-gray-600 bg-gray-100/30 hover:text-gray-900 hover:bg-gray-100/50 rounded-lg hover:ring-1 hover:ring-gray-300/40'),
-                              isDisabled && (theme === 'dark' ? 'opacity-40 cursor-not-allowed text-gray-600' : 'opacity-40 cursor-not-allowed text-gray-400')
+
+                              isActive &&
+                                (theme === 'dark'
+                                  ? 'bg-gray-900 text-cyan-300 rounded-xl border-r-4 border-cyan-500/90 shadow-inner shadow-cyan-500/10'
+                                  : 'bg-white text-blue-700 rounded-xl border-r-4 border-blue-500/90 shadow-inner shadow-blue-500/10'),
+
+                              !isActive &&
+                                !isDisabledUI &&
+                                (theme === 'dark'
+                                  ? 'text-gray-400 bg-gray-900/30 hover:text-gray-200 hover:bg-gray-800/40 rounded-lg hover:ring-1 hover:ring-gray-700/40'
+                                  : 'text-gray-600 bg-gray-100/30 hover:text-gray-900 hover:bg-gray-100/50 rounded-lg hover:ring-1 hover:ring-gray-300/40'),
+
+                              isDisabledUI &&
+                                (theme === 'dark'
+                                  ? 'opacity-40 cursor-not-allowed text-gray-600'
+                                  : 'opacity-40 cursor-not-allowed text-gray-400')
                             )}
                           >
                             {operation.icon && (
                               <span
                                 className={cn(
                                   'flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-md transition-all duration-200',
-                                  isActive && (theme === 'dark'
-                                    ? 'text-cyan-400 bg-cyan-500/15 ring-1 ring-cyan-500/40 shadow-sm shadow-cyan-500/30'
-                                    : 'text-blue-600 bg-blue-500/15 ring-1 ring-blue-500/40 shadow-sm shadow-blue-500/30'),
-                                  !isActive && (theme === 'dark'
-                                    ? 'text-gray-500 bg-gray-800/30 group-hover:text-cyan-400 group-hover:bg-cyan-500/10 group-hover:ring-1 group-hover:ring-cyan-500/20 group-hover:scale-110'
-                                    : 'text-gray-500 bg-gray-200/50 group-hover:text-blue-600 group-hover:bg-blue-500/10 group-hover:ring-1 group-hover:ring-blue-500/20 group-hover:scale-110')
+                                  isActive &&
+                                    (theme === 'dark'
+                                      ? 'text-cyan-400 bg-cyan-500/15 ring-1 ring-cyan-500/40 shadow-sm shadow-cyan-500/30'
+                                      : 'text-blue-600 bg-blue-500/15 ring-1 ring-blue-500/40 shadow-sm shadow-blue-500/30'),
+                                  !isActive &&
+                                    (theme === 'dark'
+                                      ? 'text-gray-500 bg-gray-800/30 group-hover:text-cyan-400 group-hover:bg-cyan-500/10 group-hover:ring-1 group-hover:ring-cyan-500/20 group-hover:scale-110'
+                                      : 'text-gray-500 bg-gray-200/50 group-hover:text-blue-600 group-hover:bg-blue-500/10 group-hover:ring-1 group-hover:ring-blue-500/20 group-hover:scale-110')
                                 )}
                               >
                                 {operation.icon}
                               </span>
                             )}
 
-                            <div className="flex-1 flex items-center gap-2 min-w-0">
+                            <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
                               <span className="truncate text-left">{operation.label}</span>
-                              
-                              {/* Badge group */}
-                              <div className="flex items-center gap-1 shrink-0">
-                                {/* Status badge */}
-                                {operation.status && (
-                                  <Badge
-                                    type={operation.status}
-                                    size="sm"
-                                    theme={theme}
-                                    showIcon={true}
-                                  />
-                                )}
-                                
-                                {/* Tier badge */}
-                                {operation.tierBadge && (
-                                  <Badge
-                                    type={operation.tierBadge}
-                                    size="sm"
-                                    theme={theme}
-                                    showIcon={true}
-                                  />
-                                )}
-                                
-                                {/* Numeric badge */}
-                                {operation.badge && (
-                                  <span
-                                    className={cn(
-                                      'px-2 py-0.5 rounded-full text-xs font-bold transition-all duration-200',
-                                      isActive && (theme === 'dark'
+
+                              {badge !== undefined && badge !== null && badge !== '' && (
+                                <span
+                                  className={cn(
+                                    'px-2 py-0.5 rounded-full text-xs font-bold transition-all duration-200 shrink-0',
+                                    isActive &&
+                                      (theme === 'dark'
                                         ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 ring-1 ring-cyan-500/40'
                                         : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-700 ring-1 ring-blue-500/40'),
-                                      !isActive && (theme === 'dark'
+                                    !isActive &&
+                                      (theme === 'dark'
                                         ? 'bg-gray-800 text-gray-400 ring-1 ring-gray-700/30 group-hover:bg-gray-700 group-hover:text-gray-300'
                                         : 'bg-gray-200 text-gray-600 ring-1 ring-gray-300/30 group-hover:bg-gray-300 group-hover:text-gray-700')
-                                    )}
-                                  >
-                                    {operation.badge}
-                                  </span>
-                                )}
-                              </div>
+                                  )}
+                                >
+                                  {badge}
+                                </span>
+                              )}
                             </div>
 
                             {isActive && (
                               <div className="flex-shrink-0 ml-2">
-                                <div
-                                  className={cn(
-                                    'w-2 h-2 rotate-45 animate-pulse',
-                                    theme === 'dark' ? 'bg-cyan-400' : 'bg-blue-600'
-                                  )}
-                                />
+                                <div className={cn('w-2 h-2 rotate-45 animate-pulse', theme === 'dark' ? 'bg-cyan-400' : 'bg-blue-600')} />
                               </div>
                             )}
                           </button>
@@ -633,16 +843,12 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
           </div>
 
           {/* Footer */}
-          {sidebarFooter && !collapsedSide && (
-            <div className={cn('border-t px-4 py-3', borderClass)}>{sidebarFooter}</div>
-          )}
+          {sidebarFooter && !collapsedSide && <div className={cn('border-t px-4 py-3', borderClass)}>{sidebarFooter}</div>}
         </>
       )}
 
       {/* Floating indicator */}
-      {isFloating && (
-        <div className="absolute inset-0 pointer-events-none border-2 border-cyan-500/30 rounded-2xl" />
-      )}
+      {isFloating && <div className="absolute inset-0 pointer-events-none border-2 border-cyan-500/30 rounded-2xl" />}
     </aside>
   );
 };

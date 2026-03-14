@@ -1,27 +1,9 @@
 /**
  * ============================================================================
- * ADMIN MODULE (ROUTER-DRIVEN)
+ * ADMIN MODULE (ROUTER-DRIVEN) — with module gating + operation gating
  * ============================================================================
- * 
- * Centralized administrative control panel for managing:
- * - System overview & setup health
- * - Team (staff, invitations, roles)
- * - Facility structure
- * - Service catalog & pricing
- * - Plans & subscriptions
- * - Clinical space management
- * - Inventory management
- * - Facility settings
- * 
- * Architecture:
- * ------------
- * - Uses BaseModuleWorkspace for consistent layout
- * - Router-driven navigation with nested routes
- * - Theme-aware rendering
- * - Scalable operation-based architecture
  */
-
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -32,93 +14,98 @@ import {
   Settings2,
   CreditCard,
 } from 'lucide-react';
+
 import { BaseModuleWorkspace } from '../../../../shared/components/workspace/BaseModuleWorkspace';
 import { ADMIN_ROUTES } from '../../../../app/routes/constants/administration.paths';
 import { ROUTES } from '../../../../app/routes/routeConstants';
+import type { PlanTier } from '../../../../shared/entitlements/entitlements';
+
 /**
  * Admin module operations configuration
- * Each operation corresponds to a nested route under /admin
  */
 const ADMIN_OPERATIONS = [
-  { 
-    id: 'overview', 
-    label: 'Command Center', 
+  {
+    id: 'overview',
+    label: 'Command Center',
     icon: <LayoutDashboard className="w-4 h-4" />,
     description: 'Administrative overview and setup status',
-    status: 'new' // Add status badge
+    status: 'new' as const,
   },
-  { 
-    id: 'facility-setup', 
-    label: 'Clinical Departments', 
+  {
+    id: 'facility-setup',
+    label: 'Clinical Departments',
     icon: <Building2 className="w-4 h-4" />,
-    description: 'Configure departments and facility structure'
+    description: 'Configure departments and facility structure',
   },
-  { 
-    id: 'clinical-space-management', 
-    label: 'Clinical Space Management', 
+  {
+    id: 'clinical-space-management',
+    label: 'Clinical Space Management',
     icon: <MapIcon className="w-4 h-4" />,
     description: 'Define rooms, floors, buildings, and manage staff space assignments',
-    tierBadge: 'enterprise' // Add tier badge
+    requiredTier: 'professional' as const,
   },
-  { 
-    id: 'service-catalog', 
-    label: 'Clinical & Billing Services', 
+  {
+    id: 'service-catalog',
+    label: 'Clinical & Billing Services',
     icon: <Layers className="w-4 h-4" />,
     description: 'Manage services and pricing versions',
-    status: 'beta' // Add status badge
+    status: 'beta' as const,
   },
-  { 
-    id: 'inventory', 
-    label: 'Supply & Inventory Management', 
+  {
+    id: 'inventory',
+    label: 'Supply & Inventory Management',
     icon: <Boxes className="w-4 h-4" />,
-    description: 'Manage stock items, locations, and inventory controls'
+    description: 'Manage stock items, locations, and inventory controls',
+    requiredTier: 'professional' as const,
   },
-  { 
-    id: 'team', 
-    label: 'Workforce Administration', 
+  {
+    id: 'team',
+    label: 'Workforce Administration',
     icon: <Users className="w-4 h-4" />,
-    description: 'Manage staff, invitations, and roles'
+    description: 'Manage staff, invitations, and roles',
+    requiredTier: 'professional' as const,
   },
-  { 
-    id: 'plans-subscriptions', 
-    label: 'Plans & Subscriptions', 
+  {
+    id: 'plans-subscriptions',
+    label: 'Plans & Subscriptions',
     icon: <CreditCard className="w-4 h-4" />,
     description: 'Manage facility plans, subscriptions, and billing',
-    badge: 3 // Numeric badge for count
+    requiredTier: 'enterprise' as const,
   },
-  { 
-    id: 'settings', 
-    label: 'Enterprise Facility Settings', 
+  {
+    id: 'settings',
+    label: 'Enterprise Facility Settings',
     icon: <Settings2 className="w-4 h-4" />,
     description: 'Manage facility identity, regulatory parameters, and operational policies',
-    tierBadge: 'professional' // Add tier badge
+    requiredTier: 'essential' as const,
   },
 ];
 
 /**
  * Admin Module
- * 
- * Provides a workspace with operation-based navigation for all
- * administrative functions. Each operation maps to a nested route
- * under the /admin base path.
- * 
- * @example
- * ```tsx
- * <Route path="/admin/*" element={<AdminModule />} />
- * ```
  */
 const AdminModule: React.FC = () => {
+  // UI-first test: swap this to selector later (auth/session)
+  const currentTier: PlanTier = 'essential';
+
+  const onRequestUpgrade = useCallback((requiredTier: PlanTier) => {
+    // Replace with modal / billing route later
+    alert(`Upgrade required: ${requiredTier}`);
+  }, []);
+
   return (
     <BaseModuleWorkspace
       contextTitle="Facility Governance"
-      operations={ADMIN_OPERATIONS}
+      operations={ADMIN_OPERATIONS as any}
       basePath={ROUTES.ADMINISTRATION}
       defaultOperationPath={ADMIN_ROUTES.OVERVIEW}
+      currentTier={currentTier}
+      onRequestUpgrade={onRequestUpgrade}
+      moduleRequiredTier="essential"
+      moduleDisabledReason="Admin is available on Enterprise tier"
     />
   );
 };
 
-// Display name for React DevTools
 AdminModule.displayName = 'AdminModule';
-
 export default AdminModule;
