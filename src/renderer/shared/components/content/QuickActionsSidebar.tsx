@@ -1,4 +1,3 @@
-// QuickActionsSidebar.tsx
 import React, { useMemo, type ReactNode, useState, useRef, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../app/store/store';
@@ -16,11 +15,11 @@ import {
   ChevronsLeft,
   ChevronsRight,
   PanelLeft,
+  Crown,
 } from 'lucide-react';
 import { cn } from '../../utils/classNameUtils';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
-// NEW: optional gating helpers (UI-first; backend later)
 import { hasTier, tierLabel, type FeatureStatus, type PlanTier } from '../../entitlements/entitlements';
 
 export type DockSide = 'left' | 'right';
@@ -50,7 +49,6 @@ export interface Operation {
 
   /**
    * NEW: feature status (optional)
-   * If badge is not provided, we can show a small status label like BETA/NEW.
    */
   status?: FeatureStatus;
 
@@ -85,23 +83,11 @@ export interface QuickActionsSidebarProps {
   onAutoHide?: () => void;
   isAutoHidden?: boolean;
 
-  /**
-   * NEW: gating inputs (optional; default keeps current behavior)
-   */
   currentTier?: PlanTier;
-
-  /**
-   * NEW: module-level gating (optional)
-   * If set and user tier is below it, the module remains visible but all operations appear locked.
-   * We intentionally avoid repeating "Enterprise/Professional" badges on every operation for cleanliness.
-   */
   moduleRequiredTier?: PlanTier;
 
-  /**
-   * NEW: upgrade hook (optional)
-   */
   onRequestUpgrade?: (requiredTier: PlanTier) => void;
-  
+
   /**
    * NEW: plans page URL for upgrade redirect
    */
@@ -136,58 +122,30 @@ const isTierLikeText = (value: string) => {
   );
 };
 
-// Updated statusBadgeText with background colors
+// Updated statusBadgeText with background colors (kept)
 const statusBadgeConfig = (status?: FeatureStatus) => {
   if (!status) return null;
-  
+
   switch (status) {
     case 'beta':
-      return {
-        text: 'BETA',
-        bgColor: 'bg-purple-500',
-        textColor: 'text-white',
-        darkBgColor: 'bg-purple-600',
-      };
+      return { text: 'BETA', bgColor: 'bg-purple-500', textColor: 'text-white', darkBgColor: 'bg-purple-600' };
     case 'new':
-      return {
-        text: 'NEW',
-        bgColor: 'bg-green-500',
-        textColor: 'text-white',
-        darkBgColor: 'bg-green-600',
-      };
+      return { text: 'NEW', bgColor: 'bg-green-500', textColor: 'text-white', darkBgColor: 'bg-green-600' };
     case 'deprecated':
-      return {
-        text: 'DEPRECATED',
-        bgColor: 'bg-amber-500',
-        textColor: 'text-white',
-        darkBgColor: 'bg-amber-600',
-      };
+      return { text: 'DEPRECATED', bgColor: 'bg-amber-500', textColor: 'text-white', darkBgColor: 'bg-amber-600' };
     default:
       return null;
   }
 };
 
-// Tier badge configuration
 const tierBadgeConfig = (tier: PlanTier) => {
   switch (tier) {
     case 'professional':
-      return {
-        bgColor: 'bg-blue-500',
-        textColor: 'text-white',
-        darkBgColor: 'bg-blue-600',
-      };
+      return { bgColor: 'bg-blue-500', textColor: 'text-white', darkBgColor: 'bg-blue-600' };
     case 'enterprise':
-      return {
-        bgColor: 'bg-amber-500',
-        textColor: 'text-white',
-        darkBgColor: 'bg-amber-600',
-      };
+      return { bgColor: 'bg-amber-500', textColor: 'text-white', darkBgColor: 'bg-amber-600' };
     default:
-      return {
-        bgColor: 'bg-gray-500',
-        textColor: 'text-white',
-        darkBgColor: 'bg-gray-600',
-      };
+      return { bgColor: 'bg-gray-500', textColor: 'text-white', darkBgColor: 'bg-gray-600' };
   }
 };
 
@@ -210,14 +168,14 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
   onFloat,
   isFloating = false,
 
-  // NEW (optional)
   currentTier = 'essential',
   moduleRequiredTier,
   onRequestUpgrade,
-  plansPageUrl = '/plans', // Default plans page URL
+  plansPageUrl = '/plans',
 }) => {
   const theme = useSelector((state: RootState) => state.ui.theme);
   const navigate = useNavigate();
+  const location = useLocation();
   const [showMenu, setShowMenu] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -229,106 +187,91 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
 
   const moduleTierBlocked = !!moduleRequiredTier && !hasTier(currentTier, moduleRequiredTier);
 
-  // Master toggle - handles opening sidebar when fully collapsed
+  const returnUrl = `${location.pathname}${location.search ?? ''}`;
+
   const handleMenuToggle = useCallback(() => {
-    // If fully collapsed, open the sidebar
     if (collapsedSide && collapsedUp) {
       onToggleCollapsedSide();
       onToggleCollapsedUp();
       setShowMenu(false);
     } else {
-      // Otherwise, show menu
       setShowMenu(!showMenu);
     }
   }, [collapsedSide, collapsedUp, onToggleCollapsedSide, onToggleCollapsedUp, showMenu]);
 
-  // Updated requestUpgrade to handle redirect to plans page
+  /**
+   * Upgrade action: call hook (optional) + navigate to plans page.
+   */
   const requestUpgrade = useCallback(
     (tier: PlanTier) => {
-      // First call the provided onRequestUpgrade if it exists
       onRequestUpgrade?.(tier);
-      
-      // Then navigate to plans page
-      navigate(plansPageUrl, { 
-        state: { requiredTier: tier, returnUrl: window.location.pathname } 
+      navigate(plansPageUrl, {
+        state: { requiredTier: tier, returnUrl },
       });
     },
-    [onRequestUpgrade, navigate, plansPageUrl]
+    [onRequestUpgrade, navigate, plansPageUrl, returnUrl]
+  );
+
+  const getUpgradeTier = useCallback(
+    (op: Operation): PlanTier | undefined => {
+      if (moduleTierBlocked) return moduleRequiredTier;
+      const opTierBlocked = !!op.requiredTier && !hasTier(currentTier, op.requiredTier);
+      return opTierBlocked ? op.requiredTier : undefined;
+    },
+    [currentTier, moduleTierBlocked, moduleRequiredTier]
   );
 
   /**
-   * Badge cleanliness rules (to stop repeated Pro/Enterprise everywhere):
-   * - If module is tier-blocked, DO NOT show tier badges per operation (just lock styling + tooltip + upgrade on click).
-   * - If an operation provides a tier-like badge string but user already has access, hide it.
-   * - If an operation provides a tier-like badge string but module is tier-blocked, hide it.
-   * - If no explicit badge, optionally show status (BETA/NEW/DEPRECATED).
-   * - If op is tier-blocked (and module is NOT tier-blocked), show PRO/ENT short badge.
+   * Badge cleanliness rules (kept), but we still compute same badge values.
    */
   const getEffectiveBadge = useCallback(
     (op: Operation): { text: string | number; config: any } | undefined => {
-      // Preserve numeric badges always (counts)
       if (typeof op.badge === 'number') {
         return {
           text: op.badge,
-          config: {
-            bgColor: 'bg-red-500',
-            textColor: 'text-white',
-            darkBgColor: 'bg-red-600',
-          }
+          config: { bgColor: 'bg-red-500', textColor: 'text-white', darkBgColor: 'bg-red-600' },
         };
       }
 
       const opTierBlocked = !!op.requiredTier && !hasTier(currentTier, op.requiredTier);
-      const effectiveTierBlocked = moduleTierBlocked || opTierBlocked;
 
-      // Normalize provided badge (string)
       if (typeof op.badge === 'string') {
-        // If it's a tier label, suppress in clean UI scenarios
         if (isTierLikeText(op.badge)) {
-          if (moduleTierBlocked) return undefined; // avoid repetition on module lock
-          if (!opTierBlocked) return undefined; // user already has tier -> don't repeat
-          
-          // Show tier badge with proper colors
-          const tier = op.requiredTier || 
-            (op.badge.toLowerCase().includes('pro') ? 'professional' : 
-             op.badge.toLowerCase().includes('ent') ? 'enterprise' : 'essential');
-          const config = tierBadgeConfig(tier as PlanTier);
-          return { text: op.badge.toUpperCase(), config };
+          if (moduleTierBlocked) return undefined;
+          if (!opTierBlocked) return undefined;
+
+          const tier =
+            op.requiredTier ||
+            (op.badge.toLowerCase().includes('pro')
+              ? 'professional'
+              : op.badge.toLowerCase().includes('ent')
+                ? 'enterprise'
+                : 'essential');
+
+          return { text: op.badge.toUpperCase(), config: tierBadgeConfig(tier as PlanTier) };
         }
-        
-        // Regular string badge
+
         return {
           text: op.badge,
-          config: {
-            bgColor: 'bg-gray-500',
-            textColor: 'text-white',
-            darkBgColor: 'bg-gray-600',
-          }
+          config: { bgColor: 'bg-gray-500', textColor: 'text-white', darkBgColor: 'bg-gray-600' },
         };
       }
 
-      // No badge supplied: decide derived badge
-      if (moduleTierBlocked) {
-        // Clean UI: don't repeat module tier badge on every row
-        return undefined;
-      }
+      if (moduleTierBlocked) return undefined;
 
-      // If op is tier-blocked, show tier short label
       if (opTierBlocked && op.requiredTier) {
-        const config = tierBadgeConfig(op.requiredTier);
-        return { text: tierShort(op.requiredTier), config };
+        return { text: tierShort(op.requiredTier), config: tierBadgeConfig(op.requiredTier) };
       }
 
-      // Otherwise show status badge if present
       const statusConfig = statusBadgeConfig(op.status);
       if (statusConfig) {
-        return { 
-          text: statusConfig.text, 
+        return {
+          text: statusConfig.text,
           config: {
             bgColor: statusConfig.bgColor,
             textColor: statusConfig.textColor,
             darkBgColor: statusConfig.darkBgColor,
-          }
+          },
         };
       }
 
@@ -339,43 +282,35 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
 
   const getEffectiveTitle = useCallback(
     (op: Operation) => {
-      const opTierBlocked = !!op.requiredTier && !hasTier(currentTier, op.requiredTier);
-      const effectiveTierBlocked = moduleTierBlocked || opTierBlocked;
+      const upgradeTier = getUpgradeTier(op);
 
       if (op.disabled && op.disabledReason) return op.disabledReason;
 
-      if (effectiveTierBlocked) {
-        const required = moduleTierBlocked ? moduleRequiredTier : op.requiredTier;
-        if (required) return `Requires ${tierLabel(required)} tier - Click to upgrade`;
+      if (upgradeTier) {
+        return `Requires ${tierLabel(upgradeTier)} tier`;
       }
 
       return op.description || op.label;
     },
-    [currentTier, moduleTierBlocked, moduleRequiredTier]
+    [getUpgradeTier]
   );
 
+  /**
+   * Clicking the operation should NOT navigate/select when gated.
+   * Instead, the Upgrade button will handle it.
+   */
   const handleOperationClick = useCallback(
     (op: Operation) => {
       if (op.disabled) return;
 
-      const opTierBlocked = !!op.requiredTier && !hasTier(currentTier, op.requiredTier);
-
-      if (moduleTierBlocked && moduleRequiredTier) {
-        requestUpgrade(moduleRequiredTier);
-        return;
-      }
-
-      if (opTierBlocked && op.requiredTier) {
-        requestUpgrade(op.requiredTier);
-        return;
-      }
+      const upgradeTier = getUpgradeTier(op);
+      if (upgradeTier) return;
 
       onSelectOperation(op.id);
     },
-    [currentTier, moduleTierBlocked, moduleRequiredTier, onSelectOperation, requestUpgrade]
+    [getUpgradeTier, onSelectOperation]
   );
 
-  // Header component
   const headerNode = useMemo(() => {
     if (sidebarHeader) return sidebarHeader;
 
@@ -411,7 +346,6 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
     );
   }, [collapsedSide, contextTitle, sidebarHeader, theme]);
 
-  // Compact header (when collapsed sideways)
   const compactHeaderNode = useMemo(
     () => (
       <div className="flex flex-col items-center py-3">
@@ -430,7 +364,6 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
     [theme]
   );
 
-  // Menu options
   const menuOptions = useMemo(
     () => [
       {
@@ -451,10 +384,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
           setShowMenu(false);
         },
       },
-      {
-        id: 'divider-1',
-        isDivider: true,
-      },
+      { id: 'divider-1', isDivider: true },
       ...(onFloat
         ? [
             {
@@ -483,10 +413,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
         : []),
       ...(onClose
         ? [
-            {
-              id: 'divider-2',
-              isDivider: true,
-            },
+            { id: 'divider-2', isDivider: true },
             {
               id: 'close',
               label: 'Close Sidebar',
@@ -514,76 +441,98 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
     ]
   );
 
-  // Handle click outside to close menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-
-      if (menuRef.current && !menuRef.current.contains(target) && showMenu) {
-        setShowMenu(false);
-      }
+      if (menuRef.current && !menuRef.current.contains(target) && showMenu) setShowMenu(false);
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMenu]);
 
-  // Compact operations (icon-only mode)
+  /**
+   * Compact operations (icon-only mode)
+   * - If gated: operation button is disabled
+   * - Show a small "Upgrade" overlay button that navigates to Plans
+   */
   const compactOperations = useMemo(
     () => (
       <div className="flex-1 flex flex-col items-center py-2 gap-2 overflow-auto">
         {operations.map((operation) => {
           const isActive = operation.id === activeOperation;
 
-          const opTierBlocked = !!operation.requiredTier && !hasTier(currentTier, operation.requiredTier);
-          const isGated = moduleTierBlocked || opTierBlocked;
+          const upgradeTier = getUpgradeTier(operation);
+          const isGated = !!upgradeTier;
           const isHardDisabled = !!operation.disabled;
 
-          // UI disabled state includes gating, but we do NOT set `disabled` for gating (so click can trigger upgrade)
           const isDisabledUI = isHardDisabled || isGated;
 
           const badgeData = getEffectiveBadge(operation);
 
           return (
-            <button
-              key={operation.id}
-              type="button"
-              onClick={() => handleOperationClick(operation)}
-              disabled={isHardDisabled}
-              title={getEffectiveTitle(operation)}
-              aria-label={operation.label}
-              aria-disabled={isDisabledUI}
-              className={cn(
-                'relative w-11 h-11 rounded-lg flex items-center justify-center transition-all duration-200 cursor-pointer',
-                'focus:outline-none focus:ring-2 focus:ring-offset-0',
-                theme === 'dark' ? 'focus:ring-cyan-500/50' : 'focus:ring-blue-500/50',
-                isActive &&
-                  (theme === 'dark'
-                    ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 text-cyan-300 shadow-lg shadow-cyan-500/30'
-                    : 'bg-blue-500/20 ring-2 ring-blue-500/40 text-blue-600 shadow-lg shadow-blue-500/30'),
-                !isActive &&
-                  !isDisabledUI &&
-                  (theme === 'dark'
-                    ? 'hover:bg-gray-800/60 text-gray-400 hover:text-cyan-300 hover:ring-1 hover:ring-gray-700'
-                    : 'hover:bg-gray-100/70 text-gray-600 hover:text-blue-700 hover:ring-1 hover:ring-gray-300'),
-                isDisabledUI && 'opacity-40 cursor-not-allowed'
-              )}
-            >
-              {operation.icon}
-              {badgeData !== undefined && (
-                <span
+            <div key={operation.id} className="relative">
+              <button
+                type="button"
+                onClick={() => handleOperationClick(operation)}
+                disabled={isHardDisabled || isGated}
+                title={getEffectiveTitle(operation)}
+                aria-label={operation.label}
+                aria-disabled={isDisabledUI}
+                className={cn(
+                  'relative w-11 h-11 rounded-lg flex items-center justify-center transition-all duration-200 cursor-pointer',
+                  'focus:outline-none focus:ring-2 focus:ring-offset-0',
+                  theme === 'dark' ? 'focus:ring-cyan-500/50' : 'focus:ring-blue-500/50',
+                  isActive &&
+                    (theme === 'dark'
+                      ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 text-cyan-300 shadow-lg shadow-cyan-500/30'
+                      : 'bg-blue-500/20 ring-2 ring-blue-500/40 text-blue-600 shadow-lg shadow-blue-500/30'),
+                  !isActive &&
+                    !isDisabledUI &&
+                    (theme === 'dark'
+                      ? 'hover:bg-gray-800/60 text-gray-400 hover:text-cyan-300 hover:ring-1 hover:ring-gray-700'
+                      : 'hover:bg-gray-100/70 text-gray-600 hover:text-blue-700 hover:ring-1 hover:ring-gray-300'),
+                  isDisabledUI && 'opacity-40 cursor-not-allowed'
+                )}
+              >
+                {operation.icon}
+                {badgeData !== undefined && (
+                  <span
+                    className={cn(
+                      'absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full flex items-center justify-center',
+                      badgeData.config.bgColor,
+                      badgeData.config.textColor,
+                      'ring-2',
+                      theme === 'dark' ? 'ring-gray-900' : 'ring-white'
+                    )}
+                  >
+                    {badgeData.text}
+                  </span>
+                )}
+              </button>
+
+              {/* Upgrade overlay (only for gated, not hard-disabled) */}
+              {isGated && !isHardDisabled && upgradeTier && (
+                <button
+                  type="button"
+                  onClick={() => requestUpgrade(upgradeTier)}
+                  aria-label={`Upgrade to ${tierLabel(upgradeTier)} to unlock ${operation.label}`}
+                  title={`Upgrade to ${tierLabel(upgradeTier)} to unlock`}
                   className={cn(
-                    'absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full flex items-center justify-center',
-                    badgeData.config.bgColor,
-                    badgeData.config.textColor,
+                    'absolute -bottom-1 -right-1',
+                    'h-[18px] px-1.5 rounded-full text-[10px] font-bold',
+                    'flex items-center gap-1',
                     'ring-2',
-                    theme === 'dark' ? 'ring-gray-900' : 'ring-white'
+                    theme === 'dark'
+                      ? 'bg-amber-500/90 text-white ring-gray-900'
+                      : 'bg-amber-500 text-white ring-white'
                   )}
                 >
-                  {badgeData.text}
-                </span>
+                  <Crown className="w-3 h-3" />
+                  Upg
+                </button>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
@@ -591,16 +540,15 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
     [
       operations,
       activeOperation,
-      currentTier,
-      moduleTierBlocked,
+      getUpgradeTier,
       getEffectiveBadge,
       getEffectiveTitle,
       handleOperationClick,
+      requestUpgrade,
       theme,
     ]
   );
 
-  // Ultra-compact mode (both collapsed)
   const ultraCompactMode = useMemo(
     () => (
       <div className="h-full flex flex-col items-center justify-between py-4">
@@ -631,7 +579,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="w-10 h-10" /> {/* Spacer for balance */}
+        <div className="w-10 h-10" />
       </div>
     ),
     [theme, handleMenuToggle]
@@ -653,7 +601,6 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
       role="complementary"
       aria-label="Quick actions sidebar"
     >
-      {/* Ultra-compact mode */}
       {collapsedSide && collapsedUp ? (
         ultraCompactMode
       ) : (
@@ -672,7 +619,9 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                   title="Dock left"
                   className={cn(
                     'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 cursor-pointer',
-                    theme === 'dark' ? 'hover:bg-gray-800/60 focus:ring-cyan-500/40' : 'hover:bg-gray-100/70 focus:ring-blue-500/40',
+                    theme === 'dark'
+                      ? 'hover:bg-gray-800/60 focus:ring-cyan-500/40'
+                      : 'hover:bg-gray-100/70 focus:ring-blue-500/40',
                     theme === 'dark' ? 'text-cyan-400' : 'text-blue-600',
                     dockSide === 'left' &&
                       (theme === 'dark'
@@ -691,7 +640,9 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                   title="Dock right"
                   className={cn(
                     'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 cursor-pointer',
-                    theme === 'dark' ? 'hover:bg-gray-800/60 focus:ring-cyan-500/40' : 'hover:bg-gray-100/70 focus:ring-blue-500/40',
+                    theme === 'dark'
+                      ? 'hover:bg-gray-800/60 focus:ring-cyan-500/40'
+                      : 'hover:bg-gray-100/70 focus:ring-blue-500/40',
                     theme === 'dark' ? 'text-cyan-400' : 'text-blue-600',
                     dockSide === 'right' &&
                       (theme === 'dark'
@@ -702,7 +653,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                   <PanelRight className="w-4 h-4" />
                 </button>
 
-                {/* Master menu toggle */}
+                {/* Master menu toggle (existing rendering kept) */}
                 <div className="relative">
                   {showMenu && (
                     <div
@@ -717,12 +668,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                     >
                       {menuOptions.map((option) => {
                         if ('isDivider' in option && option.isDivider) {
-                          return (
-                            <div
-                              key={option.id}
-                              className={cn('my-1 h-px', theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200')}
-                            />
-                          );
+                          return <div key={option.id} className={cn('my-1 h-px', theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200')} />;
                         }
 
                         return (
@@ -748,15 +694,9 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
             )}
           </div>
 
-          {/* Collapse/Expand Control Row - NEW SECTION */}
+          {/* Collapse/Expand Control Row (kept) */}
           {!collapsedUp && (
-            <div
-              className={cn(
-                'flex items-center gap-2 px-3 py-2 border-b',
-                borderClass,
-                theme === 'dark' ? 'bg-gray-800/30' : 'bg-gray-50/50'
-              )}
-            >
+            <div className={cn('flex items-center gap-2 px-3 py-2 border-b', borderClass, theme === 'dark' ? 'bg-gray-800/30' : 'bg-gray-50/50')}>
               <button
                 type="button"
                 onClick={onToggleCollapsedSide}
@@ -797,7 +737,6 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
           <div className={cn('flex-1 min-h-0', collapsedUp ? 'hidden' : 'block')}>
             {collapsedSide ? (
               <>
-                {/* Collapse button for compact mode */}
                 <div className="flex justify-center py-2 px-2">
                   <button
                     type="button"
@@ -823,8 +762,8 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                   {operations.map((operation, index) => {
                     const isActive = operation.id === activeOperation;
 
-                    const opTierBlocked = !!operation.requiredTier && !hasTier(currentTier, operation.requiredTier);
-                    const isGated = moduleTierBlocked || opTierBlocked;
+                    const upgradeTier = getUpgradeTier(operation);
+                    const isGated = !!upgradeTier;
                     const isHardDisabled = !!operation.disabled;
 
                     const isDisabledUI = isHardDisabled || isGated;
@@ -853,84 +792,106 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                                 ? 'ring-2 ring-cyan-500/80 rounded-xl shadow-lg shadow-cyan-500/30'
                                 : 'ring-2 ring-blue-500/80 rounded-xl shadow-lg shadow-blue-500/30')
                           )}
-                          style={{
-                            animation: `slideInRight 0.2s ease-out ${index * 0.02}s both`,
-                          }}
+                          style={{ animation: `slideInRight 0.2s ease-out ${index * 0.02}s both` }}
                         >
-                          <button
-                            type="button"
-                            onClick={() => handleOperationClick(operation)}
-                            disabled={isHardDisabled}
-                            aria-label={operation.description || operation.label}
-                            aria-current={isActive ? 'page' : undefined}
-                            aria-disabled={isDisabledUI}
-                            title={getEffectiveTitle(operation)}
-                            className={cn(
-                              'w-full flex items-center gap-3 px-3.5 py-2.5 relative z-10 cursor-pointer',
-                              'text-sm font-medium transition-all duration-200',
-                              'focus:outline-none focus:ring-2 focus:ring-offset-0 group',
-                              theme === 'dark' ? 'focus:ring-cyan-500/50' : 'focus:ring-blue-500/50',
+                          {/* Wrapper keeps existing layout intact, but allows an Upgrade button beside */}
+                          <div className="flex items-stretch gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOperationClick(operation)}
+                              disabled={isHardDisabled || isGated}
+                              aria-label={operation.description || operation.label}
+                              aria-current={isActive ? 'page' : undefined}
+                              aria-disabled={isDisabledUI}
+                              title={getEffectiveTitle(operation)}
+                              className={cn(
+                                'w-full flex items-center gap-3 px-3.5 py-2.5 relative z-10 cursor-pointer',
+                                'text-sm font-medium transition-all duration-200',
+                                'focus:outline-none focus:ring-2 focus:ring-offset-0 group',
+                                theme === 'dark' ? 'focus:ring-cyan-500/50' : 'focus:ring-blue-500/50',
 
-                              isActive &&
-                                (theme === 'dark'
-                                  ? 'bg-gray-900 text-cyan-300 rounded-xl border-r-4 border-cyan-500/90 shadow-inner shadow-cyan-500/10'
-                                  : 'bg-white text-blue-700 rounded-xl border-r-4 border-blue-500/90 shadow-inner shadow-blue-500/10'),
+                                isActive &&
+                                  (theme === 'dark'
+                                    ? 'bg-gray-900 text-cyan-300 rounded-xl border-r-4 border-cyan-500/90 shadow-inner shadow-cyan-500/10'
+                                    : 'bg-white text-blue-700 rounded-xl border-r-4 border-blue-500/90 shadow-inner shadow-blue-500/10'),
 
-                              !isActive &&
-                                !isDisabledUI &&
-                                (theme === 'dark'
-                                  ? 'text-gray-400 bg-gray-900/30 hover:text-gray-200 hover:bg-gray-800/40 rounded-lg hover:ring-1 hover:ring-gray-700/40'
-                                  : 'text-gray-600 bg-gray-100/30 hover:text-gray-900 hover:bg-gray-100/50 rounded-lg hover:ring-1 hover:ring-gray-300/40'),
+                                !isActive &&
+                                  !isDisabledUI &&
+                                  (theme === 'dark'
+                                    ? 'text-gray-400 bg-gray-900/30 hover:text-gray-200 hover:bg-gray-800/40 rounded-lg hover:ring-1 hover:ring-gray-700/40'
+                                    : 'text-gray-600 bg-gray-100/30 hover:text-gray-900 hover:bg-gray-100/50 rounded-lg hover:ring-1 hover:ring-gray-300/40'),
 
-                              isDisabledUI &&
-                                (theme === 'dark'
-                                  ? 'opacity-40 cursor-not-allowed text-gray-600'
-                                  : 'opacity-40 cursor-not-allowed text-gray-400')
-                            )}
-                          >
-                            {operation.icon && (
-                              <span
-                                className={cn(
-                                  'flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-md transition-all duration-200',
-                                  isActive &&
-                                    (theme === 'dark'
-                                      ? 'text-cyan-400 bg-cyan-500/15 ring-1 ring-cyan-500/40 shadow-sm shadow-cyan-500/30'
-                                      : 'text-blue-600 bg-blue-500/15 ring-1 ring-blue-500/40 shadow-sm shadow-blue-500/30'),
-                                  !isActive &&
-                                    (theme === 'dark'
-                                      ? 'text-gray-500 bg-gray-800/30 group-hover:text-cyan-400 group-hover:bg-cyan-500/10 group-hover:ring-1 group-hover:ring-cyan-500/20 group-hover:scale-110'
-                                      : 'text-gray-500 bg-gray-200/50 group-hover:text-blue-600 group-hover:bg-blue-500/10 group-hover:ring-1 group-hover:ring-blue-500/20 group-hover:scale-110')
-                                )}
-                              >
-                                {operation.icon}
-                              </span>
-                            )}
-
-                            <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                              <span className="truncate text-left">{operation.label}</span>
-
-                              {badgeData !== undefined && (
+                                isDisabledUI &&
+                                  (theme === 'dark'
+                                    ? 'opacity-40 cursor-not-allowed text-gray-600'
+                                    : 'opacity-40 cursor-not-allowed text-gray-400')
+                              )}
+                            >
+                              {operation.icon && (
                                 <span
                                   className={cn(
-                                    'px-2 py-0.5 rounded-full text-xs font-bold transition-all duration-200 shrink-0',
-                                    badgeData.config.bgColor,
-                                    badgeData.config.textColor,
-                                    theme === 'dark' ? badgeData.config.darkBgColor : '',
-                                    isActive && 'ring-2 ring-offset-1',
-                                    theme === 'dark' ? 'ring-offset-gray-900' : 'ring-offset-white'
+                                    'flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-md transition-all duration-200',
+                                    isActive &&
+                                      (theme === 'dark'
+                                        ? 'text-cyan-400 bg-cyan-500/15 ring-1 ring-cyan-500/40 shadow-sm shadow-cyan-500/30'
+                                        : 'text-blue-600 bg-blue-500/15 ring-1 ring-blue-500/40 shadow-sm shadow-blue-500/30'),
+                                    !isActive &&
+                                      (theme === 'dark'
+                                        ? 'text-gray-500 bg-gray-800/30 group-hover:text-cyan-400 group-hover:bg-cyan-500/10 group-hover:ring-1 group-hover:ring-cyan-500/20 group-hover:scale-110'
+                                        : 'text-gray-500 bg-gray-200/50 group-hover:text-blue-600 group-hover:bg-blue-500/10 group-hover:ring-1 group-hover:ring-blue-500/20 group-hover:scale-110')
                                   )}
                                 >
-                                  {badgeData.text}
+                                  {operation.icon}
                                 </span>
                               )}
-                            </div>
 
-                            {isActive && (
-                              <div className="flex-shrink-0 ml-2">
-                                <div className={cn('w-2 h-2 rotate-45 animate-pulse', theme === 'dark' ? 'bg-cyan-400' : 'bg-blue-600')} />
+                              <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                                <span className="truncate text-left">{operation.label}</span>
+
+                                {badgeData !== undefined && (
+                                  <span
+                                    className={cn(
+                                      'px-2 py-0.5 rounded-full text-xs font-bold transition-all duration-200 shrink-0',
+                                      badgeData.config.bgColor,
+                                      badgeData.config.textColor,
+                                      theme === 'dark' ? badgeData.config.darkBgColor : '',
+                                      isActive && 'ring-2 ring-offset-1',
+                                      theme === 'dark' ? 'ring-offset-gray-900' : 'ring-offset-white'
+                                    )}
+                                  >
+                                    {badgeData.text}
+                                  </span>
+                                )}
                               </div>
+
+                              {isActive && (
+                                <div className="flex-shrink-0 ml-2">
+                                  <div className={cn('w-2 h-2 rotate-45 animate-pulse', theme === 'dark' ? 'bg-cyan-400' : 'bg-blue-600')} />
+                                </div>
+                              )}
+                            </button>
+
+                            {/* UPGRADE BUTTON (new) — only when gated, keeps design language */}
+                            {isGated && !isHardDisabled && upgradeTier && (
+                              <button
+                                type="button"
+                                onClick={() => requestUpgrade(upgradeTier)}
+                                title={`Upgrade to ${tierLabel(upgradeTier)} to unlock`}
+                                aria-label={`Upgrade to ${tierLabel(upgradeTier)} to unlock ${operation.label}`}
+                                className={cn(
+                                  'shrink-0 px-3 rounded-xl',
+                                  'text-xs font-bold flex items-center gap-2',
+                                  'transition-all duration-200',
+                                  theme === 'dark'
+                                    ? 'bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 ring-1 ring-amber-500/30'
+                                    : 'bg-amber-100 text-amber-900 hover:bg-amber-200 ring-1 ring-amber-300'
+                                )}
+                              >
+                                <Crown className="w-4 h-4" />
+                                Upgrade
+                              </button>
                             )}
-                          </button>
+                          </div>
                         </div>
                       </li>
                     );
@@ -940,12 +901,10 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
             )}
           </div>
 
-          {/* Footer */}
           {sidebarFooter && !collapsedSide && <div className={cn('border-t px-4 py-3', borderClass)}>{sidebarFooter}</div>}
         </>
       )}
 
-      {/* Floating indicator */}
       {isFloating && <div className="absolute inset-0 pointer-events-none border-2 border-cyan-500/30 rounded-2xl" />}
     </aside>
   );

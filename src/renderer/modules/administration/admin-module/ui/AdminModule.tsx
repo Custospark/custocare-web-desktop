@@ -1,28 +1,11 @@
-/**
- * ============================================================================
- * ADMIN MODULE (ROUTER-DRIVEN) — with module gating + operation gating
- * ============================================================================
- */
 import React, { useCallback } from 'react';
-import {
-  LayoutDashboard,
-  Users,
-  Building2,
-  Layers,
-  Boxes,
-  MapIcon,
-  Settings2,
-  CreditCard,
-} from 'lucide-react';
+import { LayoutDashboard, Users, Building2, Layers, Boxes, MapIcon, Settings2, CreditCard } from 'lucide-react';
 
 import { BaseModuleWorkspace } from '../../../../shared/components/workspace/BaseModuleWorkspace';
 import { ADMIN_ROUTES } from '../../../../app/routes/constants/administration.paths';
 import { ROUTES } from '../../../../app/routes/routeConstants';
-import { tierLabel, type PlanTier } from '../../../../shared/entitlements/entitlements';
+import type { PlanTier } from '../../../../shared/entitlements/entitlements';
 
-/**
- * Admin module operations configuration
- */
 const ADMIN_OPERATIONS = [
   {
     id: 'overview',
@@ -81,15 +64,11 @@ const ADMIN_OPERATIONS = [
   },
 ];
 
-/**
- * Admin Module
- */
 const AdminModule: React.FC = () => {
-  // UI-first test: swap this to selector later (auth/session)
   const currentTier: PlanTier = 'essential';
 
   const onRequestUpgrade = useCallback((requiredTier: PlanTier) => {
-    // Replace with modal / billing route later
+    // Keep your existing behavior (modal/alert/etc)
     alert(`Upgrade required: ${requiredTier}`);
   }, []);
 
@@ -101,7 +80,7 @@ const AdminModule: React.FC = () => {
       defaultOperationPath={ADMIN_ROUTES.OVERVIEW}
       currentTier={currentTier}
       onRequestUpgrade={onRequestUpgrade}
-      // No moduleRequiredTier prop - let each operation handle its own tier requirements
+      plansPageUrl="/plans"
     />
   );
 };

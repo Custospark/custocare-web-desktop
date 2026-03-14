@@ -1,8 +1,3 @@
-/**
- * ============================================================================
- * BASE MODULE WORKSPACE (ROUTER-DRIVEN) — with tier gating + badges
- * ============================================================================
- */
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
@@ -15,13 +10,10 @@ import type { BadgeSpec } from '../../utils/Badge';
 import { hasTier, tierLabel, type FeatureStatus, type PlanTier } from '../../entitlements/entitlements';
 
 export type ModuleOperation = ContentOperation & {
-  // NEW: gating + badges
   requiredTier?: PlanTier;
   status?: FeatureStatus;
   badges?: (BadgeSpec | string)[];
   disabledReason?: string;
-
-  // legacy-compatible for sidebars/content layouts that support it
   badge?: any;
 };
 
@@ -29,31 +21,27 @@ export interface ModuleWorkspaceProps {
   contextTitle: string;
   operations: ModuleOperation[];
   basePath: string;
-
-  // existing (kept for compatibility; parent routing may already redirect)
   defaultOperationPath: string;
 
-  // NEW: UI-first gating
   currentTier?: PlanTier;
   onRequestUpgrade?: (requiredTier: PlanTier) => void;
 
-  // NEW: module-level gating (disables *everything* in module)
-  moduleRequiredTier?: PlanTier;
   moduleDisabledReason?: string;
+
+  /**
+   * NEW: plans page URL for upgrade redirect
+   */
+  plansPageUrl?: string;
 }
 
 function buildStatusBadges(status: FeatureStatus | undefined): BadgeSpec[] {
   if (!status) return [];
 
   if (status === 'beta') {
-    return [
-      { text: 'BETA', tone: 'info', icon: <FlaskConical className="w-3 h-3" />, title: 'This feature is in beta' },
-    ];
+    return [{ text: 'BETA', tone: 'info', icon: <FlaskConical className="w-3 h-3" />, title: 'This feature is in beta' }];
   }
   if (status === 'new') {
-    return [
-      { text: 'NEW', tone: 'success', icon: <Sparkles className="w-3 h-3" />, title: 'Recently added feature' },
-    ];
+    return [{ text: 'NEW', tone: 'success', icon: <Sparkles className="w-3 h-3" />, title: 'Recently added feature' }];
   }
   if (status === 'deprecated') {
     return [
@@ -77,19 +65,28 @@ export function BaseModuleWorkspace({
   contextTitle,
   operations,
   basePath,
-
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   defaultOperationPath,
-
   currentTier = 'essential',
   onRequestUpgrade,
-
   moduleDisabledReason,
+  plansPageUrl = '/plans',
 }: ModuleWorkspaceProps) {
   const theme = useSelector((state: RootState) => state.ui.theme);
   const location = useLocation();
   const navigate = useNavigate();
 
+  const returnUrl = `${location.pathname}${location.search ?? ''}`;
+
+  const requestUpgrade = useCallback(
+    (tier: PlanTier) => {
+      onRequestUpgrade?.(tier);
+      navigate(plansPageUrl, {
+        state: { requiredTier: tier, returnUrl },
+      });
+    },
+    [onRequestUpgrade, navigate, plansPageUrl, returnUrl]
+  );
 
   const activeOperationId = useMemo(() => {
     const path = location.pathname;
@@ -104,7 +101,7 @@ export function BaseModuleWorkspace({
     return operations.map((op) => {
       const opTierBlocked = op.requiredTier ? !hasTier(currentTier, op.requiredTier) : false;
 
-      // const effectiveDisabled = moduleTierBlocked || !!op.disabled || opTierBlocked;
+      // keep existing behavior: op becomes disabled if tier-blocked or explicitly disabled
       const effectiveDisabled = !!op.disabled || opTierBlocked;
 
       const effectiveReason =
@@ -114,6 +111,7 @@ export function BaseModuleWorkspace({
 
       const statusBadges = buildStatusBadges(op.status);
 
+      // Tier badge is clickable when blocked => goes to Plans page
       const tierBadge: BadgeSpec[] = op.requiredTier
         ? [
             {
@@ -121,15 +119,13 @@ export function BaseModuleWorkspace({
               tone: 'premium',
               icon: <Crown className="w-3 h-3" />,
               title: `Available on ${tierLabel(op.requiredTier)} tier and above`,
-              onClick: opTierBlocked ? () => onRequestUpgrade?.(op.requiredTier!) : undefined,
+              onClick: opTierBlocked ? () => requestUpgrade(op.requiredTier!) : undefined,
             },
           ]
         : [];
 
-
       const customBadges = normalizeCustomBadges(op.badges);
 
-      // For maximum compatibility: set "badge" too (many layouts only support a single badge)
       const badgesForUI = [...statusBadges, ...tierBadge, ...customBadges];
       const badgeProp = badgesForUI.length > 0 ? badgesForUI : undefined;
 
@@ -138,23 +134,15 @@ export function BaseModuleWorkspace({
         disabled: effectiveDisabled,
         disabledReason: effectiveReason,
         badge: badgeProp,
-      
       };
     });
-  }, [
-    operations,
-    currentTier,
-    onRequestUpgrade,
-    moduleDisabledReason,
-  ]);
+  }, [operations, currentTier, moduleDisabledReason, requestUpgrade]);
 
-  // Choose a safe fallback operation (first enabled)
   const fallbackOperation = useMemo(() => {
     const firstEnabled = uiOperations.find((op) => !op.disabled)?.id;
     return firstEnabled ?? uiOperations[0]?.id ?? 'overview';
   }, [uiOperations]);
 
-  // If user navigates directly to a disabled operation, redirect to fallback
   useEffect(() => {
     if (!activeOperationId) return;
 
@@ -172,19 +160,17 @@ export function BaseModuleWorkspace({
       const op = uiOperations.find((x) => x.id === operationId);
       if (!op) return;
 
-
-      // If operation is tier-blocked, prefer upgrading op-tier
+      // If operation is tier-blocked => go to Plans page
       const opTierBlocked = op.requiredTier ? !hasTier(currentTier, op.requiredTier) : false;
       if (opTierBlocked && op.requiredTier) {
-        onRequestUpgrade?.(op.requiredTier);
+        requestUpgrade(op.requiredTier);
         return;
       }
 
       if (op.disabled) return;
-
       navigate(`${basePath}/${operationId}`);
     },
-    [uiOperations, navigate, basePath, onRequestUpgrade, currentTier]
+    [uiOperations, navigate, basePath, currentTier, requestUpgrade]
   );
 
   return (
@@ -195,15 +181,11 @@ export function BaseModuleWorkspace({
       defaultOperation={fallbackOperation as string}
       contextTitle={contextTitle}
     >
-      {/* Router renders operation content */}
       <OutletWrapper theme={theme} />
     </ContentLayout>
   );
 }
 
-/**
- * Pass theme via Outlet context
- */
 function OutletWrapper({ theme }: { theme: 'light' | 'dark' }) {
   return <Outlet context={{ theme }} />;
 }
