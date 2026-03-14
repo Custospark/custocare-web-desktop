@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Badge, BadgeType, UpgradeBadge } from '../../utils/Badge';
 
 export interface ActionConfig<TActionId extends string> {
   key: TActionId;
@@ -11,6 +12,16 @@ export interface ActionConfig<TActionId extends string> {
   description?: string;
   disabled?: boolean;
   disabledReason?: string;
+  badge?: {
+    type: BadgeType;
+    tooltip?: string;
+    showIcon?: boolean;
+  };
+  tier?: {
+    required: 'essential' | 'professional' | 'enterprise';
+    current: 'essential' | 'professional' | 'enterprise';
+    onUpgrade?: () => void;
+  };
 }
 
 interface BaseActionWorkspaceProps<TActionId extends string> {
@@ -219,12 +230,35 @@ export function BaseActionWorkspace<TActionId extends string>({
                           aria-disabled={disabled} 
                           title={getActionTitle(action)}
                         >
-                          {action.icon && (
-                            <span className={!isActive && !disabled ? iconColor : ''}>
-                              {action.icon}
-                            </span>
-                          )}
-                          <span>{action.label}</span>
+                          <span className="flex items-center gap-2">
+                            {action.icon && (
+                              <span className={!isActive && !disabled ? iconColor : ''}>
+                                {action.icon}
+                              </span>
+                            )}
+                            <span>{action.label}</span>
+                            
+                            {/* Badge */}
+                            {action.badge && !disabled && (
+                              <Badge 
+                                type={action.badge.type}
+                                size="sm"
+                                showIcon={action.badge.showIcon !== false}
+                                tooltip={action.badge.tooltip}
+                                theme={theme}
+                              />
+                            )}
+                            
+                            {/* Upgrade indicator for tier-restricted features */}
+                            {action.tier && disabled && (
+                              <UpgradeBadge
+                                currentTier={action.tier.current}
+                                requiredTier={action.tier.required}
+                                onClick={action.tier.onUpgrade}
+                                theme={theme}
+                              />
+                            )}
+                          </span>
                         </button>
                       </motion.div>
                     );

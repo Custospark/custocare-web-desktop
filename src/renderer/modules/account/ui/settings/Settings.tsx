@@ -15,7 +15,8 @@ interface SettingsProps {
 }
 
 const Settings: React.FC<SettingsProps> = ({ theme }) => {
-  return (
+
+ return (
     <BaseActionWorkspace
       title="Account Center"
       icon={<SettingsIcon className="w-6 h-6" />}
@@ -34,15 +35,18 @@ const Settings: React.FC<SettingsProps> = ({ theme }) => {
           label: 'Account Security', 
           icon: <Shield className="w-4 h-4" />, 
           to: ACCOUNT_ROUTES.SETTINGS_SECURITY,
-          description: 'Configure password policies and multi-factor authentication'
+          description: 'Configure password policies and multi-factor authentication',
+          badge: { type: 'new', tooltip: 'New security features available' }
         },
         { 
           key: 'preferences', 
           label: 'User Preferences', 
           icon: <FaPalette className="w-4 h-4" />, 
           to: ACCOUNT_ROUTES.SETTINGS_PREFERENCES,
-          description: 'Customize interface behavior and system experience'
+          description: 'Customize interface behavior and system experience',
+          badge: { type: 'beta', tooltip: 'Beta feature - feedback welcome' }
         },
+        
       ]}
     />
   );

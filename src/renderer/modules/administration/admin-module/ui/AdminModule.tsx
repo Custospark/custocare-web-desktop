@@ -44,7 +44,8 @@ const ADMIN_OPERATIONS = [
     id: 'overview', 
     label: 'Command Center', 
     icon: <LayoutDashboard className="w-4 h-4" />,
-    description: 'Administrative overview and setup status'
+    description: 'Administrative overview and setup status',
+    status: 'new' // Add status badge
   },
   { 
     id: 'facility-setup', 
@@ -56,13 +57,15 @@ const ADMIN_OPERATIONS = [
     id: 'clinical-space-management', 
     label: 'Clinical Space Management', 
     icon: <MapIcon className="w-4 h-4" />,
-    description: 'Define rooms, floors, buildings, and manage staff space assignments'
+    description: 'Define rooms, floors, buildings, and manage staff space assignments',
+    tierBadge: 'enterprise' // Add tier badge
   },
   { 
     id: 'service-catalog', 
     label: 'Clinical & Billing Services', 
     icon: <Layers className="w-4 h-4" />,
-    description: 'Manage services and pricing versions'
+    description: 'Manage services and pricing versions',
+    status: 'beta' // Add status badge
   },
   { 
     id: 'inventory', 
@@ -80,13 +83,15 @@ const ADMIN_OPERATIONS = [
     id: 'plans-subscriptions', 
     label: 'Plans & Subscriptions', 
     icon: <CreditCard className="w-4 h-4" />,
-    description: 'Manage facility plans, subscriptions, and billing'
+    description: 'Manage facility plans, subscriptions, and billing',
+    badge: 3 // Numeric badge for count
   },
   { 
     id: 'settings', 
     label: 'Enterprise Facility Settings', 
     icon: <Settings2 className="w-4 h-4" />,
-    description: 'Manage facility identity, regulatory parameters, and operational policies'
+    description: 'Manage facility identity, regulatory parameters, and operational policies',
+    tierBadge: 'professional' // Add tier badge
   },
 ];
 

@@ -17,6 +17,8 @@ import {
   PanelLeft,
 } from 'lucide-react';
 import { cn } from '../../utils/classNameUtils';
+import { Badge } from '../../utils/Badge'
+import type { BadgeStatus, BadgeTier } from '../../utils/Badge';
 
 export type DockSide = 'left' | 'right';
 
@@ -27,6 +29,8 @@ export interface Operation {
   description?: string;
   disabled?: boolean;
   badge?: number | string;
+  tierBadge?: BadgeTier;
+  status?: BadgeStatus;
 }
 
 export interface QuickActionsSidebarProps {
@@ -86,13 +90,11 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
 
   // Master toggle - handles opening sidebar when fully collapsed
   const handleMenuToggle = useCallback(() => {
-    // If fully collapsed, open the sidebar
     if (collapsedSide && collapsedUp) {
       onToggleCollapsedSide();
       onToggleCollapsedUp();
       setShowMenu(false);
     } else {
-      // Otherwise, show menu
       setShowMenu(!showMenu);
     }
   }, [collapsedSide, collapsedUp, onToggleCollapsedSide, onToggleCollapsedUp, showMenu]);
@@ -117,8 +119,8 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
         {!collapsedSide && (
           <div className="min-w-0">
             <h3 className={cn('text-sm font-semibold truncate', theme === 'dark' ? 'text-gray-200' : 'text-gray-800')}>
-            Workspace Actions
-</h3>
+              Workspace Actions
+            </h3>
             {contextTitle && (
               <p
                 className={cn('text-xs mt-0.5 truncate', theme === 'dark' ? 'text-gray-500' : 'text-gray-500')}
@@ -228,37 +230,53 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
         const isDisabled = !!operation.disabled;
 
         return (
-          <button
-            key={operation.id}
-            type="button"
-            onClick={() => !isDisabled && onSelectOperation(operation.id)}
-            disabled={isDisabled}
-            title={operation.label}
-            aria-label={operation.label}
-            className={cn(
-              'relative w-11 h-11 rounded-lg flex items-center justify-center transition-all duration-200 cursor-pointer',
-              'focus:outline-none focus:ring-2 focus:ring-offset-0',
-              theme === 'dark' ? 'focus:ring-cyan-500/50' : 'focus:ring-blue-500/50',
-              isActive && (theme === 'dark' 
-                ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 text-cyan-300 shadow-lg shadow-cyan-500/30' 
-                : 'bg-blue-500/20 ring-2 ring-blue-500/40 text-blue-600 shadow-lg shadow-blue-500/30'),
-              !isActive && !isDisabled && (theme === 'dark' 
-                ? 'hover:bg-gray-800/60 text-gray-400 hover:text-cyan-300 hover:ring-1 hover:ring-gray-700' 
-                : 'hover:bg-gray-100/70 text-gray-600 hover:text-blue-700 hover:ring-1 hover:ring-gray-300'),
-              isDisabled && 'opacity-40 cursor-not-allowed'
+          <div key={operation.id} className="relative">
+            <button
+              type="button"
+              onClick={() => !isDisabled && onSelectOperation(operation.id)}
+              disabled={isDisabled}
+              title={operation.label}
+              aria-label={operation.label}
+              className={cn(
+                'relative w-11 h-11 rounded-lg flex items-center justify-center transition-all duration-200 cursor-pointer',
+                'focus:outline-none focus:ring-2 focus:ring-offset-0',
+                theme === 'dark' ? 'focus:ring-cyan-500/50' : 'focus:ring-blue-500/50',
+                isActive && (theme === 'dark' 
+                  ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 text-cyan-300 shadow-lg shadow-cyan-500/30' 
+                  : 'bg-blue-500/20 ring-2 ring-blue-500/40 text-blue-600 shadow-lg shadow-blue-500/30'),
+                !isActive && !isDisabled && (theme === 'dark' 
+                  ? 'hover:bg-gray-800/60 text-gray-400 hover:text-cyan-300 hover:ring-1 hover:ring-gray-700' 
+                  : 'hover:bg-gray-100/70 text-gray-600 hover:text-blue-700 hover:ring-1 hover:ring-gray-300'),
+                isDisabled && 'opacity-40 cursor-not-allowed'
+              )}
+            >
+              {operation.icon}
+              
+              {/* Badge for compact mode */}
+              {operation.badge && (
+                <span className={cn(
+                  'absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full flex items-center justify-center',
+                  'bg-red-500 text-white ring-2',
+                  theme === 'dark' ? 'ring-gray-900' : 'ring-white'
+                )}>
+                  {operation.badge}
+                </span>
+              )}
+            </button>
+            
+            {/* Tier or status badge for compact mode - positioned below button */}
+            {(operation.tierBadge || operation.status) && (
+              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
+                <Badge
+                  type={operation.tierBadge || operation.status!}
+                  size="sm"
+                  theme={theme}
+                  showIcon={false}
+                  className="text-[8px] px-1 py-0"
+                />
+              </div>
             )}
-          >
-            {operation.icon}
-            {operation.badge && (
-              <span className={cn(
-                'absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full flex items-center justify-center',
-                'bg-red-500 text-white ring-2',
-                theme === 'dark' ? 'ring-gray-900' : 'ring-white'
-              )}>
-                {operation.badge}
-              </span>
-            )}
-          </button>
+          </div>
         );
       })}
     </div>
@@ -294,7 +312,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
         <Menu className="w-5 h-5" />
       </button>
 
-      <div className="w-10 h-10" /> {/* Spacer for balance */}
+      <div className="w-10 h-10" />
     </div>
   ), [theme, handleMenuToggle]);
 
@@ -314,7 +332,6 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
       role="complementary"
       aria-label="Quick actions sidebar"
     >
-      {/* Ultra-compact mode */}
       {collapsedSide && collapsedUp ? (
         ultraCompactMode
       ) : (
@@ -326,48 +343,44 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
             {!collapsedSide && (
               <div className="flex items-center gap-1.5">
                 {/* Dock left */}
-                  <button
-                    type="button"
-                    onClick={() => onDockChange('left')}
-                    aria-label="Dock left"
-                    title="Dock left"
-                    className={cn(
-                      'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 cursor-pointer',
-                      theme === 'dark'
-                        ? 'hover:bg-gray-800/60 focus:ring-cyan-500/40'
-                        : 'hover:bg-gray-100/70 focus:ring-blue-500/40',
-                      // Default blue icon
-                      theme === 'dark' ? 'text-cyan-400' : 'text-blue-600',
-                      // Active highlighting (on top of blue icon)
-                      dockSide === 'left' && (theme === 'dark' 
-                        ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 shadow-lg shadow-cyan-500/30' 
-                        : 'bg-blue-500/20 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/30')
-                    )}
-                  >
-                    <PanelLeft className="w-4 h-4" />
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => onDockChange('left')}
+                  aria-label="Dock left"
+                  title="Dock left"
+                  className={cn(
+                    'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 cursor-pointer',
+                    theme === 'dark'
+                      ? 'hover:bg-gray-800/60 focus:ring-cyan-500/40'
+                      : 'hover:bg-gray-100/70 focus:ring-blue-500/40',
+                    theme === 'dark' ? 'text-cyan-400' : 'text-blue-600',
+                    dockSide === 'left' && (theme === 'dark' 
+                      ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 shadow-lg shadow-cyan-500/30' 
+                      : 'bg-blue-500/20 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/30')
+                  )}
+                >
+                  <PanelLeft className="w-4 h-4" />
+                </button>
 
-                  {/* Dock right */}
-                  <button
-                    type="button"
-                    onClick={() => onDockChange('right')}
-                    aria-label="Dock right"
-                    title="Dock right"
-                    className={cn(
-                      'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 cursor-pointer',
-                      theme === 'dark'
-                        ? 'hover:bg-gray-800/60 focus:ring-cyan-500/40'
-                        : 'hover:bg-gray-100/70 focus:ring-blue-500/40',
-                      // Default blue icon
-                      theme === 'dark' ? 'text-cyan-400' : 'text-blue-600',
-                      // Active highlighting (on top of blue icon)
-                      dockSide === 'right' && (theme === 'dark' 
-                        ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 shadow-lg shadow-cyan-500/30' 
-                        : 'bg-blue-500/20 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/30')
-                    )}
-                  >
-                    <PanelRight className="w-4 h-4" />
-                  </button>
+                {/* Dock right */}
+                <button
+                  type="button"
+                  onClick={() => onDockChange('right')}
+                  aria-label="Dock right"
+                  title="Dock right"
+                  className={cn(
+                    'p-1.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 cursor-pointer',
+                    theme === 'dark'
+                      ? 'hover:bg-gray-800/60 focus:ring-cyan-500/40'
+                      : 'hover:bg-gray-100/70 focus:ring-blue-500/40',
+                    theme === 'dark' ? 'text-cyan-400' : 'text-blue-600',
+                    dockSide === 'right' && (theme === 'dark' 
+                      ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40 shadow-lg shadow-cyan-500/30' 
+                      : 'bg-blue-500/20 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/30')
+                  )}
+                >
+                  <PanelRight className="w-4 h-4" />
+                </button>
 
                 {/* Master menu toggle */}
                 <div className="relative">
@@ -417,7 +430,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
             )}
           </div>
 
-          {/* Collapse/Expand Control Row - NEW SECTION */}
+          {/* Collapse/Expand Control Row */}
           {!collapsedUp && (
             <div className={cn(
               'flex items-center gap-2 px-3 py-2 border-b',
@@ -440,7 +453,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                 {collapsedSide ? (
                   <>
                     <ChevronsRight className="w-3.5 h-3.5" />
-                    {!collapsedSide && <span>Expand</span>}
+                    <span>Expand</span>
                   </>
                 ) : (
                   <>
@@ -450,16 +463,16 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                 )}
               </button>
 
-        {!collapsedSide && (
-              <div className="flex flex-col">
-                <span className={cn(
-                  'text-xs font-mono',
-                  theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                )}>
-                  Press ⌘K or Ctrl+K to search for anything
-                </span>
-              </div>
-            )}
+              {!collapsedSide && (
+                <div className="flex flex-col">
+                  <span className={cn(
+                    'text-xs font-mono',
+                    theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                  )}>
+                    Press ⌘K or Ctrl+K to search
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
@@ -467,7 +480,6 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
           <div className={cn('flex-1 min-h-0', collapsedUp ? 'hidden' : 'block')}>
             {collapsedSide ? (
               <>
-                {/* Collapse button for compact mode */}
                 <div className="flex justify-center py-2 px-2">
                   <button
                     type="button"
@@ -531,15 +543,12 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                               'text-sm font-medium transition-all duration-200',
                               'focus:outline-none focus:ring-2 focus:ring-offset-0 group',
                               theme === 'dark' ? 'focus:ring-cyan-500/50' : 'focus:ring-blue-500/50',
-
                               isActive && (theme === 'dark'
                                 ? 'bg-gray-900 text-cyan-300 rounded-xl border-r-4 border-cyan-500/90 shadow-inner shadow-cyan-500/10'
                                 : 'bg-white text-blue-700 rounded-xl border-r-4 border-blue-500/90 shadow-inner shadow-blue-500/10'),
-
                               !isActive && !isDisabled && (theme === 'dark'
                                 ? 'text-gray-400 bg-gray-900/30 hover:text-gray-200 hover:bg-gray-800/40 rounded-lg hover:ring-1 hover:ring-gray-700/40'
                                 : 'text-gray-600 bg-gray-100/30 hover:text-gray-900 hover:bg-gray-100/50 rounded-lg hover:ring-1 hover:ring-gray-300/40'),
-
                               isDisabled && (theme === 'dark' ? 'opacity-40 cursor-not-allowed text-gray-600' : 'opacity-40 cursor-not-allowed text-gray-400')
                             )}
                           >
@@ -559,24 +568,48 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                               </span>
                             )}
 
-                            <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                            <div className="flex-1 flex items-center gap-2 min-w-0">
                               <span className="truncate text-left">{operation.label}</span>
-
-                              {operation.badge && (
-                                <span
-                                  className={cn(
-                                    'px-2 py-0.5 rounded-full text-xs font-bold transition-all duration-200 shrink-0',
-                                    isActive && (theme === 'dark'
-                                      ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 ring-1 ring-cyan-500/40'
-                                      : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-700 ring-1 ring-blue-500/40'),
-                                    !isActive && (theme === 'dark'
-                                      ? 'bg-gray-800 text-gray-400 ring-1 ring-gray-700/30 group-hover:bg-gray-700 group-hover:text-gray-300'
-                                      : 'bg-gray-200 text-gray-600 ring-1 ring-gray-300/30 group-hover:bg-gray-300 group-hover:text-gray-700')
-                                  )}
-                                >
-                                  {operation.badge}
-                                </span>
-                              )}
+                              
+                              {/* Badge group */}
+                              <div className="flex items-center gap-1 shrink-0">
+                                {/* Status badge */}
+                                {operation.status && (
+                                  <Badge
+                                    type={operation.status}
+                                    size="sm"
+                                    theme={theme}
+                                    showIcon={true}
+                                  />
+                                )}
+                                
+                                {/* Tier badge */}
+                                {operation.tierBadge && (
+                                  <Badge
+                                    type={operation.tierBadge}
+                                    size="sm"
+                                    theme={theme}
+                                    showIcon={true}
+                                  />
+                                )}
+                                
+                                {/* Numeric badge */}
+                                {operation.badge && (
+                                  <span
+                                    className={cn(
+                                      'px-2 py-0.5 rounded-full text-xs font-bold transition-all duration-200',
+                                      isActive && (theme === 'dark'
+                                        ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 ring-1 ring-cyan-500/40'
+                                        : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-700 ring-1 ring-blue-500/40'),
+                                      !isActive && (theme === 'dark'
+                                        ? 'bg-gray-800 text-gray-400 ring-1 ring-gray-700/30 group-hover:bg-gray-700 group-hover:text-gray-300'
+                                        : 'bg-gray-200 text-gray-600 ring-1 ring-gray-300/30 group-hover:bg-gray-300 group-hover:text-gray-700')
+                                    )}
+                                  >
+                                    {operation.badge}
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
                             {isActive && (
