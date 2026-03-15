@@ -28,7 +28,6 @@ import {
   useGetPlans,
 } from '../../../../modules/administration/admin-module/api/subscriptions/SubscriptionQueries';
 import {
-  type Subscription,
   type Plan,
   SubscriptionStatus,
 } from '../../../../modules/administration/admin-module/api/subscriptions/SubscriptionTypes';

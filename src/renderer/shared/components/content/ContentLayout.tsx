@@ -7,7 +7,7 @@ import { cn } from '../../utils/classNameUtils';
 import { LayoutMainContent } from './LayoutMainContent';
 import { QuickActionsSidebar, type DockSide} from './QuickActionsSidebar';
 import { type AppDispatch } from '../../../app/store/store';
-import { BadgeSpec } from '../../utils/Badge';
+import { type BadgeSpec } from '../../utils/Badge';
 
 export interface ContentLayoutProps {
   operations: Operation[];

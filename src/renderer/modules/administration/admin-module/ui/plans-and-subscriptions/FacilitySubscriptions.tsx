@@ -278,7 +278,7 @@ const InactiveSubscriptionBanner: React.FC<{
   const isDark = theme === 'dark';
   const isCancelled  = subscription.status === SubscriptionStatus.CANCELLED;
   const isSuspended  = subscription.status === SubscriptionStatus.SUSPENDED;
-  const isPastDue    = subscription.status === SubscriptionStatus.PAST_DUE;
+  // const isPastDue    = subscription.status === SubscriptionStatus.PAST_DUE;
 
   const iconCfg = isCancelled
     ? { icon: XCircle, color: isDark ? 'text-red-400' : 'text-red-600', bg: isDark ? 'bg-red-900/30' : 'bg-red-100', border: isDark ? 'border-red-800' : 'border-red-200', cardBg: isDark ? 'bg-red-900/10' : 'bg-red-50' }

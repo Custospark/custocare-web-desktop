@@ -3,7 +3,6 @@ import { useSelector } from 'react-redux';
 import {
   BarChart,
   Bar,
-  LineChart,
   Line,
   PieChart,
   Pie,
@@ -14,8 +13,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  AreaChart,
-  Area,
   ComposedChart,
 } from 'recharts';
 import {
@@ -68,7 +65,7 @@ import {
   useFacilityGrowthTrends,
 } from '../statistics/api/facility/FacilityStatsQueries';
 
-import { RootState } from '../../../app/store/rootReducer';
+import { type RootState } from '../../../app/store/rootReducer';
 
 // ==================== ICON MAP ====================
 
@@ -107,6 +104,35 @@ type TabKey = 'overview' | 'capacity' | 'services' | 'compliance';
 const cx = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(' ');
 
+// ==================== UTILITY FUNCTIONS ====================
+
+/**
+ * Transforms data for Recharts components by adding required index signature
+ * and mapping name/value fields
+ */
+const toChartData = <T extends Record<string, any>>(
+  data: T[],
+  nameKey: keyof T,
+  valueKey: keyof T,
+  colorKey?: keyof T
+): Array<{ name: string; value: number; fill?: string; original: T }> => {
+  return data.map(item => ({
+    name: String(item[nameKey]),
+    value: Number(item[valueKey]),
+    ...(colorKey && { fill: String(item[colorKey]) }),
+    original: item // Keep original data if needed
+  }));
+};
+
+/**
+ * Type guard to check if data exists and has length
+ */
+const hasData = (data: any[] | null | undefined): data is any[] => {
+  return Array.isArray(data) && data.length > 0;
+};
+
+// ==================== CHART TOOLTIP ====================
+
 /** A consistent tooltip for all charts (improves dark theme readability) */
 function ChartTooltip({
   isDark,
@@ -137,6 +163,8 @@ function ChartTooltip({
   );
 }
 
+// ==================== SECTION CARD ====================
+
 function SectionCard({
   title,
   subtitle,
@@ -148,7 +176,6 @@ function SectionCard({
   isDark,
   text,
   textSecondary,
-  border,
 }: {
   title: string;
   subtitle?: string;
@@ -192,6 +219,8 @@ function SectionCard({
     </section>
   );
 }
+
+// ==================== METRIC CAROUSEL ====================
 
 /** Shows 3 metrics at a time, but keeps total count accessible */
 function MetricCarousel({
@@ -577,7 +606,7 @@ export const FacilityStats: React.FC = () => {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           {/* Metrics (3 at a time) */}
-          {data?.key_metrics?.length ? (
+          {hasData(data?.key_metrics) && (
             <MetricCarousel
               metrics={data.key_metrics}
               isDark={isDark}
@@ -587,12 +616,12 @@ export const FacilityStats: React.FC = () => {
               textMuted={ui.textMuted}
               grid={ui.grid}
             />
-          ) : null}
+          )}
 
           {/* Two Column Layout for Distributions */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Facility Type Distribution */}
-            {data?.facility_type_distribution?.length ? (
+            {hasData(data?.facility_type_distribution) && (
               <SectionCard
                 title="Facilities by Type"
                 subtitle="Distribution across facility types"
@@ -607,28 +636,32 @@ export const FacilityStats: React.FC = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={data.facility_type_distribution}
+                        data={toChartData(
+                          data.facility_type_distribution,
+                          'type_label',
+                          'count',
+                          'color'
+                        )}
                         cx="50%"
                         cy="50%"
                         innerRadius={60}
                         outerRadius={120}
                         paddingAngle={2}
-                        dataKey="count"
-                        nameKey="type_label"
+                        dataKey="value"
+                        nameKey="name"
                         label={false}
                       >
-                        {data.facility_type_distribution.map((entry, index) => (
+                        {data.facility_type_distribution.map((entry: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
                       <ChartTooltip isDark={isDark} bg={ui.tooltipBg} border={ui.tooltipBorder} text={ui.tooltipText} />
-                      {/* <Legend wrapperStyle={{ color: isDark ? '#E2E8F0' : '#334155' }} /> */}
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t" style={{ borderColor: ui.border }}>
-                  {data.facility_type_distribution.slice(0, 6).map((type, idx) => (
+                  {data.facility_type_distribution.slice(0, 6).map((type: any, idx: number) => (
                     <div key={idx} className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: type.color }} />
                       <span className={cx('text-xs', ui.textSecondary)}>
@@ -638,10 +671,10 @@ export const FacilityStats: React.FC = () => {
                   ))}
                 </div>
               </SectionCard>
-            ) : null}
+            )}
 
             {/* Facility Tier Distribution */}
-            {data?.facility_tier_distribution?.length ? (
+            {hasData(data?.facility_tier_distribution) && (
               <SectionCard
                 title="Facilities by Tier"
                 subtitle="Tier distribution across all facilities"
@@ -664,7 +697,7 @@ export const FacilityStats: React.FC = () => {
                       <YAxis stroke={ui.grid} tick={{ fill: isDark ? '#CBD5E1' : '#475569', fontSize: 12 }} />
                       <ChartTooltip isDark={isDark} bg={ui.tooltipBg} border={ui.tooltipBorder} text={ui.tooltipText} />
                       <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                        {data.facility_tier_distribution.map((entry, index) => (
+                        {data.facility_tier_distribution.map((entry: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Bar>
@@ -672,11 +705,11 @@ export const FacilityStats: React.FC = () => {
                   </ResponsiveContainer>
                 </div>
               </SectionCard>
-            ) : null}
+            )}
           </div>
 
           {/* Status Distribution */}
-          {data?.operational_status_distribution?.length ? (
+          {hasData(data?.operational_status_distribution) && (
             <SectionCard
               title="Operational Status"
               subtitle="Current operational status of facilities"
@@ -688,7 +721,7 @@ export const FacilityStats: React.FC = () => {
               border={ui.border}
             >
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                {data.operational_status_distribution.map((status, idx) => {
+                {data.operational_status_distribution.map((status: any, idx: number) => {
                   const totalFacilities = data.key_metrics?.[0]?.value as number || 1;
                   const percentage = ((status.count / totalFacilities) * 100).toFixed(1);
                   
@@ -703,10 +736,10 @@ export const FacilityStats: React.FC = () => {
                 })}
               </div>
             </SectionCard>
-          ) : null}
+          )}
 
           {/* Growth Trends */}
-          {data?.facility_growth_trends?.length ? (
+          {hasData(data?.facility_growth_trends) && (
             <SectionCard
               title="Facility Growth Trends"
               subtitle="New facilities and cumulative growth over time"
@@ -736,7 +769,7 @@ export const FacilityStats: React.FC = () => {
                 </ResponsiveContainer>
               </div>
             </SectionCard>
-          ) : null}
+          )}
         </div>
       )}
 
@@ -753,7 +786,7 @@ export const FacilityStats: React.FC = () => {
                 <div>
                   <p className={cx('text-sm font-medium', ui.textSecondary)}>Total Bed Capacity</p>
                   <p className={cx('text-3xl font-bold mt-1', ui.text)}>
-                    {data.capacity_metrics.bed_distribution.reduce((sum, item) => {
+                    {data.capacity_metrics.bed_distribution.reduce((sum: number, item: any) => {
                       const count = item.count;
                       const range = item.range;
                       let avg = 0;
@@ -799,7 +832,7 @@ export const FacilityStats: React.FC = () => {
           </div>
 
           {/* Bed Distribution Chart */}
-          {data.capacity_metrics.bed_distribution?.length ? (
+          {hasData(data.capacity_metrics.bed_distribution) && (
             <SectionCard
               title="Bed Capacity Distribution"
               subtitle="Number of facilities by bed capacity range"
@@ -822,7 +855,7 @@ export const FacilityStats: React.FC = () => {
                     <YAxis stroke={ui.grid} tick={{ fill: isDark ? '#CBD5E1' : '#475569', fontSize: 12 }} />
                     <ChartTooltip isDark={isDark} bg={ui.tooltipBg} border={ui.tooltipBorder} text={ui.tooltipText} />
                     <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                      {data.capacity_metrics.bed_distribution.map((entry, index) => (
+                      {data.capacity_metrics.bed_distribution.map((entry: any, index: number) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Bar>
@@ -830,7 +863,7 @@ export const FacilityStats: React.FC = () => {
                 </ResponsiveContainer>
               </div>
             </SectionCard>
-          ) : null}
+          )}
 
           {/* Emergency Capabilities */}
           {data?.emergency_capabilities && (
@@ -912,11 +945,11 @@ export const FacilityStats: React.FC = () => {
               </div>
 
               {/* Trauma Center Levels */}
-              {data.emergency_capabilities.trauma_center.by_level?.length > 0 && (
+              {hasData(data.emergency_capabilities.trauma_center.by_level) && (
                 <div className={cx('mt-4 pt-4 border-t', ui.border)}>
                   <p className={cx('text-sm font-medium mb-2', ui.text)}>Trauma Center Levels</p>
                   <div className="flex flex-wrap gap-4">
-                    {data.emergency_capabilities.trauma_center.by_level.map((level, idx) => (
+                    {data.emergency_capabilities.trauma_center.by_level.map((level: any, idx: number) => (
                       <div key={idx} className="flex items-center gap-1">
                         <span className={cx('text-sm', ui.textSecondary)}>{level.level}:</span>
                         <span className={cx('text-sm font-medium', ui.text)}>{level.count}</span>
@@ -979,7 +1012,7 @@ export const FacilityStats: React.FC = () => {
           </div>
 
           {/* Top Services */}
-          {data.service_availability.top_services?.length ? (
+          {hasData(data.service_availability.top_services) && (
             <SectionCard
               title="Top 10 Services Offered"
               subtitle="Most common services across facilities"
@@ -991,7 +1024,7 @@ export const FacilityStats: React.FC = () => {
               border={ui.border}
             >
               <div className="space-y-4">
-                {data.service_availability.top_services.map((service, idx) => (
+                {data.service_availability.top_services.map((service: any, idx: number) => (
                   <div key={idx}>
                     <div className="flex justify-between items-center mb-1">
                       <span className={cx('text-sm', ui.text)}>{service.service}</span>
@@ -1009,10 +1042,10 @@ export const FacilityStats: React.FC = () => {
                 ))}
               </div>
             </SectionCard>
-          ) : null}
+          )}
 
           {/* Top Specialties */}
-          {data?.specialty_services?.top_specialties?.length ? (
+          {hasData(data?.specialty_services?.top_specialties) && (
             <SectionCard
               title="Top 10 Specialties"
               subtitle="Most common medical specialties"
@@ -1024,7 +1057,7 @@ export const FacilityStats: React.FC = () => {
               border={ui.border}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {data.specialty_services.top_specialties.map((specialty, idx) => (
+                {data.specialty_services.top_specialties.map((specialty: any, idx: number) => (
                   <div
                     key={idx}
                     className={cx(
@@ -1040,7 +1073,7 @@ export const FacilityStats: React.FC = () => {
                 ))}
               </div>
             </SectionCard>
-          ) : null}
+          )}
         </div>
       )}
 
@@ -1100,19 +1133,25 @@ export const FacilityStats: React.FC = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={[
-                      { name: 'Expiring Soon (≤30d)', value: data.license_expiry_metrics.expiring_soon, color: '#F59E0B' },
-                      { name: 'Expiring (31-90d)', value: data.license_expiry_metrics.expiring_medium, color: '#F97316' },
-                      { name: 'Expiring Later (>90d)', value: data.license_expiry_metrics.expiring_later, color: '#10B981' },
-                      { name: 'Expired', value: data.license_expiry_metrics.expired, color: '#EF4444' },
-                      { name: 'No License Date', value: data.license_expiry_metrics.no_license_date, color: '#6B7280' },
-                    ]}
+                    data={toChartData(
+                      [
+                        { name: 'Expiring Soon (≤30d)', value: data.license_expiry_metrics.expiring_soon, color: '#F59E0B' },
+                        { name: 'Expiring (31-90d)', value: data.license_expiry_metrics.expiring_medium, color: '#F97316' },
+                        { name: 'Expiring Later (>90d)', value: data.license_expiry_metrics.expiring_later, color: '#10B981' },
+                        { name: 'Expired', value: data.license_expiry_metrics.expired, color: '#EF4444' },
+                        { name: 'No License Date', value: data.license_expiry_metrics.no_license_date, color: '#6B7280' },
+                      ],
+                      'name',
+                      'value',
+                      'color'
+                    )}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
                     outerRadius={120}
                     paddingAngle={2}
                     dataKey="value"
+                    nameKey="name"
                     label={false}
                   >
                     {[
@@ -1157,7 +1196,7 @@ export const FacilityStats: React.FC = () => {
                 <div>
                   <p className={cx('text-sm font-medium mb-3', ui.text)}>Top Accreditations</p>
                   <div className="space-y-3">
-                    {data.accreditation_stats.top_accreditations.map((item, idx) => (
+                    {data.accreditation_stats.top_accreditations.map((item: any, idx: number) => (
                       <div key={idx} className="flex justify-between items-center">
                         <span className={cx('text-sm', ui.textSecondary)}>{item.accreditation}</span>
                         <span className={cx('text-sm font-medium', ui.text)}>

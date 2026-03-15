@@ -74,7 +74,7 @@ const ComparisonModal: React.FC<ComparisonModalProps> = ({ theme, plans, onClose
       .replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const formatFeatureValue = (plan: Plan, category: string, feature: string): string => {
+  const formatFeatureValue = (plan: Plan, feature: string): string => {
     if (feature === 'pricing') {
       return `${plan.pricing.ugx.toLocaleString()} UGX / ${plan.pricing.billing_cycle}`;
     }
@@ -212,11 +212,11 @@ const ComparisonModal: React.FC<ComparisonModalProps> = ({ theme, plans, onClose
                         <td key={plan.id} className="px-4 py-3">
                           <span className={cn(
                             'text-sm',
-                            formatFeatureValue(plan, categoryKey, feature) === '✓'
+                            formatFeatureValue(plan, feature) === '✓'
                               ? isDark ? 'text-green-400' : 'text-green-600'
                               : isDark ? 'text-gray-300' : 'text-gray-700'
                           )}>
-                            {formatFeatureValue(plan, categoryKey, feature)}
+                            {formatFeatureValue(plan, feature)}
                           </span>
                         </td>
                       ))}

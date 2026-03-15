@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { Crown, AlertTriangle, FlaskConical, Sparkles } from 'lucide-react';
@@ -66,7 +66,6 @@ export function BaseModuleWorkspace({
   operations,
   basePath,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  defaultOperationPath,
   currentTier = 'essential',
   onRequestUpgrade,
   moduleDisabledReason,

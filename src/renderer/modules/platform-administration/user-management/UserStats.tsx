@@ -58,9 +58,36 @@ import {
   useUserRetention,
   useVerificationFunnel,
   useWeeklyTrends,
-  type DateRange,
 } from '../statistics/api/user/UserStatsQueries';
-import { RootState } from '../../../app/store/rootReducer';
+import {type GenderDistribution, type DateRange } from '../statistics/api/user/UserStatsType';
+import { type RootState } from '../../../app/store/rootReducer';
+
+// ==================== UTILITY FUNCTIONS ====================
+
+/**
+ * Transforms data for Recharts components by adding required index signature
+ * and mapping name/value fields
+ */
+const toChartData = <T extends Record<string, any>>(
+  data: T[],
+  nameKey: keyof T,
+  valueKey: keyof T,
+  colorKey?: keyof T
+): Array<{ name: string; value: number; fill?: string; original: T }> => {
+  return data.map(item => ({
+    name: String(item[nameKey]),
+    value: Number(item[valueKey]),
+    ...(colorKey && { fill: String(item[colorKey]) }),
+    original: item // Keep original data if needed
+  }));
+};
+
+/**
+ * Type guard to check if data exists and has length
+ */
+const hasData = (data: any[] | null | undefined): data is any[] => {
+  return Array.isArray(data) && data.length > 0;
+};
 
 const IconMap = {
   Users,
@@ -138,7 +165,6 @@ function SectionCard({
   isDark,
   text,
   textSecondary,
-  border,
 }: {
   title: string;
   subtitle?: string;
@@ -600,7 +626,7 @@ export const UserStats: React.FC = () => {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           {/* Metrics (3 at a time) */}
-          {data?.key_metrics?.length ? (
+          {hasData(data?.key_metrics) && (
             <MetricCarousel
               metrics={data.key_metrics}
               isDark={isDark}
@@ -610,10 +636,10 @@ export const UserStats: React.FC = () => {
               textMuted={ui.textMuted}
               grid={ui.grid}
             />
-          ) : null}
+          )}
 
           {/* Primary: Daily Activity (kept front-and-center) */}
-          {data?.daily_activity?.length ? (
+          {hasData(data?.daily_activity) && (
             <SectionCard
               title="Daily user activity"
               subtitle="New users, verified users, and active users"
@@ -658,11 +684,11 @@ export const UserStats: React.FC = () => {
                 Tip: Hover for exact values. This chart intentionally prioritizes readability over density.
               </p>
             </SectionCard>
-          ) : null}
+          )}
 
           {/* Secondary: Trends + MFA side-by-side */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {data?.weekly_trends?.length ? (
+            {hasData(data?.weekly_trends) && (
               <SectionCard
                 title="Weekly trends"
                 subtitle="Direction of growth over time"
@@ -692,9 +718,9 @@ export const UserStats: React.FC = () => {
                   </ResponsiveContainer>
                 </div>
               </SectionCard>
-            ) : null}
+            )}
 
-            {data?.mfa_adoption?.overall ? (
+            {data?.mfa_adoption?.overall && (
               <SectionCard
                 title="MFA adoption"
                 subtitle="Security posture overview"
@@ -718,16 +744,22 @@ export const UserStats: React.FC = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={[
-                          { name: 'Enabled', value: data.mfa_adoption.overall.enabled },
-                          { name: 'Disabled', value: data.mfa_adoption.overall.disabled },
-                        ]}
+                        data={toChartData(
+                          [
+                            { name: 'Enabled', value: data.mfa_adoption.overall.enabled, color: '#10B981' },
+                            { name: 'Disabled', value: data.mfa_adoption.overall.disabled, color: '#EF4444' },
+                          ],
+                          'name',
+                          'value',
+                          'color'
+                        )}
                         cx="50%"
                         cy="50%"
                         innerRadius={62}
                         outerRadius={92}
                         paddingAngle={2}
                         dataKey="value"
+                        nameKey="name"
                         label={false}
                       >
                         <Cell fill="#10B981" />
@@ -739,7 +771,7 @@ export const UserStats: React.FC = () => {
                   </ResponsiveContainer>
                 </div>
 
-                {data.mfa_adoption.by_region?.length ? (
+                {hasData(data.mfa_adoption.by_region) && (
                   <div className={cx('mt-4 pt-4 border-t', ui.border)}>
                     <div className="flex items-center justify-between">
                       <h3 className={cx('text-sm font-semibold', ui.text)}>Top regions</h3>
@@ -760,13 +792,13 @@ export const UserStats: React.FC = () => {
                       ))}
                     </div>
                   </div>
-                ) : null}
+                )}
               </SectionCard>
-            ) : null}
+            )}
           </div>
 
           {/* Collapsible: Verification (kept but not shoved in user’s face immediately) */}
-          {data?.verification_funnel ? (
+          {data?.verification_funnel && (
             <details className={cx(cardClassName, 'group')} open={false}>
               <summary
                 className={cx(
@@ -839,13 +871,19 @@ export const UserStats: React.FC = () => {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={data.verification_funnel.methods}
+                          data={toChartData(
+                            data.verification_funnel.methods,
+                            'name',
+                            'value',
+                            'color'
+                          )}
                           cx="50%"
                           cy="50%"
                           innerRadius={60}
                           outerRadius={100}
                           paddingAngle={2}
                           dataKey="value"
+                          nameKey="name"
                           label={false}
                         >
                           {data.verification_funnel.methods.map((entry: any, index: number) => (
@@ -864,7 +902,7 @@ export const UserStats: React.FC = () => {
                 </div>
               </div>
             </details>
-          ) : null}
+          )}
         </div>
       )}
 
@@ -913,16 +951,22 @@ export const UserStats: React.FC = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={data.demographic_distribution.gender}
+                      data={data.demographic_distribution.gender.map(item => ({
+                        name: item.name, // Map gender to name
+                        value: item.value,
+                        fill: item.color,
+                        original: item
+                      }))}
                       cx="50%"
                       cy="50%"
                       innerRadius={70}
                       outerRadius={115}
                       paddingAngle={2}
                       dataKey="value"
+                      nameKey="name"
                       label={false}
                     >
-                      {data.demographic_distribution.gender.map((entry: any, index: number) => (
+                      {data.demographic_distribution.gender.map((entry: GenderDistribution, index: number) => (
                         <Cell key={`gender-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -935,7 +979,7 @@ export const UserStats: React.FC = () => {
           </div>
 
           {/* Geographic distribution */}
-          {data?.geographic_distribution ? (
+          {data?.geographic_distribution && (
             <SectionCard
               title="Geographic distribution"
               subtitle="Top countries, states, and data residency"
@@ -963,7 +1007,7 @@ export const UserStats: React.FC = () => {
                   </div>
                 </div>
 
-                {data.geographic_distribution.by_state?.length > 0 ? (
+                {hasData(data.geographic_distribution.by_state) ? (
                   <div>
                     <h3 className={cx('text-sm font-semibold mb-3', ui.text)}>Top US states</h3>
                     <div className="space-y-2">
@@ -998,10 +1042,10 @@ export const UserStats: React.FC = () => {
                 </div>
               </div>
             </SectionCard>
-          ) : null}
+          )}
 
           {/* Retention - kept as is but sits lower in the page */}
-          {data?.user_retention?.length ? (
+          {hasData(data?.user_retention) && (
             <SectionCard
               title="User retention cohorts"
               subtitle="Cohort table (first 6 cohorts)"
@@ -1055,7 +1099,7 @@ export const UserStats: React.FC = () => {
                 </table>
               </div>
             </SectionCard>
-          ) : null}
+          )}
         </div>
       )}
 
@@ -1125,7 +1169,7 @@ export const UserStats: React.FC = () => {
           </SectionCard>
 
           {/* Staff performance */}
-          {data?.staff_performance ? (
+          {data?.staff_performance && (
             <SectionCard
               title="Top performing staff"
               subtitle="Verification throughput and recency"
@@ -1163,7 +1207,7 @@ export const UserStats: React.FC = () => {
                 </p>
               </div>
             </SectionCard>
-          ) : null}
+          )}
         </div>
       )}
 
@@ -1185,17 +1229,23 @@ export const UserStats: React.FC = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={[
-                        { name: 'Desktop', value: data.platform_breakdown.device_types.desktop },
-                        { name: 'Mobile', value: data.platform_breakdown.device_types.mobile },
-                        { name: 'Tablet', value: data.platform_breakdown.device_types.tablet },
-                      ]}
+                      data={toChartData(
+                        [
+                          { name: 'Desktop', value: data.platform_breakdown.device_types.desktop, color: '#3B82F6' },
+                          { name: 'Mobile', value: data.platform_breakdown.device_types.mobile, color: '#10B981' },
+                          { name: 'Tablet', value: data.platform_breakdown.device_types.tablet, color: '#F59E0B' },
+                        ],
+                        'name',
+                        'value',
+                        'color'
+                      )}
                       cx="50%"
                       cy="50%"
                       innerRadius={70}
                       outerRadius={115}
                       paddingAngle={2}
                       dataKey="value"
+                      nameKey="name"
                       label={false}
                     >
                       <Cell fill="#3B82F6" />
