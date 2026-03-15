@@ -19,6 +19,7 @@ import { PLATFORM_ADMIN_ROUTES } from "../constants/platform-administration.path
 
 // Lazy load components for better performance
 import React from 'react';
+import FacilityStats from "../../../modules/platform-administration/facility-managment/FacilityStats";
 
 // ============================================================================
 // LAZY IMPORTS
@@ -59,6 +60,15 @@ export const platformAdminRoutes = [
         </SuspenseWrapper>
       }
     >
+      {/* Facility  Statistics */}
+      <Route 
+        path={PLATFORM_ADMIN_ROUTES.FACILITIES_STATS}
+        element={
+          <SuspenseWrapper variant="detail">
+            <WithAuthProp Component={FacilityStats} />
+          </SuspenseWrapper>
+        }
+      />
       {/* Financial Statistics */}
       <Route 
         path={PLATFORM_ADMIN_ROUTES.FACILITIES_FIN_STATS}

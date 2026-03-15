@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Building2, CreditCard, Layers, BarChart3 } from 'lucide-react';
+import { Building2, CreditCard, Layers, BarChart3, BarChart2 } from 'lucide-react';
 import { PLATFORM_ADMIN_ROUTES } from '../../../app/routes/constants/platform-administration.paths';
 import { BaseActionWorkspace } from '../../../shared/components/workspace/BaseActionWorkspace';
 interface FacilityManagementProps {
@@ -20,6 +20,12 @@ const FacilityManagement: React.FC<FacilityManagementProps> = ({ theme }) => {
       theme={theme}
       defaultActionTo={PLATFORM_ADMIN_ROUTES.FACILITIES}
       actions={[
+        { 
+          key: 'stats', 
+          label: 'Facility Statistics', 
+          icon: <BarChart2 className="w-4 h-4" />, 
+          to: PLATFORM_ADMIN_ROUTES.FACILITIES_STATS 
+        },
         { 
           key: 'fin-stats', 
           label: 'Financial Statistics', 
