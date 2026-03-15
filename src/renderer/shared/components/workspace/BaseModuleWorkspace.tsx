@@ -97,46 +97,47 @@ export function BaseModuleWorkspace({
     return segments[0];
   }, [location.pathname, basePath]);
 
-  const uiOperations: ModuleOperation[] = useMemo(() => {
-    return operations.map((op) => {
-      const opTierBlocked = op.requiredTier ? !hasTier(currentTier, op.requiredTier) : false;
+ const uiOperations: ModuleOperation[] = useMemo(() => {
+  return operations.map((op) => {
+    const opTierBlocked = op.requiredTier ? !hasTier(currentTier, op.requiredTier) : false;
 
-      // keep existing behavior: op becomes disabled if tier-blocked or explicitly disabled
-      const effectiveDisabled = !!op.disabled || opTierBlocked;
+    // keep existing behavior: op becomes disabled if tier-blocked or explicitly disabled
+    const effectiveDisabled = !!op.disabled || opTierBlocked;
 
-      const effectiveReason =
-        moduleDisabledReason ??
-        op.disabledReason ??
-        (opTierBlocked && op.requiredTier ? `Requires ${tierLabel(op.requiredTier)} Plan` : undefined);
+    const effectiveReason =
+      moduleDisabledReason ??
+      op.disabledReason ??
+      (opTierBlocked && op.requiredTier ? `Requires ${tierLabel(op.requiredTier)} Plan` : undefined);
 
-      const statusBadges = buildStatusBadges(op.status);
+    const statusBadges = buildStatusBadges(op.status);
 
-      // Tier badge is clickable when blocked => goes to Plans page
-      const tierBadge: BadgeSpec[] = op.requiredTier
-        ? [
-            {
-              text: tierLabel(op.requiredTier),
-              tone: 'premium',
-              icon: <Crown className="w-3 h-3" />,
-              title: `Available on ${tierLabel(op.requiredTier)} tier and above`,
-              onClick: opTierBlocked ? () => requestUpgrade(op.requiredTier!) : undefined,
-            },
-          ]
-        : [];
+    // Tier badge is clickable when blocked => goes to Plans page
+    const tierBadge: BadgeSpec[] = op.requiredTier && opTierBlocked
+      ? [
+          {
+            text: tierLabel(op.requiredTier),
+            tone: 'premium',
+            icon: <Crown className="w-3 h-3" />,
+            title: `Available on ${tierLabel(op.requiredTier)} tier and above`,
+            onClick: () => requestUpgrade(op.requiredTier!),
+          },
+        ]
+      : [];
 
-      const customBadges = normalizeCustomBadges(op.badges);
+    const customBadges = normalizeCustomBadges(op.badges);
 
-      const badgesForUI = [...statusBadges, ...tierBadge, ...customBadges];
-      const badgeProp = badgesForUI.length > 0 ? badgesForUI : undefined;
+    // Always include status badges, conditionally include tier badges (only when blocked)
+    const badgesForUI = [...statusBadges, ...tierBadge, ...customBadges];
+    const badgeProp = badgesForUI.length > 0 ? badgesForUI : undefined;
 
-      return {
-        ...op,
-        disabled: effectiveDisabled,
-        disabledReason: effectiveReason,
-        badge: badgeProp,
-      };
-    });
-  }, [operations, currentTier, moduleDisabledReason, requestUpgrade]);
+    return {
+      ...op,
+      disabled: effectiveDisabled,
+      disabledReason: effectiveReason,
+      badge: badgeProp,
+    };
+  });
+}, [operations, currentTier, moduleDisabledReason, requestUpgrade]);
 
   const fallbackOperation = useMemo(() => {
     const firstEnabled = uiOperations.find((op) => !op.disabled)?.id;
