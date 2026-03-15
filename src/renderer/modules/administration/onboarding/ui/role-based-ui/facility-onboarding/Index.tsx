@@ -425,7 +425,7 @@ export const Index: React.FC = () => {
                         {isSubmitting ? (
                             <>
                             <Loader2 className="w-5 h-5 animate-spin" />
-                            Registering...
+                            Processing..
                             </>
                         ) : (
                             <>

@@ -53,7 +53,7 @@ const ADMIN_OPERATIONS = [
     label: 'Plans & Subscriptions',
     icon: <CreditCard className="w-4 h-4" />,
     description: 'Manage facility plans, subscriptions, and billing',
-    requiredTier: 'enterprise' as const,
+    requiredTier: 'essential' as const,
   },
   {
     id: 'settings',
