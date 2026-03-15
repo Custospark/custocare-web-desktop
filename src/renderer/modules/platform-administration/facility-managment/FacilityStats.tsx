@@ -655,7 +655,9 @@ export const FacilityStats: React.FC = () => {
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <ChartTooltip isDark={isDark} bg={ui.tooltipBg} border={ui.tooltipBorder} text={ui.tooltipText} />
+                    
+                         <ChartTooltip isDark={isDark} bg={ui.tooltipBg} border={ui.tooltipBorder} text={ui.tooltipText} />
+                      {/* <Legend wrapperStyle={{ color: isDark ? '#E2E8F0' : '#334155' }} /> */}
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
