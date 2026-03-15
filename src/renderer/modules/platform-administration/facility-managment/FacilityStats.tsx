@@ -622,7 +622,7 @@ export const FacilityStats: React.FC = () => {
                         ))}
                       </Pie>
                       <ChartTooltip isDark={isDark} bg={ui.tooltipBg} border={ui.tooltipBorder} text={ui.tooltipText} />
-                      <Legend wrapperStyle={{ color: isDark ? '#E2E8F0' : '#334155' }} />
+                      {/* <Legend wrapperStyle={{ color: isDark ? '#E2E8F0' : '#334155' }} /> */}
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
