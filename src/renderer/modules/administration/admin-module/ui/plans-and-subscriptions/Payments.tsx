@@ -1442,4 +1442,4 @@ export const Payments: React.FC<PaymentsProps> = ({ theme }) => {
   );
 };
 
-export default Payments;
+export default Payments

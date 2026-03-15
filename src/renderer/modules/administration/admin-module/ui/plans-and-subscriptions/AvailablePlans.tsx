@@ -38,6 +38,7 @@ interface AvailablePlansProps {
 
 
 // ─── Plan Comparison Modal ────────────────────────────────────────────────────
+// ─── Plan Comparison Modal ────────────────────────────────────────────────────
 interface ComparisonModalProps {
   theme: 'light' | 'dark';
   plans: Plan[];
@@ -101,7 +102,7 @@ const ComparisonModal: React.FC<ComparisonModalProps> = ({ theme, plans, onClose
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+      className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto"
       onClick={onClose}
     >
       <motion.div
@@ -114,9 +115,9 @@ const ComparisonModal: React.FC<ComparisonModalProps> = ({ theme, plans, onClose
           isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
         )}
       >
-        {/* Header */}
+        {/* Header - Changed from sticky to relative */}
         <div className={cn(
-          'sticky top-0 z-10 flex items-center justify-between p-6 border-b rounded-t-2xl',
+          'relative flex items-center justify-between p-6 border-b rounded-t-2xl',
           isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
         )}>
           <div className="flex items-center gap-3">
@@ -139,10 +140,13 @@ const ComparisonModal: React.FC<ComparisonModalProps> = ({ theme, plans, onClose
           </button>
         </div>
 
-        {/* Comparison Table */}
-        <div className="p-6 overflow-x-auto">
+        {/* Comparison Table - Added max-height and overflow */}
+        <div className="p-6 overflow-x-auto" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
           <table className="w-full">
-            <thead>
+            <thead className={cn(
+              'sticky top-0 z-10',
+              isDark ? 'bg-gray-900' : 'bg-white'
+            )}>
               <tr>
                 <th className="text-left pb-4 min-w-[200px]">
                   <span className={cn('text-sm font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>
@@ -226,8 +230,8 @@ const ComparisonModal: React.FC<ComparisonModalProps> = ({ theme, plans, onClose
 
         {/* Footer */}
         <div className={cn(
-          'p-6 border-t flex justify-end',
-          isDark ? 'border-gray-800' : 'border-gray-200'
+          'p-6 border-t flex justify-end sticky bottom-0',
+          isDark ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'
         )}>
           <button
             onClick={onClose}
@@ -245,7 +249,6 @@ const ComparisonModal: React.FC<ComparisonModalProps> = ({ theme, plans, onClose
     </motion.div>
   );
 };
-
 // ─── Plan Card ───────────────────────────────────────────────────────────────
 interface PlanCardProps {
   theme: 'light' | 'dark';
