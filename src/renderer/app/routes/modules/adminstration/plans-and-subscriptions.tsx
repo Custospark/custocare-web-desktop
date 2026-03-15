@@ -2,10 +2,10 @@ import React from "react";
 import { Route } from "react-router-dom";
 import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from "../../constants/administration.paths";
 import { SuspenseWrapper, WithThemeProp } from "../shared/routeUtils";
+import FacilitySubscriptions from "../../../../modules/administration/admin-module/ui/plans-and-subscriptions/FacilitySubscriptions";
 
 const AvailablePlans = React.lazy(() => import("../../../../modules/administration/admin-module/ui/plans-and-subscriptions/AvailablePlans"));
 const Payments = React.lazy(() => import("../../../../modules/administration/admin-module/ui/plans-and-subscriptions/Payments"));
-const FacilitySubscriptions = React.lazy(() => import("../../../../modules/platform-administration/facility-managment/FacilitySubscriptions"));
 
 export const plansSubscriptionsRoutes = [
   <Route
