@@ -9,12 +9,12 @@ import type { RootState } from '../../../app/store/rootReducer';
 import type { BadgeSpec } from '../../utils/Badge';
 import { hasTier, tierLabel, type FeatureStatus, type PlanTier } from '../../entitlements/entitlements';
 
-export type ModuleOperation = ContentOperation & {
+export type ModuleOperation = Omit<ContentOperation, 'badge'> & {
   requiredTier?: PlanTier;
   status?: FeatureStatus;
   badges?: (BadgeSpec | string)[];
   disabledReason?: string;
-  badge?: any;
+  badge?: string | number | BadgeSpec | BadgeSpec[]; // Now properly overrides
 };
 
 export interface ModuleWorkspaceProps {

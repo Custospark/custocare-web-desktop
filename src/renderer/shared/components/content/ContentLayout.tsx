@@ -1,3 +1,4 @@
+// In ContentLayout.tsx
 import React, { useCallback, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../../app/store/store';
@@ -6,6 +7,7 @@ import { cn } from '../../utils/classNameUtils';
 import { LayoutMainContent } from './LayoutMainContent';
 import { QuickActionsSidebar, type DockSide} from './QuickActionsSidebar';
 import { type AppDispatch } from '../../../app/store/store';
+import { BadgeSpec } from '../../utils/Badge';
 
 export interface ContentLayoutProps {
   operations: Operation[];
@@ -25,13 +27,14 @@ export interface ContentLayoutProps {
   renderExtraContent?: () => React.ReactNode;
 }
 
+// Update Operation to match ModuleOperation's badge type
 export interface Operation {
   id: string;
   label: string;
   icon?: ReactNode;
   description?: string;
   disabled?: boolean;
-  badge?: number | string;
+  badge?: string | number | BadgeSpec | BadgeSpec[]; // Match ModuleOperation
 }
 
 const MOBILE_BREAKPOINT = 1024;

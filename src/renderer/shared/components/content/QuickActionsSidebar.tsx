@@ -21,6 +21,7 @@ import { cn } from '../../utils/classNameUtils';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { hasTier, tierLabel, type FeatureStatus, type PlanTier } from '../../entitlements/entitlements';
+import { Badge, type BadgeSpec } from '../../utils/Badge';
 
 export type DockSide = 'left' | 'right';
 
@@ -37,10 +38,9 @@ export interface Operation {
   disabled?: boolean;
 
   /**
-   * Original badge API (kept EXACTLY).
-   * Used for counts or short labels.
+   * Updated badge API to handle complex badges
    */
-  badge?: number | string;
+  badge?: number | string | BadgeSpec | BadgeSpec[];
 
   /**
    * NEW: entitlement gating (optional)
@@ -102,8 +102,6 @@ const tierShort = (tier: PlanTier) => {
       return 'PRO';
     case 'enterprise':
       return 'ENT';
-    default:
-      return tier.toUpperCase();
   }
 };
 
@@ -147,6 +145,11 @@ const tierBadgeConfig = (tier: PlanTier) => {
     default:
       return { bgColor: 'bg-gray-500', textColor: 'text-white', darkBgColor: 'bg-gray-600' };
   }
+};
+
+// Helper to check if a badge is a BadgeSpec
+const isBadgeSpec = (badge: any): badge is BadgeSpec => {
+  return badge && typeof badge === 'object' && 'text' in badge;
 };
 
 export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
@@ -220,17 +223,74 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
     },
     [currentTier, moduleTierBlocked, moduleRequiredTier]
   );
+    // Helper functions for badge colors
+  const getToneBgColor = (tone: string): string => {
+    switch (tone) {
+      case 'info': return 'bg-blue-500';
+      case 'success': return 'bg-green-500';
+      case 'warning': return 'bg-amber-500';
+      case 'danger': return 'bg-red-500';
+      case 'premium': return 'bg-amber-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getDarkToneBgColor = (tone: string): string => {
+    switch (tone) {
+      case 'info': return 'bg-blue-600';
+      case 'success': return 'bg-green-600';
+      case 'warning': return 'bg-amber-600';
+      case 'danger': return 'bg-red-600';
+      case 'premium': return 'bg-amber-600';
+      default: return 'bg-gray-600';
+    }
+  };
 
   /**
-   * Badge cleanliness rules (kept), but we still compute same badge values.
+   * Badge cleanliness rules (kept), but now handles BadgeSpec and arrays
    */
   const getEffectiveBadge = useCallback(
     (op: Operation): { text: string | number; config: any } | undefined => {
+      // Handle number badges
       if (typeof op.badge === 'number') {
         return {
           text: op.badge,
           config: { bgColor: 'bg-red-500', textColor: 'text-white', darkBgColor: 'bg-red-600' },
         };
+      }
+
+      // Handle BadgeSpec objects
+      if (isBadgeSpec(op.badge)) {
+        return {
+          text: op.badge.text,
+          config: {
+            bgColor: op.badge.tone ? getToneBgColor(op.badge.tone) : 'bg-gray-500',
+            textColor: 'text-white',
+            darkBgColor: op.badge.tone ? getDarkToneBgColor(op.badge.tone) : 'bg-gray-600',
+          },
+        };
+      }
+
+      // Handle arrays - for now, just use the first badge for display
+      // The actual rendering of multiple badges will be handled separately
+      if (Array.isArray(op.badge) && op.badge.length > 0) {
+        const firstBadge = op.badge[0];
+        if (typeof firstBadge === 'string' || typeof firstBadge === 'number') {
+          return {
+            text: firstBadge,
+            config: { bgColor: 'bg-gray-500', textColor: 'text-white', darkBgColor: 'bg-gray-600' },
+          };
+        }
+        if (isBadgeSpec(firstBadge)) {
+          return {
+            text: firstBadge.text,
+            config: {
+              bgColor: firstBadge.tone ? getToneBgColor(firstBadge.tone) : 'bg-gray-500',
+              textColor: 'text-white',
+              darkBgColor: firstBadge.tone ? getDarkToneBgColor(firstBadge.tone) : 'bg-gray-600',
+            },
+          };
+        }
       }
 
       const opTierBlocked = !!op.requiredTier && !hasTier(currentTier, op.requiredTier);
@@ -280,6 +340,8 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
     [currentTier, moduleTierBlocked]
   );
 
+
+
   const getEffectiveTitle = useCallback(
     (op: Operation) => {
       const upgradeTier = getUpgradeTier(op);
@@ -310,6 +372,48 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
     },
     [getUpgradeTier, onSelectOperation]
   );
+
+  // Helper to render multiple badges
+  const renderBadges = useCallback((badge?: number | string | BadgeSpec | BadgeSpec[]) => {
+    if (!badge) return null;
+    
+    const badges = Array.isArray(badge) ? badge : [badge];
+    
+    return (
+      <div className="flex flex-wrap gap-1 ml-2">
+        {badges.map((b, index) => {
+          if (typeof b === 'string' || typeof b === 'number') {
+            return (
+              <span
+                key={index}
+                className={cn(
+                  'px-1.5 py-0.5 rounded-full text-[10px] font-bold',
+                  theme === 'dark'
+                    ? 'bg-gray-800 text-gray-300 ring-1 ring-gray-700'
+                    : 'bg-gray-100 text-gray-700 ring-1 ring-gray-200'
+                )}
+              >
+                {b}
+              </span>
+            );
+          }
+          
+          if (isBadgeSpec(b)) {
+            return (
+              <Badge
+                key={index}
+                badge={b}
+                theme={theme}
+                size="xs"
+              />
+            );
+          }
+          
+          return null;
+        })}
+      </div>
+    );
+  }, [theme]);
 
   const headerNode = useMemo(() => {
     if (sidebarHeader) return sidebarHeader;
@@ -848,7 +952,8 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                               <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
                                 <span className="truncate text-left">{operation.label}</span>
 
-                                {badgeData !== undefined && (
+                                {/* Render single badge or multiple badges */}
+                                {badgeData !== undefined && !Array.isArray(operation.badge) && (
                                   <span
                                     className={cn(
                                       'px-2 py-0.5 rounded-full text-xs font-bold transition-all duration-200 shrink-0',
@@ -862,6 +967,9 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                                     {badgeData.text}
                                   </span>
                                 )}
+
+                                {/* Render multiple badges if present */}
+                                {Array.isArray(operation.badge) && renderBadges(operation.badge)}
                               </div>
 
                               {isActive && (

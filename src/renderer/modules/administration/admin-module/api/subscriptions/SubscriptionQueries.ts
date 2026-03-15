@@ -191,7 +191,7 @@ export const useGetPlans = (
 
 /**
  * GET /billing/plans/{plan}
- *
+ *Facility Administrator
  * Retrieves a single active plan by its ID. No authentication required.
  * Disabled automatically when `planId` is falsy.
  */
@@ -220,7 +220,7 @@ export const useGetPlan = (
 
 /**
  * GET /facilities/{facility}/subscription
- *
+ *Facility Administrator
  * Retrieves the current subscription for the active facility.
  * **facilityId is injected from `activeContextSlice.activeFacilityId`.**
  * Query is disabled when no facility is selected.
@@ -256,7 +256,7 @@ export const useGetFacilitySubscription = (
  * A payment must be submitted and admin-approved to transition to **active**.
  *
  * **facilityId is injected from `activeContextSlice.activeFacilityId`.**
- *
+ *Facility Administrator
  * @example
  * const { mutate } = useCreateSubscription({ onSuccess: () => navigate('/billing') });
  * mutate({ data: { plan_id: 2 } });
@@ -315,7 +315,7 @@ export const useCreateSubscription = (
  * An optional `reason` can be provided in the request body.
  *
  * **facilityId is injected from `activeContextSlice.activeFacilityId`.**
- *
+ *Facility Administrator
  * @example
  * const { mutate } = useCancelSubscription();
  * mutate({ data: { reason: 'Switching providers' } });
@@ -378,7 +378,7 @@ export const useCancelSubscription = (
  * filters and pagination via `per_page`.
  *
  * **facilityId is injected from `activeContextSlice.activeFacilityId`.**
- *
+ *Platform Administrator
  * @example
  * const { data } = useGetFacilityPayments({ status: 'pending', per_page: 10 });
  */
@@ -412,7 +412,7 @@ export const useGetFacilityPayments = (
  *
  * Retrieves a single payment for the active facility.
  * Disabled when either `facilityId` or `paymentId` is falsy.
- *
+ *Facility Administrator
  * **facilityId is injected from `activeContextSlice.activeFacilityId`.**
  */
 export const useGetFacilityPayment = (
@@ -450,6 +450,7 @@ export const useGetFacilityPayment = (
  *
  * @example
  * const { mutate } = useRecordPayment();
+ * Facility Administrator
  * mutate({
  *   data: { amount: 440000, currency: 'UGX', method: 'mobile_money',
  *           payment_type: 'subscription', paid_at: '2024-03-10',
@@ -536,7 +537,7 @@ export const useRecordPayment = (
 
 /**
  * GET /admin/billing/plans
- *
+ *Platform Administrator
  * Admin: Lists all plans (including inactive), paginated.
  * Supports `is_active`, `search`, and `per_page` filters.
  */
@@ -561,7 +562,7 @@ export const useGetAdminPlans = (
 
 /**
  * GET /admin/billing/plans/{plan}
- *
+ *Platform Administrator
  * Admin: Retrieves a single plan by ID (includes inactive plans).
  */
 export const useGetAdminPlan = (
@@ -584,7 +585,7 @@ export const useGetAdminPlan = (
 
 /**
  * POST /admin/billing/plans
- *
+ *Platform Administrator
  * Admin: Creates a new subscription plan.
  * Invalidates both admin and public plan lists on success.
  */
@@ -627,7 +628,7 @@ export const useAdminCreatePlan = (
 /**
  * PUT /admin/billing/plans/{plan}
  *
- * Admin: Updates an existing plan.
+ * Platform Administrator: Updates an existing plan.
  * Patches both admin and public caches, then invalidates lists.
  */
 export const useAdminUpdatePlan = (
@@ -676,7 +677,7 @@ export const useAdminUpdatePlan = (
 /**
  * DELETE /admin/billing/plans/{plan}
  *
- * Admin: Deletes a plan.
+ * Platform Administrator: Deletes a plan.
  * The backend rejects deletion when any non-cancelled subscription references this plan.
  * On success, removes the plan from all relevant caches.
  */
@@ -731,7 +732,7 @@ export const useAdminDeletePlan = (
 /**
  * GET /admin/billing/subscriptions
  *
- * Admin: Lists all subscriptions across all facilities, paginated.
+ * Platform Administrator: Lists all subscriptions across all facilities, paginated.
  * Filters: status, facility_id, plan_id, per_page.
  */
 export const useGetAdminSubscriptions = (
@@ -757,7 +758,7 @@ export const useGetAdminSubscriptions = (
 /**
  * GET /admin/billing/subscriptions/{subscription}
  *
- * Admin: Retrieves a single subscription by ID with full relation data
+ * Platform Administrator: Retrieves a single subscription by ID with full relation data
  * (facility, plan, payments, approvedBy).
  */
 export const useGetAdminSubscription = (
@@ -783,7 +784,7 @@ export const useGetAdminSubscription = (
 /**
  * POST /admin/billing/subscriptions/{subscription}/activate
  *
- * Admin: Manually activates a subscription.
+ * Platform Administrator: Manually activates a subscription.
  * Used for edge cases where payment was verified offline (e.g. cash paid directly).
  * Creates a synthetic approved payment record on the backend for the audit trail.
  */
@@ -833,7 +834,7 @@ export const useAdminActivateSubscription = (
 /**
  * POST /admin/billing/subscriptions/{subscription}/suspend
  *
- * Admin: Manually suspends a facility's subscription, blocking API access (402).
+ * Platform Administrator: Manually suspends a facility's subscription, blocking API access (402).
  */
 export const useAdminSuspendSubscription = (
   callbacks: MutationCallbacks<AdminSubscriptionResponse, AxiosError<ApiErrorResponse>> = {},
@@ -879,7 +880,7 @@ export const useAdminSuspendSubscription = (
 /**
  * POST /admin/billing/subscriptions/{subscription}/cancel
  *
- * Admin: Administratively cancels a subscription. An optional `reason` is appended
+ * Platform Administrator & Facility Administrator: Administratively cancels a subscription. An optional `reason` is appended
  * to the subscription's notes on the backend.
  */
 export const useAdminCancelSubscription = (
@@ -930,7 +931,7 @@ export const useAdminCancelSubscription = (
 /**
  * GET /admin/billing/payments
  *
- * Admin: Lists all payments across all facilities, paginated.
+ * Platform Administrator: Lists all payments across all facilities, paginated.
  * Pass `{ status: 'pending' }` to load the **approval queue**.
  * Filters: status, facility_id, payment_type, method, per_page.
  */
@@ -957,7 +958,7 @@ export const useGetAdminPayments = (
 /**
  * GET /admin/billing/payments/{payment}
  *
- * Admin: Retrieves a single payment with full relation data including
+ * Platform Administrator: Retrieves a single payment with full relation data including
  * receipt URL, approvedBy staff, and linked subscription/plan.
  */
 export const useGetAdminPayment = (
@@ -993,7 +994,7 @@ export const useGetAdminPayment = (
  *
  * On success, this hook invalidates **all subscription and payment caches**
  * so every affected view refreshes automatically.
- *
+ *Platform Administrator
  * @example
  * const { mutate } = useAdminApprovePayment({
  *   onSuccess: () => navigate('/admin/billing/payments'),
@@ -1054,7 +1055,7 @@ export const useAdminApprovePayment = (
  * ❌ Rejects a pending payment with a mandatory reason string.
  * The subscription remains in its current status — no transition is triggered.
  * The backend requires `reason` to be at least 10 characters.
- *
+ *Platform Administrator
  * @example
  * const { mutate } = useAdminRejectPayment();
  * mutate({
