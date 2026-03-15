@@ -872,7 +872,6 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
           )}>
             <AlertTriangle className={cn('w-5 h-5 mt-0.5 flex-shrink-0', isDark ? 'text-amber-400' : 'text-amber-600')} />
             <p className={cn('text-sm', isDark ? 'text-amber-200' : 'text-amber-800')}>
-              <span className="font-semibold">Manual Review Required — </span>
               After submission your payment will be reviewed by our team. Once verified and approved,
               your subscription will be activated automatically. This typically takes 1–2 business hours.
             </p>
