@@ -25,6 +25,7 @@ import { ROUTES} from '../../../../app/routes/routeConstants';
 import { logout } from '../../../../app/store/slices/authSlice';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
+import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../app/routes/constants/administration.paths';
 import {
   switchCapability,
   switchFacility,
@@ -325,14 +326,13 @@ export const Navbar: React.FC<NavbarProps> = ({
       <Subscription 
       isDark={isDark} 
       isMobile={isMobile}
-      currentPlan="essential" // This should come from your Redux store or API
-      onUpgradeClick={(planId) => {
+      onUpgradeClick={() => {
         // Handle upgrade navigation
-        navigate(`/billing/upgrade?plan=${planId}`);
+        navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.AVAILABLE_PLANS);
       }}
       onManageClick={() => {
         // Handle manage billing navigation
-        navigate('/billing/manage');
+        navigate(ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS);
       }}
     />
 
