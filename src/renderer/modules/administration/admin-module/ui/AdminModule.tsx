@@ -46,7 +46,7 @@ const ADMIN_OPERATIONS = [
     label: 'Workforce Administration',
     icon: <Users className="w-4 h-4" />,
     description: 'Manage staff, invitations, and roles',
-    requiredTier: 'professional' as const,
+    requiredTier: 'enterprise' as const,
   },
   {
     id: 'plans-subscriptions',

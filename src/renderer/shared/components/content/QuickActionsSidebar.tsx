@@ -223,7 +223,8 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
     },
     [currentTier, moduleTierBlocked, moduleRequiredTier]
   );
-    // Helper functions for badge colors
+  
+  // Helper functions for badge colors
   const getToneBgColor = (tone: string): string => {
     switch (tone) {
       case 'info': return 'bg-blue-500';
@@ -249,99 +250,96 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
   /**
    * Badge cleanliness rules (kept), but now handles BadgeSpec and arrays
    */
-// Update getEffectiveBadge to handle different badge types separately
-const getEffectiveBadge = useCallback(
-  (op: Operation): { text: string | number; config: any } | undefined => {
-    // First priority: Show status badges (beta, new, deprecated) for ALL operations
-    const statusConfig = statusBadgeConfig(op.status);
-    if (statusConfig) {
-      return {
-        text: statusConfig.text,
-        config: {
-          bgColor: statusConfig.bgColor,
-          textColor: statusConfig.textColor,
-          darkBgColor: statusConfig.darkBgColor,
-        },
-      };
-    }
-
-    const opTierBlocked = !!op.requiredTier && !hasTier(currentTier, op.requiredTier);
-
-    // Second priority: Show tier badge only when blocked
-    if (opTierBlocked && op.requiredTier) {
-      return { text: tierShort(op.requiredTier), config: tierBadgeConfig(op.requiredTier) };
-    }
-
-    // Handle number badges
-    if (typeof op.badge === 'number') {
-      return {
-        text: op.badge,
-        config: { bgColor: 'bg-red-500', textColor: 'text-white', darkBgColor: 'bg-red-600' },
-      };
-    }
-
-    // Handle BadgeSpec objects (custom badges)
-    if (isBadgeSpec(op.badge)) {
-      return {
-        text: op.badge.text,
-        config: {
-          bgColor: op.badge.tone ? getToneBgColor(op.badge.tone) : 'bg-gray-500',
-          textColor: 'text-white',
-          darkBgColor: op.badge.tone ? getDarkToneBgColor(op.badge.tone) : 'bg-gray-600',
-        },
-      };
-    }
-
-    // Handle arrays - use the first badge for display
-    if (Array.isArray(op.badge) && op.badge.length > 0) {
-      const firstBadge = op.badge[0];
-      if (typeof firstBadge === 'string' || typeof firstBadge === 'number') {
+  const getEffectiveBadge = useCallback(
+    (op: Operation): { text: string | number; config: any } | undefined => {
+      // First priority: Show status badges (beta, new, deprecated) for ALL operations
+      const statusConfig = statusBadgeConfig(op.status);
+      if (statusConfig) {
         return {
-          text: firstBadge,
-          config: { bgColor: 'bg-gray-500', textColor: 'text-white', darkBgColor: 'bg-gray-600' },
-        };
-      }
-      if (isBadgeSpec(firstBadge)) {
-        return {
-          text: firstBadge.text,
+          text: statusConfig.text,
           config: {
-            bgColor: firstBadge.tone ? getToneBgColor(firstBadge.tone) : 'bg-gray-500',
-            textColor: 'text-white',
-            darkBgColor: firstBadge.tone ? getDarkToneBgColor(firstBadge.tone) : 'bg-gray-600',
+            bgColor: statusConfig.bgColor,
+            textColor: statusConfig.textColor,
+            darkBgColor: statusConfig.darkBgColor,
           },
         };
       }
-    }
 
-    // Handle string badges
-    if (typeof op.badge === 'string') {
-      if (isTierLikeText(op.badge)) {
-        // Only show tier-like text if operation is blocked
-        if (!moduleTierBlocked && !opTierBlocked) return undefined;
+      const opTierBlocked = !!op.requiredTier && !hasTier(currentTier, op.requiredTier);
 
-        const tier =
-          op.requiredTier ||
-          (op.badge.toLowerCase().includes('pro')
-            ? 'professional'
-            : op.badge.toLowerCase().includes('ent')
-              ? 'enterprise'
-              : 'essential');
-
-        return { text: op.badge.toUpperCase(), config: tierBadgeConfig(tier as PlanTier) };
+      // Second priority: Show tier badge only when blocked
+      if (opTierBlocked && op.requiredTier) {
+        return { text: tierShort(op.requiredTier), config: tierBadgeConfig(op.requiredTier) };
       }
 
-      return {
-        text: op.badge,
-        config: { bgColor: 'bg-gray-500', textColor: 'text-white', darkBgColor: 'bg-gray-600' },
-      };
-    }
+      // Handle number badges
+      if (typeof op.badge === 'number') {
+        return {
+          text: op.badge,
+          config: { bgColor: 'bg-red-500', textColor: 'text-white', darkBgColor: 'bg-red-600' },
+        };
+      }
 
-    return undefined;
-  },
-  [currentTier, moduleTierBlocked]
-);
+      // Handle BadgeSpec objects (custom badges)
+      if (isBadgeSpec(op.badge)) {
+        return {
+          text: op.badge.text,
+          config: {
+            bgColor: op.badge.tone ? getToneBgColor(op.badge.tone) : 'bg-gray-500',
+            textColor: 'text-white',
+            darkBgColor: op.badge.tone ? getDarkToneBgColor(op.badge.tone) : 'bg-gray-600',
+          },
+        };
+      }
 
+      // Handle arrays - use the first badge for display
+      if (Array.isArray(op.badge) && op.badge.length > 0) {
+        const firstBadge = op.badge[0];
+        if (typeof firstBadge === 'string' || typeof firstBadge === 'number') {
+          return {
+            text: firstBadge,
+            config: { bgColor: 'bg-gray-500', textColor: 'text-white', darkBgColor: 'bg-gray-600' },
+          };
+        }
+        if (isBadgeSpec(firstBadge)) {
+          return {
+            text: firstBadge.text,
+            config: {
+              bgColor: firstBadge.tone ? getToneBgColor(firstBadge.tone) : 'bg-gray-500',
+              textColor: 'text-white',
+              darkBgColor: firstBadge.tone ? getDarkToneBgColor(firstBadge.tone) : 'bg-gray-600',
+            },
+          };
+        }
+      }
 
+      // Handle string badges
+      if (typeof op.badge === 'string') {
+        if (isTierLikeText(op.badge)) {
+          // Only show tier-like text if operation is blocked
+          if (!moduleTierBlocked && !opTierBlocked) return undefined;
+
+          const tier =
+            op.requiredTier ||
+            (op.badge.toLowerCase().includes('pro')
+              ? 'professional'
+              : op.badge.toLowerCase().includes('ent')
+                ? 'enterprise'
+                : 'essential');
+
+          return { text: op.badge.toUpperCase(), config: tierBadgeConfig(tier as PlanTier) };
+        }
+
+        return {
+          text: op.badge,
+          config: { bgColor: 'bg-gray-500', textColor: 'text-white', darkBgColor: 'bg-gray-600' },
+        };
+      }
+
+      return undefined;
+    },
+    [currentTier, moduleTierBlocked]
+  );
 
   const getEffectiveTitle = useCallback(
     (op: Operation) => {
@@ -350,76 +348,18 @@ const getEffectiveBadge = useCallback(
       if (op.disabled && op.disabledReason) return op.disabledReason;
 
       if (upgradeTier) {
-        return `Requires ${tierLabel(upgradeTier)} tier`;
+        return `Requires ${tierLabel(upgradeTier)} Plan`;
       }
 
       return op.description || op.label;
     },
     [getUpgradeTier]
   );
-/**
- * Helper to render multiple badges.
- */
-
-  const renderMultipleBadges = useCallback((badge?: number | string | BadgeSpec | BadgeSpec[]) => {
-  if (!badge) return null;
-  
-  const badges = Array.isArray(badge) ? badge : [badge];
-  
-  return (
-    <div className="flex flex-wrap gap-1 ml-2">
-      {badges.map((b, index) => {
-        if (typeof b === 'string' || typeof b === 'number') {
-          return (
-            <span
-              key={index}
-              className={cn(
-                'px-1.5 py-0.5 rounded-full text-[10px] font-bold',
-                theme === 'dark'
-                  ? 'bg-gray-800 text-gray-300 ring-1 ring-gray-700'
-                  : 'bg-gray-100 text-gray-700 ring-1 ring-gray-200'
-              )}
-            >
-              {b}
-            </span>
-          );
-        }
-        
-        if (isBadgeSpec(b)) {
-          return (
-            <Badge
-              key={index}
-              badge={b}
-              theme={theme}
-              size="xs"
-            />
-          );
-        }
-        
-        return null;
-      })}
-    </div>
-  );
-}, [theme]);
 
   /**
-   * Clicking the operation should NOT navigate/select when gated.
-   * Instead, the Upgrade button will handle it.
+   * Helper to render multiple badges.
    */
-  const handleOperationClick = useCallback(
-    (op: Operation) => {
-      if (op.disabled) return;
-
-      const upgradeTier = getUpgradeTier(op);
-      if (upgradeTier) return;
-
-      onSelectOperation(op.id);
-    },
-    [getUpgradeTier, onSelectOperation]
-  );
-
-  // Helper to render multiple badges
-  const renderBadges = useCallback((badge?: number | string | BadgeSpec | BadgeSpec[]) => {
+  const renderMultipleBadges = useCallback((badge?: number | string | BadgeSpec | BadgeSpec[]) => {
     if (!badge) return null;
     
     const badges = Array.isArray(badge) ? badge : [badge];
@@ -459,6 +399,22 @@ const getEffectiveBadge = useCallback(
       </div>
     );
   }, [theme]);
+
+  /**
+   * Clicking the operation should NOT navigate/select when gated.
+   * Instead, the Upgrade button will handle it.
+   */
+  const handleOperationClick = useCallback(
+    (op: Operation) => {
+      if (op.disabled) return;
+
+      const upgradeTier = getUpgradeTier(op);
+      if (upgradeTier) return;
+
+      onSelectOperation(op.id);
+    },
+    [getUpgradeTier, onSelectOperation]
+  );
 
   const headerNode = useMemo(() => {
     if (sidebarHeader) return sidebarHeader;
@@ -994,25 +950,24 @@ const getEffectiveBadge = useCallback(
                                 </span>
                               )}
 
+                              <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                                <span className="truncate text-left">{operation.label}</span>
 
-                            <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                              <span className="truncate text-left">{operation.label}</span>
-
-                              {/* Always show status badges via badgeData */}
-                              {badgeData !== undefined && !Array.isArray(operation.badge) && (
-                                <span
-                                  className={cn(
-                                    'px-2 py-0.5 rounded-full text-xs font-bold transition-all duration-200 shrink-0',
-                                    badgeData.config.bgColor,
-                                    badgeData.config.textColor,
-                                    theme === 'dark' ? badgeData.config.darkBgColor : '',
-                                    isActive && 'ring-2 ring-offset-1',
-                                    theme === 'dark' ? 'ring-offset-gray-900' : 'ring-offset-white'
-                                  )}
-                                >
-                                  {badgeData.text}
-                                </span>
-                              )}
+                                {/* Always show status badges via badgeData */}
+                                {badgeData !== undefined && !Array.isArray(operation.badge) && (
+                                  <span
+                                    className={cn(
+                                      'px-2 py-0.5 rounded-full text-xs font-bold transition-all duration-200 shrink-0',
+                                      badgeData.config.bgColor,
+                                      badgeData.config.textColor,
+                                      theme === 'dark' ? badgeData.config.darkBgColor : '',
+                                      isActive && 'ring-2 ring-offset-1',
+                                      theme === 'dark' ? 'ring-offset-gray-900' : 'ring-offset-white'
+                                    )}
+                                  >
+                                    {badgeData.text}
+                                  </span>
+                                )}
 
                                 {/* Render multiple badges if present (for custom badges array) */}
                                 {Array.isArray(operation.badge) && renderMultipleBadges(operation.badge)}
@@ -1025,7 +980,7 @@ const getEffectiveBadge = useCallback(
                               )}
                             </button>
 
-                            {/* UPGRADE BUTTON (new) — only when gated, keeps design language */}
+                            {/* UPGRADE BUTTON — only when gated, not hard-disabled */}
                             {isGated && !isHardDisabled && upgradeTier && (
                               <button
                                 type="button"
