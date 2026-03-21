@@ -43,9 +43,9 @@ export const allModules: SearchableModule[] = [
   // ══════════════════════════════════════════════════════════════════════════
   {
     id: 'medical-records',
-    label: 'Clinical Workspace',
+    label: 'Medical Records ',
     route: ROUTES.MEDICAL_RECORDS,
-    description: 'Patient management, clinical workflows, and care delivery.',
+    description: 'Medical Records, Patient Registration & workflows',
     moduleCode: 'medical_records',
     keywords: ['front desk', 'reception', 'records', 'medical', 'registration', 'patient intake'],
     category: 'Clinical',

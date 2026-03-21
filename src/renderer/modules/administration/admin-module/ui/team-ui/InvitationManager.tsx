@@ -2233,104 +2233,106 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                     </div>
 
                     {/* Module Selection */}
-                    <div>
-                      <label
-                        className={`block text-sm font-medium mb-2 ${
-                          isDark ? 'text-gray-300' : 'text-gray-700'
-                        }`}
-                      >
-                        Permission Access *
-                      </label>
-                      <p className={`text-xs mb-3 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                        Grant permissions this staff can have.
-                      </p>
+                   <div>
+  <label
+    className={`block text-sm font-medium mb-2 ${
+      isDark ? 'text-gray-300' : 'text-gray-700'
+    }`}
+  >
+    Permission Access *
+  </label>
+  <p className={`text-xs mb-3 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+    Grant permissions this staff can have.
+  </p>
 
-                      <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {modules.length === 0 ? (
-                          <div
-                            className={cn(
-                              'p-4 rounded-lg text-center border-2',
-                              isDark
-                                ? 'bg-gray-800 text-gray-400 border-gray-700'
-                                : 'bg-gray-50 text-gray-600 border-gray-200'
-                            )}
-                          >
-                            No access available
-                          </div>
-                        ) : (
-                          modules.map((module) => (
-                            <motion.label
-                              key={module.id}
-                              whileHover={{ scale: 1.01, x: 4 }}
-                              className={cn(
-                                'flex items-start gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer',
-                                formData.module_codes.includes(module.code)
-                                  ? isDark
-                                    ? 'bg-blue-900/20 border-blue-700'
-                                    : 'bg-blue-50 border-blue-300'
-                                  : isDark
-                                  ? 'bg-gray-800 border-gray-700 hover:border-gray-600'
-                                  : 'bg-gray-50 border-gray-300 hover:border-gray-400',
-                                createMutation.isPending ? 'cursor-not-allowed opacity-50' : ''
-                              )}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={formData.module_codes.includes(module.code)}
-                                onChange={() => handleToggleModule(module.code)}
-                                disabled={createMutation.isPending}
-                                className={cn(
-                                  'mt-0.5 w-4 h-4 rounded border-2 text-blue-600 focus:ring-blue-500',
-                                  createMutation.isPending ? 'cursor-not-allowed' : 'cursor-pointer'
-                                )}
-                              />
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <div className="font-medium">{module.name}</div>
-                                  <code
-                                    className={cn(
-                                      'px-2 py-0.5 rounded text-xs border',
-                                      isDark
-                                        ? 'bg-gray-900 text-gray-400 border-gray-700'
-                                        : 'bg-white text-gray-600 border-gray-200'
-                                    )}
-                                  >
-                                    {module.code}
-                                  </code>
-                                </div>
-                                {module.description && (
-                                  <div
-                                    className={`text-sm mt-1 ${
-                                      isDark ? 'text-gray-400' : 'text-gray-600'
-                                    }`}
-                                  >
-                                    {module.description}
-                                  </div>
-                                )}
-                              </div>
-                            </motion.label>
-                          ))
-                        )}
-                      </div>
+  <div className="space-y-2 max-h-60 overflow-y-auto">
+    {modules.filter(module => module.code !== 'account').length === 0 ? (
+      <div
+        className={cn(
+          'p-4 rounded-lg text-center border-2',
+          isDark
+            ? 'bg-gray-800 text-gray-400 border-gray-700'
+            : 'bg-gray-50 text-gray-600 border-gray-200'
+        )}
+      >
+        No access available
+      </div>
+    ) : (
+      modules
+        .filter(module => module.code !== 'account')
+        .map((module) => (
+          <motion.label
+            key={module.id}
+            whileHover={{ scale: 1.01, x: 4 }}
+            className={cn(
+              'flex items-start gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer',
+              formData.module_codes.includes(module.code)
+                ? isDark
+                  ? 'bg-blue-900/20 border-blue-700'
+                  : 'bg-blue-50 border-blue-300'
+                : isDark
+                ? 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                : 'bg-gray-50 border-gray-300 hover:border-gray-400',
+              createMutation.isPending ? 'cursor-not-allowed opacity-50' : ''
+            )}
+          >
+            <input
+              type="checkbox"
+              checked={formData.module_codes.includes(module.code)}
+              onChange={() => handleToggleModule(module.code)}
+              disabled={createMutation.isPending}
+              className={cn(
+                'mt-0.5 w-4 h-4 rounded border-2 text-blue-600 focus:ring-blue-500',
+                createMutation.isPending ? 'cursor-not-allowed' : 'cursor-pointer'
+              )}
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <div className="font-medium">{module.name}</div>
+                <code
+                  className={cn(
+                    'px-2 py-0.5 rounded text-xs border',
+                    isDark
+                      ? 'bg-gray-900 text-gray-400 border-gray-700'
+                      : 'bg-white text-gray-600 border-gray-200'
+                  )}
+                >
+                  {module.code}
+                </code>
+              </div>
+              {module.description && (
+                <div
+                  className={`text-sm mt-1 ${
+                    isDark ? 'text-gray-400' : 'text-gray-600'
+                  }`}
+                >
+                  {module.description}
+                </div>
+              )}
+            </div>
+          </motion.label>
+        ))
+    )}
+  </div>
 
-                      {formErrors.module_codes && (
-                        <p className="mt-2 text-sm text-red-500 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          {formErrors.module_codes}
-                        </p>
-                      )}
+  {formErrors.module_codes && (
+    <p className="mt-2 text-sm text-red-500 flex items-center gap-1">
+      <AlertCircle className="w-3 h-3" />
+      {formErrors.module_codes}
+    </p>
+  )}
 
-                      {formData.module_codes.length > 0 && (
-                        <div
-                          className={`mt-2 text-xs ${
-                            isDark ? 'text-gray-400' : 'text-gray-600'
-                          }`}
-                        >
-                          {formData.module_codes.length} module
-                          {formData.module_codes.length !== 1 ? 's' : ''} selected
-                        </div>
-                      )}
+  {formData.module_codes.length > 0 && (
+    <div
+      className={`mt-2 text-xs ${
+        isDark ? 'text-gray-400' : 'text-gray-600'
+      }`}
+    >
+      {formData.module_codes.length} module
+      {formData.module_codes.length !== 1 ? 's' : ''} selected
                     </div>
+                  )}
+                </div>
                   </>
                 )}
               </div>

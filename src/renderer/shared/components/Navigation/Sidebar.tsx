@@ -156,11 +156,11 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
       // Clinical Modules - ONLY staff capability (facility-based)
       {
         id: 'front-desk',
-        label: 'Clinical Workspace',
+        label: 'Medical Records',
         icon: <FileText className="w-5 h-5" />,
         href: ROUTES.MEDICAL_RECORDS,
         route: ROUTES.MEDICAL_RECORDS,
-        description: 'Patient management, clinical workflows, and care delivery.',
+        description: 'Medical Records, Patient Registration & workflows',
         stats: 'Patients in Care',
         glowColor: 'from-purple-500 to-pink-400',
         moduleCode: 'medical_records',
