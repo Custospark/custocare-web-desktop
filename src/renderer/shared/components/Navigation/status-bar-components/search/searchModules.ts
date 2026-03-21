@@ -6,7 +6,7 @@ import { MEDICAL_RECORDS_ROUTES }        from '../../../../../app/routes/routeCo
 import {
   ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES,
   ADMINISTRATION_FACILITY_SETTINGS_ROUTES,
-  ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES,
+  // ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES,
 } from '../../../../../app/routes/constants/administration.paths';
 import { ADMIN_ROUTES } from '../../../../../app/routes/constants/administration.paths';
 import type { SearchableModule } from '../StatusBarTypes';
@@ -122,55 +122,55 @@ export const allModules: SearchableModule[] = [
     keywords: ['visit', 'status', 'tracking', 'encounter', 'appointment'],
     category: 'Clinical',
   },
-  {
-    id: 'nursing-care',
-    label: 'Nursing Care',
-    route: ROUTES.NURSING,
-    description: 'Vitals & ward care',
-    moduleCode: 'nursing',
-    keywords: ['nursing', 'vitals', 'ward', 'care', 'nurse'],
-    category: 'Clinical',
-  },
-  {
-    id: 'clinical',
-    label: 'Clinical Workspace',
-    route: ROUTES.CLINICAL,
-    description: 'Doctor Consultation & diagnosis',
-    moduleCode: 'clinical',
-    keywords: ['clinical', 'doctor', 'consultation', 'diagnosis', 'physician'],
-    category: 'Clinical',
-  },
-  {
-    id: 'laboratory',
-    label: 'Laboratory',
-    route: ROUTES.LABORATORY,
-    description: 'Lab tests, results & specimens',
-    moduleCode: 'laboratory',
-    keywords: ['lab', 'laboratory', 'tests', 'results', 'specimens', 'pathology'],
-    category: 'Clinical',
-  },
-  {
-    id: 'pharmacy',
-    label: 'Pharmacy',
-    route: ROUTES.PHARMACY,
-    description: 'Medication dispensing',
-    moduleCode: 'pharmacy',
-    keywords: ['pharmacy', 'medication', 'drugs', 'dispensing', 'prescriptions'],
-    category: 'Clinical',
-  },
+  // {
+  //   id: 'nursing-care',
+  //   label: 'Nursing Care',
+  //   route: ROUTES.NURSING,
+  //   description: 'Vitals & ward care',
+  //   moduleCode: 'nursing',
+  //   keywords: ['nursing', 'vitals', 'ward', 'care', 'nurse'],
+  //   category: 'Clinical',
+  // },
+  // {
+  //   id: 'clinical',
+  //   label: 'Clinical Workspace',
+  //   route: ROUTES.CLINICAL,
+  //   description: 'Doctor Consultation & diagnosis',
+  //   moduleCode: 'clinical',
+  //   keywords: ['clinical', 'doctor', 'consultation', 'diagnosis', 'physician'],
+  //   category: 'Clinical',
+  // },
+  // {
+  //   id: 'laboratory',
+  //   label: 'Laboratory',
+  //   route: ROUTES.LABORATORY,
+  //   description: 'Lab tests, results & specimens',
+  //   moduleCode: 'laboratory',
+  //   keywords: ['lab', 'laboratory', 'tests', 'results', 'specimens', 'pathology'],
+  //   category: 'Clinical',
+  // },
+  // {
+  //   id: 'pharmacy',
+  //   label: 'Pharmacy',
+  //   route: ROUTES.PHARMACY,
+  //   description: 'Medication dispensing',
+  //   moduleCode: 'pharmacy',
+  //   keywords: ['pharmacy', 'medication', 'drugs', 'dispensing', 'prescriptions'],
+  //   category: 'Clinical',
+  // },
 
   // ══════════════════════════════════════════════════════════════════════════
   // FINANCE
   // ══════════════════════════════════════════════════════════════════════════
-  {
-    id: 'billing',
-    label: 'Billing & Finance',
-    route: ROUTES.BILLING,
-    description: 'Invoices & payments',
-    moduleCode: 'billing',
-    keywords: ['billing', 'finance', 'invoices', 'payments', 'accounts'],
-    category: 'Finance',
-  },
+  // {
+  //   id: 'billing',
+  //   label: 'Billing & Finance',
+  //   route: ROUTES.BILLING,
+  //   description: 'Invoices & payments',
+  //   moduleCode: 'billing',
+  //   keywords: ['billing', 'finance', 'invoices', 'payments', 'accounts'],
+  //   category: 'Finance',
+  // },
 
   // ══════════════════════════════════════════════════════════════════════════
   // ADMINISTRATION
@@ -301,15 +301,15 @@ export const allModules: SearchableModule[] = [
   //   keywords: ['subscriptions', 'facility', 'plans', 'enrollment'],
   //   category: 'Administration',
   // },
-  {
-    id: 'payments',
-    label: 'Payments',
-    route: ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS,
-    description: 'Manage payment methods and history',
-    moduleCode: 'administration',
-    keywords: ['payments', 'billing', 'credit card', 'payment method'],
-    category: 'Administration',
-  },
+  // {
+  //   id: 'payments',
+  //   label: 'Payments',
+  //   route: ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES.PAYMENTS,
+  //   description: 'Manage payment methods and history',
+  //   moduleCode: 'administration',
+  //   keywords: ['payments', 'billing', 'credit card', 'payment method'],
+  //   category: 'Administration',
+  // },
 
   // ══════════════════════════════════════════════════════════════════════════
   // PLATFORM ADMINISTRATION (super-admin only)

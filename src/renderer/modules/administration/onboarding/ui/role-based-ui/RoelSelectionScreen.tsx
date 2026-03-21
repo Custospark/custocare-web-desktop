@@ -18,7 +18,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Heart,
+  // Heart,
   Stethoscope,
   Building2,
   ArrowRight,
@@ -54,21 +54,21 @@ const ROLES = [
       'Reduced administrative burden'
     ]
   },
-  {
-    id: 'patient',
-    title: 'Patient',
-    subtitle: 'Individuals Receiving Care',
-    description:
-      'Experience seamless, coordinated care across visits, departments, and healthcare facilities.',
-    icon: Heart,
-    gradient: 'from-emerald-600 to-teal-600',
-    route: ROUTES.PATIENT_ONBOARDING,
-    benefits: [
-      'Continuity of care across facilities',
-      'Accurate, centralized health records',
-      'Safer, more coordinated care'
-    ]
-  },
+  // {
+  //   id: 'patient',
+  //   title: 'Patient',
+  //   subtitle: 'Individuals Receiving Care',
+  //   description:
+  //     'Experience seamless, coordinated care across visits, departments, and healthcare facilities.',
+  //   icon: Heart,
+  //   gradient: 'from-emerald-600 to-teal-600',
+  //   route: ROUTES.PATIENT_ONBOARDING,
+  //   benefits: [
+  //     'Continuity of care across facilities',
+  //     'Accurate, centralized health records',
+  //     'Safer, more coordinated care'
+  //   ]
+  // },
   {
     id: 'facility-owner',
     title: 'Healthcare Facility',
@@ -106,7 +106,7 @@ export const RoleSelection: React.FC = () => {
   };
 
   const handleGoBack = () => {
-    navigate(-1); // Navigate to previous page
+    navigate(-1);
   };
 
   const { user } = useAppSelector((state) => state.auth);
@@ -227,10 +227,20 @@ export const RoleSelection: React.FC = () => {
               </h1>
             </motion.div>
 
-            {/* Role Cards */}
+            {/* ✅ Role Cards — column count driven by ROLES.length:
+                  1 role  → single centered column
+                  2 roles → 2-col centered (max-w-3xl mx-auto)
+                  3 roles → full 3-col grid (uncomment Patient to restore) */}
             <motion.div
               variants={containerVariants}
-              className="grid grid-cols-1 md:grid-cols-3 gap-6"
+              className={cn(
+                "grid gap-6",
+                ROLES.length === 1
+                  ? "grid-cols-1 max-w-sm mx-auto"
+                  : ROLES.length === 2
+                  ? "grid-cols-1 md:grid-cols-2 max-w-3xl mx-auto"
+                  : "grid-cols-1 md:grid-cols-3"
+              )}
             >
               {ROLES.map((role) => {
                 const isSelected = selectedRole === role.id;
