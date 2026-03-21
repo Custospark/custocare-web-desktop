@@ -341,17 +341,16 @@ export function BaseActionWorkspace<TActionId extends string>({
                             <span className={!isActive && !effectiveDisabled ? iconColor : ''}>{action.icon}</span>
                           )}
 
-                          <div className="flex items-center justify-between gap-2 min-w-[180px]">
-                            <span className="truncate">{action.label}</span>
+                          {/* ✅ FIX: label sits naturally in the flex flow; no fixed min-width */}
+                          <span className="truncate">{action.label}</span>
 
-                            {allBadges.length > 0 && (
-                              <span className="flex items-center gap-1.5 shrink-0">
-                                {allBadges.map((b, i) => (
-                                  <Badge key={`${String(action.key)}-badge-${i}`} badge={b} theme={theme} />
-                                ))}
-                              </span>
-                            )}
-                          </div>
+                          {allBadges.length > 0 && (
+                            <span className="flex items-center gap-1.5 shrink-0">
+                              {allBadges.map((b, i) => (
+                                <Badge key={`${String(action.key)}-badge-${i}`} badge={b} theme={theme} />
+                              ))}
+                            </span>
+                          )}
                         </button>
                       </motion.div>
                     );
