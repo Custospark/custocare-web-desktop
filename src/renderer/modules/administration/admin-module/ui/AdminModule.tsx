@@ -48,13 +48,13 @@ const ADMIN_OPERATIONS = [
     description: 'Manage staff, invitations, and roles',
     // requiredTier: 'enterprise' as const,
   },
-  {
-    id: 'plans-subscriptions',
-    label: 'Plans & Subscriptions',
-    icon: <CreditCard className="w-4 h-4" />,
-    description: 'Manage facility plans, subscriptions, and billing',
-    // requiredTier: 'essential' as const,
-  },
+  // {
+  //   id: 'plans-subscriptions',
+  //   label: 'Plans & Subscriptions',
+  //   icon: <CreditCard className="w-4 h-4" />,
+  //   description: 'Manage facility plans, subscriptions, and billing',
+  //   // requiredTier: 'essential' as const,
+  // },
   {
     id: 'settings',
     label: 'Enterprise Facility Settings',
