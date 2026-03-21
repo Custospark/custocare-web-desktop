@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Heart, Stethoscope } from 'lucide-react';
+import { Plus, Stethoscope } from 'lucide-react';
 import { cn } from '../../../../../../shared/types/cn';
 interface FooterActionsProps {
   isPatient: boolean;
@@ -19,11 +19,11 @@ interface FooterActionsProps {
 }
 
 export const FooterActions: React.FC<FooterActionsProps> = ({
-  isPatient,
+  // isPatient,
   isStaff,
   theme,
   onRegisterFacility,
-  onActivatePatientPortal,
+  // onActivatePatientPortal,
   onRegisterMedicalStaff,
 }) => {
   return (
@@ -50,7 +50,7 @@ export const FooterActions: React.FC<FooterActionsProps> = ({
           <span className="whitespace-nowrap">Register New Facility</span>
         </button>
 
-        {!isPatient && (
+        {/* {!isPatient && (
           <button
             onClick={onActivatePatientPortal}
             className={cn(
@@ -65,7 +65,7 @@ export const FooterActions: React.FC<FooterActionsProps> = ({
             <Heart className="w-4 h-4 shrink-0" />
             <span className="whitespace-nowrap">Activate Patient Portal</span>
           </button>
-        )}
+        )} */}
 
         {!isStaff && (
           <button

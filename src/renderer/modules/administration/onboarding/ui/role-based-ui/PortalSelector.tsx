@@ -33,7 +33,7 @@ import { PortalHeader } from './port-selector-components/PortalHeader';
 import { FooterActions } from './port-selector-components/FooterActions';
 import { WelcomeSection } from './port-selector-components/WelcomeSection';
 import { ProfessionalWorkspaces } from './port-selector-components/ProfessionalWorkspaces';
-import { PersonalAccessSection } from './port-selector-components/PersonalAccessSection';
+// import { PersonalAccessSection } from './port-selector-components/PersonalAccessSection';
 import { GlobalCapabilities } from './port-selector-components/GlobalCapabilities';
 
 
@@ -47,7 +47,7 @@ export const PortalSelector: React.FC = () => {
 
   const {
     user,
-    capabilities,
+    // capabilities,
     facilityRoles,
     isPatient,
     isStaff,
@@ -120,18 +120,18 @@ export const PortalSelector: React.FC = () => {
   /**
    * Handle patient portal access
    */
-  const handlePatientPortal = useCallback((): void => {
-    dispatch(switchCapability('patient'));
+  // const handlePatientPortal = useCallback((): void => {
+  //   dispatch(switchCapability('patient'));
 
-    navigate(ROUTES.DASHBOARD, {
-      state: {
-        user,
-        timestamp: new Date().toISOString(),
-      },
-    });
+  //   navigate(ROUTES.DASHBOARD, {
+  //     state: {
+  //       user,
+  //       timestamp: new Date().toISOString(),
+  //     },
+  //   });
 
-    showToast('success', 'Welcome to your patient portal', 3000);
-  }, [dispatch, navigate, showToast, user]);
+  //   showToast('success', 'Welcome to your patient portal', 3000);
+  // }, [dispatch, navigate, showToast, user]);
 
   /**
    * Handle global capability selection (Spatie roles)
@@ -247,7 +247,7 @@ export const PortalSelector: React.FC = () => {
         />
 
         {/* Personal Access Section */}
-        <PersonalAccessSection
+        {/* <PersonalAccessSection
           isPatient={isPatient}
           isStaff={isStaff}
           patientUuid={capabilities.patient?.patient_uuid}
@@ -255,7 +255,7 @@ export const PortalSelector: React.FC = () => {
           onPatientPortal={handlePatientPortal}
           onActivatePatientPortal={handleActivatePatientPortal}
           onRegisterMedicalStaff={handleRegisterAsMedicalStaff}
-        />
+        /> */}
 
         {/* Footer Actions */}
         <FooterActions
