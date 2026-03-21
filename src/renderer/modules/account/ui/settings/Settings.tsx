@@ -39,7 +39,7 @@ const Settings: React.FC<SettingsProps> = ({ theme }) => {
           icon: <User className="w-4 h-4" />,
           to: ACCOUNT_ROUTES.SETTINGS_PROFILE,
           description: 'Maintain and update your account identity information',
-          badges: ['Core'],
+          // badges: ['Core'],
         },
         {
           key: 'security',
@@ -47,7 +47,7 @@ const Settings: React.FC<SettingsProps> = ({ theme }) => {
           icon: <Shield className="w-4 h-4" />,
           to: ACCOUNT_ROUTES.SETTINGS_SECURITY,
           description: 'Configure password policies and multi-factor authentication',
-          status: 'new',
+          // status: 'new',
         },
         {
           key: 'preferences',
@@ -55,8 +55,8 @@ const Settings: React.FC<SettingsProps> = ({ theme }) => {
           icon: <FaPalette className="w-4 h-4" />,
           to: ACCOUNT_ROUTES.SETTINGS_PREFERENCES,
           description: 'Customize interface behavior and system experience',
-          requiredTier: 'professional',
-          badges: ['Recommended'],
+          // requiredTier: 'professional',
+          // badges: ['Recommended'],
         },
       ]}
     />
