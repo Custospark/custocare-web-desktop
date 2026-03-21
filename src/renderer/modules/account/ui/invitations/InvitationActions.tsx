@@ -297,11 +297,7 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
     }
   }, [confirm, invitation, theme, declineMutation, isGlobalDisabled]);
 
-  const handleViewDetails = useCallback(() => {
-    if (onViewDetails) {
-      onViewDetails(invitation);
-    }
-  }, [onViewDetails, invitation]);
+  
 
   /* --------------------------- Button Styling ----------------------------- */
 
@@ -380,22 +376,7 @@ export const InvitationActions: React.FC<InvitationActionsProps> = ({
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      {/* View Details Button */}
-      {onViewDetails && (
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleViewDetails}
-          disabled={isGlobalDisabled}
-          className={getButtonClasses('view', true)}
-          aria-label={getTooltipContent('view')}
-          title={getTooltipContent('view')}
-          aria-disabled={isGlobalDisabled}
-        >
-          <Eye className="w-3.5 h-3.5" aria-hidden="true" />
-          {showLabels && <span>Details</span>}
-        </motion.button>
-      )}
+  
 
       {/* Decline Button */}
       {(

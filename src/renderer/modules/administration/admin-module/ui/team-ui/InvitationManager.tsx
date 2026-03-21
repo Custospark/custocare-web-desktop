@@ -68,6 +68,7 @@ import type {
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getRoleDisplayName as formatName } from '../../../../../shared/utils/facilityRoleFormator';
 
 /* -------------------------------------------------------------------------- */
 /*                            TYPE DEFINITIONS                                */
@@ -1431,19 +1432,9 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
                                 isDark ? 'text-gray-500' : 'text-gray-500'
                               }`}
                             >
-                              {invitation.staff?.professional_title ? (
-                                <span className="truncate">
-                                  {invitation.staff.professional_title}
-                                </span>
-                              ) : (
-                                <span>Professional title not set</span>
-                              )}
-                              {invitation.staff?.staff_uuid && (
-                                <span className="mx-2">•</span>
-                              )}
                               {invitation.staff?.staff_uuid && (
                                 <span className="truncate">
-                                  Staff No: {invitation.staff.staff_uuid}
+                                  Staff Number: {invitation.staff.staff_uuid}
                                 </span>
                               )}
                             </div>
@@ -1490,9 +1481,9 @@ export const InvitationManager: React.FC<InvitationManagerProps> = ({
 
                           <div className="flex items-center gap-2 min-w-0">
                             <UserPlus className="w-4 h-4 flex-shrink-0" />
-                            <span className="truncate">
-                              Role: {invitation.role?.code || 'Not specified'}
-                            </span>
+                           <span>
+                          Role: {invitation.role_code ? formatName(invitation.role_code) : 'Not specified'}
+                        </span>
                           </div>
 
                           <div className="flex items-center gap-2 min-w-0">

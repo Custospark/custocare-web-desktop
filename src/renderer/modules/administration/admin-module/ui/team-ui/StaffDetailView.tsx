@@ -271,7 +271,7 @@ export const StaffDetailView: React.FC<StaffDetailViewProps> = ({
             <div className="flex items-start gap-3">
               <Badge className={`w-5 h-5 mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
               <div>
-                <div className={`text-xs font-medium uppercase tracking-wide mb-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Staff ID</div>
+                <div className={`text-xs font-medium uppercase tracking-wide mb-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Staff Number</div>
                 <code className={`px-3 py-1.5 rounded-md text-sm font-mono ${isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
                   {staff.staff_uuid}
                 </code>
