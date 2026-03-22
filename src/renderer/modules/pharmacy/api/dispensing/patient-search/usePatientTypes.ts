@@ -19,6 +19,7 @@
  * Patient search result from the API (lean payload)
  */
 export interface PatientSearchResult {
+  id:number;
   patient_number: string; // patient_uuid
   global_user_uuid: string | null;
   name: string | null; // display name
