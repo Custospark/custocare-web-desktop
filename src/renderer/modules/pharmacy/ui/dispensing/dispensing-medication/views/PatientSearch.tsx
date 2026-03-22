@@ -71,29 +71,29 @@ function statusBadgeClasses(theme: Theme, status: PatientStatus): string {
   switch (status) {
     case PatientStatus.ACTIVE:
       return isDark 
-        ? 'bg-gradient-to-r from-green-500/20 to-green-600/10 text-green-300 border border-green-500/30' 
-        : 'bg-gradient-to-r from-green-100 to-green-50 text-green-700 border border-green-200';
+        ? 'bg-green-900/30 text-green-300 border-green-800/50' 
+        : 'bg-green-100 text-green-800 border-green-200';
     case PatientStatus.INACTIVE:
       return isDark 
-        ? 'bg-gradient-to-r from-yellow-500/20 to-yellow-600/10 text-yellow-300 border border-yellow-500/30' 
-        : 'bg-gradient-to-r from-yellow-100 to-yellow-50 text-yellow-700 border border-yellow-200';
+        ? 'bg-yellow-900/30 text-yellow-300 border-yellow-800/50' 
+        : 'bg-yellow-100 text-yellow-800 border-yellow-200';
     case PatientStatus.DECEASED:
       return isDark 
-        ? 'bg-gradient-to-r from-red-500/20 to-red-600/10 text-red-300 border border-red-500/30' 
-        : 'bg-gradient-to-r from-red-100 to-red-50 text-red-700 border border-red-200';
+        ? 'bg-red-900/30 text-red-300 border-red-800/50' 
+        : 'bg-red-100 text-red-800 border-red-200';
     case PatientStatus.MERGED:
       return isDark 
-        ? 'bg-gradient-to-r from-blue-500/20 to-blue-600/10 text-blue-300 border border-blue-500/30' 
-        : 'bg-gradient-to-r from-blue-100 to-blue-50 text-blue-700 border border-blue-200';
+        ? 'bg-blue-900/30 text-blue-300 border-blue-800/50' 
+        : 'bg-blue-100 text-blue-800 border-blue-200';
     case PatientStatus.TEST_PATIENT:
     case PatientStatus.SYSTEM_PATIENT:
       return isDark 
-        ? 'bg-gradient-to-r from-gray-600/20 to-gray-700/10 text-gray-300 border border-gray-600/30' 
-        : 'bg-gradient-to-r from-gray-100 to-gray-50 text-gray-700 border border-gray-200';
+        ? 'bg-gray-700 text-gray-300 border-gray-600' 
+        : 'bg-gray-100 text-gray-700 border-gray-200';
     default:
       return isDark 
-        ? 'bg-gradient-to-r from-gray-700/20 to-gray-800/10 text-gray-300 border border-gray-700/30' 
-        : 'bg-gradient-to-r from-gray-100 to-gray-50 text-gray-700 border border-gray-200';
+        ? 'bg-gray-700 text-gray-300 border-gray-600' 
+        : 'bg-gray-100 text-gray-700 border-gray-200';
   }
 }
 
@@ -232,24 +232,10 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
     await onCreateNewPatient(submittedText || searchText);
   }, [confirm, onCreateNewPatient, searchText, submittedText, theme]);
 
-  const colors = useMemo(
-    () => ({
-      textPrimary: isDark ? 'text-white' : 'text-gray-900',
-      textSecondary: isDark ? 'text-gray-400' : 'text-gray-600',
-      cardBg: isDark ? 'bg-gray-800' : 'bg-white',
-      cardBorder: isDark ? 'border-gray-700' : 'border-gray-200',
-      inputBg: isDark ? 'bg-gray-800' : 'bg-white',
-      inputBorder: isDark ? 'border-gray-700' : 'border-gray-300',
-      inputText: isDark ? 'text-white' : 'text-gray-900',
-      placeholder: isDark ? 'placeholder-gray-500' : 'placeholder-gray-400',
-    }),
-    [isDark]
-  );
-
   return (
     <div className={cn(className)}>
-        <div className="w-full">
-        {/* Header with Gradient */}
+      <div className="w-full">
+        {/* Header with Premium Gradient */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -261,7 +247,6 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
             'group'
           )}
         >
-          {/* Background decoration */}
           <div className={cn(
             'absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl transition-opacity',
             isDark ? 'bg-blue-500/10 group-hover:opacity-100' : 'bg-blue-500/5 group-hover:opacity-100',
@@ -282,14 +267,14 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
                 )} />
               </div>
               <div>
-                <h1 className={cn('text-2xl font-bold', colors.textPrimary)}>{title}</h1>
-                <p className={colors.textSecondary}>{subtitle}</p>
+                <h1 className={cn('text-2xl font-bold', isDark ? 'text-white' : 'text-gray-900')}>{title}</h1>
+                <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>{subtitle}</p>
               </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Search Controls with Premium Animation */}
+        {/* Search Controls Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -303,7 +288,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
         >
           <div className="p-4">
             <div className="flex flex-col gap-4">
-              {/* Search Bar with Animated Gradient Border */}
+              {/* Search Bar with Animated Border */}
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1 relative">
                   <motion.div
@@ -343,9 +328,9 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
                         'w-full pl-10 pr-10 py-3 text-sm border-transparent',
                         'focus:outline-none focus:ring-0',
                         'transition-colors placeholder:text-sm',
-                        colors.inputBg,
-                        colors.inputText,
-                        colors.placeholder
+                        isDark
+                          ? 'bg-gray-900 text-white placeholder-gray-500'
+                          : 'bg-white text-gray-900 placeholder-gray-400'
                       )}
                     />
                     {searchText.trim().length > 0 && (
@@ -513,7 +498,7 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
           </motion.div>
         )}
 
-        {/* Initial State - Premium Blank Canvas */}
+        {/* Initial State */}
         {!hasSearched && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -521,11 +506,11 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
             transition={{ delay: 0.2 }}
             className={cn(
               'relative overflow-hidden rounded-xl border-2 p-12 text-center mt-6',
-              colors.cardBg,
-              colors.cardBorder
+              isDark 
+                ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700' 
+                : 'bg-gradient-to-br from-white to-gray-50/50 border-gray-200'
             )}
           >
-            {/* Background decoration */}
             <div className={cn(
               'absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-30',
               isDark ? 'bg-blue-500/10' : 'bg-blue-500/5'
@@ -553,20 +538,19 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
                 )} />
               </motion.div>
 
-              <h3 className={cn('text-2xl font-bold mb-3', colors.textPrimary)}>Search for a Patient</h3>
-              <p className={cn('mb-8 max-w-md mx-auto text-lg', colors.textSecondary)}>
+              <h3 className={cn('text-2xl font-bold mb-3', isDark ? 'text-white' : 'text-gray-900')}>Search for a Patient</h3>
+              <p className={cn('mb-8 max-w-md mx-auto text-lg', isDark ? 'text-gray-400' : 'text-gray-600')}>
                 Enter patient details to find and manage their records
               </p>
               
-              {/* Quick Tips Grid */}
               <div className={cn('mt-8 pt-8 border-t', isDark ? 'border-gray-700' : 'border-gray-200')}>
-                <h4 className={cn('text-sm font-semibold mb-4', colors.textPrimary)}>Search Tips:</h4>
+                <h4 className={cn('text-sm font-semibold mb-4', isDark ? 'text-gray-300' : 'text-gray-700')}>Search Tips:</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
                   {[
-                    { icon: Hash, label: 'Patient Number', tip: 'PT-12GD4...' },
+                    { icon: Hash, label: 'Patient Number', tip: 'PT-12GD4GJFHG' },
                     { icon: User, label: 'Name', tip: 'Full or partial name' },
                     { icon: Calendar, label: 'Date of Birth', tip: 'YYYY-MM-DD' },
-                    { icon: Phone, label: 'Phone Number', tip: '+256756666...' }
+                    { icon: Phone, label: 'Phone Number', tip: '+256756697871' }
                   ].map((item, index) => (
                     <motion.div
                       key={index}
@@ -583,9 +567,9 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
                           'w-5 h-5',
                           isDark ? 'text-blue-400' : 'text-blue-600'
                         )} />
-                        <span className={cn('font-medium', colors.textPrimary)}>{item.label}</span>
+                        <span className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>{item.label}</span>
                       </div>
-                      <p className={cn('text-sm', colors.textSecondary)}>{item.tip}</p>
+                      <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>{item.tip}</p>
                     </motion.div>
                   ))}
                 </div>
@@ -612,7 +596,9 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             className={cn(
               'relative overflow-hidden rounded-xl border-2 p-8 mb-6',
-              isDark ? 'bg-gradient-to-br from-red-900/20 to-red-900/5 border-red-500/30' : 'bg-gradient-to-br from-red-50 to-red-50/50 border-red-200'
+              isDark 
+                ? 'bg-gradient-to-br from-red-900/20 to-red-900/5 border-red-500/30' 
+                : 'bg-gradient-to-br from-red-50 to-red-50/50 border-red-200'
             )}
           >
             <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl bg-red-500/10" />
@@ -627,228 +613,199 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
                 )} />
               </div>
               <div>
-                <h3 className={cn('text-lg font-semibold mb-1', colors.textPrimary)}>Search Error</h3>
-                <p className={colors.textSecondary}>{getAxiosErrorMessage(error)}</p>
+                <h3 className={cn('text-lg font-semibold mb-1', isDark ? 'text-white' : 'text-gray-900')}>Search Error</h3>
+                <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>{getAxiosErrorMessage(error)}</p>
               </div>
             </div>
           </motion.div>
         )}
 
-       {/* Results State */}
-      {hasSearched && results.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="w-full space-y-3 sm:space-y-4"
-        >
-          {results.map((patient, index) => {
-            const isSelected = selectedPatientId === patient.patient_number;
-            const initials = getPatientInitials(patient);
-            const age = calculateAge(patient.date_of_birth);
-            const sexText = patient.biological_sex ? getBiologicalSexDisplayText(patient.biological_sex) : null;
+        {/* Results State */}
+        {hasSearched && results.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="w-full space-y-3"
+          >
+            {results.map((patient, index) => {
+              const isSelected = selectedPatientId === patient.patient_number;
+              const initials = getPatientInitials(patient);
+              const age = calculateAge(patient.date_of_birth);
+              const sexText = patient.biological_sex ? getBiologicalSexDisplayText(patient.biological_sex) : null;
 
-            return (
-              <motion.div
-                key={patient.patient_number}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ scale: 1.01, y: -2 }}
-                onClick={() => handleSelect(patient)}
-                className={cn(
-                  'relative overflow-hidden rounded-xl border-2 transition-all cursor-pointer',
-                  'w-full p-3 sm:p-4 md:p-5',
-                  colors.cardBg,
-                  colors.cardBorder,
-                  isSelected
-                    ? isDark
-                      ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg shadow-blue-500/20'
-                      : 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/50 shadow-lg shadow-blue-500/20'
-                    : isDark
-                      ? 'hover:bg-gray-700/50 hover:border-gray-600 hover:shadow-xl'
-                      : 'hover:bg-gray-50/80 hover:border-gray-300 hover:shadow-xl'
-                )}
-              >
-                {/* Selected indicator */}
-                {isSelected && (
-                  <motion.div
-                    layoutId="selectedIndicator"
-                    className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-blue-600"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                  />
-                )}
+              return (
+                <motion.div
+                  key={patient.patient_number}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ scale: 1.01 }}
+                  onClick={() => handleSelect(patient)}
+                  className={cn(
+                    'relative overflow-hidden rounded-xl border-2 transition-all duration-300 cursor-pointer',
+                    'w-full p-4',
+                    isSelected
+                      ? isDark
+                        ? 'border-blue-500 bg-gradient-to-br from-blue-900/20 to-gray-800'
+                        : 'border-blue-500 bg-gradient-to-br from-blue-50 to-white'
+                      : isDark
+                        ? 'border-gray-700/50 bg-gradient-to-br from-gray-800 to-gray-900 hover:border-gray-600 hover:shadow-2xl hover:shadow-blue-500/10'
+                        : 'border-gray-200 bg-gradient-to-br from-white to-gray-50/50 hover:border-gray-300 hover:shadow-2xl hover:shadow-blue-500/10',
+                    'transform hover:-translate-y-0.5'
+                  )}
+                >
+                  {/* Background decoration */}
+                  <div className={cn(
+                    'absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl transition-opacity',
+                    isDark ? 'bg-blue-500/5' : 'bg-blue-500/5',
+                    'opacity-0 group-hover:opacity-100'
+                  )} />
 
-                {/* Mobile: Columnar Layout | Desktop: Row Layout */}
-                <div className="flex flex-col md:flex-row md:items-start gap-3 sm:gap-4">
-                  {/* Top Row: Avatar + Name + Status (Mobile) */}
-                  <div className="flex items-start gap-3 w-full md:w-auto">
-                    {/* Avatar */}
-                    <motion.div
-                      whileHover={{ scale: 1.1, rotate: 5 }}
-                      className={cn(
-                        'rounded-xl flex items-center justify-center flex-shrink-0',
-                        'w-12 h-12 sm:w-14 sm:h-14',
-                        isDark 
-                          ? 'bg-gradient-to-br from-blue-500/20 to-purple-500/20' 
-                          : 'bg-gradient-to-br from-blue-100 to-purple-100'
-                      )}
-                    >
-                      <span className={cn(
-                        'font-bold',
-                        'text-base sm:text-lg',
-                        isDark ? 'text-blue-300' : 'text-blue-700'
-                      )}>
-                        {initials}
-                      </span>
-                    </motion.div>
-
-                    {/* Name and Status - Visible on mobile */}
-                    <div className="flex-1 min-w-0 md:hidden">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className={cn(
-                          'font-bold truncate',
-                          'text-base sm:text-lg',
-                          colors.textPrimary
+                  <div className="relative">
+                    {/* Desktop: Row Layout | Mobile: Column Layout */}
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                      {/* Left Section: Avatar + Basic Info */}
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        {/* Patient Avatar */}
+                        <div className={cn(
+                          'flex-shrink-0 rounded-xl flex items-center justify-center transition-all duration-300',
+                          'w-12 h-12',
+                          isSelected
+                            ? isDark
+                              ? 'bg-blue-500/30 scale-110'
+                              : 'bg-blue-200 scale-110'
+                            : isDark
+                              ? 'bg-gray-700 group-hover:bg-gray-600 group-hover:scale-105'
+                              : 'bg-gray-100 group-hover:bg-gray-200 group-hover:scale-105'
                         )}>
-                          {formatPatientName(patient)}
-                        </h3>
-                        <span className={cn(
-                          'px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap',
-                          statusBadgeClasses(theme, patient.status)
-                        )}>
-                          {getStatusDisplayText(patient.status)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Desktop Name and Status - Hidden on mobile */}
-                  <div className="hidden md:block flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className={cn(
-                        'font-bold truncate',
-                        'text-lg md:text-xl',
-                        colors.textPrimary
-                      )}>
-                        {formatPatientName(patient)}
-                      </h3>
-                      <span className={cn(
-                        'px-3 py-1 rounded-full text-xs font-medium',
-                        statusBadgeClasses(theme, patient.status)
-                      )}>
-                        {getStatusDisplayText(patient.status)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Patient Details Grid - Full width on mobile */}
-                  <div className="w-full md:flex-1 md:min-w-0">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Hash className={cn('w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0', isDark ? 'text-gray-500' : 'text-gray-400')} />
-                        <span className={cn('text-xs sm:text-sm truncate', colors.textSecondary)} title={patient.patient_number}>
-                          {patient.patient_number}
-                        </span>
-                      </div>
-
-                      {patient.date_of_birth && (
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Calendar className={cn('w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0', isDark ? 'text-gray-500' : 'text-gray-400')} />
-                          <span className={cn('text-xs sm:text-sm truncate', colors.textSecondary)}>
-                            {new Date(patient.date_of_birth).toLocaleDateString()}
-                            {age !== null && ` (${age}y)`}
+                          <span className={cn(
+                            'font-bold text-sm',
+                            isSelected
+                              ? isDark ? 'text-blue-300' : 'text-blue-700'
+                              : isDark ? 'text-gray-300' : 'text-gray-600'
+                          )}>
+                            {initials}
                           </span>
                         </div>
-                      )}
 
-                      {sexText && (
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Activity className={cn('w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0', isDark ? 'text-gray-500' : 'text-gray-400')} />
-                          <span className={cn('text-xs sm:text-sm truncate', colors.textSecondary)}>
-                            {sexText}
-                          </span>
+                        {/* Patient Name and Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h3 className={cn(
+                              'font-semibold',
+                              'text-base lg:text-lg',
+                              isDark ? 'text-white' : 'text-gray-900'
+                            )}>
+                              {formatPatientName(patient)}
+                            </h3>
+
+                            <span className={cn(
+                              'inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium border',
+                              statusBadgeClasses(theme, patient.status)
+                            )}>
+                              {getStatusDisplayText(patient.status)}
+                            </span>
+
+                            {patient.requires_isolation && (
+                              <span className={cn(
+                                'inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium border',
+                                isDark 
+                                  ? 'bg-red-900/30 text-red-300 border-red-800/50' 
+                                  : 'bg-red-100 text-red-800 border-red-200'
+                              )}>
+                                <AlertCircle className="w-3 h-3 mr-1" />
+                                Isolation
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Patient Details */}
+                          <div className={cn(
+                            'text-sm flex flex-wrap gap-x-4 gap-y-1',
+                            isDark ? 'text-gray-400' : 'text-gray-600'
+                          )}>
+                            <span className="flex items-center gap-1">
+                              <Hash className="w-3 h-3" />
+                              <span className="truncate max-w-[150px]">#{patient.patient_number}</span>
+                            </span>
+
+                            {patient.date_of_birth && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                <span>DOB: {new Date(patient.date_of_birth).toLocaleDateString()}</span>
+                                {age !== null && <span>({age}y)</span>}
+                              </span>
+                            )}
+                            
+                            {sexText && (
+                              <span className="flex items-center gap-1 capitalize">
+                                <Activity className="w-3 h-3" />
+                                {sexText.toLowerCase()}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      )}
+                      </div>
 
-                      <div className="flex items-center gap-2 min-w-0">
-                        <User className={cn('w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0', isDark ? 'text-gray-500' : 'text-gray-400')} />
-                        <span className={cn('text-xs sm:text-sm truncate', colors.textSecondary)}>
-                          {patient.global_user_uuid ? 'Linked' : 'Unlinked'}
-                        </span>
+                      {/* Right Section: Action Buttons */}
+                      <div className="flex flex-row lg:flex-col gap-2 flex-shrink-0">
+                        {processAction && (processAction.onlyWhenSelected ?? true ? isSelected : true) && (
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleProcess(patient);
+                            }}
+                            className={cn(
+                              'rounded-lg font-medium transition-all duration-200',
+                              'flex items-center justify-center gap-2',
+                              'px-4 py-2',
+                              'text-sm',
+                              isDark
+                                ? 'bg-gradient-to-br from-blue-600 to-blue-700 border border-blue-500/50 text-white hover:shadow-xl hover:shadow-blue-500/30'
+                                : 'bg-gradient-to-br from-blue-500 to-blue-600 border border-blue-300 text-white hover:shadow-xl hover:shadow-blue-500/30',
+                              'transform hover:-translate-y-0.5 cursor-pointer'
+                            )}
+                          >
+                            {processAction.icon}
+                            <span>{processAction.label}</span>
+                          </motion.button>
+                        )}
+                        
+                        {takeAction && (
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleTakeAction(patient);
+                              }}
+                              className={cn(
+                                'rounded-lg font-medium transition-all duration-200',
+                                'flex items-center justify-center gap-2',
+                                'px-4 py-2',
+                                'text-sm',
+                                isDark
+                                  ? 'bg-gradient-to-br from-blue-600 to-blue-700 border border-blue-500/50 text-white hover:shadow-xl hover:shadow-blue-500/30'
+                                  : 'bg-gradient-to-br from-blue-500 to-blue-600 border border-blue-300 text-white hover:shadow-xl hover:shadow-blue-500/30',
+                                'transform hover:-translate-y-0.5 cursor-pointer'
+                              )}
+                            >
+                              <ArrowRightCircle className="w-4 h-4" />
+                              <span>{takeAction.label ?? 'Take Action'}</span>
+                            </motion.button>
+                          )}
                       </div>
                     </div>
-
-                    {/* Isolation Warning */}
-                    {patient.requires_isolation && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={cn(
-                          'mt-2 sm:mt-3 text-xs sm:text-sm rounded-lg border-2 p-2 sm:p-3 flex items-center gap-2',
-                          isDark 
-                            ? 'bg-gradient-to-r from-yellow-900/20 to-yellow-900/5 border-yellow-500/30 text-yellow-200' 
-                            : 'bg-gradient-to-r from-yellow-50 to-yellow-50/50 border-yellow-200 text-yellow-800'
-                        )}
-                      >
-                        <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                        <span className="font-medium">Isolation required</span>
-                      </motion.div>
-                    )}
                   </div>
-
-                  {/* Action Buttons - Always visible, stacked on mobile, row on desktop */}
-                  <div className="flex flex-col sm:flex-row md:flex-col gap-2 mt-2 md:mt-0 md:ml-4 flex-shrink-0 w-full sm:w-auto">
-                    {processAction && (processAction.onlyWhenSelected ?? true ? isSelected : true) && (
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void handleProcess(patient);
-                        }}
-                        className={cn(
-                          'rounded-lg font-medium transition-all flex items-center justify-center gap-2',
-                          'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl hover:shadow-blue-500/30',
-                          'transform hover:-translate-y-0.5 cursor-pointer border border-blue-400/30',
-                          'px-3 sm:px-4 py-2 text-xs sm:text-sm',
-                          'w-full sm:w-auto'
-                        )}
-                      >
-                        {processAction.icon}
-                        <span>{processAction.label}</span>
-                      </motion.button>
-                    )}
-                    
-                    {takeAction && (
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void handleTakeAction(patient);
-                        }}
-                        className={cn(
-                          'rounded-lg font-medium transition-all flex items-center justify-center gap-2',
-                          'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl hover:shadow-blue-500/30',
-                          'transform hover:-translate-y-0.5 cursor-pointer border border-blue-400/30',
-                          'px-3 sm:px-4 py-2 text-xs sm:text-sm',
-                          'w-full sm:w-auto'
-                        )}
-                      >
-                        <ArrowRightCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span>{takeAction.label ?? 'Take Action'}</span>
-                      </motion.button>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </motion.div>
-      )}
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        )}
 
         {/* Not Found State */}
         {hasSearched && notFound && (
@@ -857,11 +814,11 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             className={cn(
               'relative overflow-hidden rounded-xl border-2 p-12 text-center mt-6',
-              colors.cardBg,
-              colors.cardBorder
+              isDark 
+                ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700' 
+                : 'bg-gradient-to-br from-white to-gray-50/50 border-gray-200'
             )}
           >
-            {/* Background decoration */}
             <div className={cn(
               'absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-30',
               isDark ? 'bg-orange-500/10' : 'bg-orange-500/5'
@@ -889,8 +846,8 @@ const PatientSearch: React.FC<PatientSearchProps> = ({
                 )} />
               </motion.div>
 
-              <h3 className={cn('text-2xl font-bold mb-3', colors.textPrimary)}>Patient Not Found</h3>
-              <p className={cn('mb-8 text-lg', colors.textSecondary)}>
+              <h3 className={cn('text-2xl font-bold mb-3', isDark ? 'text-white' : 'text-gray-900')}>Patient Not Found</h3>
+              <p className={cn('mb-8 text-lg', isDark ? 'text-gray-400' : 'text-gray-600')}>
                 No patient found for: <span className="font-bold text-blue-500">{submittedText}</span>
               </p>
 
