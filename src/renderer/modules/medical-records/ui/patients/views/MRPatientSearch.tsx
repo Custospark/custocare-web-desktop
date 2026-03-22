@@ -265,10 +265,7 @@ const MRPatientSearch: React.FC<MRPatientSearchProps> = ({ theme, className }) =
 
           // Update to redirecting stage
           setProcessingStage('redirecting');
-          await new Promise(resolve => setTimeout(resolve, 500));
-
-          showToast('success', `Visit created successfully for ${patient.name || 'patient'}`, 3000);
-          
+          await new Promise(resolve => setTimeout(resolve, 500));          
           // Navigate to action center
           navigate(MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER, { replace: true });
         } else {
