@@ -1,4 +1,6 @@
+// WalkInSessionCreator.tsx - Add new prop and Redux integration
 import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { 
   UserPlus, 
   CheckCircle, 
@@ -27,6 +29,12 @@ import { useConfirm } from '../../../../../../shared/components/Feedback/Confirm
 import { type WalkInSession } from '../../../../api/dispensing/customer-walkin/useCustomerWalkInTypes';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 
+// Redux imports
+import { getStaffId } from '../../../../../../app/store/utils/contextSelectors';
+import { useAppSelector } from '../../../../../../app/store/hooks/useApp';
+import { VisitPhase, VisitType } from '../../../../api/dispensing/visit-queue/visitTypes';
+import { setActiveVisit } from '../../../../../../app/store/slices/visitSlice';
+
 interface WalkInSessionCreatorProps {
   /** Theme for the component */
   theme?: 'light' | 'dark';
@@ -51,6 +59,9 @@ interface WalkInSessionCreatorProps {
   
   /** Optional className for custom styling */
   className?: string;
+  
+  /** Whether to automatically persist the visit to Redux after creation */
+  autoPersistToRedux?: boolean;
 }
 
 /**
@@ -66,10 +77,13 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
   isLoading: externalLoading,
   error: externalError,
   createButtonText = 'Start Walk-in',
+  autoPersistToRedux = false,
   className,
 }) => {
   const isDark = theme === 'dark';
   const { confirm } = useConfirm();
+  const dispatch = useDispatch();
+  const staffId = useAppSelector(getStaffId);
   
   // State
   const [localError, setLocalError] = useState<Error | null>(null);
@@ -92,6 +106,11 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
         setShowSuccess(true);
         setLocalError(null);
         
+        // Auto-persist to Redux if enabled
+        if (autoPersistToRedux) {
+          persistVisitToRedux(session);
+        }
+        
         // Notify parent about successful creation
         onSessionCreated(session);
       },
@@ -103,6 +122,55 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
     },
     customFacilityId
   );
+  
+  // Helper function to persist visit to Redux
+  const persistVisitToRedux = (session: WalkInSession) => {
+    const { patient_id, } = session.ui_next.params;
+    const patientName = session.walkin.display_name || 'Walk-in Patient';
+    
+    // Helper to convert null to undefined
+    const nullToUndefined = <T,>(value: T | null): T | undefined => {
+      return value === null ? undefined : value;
+    };
+    
+    // Create QueueVisitItem from the session data
+    const queueVisitItem = {
+      visit_id: session.visit.id,
+      visit_uuid: session.visit.visit_uuid,
+      facility_id: session.visit.facility_id,
+      patient_id: session.visit.patient_id,
+      patient: {
+        id: patient_id,
+        patient_number: session.walkin.patient_uuid || String(patient_id),
+        global_user_uuid: nullToUndefined(session.walkin.system_user_id ? String(session.walkin.system_user_id) : undefined),
+        name: patientName,
+        date_of_birth: null,
+        biological_sex: null,
+        blood_type: null,
+        status: 'active',
+        requires_isolation: false,
+        created_at: new Date().toISOString(),
+      },
+      current_phase: session.visit.current_phase as VisitPhase,
+      current_department_id: null,
+      assigned_staff_id: null,
+      assigned_at: null,
+      waiting_since: null,
+      acuity_score: session.visit.acuity_score,
+      arrived_at: session.visit.arrived_at,
+      visit_type: session.visit.visit_type as VisitType,
+      status: session.visit.status as any,
+      is_walk_in: session.visit.is_walk_in,
+    };
+    
+    // Set active visit in Redux
+    dispatch(setActiveVisit({
+      visit: queueVisitItem,
+      staffId: staffId || 0,
+      departmentId: undefined,
+      facilityId: session.visit.facility_id,
+    }));
+  };
   
   // Derived states
   const isLoading = externalLoading || isCreating;
@@ -189,7 +257,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
     }
   };
 
-  // Render loading state
+  // Render loading state (keep existing implementation)
   if (isLoading && !showSuccess) {
     return (
       <motion.div
@@ -215,7 +283,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
     );
   }
 
-  // Render success state
+  // Render success state (keep existing implementation)
   if (showSuccess) {
     return (
       <motion.div
@@ -318,27 +386,8 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
                         'text-sm mb-3',
                         isDark ? 'text-green-400' : 'text-green-700'
                       )}>
-                        The parent component will guide you through the next steps for this patient. 
-                        You can now proceed with patient service or start another walk-in.
+                        The walk-in session is ready. Click "Proceed" to continue with the patient's service.
                       </p>
-                      
-                      {/* Quick actions */}
-                      <div className="flex gap-2 mt-2">
-                        <div className={cn(
-                          'px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1',
-                          isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-200 text-green-700'
-                        )}>
-                          <Clock className="w-3 h-3" />
-                          Queue position assigned
-                        </div>
-                        <div className={cn(
-                          'px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1',
-                          isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-200 text-green-700'
-                        )}>
-                          <Shield className="w-3 h-3" />
-                          Billing ready
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -358,30 +407,19 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
                       'flex-1 px-6 py-3 rounded-xl font-medium transition-all cursor-pointer',
                       'border-2 flex items-center justify-center gap-2',
                       isDark
-                        ? 'bg-linear-to-br from-blue-600 to-blue-700 border-blue-500/50 text-white hover:shadow-xl hover:shadow-blue-500/30'
-                        : 'bg-linear-to-br from-blue-500 to-blue-600 border-blue-300 text-white hover:shadow-xl hover:shadow-blue-500/30',
-                      'transform hover:-translate-y-0.5 cursor-pointer'
+                        ? 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500'
+                        : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200 hover:border-gray-400',
+                      'cursor-pointer'
                     )}
                   >
                     <UserPlus className="w-5 h-5" />
                     Start Another Walk-in
                   </motion.button>
 
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={cn(
-                      'px-6 py-3 rounded-xl font-medium transition-all',
-                      'border-2 flex items-center justify-center gap-2',
-                      isDark
-                        ? 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500'
-                        : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200 hover:border-gray-400',
-                      'cursor-pointer'
-                    )}
-                  >
-                    <Users className="w-5 h-5" />
-                    View Queue
-                  </motion.button>
+                  {/* This button will be handled by parent component */}
+                  <div className="flex-1">
+                    {/* Parent will handle the proceed action */}
+                  </div>
                 </motion.div>
               </div>
             </div>
@@ -391,7 +429,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
     );
   }
 
-  // Render error state
+  // Render error state (keep existing implementation)
   if (hasError && !showSuccess) {
     return (
       <motion.div
@@ -525,27 +563,28 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
                 onClick={handleCreateWalkIn}
                 disabled={isCreating || (!hasValidFacility && !customFacilityId)}
                 className={cn(
-                  'w-full px-6 py-3 rounded-xl font-medium transition-all',
-                  'border-2 flex items-center justify-center gap-2',
-                  isCreating || (!hasValidFacility && !customFacilityId)
-                    ? isDark
-                      ? 'bg-blue-600/50 border-blue-500/30 text-white cursor-not-allowed'
-                      : 'bg-blue-500/50 border-blue-300 text-white cursor-not-allowed'
-                    : isDark
-                      ? 'bg-linear-to-br from-blue-600 to-blue-700 border-blue-500/50 text-white hover:shadow-xl hover:shadow-blue-500/30'
-                      : 'bg-linear-to-br from-blue-500 to-blue-600 border-blue-300 text-white hover:shadow-xl hover:shadow-blue-500/30',
-                  'transform hover:-translate-y-0.5'
-                )}
+                'px-4 py-2 rounded-xl font-medium transition-all',
+                'border-2 flex items-center justify-center gap-2',
+                'text-sm',
+                isCreating || (!hasValidFacility && !customFacilityId)
+                  ? isDark
+                    ? 'bg-blue-600/50 border-blue-500/30 text-white/70 cursor-not-allowed'  // ✅ disabled state
+                    : 'bg-blue-500/50 border-blue-300 text-white/70 cursor-not-allowed'      // ✅ disabled state
+                  : isDark
+                    ? 'bg-linear-to-br from-blue-600 to-blue-700 border-blue-500/50 text-white hover:shadow-xl hover:shadow-blue-500/30 cursor-pointer'  // ✅ enabled state
+                    : 'bg-linear-to-br from-blue-500 to-blue-600 border-blue-300 text-white hover:shadow-xl hover:shadow-blue-500/30 cursor-pointer',      // ✅ enabled state
+                'transform hover:-translate-y-0.5'
+              )}
               >
                 {isCreating ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Setting up...
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Setting up...</span>
                   </>
                 ) : (
                   <>
-                    <UserPlus className="w-5 h-5" />
-                    {createButtonText}
+                    <UserPlus className="w-4 h-4" />
+                    <span>{createButtonText}</span>
                   </>
                 )}
               </motion.button>
@@ -570,7 +609,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
     );
   }
 
-  // Render normal state (pre-creation)
+  // Render normal state (pre-creation) - keep existing implementation
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -658,103 +697,6 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
               ? 'bg-linear-to-br from-gray-800 to-gray-900 border-gray-700/50 hover:border-gray-600' 
               : 'bg-linear-to-br from-white to-gray-50/50 border-gray-200 hover:border-gray-300'
           )}>
-            <div className="space-y-6 mb-8">
-              {/* Benefits List */}
-              <div className="space-y-4">
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="flex items-start gap-4"
-                >
-                  <div className={cn(
-                    'p-2 rounded-lg',
-                    isDark ? 'bg-green-500/20' : 'bg-green-100'
-                  )}>
-                    <CheckCircle className={cn(
-                      'w-5 h-5',
-                      isDark ? 'text-green-400' : 'text-green-600'
-                    )} />
-                  </div>
-                  <div>
-                    <div className={cn(
-                      'font-medium mb-1',
-                      isDark ? 'text-white' : 'text-gray-900'
-                    )}>
-                      System-Generated Patient Identity
-                    </div>
-                    <div className={cn(
-                      'text-sm',
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    )}>
-                      To ensure automatic billing and service tracking.
-                    </div>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.15 }}
-                  className="flex items-start gap-4"
-                >
-                  <div className={cn(
-                    'p-2 rounded-lg',
-                    isDark ? 'bg-green-500/20' : 'bg-green-100'
-                  )}>
-                    <CheckCircle className={cn(
-                      'w-5 h-5',
-                      isDark ? 'text-green-400' : 'text-green-600'
-                    )} />
-                  </div>
-                  <div>
-                    <div className={cn(
-                      'font-medium mb-1',
-                      isDark ? 'text-white' : 'text-gray-900'
-                    )}>
-                      Ready for Service
-                    </div>
-                    <div className={cn(
-                      'text-sm',
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    )}>
-                      Patient added to queue immediately
-                    </div>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="flex items-start gap-4"
-                >
-                  <div className={cn(
-                    'p-2 rounded-lg',
-                    isDark ? 'bg-green-500/20' : 'bg-green-100'
-                  )}>
-                    <CheckCircle className={cn(
-                      'w-5 h-5',
-                      isDark ? 'text-green-400' : 'text-green-600'
-                    )} />
-                  </div>
-                  <div>
-                    <div className={cn(
-                      'font-medium mb-1',
-                      isDark ? 'text-white' : 'text-gray-900'
-                    )}>
-                      Billing Ready
-                    </div>
-                    <div className={cn(
-                      'text-sm',
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    )}>
-                      Payment setup handled automatically
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-            </div>
 
             {/* Action Buttons */}
             <motion.button
