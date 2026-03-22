@@ -6,7 +6,6 @@ import {
   CheckCircle, 
   AlertCircle, 
   Clock,
-  Users,
   ArrowRight,
   Shield,
   Zap,

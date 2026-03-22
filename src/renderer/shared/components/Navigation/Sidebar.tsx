@@ -3,13 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Users,
   Bell,
-  Stethoscope,
+  // Stethoscope,
   HeartPulse,
-  PillIcon,
+  // PillIcon,
   FileText,
   UserCog,
   Briefcase,
-  MicroscopeIcon,
+  // MicroscopeIcon,
   MonitorCheckIcon,
   HeadphonesIcon,
   X,
@@ -26,7 +26,7 @@ import {
   selectActiveFacilityName,
   selectActiveRoleCode,
 } from '../../../app/store/slices/activeContextSlice';
-import { FaRegCreditCard } from 'react-icons/fa';
+// import { FaRegCreditCard } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import {
   getPatientUuid,

@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { LayoutDashboard, Users, Building2, Layers, Boxes, MapIcon, Settings2, CreditCard } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, Layers, Boxes, MapIcon, Settings2 } from 'lucide-react';
 
 import { BaseModuleWorkspace } from '../../../../shared/components/workspace/BaseModuleWorkspace';
 import { ADMIN_ROUTES } from '../../../../app/routes/constants/administration.paths';
