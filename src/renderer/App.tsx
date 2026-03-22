@@ -3,7 +3,7 @@
 import { Provider } from 'react-redux';
 import { QueryClientProvider } from '@tanstack/react-query';
 // import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { HashRouter as Router } from 'react-router-dom';
+import { BrowserRouter as Router } from 'react-router-dom';
 
 import { store } from './app/store/store';
 import { queryClient } from './app/api/axiosConfig';

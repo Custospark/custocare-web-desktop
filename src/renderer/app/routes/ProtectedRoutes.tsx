@@ -36,7 +36,7 @@ const LaboratoryModule = React.lazy(() => import('../../modules/laboratory/ui/La
 const BillingModule = React.lazy(() => import('../../modules/billling/ui/BillingModule'));
 const ModuleAccessMiddleware = React.lazy(() => import('./middleware/ModuleAccessMiddleware'));
 const PlatformAdministrationModule = React.lazy(() => import('../../modules/platform-administration/PlatformAdministrationModule'));
-
+import { MEDICAL_RECORDS_ROUTES } from './routeConstants';
 export const ProtectedRoutes = () => [
   <Route key="protected-routes" element={<AuthMiddlewareRoute />}>
     <Route key="restricted-module-codes" element={<ModuleAccessMiddleware />}>
@@ -53,7 +53,8 @@ export const ProtectedRoutes = () => [
               </SuspenseWrapper>
             }
           >
-            <Route index element={<Navigate to={ROUTES.MEDICAL_RECORDS} replace />} />
+            {/* <Route index element={<Navigate to={ROUTES.MEDICAL_RECORDS} replace />} /> */}
+            <Route index element={<Navigate to={MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH} replace />} />
             {medicalRecordsRoutes}
           </Route>
 

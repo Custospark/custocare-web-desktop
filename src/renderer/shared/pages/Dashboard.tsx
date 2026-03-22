@@ -33,7 +33,7 @@ const MODULE_PRIORITY = [
 
 // Module to route mapping
 const MODULE_ROUTES: Record<string, string> = {
-  medical_records: MEDICAL_RECORDS_ROUTES.OVERVIEW,
+  medical_records: MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH,
   clinical: CLINICAL_ROUTES.OVERVIEW || ROUTES.CLINICAL,
   nursing: ROUTES.NURSING,
   laboratory: ROUTES.LABORATORY,

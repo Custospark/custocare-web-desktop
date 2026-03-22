@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard,
+  // LayoutDashboard,
   Users,
   Workflow,
   Receipt,
@@ -11,11 +11,11 @@ import { ROUTES, MEDICAL_RECORDS_ROUTES } from '../../../app/routes/routeConstan
  * Note: The id must match an existing route for that base module.
  */
 const MEDICAL_RECORDS_OPERATIONS = [
-  { 
-    id: 'overview', 
-    label: 'Clinical Overview', 
-    icon: <LayoutDashboard className="w-4 h-4" /> 
-  },
+  // { 
+  //   id: 'overview', 
+  //   label: 'Clinical Overview', 
+  //   icon: <LayoutDashboard className="w-4 h-4" /> 
+  // },
 
   { 
     id: 'patients', 
@@ -43,7 +43,7 @@ const MedicalRecordsModule = () => {
       contextTitle="Medical Records"
       operations={MEDICAL_RECORDS_OPERATIONS}
       basePath={ROUTES.MEDICAL_RECORDS}
-      defaultOperationPath={MEDICAL_RECORDS_ROUTES.OVERVIEW}
+      defaultOperationPath={MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH}
     />
   );
 };

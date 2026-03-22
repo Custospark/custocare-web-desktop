@@ -13,7 +13,7 @@
  */
 
 import React, { useCallback } from 'react';
-import { Check, X, Loader2, Eye } from 'lucide-react';
+import { Check, X, Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useConfirm } from '../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
