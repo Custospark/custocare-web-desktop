@@ -310,8 +310,8 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
               <input
                 type="text"
                 placeholder={hasLoadedInitialData 
-                  ? "Search loaded staff by name, ID, or role..." 
-                  : "Search staff by name, ID, or role..."}
+                  ? "Search staff by name, staff number, or role..." 
+                  : "Search staff by name, staff number, or role..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className={`w-full pl-10 pr-10 py-3 rounded-lg border ${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-text`}
