@@ -24,6 +24,7 @@ import {
   useArchiveMessage,
   useUnarchiveMessage,
   useTrashMessage,
+  useDownloadMessageAttachment,  
 }  from '../../api/messages/MessageQueries';
 import type {
   MessageStateWithMessage,
@@ -57,7 +58,13 @@ interface DisplayMessage {
   starred: boolean;
   archived: boolean;
   labels: string[];
-  attachments: Array<{ name: string; size: string; type: string }>;
+  attachments: Array<{
+    id: number;           // needed to call the download endpoint
+    name: string;
+    size: string;
+    type: string;
+    downloadUrl?: string; // present when backend returns a pre-signed / public URL
+  }>;
   priority: 'low' | 'normal' | 'high';
 }
 
@@ -121,9 +128,11 @@ const mapToDisplay = (item: MessageStateWithMessage): DisplayMessage => {
     archived: item.is_archived,
     labels: msg.labels?.map(l => l.label) ?? [],
     attachments: msg.attachments?.map(a => ({
-      name: a.original_name,
-      size: a.size_formatted ?? formatBytes(a.size_bytes),
-      type: a.mime_type ?? 'unknown',
+      id:          a.id,
+      name:        a.original_name,
+      size:        a.size_formatted ?? formatBytes(a.size_bytes),
+      type:        a.mime_type ?? 'unknown',
+      downloadUrl: a.download_url ?? undefined,   // pass through if backend provides it
     })) ?? [],
     priority: msg.priority,
   };
@@ -181,12 +190,13 @@ export const Inbox: React.FC<InboxProps> = ({ theme }) => {
   const messages = useMemo(() => (data?.data ?? []).map(mapToDisplay), [data]);
 
   /* -------------------------------- Mutations -------------------------------- */
-  const markRead = useMarkReadMessage();
-  const markUnread = useMarkUnreadMessage();
-  const toggleStar = useToggleStarMessage();
-  const archive = useArchiveMessage();
-  const unarchive = useUnarchiveMessage();
-  const trash = useTrashMessage();
+  const markRead          = useMarkReadMessage();
+  const markUnread        = useMarkUnreadMessage();
+  const toggleStar        = useToggleStarMessage();
+  const archive           = useArchiveMessage();
+  const unarchive         = useUnarchiveMessage();
+  const trash             = useTrashMessage();
+  const downloadAttachment = useDownloadMessageAttachment();
 
   /* -------------------------------- Derived -------------------------------- */
   const selectedMessage = useMemo(
@@ -245,7 +255,18 @@ export const Inbox: React.FC<InboxProps> = ({ theme }) => {
     navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
   }, [selectedMessage, navigate]);
 
- 
+ // ADD THIS (new handler — place after handleForward):
+  const handleDownloadAttachment = useCallback(
+    (att: { id: number; name: string; downloadUrl?: string }) => {
+      downloadAttachment.mutate({
+        attachmentId: att.id,
+        fileName:     att.name,
+        downloadUrl:  att.downloadUrl,
+      });
+    },
+    [downloadAttachment],
+  );
+
 
   /* ==================== RENDER ==================== */
 
@@ -642,11 +663,26 @@ export const Inbox: React.FC<InboxProps> = ({ theme }) => {
                             <p className={cn('text-sm font-medium truncate', isDark ? 'text-white' : 'text-gray-900')}>{att.name}</p>
                             <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>{att.size}</p>
                           </div>
-                          <button className={cn('p-2 rounded-lg transition-colors cursor-pointer',
-                            isDark ? 'hover:bg-gray-600 text-gray-300' : 'hover:bg-gray-200 text-gray-600')}>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
+                        <button
+                            onClick={() => handleDownloadAttachment(att)}
+                            disabled={downloadAttachment.isPending}
+                            title={`Download ${att.name}`}
+                            className={cn(
+                              'p-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait',
+                              isDark ? 'hover:bg-gray-600 text-gray-300' : 'hover:bg-gray-200 text-gray-600',
+                            )}
+                          >
+                            {downloadAttachment.isPending ? (
+                              /* spinner while downloading */
+                              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              </svg>
+                            )}
                           </button>
                         </div>
                       ))}

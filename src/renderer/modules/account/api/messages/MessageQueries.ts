@@ -604,6 +604,99 @@ export const useRemoveMessageAttachment = () => {
 };
 
 /**
+ * GET /messages/attachments/{attachmentId}
+ *
+ * The backend now returns a temporarySignedRoute URL in `download_url`.
+ * We ALWAYS pipe through axios so the session cookie / Bearer token is sent.
+ * Never use a bare <a href> for attachment downloads — it bypasses auth.
+ */
+export const useDownloadMessageAttachment = () => {
+  const { showToast } = useToast();
+
+  return useMutation<
+    void,
+    AxiosError<ApiErrorResponse>,
+    { attachmentId: number; fileName: string; downloadUrl?: string | null }
+  >({
+    mutationFn: async ({ attachmentId, fileName, downloadUrl }) => {
+
+      /*
+       * Resolve the endpoint to call:
+       *  - If backend gave us a full signed URL → use it (axios still adds auth headers)
+       *  - Otherwise fall back to the standard REST path
+       */
+      const endpoint = downloadUrl ?? `messages/attachments/${attachmentId}`;
+
+      /* ── DEV: log exactly what we're requesting ─────────────────────── */
+      if (import.meta.env.DEV) {
+        console.debug(
+          '%c[AttachmentDownload] ▶ initiating',
+          'color:#6366f1;font-weight:bold;',
+          {
+            attachmentId,
+            fileName,
+            endpoint,
+            usingSignedUrl: !!downloadUrl,
+            timestamp: new Date().toISOString(),
+          },
+        );
+      }
+
+      /*
+       * Always use axios — this ensures the session cookie / Bearer token
+       * is forwarded. A bare <a href> does NOT send auth headers and would
+       * fail for signed API routes on private-disk files.
+       */
+      const response = await axiosInstance.get(endpoint, {
+        responseType: 'blob',
+        // If the URL is already absolute (signed URL), axios will use it as-is.
+        // If it's a relative path, axios prepends baseURL as usual.
+        baseURL: downloadUrl ? '' : undefined,
+      });
+
+      /* ── DEV: log response metadata ─────────────────────────────────── */
+      if (import.meta.env.DEV) {
+        console.debug('[AttachmentDownload] ✅ response received', {
+          status:        response.status,
+          contentType:   response.headers['content-type'],
+          contentLength: response.headers['content-length'],
+          blobSize:      (response.data as Blob)?.size,
+          resolvedUrl:   endpoint,
+        });
+      }
+
+      /* ── Trigger browser Save-As dialog ─────────────────────────────── */
+      const mimeType =
+        (response.headers['content-type'] as string) ?? 'application/octet-stream';
+
+      const blob     = new Blob([response.data as BlobPart], { type: mimeType });
+      const objectUrl = URL.createObjectURL(blob);
+
+      const link      = document.createElement('a');
+      link.href       = objectUrl;
+      link.download   = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Release after enough time for the browser to start the download
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+    },
+
+    onError: (error) => {
+      if (import.meta.env.DEV) {
+        console.error('[AttachmentDownload] ❌ failed', {
+          status:  error.response?.status,
+          message: error.message,
+          data:    error.response?.data,
+        });
+      }
+      showToast('error', extractErrorMessage(error, 'Failed to download attachment.'), 9000);
+    },
+  });
+};
+
+/**
  * POST /messages/bulk
  */
 export const useBulkMessageAction = (
