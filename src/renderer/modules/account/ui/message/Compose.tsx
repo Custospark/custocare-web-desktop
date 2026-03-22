@@ -22,6 +22,11 @@
  *     boundary should use `position: fixed` in their own implementations
  *     (ComposeFooter, ComposeDialogs).  The layout here makes no further
  *     assumptions about those internals.
+ *
+ *  5. MINIMIZED STATE FIX: The minimized preview now only shows the
+ *     body content and footer controls when a subject (title) exists.
+ *     If there's no subject, only the header bar is displayed, preventing
+ *     a "new message" from appearing with empty content.
  */
 
 import React from 'react';
@@ -56,7 +61,7 @@ export const Compose: React.FC<ComposeProps> = props => {
     showBcc,
     setShowBcc,
     editorMode,
-    setEditorMode,       // ← this is now handleEditorModeChange (FIX 3)
+    setEditorMode,   
     isSaving,
     lastSaved,
     validationErrors,
@@ -86,8 +91,12 @@ export const Compose: React.FC<ComposeProps> = props => {
 
   /* ═══════════════════════════════════════════════════════════
      MINIMISED STATE
+     FIX 5: Only show preview content when subject exists.
+     Without a subject, only the header bar is visible.
   ═══════════════════════════════════════════════════════════ */
   if (windowState === 'minimized') {
+    const hasSubject = !!message.subject && message.subject.trim().length > 0;
+    
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -98,13 +107,17 @@ export const Compose: React.FC<ComposeProps> = props => {
           isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
         )}
       >
-        {/* Mini header */}
-        <div className={cn('flex items-center justify-between px-3 py-2.5 border-b', isDark ? 'border-gray-700' : 'border-gray-200')}>
+        {/* Mini header - Always visible */}
+        <div className={cn(
+          'flex items-center justify-between px-3 py-2.5',
+          hasSubject ? 'border-b' : '',
+          hasSubject && (isDark ? 'border-gray-700' : 'border-gray-200')
+        )}>
           <div className="flex items-center gap-2 min-w-0">
             <h3 className="text-sm font-semibold truncate">
-              {message.subject || 'New Message'}
+              {hasSubject ? message.subject : 'New Message'}
             </h3>
-            {message.to.length > 0 && (
+            {hasSubject && message.to.length > 0 && (
               <span className="text-xs text-gray-500 shrink-0">
                 {message.to.length} recipient{message.to.length !== 1 ? 's' : ''}
               </span>
@@ -114,55 +127,83 @@ export const Compose: React.FC<ComposeProps> = props => {
             <button
               onClick={handleRestore}
               title="Restore"
-              className={cn('p-1.5 rounded-lg cursor-pointer transition-colors', isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500')}
+              className={cn(
+                'p-1.5 rounded-lg cursor-pointer transition-colors',
+                isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
+              )}
             >
               <Maximize2 className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={handleDiscard}
               title="Close"
-              className={cn('p-1.5 rounded-lg cursor-pointer transition-colors', isDark ? 'hover:bg-red-900/30 text-gray-400' : 'hover:bg-red-50 text-gray-500')}
+              className={cn(
+                'p-1.5 rounded-lg cursor-pointer transition-colors',
+                isDark ? 'hover:bg-red-900/30 text-gray-400' : 'hover:bg-red-50 text-gray-500'
+              )}
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        {/* Body preview */}
-        <div
-          className={cn('px-3 py-2 text-xs cursor-pointer', isDark ? 'text-gray-400' : 'text-gray-500')}
-          onClick={handleRestore}
-        >
-          {message.body
-            ? <p className="truncate line-clamp-2">{message.body.replace(/<[^>]*>/g, '').substring(0, 120)}</p>
-            : <p className="italic">No content — click to continue writing</p>}
-        </div>
-
-        {/* Mini footer */}
-        <div className={cn('flex items-center justify-between px-2 py-2 border-t', isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-100 bg-gray-50')}>
-          <button
-            onClick={saveDraft}
-            className={cn('flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer transition-colors', isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-600')}
-          >
-            <Save className="w-3 h-3" /> Save
-          </button>
-
-          <div className="flex items-center gap-1">
-            {message.attachments.length > 0 && (
-              <span className={cn('flex items-center gap-0.5 text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
-                <Paperclip className="w-3 h-3" /> {message.attachments.length}
-              </span>
+        {/* Body preview - ONLY SHOW WHEN SUBJECT EXISTS */}
+        {hasSubject && (
+          <div
+            className={cn(
+              'px-3 py-2 text-xs cursor-pointer',
+              isDark ? 'text-gray-400' : 'text-gray-500'
             )}
-            <button
-              onClick={handleSend}
-              disabled={isSending}
-              className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer disabled:opacity-60 transition-colors"
-            >
-              <Send className="w-3 h-3" />
-              {message.scheduledSend ? 'Schedule' : 'Send'}
-            </button>
+            onClick={handleRestore}
+          >
+            {message.body
+              ? (
+                <p className="truncate line-clamp-2">
+                  {message.body.replace(/<[^>]*>/g, '').substring(0, 120)}
+                </p>
+              )
+              : (
+                <p className="italic">No content — click to continue writing</p>
+              )}
           </div>
-        </div>
+        )}
+
+        {/* Mini footer - ONLY SHOW WHEN SUBJECT EXISTS */}
+        {hasSubject && (
+          <div className={cn(
+            'flex items-center justify-between px-2 py-2 border-t',
+            isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-100 bg-gray-50'
+          )}>
+            <button
+              onClick={saveDraft}
+              className={cn(
+                'flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer transition-colors',
+                isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-600'
+              )}
+            >
+              <Save className="w-3 h-3" /> Save
+            </button>
+
+            <div className="flex items-center gap-1">
+              {message.attachments.length > 0 && (
+                <span className={cn(
+                  'flex items-center gap-0.5 text-xs',
+                  isDark ? 'text-gray-500' : 'text-gray-400'
+                )}>
+                  <Paperclip className="w-3 h-3" /> {message.attachments.length}
+                </span>
+              )}
+              <button
+                onClick={handleSend}
+                disabled={isSending}
+                className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer disabled:opacity-60 transition-colors"
+              >
+                <Send className="w-3 h-3" />
+                {message.scheduledSend ? 'Schedule' : 'Send'}
+              </button>
+            </div>
+          </div>
+        )}
       </motion.div>
     );
   }
@@ -224,7 +265,10 @@ export const Compose: React.FC<ComposeProps> = props => {
                 : isDark ? 'border-gray-700' : 'border-gray-200',
             )}
           >
-            <span className={cn('text-xs font-semibold uppercase tracking-wide w-14 shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>
+            <span className={cn(
+              'text-xs font-semibold uppercase tracking-wide w-14 shrink-0',
+              isDark ? 'text-gray-400' : 'text-gray-500'
+            )}>
               Subject
             </span>
             <input

@@ -1,9 +1,9 @@
 /**
  * ============================================================================
- * COMPOSE RECIPIENTS COMPONENT
+ * COMPOSE RECIPIENTS COMPONENT - EMAIL ONLY
  * ============================================================================
  * Features:
- *  - Email AND phone-number recipient input
+ *  - Email recipient input only (phone support to be added later)
  *  - In-memory / localStorage auto-suggestions (frequency-ranked)
  *  - CC / BCC toggleable rows
  *  - Paste handling (comma/semicolon separated)
@@ -15,15 +15,13 @@ import React, {
   useState, useCallback, useRef, useMemo,
 } from 'react';
 import {
-  User, X, AlertCircle, Phone, Mail, AtSign,
+  X, AlertCircle, Mail,
 } from 'lucide-react';
 import type { Recipient, StoredContact } from './composeTypes';
 import { cn } from '../../../../../shared/types/cn';
 import { loadStoredContacts } from './useComposeState';
 
 /* ── helpers ────────────────────────────────────────────────────── */
-// export const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-// export const validatePhone = (v: string) => /^\+?[\d\s\-().]{7,20}$/.test(v.trim());
 
 const filterContacts = (query: string, contacts: StoredContact[]): StoredContact[] => {
   if (!query || query.length < 1) return [];
@@ -31,8 +29,7 @@ const filterContacts = (query: string, contacts: StoredContact[]): StoredContact
   return contacts
     .filter(c =>
       c.email?.toLowerCase().includes(q) ||
-      c.name?.toLowerCase().includes(q) ||
-      c.phone?.includes(q),
+      c.name?.toLowerCase().includes(q),
     )
     .sort((a, b) => b.useCount - a.useCount)
     .slice(0, 8);
@@ -47,40 +44,31 @@ interface RecipientChipProps {
 
 const RecipientChip: React.FC<RecipientChipProps> = ({ recipient, isDark, onRemove }) => {
   const isInvalid = !recipient.isValid;
-  const isPhone = recipient.contactType === 'phone';
 
   return (
     <span
-      title={isPhone ? recipient.phone : recipient.email}
+      title={recipient.email}
       className={cn(
         'inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-sm group max-w-[200px] border',
         isInvalid
           ? isDark
             ? 'bg-red-900/20 text-red-300 border-red-500/40'
             : 'bg-red-50 text-red-600 border-red-200'
-          : isPhone
-            ? isDark
-              ? 'bg-violet-900/20 text-violet-300 border-violet-500/30'
-              : 'bg-violet-50 text-violet-700 border-violet-200'
-            : isDark
-              ? 'bg-gray-700 text-gray-200 border-gray-600'
-              : 'bg-gray-100 text-gray-700 border-gray-200',
+          : isDark
+            ? 'bg-blue-900/20 text-blue-300 border-blue-500/30'
+            : 'bg-blue-50 text-blue-700 border-blue-200',
       )}
     >
       {isInvalid ? (
         <AlertCircle className="w-3 h-3 shrink-0" />
-      ) : isPhone ? (
-        <Phone className="w-3 h-3 shrink-0" />
       ) : (
-        <User className="w-3 h-3 shrink-0" />
+        <Mail className="w-3 h-3 shrink-0" />
       )}
 
       <span className="truncate">
-        {recipient.name && recipient.name !== recipient.email && recipient.name !== recipient.phone
+        {recipient.name && recipient.name !== recipient.email
           ? recipient.name
-          : isPhone
-            ? recipient.phone
-            : recipient.email}
+          : recipient.email}
       </span>
 
       <button
@@ -131,7 +119,7 @@ const SuggestionItem: React.FC<SuggestionItemProps> = ({
         <div className="font-medium truncate">{contact.name}</div>
       )}
       <div className={cn('truncate', isDark ? 'text-gray-400' : 'text-gray-500')}>
-        {contact.email || contact.phone}
+        {contact.email}
       </div>
     </div>
 
@@ -167,7 +155,6 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
   const [suggestions, setSuggestions] = useState<StoredContact[]>([]);
   const [highlightIdx, setHighlightIdx] = useState(-1);
   const [showSuggest, setShowSuggest] = useState(false);
-  const [inputMode, setInputMode] = useState<'email' | 'phone'>('email');
   const inputRef = useRef<HTMLInputElement>(null);
   const contacts = useMemo(() => loadStoredContacts(), []);
 
@@ -214,7 +201,7 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
       if ((e.key === 'Enter' || e.key === 'Tab') && highlightIdx >= 0) {
         e.preventDefault();
         const s = suggestions[highlightIdx];
-        commit(s.email || s.phone || '', s.name);
+        commit(s.email, s.name);
         return;
       }
     }
@@ -236,9 +223,7 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
   };
 
   const placeholder = recipients.length === 0
-    ? inputMode === 'email'
-      ? `Add ${label} recipients (email or phone)`
-      : `Add phone number`
+    ? `Add ${label} recipients (email addresses)`
     : '';
 
   return (
@@ -271,24 +256,17 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
         ))}
 
         <div className="relative flex items-center flex-1 min-w-[180px]">
-          {/* Mode toggle */}
-          <button
-            onClick={() => setInputMode(m => m === 'email' ? 'phone' : 'email')}
-            title={inputMode === 'email' ? 'Switch to phone' : 'Switch to email'}
+          <Mail 
             className={cn(
-              'mr-1 p-1 rounded transition-colors cursor-pointer shrink-0',
-              isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600',
+              'mr-1 w-4 h-4 shrink-0',
+              isDark ? 'text-blue-400' : 'text-blue-500',
             )}
-          >
-            {inputMode === 'email'
-              ? <AtSign className="w-3.5 h-3.5" />
-              : <Phone className="w-3.5 h-3.5" />}
-          </button>
-
+          />
+          
           <input
             ref={inputRef}
-            type={inputMode === 'phone' ? 'tel' : 'text'}
-            inputMode={inputMode === 'phone' ? 'tel' : 'email'}
+            type="email"
+            inputMode="email"
             value={inputValue}
             onChange={e => handleChange(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -315,7 +293,7 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
                   isDark ? 'text-gray-400 border-gray-700' : 'text-gray-500 border-gray-100',
                 )}
               >
-                <Mail className="w-3 h-3" /> Suggestions
+                <Mail className="w-3 h-3" /> Email Suggestions
               </div>
               {suggestions.map((s, i) => (
                 <SuggestionItem
@@ -323,7 +301,7 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
                   contact={s}
                   isDark={isDark}
                   isHighlighted={i === highlightIdx}
-                  onSelect={() => commit(s.email || s.phone || '', s.name)}
+                  onSelect={() => commit(s.email, s.name)}
                 />
               ))}
             </div>
@@ -365,6 +343,8 @@ export const ComposeRecipients: React.FC<ComposeRecipientsProps> = ({
   onToggleCc, onToggleBcc,
 }) => {
   const isDark = theme === 'dark';
+  const allRecipients = [...to, ...cc, ...bcc];
+  const hasInvalidRecipients = allRecipients.some(r => !r.isValid);
 
   return (
     <div className="px-4 pt-2">
@@ -435,18 +415,15 @@ export const ComposeRecipients: React.FC<ComposeRecipientsProps> = ({
         />
       )}
 
-      {/* Phone-only recipients note */}
-      {[...to, ...cc, ...bcc].some(r => r.contactType === 'phone') && (
-        <div
-          className={cn(
-            'flex items-center gap-1.5 text-xs mt-1.5 px-1',
-            isDark ? 'text-violet-400' : 'text-violet-600',
-          )}
-        >
-          <Phone className="w-3 h-3" />
-          Phone recipients will be sent via SMS gateway (requires backend SMS support).
-        </div>
-      )}
+      {/* Validation note */}
+      <div className="mt-2 px-1">
+        {hasInvalidRecipients && (
+          <div className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+            <AlertCircle className="w-3 h-3" />
+            Some recipients look invalid. Please review highlighted chips before sending.
+          </div>
+        )}
+      </div>
     </div>
   );
 };
