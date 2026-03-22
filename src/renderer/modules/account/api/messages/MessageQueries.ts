@@ -603,6 +603,27 @@ export const useRemoveMessageAttachment = () => {
   });
 };
 
+const extractFileNameFromContentDisposition = (
+  contentDisposition?: string,
+): string | null => {
+  if (!contentDisposition) return null;
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+
+  const asciiMatch = contentDisposition.match(/filename="([^"]+)"|filename=([^;]+)/i);
+  if (!asciiMatch) return null;
+
+  return (asciiMatch[1] ?? asciiMatch[2] ?? '').trim() || null;
+};
+
+
 /**
  * GET /messages/attachments/{attachmentId}
  *
@@ -666,18 +687,26 @@ export const useDownloadMessageAttachment = () => {
       }
 
       /* ── Trigger browser Save-As dialog ─────────────────────────────── */
-      const mimeType =
-        (response.headers['content-type'] as string) ?? 'application/octet-stream';
+      const serverFileName = extractFileNameFromContentDisposition(
+  response.headers['content-disposition'] as string | undefined,
+);
 
-      const blob     = new Blob([response.data as BlobPart], { type: mimeType });
-      const objectUrl = URL.createObjectURL(blob);
+        const resolvedFileName = serverFileName || fileName;
 
-      const link      = document.createElement('a');
-      link.href       = objectUrl;
-      link.download   = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+        /*
+        * response.data is already a Blob because responseType = 'blob'.
+        * Do not wrap it again.
+        */
+        const blob = response.data;
+        const objectUrl = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = resolvedFileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
 
       // Release after enough time for the browser to start the download
       setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
