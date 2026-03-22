@@ -37,7 +37,7 @@ export const ROUTES = {
   HELP: '/help',
 
   // Dashboards
-  PATIENT_DASHBOARD: '/dahboard/patient',
+  PATIENT_DASHBOARD: '/dashboard/patient',
 
   // Role-Based Clinical Modules
   MEDICAL_RECORDS: '/medical-records',
