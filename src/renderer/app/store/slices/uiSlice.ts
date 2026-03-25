@@ -1,4 +1,3 @@
-// uiSlice.ts - add selectors at the bottom
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 /* =========================
@@ -23,31 +22,55 @@ type UIPreferences = Pick<UIState, 'theme' | 'sidebarOpen' | 'sidebarCollapsed'>
 
 const UI_STORAGE_KEY = 'custocare_ui_preferences';
 
-const loadUIPreferences = (): UIPreferences => {
-  try {
-    const stored = localStorage.getItem(UI_STORAGE_KEY);
-    if (!stored) {
-      return { 
-        theme: 'dark', 
-        sidebarOpen: true,
-        sidebarCollapsed: false 
-      };
-    }
-    return JSON.parse(stored);
-  } catch {
-    return { 
-      theme: 'dark', 
-      sidebarOpen: true,
-      sidebarCollapsed: false 
-    };
-  }
+const DEFAULT_UI_PREFERENCES: UIPreferences = {
+  theme: 'light',
+  sidebarOpen: true,
+  sidebarCollapsed: false,
 };
+
+const isValidTheme = (value: unknown): value is UIState['theme'] =>
+  value === 'light' || value === 'dark';
 
 const saveUIPreferences = (prefs: UIPreferences) => {
   try {
     localStorage.setItem(UI_STORAGE_KEY, JSON.stringify(prefs));
   } catch {
     // silently fail (private mode, quota exceeded, etc.)
+  }
+};
+
+const loadUIPreferences = (): UIPreferences => {
+  try {
+    const stored = localStorage.getItem(UI_STORAGE_KEY);
+
+    // Nothing in localStorage -> use light and persist it
+    if (!stored) {
+      saveUIPreferences(DEFAULT_UI_PREFERENCES);
+      return DEFAULT_UI_PREFERENCES;
+    }
+
+    const parsed = JSON.parse(stored) as Partial<UIPreferences>;
+
+    const normalized: UIPreferences = {
+      theme: isValidTheme(parsed?.theme) ? parsed.theme : 'light',
+      sidebarOpen:
+        typeof parsed?.sidebarOpen === 'boolean'
+          ? parsed.sidebarOpen
+          : DEFAULT_UI_PREFERENCES.sidebarOpen,
+      sidebarCollapsed:
+        typeof parsed?.sidebarCollapsed === 'boolean'
+          ? parsed.sidebarCollapsed
+          : DEFAULT_UI_PREFERENCES.sidebarCollapsed,
+    };
+
+    // Re-save normalized value in case stored object is partial/invalid
+    saveUIPreferences(normalized);
+
+    return normalized;
+  } catch {
+    // Invalid JSON or localStorage read error -> fallback to light and persist it
+    saveUIPreferences(DEFAULT_UI_PREFERENCES);
+    return DEFAULT_UI_PREFERENCES;
   }
 };
 
@@ -58,7 +81,7 @@ const saveUIPreferences = (prefs: UIPreferences) => {
 const persistedPrefs = loadUIPreferences();
 
 const initialState: UIState = {
-  isInitialized: true, // Initialize immediately - no artificial loading
+  isInitialized: true,
   isLoading: false,
   loadingMessage: null,
   sidebarOpen: persistedPrefs.sidebarOpen,
@@ -179,7 +202,8 @@ export const selectSidebarCollapsed = (state: { ui: UIState }) => state.ui.sideb
 export const selectIsLoading = (state: { ui: UIState }) => state.ui.isLoading;
 export const selectLoadingMessage = (state: { ui: UIState }) => state.ui.loadingMessage;
 export const selectIsInitialized = (state: { ui: UIState }) => state.ui.isInitialized;
-export const selectModalOpen = (modalId: string) => (state: { ui: UIState }) => state.ui.modalOpen[modalId] || false;
+export const selectModalOpen = (modalId: string) => (state: { ui: UIState }) =>
+  state.ui.modalOpen[modalId] || false;
 
 /* =========================
    Exports

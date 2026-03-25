@@ -76,7 +76,7 @@ const MRBilling: React.FC<MRBillingProps> = ({
         />
 
       {/* Billing Tray Overlay */}
-      <BillingTray theme={theme} />
+      <BillingTray />
     </div>
   );
 };
