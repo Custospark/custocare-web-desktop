@@ -347,18 +347,22 @@ const ActionCard: React.FC<ActionCardProps> = React.memo(
 
     return (
       <div className={cn('rounded-xl border p-5', toneClasses.bg, toneClasses.border)}>
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex flex-col gap-5">
+          {/* Content Section */}
           <div className="flex gap-4">
             <div className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border', toneClasses.icon)}>
               {icon}
             </div>
 
-            <div>
+            <div className="flex-1">
               <h4 className={cn('text-base font-semibold', toneClasses.text)}>{title}</h4>
-              <p className={cn('mt-1 text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>{description}</p>
+              <p className={cn('mt-1 text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                {description}
+              </p>
             </div>
           </div>
 
+          {/* Button Section - Full width column */}
           <motion.button
             type="button"
             whileHover={!disabled ? { scale: 1.02 } : undefined}
@@ -366,7 +370,8 @@ const ActionCard: React.FC<ActionCardProps> = React.memo(
             onClick={onClick}
             disabled={disabled}
             className={cn(
-              'inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition-all whitespace-nowrap',
+              'flex w-full items-center justify-between gap-3 rounded-lg border px-5 py-3 text-sm font-semibold transition-all',
+              'sm:px-6 sm:py-3.5',
               toneClasses.bg,
               toneClasses.border,
               toneClasses.text,
@@ -374,8 +379,8 @@ const ActionCard: React.FC<ActionCardProps> = React.memo(
               disabled && 'cursor-not-allowed opacity-50'
             )}
           >
-            {buttonLabel}
-            <AlertTriangle className="h-4 w-4" />
+            <span className="flex-1 text-left break-words">{buttonLabel}</span>
+            <AlertTriangle className="h-5 w-5 shrink-0" />
           </motion.button>
         </div>
       </div>
@@ -392,6 +397,8 @@ interface ActionReasonFormProps {
   onBack: () => void;
   isLoading?: boolean;
 }
+
+
 
 const ActionReasonForm: React.FC<ActionReasonFormProps> = React.memo(
   ({ theme, actionType, onSubmit, onBack, isLoading = false }) => {
@@ -448,27 +455,42 @@ const ActionReasonForm: React.FC<ActionReasonFormProps> = React.memo(
     const finalReasonText = useMemo(() => {
       if (!selectedReason) return '';
 
-      const base =
-        selectedReason === 'other'
-          ? customReason.trim()
-          : (selectedOption?.label ?? selectedReason).trim();
+      // Handle "other" reason
+      if (selectedReason === 'other') {
+        const custom = customReason.trim();
+        if (!custom) return '';
+        // If details are provided for "other" (though "other" already has requiresDetails)
+        const extra = details.trim();
+        return extra ? `${custom}: ${extra}` : custom;
+      }
 
-      if (!base) return '';
-
+      // Handle other reasons with requiresDetails
+      const base = selectedOption?.label ?? selectedReason;
       if (selectedOption?.requiresDetails) {
         const extra = details.trim();
-        return extra ? `${base}: ${extra}` : '';
+        return extra ? `${base}: ${extra}` : base;
       }
 
       return base;
     }, [customReason, details, selectedOption, selectedReason]);
 
+    // FIXED: Simplified validation logic
     const isValid = useMemo(() => {
       if (!selectedReason) return false;
-      if (selectedReason === 'other' && !customReason.trim()) return false;
-      if (selectedOption?.requiresDetails && !details.trim()) return false;
+      
+      // For "other" reason, require custom reason text
+      if (selectedReason === 'other') {
+        return customReason.trim().length > 0;
+      }
+      
+      // For reasons that require additional details
+      if (selectedOption?.requiresDetails) {
+        return details.trim().length > 0;
+      }
+      
+      // For all other reasons, just having the reason selected is enough
       return true;
-    }, [customReason, details, selectedOption, selectedReason]);
+    }, [selectedReason, selectedOption, customReason, details]);
 
     const tone = getToneClasses(isCancel ? 'warning' : 'danger', isDark);
 
@@ -504,7 +526,16 @@ const ActionReasonForm: React.FC<ActionReasonFormProps> = React.memo(
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => setSelectedReason(option.value)}
+                  onClick={() => {
+                    setSelectedReason(option.value);
+                    // Reset dependent fields when changing reason
+                    if (option.value !== 'other') {
+                      setCustomReason('');
+                    }
+                    if (!option.requiresDetails) {
+                      setDetails('');
+                    }
+                  }}
                   className={cn(
                     'rounded-lg border p-4 text-left transition-all',
                     'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
@@ -531,6 +562,7 @@ const ActionReasonForm: React.FC<ActionReasonFormProps> = React.memo(
           </div>
         </div>
 
+        {/* Custom Reason Input for "Other" */}
         {selectedReason === 'other' && (
           <div>
             <label className={cn('mb-2 block text-sm font-medium', isDark ? 'text-white' : 'text-slate-900')}>
@@ -544,13 +576,16 @@ const ActionReasonForm: React.FC<ActionReasonFormProps> = React.memo(
                 'w-full rounded-lg border px-4 py-2.5 outline-none transition focus:ring-2 focus:ring-blue-500',
                 isDark
                   ? 'border-gray-800 bg-gray-950 text-white focus:border-blue-500'
-                  : 'border-slate-200 bg-white text-slate-900 focus:border-blue-500'
+                  : 'border-slate-200 bg-white text-slate-900 focus:border-blue-500',
+                'cursor-text'
               )}
               placeholder={`Enter the reason to ${isCancel ? 'cancel' : 'delete'} this visit`}
+              autoFocus
             />
           </div>
         )}
 
+        {/* Additional Details for reasons that require them (excluding "other" since it's handled separately) */}
         {selectedOption?.requiresDetails && selectedReason !== 'other' && (
           <div>
             <label className={cn('mb-2 block text-sm font-medium', isDark ? 'text-white' : 'text-slate-900')}>
@@ -564,9 +599,11 @@ const ActionReasonForm: React.FC<ActionReasonFormProps> = React.memo(
                 'w-full rounded-lg border px-4 py-2.5 outline-none transition focus:ring-2 focus:ring-blue-500',
                 isDark
                   ? 'border-gray-800 bg-gray-950 text-white focus:border-blue-500'
-                  : 'border-slate-200 bg-white text-slate-900 focus:border-blue-500'
+                  : 'border-slate-200 bg-white text-slate-900 focus:border-blue-500',
+                'cursor-text'
               )}
               placeholder="Provide additional details for audit purposes"
+              autoFocus
             />
           </div>
         )}
