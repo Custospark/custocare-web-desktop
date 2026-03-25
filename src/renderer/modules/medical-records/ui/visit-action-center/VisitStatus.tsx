@@ -1,44 +1,37 @@
 /**
  * ============================================================================
- * VISIT STATUS COMPONENT (Status-only, user-friendly, optimistic Redux updates)
+ * VISIT STATUS COMPONENT - ENTERPRISE EDITION
+ * Fully responsive with adaptive layouts and no text truncation
  * ============================================================================
- *
- * What this component does (per your requirements):
- * - ✅ NO phase management (status-only)
- * - ✅ Status change is confirmed; optimistic Redux update happens AFTER backend success
- * - ✅ Cancel requires reason (UI-enforced) and clears slice + redirects on success
- * - ✅ Delete requires reason (UI-enforced) and clears slice + redirects on success
- * - ✅ If status becomes COMPLETED or NO_SHOW: clears slice + redirects on success
- * - ✅ Clear status transitions UI so users understand what each status means
- * - ✅ Avoid duplicate type imports/enum naming collisions (VisitStatus enum aliased)
- * - ✅ Bug-free: stable hooks, guards, no unused imports, safe null handling
- *
- * NOTE ABOUT DELETE REASON:
- * Your current useDeleteVisit hook does NOT accept a reason param (backend call is DELETE /visits/:uuid).
- * This component enforces reason in UI, and logs/records it locally only.
- * If backend truly requires `deletion_reason`, you must update useDeleteVisit to send it.
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
+import type { AxiosError } from 'axios';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   Activity,
   AlertCircle,
   AlertTriangle,
-  CheckCircle,
+  ArrowRight,
+  Calendar,
+  Check,
+  CheckCircle2,
+  ClipboardList,
+  Clock,
   Loader2,
-  Play,
+  PlayCircle,
+  ShieldAlert,
   Trash2,
+  UserRound,
   UserX,
   X,
   XCircle,
 } from 'lucide-react';
-import type { AxiosError } from 'axios';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
 
 import { cn } from '../../../../shared/utils/classNameUtils';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
-// import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import { useConfirm } from '../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
 
@@ -59,7 +52,10 @@ import {
   useUpdateVisitStatus,
 } from '../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
 
-import type { ApiErrorResponse, VisitResponse } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import type {
+  ApiErrorResponse,
+  VisitResponse,
+} from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { VisitStatus as VisitStatusEnum } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 
 /* -------------------------------------------------------------------------- */
@@ -72,127 +68,322 @@ interface VisitStatusProps {
   onActionComplete?: () => void | Promise<void>;
   readOnly?: boolean;
   compact?: boolean;
-  visitUuid?: string; // optional override
+  visitUuid?: string;
 }
 
-type StatusOption = {
+interface StatusOption {
   value: VisitStatusEnum;
   label: string;
-  icon: React.ReactNode;
   description: string;
-  userImpact: string;
-  isTerminal?: boolean; // if true => clear slice + redirect after success
-};
+  icon: React.ReactNode;
+  tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+  isTerminal?: boolean;
+}
 
-type ActionReasonOption = {
+interface ActionReasonOption {
   value: string;
   label: string;
   description: string;
   requiresDetails?: boolean;
-};
+}
+
+type Mode = 'idle' | 'cancel' | 'delete';
+type ActionInProgress = 'status' | 'cancel' | 'delete' | null;
 
 /* -------------------------------------------------------------------------- */
-/*                             SMALL UTIL HELPERS                             */
+/*                                  CONSTANTS                                 */
 /* -------------------------------------------------------------------------- */
-
-const isTerminalStatus = (s: VisitStatusEnum): boolean =>
-  s === VisitStatusEnum.CANCELLED || s === VisitStatusEnum.COMPLETED || s === VisitStatusEnum.NO_SHOW;
 
 const queueRedirectPath = MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE;
 
+const isTerminalStatus = (status: VisitStatusEnum): boolean =>
+  status === VisitStatusEnum.CANCELLED ||
+  status === VisitStatusEnum.COMPLETED ||
+  status === VisitStatusEnum.NO_SHOW;
+
+const STATUS_OPTIONS: StatusOption[] = [
+  {
+    value: VisitStatusEnum.ACTIVE,
+    label: 'Active',
+    description: 'Visit is open and awaiting next steps',
+    icon: <PlayCircle className="h-5 w-5" />,
+    tone: 'info',
+  },
+  {
+    value: VisitStatusEnum.IN_PROGRESS,
+    label: 'In Progress',
+    description: 'Care is currently being provided',
+    icon: <Activity className="h-5 w-5" />,
+    tone: 'neutral',
+  },
+  {
+    value: VisitStatusEnum.COMPLETED,
+    label: 'Completed',
+    description: 'Visit is finished and closed',
+    icon: <CheckCircle2 className="h-5 w-5" />,
+    tone: 'success',
+    isTerminal: true,
+  },
+  {
+    value: VisitStatusEnum.NO_SHOW,
+    label: 'No Show',
+    description: 'Patient did not arrive',
+    icon: <UserX className="h-5 w-5" />,
+    tone: 'warning',
+    isTerminal: true,
+  },
+  {
+    value: VisitStatusEnum.CANCELLED,
+    label: 'Cancelled',
+    description: 'Visit is cancelled (audit-safe)',
+    icon: <XCircle className="h-5 w-5" />,
+    tone: 'danger',
+    isTerminal: true,
+  },
+];
+
 /* -------------------------------------------------------------------------- */
-/*                               SUBCOMPONENTS                                */
+/*                              DESIGN UTILITIES                              */
 /* -------------------------------------------------------------------------- */
 
-interface StatusSelectorProps {
+const getToneClasses = (tone: StatusOption['tone'], isDark: boolean) => {
+  const tones = {
+    success: {
+      light: {
+        bg: 'bg-emerald-50',
+        border: 'border-emerald-200',
+        text: 'text-emerald-700',
+        icon: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+        ring: 'ring-emerald-300',
+        hover: 'hover:border-emerald-300 hover:shadow-md',
+      },
+      dark: {
+        bg: 'bg-emerald-500/10',
+        border: 'border-emerald-500/20',
+        text: 'text-emerald-300',
+        icon: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/20',
+        ring: 'ring-emerald-400/40',
+        hover: 'hover:border-emerald-500/30',
+      },
+    },
+    warning: {
+      light: {
+        bg: 'bg-amber-50',
+        border: 'border-amber-200',
+        text: 'text-amber-700',
+        icon: 'bg-amber-100 text-amber-700 border-amber-200',
+        ring: 'ring-amber-300',
+        hover: 'hover:border-amber-300',
+      },
+      dark: {
+        bg: 'bg-amber-500/10',
+        border: 'border-amber-500/20',
+        text: 'text-amber-300',
+        icon: 'bg-amber-500/15 text-amber-300 border-amber-500/20',
+        ring: 'ring-amber-400/40',
+        hover: 'hover:border-amber-500/30',
+      },
+    },
+    danger: {
+      light: {
+        bg: 'bg-red-50',
+        border: 'border-red-200',
+        text: 'text-red-700',
+        icon: 'bg-red-100 text-red-700 border-red-200',
+        ring: 'ring-red-300',
+        hover: 'hover:border-red-300',
+      },
+      dark: {
+        bg: 'bg-red-500/10',
+        border: 'border-red-500/20',
+        text: 'text-red-300',
+        icon: 'bg-red-500/15 text-red-300 border-red-500/20',
+        ring: 'ring-red-400/40',
+        hover: 'hover:border-red-500/30',
+      },
+    },
+    info: {
+      light: {
+        bg: 'bg-blue-50',
+        border: 'border-blue-200',
+        text: 'text-blue-700',
+        icon: 'bg-blue-100 text-blue-700 border-blue-200',
+        ring: 'ring-blue-300',
+        hover: 'hover:border-blue-300',
+      },
+      dark: {
+        bg: 'bg-blue-500/10',
+        border: 'border-blue-500/20',
+        text: 'text-blue-300',
+        icon: 'bg-blue-500/15 text-blue-300 border-blue-500/20',
+        ring: 'ring-blue-400/40',
+        hover: 'hover:border-blue-500/30',
+      },
+    },
+    neutral: {
+      light: {
+        bg: 'bg-slate-50',
+        border: 'border-slate-200',
+        text: 'text-slate-700',
+        icon: 'bg-slate-100 text-slate-700 border-slate-200',
+        ring: 'ring-slate-300',
+        hover: 'hover:border-slate-300',
+      },
+      dark: {
+        bg: 'bg-slate-500/10',
+        border: 'border-slate-500/20',
+        text: 'text-slate-300',
+        icon: 'bg-slate-500/15 text-slate-300 border-slate-500/20',
+        ring: 'ring-slate-400/30',
+        hover: 'hover:border-slate-500/30',
+      },
+    },
+  };
+
+  return isDark ? tones[tone].dark : tones[tone].light;
+};
+
+/* -------------------------------------------------------------------------- */
+/*                             SUBCOMPONENTS                                  */
+/* -------------------------------------------------------------------------- */
+
+interface StatusCardProps {
   theme: 'light' | 'dark';
+  option: StatusOption;
   currentStatus: VisitStatusEnum;
-  statuses: StatusOption[];
   onSelect: (status: VisitStatusEnum) => void;
   disabled?: boolean;
   loading?: boolean;
 }
 
-const StatusSelector: React.FC<StatusSelectorProps> = React.memo(
-  ({ theme, currentStatus, statuses, onSelect, disabled = false, loading = false }) => {
+const StatusCard: React.FC<StatusCardProps> = React.memo(
+  ({ theme, option, currentStatus, onSelect, disabled = false, loading = false }) => {
     const isDark = theme === 'dark';
-
-    const colors = useMemo(
-      () => ({
-        bg: isDark ? 'bg-gray-900' : 'bg-white',
-        border: isDark ? 'border-gray-700' : 'border-gray-200',
-        text: isDark ? 'text-gray-100' : 'text-gray-900',
-        textSecondary: isDark ? 'text-gray-400' : 'text-gray-600',
-        hoverBg: isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50',
-      }),
-      [isDark]
-    );
+    const selected = currentStatus === option.value;
+    const tone = getToneClasses(option.tone, isDark);
+    const isDisabled = disabled || loading;
 
     return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <div className={cn('text-sm font-semibold', colors.text)}>Change Visit Status</div>
-            <div className={cn('text-xs', colors.textSecondary)}>
-              Select a status below. You’ll be asked to confirm before updating.
+      <motion.button
+        type="button"
+        whileHover={!isDisabled ? { scale: 1.02 } : undefined}
+        whileTap={!isDisabled ? { scale: 0.98 } : undefined}
+        onClick={() => {
+          if (isDisabled || selected) return;
+          onSelect(option.value);
+        }}
+        disabled={isDisabled}
+        className={cn(
+          'w-full rounded-xl border p-4 text-left transition-all duration-200',
+          'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+          isDark ? 'focus:ring-offset-gray-950' : 'focus:ring-offset-white',
+          selected
+            ? cn(tone.bg, tone.border, 'ring-2', tone.ring)
+            : cn(
+                isDark
+                  ? 'border-gray-800 bg-gray-950/90 hover:border-gray-700'
+                  : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md',
+                tone.hover
+              ),
+          isDisabled && 'cursor-not-allowed opacity-60'
+        )}
+      >
+        <div className="flex gap-4">
+          <div className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border', tone.icon)}>
+            {option.icon}
+          </div>
+
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className={cn('text-base font-semibold', tone.text)}>{option.label}</div>
+                <div className={cn('mt-1 text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                  {option.description}
+                </div>
+              </div>
+
+              {option.isTerminal && (
+                <span
+                  className={cn(
+                    'rounded-full px-2 py-1 text-xs font-medium',
+                    isDark ? 'bg-red-500/10 text-red-300' : 'bg-red-100 text-red-700'
+                  )}
+                >
+                  Terminal
+                </span>
+              )}
+            </div>
+
+            {selected && (
+              <div className="mt-2 flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                <Check className="h-3 w-3" />
+                <span>Current Status</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.button>
+    );
+  }
+);
+
+StatusCard.displayName = 'StatusCard';
+
+interface ActionCardProps {
+  theme: 'light' | 'dark';
+  title: string;
+  description: string;
+  buttonLabel: string;
+  icon: React.ReactNode;
+  tone: 'warning' | 'danger';
+  disabled?: boolean;
+  onClick: () => void;
+}
+
+const ActionCard: React.FC<ActionCardProps> = React.memo(
+  ({ theme, title, description, buttonLabel, icon, tone, disabled = false, onClick }) => {
+    const isDark = theme === 'dark';
+    const toneClasses = getToneClasses(tone === 'warning' ? 'warning' : 'danger', isDark);
+
+    return (
+      <div className={cn('rounded-xl border p-5', toneClasses.bg, toneClasses.border)}>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="flex gap-4">
+            <div className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border', toneClasses.icon)}>
+              {icon}
+            </div>
+
+            <div>
+              <h4 className={cn('text-base font-semibold', toneClasses.text)}>{title}</h4>
+              <p className={cn('mt-1 text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>{description}</p>
             </div>
           </div>
 
-          <span className={cn('px-2 py-1 rounded-full text-xs font-medium', getStatusColor(currentStatus))}>
-            Current: {statuses.find((s) => s.value === currentStatus)?.label ?? currentStatus}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          {statuses.map((s) => {
-            const selected = s.value === currentStatus;
-            const isDisabled = disabled || loading;
-
-            return (
-              <button
-                key={s.value}
-                type="button"
-                onClick={() => {
-                  if (isDisabled) return;
-                  onSelect(s.value);
-                }}
-                disabled={isDisabled}
-                className={cn(
-                  'rounded-lg border p-3 text-left transition-all duration-200',
-                  'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
-                  isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
-                  selected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : colors.border,
-                  colors.bg,
-                  !isDisabled && colors.hoverBg,
-                  isDisabled && 'opacity-50 cursor-not-allowed'
-                )}
-                aria-pressed={selected}
-              >
-                <div className="flex items-start gap-2">
-                  <div className={cn('mt-0.5', colors.textSecondary)}>{s.icon}</div>
-                  <div className="min-w-0">
-                    <div className={cn('text-sm font-semibold', colors.text)}>{s.label}</div>
-                    <div className={cn('text-xs mt-1', colors.textSecondary)}>{s.description}</div>
-                    <div className={cn('text-xs mt-2', colors.textSecondary)}>
-                      <span className="font-medium">Impact:</span> {s.userImpact}
-                    </div>
-                    {s.isTerminal && (
-                      <div className={cn('text-xs mt-2', isDark ? 'text-red-300' : 'text-red-600')}>
-                        Terminal status — after success you will be returned to the queue.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+          <motion.button
+            type="button"
+            whileHover={!disabled ? { scale: 1.02 } : undefined}
+            whileTap={!disabled ? { scale: 0.98 } : undefined}
+            onClick={onClick}
+            disabled={disabled}
+            className={cn(
+              'inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition-all whitespace-nowrap',
+              toneClasses.bg,
+              toneClasses.border,
+              toneClasses.text,
+              !disabled && 'cursor-pointer hover:shadow-md',
+              disabled && 'cursor-not-allowed opacity-50'
+            )}
+          >
+            {buttonLabel}
+            <AlertTriangle className="h-4 w-4" />
+          </motion.button>
         </div>
       </div>
     );
   }
 );
 
-StatusSelector.displayName = 'StatusSelector';
+ActionCard.displayName = 'ActionCard';
 
 interface ActionReasonFormProps {
   theme: 'light' | 'dark';
@@ -202,188 +393,227 @@ interface ActionReasonFormProps {
   isLoading?: boolean;
 }
 
-const ActionReasonForm: React.FC<ActionReasonFormProps> = React.memo(({ theme, actionType, onSubmit, onBack, isLoading }) => {
-  const isDark = theme === 'dark';
+const ActionReasonForm: React.FC<ActionReasonFormProps> = React.memo(
+  ({ theme, actionType, onSubmit, onBack, isLoading = false }) => {
+    const isDark = theme === 'dark';
+    const isCancel = actionType === 'cancel';
 
-  const [selectedReason, setSelectedReason] = useState<string>('');
-  const [details, setDetails] = useState<string>('');
-  const [customReason, setCustomReason] = useState<string>('');
+    const [selectedReason, setSelectedReason] = useState('');
+    const [details, setDetails] = useState('');
+    const [customReason, setCustomReason] = useState('');
 
-  const colors = useMemo(
-    () => ({
-      bg: isDark ? 'bg-gray-900' : 'bg-white',
-      border: isDark ? 'border-gray-700' : 'border-gray-200',
-      text: isDark ? 'text-white' : 'text-gray-900',
-      textSecondary: isDark ? 'text-gray-400' : 'text-gray-600',
-      danger: isDark ? 'text-red-300' : 'text-red-600',
-      dangerBg: isDark ? 'bg-red-900/20' : 'bg-red-50',
-      warning: isDark ? 'text-yellow-300' : 'text-yellow-700',
-      warningBg: isDark ? 'bg-yellow-900/20' : 'bg-yellow-50',
-    }),
-    [isDark]
-  );
+    const reasonOptions = useMemo<ActionReasonOption[]>(
+      () => [
+        {
+          value: 'patient_requested',
+          label: 'Patient Requested',
+          description: `Patient requested to ${isCancel ? 'cancel' : 'delete'} the visit.`,
+        },
+        {
+          value: 'duplicate_visit',
+          label: 'Duplicate Visit',
+          description: 'Visit was created more than once and should not remain active.',
+        },
+        {
+          value: 'no_show',
+          label: 'No Show',
+          description: 'Patient did not attend the visit.',
+        },
+        {
+          value: 'wrong_information',
+          label: 'Wrong Information',
+          description: 'Visit contains incorrect patient, scheduling, or facility information.',
+        },
+        {
+          value: 'system_error',
+          label: 'System Error',
+          description: 'A technical issue requires manual intervention.',
+          requiresDetails: true,
+        },
+        {
+          value: 'other',
+          label: 'Other',
+          description: 'Provide a custom reason.',
+          requiresDetails: true,
+        },
+      ],
+      [isCancel]
+    );
 
-  const isCancel = actionType === 'cancel';
-  const title = isCancel ? 'Cancel Visit' : 'Delete Visit';
-  const verb = isCancel ? 'cancel' : 'delete';
+    const selectedOption = useMemo(
+      () => reasonOptions.find((reason) => reason.value === selectedReason),
+      [reasonOptions, selectedReason]
+    );
 
-  const reasonOptions = useMemo<ActionReasonOption[]>(
-    () => [
-      { value: 'patient_requested', label: 'Patient Requested', description: `Patient asked to ${verb} the visit` },
-      { value: 'duplicate_visit', label: 'Duplicate Visit', description: 'Visit was created in error (duplicate)' },
-      { value: 'no_show', label: 'No Show', description: 'Patient did not arrive for the visit' },
-      { value: 'wrong_information', label: 'Wrong Information', description: 'Incorrect patient/facility information' },
-      { value: 'system_error', label: 'System Error', description: 'Technical/system issue', requiresDetails: true },
-      { value: 'other', label: 'Other', description: 'Specify reason below', requiresDetails: true },
-    ],
-    [verb]
-  );
+    const finalReasonText = useMemo(() => {
+      if (!selectedReason) return '';
 
-  const selectedOption = useMemo(
-    () => reasonOptions.find((r) => r.value === selectedReason),
-    [reasonOptions, selectedReason]
-  );
+      const base =
+        selectedReason === 'other'
+          ? customReason.trim()
+          : (selectedOption?.label ?? selectedReason).trim();
 
-  const reasonText = useMemo(() => {
-    if (!selectedReason) return '';
-    const base =
-      selectedReason === 'other' ? customReason.trim() : (selectedOption?.label ?? selectedReason).trim();
-    if (!base) return '';
-    if (selectedOption?.requiresDetails) return `${base}: ${details.trim()}`;
-    return base;
-  }, [customReason, details, selectedOption?.label, selectedOption?.requiresDetails, selectedReason]);
+      if (!base) return '';
 
-  const isValid = useMemo(() => {
-    if (!selectedReason) return false;
-    if (selectedReason === 'other' && !customReason.trim()) return false;
-    if (selectedOption?.requiresDetails && !details.trim()) return false;
-    return true;
-  }, [customReason, details, selectedOption?.requiresDetails, selectedReason]);
+      if (selectedOption?.requiresDetails) {
+        const extra = details.trim();
+        return extra ? `${base}: ${extra}` : '';
+      }
 
-  const panelBg = isCancel ? colors.warningBg : colors.dangerBg;
-  const panelText = isCancel ? colors.warning : colors.danger;
+      return base;
+    }, [customReason, details, selectedOption, selectedReason]);
 
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!isValid) return;
-        onSubmit(reasonText);
-      }}
-      className="space-y-4"
-    >
-      <div className={cn('p-4 rounded-lg border', panelBg, colors.border)}>
-        <div className="flex items-center gap-2 mb-2">
-          <AlertTriangle className={cn('w-5 h-5', panelText)} />
-          <h3 className={cn('font-semibold', panelText)}>{title}</h3>
+    const isValid = useMemo(() => {
+      if (!selectedReason) return false;
+      if (selectedReason === 'other' && !customReason.trim()) return false;
+      if (selectedOption?.requiresDetails && !details.trim()) return false;
+      return true;
+    }, [customReason, details, selectedOption, selectedReason]);
+
+    const tone = getToneClasses(isCancel ? 'warning' : 'danger', isDark);
+
+    return (
+      <form onSubmit={(e) => { e.preventDefault(); if (isValid) onSubmit(finalReasonText); }} className="space-y-6">
+        <div className={cn('rounded-xl border p-5', tone.bg, tone.border)}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', tone.icon)}>
+                <ShieldAlert className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className={cn('text-lg font-semibold', tone.text)}>
+                  {isCancel ? 'Cancel Visit' : 'Delete Visit'}
+                </h3>
+                <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                  Reason required. You will be returned to the queue after success.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-        <p className={cn('text-sm', colors.textSecondary)}>
-          Reason is required. After success, you will be returned to the patient queue.
-        </p>
-      </div>
 
-      <div>
-        <label className={cn('block text-sm font-medium mb-2', colors.text)}>Select Reason *</label>
-        <div className="space-y-2">
-          {reasonOptions.map((r) => {
-            const selected = selectedReason === r.value;
-
-            return (
-              <button
-                key={r.value}
-                type="button"
-                onClick={() => setSelectedReason(r.value)}
-                className={cn(
-                  'w-full text-left p-3 rounded-lg border transition-colors',
-                  'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
-                  isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
-                  selected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : colors.border,
-                  colors.bg,
-                  isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'
-                )}
-                aria-pressed={selected}
-              >
-                <div className={cn('text-sm font-semibold', colors.text)}>{r.label}</div>
-                <div className={cn('text-xs mt-1', colors.textSecondary)}>{r.description}</div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {selectedReason === 'other' && (
         <div>
-          <label className={cn('block text-sm font-medium mb-2', colors.text)}>Specify Reason *</label>
-          <input
-            value={customReason}
-            onChange={(e) => setCustomReason(e.target.value)}
-            className={cn(
-              'w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500',
-              colors.bg,
-              colors.border,
-              colors.text
-            )}
-            placeholder={`Enter the reason to ${verb} this visit...`}
-            required
-          />
+          <label className={cn('mb-3 block text-sm font-medium', isDark ? 'text-white' : 'text-slate-900')}>
+            Reason *
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {reasonOptions.map((option) => {
+              const selected = option.value === selectedReason;
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setSelectedReason(option.value)}
+                  className={cn(
+                    'rounded-lg border p-4 text-left transition-all',
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                    isDark ? 'focus:ring-offset-gray-950' : 'focus:ring-offset-white',
+                    selected
+                      ? isDark
+                        ? 'border-blue-500/40 bg-blue-500/10'
+                        : 'border-blue-300 bg-blue-50'
+                      : isDark
+                        ? 'border-gray-800 bg-gray-950 hover:border-gray-700'
+                        : 'border-slate-200 bg-white hover:border-slate-300',
+                    'cursor-pointer'
+                  )}
+                >
+                  <div className={cn('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                    {option.label}
+                  </div>
+                  <div className={cn('mt-1 text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                    {option.description}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      )}
 
-      {selectedOption?.requiresDetails && (
-        <div>
-          <label className={cn('block text-sm font-medium mb-2', colors.text)}>Additional Details *</label>
-          <textarea
-            value={details}
-            onChange={(e) => setDetails(e.target.value)}
-            rows={3}
+        {selectedReason === 'other' && (
+          <div>
+            <label className={cn('mb-2 block text-sm font-medium', isDark ? 'text-white' : 'text-slate-900')}>
+              Specify Reason *
+            </label>
+            <input
+              type="text"
+              value={customReason}
+              onChange={(e) => setCustomReason(e.target.value)}
+              className={cn(
+                'w-full rounded-lg border px-4 py-2.5 outline-none transition focus:ring-2 focus:ring-blue-500',
+                isDark
+                  ? 'border-gray-800 bg-gray-950 text-white focus:border-blue-500'
+                  : 'border-slate-200 bg-white text-slate-900 focus:border-blue-500'
+              )}
+              placeholder={`Enter the reason to ${isCancel ? 'cancel' : 'delete'} this visit`}
+            />
+          </div>
+        )}
+
+        {selectedOption?.requiresDetails && selectedReason !== 'other' && (
+          <div>
+            <label className={cn('mb-2 block text-sm font-medium', isDark ? 'text-white' : 'text-slate-900')}>
+              Additional Details *
+            </label>
+            <textarea
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              rows={3}
+              className={cn(
+                'w-full rounded-lg border px-4 py-2.5 outline-none transition focus:ring-2 focus:ring-blue-500',
+                isDark
+                  ? 'border-gray-800 bg-gray-950 text-white focus:border-blue-500'
+                  : 'border-slate-200 bg-white text-slate-900 focus:border-blue-500'
+              )}
+              placeholder="Provide additional details for audit purposes"
+            />
+          </div>
+        )}
+
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onBack}
+            disabled={isLoading}
             className={cn(
-              'w-full px-3 py-2 rounded-lg border resize-none focus:outline-none focus:ring-2 focus:ring-blue-500',
-              colors.bg,
-              colors.border,
-              colors.text
+              'rounded-lg border px-6 py-2.5 text-sm font-semibold transition-all',
+              isDark
+                ? 'border-gray-800 bg-gray-950 text-gray-200 hover:bg-gray-900'
+                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+              isLoading && 'cursor-not-allowed opacity-50',
+              !isLoading && 'cursor-pointer'
             )}
-            placeholder="Provide additional details..."
-            required
-          />
+          >
+            Back
+          </button>
+
+          <button
+            type="submit"
+            disabled={!isValid || isLoading}
+            className={cn(
+              'rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-all',
+              isCancel ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700',
+              (!isValid || isLoading) && 'cursor-not-allowed opacity-50',
+              isValid && !isLoading && 'cursor-pointer'
+            )}
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Processing...
+              </span>
+            ) : isCancel ? (
+              'Confirm Cancellation'
+            ) : (
+              'Confirm Deletion'
+            )}
+          </button>
         </div>
-      )}
-
-      <div className="flex gap-3 pt-2">
-        <button
-          type="button"
-          onClick={onBack}
-          disabled={!!isLoading}
-          className={cn(
-            'flex-1 py-2 rounded-lg font-semibold transition-colors',
-            isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700',
-            !!isLoading && 'opacity-50 cursor-not-allowed'
-          )}
-        >
-          Back
-        </button>
-
-        <button
-          type="submit"
-          disabled={!isValid || !!isLoading}
-          className={cn(
-            'flex-1 py-2 rounded-lg font-semibold transition-colors',
-            isCancel ? 'bg-yellow-600 hover:bg-yellow-700 text-white' : 'bg-red-600 hover:bg-red-700 text-white',
-            (!isValid || !!isLoading) && 'opacity-50 cursor-not-allowed'
-          )}
-        >
-          {isLoading ? (
-            <span className="flex items-center justify-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Processing...
-            </span>
-          ) : (
-            title
-          )}
-        </button>
-      </div>
-    </form>
-  );
-});
+      </form>
+    );
+  }
+);
 
 ActionReasonForm.displayName = 'ActionReasonForm';
 
@@ -402,7 +632,6 @@ const VisitStatus: React.FC<VisitStatusProps> = ({
   const isDark = theme === 'dark';
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  // const { showToast } = useToast();
   const { confirm } = useConfirm();
 
   const reduxVisitUuid = useSelector(selectActiveVisitUuid);
@@ -412,104 +641,23 @@ const VisitStatus: React.FC<VisitStatusProps> = ({
 
   const visitUuid = propVisitUuid ?? reduxVisitUuid;
 
-  const [mode, setMode] = useState<'idle' | 'cancel' | 'delete'>('idle');
+  const [mode, setMode] = useState<Mode>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [actionInProgress, setActionInProgress] = useState<'status' | 'cancel' | 'delete' | null>(null);
+  const [actionInProgress, setActionInProgress] = useState<ActionInProgress>(null);
 
-  const colors = useMemo(
-    () => ({
-      bg: isDark ? 'bg-gray-900' : 'bg-white',
-      border: isDark ? 'border-gray-800' : 'border-gray-200',
-      text: {
-        primary: isDark ? 'text-white' : 'text-gray-900',
-        secondary: isDark ? 'text-gray-400' : 'text-gray-600',
-      },
-      accent: {
-        bg: isDark ? 'bg-blue-900/20' : 'bg-blue-50',
-        text: isDark ? 'text-blue-300' : 'text-blue-600',
-        border: isDark ? 'border-blue-800' : 'border-blue-200',
-      },
-      warning: {
-        bg: isDark ? 'bg-yellow-900/20' : 'bg-yellow-50',
-        text: isDark ? 'text-yellow-300' : 'text-yellow-700',
-        border: isDark ? 'border-yellow-800' : 'border-yellow-200',
-      },
-      danger: {
-        bg: isDark ? 'bg-red-900/20' : 'bg-red-50',
-        text: isDark ? 'text-red-300' : 'text-red-600',
-        border: isDark ? 'border-red-800' : 'border-red-200',
-      },
-    }),
-    [isDark]
-  );
-
-  const displayPatientName = activePatient?.name || visitInfo?.patientName || 'Patient';
-  const displayPatientNumber = visitInfo?.patientNumber || 'N/A';
-
-  // Keep the backend query (for freshness), but UI is driven by Redux.
   const { isLoading: isLoadingVisit } = useGetVisitByUUID(visitUuid ?? '', {
     enabled: !!visitUuid,
     staleTime: 10_000,
   });
 
-  const statuses = useMemo<StatusOption[]>(
-    () => [
-      {
-        value: VisitStatusEnum.ACTIVE,
-        label: 'Active',
-        icon: <Play className="w-4 h-4" />,
-        description: 'Visit is open and awaiting next steps.',
-        userImpact: 'Visit stays in your workspace.',
-      },
-      {
-        value: VisitStatusEnum.IN_PROGRESS,
-        label: 'In Progress',
-        icon: <Activity className="w-4 h-4" />,
-        description: 'Care is currently being provided.',
-        userImpact: 'Visit stays in your workspace.',
-      },
-      {
-        value: VisitStatusEnum.COMPLETED,
-        label: 'Completed',
-        icon: <CheckCircle className="w-4 h-4" />,
-        description: 'Visit is finished and closed.',
-        userImpact: 'You’ll be returned to the queue after success.',
-        isTerminal: true,
-      },
-      {
-        value: VisitStatusEnum.NO_SHOW,
-        label: 'No Show',
-        icon: <UserX className="w-4 h-4" />,
-        description: 'Patient did not arrive.',
-        userImpact: 'You’ll be returned to the queue after success.',
-        isTerminal: true,
-      },
-      {
-        value: VisitStatusEnum.CANCELLED,
-        label: 'Cancelled',
-        icon: <XCircle className="w-4 h-4" />,
-        description: 'Visit is cancelled (audit-safe).',
-        userImpact: 'You’ll be returned to the queue after success.',
-        isTerminal: true,
-      },
-    ],
-    []
-  );
-
   const updateStatusMutation = useUpdateVisitStatus({
-    onSuccess: (data: VisitResponse) => {
-      const newStatus = data.data.status;
-
-      // Optimistic Redux update AFTER success (your requirement)
-      dispatch(updateActiveVisitStatus(newStatus));
-
+    onSuccess: (response: VisitResponse) => {
+      const nextStatus = response.data.status;
+      dispatch(updateActiveVisitStatus(nextStatus));
       setError(null);
       setActionInProgress(null);
 
-      // showToast('success', `Status updated to "${newStatus}".`, 3000);
-
-      // If new status is terminal => clear slice + redirect to queue
-      if (isTerminalStatus(newStatus)) {
+      if (isTerminalStatus(nextStatus)) {
         dispatch(emergencyClearVisit());
         navigate(queueRedirectPath);
       }
@@ -518,9 +666,8 @@ const VisitStatus: React.FC<VisitStatusProps> = ({
     },
     onError: (err: AxiosError<ApiErrorResponse>) => {
       setActionInProgress(null);
-      const msg = err.response?.data?.message || err.message || 'Failed to update visit status';
-      setError(msg);
-      // showToast('error', msg, 6000);
+      const message = err.response?.data?.message || err.message || 'Failed to update visit status';
+      setError(message);
     },
   });
 
@@ -529,19 +676,14 @@ const VisitStatus: React.FC<VisitStatusProps> = ({
       setError(null);
       setActionInProgress(null);
       setMode('idle');
-
-      // Cancel is terminal by definition for this workflow
       dispatch(emergencyClearVisit());
-      // showToast('success', 'Visit cancelled successfully.', 3000);
       navigate(queueRedirectPath);
-
       onActionComplete?.();
     },
     onError: (err: AxiosError<ApiErrorResponse>) => {
       setActionInProgress(null);
-      const msg = err.response?.data?.message || err.message || 'Failed to cancel visit';
-      setError(msg);
-      // showToast('error', msg, 6000);
+      const message = err.response?.data?.message || err.message || 'Failed to cancel visit';
+      setError(message);
     },
   });
 
@@ -550,96 +692,93 @@ const VisitStatus: React.FC<VisitStatusProps> = ({
       setError(null);
       setActionInProgress(null);
       setMode('idle');
-
       dispatch(emergencyClearVisit());
-      // showToast('success', 'Visit deleted successfully.', 3000);
       navigate(queueRedirectPath);
-
       onActionComplete?.();
     },
     onError: (err: AxiosError<ApiErrorResponse>) => {
       setActionInProgress(null);
-      const msg = err.response?.data?.message || err.message || 'Failed to delete visit';
-      setError(msg);
-      // showToast('error', msg, 6000);
+      const message = err.response?.data?.message || err.message || 'Failed to delete visit';
+      setError(message);
     },
   });
 
   const isBusy =
-    isLoadingVisit || updateStatusMutation.isPending || cancelMutation.isPending || deleteMutation.isPending;
+    isLoadingVisit ||
+    updateStatusMutation.isPending ||
+    cancelMutation.isPending ||
+    deleteMutation.isPending;
+
+  const handleBackToQueue = useCallback(() => {
+    navigate(queueRedirectPath);
+  }, [navigate]);
 
   const handleSelectStatus = useCallback(
-    async (next: VisitStatusEnum) => {
-      if (!visitUuid || readOnly) return;
-      if (!currentStatus) return;
-      if (next === currentStatus) return;
+    async (nextStatus: VisitStatusEnum) => {
+      if (!visitUuid || readOnly || !currentStatus) return;
+      if (nextStatus === currentStatus) return;
 
-      const nextMeta = statuses.find((s) => s.value === next);
-      const ok = await confirm({
+      const nextMeta = STATUS_OPTIONS.find((status) => status.value === nextStatus);
+      const displayName = activePatient?.name || visitInfo?.patientName || 'Patient';
+      const displayNumber = visitInfo?.patientNumber || 'N/A';
+
+      const approved = await confirm({
         title: 'Confirm Status Change',
         message: [
-          `Patient: ${displayPatientName} (${displayPatientNumber})`,
-          `From: ${currentStatus}`,
-          `To: ${next}`,
+          `Patient: ${displayName} (${displayNumber})`,
+          `Current status: ${currentStatus}`,
+          `New status: ${nextStatus}`,
           '',
           nextMeta?.isTerminal
-            ? 'This is a terminal status. After success, you will be returned to the queue.'
-            : 'This will keep the visit open in your workspace.',
+            ? 'This is a terminal status. After success, the visit will be cleared and you will return to the queue.'
+            : 'This update keeps the visit active in your current workspace.',
         ].join('\n'),
-        confirmText: 'Yes, update',
+        confirmText: 'Update Status',
         cancelText: 'Cancel',
         variant: nextMeta?.isTerminal ? 'warning' : 'info',
         theme,
       });
 
-      if (!ok) return;
+      if (!approved) return;
 
       setActionInProgress('status');
+
       try {
         await updateStatusMutation.mutateAsync({
           uuid: visitUuid,
-          data: { status: next },
+          data: { status: nextStatus },
         });
       } catch {
-        // handled via onError
+        // handled in onError
       }
     },
-    [
-      confirm,
-      currentStatus,
-      displayPatientName,
-      displayPatientNumber,
-      readOnly,
-      statuses,
-      theme,
-      updateStatusMutation,
-      visitUuid,
-    ]
+    [confirm, currentStatus, activePatient, visitInfo, readOnly, theme, updateStatusMutation, visitUuid]
   );
 
   const handleCancelSubmit = useCallback(
     async (reasonText: string) => {
       if (!visitUuid || readOnly) return;
 
-      const ok = await confirm({
+      const approved = await confirm({
         title: 'Confirm Cancellation',
-        message: `Cancel this visit?\n\nReason: ${reasonText}\n\nAfter success you will be returned to the queue.`,
-        confirmText: 'Yes, cancel',
-        cancelText: 'Keep visit',
+        message: `Cancel this visit?\n\nReason: ${reasonText}\n\nAfter success, you will return to the queue.`,
+        confirmText: 'Yes, Cancel Visit',
+        cancelText: 'Keep Visit',
         variant: 'warning',
         theme,
       });
 
-      if (!ok) return;
+      if (!approved) return;
 
       setActionInProgress('cancel');
+
       try {
         await cancelMutation.mutateAsync({
           uuid: visitUuid,
           data: { cancellation_reason: reasonText },
         });
       } catch {
-        // handled via onError
+        // handled in onError
       }
     },
     [cancelMutation, confirm, readOnly, theme, visitUuid]
@@ -649,79 +788,166 @@ const VisitStatus: React.FC<VisitStatusProps> = ({
     async (reasonText: string) => {
       if (!visitUuid || readOnly) return;
 
-      const ok = await confirm({
+      const approved = await confirm({
         title: 'Confirm Deletion',
-        message: `Delete this visit permanently?\n\nReason: ${reasonText}\n\nAfter success you will be returned to the queue.`,
-        confirmText: 'Yes, delete',
+        message: `Delete this visit permanently?\n\nReason: ${reasonText}\n\nAfter success, you will return to the queue.`,
+        confirmText: 'Yes, Delete Visit',
         cancelText: 'Cancel',
         variant: 'danger',
         theme,
       });
 
-      if (!ok) return;
+      if (!approved) return;
 
       setActionInProgress('delete');
 
-      // Backend hook doesn't accept reason (see note at top). UI still enforces it.
       try {
         await deleteMutation.mutateAsync({ uuid: visitUuid });
       } catch {
-        // handled via onError
+        // handled in onError
       }
     },
     [confirm, deleteMutation, readOnly, theme, visitUuid]
   );
 
-  // No active visit
+  // No active visit state
   if (!visitUuid) {
     return (
-      <div className={cn('rounded-xl border p-8 text-center', colors.bg, colors.border, className)}>
-        <Activity className={cn('w-16 h-16 mx-auto mb-4', colors.text.secondary)} />
-        <h3 className={cn('text-xl font-bold mb-2', colors.text.primary)}>No Active Visit Selected</h3>
-        <p className={cn('max-w-md mx-auto', colors.text.secondary)}>
-          Select a patient visit from the queue to manage its status.
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={cn(
+          'rounded-2xl border p-8 text-center shadow-sm',
+          isDark ? 'border-gray-800 bg-gray-950' : 'border-slate-200 bg-white',
+          className
+        )}
+      >
+        <div
+          className={cn(
+            'mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl',
+            isDark ? 'bg-gray-800' : 'bg-slate-100'
+          )}
+        >
+          <ClipboardList className={cn('h-8 w-8', isDark ? 'text-gray-500' : 'text-slate-400')} />
+        </div>
+
+        <h3 className={cn('mb-2 text-xl font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+          No Active Visit Selected
+        </h3>
+
+        <p className={cn('mb-6 max-w-md', isDark ? 'text-gray-400' : 'text-slate-600')}>
+          Select a patient visit from the queue to manage its status and track progress.
         </p>
-      </div>
+
+        <button
+          type="button"
+          onClick={handleBackToQueue}
+          className={cn(
+            'inline-flex items-center gap-2 rounded-lg border px-5 py-2.5 text-sm font-semibold transition-all',
+            isDark
+              ? 'border-gray-800 bg-gray-950 text-gray-200 hover:bg-gray-900'
+              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+            'cursor-pointer'
+          )}
+        >
+          Go to Queue
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </motion.div>
     );
   }
 
-  // Loading
+  // Loading state
   if (isLoadingVisit) {
     return (
       <div className={className}>
-        <LoadingSkeleton variant="detail" theme={theme} message="Loading visit..." />
+        <LoadingSkeleton variant="detail" theme={theme} message="Loading visit details..." />
       </div>
     );
   }
 
+  const currentStatusOption = STATUS_OPTIONS.find((s) => s.value === currentStatus);
+  const displayName = activePatient?.name || visitInfo?.patientName || 'Patient';
+  const displayNumber = visitInfo?.patientNumber || 'N/A';
+
   return (
     <div className={cn('space-y-6', className)}>
-      <div className={cn('rounded-xl border shadow-sm', colors.bg, colors.border)}>
-        {/* Header */}
-        <div className={cn('p-6 border-b', colors.border)}>
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className={cn('p-2.5 rounded-xl', colors.accent.bg)}>
-                <Activity className={cn('w-6 h-6', colors.accent.text)} />
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={cn(
+          'rounded-2xl border shadow-sm',
+          isDark ? 'border-gray-800 bg-gray-950' : 'border-slate-200 bg-white'
+        )}
+      >
+        {/* Header Section */}
+        <div className={cn('border-b p-6', isDark ? 'border-gray-800' : 'border-slate-200')}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex gap-4">
+              <div
+                className={cn(
+                  'flex h-14 w-14 shrink-0 items-center justify-center rounded-xl',
+                  currentStatusOption
+                    ? getToneClasses(currentStatusOption.tone, isDark).icon
+                    : isDark
+                    ? 'bg-gray-800 text-gray-500'
+                    : 'bg-slate-100 text-slate-500'
+                )}
+              >
+                {currentStatusOption?.icon || <Activity className="h-6 w-6" />}
               </div>
 
               <div>
-                <h2 className={cn('text-xl font-bold', colors.text.primary)}>Visit Status</h2>
-                <div className="flex flex-wrap items-center gap-2 mt-1">
-                  <span className={cn('text-sm', colors.text.secondary)}>{displayPatientName}</span>
-                  <span
-                    className={cn(
-                      'text-xs px-2 py-0.5 rounded',
-                      isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
-                    )}
-                  >
-                    {displayPatientNumber}
-                  </span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className={cn('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>
+                    Visit Status
+                  </h2>
 
                   {currentStatus && (
-                    <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', getStatusColor(currentStatus))}>
-                      {statuses.find((s) => s.value === currentStatus)?.label ?? currentStatus}
+                    <span
+                      className={cn(
+                        'rounded-full px-3 py-1 text-xs font-semibold',
+                        getStatusColor(currentStatus)
+                      )}
+                    >
+                      {currentStatusOption?.label || currentStatus}
                     </span>
+                  )}
+
+                  {readOnly && (
+                    <span
+                      className={cn(
+                        'rounded-full px-3 py-1 text-xs font-medium',
+                        isDark ? 'bg-gray-800 text-gray-300' : 'bg-slate-100 text-slate-700'
+                      )}
+                    >
+                      Read Only
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+                  <div className="flex items-center gap-2">
+                    <UserRound className={cn('h-4 w-4', isDark ? 'text-gray-500' : 'text-slate-400')} />
+                    <span className={cn('text-sm', isDark ? 'text-gray-300' : 'text-slate-700')}>
+                      {displayName}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <ClipboardList className={cn('h-4 w-4', isDark ? 'text-gray-500' : 'text-slate-400')} />
+                    <span className={cn('text-sm', isDark ? 'text-gray-300' : 'text-slate-700')}>
+                      Visit: {displayNumber}
+                    </span>
+                  </div>
+
+                  {visitInfo?.arrivedAt && (
+                    <div className="flex items-center gap-2">
+                      <Calendar className={cn('h-4 w-4', isDark ? 'text-gray-500' : 'text-slate-400')} />
+                      <span className={cn('text-sm', isDark ? 'text-gray-300' : 'text-slate-700')}>
+                        Started: {new Date(visitInfo.arrivedAt).toLocaleString()}
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -729,172 +955,224 @@ const VisitStatus: React.FC<VisitStatusProps> = ({
 
             <button
               type="button"
-              onClick={() => navigate(queueRedirectPath)}
+              onClick={handleBackToQueue}
               className={cn(
-                'px-3 py-2 rounded-lg text-sm font-semibold border transition-colors',
-                isDark ? 'border-gray-700 hover:bg-gray-800 text-gray-200' : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+                'inline-flex items-center justify-center gap-2 rounded-lg border px-5 py-2.5 text-sm font-semibold transition-all',
+                isDark
+                  ? 'border-gray-800 bg-gray-950 text-gray-200 hover:bg-gray-900'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+                'cursor-pointer'
               )}
             >
               Back to Queue
+              <ArrowRight className="h-4 w-4" />
             </button>
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
-          {/* Error */}
-          {error && (
-            <div className={cn('rounded-lg border p-4 flex gap-3 items-start', colors.danger.bg, colors.danger.border)}>
-              <AlertCircle className={cn('w-5 h-5 flex-shrink-0 mt-0.5', colors.danger.text)} />
-              <div className="flex-1">
-                <div className={cn('text-sm font-semibold', colors.danger.text)}>Something went wrong</div>
-                <div className={cn('text-sm mt-1', colors.danger.text)}>{error}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setError(null)}
-                className={cn(
-                  'p-1 rounded-lg transition-colors',
-                  isDark ? 'hover:bg-red-800/30 text-red-300' : 'hover:bg-red-100 text-red-600'
-                )}
-                aria-label="Dismiss error"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
-          {/* Busy banner */}
-          {isBusy && actionInProgress && (
-            <div className={cn('rounded-lg border p-4 flex items-center gap-3', colors.accent.bg, colors.accent.border)}>
-              <Loader2 className={cn('w-5 h-5 animate-spin', colors.accent.text)} />
-              <div className="min-w-0">
-                <div className={cn('text-sm font-semibold', colors.accent.text)}>
-                  {actionInProgress === 'status' && 'Updating status…'}
-                  {actionInProgress === 'cancel' && 'Cancelling visit…'}
-                  {actionInProgress === 'delete' && 'Deleting visit…'}
-                </div>
-                <div className={cn('text-xs mt-1', colors.text.secondary)}>Please wait, syncing with the server.</div>
-              </div>
-            </div>
-          )}
-
-          {/* Main Mode */}
-          {mode === 'idle' && currentStatus && (
-            <>
-              <StatusSelector
-                theme={theme}
-                currentStatus={currentStatus}
-                statuses={statuses}
-                onSelect={handleSelectStatus}
-                disabled={readOnly}
-                loading={updateStatusMutation.isPending}
-              />
-
-              <div className={cn('pt-4 border-t space-y-4', colors.border)}>
-                <div className={cn('text-lg font-bold', colors.text.primary)}>Actions</div>
-
-                <div className={cn('p-4 rounded-lg border', colors.warning.bg, colors.warning.border)}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <XCircle className={cn('w-5 h-5', colors.warning.text)} />
-                    <div className={cn('font-semibold', colors.warning.text)}>Cancel Visit</div>
+        {/* Content Section */}
+        <div className="p-6">
+          <div className="space-y-6">
+            {/* Error Alert */}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  className={cn(
+                    'rounded-xl border p-4',
+                    isDark ? 'border-red-500/20 bg-red-500/10' : 'border-red-200 bg-red-50'
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className={cn('mt-0.5 h-5 w-5', isDark ? 'text-red-400' : 'text-red-600')} />
+                    <div className="flex-1">
+                      <div className={cn('font-semibold', isDark ? 'text-red-400' : 'text-red-800')}>
+                        Something went wrong
+                      </div>
+                      <p className={cn('mt-1 text-sm', isDark ? 'text-red-300' : 'text-red-700')}>{error}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setError(null)}
+                      className={cn(
+                        'rounded p-1 transition-colors',
+                        isDark ? 'text-red-400 hover:bg-red-500/10' : 'text-red-600 hover:bg-red-100',
+                        'cursor-pointer'
+                      )}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
-                  <div className={cn('text-sm', colors.text.secondary)}>
-                    Cancels the visit (audit-safe). Reason required. Redirects to queue after success.
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Processing Indicator */}
+            <AnimatePresence>
+              {isBusy && actionInProgress && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  className={cn(
+                    'rounded-xl border p-4',
+                    isDark ? 'border-blue-500/20 bg-blue-500/10' : 'border-blue-200 bg-blue-50'
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <Loader2 className={cn('h-5 w-5 animate-spin', isDark ? 'text-blue-400' : 'text-blue-600')} />
+                    <div>
+                      <div className={cn('font-semibold', isDark ? 'text-blue-400' : 'text-blue-800')}>
+                        {actionInProgress === 'status' && 'Updating visit status...'}
+                        {actionInProgress === 'cancel' && 'Cancelling visit...'}
+                        {actionInProgress === 'delete' && 'Deleting visit...'}
+                      </div>
+                      <div className={cn('mt-1 text-sm', isDark ? 'text-blue-300' : 'text-blue-600')}>
+                        Please wait while we synchronize with the server.
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Main Content */}
+            <AnimatePresence mode="wait">
+              {mode === 'idle' && currentStatus && (
+                <motion.div
+                  key="idle"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-6"
+                >
+                  {/* Status Change Section */}
+                  <div>
+                    <div className="mb-4">
+                      <h3 className={cn('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                        Change Status
+                      </h3>
+                      <p className={cn('mt-1 text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                        Select a new status for this visit. You'll be prompted to confirm.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      {STATUS_OPTIONS.map((option) => (
+                        <StatusCard
+                          key={option.value}
+                          theme={theme}
+                          option={option}
+                          currentStatus={currentStatus}
+                          onSelect={handleSelectStatus}
+                          disabled={readOnly}
+                          loading={updateStatusMutation.isPending}
+                        />
+                      ))}
+                    </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setMode('cancel')}
-                    disabled={readOnly || isBusy}
-                    className={cn(
-                      'mt-3 w-full px-4 py-3 rounded-lg border font-semibold transition-colors flex items-center justify-between',
-                      isDark
-                        ? 'bg-yellow-900/30 hover:bg-yellow-900/40 text-yellow-300 border-yellow-800'
-                        : 'bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200',
-                      (readOnly || isBusy) && 'opacity-50 cursor-not-allowed'
-                    )}
-                  >
-                    <span>Cancel with reason</span>
-                    <AlertTriangle className="w-4 h-4" />
-                  </button>
-                </div>
+                  {/* Administrative Actions */}
+                  <div className={cn('pt-4', isDark ? 'border-t border-gray-800' : 'border-t border-slate-200')}>
+                    <div className="mb-4">
+                      <h3 className={cn('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                        Administrative Actions
+                      </h3>
+                      <p className={cn('mt-1 text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                        Restricted actions requiring a reason and confirmation.
+                      </p>
+                    </div>
 
-                <div className={cn('p-4 rounded-lg border', colors.danger.bg, colors.danger.border)}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Trash2 className={cn('w-5 h-5', colors.danger.text)} />
-                    <div className={cn('font-semibold', colors.danger.text)}>Delete Visit</div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <ActionCard
+                        theme={theme}
+                        tone="warning"
+                        title="Cancel Visit"
+                        description="Cancel the visit in an audit-safe way. Reason required."
+                        buttonLabel="Cancel with Reason"
+                        icon={<XCircle className="h-5 w-5" />}
+                        disabled={readOnly || isBusy}
+                        onClick={() => setMode('cancel')}
+                      />
+
+                      <ActionCard
+                        theme={theme}
+                        tone="danger"
+                        title="Delete Visit"
+                        description="Permanently remove the visit. Reason required."
+                        buttonLabel="Delete with Reason"
+                        icon={<Trash2 className="h-5 w-5" />}
+                        disabled={readOnly || isBusy}
+                        onClick={() => setMode('delete')}
+                      />
+                    </div>
                   </div>
-                  <div className={cn('text-sm', colors.text.secondary)}>
-                    Permanently deletes the visit. Reason required. Redirects to queue after success.
-                  </div>
+                </motion.div>
+              )}
 
-                  <button
-                    type="button"
-                    onClick={() => setMode('delete')}
-                    disabled={readOnly || isBusy}
-                    className={cn(
-                      'mt-3 w-full px-4 py-3 rounded-lg border font-semibold transition-colors flex items-center justify-between',
-                      isDark
-                        ? 'bg-red-900/30 hover:bg-red-900/40 text-red-300 border-red-800'
-                        : 'bg-red-50 hover:bg-red-100 text-red-600 border-red-200',
-                      (readOnly || isBusy) && 'opacity-50 cursor-not-allowed'
-                    )}
-                  >
-                    <span>Delete with reason</span>
-                    <AlertTriangle className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
+              {mode === 'cancel' && (
+                <motion.div
+                  key="cancel"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                >
+                  <ActionReasonForm
+                    theme={theme}
+                    actionType="cancel"
+                    onSubmit={handleCancelSubmit}
+                    onBack={() => setMode('idle')}
+                    isLoading={cancelMutation.isPending}
+                  />
+                </motion.div>
+              )}
 
-          {mode === 'cancel' && (
-            <div className={cn('p-4 rounded-lg border', colors.warning.bg, colors.warning.border)}>
-              <ActionReasonForm
-                theme={theme}
-                actionType="cancel"
-                onSubmit={handleCancelSubmit}
-                onBack={() => setMode('idle')}
-                isLoading={cancelMutation.isPending}
-              />
-            </div>
-          )}
-
-          {mode === 'delete' && (
-            <div className={cn('p-4 rounded-lg border', colors.danger.bg, colors.danger.border)}>
-              <ActionReasonForm
-                theme={theme}
-                actionType="delete"
-                onSubmit={handleDeleteSubmit}
-                onBack={() => setMode('idle')}
-                isLoading={deleteMutation.isPending}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Extra guidance */}
-      {!compact && (
-        <div className={cn('rounded-xl border p-5', colors.bg, colors.border)}>
-          <div className={cn('font-bold mb-2 flex items-center gap-2', colors.text.primary)}>
-            <AlertCircle className="w-4 h-4" />
-            Status transition guide
+              {mode === 'delete' && (
+                <motion.div
+                  key="delete"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                >
+                  <ActionReasonForm
+                    theme={theme}
+                    actionType="delete"
+                    onSubmit={handleDeleteSubmit}
+                    onBack={() => setMode('idle')}
+                    isLoading={deleteMutation.isPending}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-          <div className={cn('text-sm', colors.text.secondary)}>
-            <div className="grid gap-2">
-              <div>
-                <span className="font-semibold">Active → In Progress</span>: start working on the visit.
-              </div>
-              <div>
-                <span className="font-semibold">In Progress → Completed</span>: close the visit (redirects to queue after success).
-              </div>
-              <div>
-                <span className="font-semibold">Active/In Progress → No Show</span>: mark patient as not arrived (redirects to queue after success).
-              </div>
-              <div>
-                <span className="font-semibold">Cancel/Delete</span>: requires a reason and always returns you to the queue after success.
-              </div>
+        </div>
+      </motion.div>
+
+      {/* Help Section */}
+      {!compact && mode === 'idle' && (
+        <div
+          className={cn(
+            'rounded-xl border p-4',
+            isDark ? 'border-gray-800 bg-gray-950' : 'border-slate-200 bg-white'
+          )}
+        >
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <Clock className={cn('h-4 w-4', isDark ? 'text-gray-500' : 'text-slate-400')} />
+              <span className={cn('text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                Terminal statuses (<span className="font-semibold">Completed</span>,{' '}
+                <span className="font-semibold">No Show</span>, <span className="font-semibold">Cancelled</span>)
+                will return you to the queue after success.
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <AlertCircle className={cn('h-4 w-4', isDark ? 'text-gray-500' : 'text-slate-400')} />
+              <span className={cn('text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                Cancellation and deletion require a reason for audit purposes.
+              </span>
             </div>
           </div>
         </div>
