@@ -1,4 +1,4 @@
-//uiSlice.ts
+// uiSlice.ts - add selectors at the bottom
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 /* =========================
@@ -168,6 +168,18 @@ const uiSlice = createSlice({
     },
   },
 });
+
+/* =========================
+   Selectors
+========================= */
+
+export const selectTheme = (state: { ui: UIState }) => state.ui.theme;
+export const selectSidebarOpen = (state: { ui: UIState }) => state.ui.sidebarOpen;
+export const selectSidebarCollapsed = (state: { ui: UIState }) => state.ui.sidebarCollapsed;
+export const selectIsLoading = (state: { ui: UIState }) => state.ui.isLoading;
+export const selectLoadingMessage = (state: { ui: UIState }) => state.ui.loadingMessage;
+export const selectIsInitialized = (state: { ui: UIState }) => state.ui.isInitialized;
+export const selectModalOpen = (modalId: string) => (state: { ui: UIState }) => state.ui.modalOpen[modalId] || false;
 
 /* =========================
    Exports

@@ -20,6 +20,8 @@ import billingReducer from '../../modules/medical-records/ui/visit-action-center
 import roleReducer from './slices/roleSlice';
 import auditReducer from './slices/auditSlice';
 import visitReducer from './slices/visitSlice';
+import patientForwardingReducer from './slices/forwardPatientSlice';
+
 // ==============================
 // MODULE NAVIGATION (NEW)
 // ==============================
@@ -33,6 +35,7 @@ export const rootReducer = combineReducers({
   activeContext: activeContextReducer, // Role / Facility context
   ui: uiReducer,
   visits:visitReducer,
+  patientForwarding: patientForwardingReducer,
 
   /**
    * Module-level navigation state
@@ -49,6 +52,7 @@ export const rootReducer = combineReducers({
   billing: billingReducer,
   role: roleReducer,
   audit: auditReducer,
+
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

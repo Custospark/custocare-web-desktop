@@ -1,6 +1,20 @@
 import React from 'react';
-import { ArrowRight, AlertCircle, CreditCard, Save, Send } from 'lucide-react';
+import { ArrowRight, AlertCircle, CreditCard, Save, Send, Loader2, Lightbulb, ArrowRightCircle, Clock, Users } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+
 import { formatCurrency } from '../billing-types';
+import { clearActiveVisit } from '../../../../../../app/store/slices/visitSlice';
+import { MEDICAL_RECORDS_ROUTES } from '../../../../../../app/routes/routeConstants';
+import {
+  clearPendingForwarding,
+  selectPendingForwarding,
+} from '../../../../../../app/store/slices/forwardPatientSlice';
+import {
+  clearAll as clearBillingState,
+  closeTray,
+} from '../billingSlice';
+import { useAssignStaffToVisit } from '../../../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
 
 interface BillingSummaryProps {
   subtotal: number;
@@ -16,12 +30,29 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
   subtotal,
   isReadOnly,
   isDisabledProceed,
+  theme,
   colors,
   onProceedToBilling,
   activeOption = 'default',
 }) => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const pendingForwarding = useSelector(selectPendingForwarding);
+  const isDark = theme === 'dark';
 
-  // Finish & Exit (Pay Later)
+  const assignMutation = useAssignStaffToVisit({
+    onSuccess: () => {
+      dispatch(clearPendingForwarding());
+      dispatch(closeTray());
+      dispatch(clearBillingState());
+      dispatch(clearActiveVisit());
+      navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE);
+    },
+    onError: (error) => {
+      console.error('Failed to forward patient from billing summary:', error);
+    },
+  });
+
   const handleSaveAndExit = () => {
     if (!isDisabledProceed) {
       console.log('Finish & Exit (bill pending)');
@@ -29,15 +60,27 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
     }
   };
 
-  // Forward Patient (encounter remains open)
-  const handleForwardPatient = () => {
-    if (!isDisabledProceed) {
-      console.log('Forward patient (encounter continues)');
-      // Save current services + route to next department
+  const handleForwardPatient = async () => {
+    if (isDisabledProceed || assignMutation.isPending) return;
+
+    if (!pendingForwarding?.visitId || !pendingForwarding?.assignedStaffId) {
+      dispatch(closeTray());
+      navigate(MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT);
+      return;
+    }
+
+    try {
+      await assignMutation.mutateAsync({
+        data: {
+          visit_id: pendingForwarding.visitId,
+          assigned_staff_id: pendingForwarding.assignedStaffId,
+        },
+      });
+    } catch (error) {
+      console.error('Forward patient failed:', error);
     }
   };
 
-  // Proceed to Payment (closes encounter)
   const handleProceedToPayment = () => {
     if (!isDisabledProceed) {
       onProceedToBilling();
@@ -49,45 +92,76 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
   const showForwardOption = activeOption === 'forward' || activeOption === 'default';
 
   const getButtonStyle = (isDisabled: boolean) => {
-    return isDisabled
-      ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-      : `${colors.accent.primary} ${colors.accent.hover} ${colors.accent.text} cursor-pointer hover:shadow-lg active:scale-[0.98]`;
+    if (isDisabled) {
+      return 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed';
+    }
+    return 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer hover:shadow-lg active:scale-[0.98]';
   };
+
+  const isForwardDisabled = isDisabledProceed || assignMutation.isPending;
+
+  const getWorkflowTip = () => {
+    if (isReadOnly) {
+      return {
+        icon: AlertCircle,
+        text: 'Closed encounters cannot be modified. You may reprint receipts if needed.',
+        color: isDark ? 'text-gray-400' : 'text-gray-500'
+      };
+    }
+
+    switch (activeOption) {
+      case 'payment':
+        return {
+          icon: CreditCard,
+          text: 'Use this when consultation is complete and no more services are expected.',
+          color: isDark ? 'text-blue-400' : 'text-blue-600'
+        };
+      case 'save':
+        return {
+          icon: Clock,
+          text: 'Use for insurance or deferred payments. Patient can return later.',
+          color: isDark ? 'text-green-400' : 'text-green-600'
+        };
+      case 'forward':
+        return {
+          icon: Users,
+          text: 'Use when patient needs lab, pharmacy, or another clinician before final billing.',
+          color: isDark ? 'text-purple-400' : 'text-purple-600'
+        };
+      default:
+        return {
+          icon: Lightbulb,
+          text: 'Keep the cursor in the search box, then search for an item/service.',
+          color: isDark ? 'text-yellow-400' : 'text-yellow-600'
+        };
+    }
+  };
+
+  const workflowTip = getWorkflowTip();
+  const TipIcon = workflowTip.icon;
 
   return (
     <div className="lg:col-span-4 xl:col-span-3 min-h-0">
       <div className="lg:sticky lg:top-4 space-y-4">
-
-        {/* Summary */}
+        {/* Summary Card */}
         <div className={`p-4 sm:p-5 border ${colors.border.primary} ${colors.bg.secondary} rounded-xl`}>
-          <h3 className={`text-base sm:text-lg font-bold mb-4 ${colors.text.primary}`}>
+          <h3 className={`text-base sm:text-lg font-bold mb-4 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
             Billing Summary
           </h3>
 
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className={colors.text.secondary}>Subtotal</span>
-              <span className="text-lg font-extrabold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+              <span className={isDark ? 'text-gray-300' : 'text-gray-600'}>Subtotal</span>
+              <span className="text-lg font-extrabold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
                 {formatCurrency(subtotal)}
               </span>
             </div>
-
-            <div className="flex justify-between">
-              <span className={colors.text.secondary}>Tax</span>
-              <span className={colors.text.tertiary}>Applied at payment</span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className={colors.text.secondary}>Discount</span>
-              <span className={colors.text.tertiary}>Applied at payment</span>
-            </div>
-
             <div className={`pt-4 border-t ${colors.border.primary}`}>
               <div className="flex justify-between">
-                <span className={`text-sm font-semibold ${colors.text.secondary}`}>
+                <span className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
                   Estimated Total
                 </span>
-                <span className="text-lg font-extrabold bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+                <span className="text-lg font-extrabold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
                   {formatCurrency(subtotal)}
                 </span>
               </div>
@@ -95,9 +169,8 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Actions Card */}
         <div className={`p-4 sm:p-5 border ${colors.border.primary} ${colors.bg.secondary} rounded-xl space-y-3`}>
-
           {showPaymentOption && (
             <button
               type="button"
@@ -106,7 +179,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
               className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-lg transition-all ${getButtonStyle(isDisabledProceed)}`}
             >
               <CreditCard className="w-4 h-4" />
-              <span>Send to Payment</span>
+              <span>Proceed to Payment</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           )}
@@ -115,11 +188,20 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
             <button
               type="button"
               onClick={handleForwardPatient}
-              disabled={isDisabledProceed}
-              className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-lg transition-all ${getButtonStyle(isDisabledProceed)}`}
+              disabled={isForwardDisabled}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-lg transition-all ${getButtonStyle(isForwardDisabled)}`}
             >
-              <Send className="w-4 h-4" />
-              <span>Forward Patient</span>
+              {assignMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Forwarding Patient...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  <span>Forward Patient</span>
+                </>
+              )}
             </button>
           )}
 
@@ -135,58 +217,35 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
             </button>
           )}
 
-          {/* Info */}
-          <div className="mt-3 flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 text-blue-500 mt-0.5" />
-            <p className={`text-xs ${colors.text.secondary}`}>
-              {isReadOnly
-                ? 'This encounter is closed. Billing details are locked.'
-                : getInfoMessage(activeOption)}
+          {/* Forwarding Info Banner */}
+          {pendingForwarding?.assignedStaffName && showForwardOption && (
+            <div className={`rounded-lg border p-3 ${
+              isDark 
+                ? 'border-blue-800 bg-blue-900/30 text-blue-200' 
+                : 'border-blue-200 bg-blue-50 text-blue-800'
+            }`}>
+              <p className="text-xs">
+                <ArrowRightCircle className="w-3 h-3 inline mr-1" />
+                Patient will be forwarded to <span className="font-semibold">{pendingForwarding.assignedStaffName}</span>
+                {pendingForwarding.note ? ` • Note: ${pendingForwarding.note}` : ''}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Workflow Tip Card */}
+        <div className={`p-4 border ${colors.border.primary} ${colors.bg.secondary} rounded-xl`}>
+          <div className="flex items-start gap-2">
+            <TipIcon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${workflowTip.color}`} />
+            <p className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+              <span className={`font-semibold ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                Workflow tip:
+              </span>{' '}
+              {workflowTip.text}
             </p>
           </div>
         </div>
-
-        {/* Tip */}
-        <div className={`p-4 border ${colors.border.primary} ${colors.bg.secondary} rounded-xl`}>
-          <p className={`text-xs ${colors.text.secondary}`}>
-            <span className="font-semibold">Workflow tip:</span>{' '}
-            {getWorkflowTip(isReadOnly, activeOption)}
-          </p>
-        </div>
-
       </div>
     </div>
   );
-};
-
-// Info messaging aligned with real workflow
-const getInfoMessage = (activeOption: string): string => {
-  switch (activeOption) {
-    case 'payment':
-      return 'Bill is already created. Patient will proceed to payment and encounter will be closed.';
-    case 'save':
-      return 'Encounter will be closed. Bill remains pending and can be paid later.';
-    case 'forward':
-      return 'Patient continues care. Encounter remains open and more services can be added.';
-    default:
-      return 'A bill is automatically created from services. Choose the next step to continue.';
-  }
-};
-
-// Workflow guidance
-const getWorkflowTip = (isReadOnly: boolean, activeOption: string): string => {
-  if (isReadOnly) {
-    return 'Closed encounters cannot be modified. You may reprint receipts if needed.';
-  }
-
-  switch (activeOption) {
-    case 'payment':
-      return 'Use this when consultation is complete and no more services are expected.';
-    case 'save':
-      return 'Use for insurance or deferred payments. Patient can return later.';
-    case 'forward':
-      return 'Use when patient needs lab, pharmacy, or another clinician before final billing.';
-    default:
-      return 'Forward patients if more services are needed before final payment.';
-  }
 };

@@ -19,6 +19,7 @@ import { NavigationBridge } from './app/routes/navigation/NavigationBridge';
 import { UpdateNotification } from './shared/components/Feedback/UpdateNotification';
 
 import './App.css';
+import { BillingTray } from './modules/medical-records/ui/visit-action-center/billing-space';
 
 /**
  * Root Application Component
@@ -49,6 +50,7 @@ function App() {
                   <AppInitializer>
                     <AppRoutes />
                   </AppInitializer>
+                  <BillingTray/>
 
                   {/* ---- System-Level UI (Non-blocking) ---- */}
                   <UpdateNotification />

@@ -1,10 +1,11 @@
 // BillingTray.tsx
 import React, { useEffect, useCallback, useRef } from 'react';
-import { X, AlertTriangle, FileText, CreditCard, CheckCircle2, Info, LucideCreditCard } from 'lucide-react';
+import { X, AlertTriangle, FileText, CreditCard, CheckCircle2, Info, LucideCreditCard, User } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
-import { clearActiveVisit } from '../../../../../app/store/slices/visitSlice';
+import { clearActiveVisit, selectActiveVisitInfo } from '../../../../../app/store/slices/visitSlice';
+import { selectTheme } from '../../../../../app/store/slices/uiSlice';
 import {
   closeTray,
   setStep,
@@ -21,15 +22,19 @@ import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDia
 import LogoImage from '../../../../../shared/assets/LogoImage';
 import { BrandName } from '../../../../../shared/utils/BrandName';
 
-interface BillingTrayProps {
-  theme?: 'light' | 'dark';
-}
-
-export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => {
+export const BillingTray: React.FC = () => {
+  // Get theme from UI slice
+  const theme = useSelector(selectTheme);
   const isDark = theme === 'dark';
+  
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { confirm } = useConfirm();
+
+  // Get active visit info from visit slice (patient name)
+  const activeVisitInfo = useSelector(selectActiveVisitInfo);
+  const patientName = activeVisitInfo?.patientName || 'Patient';
+  const patientNumber = activeVisitInfo?.patientNumber || '';
 
   const isTrayOpen = useSelector(selectIsTrayOpen);
   const currentStep = useSelector(selectCurrentStep);
@@ -185,7 +190,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
           {/* Header */}
           <div className={`flex items-center justify-between px-4 py-3 border-b ${colors.border.primary} gap-3`}>
             
-          {/* Left: App Logo */}
+            {/* Left: App Logo & Patient Info */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <LogoImage size="sm" />
               <div className="hidden sm:flex sm:items-center sm:gap-2">
@@ -194,6 +199,20 @@ export const BillingTray: React.FC<BillingTrayProps> = ({ theme = 'light' }) => 
                 <span className="text-sm font-medium text-blue-500">
                   Billing
                 </span>
+              </div>
+              {/* Patient Info */}
+              <div className="ml-4 hidden md:flex items-center gap-2 pl-4 border-l border-gray-300 dark:border-gray-700">
+                <User className="w-4 h-4 text-gray-500" />
+                <div className="flex flex-col">
+                  <span className={`text-sm font-medium ${colors.text.primary}`}>
+                    {patientName}
+                  </span>
+                  {patientNumber && (
+                    <span className={`text-xs ${colors.text.secondary}`}>
+                      #{patientNumber}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
