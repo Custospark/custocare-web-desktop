@@ -1,4 +1,3 @@
-// BillingTray.tsx
 import React, { useEffect, useCallback, useRef } from 'react';
 import { X, AlertTriangle, FileText, CreditCard, CheckCircle2, Info, LucideCreditCard, User } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -6,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
 import { clearActiveVisit, selectActiveVisitInfo } from '../../../../../app/store/slices/visitSlice';
 import { selectTheme } from '../../../../../app/store/slices/uiSlice';
+import { clearPendingForwarding } from '../../../../../app/store/slices/forwardPatientSlice';
 import {
   closeTray,
   setStep,
@@ -99,6 +99,7 @@ export const BillingTray: React.FC = () => {
       if (confirmed) {
         dispatch(clearAll());
         dispatch(clearActiveVisit());
+        dispatch(clearPendingForwarding()); // Clear pending forwarding
         navigate(QUEUE_ROUTE);
       }
       return;
@@ -116,11 +117,14 @@ export const BillingTray: React.FC = () => {
 
       if (confirmed) {
         dispatch(clearAll());
+        dispatch(clearPendingForwarding()); // Clear pending forwarding
       }
       return;
     }
 
+    // Close tray without changes - clear pending forwarding
     dispatch(closeTray());
+    dispatch(clearPendingForwarding()); // Clear pending forwarding
   }, [confirm, dispatch, isDirty, navigate, theme, status, QUEUE_ROUTE]);
 
   useEffect(() => {
