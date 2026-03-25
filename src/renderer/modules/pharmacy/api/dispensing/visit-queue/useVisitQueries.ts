@@ -198,8 +198,9 @@ export const useGetMyQueue = (
       return response.data;
     },
     enabled: !!facilityId && !!staffId,
-    staleTime: 10000,
-    refetchInterval: 30000,
+    staleTime: 5000,                      // Data fresh for 5 seconds
+    refetchInterval: 5000,               // Refetch every 5 seconds
+    refetchIntervalInBackground: true,   // Keep refetching even when tab is inactive
     ...options,
   });
 };
