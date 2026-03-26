@@ -53,6 +53,7 @@ import {
   countryCodes,
 } from '../../../../../administration/onboarding/ui/auth/countryCodes';
 
+// TODO: update this import path to your real route file
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../../app/routes/routeConstants';
 
 type Theme = 'light' | 'dark';
@@ -126,6 +127,26 @@ const INITIAL_FORM_STATE: Partial<CreatePatientRequest> = {
   biological_sex: undefined,
 };
 
+function getSafeTrimmedValue(value: string | undefined): string {
+  return value?.trim() ?? '';
+}
+
+function formatDisplayValue(value?: string | null): string {
+  return value && value.trim().length > 0 ? value : 'Not provided';
+}
+
+function buildSuggestedSearchText(form: Partial<CreatePatientRequest>): string {
+  return [
+    getSafeTrimmedValue(form.first_name),
+    getSafeTrimmedValue(form.last_name),
+    getSafeTrimmedValue(form.phone),
+    getSafeTrimmedValue(form.email),
+    getSafeTrimmedValue(form.date_of_birth),
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
 function errorToMessage(error: unknown): string {
   if (!error) return 'Something went wrong while saving this patient. Please try again.';
 
@@ -150,7 +171,7 @@ function errorToMessage(error: unknown): string {
     }
 
     if (axiosErr.response?.status === 409) {
-      return 'We found another record that may already belong to this patient. Please review it first.';
+      return 'We found another record that may already belong to this patient. Please review it before creating a new record.';
     }
 
     if (axiosErr.response?.status === 422) {
@@ -171,18 +192,18 @@ function errorToMessage(error: unknown): string {
 
 function getConflictHeadline(type: ConflictType): string {
   if (type === 'duplicate') return 'We found a similar patient record';
-  if (type === 'existing_user') return 'This phone number or email may already be in use';
-  return 'Please review this record';
+  if (type === 'existing_user') return 'This phone number or email is already be in use';
+  return 'Please review this information';
 }
 
 function getConflictDescription(conflict: ConflictState): string {
   if (conflict.type === 'duplicate') {
-    return 'Before creating a new patient, please review the similar record below. This helps prevent duplicate records.';
+    return 'Before creating a new patient, please review the similar record below. This helps prevent duplicate patient records.';
   }
 
   if (conflict.type === 'existing_user') {
     if (conflict.data.conflictCode === 'IDENTITY_MISMATCH') {
-      return 'The phone number or email entered is already linked to another person. Please review the details before continuing.';
+      return 'The phone number or email entered is already linked to another person. Please review the record below before continuing.';
     }
 
     return 'The phone number or email entered matches an existing record. Please review it before creating a new patient.';
@@ -196,7 +217,7 @@ function getConflictGuidance(conflict: ConflictState): string[] {
     return [
       'Check whether the patient shown below is the same person.',
       'If it is the same person, open patient search and use the existing record.',
-      'If it is not the same person, keep editing and update the details before trying again.',
+      'If it is not the same person, keep editing and correct the details before trying again.',
     ];
   }
 
@@ -221,14 +242,6 @@ function formatMatchedContactFields(fields?: ContactMatchField[]): string {
   return fields
     .map((field) => (field === 'email' ? 'Email' : 'Phone'))
     .join(', ');
-}
-
-function getSafeTrimmedValue(value: string | undefined): string {
-  return value?.trim() ?? '';
-}
-
-function formatDisplayValue(value?: string | null): string {
-  return value && value.trim().length > 0 ? value : 'Not provided';
 }
 
 const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
@@ -340,7 +353,7 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="patient-success-title"
+      aria-labelledby="patient-success-modal-title"
     >
       <motion.div
         initial={{ scale: 0.96, opacity: 0 }}
@@ -373,7 +386,7 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
                 ? 'text-gray-400 hover:bg-gray-700 hover:text-white'
                 : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
             )}
-            aria-label="Close"
+            aria-label="Close modal"
           >
             <X className="h-5 w-5" />
           </motion.button>
@@ -407,7 +420,7 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
               initial={{ y: 14, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.16 }}
-              id="patient-success-title"
+              id="patient-success-modal-title"
               className={cn(
                 'mb-2 text-center text-xl font-bold sm:text-2xl',
                 isDark ? 'text-white' : 'text-gray-900'
@@ -712,8 +725,8 @@ const PhoneInputWithCountryCode: React.FC<PhoneInputProps> = ({
     if (!searchQuery.trim()) {
       const eastAfricanCountries = ['UG', 'KE', 'TZ', 'RW', 'BI', 'SS', 'ET', 'ER', 'DJ', 'SO'];
       const eastAfrica = countryCodes.filter((country) => eastAfricanCountries.includes(country.code));
-      const others = countryCodes.filter((country) => !eastAfricanCountries.includes(country.code));
-      return [...eastAfrica, ...others];
+      const otherCountries = countryCodes.filter((country) => !eastAfricanCountries.includes(country.code));
+      return [...eastAfrica, ...otherCountries];
     }
 
     const query = searchQuery.toLowerCase();
@@ -988,8 +1001,8 @@ PhoneInputWithCountryCode.displayName = 'PhoneInputWithCountryCode';
 
 const PatientCreate: React.FC<PatientCreateProps> = ({
   theme,
-  title = 'Add Patient',
-  subtitle = 'Enter the patient details below. If we find a similar record, we will guide you before anything is created.',
+  title = 'Create New Patient',
+  subtitle = 'Enter patient details to create a new record',
   initialValues,
   onSuccess,
   onProceed,
@@ -1024,16 +1037,27 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
     setConflict(null);
   }, [initialValues]);
 
-  const buildPayload = useCallback((): CreatePatientRequest => {
-    return {
-      first_name: getSafeTrimmedValue(form.first_name),
-      last_name: getSafeTrimmedValue(form.last_name),
-      email: getSafeTrimmedValue(form.email) || undefined,
-      phone: getSafeTrimmedValue(form.phone) || undefined,
-      date_of_birth: getSafeTrimmedValue(form.date_of_birth),
-      biological_sex: form.biological_sex as BiologicalSex,
-    };
-  }, [form]);
+  const handleGoToPatientSearch = useCallback(() => {
+    navigate(MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH, {
+      state: {
+        fromPatientCreate: true,
+        suggestedSearch: buildSuggestedSearchText(form),
+        draftPatient: {
+          first_name: getSafeTrimmedValue(form.first_name),
+          last_name: getSafeTrimmedValue(form.last_name),
+          email: getSafeTrimmedValue(form.email),
+          phone: getSafeTrimmedValue(form.phone),
+          date_of_birth: getSafeTrimmedValue(form.date_of_birth),
+          biological_sex: form.biological_sex,
+        },
+      },
+    });
+  }, [form, navigate]);
+
+  const handleDismissConflict = useCallback(() => {
+    setConflict(null);
+    setFormError(null);
+  }, []);
 
   const createMutation = useCreatePatientByAdmin({
     onSuccess: async (response, variables) => {
@@ -1062,7 +1086,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
       }
 
       if (!isPatientCreateSuccessResponse(response)) {
-        setFormError('We received an unexpected response while saving this patient.');
+        setFormError('We received an unexpected response while creating this patient.');
         return;
       }
 
@@ -1109,36 +1133,16 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
     );
   }, []);
 
-  const handleDismissConflict = useCallback(() => {
-    setConflict(null);
-    setFormError(null);
-  }, []);
-
-  const handleGoToPatientSearch = useCallback(() => {
-    const searchText = [
-      getSafeTrimmedValue(form.first_name),
-      getSafeTrimmedValue(form.last_name),
-      getSafeTrimmedValue(form.phone),
-      getSafeTrimmedValue(form.email),
-    ]
-      .filter(Boolean)
-      .join(' ');
-
-    navigate(MEDICAL_RECORDS_ROUTES.PATIENT_SEARCH, {
-      state: {
-        fromPatientCreate: true,
-        suggestedSearch: searchText,
-        draftPatient: {
-          first_name: getSafeTrimmedValue(form.first_name),
-          last_name: getSafeTrimmedValue(form.last_name),
-          email: getSafeTrimmedValue(form.email),
-          phone: getSafeTrimmedValue(form.phone),
-          date_of_birth: getSafeTrimmedValue(form.date_of_birth),
-          biological_sex: form.biological_sex,
-        },
-      },
-    });
-  }, [form, navigate]);
+  const buildPayload = useCallback((): CreatePatientRequest => {
+    return {
+      first_name: getSafeTrimmedValue(form.first_name),
+      last_name: getSafeTrimmedValue(form.last_name),
+      email: getSafeTrimmedValue(form.email) || undefined,
+      phone: getSafeTrimmedValue(form.phone) || undefined,
+      date_of_birth: getSafeTrimmedValue(form.date_of_birth),
+      biological_sex: form.biological_sex as BiologicalSex,
+    };
+  }, [form]);
 
   const submit = useCallback(async () => {
     markAllFieldsTouched();
@@ -1148,7 +1152,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
       const firstKey = Object.keys(currentValidation.errors)[0] as keyof typeof currentValidation.errors | undefined;
       const firstMessage = firstKey ? currentValidation.errors[firstKey]?.[0] : undefined;
 
-      setFormError(firstMessage ?? 'Please check the form and try again.');
+      setFormError(firstMessage ?? 'Please review the patient details and try again.');
 
       setTimeout(() => {
         const firstErrorElement = document.querySelector('[aria-invalid="true"]');
@@ -1159,10 +1163,10 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
     }
 
     const ok = await confirm({
-      title: 'Create patient',
-      message: 'We will save this patient after checking for similar records. Do you want to continue?',
-      confirmText: 'Create patient',
-      cancelText: 'Not now',
+      title: 'Create Patient Record',
+      message: 'Are you sure you want to create this patient record?',
+      confirmText: 'Yes, Create',
+      cancelText: 'Cancel',
       variant: 'info',
       theme,
     });
@@ -1189,251 +1193,246 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
   const renderConflictCard = useMemo(() => {
     if (!conflict) return null;
 
-    const foundPatient = conflict.data.duplicatePatient ?? conflict.data.existingPatient;
+    const reviewPatient = conflict.data.duplicatePatient ?? conflict.data.existingPatient;
     const matchedContacts = formatMatchedContactFields(conflict.data.matchedContactFields);
-    const guidanceSteps = getConflictGuidance(conflict);
+    const steps = getConflictGuidance(conflict);
 
-    const toneClasses =
+    const cardClasses =
       conflict.type === 'duplicate'
         ? isDark
-          ? 'border-amber-500/30 bg-gradient-to-br from-amber-950/30 to-yellow-900/10'
-          : 'border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50'
+          ? 'border-yellow-500/30 bg-gradient-to-br from-yellow-900/20 to-yellow-800/10'
+          : 'border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50'
         : isDark
-          ? 'border-blue-500/30 bg-gradient-to-br from-blue-950/30 to-indigo-950/10'
+          ? 'border-blue-500/30 bg-gradient-to-br from-blue-900/20 to-blue-800/10'
           : 'border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50';
 
-    const iconWrapClasses =
+    const iconClasses =
       conflict.type === 'duplicate'
         ? isDark
-          ? 'bg-amber-500/15 text-amber-300'
-          : 'bg-amber-100 text-amber-700'
+          ? 'bg-yellow-500/20 text-yellow-400'
+          : 'bg-yellow-100 text-yellow-700'
         : isDark
-          ? 'bg-blue-500/15 text-blue-300'
+          ? 'bg-blue-500/20 text-blue-400'
           : 'bg-blue-100 text-blue-700';
 
     return (
       <motion.div
-        initial={{ opacity: 0, y: -12 }}
+        initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -12 }}
-        className={cn(
-          'relative mb-6 overflow-hidden rounded-2xl border-2 p-4 sm:p-5 lg:p-6',
-          toneClasses
-        )}
+        exit={{ opacity: 0, y: -16 }}
+        className={cn('relative mb-6 overflow-hidden rounded-2xl border-2 p-4 sm:p-5', cardClasses)}
       >
         <div
           className={cn(
             'absolute right-0 top-0 h-28 w-28 rounded-full blur-3xl opacity-25',
             conflict.type === 'duplicate'
               ? isDark
-                ? 'bg-amber-400/20'
-                : 'bg-amber-300/30'
+                ? 'bg-yellow-500/20'
+                : 'bg-yellow-400/20'
               : isDark
-                ? 'bg-blue-400/20'
-                : 'bg-blue-300/30'
+                ? 'bg-blue-500/20'
+                : 'bg-blue-400/20'
           )}
         />
 
-        <div className="relative">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-            <div className={cn('w-fit rounded-2xl p-3', iconWrapClasses)}>
-              {conflict.type === 'duplicate' ? (
-                <AlertCircle className="h-6 w-6" />
-              ) : (
-                <Shield className="h-6 w-6" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start">
+          <div className={cn('w-fit rounded-2xl p-3', iconClasses)}>
+            {conflict.type === 'duplicate' ? (
+              <AlertCircle className="h-6 w-6" />
+            ) : (
+              <Shield className="h-6 w-6" />
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h4 className={cn('text-lg font-semibold sm:text-xl', isDark ? 'text-white' : 'text-gray-900')}>
+              {getConflictHeadline(conflict.type)}
+            </h4>
+
+            <p className={cn('mt-2 text-sm leading-6', isDark ? 'text-gray-300' : 'text-gray-700')}>
+              {getConflictDescription(conflict)}
+            </p>
+
+            <div
+              className={cn(
+                'mt-4 rounded-xl border p-4',
+                isDark ? 'border-gray-700 bg-gray-900/40' : 'border-white/70 bg-white/80'
               )}
+            >
+              <div className="flex items-start gap-2">
+                <Info className={cn('mt-0.5 h-4 w-4 flex-shrink-0', isDark ? 'text-blue-300' : 'text-blue-600')} />
+                <div className={cn('text-sm leading-6', isDark ? 'text-gray-300' : 'text-gray-700')}>
+                  <span className="font-semibold">What you can do now:</span>
+                  <ul className="mt-2 space-y-1.5">
+                    {steps.map((step) => (
+                      <li key={step} className="flex gap-2">
+                        <span className="mt-[9px] h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
             </div>
 
-            <div className="min-w-0 flex-1">
-              <h4 className={cn('text-lg font-semibold sm:text-xl', isDark ? 'text-white' : 'text-gray-900')}>
-                {getConflictHeadline(conflict.type)}
-              </h4>
-
-              <p className={cn('mt-2 text-sm leading-6 sm:text-[15px]', isDark ? 'text-gray-300' : 'text-gray-700')}>
-                {getConflictDescription(conflict)}
-              </p>
-
+            <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
               <div
                 className={cn(
-                  'mt-4 rounded-xl border p-4',
-                  isDark ? 'border-gray-700 bg-black/10' : 'border-white/70 bg-white/80'
+                  'rounded-xl border-2 p-4',
+                  isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-white'
                 )}
               >
-                <div className="flex items-start gap-2">
-                  <Info className={cn('mt-0.5 h-4 w-4 flex-shrink-0', isDark ? 'text-blue-300' : 'text-blue-600')} />
-                  <div className={cn('text-sm leading-6', isDark ? 'text-gray-300' : 'text-gray-700')}>
-                    <span className="font-semibold">What you can do now:</span>
-                    <ul className="mt-2 space-y-1.5">
-                      {guidanceSteps.map((step) => (
-                        <li key={step} className="flex gap-2">
-                          <span className="mt-[8px] h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-                          <span>{step}</span>
-                        </li>
-                      ))}
-                    </ul>
+                <div className={cn('mb-3 text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+                  New Record
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Name</span>
+                    <span className={cn('text-right font-medium break-words', isDark ? 'text-gray-100' : 'text-gray-900')}>
+                      {formatDisplayValue(`${form.first_name ?? ''} ${form.last_name ?? ''}`.trim())}
+                    </span>
+                  </div>
+
+                  <div className="flex items-start justify-between gap-3">
+                    <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Date of birth</span>
+                    <span className={cn('text-right font-medium', isDark ? 'text-gray-100' : 'text-gray-900')}>
+                      {formatDisplayValue(form.date_of_birth)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-start justify-between gap-3">
+                    <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Biological sex</span>
+                    <span className={cn('text-right font-medium capitalize', isDark ? 'text-gray-100' : 'text-gray-900')}>
+                      {formatDisplayValue(form.biological_sex)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-start justify-between gap-3">
+                    <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Email</span>
+                    <span className={cn('text-right font-medium break-all', isDark ? 'text-gray-100' : 'text-gray-900')}>
+                      {formatDisplayValue(form.email)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-start justify-between gap-3">
+                    <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Phone</span>
+                    <span className={cn('text-right font-medium break-all', isDark ? 'text-gray-100' : 'text-gray-900')}>
+                      {formatDisplayValue(form.phone)}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
-                <div
-                  className={cn(
-                    'min-w-0 rounded-xl border-2 p-4',
-                    isDark ? 'border-gray-700 bg-gray-900/60' : 'border-gray-200 bg-white'
-                  )}
-                >
-                  <div className={cn('mb-3 text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
-                    What you entered
-                  </div>
+              <div
+                className={cn(
+                  'rounded-xl border-2 p-4',
+                  isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-white'
+                )}
+              >
+                <div className={cn('mb-3 text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+                  Existing Record
+                </div>
 
+                {reviewPatient ? (
                   <div className="space-y-2 text-sm">
                     <div className="flex items-start justify-between gap-3">
                       <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Name</span>
                       <span className={cn('text-right font-medium break-words', isDark ? 'text-gray-100' : 'text-gray-900')}>
-                        {formatDisplayValue(`${form.first_name ?? ''} ${form.last_name ?? ''}`.trim())}
+                        {formatDisplayValue(reviewPatient.name)}
                       </span>
                     </div>
 
                     <div className="flex items-start justify-between gap-3">
                       <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Date of birth</span>
                       <span className={cn('text-right font-medium', isDark ? 'text-gray-100' : 'text-gray-900')}>
-                        {formatDisplayValue(form.date_of_birth)}
+                        {formatDisplayValue(reviewPatient.date_of_birth)}
                       </span>
                     </div>
 
                     <div className="flex items-start justify-between gap-3">
-                      <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Sex</span>
+                      <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Biological sex</span>
                       <span className={cn('text-right font-medium capitalize', isDark ? 'text-gray-100' : 'text-gray-900')}>
-                        {formatDisplayValue(form.biological_sex)}
+                        {formatDisplayValue(reviewPatient.biological_sex)}
                       </span>
                     </div>
 
                     <div className="flex items-start justify-between gap-3">
-                      <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Email</span>
-                      <span className={cn('text-right font-medium break-all', isDark ? 'text-gray-100' : 'text-gray-900')}>
-                        {formatDisplayValue(form.email)}
+                      <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Patient number</span>
+                      <span
+                        className={cn(
+                          'rounded-lg px-2 py-1 text-right font-mono text-xs sm:text-sm',
+                          isDark ? 'bg-gray-700 text-blue-300' : 'bg-blue-50 text-blue-700'
+                        )}
+                      >
+                        {reviewPatient.patient_number}
                       </span>
                     </div>
 
                     <div className="flex items-start justify-between gap-3">
-                      <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Phone</span>
-                      <span className={cn('text-right font-medium break-all', isDark ? 'text-gray-100' : 'text-gray-900')}>
-                        {formatDisplayValue(form.phone)}
+                      <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Status</span>
+                      <span className={cn('text-right font-medium capitalize', isDark ? 'text-gray-100' : 'text-gray-900')}>
+                        {formatDisplayValue(reviewPatient.status)}
                       </span>
                     </div>
                   </div>
-                </div>
-
-                <div
-                  className={cn(
-                    'min-w-0 rounded-xl border-2 p-4',
-                    isDark ? 'border-gray-700 bg-gray-900/60' : 'border-gray-200 bg-white'
-                  )}
-                >
-                  <div className={cn('mb-3 text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
-                    Record to review
+                ) : (
+                  <div className={cn('text-sm leading-6', isDark ? 'text-gray-300' : 'text-gray-700')}>
+                    We found matching contact information in another record.
+                    {matchedContacts !== 'Not specified' && (
+                      <div className="mt-2">
+                        Matching details: <span className="font-medium">{matchedContacts}</span>
+                      </div>
+                    )}
                   </div>
-
-                  {foundPatient ? (
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Name</span>
-                        <span className={cn('text-right font-medium break-words', isDark ? 'text-gray-100' : 'text-gray-900')}>
-                          {formatDisplayValue(foundPatient.name)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-start justify-between gap-3">
-                        <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Date of birth</span>
-                        <span className={cn('text-right font-medium', isDark ? 'text-gray-100' : 'text-gray-900')}>
-                          {formatDisplayValue(foundPatient.date_of_birth)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-start justify-between gap-3">
-                        <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Sex</span>
-                        <span className={cn('text-right font-medium capitalize', isDark ? 'text-gray-100' : 'text-gray-900')}>
-                          {formatDisplayValue(foundPatient.biological_sex)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-start justify-between gap-3">
-                        <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Patient number</span>
-                        <span
-                          className={cn(
-                            'rounded-lg px-2 py-1 text-right font-mono text-xs sm:text-sm',
-                            isDark ? 'bg-gray-800 text-blue-300' : 'bg-blue-50 text-blue-700'
-                          )}
-                        >
-                          {foundPatient.patient_number}
-                        </span>
-                      </div>
-
-                      <div className="flex items-start justify-between gap-3">
-                        <span className={cn('shrink-0', isDark ? 'text-gray-400' : 'text-gray-500')}>Status</span>
-                        <span className={cn('text-right font-medium capitalize', isDark ? 'text-gray-100' : 'text-gray-900')}>
-                          {formatDisplayValue(foundPatient.status)}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className={cn('text-sm leading-6', isDark ? 'text-gray-300' : 'text-gray-700')}>
-                      We found matching contact information in another record.
-                      {matchedContacts !== 'Not specified' && (
-                        <div className="mt-2">
-                          Matching details: <span className="font-medium">{matchedContacts}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
+            </div>
 
-              {matchedContacts !== 'Not specified' && (
-                <div
-                  className={cn(
-                    'mt-4 rounded-xl px-4 py-3 text-sm',
-                    isDark ? 'bg-blue-950/30 text-blue-200' : 'bg-blue-50 text-blue-700'
-                  )}
-                >
-                  Matching details found: <span className="font-semibold">{matchedContacts}</span>
-                </div>
-              )}
-
-              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                <motion.button
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  type="button"
-                  onClick={handleGoToPatientSearch}
-                  disabled={isSubmitting}
-                  className={cn(
-                    'flex w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1',
-                    isDark
-                      ? 'border-blue-500/50 bg-gradient-to-br from-blue-600 to-blue-700 text-white hover:shadow-lg hover:shadow-blue-500/20'
-                      : 'border-blue-300 bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:shadow-lg hover:shadow-blue-500/20'
-                  )}
-                >
-                  <Search className="h-4 w-4" />
-                  Open patient search
-                </motion.button>
-
-                <motion.button
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  type="button"
-                  onClick={handleDismissConflict}
-                  disabled={isSubmitting}
-                  className={cn(
-                    'flex w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1',
-                    isDark
-                      ? 'border-gray-600 bg-gray-700 text-gray-200 hover:border-gray-500 hover:bg-gray-600'
-                      : 'border-gray-300 bg-gray-100 text-gray-700 hover:border-gray-400 hover:bg-gray-200'
-                  )}
-                >
-                  Keep editing
-                </motion.button>
+            {matchedContacts !== 'Not specified' && (
+              <div
+                className={cn(
+                  'mt-4 rounded-xl px-4 py-3 text-sm',
+                  isDark ? 'bg-blue-950/30 text-blue-200' : 'bg-blue-50 text-blue-700'
+                )}
+              >
+                Matching details found: <span className="font-semibold">{matchedContacts}</span>
               </div>
+            )}
+
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                type="button"
+                onClick={handleGoToPatientSearch}
+                disabled={isSubmitting}
+                className={cn(
+                  'flex w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1',
+                  isDark
+                    ? 'border-blue-500/50 bg-gradient-to-br from-blue-600 to-blue-700 text-white hover:shadow-lg hover:shadow-blue-500/20'
+                    : 'border-blue-300 bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:shadow-lg hover:shadow-blue-500/20'
+                )}
+              >
+                <Search className="h-4 w-4" />
+                Open patient search
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                type="button"
+                onClick={handleDismissConflict}
+                disabled={isSubmitting}
+                className={cn(
+                  'flex w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1',
+                  isDark
+                    ? 'border-gray-600 bg-gray-700 text-gray-200 hover:border-gray-500 hover:bg-gray-600'
+                    : 'border-gray-300 bg-gray-100 text-gray-700 hover:border-gray-400 hover:bg-gray-200'
+                )}
+              >
+                Keep editing
+              </motion.button>
             </div>
           </div>
         </div>
@@ -1515,7 +1514,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                         isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
                       )}
                     >
-                      <LoadingSkeleton variant="default" theme={theme} message="Saving patient..." />
+                      <LoadingSkeleton variant="default" theme={theme} message="Creating patient record..." />
                     </div>
                   </motion.div>
                 )}
@@ -1541,13 +1540,40 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                       )}
                     />
 
-                    <div className="relative flex items-start gap-3">
-                      <div className={cn('rounded-lg p-2', isDark ? 'bg-red-500/20' : 'bg-red-100')}>
-                        <AlertCircle className={cn('h-5 w-5', isDark ? 'text-red-400' : 'text-red-600')} />
+                    <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className={cn('rounded-lg p-2', isDark ? 'bg-red-500/20' : 'bg-red-100')}>
+                          <AlertCircle className={cn('h-5 w-5', isDark ? 'text-red-400' : 'text-red-600')} />
+                        </div>
+
+                        <div className="flex-1">
+                          <div className={cn('text-sm font-medium', isDark ? 'text-red-200' : 'text-red-800')}>
+                            We could not complete this action
+                          </div>
+                          <div className={cn('mt-1 text-sm', isDark ? 'text-red-300' : 'text-red-700')}>
+                            {formError}
+                          </div>
+                          <div className={cn('mt-2 text-xs', isDark ? 'text-red-200/80' : 'text-red-700/80')}>
+                            You can review existing patients first, then return here if needed.
+                          </div>
+                        </div>
                       </div>
-                      <div className={cn('flex-1 text-sm', isDark ? 'text-red-300' : 'text-red-700')}>
-                        {formError}
-                      </div>
+
+                      <motion.button
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        type="button"
+                        onClick={handleGoToPatientSearch}
+                        className={cn(
+                          'inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all sm:ml-4',
+                          isDark
+                            ? 'border-red-300/20 bg-red-950/30 text-red-100 hover:bg-red-950/50'
+                            : 'border-red-200 bg-white text-red-700 hover:bg-red-50'
+                        )}
+                      >
+                        <Search className="h-4 w-4" />
+                        Search patients
+                      </motion.button>
                     </div>
                   </motion.div>
                 )}
@@ -1558,7 +1584,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
               <div className="mb-6 grid grid-cols-1 gap-5 xl:grid-cols-2">
                 <FormInput
                   theme={theme}
-                  label="First name"
+                  label="First Name"
                   value={form.first_name ?? ''}
                   onChange={(value) => handleFieldChange('first_name', value)}
                   error={validation.errors.first_name?.[0]}
@@ -1571,7 +1597,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
 
                 <FormInput
                   theme={theme}
-                  label="Last name"
+                  label="Last Name"
                   value={form.last_name ?? ''}
                   onChange={(value) => handleFieldChange('last_name', value)}
                   error={validation.errors.last_name?.[0]}
@@ -1584,7 +1610,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
 
                 <FormInput
                   theme={theme}
-                  label="Email"
+                  label="Email (optional if phone is provided)"
                   value={form.email ?? ''}
                   onChange={(value) => handleFieldChange('email', value)}
                   error={validation.errors.email?.[0]}
@@ -1597,7 +1623,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
 
                 <PhoneInputWithCountryCode
                   theme={theme}
-                  label="Phone"
+                  label="Phone (optional if email is provided)"
                   value={form.phone ?? ''}
                   onChange={(value) => handleFieldChange('phone', value)}
                   error={validation.errors.phone?.[0]}
@@ -1607,7 +1633,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
 
                 <FormInput
                   theme={theme}
-                  label="Date of birth"
+                  label="Date of Birth"
                   value={form.date_of_birth ?? ''}
                   onChange={(value) => handleFieldChange('date_of_birth', value)}
                   error={validation.errors.date_of_birth?.[0]}
@@ -1625,7 +1651,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                       isDark ? 'text-gray-300' : 'text-gray-700'
                     )}
                   >
-                    Biological sex <span className="text-red-500">*</span>
+                    Biological Sex <span className="text-red-500">*</span>
                   </label>
 
                   <div className="group relative">
@@ -1669,7 +1695,6 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                       <option value={BiologicalSex.MALE}>Male</option>
                       <option value={BiologicalSex.FEMALE}>Female</option>
                       <option value={BiologicalSex.INTERSEX}>Intersex</option>
-                      <option value={BiologicalSex.UNKNOWN}>Unknown</option>
                     </select>
 
                     <ChevronDown
@@ -1704,7 +1729,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                   (touchedFields.has('email') || touchedFields.has('phone')) && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity:1, y: 0 }}
+                      animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       className={cn(
                         'mb-5 flex items-start gap-2 rounded-xl p-3 text-sm',
@@ -1744,8 +1769,7 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                   onClick={() => void submit()}
                   disabled={!isFormValid || isSubmitting || !!conflict}
                   className={cn(
-                    'flex w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50',
-                    onCancel ? 'sm:flex-1' : '',
+                    'flex w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50',  onCancel ? 'sm:flex-1' : '',
                     isDark
                       ? 'border-blue-500/50 bg-gradient-to-br from-blue-600 to-blue-700 text-white hover:shadow-lg hover:shadow-blue-500/20'
                       : 'border-blue-300 bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:shadow-lg hover:shadow-blue-500/20'
@@ -1754,12 +1778,12 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                   {isSubmitting ? (
                     <>
                       <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      Saving patient...
+                      Creating...
                     </>
                   ) : (
                     <>
                       <UserPlus className="h-5 w-5" />
-                      Review and create patient
+                      Create Patient
                     </>
                   )}
                 </motion.button>
