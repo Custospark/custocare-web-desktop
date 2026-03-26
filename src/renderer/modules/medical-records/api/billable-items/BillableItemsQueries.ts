@@ -153,7 +153,7 @@ export const useGetBillingByVisit = (
  * @returns Mutation object with mutate function and state
  * 
  * @example
- * const { mutate, isPending } = useFinalizeBilling({
+ * const { mutate, isPending } = useSubmitBilling({
  *   onSuccess: (data) => navigate(`/billing/${data.data.billing_cycle_uuid}`),
  * });
  * 
@@ -164,7 +164,7 @@ export const useGetBillingByVisit = (
  *   payment_methods: [...]
  * });
  */
-export const useFinalizeBilling = (
+export const useSubmitBilling = (
   callbacks: MutationCallbacks<BillingSubmissionResponse, AxiosError<ApiErrorResponse>> = {}
 ) => {
   const { showToast } = useToast();
@@ -173,7 +173,7 @@ export const useFinalizeBilling = (
   return useMutation<BillingSubmissionResponse, AxiosError<ApiErrorResponse>, BillingSubmissionPayload>({
     mutationFn: async (payload: BillingSubmissionPayload) => {
       const response = await axiosInstance.post<BillingSubmissionResponse>(
-        '/billing/finalize',
+        '/billing/save',
         payload,
         {
           headers: {
@@ -184,12 +184,12 @@ export const useFinalizeBilling = (
       return response.data;
     },
     onSuccess: (data) => {
-      const successMessage = data.message || 'Billing finalized successfully!';
+      const successMessage = data.message || 'Billing saved successfully!';
       showToast('success', successMessage, 8000);
       callbacks.onSuccess?.(data);
     },
     onError: (error: AxiosError<ApiErrorResponse>) => {
-      const apiMessage = error.response?.data?.message || error.message || 'Failed to finalize billing.';
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to save billing.';
 
       // Extract validation errors if present
       let errorDetails = '';
@@ -265,7 +265,7 @@ export default {
   useGetBillingByVisit,
 
   // Mutation hooks
-  useFinalizeBilling,
+  useSubmitBilling,
   
 
   // Utilities

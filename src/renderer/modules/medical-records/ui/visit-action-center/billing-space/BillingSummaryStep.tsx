@@ -35,7 +35,7 @@ import {
   selectActivePatient,
   selectActiveVisit,
 } from '../../../../../app/store/slices/visitSlice';
-import { useFinalizeBilling } from '../../../api/billable-items/BillableItemsQueries';
+import { useSubmitBilling } from '../../../api/billable-items/BillableItemsQueries';
 import { useGetFacilityIdentity } from '../../../api/facility/FacilityQueries';
 import type { BillingSubmissionPayload } from '../../../api/billable-items/BillingItemsTypes';
 import { PaymentStatus, DiscountType, type Tax, type PaymentMethod } from '../../../api/billing-review/BillingReviewTypes';
@@ -162,7 +162,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   const hasRequiredIds = visitId != null && patientId != null;
 
   // ─── Finalize billing mutation ───────────────────────────────────────────────
-  const { mutate: submitBilling, isPending: isSubmitting } = useFinalizeBilling({
+  const { mutate: submitBilling, isPending: isSubmitting } = useSubmitBilling({
     onSuccess: (response) => {
       const generatedReceiptNumber = response.data.receipt_number;
       setReceiptNumber(generatedReceiptNumber);

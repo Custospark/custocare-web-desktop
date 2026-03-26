@@ -13,7 +13,7 @@
 /* -------------------------------------------------------------------------- */
 /*                                   ENUMS                                    */
 /* -------------------------------------------------------------------------- */
-
+import { PaymentStatus } from '../billing-review/BillingReviewTypes';
 export enum BillableItemType {
   INVENTORY = 'inventory',
   SERVICE = 'service',
@@ -121,7 +121,6 @@ export type LowStockItem = InventoryItem;
 /* -------------------------------------------------------------------------- */
 /*                        BILLING SUBMISSION TYPES                            */
 /* -------------------------------------------------------------------------- */
-
 export interface BillingSubmissionPayload {
   visit_id: number;
   patient_id: number;
@@ -157,8 +156,21 @@ export interface BillingSubmissionPayload {
     balance: number;
   };
   additional_notes?: string;
+
+  /**
+   * UI/workflow billing state.
+   * For saved-but-unpaid billing records we keep this as `ready`.
+   * `settled` should only be used after successful payment completion.
+   */
   status: 'draft' | 'ready' | 'settled';
+
+  /**
+   * Explicit payment lifecycle state sent to the backend.
+   * For Save & Exit and Forward Patient flows this must always be `pending`.
+   */
+  payment_status?: PaymentStatus;
 }
+
 
 export interface BillingSubmissionResponse {
   success: boolean;
