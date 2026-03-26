@@ -53,7 +53,6 @@ import {
   countryCodes,
 } from '../../../../../administration/onboarding/ui/auth/countryCodes';
 
-// TODO: update this import path to your real route file
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../../app/routes/routeConstants';
 
 type Theme = 'light' | 'dark';
@@ -190,29 +189,66 @@ function errorToMessage(error: unknown): string {
   return 'We could not save this patient right now. Please try again.';
 }
 
-function getConflictHeadline(type: ConflictType): string {
-  if (type === 'duplicate') return 'We found a similar patient record';
-  if (type === 'existing_user') return 'This phone number or email is already be in use';
+function getConflictHeadline(conflict: ConflictState): string {
+  if (conflict.type === 'duplicate') {
+    return 'We found a similar patient record';
+  }
+  
+  if (conflict.type === 'existing_user') {
+    const matchedFields = conflict.data.matchedContactFields || [];
+    if (matchedFields.includes('email') && matchedFields.includes('phone')) {
+      return 'A patient with this email address and phone number already exists';
+    }
+    if (matchedFields.includes('email')) {
+      return 'A patient with this email address already exists';
+    }
+    if (matchedFields.includes('phone')) {
+      return 'A patient with this phone number already exists';
+    }
+    return 'This contact information is already in use';
+  }
+  
   return 'Please review this information';
 }
 
 function getConflictDescription(conflict: ConflictState): string {
+  const matchedFields = conflict.data.matchedContactFields || [];
+  
   if (conflict.type === 'duplicate') {
     return 'Before creating a new patient, please review the similar record below. This helps prevent duplicate patient records.';
   }
 
   if (conflict.type === 'existing_user') {
     if (conflict.data.conflictCode === 'IDENTITY_MISMATCH') {
-      return 'The phone number or email entered is already linked to another person. Please review the record below before continuing.';
+      if (matchedFields.includes('email') && matchedFields.includes('phone')) {
+        return 'The email address and phone number you entered are already linked to a different person. Please review the existing record below.';
+      }
+      if (matchedFields.includes('email')) {
+        return 'The email address you entered is already linked to a different person. Please review the existing record below.';
+      }
+      if (matchedFields.includes('phone')) {
+        return 'The phone number you entered is already linked to a different person. Please review the existing record below.';
+      }
+      return 'The contact information you entered is already linked to a different person. Please review the existing record below.';
     }
-
-    return 'The phone number or email entered matches an existing record. Please review it before creating a new patient.';
+    
+    if (matchedFields.includes('email') && matchedFields.includes('phone')) {
+      return 'A patient with this email address and phone number already exists on Custocare. Please review the existing record before creating a new one.';
+    }
+    if (matchedFields.includes('email')) {
+      return 'A patient with this email address already exists on Custocare. Please review the existing record before creating a new one.';
+    }
+    if (matchedFields.includes('phone')) {
+      return 'A patient with this phone number already exists on Custocare. Please review the existing record before creating a new one.';
+    }
   }
 
   return 'Please review the information below before continuing.';
 }
 
 function getConflictGuidance(conflict: ConflictState): string[] {
+  const matchedFields = conflict.data.matchedContactFields || [];
+  
   if (conflict.type === 'duplicate') {
     return [
       'Check whether the patient shown below is the same person.',
@@ -222,10 +258,53 @@ function getConflictGuidance(conflict: ConflictState): string[] {
   }
 
   if (conflict.data.conflictCode === 'IDENTITY_MISMATCH') {
+    if (matchedFields.includes('email') && matchedFields.includes('phone')) {
+      return [
+        'The email address and phone number you entered belong to someone else.',
+        'Please verify the correct email address and phone number for this patient.',
+        'Open patient search to review the existing record if needed.',
+      ];
+    }
+    if (matchedFields.includes('email')) {
+      return [
+        'The email address you entered belongs to someone else.',
+        'Please verify the correct email address for this patient.',
+        'Open patient search to review the existing record if needed.',
+      ];
+    }
+    if (matchedFields.includes('phone')) {
+      return [
+        'The phone number you entered belongs to someone else.',
+        'Please verify the correct phone number for this patient.',
+        'Open patient search to review the existing record if needed.',
+      ];
+    }
     return [
-      'Check the phone number and email carefully.',
-      'Open patient search to review the existing record.',
-      'If needed, go back and correct the details before trying again.',
+      'The contact information you entered belongs to someone else.',
+      'Please verify the correct contact details for this patient.',
+      'Open patient search to review the existing record if needed.',
+    ];
+  }
+
+  if (matchedFields.includes('email') && matchedFields.includes('phone')) {
+    return [
+      'Review the existing patient record below.',
+      'If this is the same patient, open patient search and use the existing record.',
+      'If this is a different patient, update the email address and phone number and try again.',
+    ];
+  }
+  if (matchedFields.includes('email')) {
+    return [
+      'Review the existing patient record below.',
+      'If this is the same patient, open patient search and use the existing record.',
+      'If this is a different patient, update the email address and try again.',
+    ];
+  }
+  if (matchedFields.includes('phone')) {
+    return [
+      'Review the existing patient record below.',
+      'If this is the same patient, open patient search and use the existing record.',
+      'If this is a different patient, update the phone number and try again.',
     ];
   }
 
@@ -237,11 +316,18 @@ function getConflictGuidance(conflict: ConflictState): string[] {
 }
 
 function formatMatchedContactFields(fields?: ContactMatchField[]): string {
-  if (!fields || fields.length === 0) return 'Not specified';
+  if (!fields || fields.length === 0) return '';
 
-  return fields
-    .map((field) => (field === 'email' ? 'Email' : 'Phone'))
-    .join(', ');
+  if (fields.includes('email') && fields.includes('phone')) {
+    return 'email address and phone number';
+  }
+  if (fields.includes('email')) {
+    return 'email address';
+  }
+  if (fields.includes('phone')) {
+    return 'phone number';
+  }
+  return '';
 }
 
 const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
@@ -1194,26 +1280,36 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
     if (!conflict) return null;
 
     const reviewPatient = conflict.data.duplicatePatient ?? conflict.data.existingPatient;
-    const matchedContacts = formatMatchedContactFields(conflict.data.matchedContactFields);
+    const matchedFields = formatMatchedContactFields(conflict.data.matchedContactFields);
     const steps = getConflictGuidance(conflict);
+    const headline = getConflictHeadline(conflict);
+    const description = getConflictDescription(conflict);
 
     const cardClasses =
       conflict.type === 'duplicate'
         ? isDark
           ? 'border-yellow-500/30 bg-gradient-to-br from-yellow-900/20 to-yellow-800/10'
           : 'border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50'
-        : isDark
-          ? 'border-blue-500/30 bg-gradient-to-br from-blue-900/20 to-blue-800/10'
-          : 'border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50';
+        : conflict.data.conflictCode === 'IDENTITY_MISMATCH'
+          ? isDark
+            ? 'border-red-500/30 bg-gradient-to-br from-red-900/20 to-red-800/10'
+            : 'border-red-200 bg-gradient-to-br from-red-50 to-rose-50'
+          : isDark
+            ? 'border-blue-500/30 bg-gradient-to-br from-blue-900/20 to-blue-800/10'
+            : 'border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50';
 
     const iconClasses =
       conflict.type === 'duplicate'
         ? isDark
           ? 'bg-yellow-500/20 text-yellow-400'
           : 'bg-yellow-100 text-yellow-700'
-        : isDark
-          ? 'bg-blue-500/20 text-blue-400'
-          : 'bg-blue-100 text-blue-700';
+        : conflict.data.conflictCode === 'IDENTITY_MISMATCH'
+          ? isDark
+            ? 'bg-red-500/20 text-red-400'
+            : 'bg-red-100 text-red-700'
+          : isDark
+            ? 'bg-blue-500/20 text-blue-400'
+            : 'bg-blue-100 text-blue-700';
 
     return (
       <motion.div
@@ -1229,9 +1325,13 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
               ? isDark
                 ? 'bg-yellow-500/20'
                 : 'bg-yellow-400/20'
-              : isDark
-                ? 'bg-blue-500/20'
-                : 'bg-blue-400/20'
+              : conflict.data.conflictCode === 'IDENTITY_MISMATCH'
+                ? isDark
+                  ? 'bg-red-500/20'
+                  : 'bg-red-400/20'
+                : isDark
+                  ? 'bg-blue-500/20'
+                  : 'bg-blue-400/20'
           )}
         />
 
@@ -1246,11 +1346,11 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
 
           <div className="min-w-0 flex-1">
             <h4 className={cn('text-lg font-semibold sm:text-xl', isDark ? 'text-white' : 'text-gray-900')}>
-              {getConflictHeadline(conflict.type)}
+              {headline}
             </h4>
 
             <p className={cn('mt-2 text-sm leading-6', isDark ? 'text-gray-300' : 'text-gray-700')}>
-              {getConflictDescription(conflict)}
+              {description}
             </p>
 
             <div
@@ -1378,25 +1478,35 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                   </div>
                 ) : (
                   <div className={cn('text-sm leading-6', isDark ? 'text-gray-300' : 'text-gray-700')}>
-                    We found matching contact information in another record.
-                    {matchedContacts !== 'Not specified' && (
-                      <div className="mt-2">
-                        Matching details: <span className="font-medium">{matchedContacts}</span>
-                      </div>
+                    {matchedFields ? (
+                      <>
+                        A patient with this {matchedFields} already exists.
+                        <div className="mt-2">
+                          Please review the existing record by opening patient search.
+                        </div>
+                      </>
+                    ) : (
+                      'We found matching information in another record. Please review patient search to locate the existing record.'
                     )}
                   </div>
                 )}
               </div>
             </div>
 
-            {matchedContacts !== 'Not specified' && (
+            {matchedFields && (
               <div
                 className={cn(
                   'mt-4 rounded-xl px-4 py-3 text-sm',
-                  isDark ? 'bg-blue-950/30 text-blue-200' : 'bg-blue-50 text-blue-700'
+                  conflict.data.conflictCode === 'IDENTITY_MISMATCH'
+                    ? isDark
+                      ? 'bg-red-950/30 text-red-200'
+                      : 'bg-red-50 text-red-700'
+                    : isDark
+                      ? 'bg-blue-950/30 text-blue-200'
+                      : 'bg-blue-50 text-blue-700'
                 )}
               >
-                Matching details found: <span className="font-semibold">{matchedContacts}</span>
+                <span className="font-semibold">Matching details:</span> A patient with this {matchedFields} already exists on Custocare.
               </div>
             )}
 
@@ -1769,7 +1879,8 @@ const PatientCreate: React.FC<PatientCreateProps> = ({
                   onClick={() => void submit()}
                   disabled={!isFormValid || isSubmitting || !!conflict}
                   className={cn(
-                    'flex w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50',  onCancel ? 'sm:flex-1' : '',
+                    'flex w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50',
+                    onCancel ? 'sm:flex-1' : '',
                     isDark
                       ? 'border-blue-500/50 bg-gradient-to-br from-blue-600 to-blue-700 text-white hover:shadow-lg hover:shadow-blue-500/20'
                       : 'border-blue-300 bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:shadow-lg hover:shadow-blue-500/20'
