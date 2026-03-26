@@ -255,6 +255,7 @@ const MRPatientSearch: React.FC<MRPatientSearchProps> = ({ theme, className }) =
             is_walk_in: response.data.is_walk_in,
           };
 
+
           // Set active visit in Redux
           dispatch(setActiveVisit({
             visit: queueVisitItem,

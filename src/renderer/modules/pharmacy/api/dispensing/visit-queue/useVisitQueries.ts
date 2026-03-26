@@ -393,6 +393,7 @@ export const useCreateVisit = (
     mutationFn: async (data: CreateVisitRequest) => {
       const response = await axiosInstance.post<VisitResponse>('/visits', data);
       return response.data;
+
     },
     onMutate: async (newVisit) => {
       await queryClient.cancelQueries({ queryKey: visitKeys.lists() });
