@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import {
   ArrowRight,
   AlertCircle,
@@ -62,33 +62,40 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
+  // Redux selectors - always call hooks at top level
   const pendingForwarding = useSelector(selectPendingForwarding);
   const activeVisit = useSelector(selectActiveVisit);
   const activeVisitId = useSelector(selectActiveVisitId);
-
   const chargeItems = useSelector(selectChargeItems);
   const billingState = useSelector(selectBillingState);
   const billingData = useSelector(selectBillingData);
 
+  // State hooks
   const [currentAction, setCurrentAction] = useState<BillingAction>(null);
 
+  // Theme helper
   const isDark = theme === 'dark';
 
-  const visitId =
-    activeVisitId ??
-    activeVisit?.visit_id ??
-    (billingState.visitId ? Number(billingState.visitId) : undefined);
+  // Derived values
+  const visitId = useMemo(() => 
+    activeVisitId ?? activeVisit?.visit_id ?? (billingState.visitId ? Number(billingState.visitId) : undefined),
+    [activeVisitId, activeVisit?.visit_id, billingState.visitId]
+  );
 
-  const patientId =
-    activeVisit?.patient_id ??
-    (billingState.patientId ? Number(billingState.patientId) : undefined);
+  const patientId = useMemo(() => 
+    activeVisit?.patient_id ?? (billingState.patientId ? Number(billingState.patientId) : undefined),
+    [activeVisit?.patient_id, billingState.patientId]
+  );
 
+  // Query hooks
   const billingMutation = useSubmitBilling();
-
-  // Keep this mutation "dumb" here — no global onSuccess side effects.
-  // We only want forwarding cleanup to happen when the forward action was explicitly chosen.
   const assignMutation = useAssignStaffToVisit();
 
+  // Action states
+  const isActionPending = currentAction !== null || billingMutation.isPending || assignMutation.isPending;
+  const hasChargeItems = chargeItems.length > 0;
+
+  // Reset function
   const resetAndExitToQueue = useCallback(() => {
     dispatch(clearPendingForwarding());
     dispatch(closeTray());
@@ -97,7 +104,8 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
     navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE);
   }, [dispatch, navigate]);
 
-  const buildPendingBillingPayload = (): BillingSubmissionPayload | null => {
+  // Build payload function
+  const buildPendingBillingPayload = useCallback((): BillingSubmissionPayload | null => {
     if (visitId == null || patientId == null) {
       console.error('Unable to persist billing: missing visit ID or patient ID.', {
         visitId,
@@ -152,9 +160,19 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
       status: 'ready',
       payment_status: PaymentStatus.PENDING,
     };
-  };
+  }, [
+    visitId,
+    patientId,
+    chargeItems,
+    billingState.discount.type,
+    billingState.discount.value,
+    billingState.additionalNotes,
+    billingState.paymentMethods,
+    billingData,
+  ]);
 
-  const persistPendingBilling = async (): Promise<boolean> => {
+  // Persist billing function
+  const persistPendingBilling = useCallback(async (): Promise<boolean> => {
     const payload = buildPendingBillingPayload();
 
     if (!payload) return false;
@@ -167,13 +185,14 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
       console.error('Failed to persist pending billing data:', error);
       return false;
     }
-  };
+  }, [buildPendingBillingPayload, billingMutation, dispatch]);
 
+  // Main action handler
   const runAction = useCallback(
     async (action: Exclude<BillingAction, null>) => {
       if (
         isReadOnly ||
-        isDisabledProceed ||
+        !hasChargeItems ||
         currentAction !== null ||
         billingMutation.isPending ||
         assignMutation.isPending
@@ -185,17 +204,21 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
 
       try {
         const isSaved = await persistPendingBilling();
-        if (!isSaved) return;
+        if (!isSaved) {
+          setCurrentAction(null);
+          return;
+        }
 
         if (action === 'save') {
           resetAndExitToQueue();
           return;
         }
 
-        // action === 'forward'
+        // Forward action
         if (!pendingForwarding?.visitId || !pendingForwarding?.assignedStaffId) {
           dispatch(closeTray());
           navigate(MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT);
+          setCurrentAction(null);
           return;
         }
 
@@ -213,47 +236,60 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
         setCurrentAction(null);
       }
     },
-    []
+    [
+      isReadOnly,
+      hasChargeItems,
+      currentAction,
+      billingMutation.isPending,
+      persistPendingBilling,
+      pendingForwarding,
+      dispatch,
+      navigate,
+      resetAndExitToQueue,
+      assignMutation, 
+    ]
   );
 
-  const handleSaveAndExit = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  // Event handlers
+  const handleSaveAndExit = useCallback(async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
     await runAction('save');
-  };
+  }, [runAction]);
 
-  const handleForwardPatient = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleForwardPatient = useCallback(async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
     await runAction('forward');
-  };
+  }, [runAction]);
 
-  const handleProceedToPayment = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleProceedToPayment = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (!isDisabledProceed && currentAction === null) {
       onProceedToBilling();
     }
-  };
+  }, [isDisabledProceed, currentAction, onProceedToBilling]);
 
+  // Button disabled states
+  const isSaveDisabled = isReadOnly || !hasChargeItems || isActionPending;
+  const isForwardDisabled = isReadOnly || !hasChargeItems || isActionPending;
+  const isPaymentDisabled = isDisabledProceed || isActionPending;
+
+  // UI helpers
   const showPaymentOption = activeOption === 'payment' || activeOption === 'default';
   const showSaveOption = activeOption === 'save' || activeOption === 'default';
   const showForwardOption = activeOption === 'forward' || activeOption === 'default';
 
-  const getButtonStyle = (isDisabled: boolean) => {
+  const getButtonStyle = useCallback((isDisabled: boolean) => {
     if (isDisabled) {
       return 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed';
     }
-    return 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer hover:shadow-lg active:scale-[0.98]';
-  };
+    return 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer hover:shadow-lg active:scale-[0.98] transition-all';
+  }, []);
 
-  const isActionPending = currentAction !== null || billingMutation.isPending || assignMutation.isPending;
-  const isSaveDisabled = isDisabledProceed || isActionPending;
-  const isForwardDisabled = isDisabledProceed || isActionPending;
-  const isPaymentDisabled = isDisabledProceed || isActionPending;
-
-  const getWorkflowTip = () => {
+  const getWorkflowTip = useCallback(() => {
     if (isReadOnly) {
       return {
         icon: AlertCircle,
@@ -288,14 +324,43 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
           color: isDark ? 'text-yellow-400' : 'text-yellow-600',
         };
     }
-  };
+  }, [isReadOnly, activeOption, isDark]);
 
   const workflowTip = getWorkflowTip();
   const TipIcon = workflowTip.icon;
 
+  // Render loading state for buttons
+  const renderButtonContent = (action: BillingAction, defaultIcon: React.ReactNode, defaultText: string, loadingText: string) => {
+    if (currentAction === action && billingMutation.isPending) {
+      return (
+        <>
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Saving Billing...</span>
+        </>
+      );
+    }
+    
+    if (currentAction === action && assignMutation.isPending) {
+      return (
+        <>
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>{loadingText}</span>
+        </>
+      );
+    }
+    
+    return (
+      <>
+        {defaultIcon}
+        <span>{defaultText}</span>
+      </>
+    );
+  };
+
   return (
     <div className="lg:col-span-4 xl:col-span-3 min-h-0">
       <div className="lg:sticky lg:top-4 space-y-4">
+        {/* Summary Card */}
         <div className={`p-4 sm:p-5 border ${colors.border.primary} ${colors.bg.secondary} rounded-xl`}>
           <h3 className={`text-base sm:text-lg font-bold mb-4 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
             Billing Summary
@@ -322,6 +387,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
           </div>
         </div>
 
+        {/* Action Buttons Card */}
         <div className={`p-4 sm:p-5 border ${colors.border.primary} ${colors.bg.secondary} rounded-xl space-y-3`}>
           {showPaymentOption && (
             <button
@@ -343,22 +409,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
               disabled={isForwardDisabled}
               className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-lg transition-all ${getButtonStyle(isForwardDisabled)}`}
             >
-              {currentAction === 'forward' && assignMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Forwarding Patient...</span>
-                </>
-              ) : currentAction === 'forward' && billingMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Saving Billing...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  <span>Forward Patient</span>
-                </>
-              )}
+              {renderButtonContent('forward', <Send className="w-4 h-4" />, 'Forward Patient', 'Forwarding Patient...')}
             </button>
           )}
 
@@ -369,20 +420,11 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
               disabled={isSaveDisabled}
               className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-lg transition-all ${getButtonStyle(isSaveDisabled)}`}
             >
-              {currentAction === 'save' && billingMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  <span>Finish & Exit (Pay Later)</span>
-                </>
-              )}
+              {renderButtonContent('save', <Save className="w-4 h-4" />, 'Finish & Exit (Pay Later)', 'Saving...')}
             </button>
           )}
 
+          {/* Forwarding Info */}
           {pendingForwarding?.assignedStaffName && showForwardOption && (
             <div
               className={`rounded-lg border p-3 ${
@@ -400,6 +442,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
           )}
         </div>
 
+        {/* Workflow Tip Card */}
         <div className={`p-4 border ${colors.border.primary} ${colors.bg.secondary} rounded-xl`}>
           <div className="flex items-start gap-2">
             <TipIcon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${workflowTip.color}`} />
