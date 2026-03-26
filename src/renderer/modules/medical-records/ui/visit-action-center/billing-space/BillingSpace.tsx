@@ -1,16 +1,20 @@
-// BillingSpace.tsx
-import React, { useCallback, useRef } from 'react';
-import { ShoppingCart, Receipt, BadgeDollarSign, RefreshCw } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { ShoppingCart, Receipt, BadgeDollarSign, RefreshCw, Database, FilePlus2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   openTray,
-  selectChargeItems,
-  selectBillingStatus,
+  selectRenderableChargeItems,
+  selectEffectiveBillingStatus,
   selectPatientInfo,
-  selectBillingData,
+  selectDisplayBillingData,
+  hydrateBackendBilling,
+  clearBackendBilling,
 } from './billingSlice';
 import { formatCurrency } from './billing-types';
-import { useGetBillableItems } from '../../../api/billable-items/BillableItemsQueries';
+import {
+  useGetBillableItems,
+  useGetBillingByVisit,
+} from '../../../api/billable-items/BillableItemsQueries';
 
 interface BillingSpaceProps {
   theme?: 'light' | 'dark';
@@ -31,27 +35,45 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
   const dispatch = useDispatch();
 
   // Redux selectors
-  const chargeItems = useSelector(selectChargeItems);
-  const status = useSelector(selectBillingStatus);
+  const renderableChargeItems = useSelector(selectRenderableChargeItems);
+  const status = useSelector(selectEffectiveBillingStatus);
   const patientInfo = useSelector(selectPatientInfo);
-  const billingData = useSelector(selectBillingData);
+  const displayBillingData = useSelector(selectDisplayBillingData);
 
-  // Use ref to track if we've already prefetched to avoid duplicate calls
   const hasPrefetchedRef = useRef(false);
-
-  // Setup billable items query - prefetch in background
-  const { 
-    refetch: refetchBillableItems, 
-    isFetching: isFetchingBillableItems 
-  } = useGetBillableItems({}, {
-    enabled: false, // Don't fetch automatically
-  });
 
   const displayPatientName = patientName || patientInfo.patientName;
   const displayPatientId = patientId || patientInfo.patientId;
   const displayVisitId = visitId || patientInfo.visitId;
+  const numericVisitId = Number(displayVisitId || 0);
 
-  // Color scheme based on theme
+  /**
+   * Background prefetch for billable items so charge entry opens quickly.
+   */
+  const {
+    refetch: refetchBillableItems,
+    isFetching: isFetchingBillableItems,
+  } = useGetBillableItems({}, { enabled: false });
+
+  /**
+   * Retrieve persisted billing for this visit and keep slice backend bucket hydrated.
+   */
+  const { data: backendBillingResponse } = useGetBillingByVisit(numericVisitId, {
+    enabled: !!numericVisitId,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  useEffect(() => {
+    if (!backendBillingResponse?.data) return;
+
+    if (backendBillingResponse.data.has_billing) {
+      dispatch(hydrateBackendBilling(backendBillingResponse.data));
+    } else {
+      dispatch(clearBackendBilling());
+    }
+  }, [backendBillingResponse, dispatch]);
+
   const colors = {
     bg: {
       primary: isDark ? 'bg-gray-900' : 'bg-white',
@@ -74,6 +96,10 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
       ready: isDark ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-700',
       settled: isDark ? 'bg-green-900/30 text-green-400' : 'bg-green-50 text-green-700',
     },
+    source: {
+      persisted: isDark ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-50 text-amber-700',
+      draft: isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-50 text-emerald-700',
+    },
   };
 
   const statusConfig = {
@@ -84,35 +110,46 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
 
   const currentStatus = statusConfig[status];
 
-  // Background prefetch function
+  const itemsCount = renderableChargeItems.length;
+  const subtotal = displayBillingData.displayedSubtotal;
+  const totalDue = displayBillingData.displayedBalance;
+
+  const persistedCount = useMemo(
+    () => renderableChargeItems.filter((item) => item.source === 'backend').length,
+    [renderableChargeItems]
+  );
+
+  const draftCount = useMemo(
+    () => renderableChargeItems.filter((item) => item.source === 'slice').length,
+    [renderableChargeItems]
+  );
+
   const prefetchInBackground = useCallback(() => {
-    // Only prefetch if we haven't already
-    if (!hasPrefetchedRef.current) {
-      hasPrefetchedRef.current = true;
-      
-      // Use requestIdleCallback or setTimeout to defer non-critical work
-      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        window.requestIdleCallback(() => {
-          refetchBillableItems().catch(error => {
-            console.error('Background prefetch failed:', error);
-            // Reset ref on error to allow retry later
-            hasPrefetchedRef.current = false;
-          });
-        }, { timeout: 2000 });
-      } else {
-        // Fallback to setTimeout for browsers without requestIdleCallback
-        setTimeout(() => {
-          refetchBillableItems().catch(error => {
+    if (hasPrefetchedRef.current) return;
+
+    hasPrefetchedRef.current = true;
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      window.requestIdleCallback(
+        () => {
+          refetchBillableItems().catch((error) => {
             console.error('Background prefetch failed:', error);
             hasPrefetchedRef.current = false;
           });
-        }, 200);
-      }
+        },
+        { timeout: 2000 }
+      );
+    } else {
+      setTimeout(() => {
+        refetchBillableItems().catch((error) => {
+          console.error('Background prefetch failed:', error);
+          hasPrefetchedRef.current = false;
+        });
+      }, 200);
     }
   }, [refetchBillableItems]);
 
   const handleOpenChargeEntry = useCallback(() => {
-    // Open the tray IMMEDIATELY
     dispatch(
       openTray({
         step: 'charge_entry',
@@ -122,7 +159,6 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
       })
     );
 
-    // Prefetch in background without blocking
     prefetchInBackground();
   }, [dispatch, displayVisitId, displayPatientId, displayPatientName, prefetchInBackground]);
 
@@ -138,7 +174,6 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
   }, [dispatch, displayVisitId, displayPatientId, displayPatientName]);
 
   const handleHoverPrefetch = useCallback(() => {
-    // When user hovers over the button, prefetch if not already done
     prefetchInBackground();
   }, [prefetchInBackground]);
 
@@ -159,6 +194,22 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
             </span>
           </div>
 
+          {/* Source Badges */}
+          <div className="flex flex-wrap gap-2">
+            {persistedCount > 0 && (
+              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${colors.source.persisted}`}>
+                <Database className="w-3 h-3" />
+                {persistedCount} persisted
+              </span>
+            )}
+            {draftCount > 0 && (
+              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${colors.source.draft}`}>
+                <FilePlus2 className="w-3 h-3" />
+                {draftCount} draft
+              </span>
+            )}
+          </div>
+
           {/* Items Count */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -168,20 +219,33 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
               </span>
             </div>
             <span className={`font-medium ${colors.text.primary}`}>
-              {chargeItems.length}
+              {itemsCount}
             </span>
           </div>
 
           {/* Subtotal */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Receipt className="w-4 h-4 text-yellow-500" /> {/* Changed from amber to yellow */}
+              <Receipt className="w-4 h-4 text-yellow-500" />
               <span className={`text-sm font-medium ${colors.text.secondary}`}>
                 Subtotal
               </span>
             </div>
             <span className={`font-bold ${colors.text.primary}`}>
-              {formatCurrency(billingData.subtotal)}
+              {formatCurrency(subtotal)}
+            </span>
+          </div>
+
+          {/* Total Due */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Receipt className="w-4 h-4 text-red-500" />
+              <span className={`text-sm font-medium ${colors.text.secondary}`}>
+                Total Due
+              </span>
+            </div>
+            <span className={`font-bold ${colors.text.primary}`}>
+              {formatCurrency(totalDue)}
             </span>
           </div>
 
@@ -208,12 +272,12 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
 
             <button
               onClick={handleOpenBillingSummary}
-              disabled={chargeItems.length === 0}
+              disabled={itemsCount === 0}
               className={`
                 flex items-center justify-center gap-1.5 px-3 py-2 rounded text-sm font-medium
                 transition-all active:scale-[0.98]
                 ${
-                  chargeItems.length === 0
+                  itemsCount === 0
                     ? `bg-gray-300 dark:bg-gray-700 ${colors.text.muted} cursor-not-allowed`
                     : `${colors.accent.primary} ${colors.accent.hover} ${colors.accent.text} cursor-pointer`
                 }
@@ -225,7 +289,7 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
             </button>
           </div>
 
-          {/* Loading indicator for background fetch (subtle) */}
+          {/* Loading indicator */}
           {isFetchingBillableItems && (
             <div className="flex items-center justify-center gap-1.5 pt-2">
               <RefreshCw className="w-3 h-3 animate-spin text-blue-500" />
@@ -240,5 +304,4 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
   );
 };
 
-// Optional: Export as default for cleaner imports
 export default BillingSpace;

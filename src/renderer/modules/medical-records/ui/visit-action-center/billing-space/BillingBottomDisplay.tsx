@@ -1,116 +1,89 @@
-// BillingSpace.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Receipt, ShoppingCart } from 'lucide-react';
+import { Receipt, ShoppingCart, Database, FilePlus2 } from 'lucide-react';
 import { type RootState } from '../../../../../app/store/rootReducer';
 import {
   selectActivePatient,
   selectActiveVisit,
-  selectActiveVisitInfo,
 } from '../../../../../app/store/slices/visitSlice';
 import {
   openTray,
-  selectChargeItems,
-  selectBillingData,
-  selectBillingStatus,
-  selectCanProceed,
+  selectRenderableChargeItems,
+  selectDisplayBillingData,
+  selectEffectiveBillingStatus,
+  hydrateBackendBilling,
+  clearBackendBilling,
 } from './billingSlice';
 import { formatCurrency } from './billing-types';
+import { useGetBillingByVisit } from '../../../api/billable-items/BillableItemsQueries';
 
-interface BillingSpaceProps {
+interface BillingBottomDisplayProps {
   theme?: 'light' | 'dark';
 }
 
-export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'light' }) => {
+export const BillingBottomDisplay: React.FC<BillingBottomDisplayProps> = ({ theme = 'light' }) => {
   const dispatch = useDispatch();
-  
-  // Get data from Redux store using the same approach as MRVisitActionCenter
+  const isDark = theme === 'dark';
+
   const patient = useSelector((state: RootState) => selectActivePatient(state));
   const activeVisit = useSelector((state: RootState) => selectActiveVisit(state));
-  const visitInfo = useSelector((state: RootState) => selectActiveVisitInfo(state));
-  
-  // Billing state selectors
-  const chargeItems = useSelector(selectChargeItems);
-  const billingData = useSelector(selectBillingData);
-  const billingStatus = useSelector(selectBillingStatus);
-  const canProceed = useSelector(selectCanProceed);
-  
-  const isDark = theme === 'dark';
-  
-  // Validate we have required data
-  const hasActiveVisit = activeVisit && visitInfo && visitInfo.uuid;
-  
-  if (!hasActiveVisit) {
+
+  const renderableChargeItems = useSelector(selectRenderableChargeItems);
+  const displayBillingData = useSelector(selectDisplayBillingData);
+  const billingStatus = useSelector(selectEffectiveBillingStatus);
+
+  const visitId = activeVisit?.visit_id ? Number(activeVisit.visit_id) : 0;
+  const patientId = activeVisit?.patient_id ? String(activeVisit.patient_id) : undefined;
+  const patientName = patient?.name || activeVisit?.patient?.name || 'Unknown Patient';
+
+  const { data: backendBillingResponse } = useGetBillingByVisit(visitId, {
+    enabled: !!visitId,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  useEffect(() => {
+    if (!backendBillingResponse?.data) return;
+
+    if (backendBillingResponse.data.has_billing) {
+      dispatch(hydrateBackendBilling(backendBillingResponse.data));
+    } else {
+      dispatch(clearBackendBilling());
+    }
+  }, [backendBillingResponse, dispatch]);
+
+  if (!activeVisit?.visit_id) {
     return null;
   }
-  
-  // Safely calculate status
-  const status = (() => {
-    try {
-      if (!billingStatus) return 'Draft';
-      
-      switch (billingStatus) {
-        case 'ready':
-          return 'Ready';
-        case 'settled':
-          return 'Settled';
-        case 'draft':
-        default:
-          return 'Draft';
-      }
-    } catch (error) {
-      console.warn('Error calculating billing status:', error);
-      return 'Draft';
+
+  const statusLabel = (() => {
+    switch (billingStatus) {
+      case 'ready':
+        return 'Ready';
+      case 'settled':
+        return 'Settled';
+      case 'draft':
+      default:
+        return 'Draft';
     }
   })();
-  
-  // Safely calculate charges length
-  const safeChargesLength = (() => {
-    try {
-      if (!chargeItems || !Array.isArray(chargeItems)) return 0;
-      const length = chargeItems.length;
-      return typeof length === 'number' && !isNaN(length) && isFinite(length) && length >= 0 
-        ? length 
-        : 0;
-    } catch {
-      return 0;
-    }
-  })();
-  
-  // Safely get subtotal from billingData
-  const subtotal = (() => {
-    try {
-      if (!billingData || typeof billingData !== 'object') return 0;
-      return billingData.subtotal || 0;
-    } catch {
-      return 0;
-    }
-  })();
-  
-  // Safely determine if summary button should be enabled
-  const isSummaryEnabled = (() => {
-    try {
-      if (typeof canProceed === 'undefined' || canProceed === null) return false;
-      return canProceed === true;
-    } catch {
-      return false;
-    }
-  })();
-  
-  // Get patient initials
+
+  const itemsCount = renderableChargeItems.length;
+  const subtotal = displayBillingData.displayedSubtotal;
+  const totalDue = displayBillingData.displayedBalance;
+
+  const persistedCount = renderableChargeItems.filter((item) => item.source === 'backend').length;
+  const draftCount = renderableChargeItems.filter((item) => item.source === 'slice').length;
+
   const getPatientInitial = () => {
-    try {
-      if (!patient || !patient.name || typeof patient.name !== 'string' || patient.name.trim() === '') {
-        return 'P';
-      }
-      const firstChar = patient.name.trim().charAt(0).toUpperCase();
-      return /[A-Z]/i.test(firstChar) ? firstChar : 'P';
-    } catch {
+    if (!patientName || typeof patientName !== 'string' || patientName.trim() === '') {
       return 'P';
     }
+
+    const firstChar = patientName.trim().charAt(0).toUpperCase();
+    return /[A-Z]/i.test(firstChar) ? firstChar : 'P';
   };
-  
-  // Colors
+
   const colors = {
     bg: isDark ? 'bg-gray-800' : 'bg-white',
     border: isDark ? 'border-gray-700' : 'border-gray-200',
@@ -120,15 +93,21 @@ export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'lig
     },
     button: {
       primary: 'bg-blue-600 hover:bg-blue-700 text-white',
-      disabled: isDark 
-        ? 'bg-gray-700 text-gray-500 cursor-not-allowed' 
+      disabled: isDark
+        ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
         : 'bg-gray-300 text-gray-500 cursor-not-allowed',
     },
+    source: {
+      persisted: isDark ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-50 text-amber-700',
+      draft: isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-50 text-emerald-700',
+    },
   };
-  
+
+  const summaryEnabled = itemsCount > 0;
+
   return (
     <div className={`fixed bottom-4 right-4 z-30 ${colors.bg} ${colors.border} border rounded-xl shadow-2xl p-4 max-w-sm`}>
-      {/* Patient Info - Using the same approach as MRVisitActionCenter */}
+      {/* Patient Info */}
       <div className="mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2 mb-1">
           <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
@@ -137,11 +116,11 @@ export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'lig
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p 
+            <p
               className={`font-medium text-sm truncate ${colors.text.primary}`}
-              title={patient?.name || 'Unknown Patient'}
+              title={patientName}
             >
-              {patient?.name || 'Unknown Patient'}
+              {patientName}
             </p>
             <p className={`text-xs ${colors.text.secondary}`}>
               {patient?.patient_number ? `Patient Number: ${patient.patient_number}` : 'No Number'}
@@ -149,60 +128,79 @@ export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'lig
           </div>
         </div>
       </div>
-      
+
+      {/* Source badges */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        {persistedCount > 0 && (
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${colors.source.persisted}`}>
+            <Database className="w-3 h-3" />
+            {persistedCount} persisted
+          </span>
+        )}
+        {draftCount > 0 && (
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${colors.source.draft}`}>
+            <FilePlus2 className="w-3 h-3" />
+            {draftCount} draft
+          </span>
+        )}
+      </div>
+
       {/* Indicators */}
       <div className="grid grid-cols-3 gap-2 mb-3">
-        {/* Items Count */}
         <div className="text-center">
           <p className={`text-xs ${colors.text.secondary}`}>Items</p>
           <p className={`text-lg font-bold ${colors.text.primary}`}>
-            {safeChargesLength}
+            {itemsCount}
           </p>
         </div>
-        
-        {/* Subtotal */}
+
         <div className="text-center">
           <p className={`text-xs ${colors.text.secondary}`}>Subtotal</p>
-          <p 
+          <p
             className={`text-sm font-bold ${colors.text.primary} truncate`}
             title={formatCurrency(subtotal)}
           >
             {formatCurrency(subtotal)}
           </p>
         </div>
-        
-        {/* Status */}
+
         <div className="text-center">
           <p className={`text-xs ${colors.text.secondary}`}>Status</p>
-          <span 
+          <span
             className={`inline-block px-2 py-0.5 rounded text-xs font-medium truncate max-w-full ${
-              status === 'Ready' 
+              statusLabel === 'Ready'
                 ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                : status === 'Settled'
+                : statusLabel === 'Settled'
                 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
                 : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
             }`}
-            title={status}
+            title={statusLabel}
           >
-            {status}
+            {statusLabel}
           </span>
         </div>
       </div>
-      
+
+      {/* Amount due */}
+      <div className="mb-3 text-center">
+        <p className={`text-xs ${colors.text.secondary}`}>Total Due</p>
+        <p className={`text-base font-bold ${colors.text.primary}`}>
+          {formatCurrency(totalDue)}
+        </p>
+      </div>
+
       {/* Action Buttons */}
       <div className="flex gap-2">
-        {/* Charge Entry Button - Always enabled */}
         <button
           onClick={() => {
-            try {
-              dispatch(openTray({ 
+            dispatch(
+              openTray({
                 step: 'charge_entry',
-                visitId: visitInfo?.uuid,
-                patientId: patient?.patient_number,
-              }));
-            } catch (error) {
-              console.error('Failed to open charge entry tray:', error);
-            }
+                visitId: String(activeVisit.visit_id),
+                patientId,
+                patientName,
+              })
+            );
           }}
           className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${colors.button.primary}`}
           title="Open charge entry"
@@ -210,38 +208,33 @@ export const BillingBottomDisplay: React.FC<BillingSpaceProps> = ({ theme = 'lig
           <ShoppingCart className="w-4 h-4 flex-shrink-0" />
           <span className="truncate">Enter Charges</span>
         </button>
-        
-        {/* Summary Button - Conditionally enabled */}
+
         <button
           onClick={() => {
-            if (!isSummaryEnabled) return;
-            
-            try {
-              dispatch(openTray({ 
+            if (!summaryEnabled) return;
+
+            dispatch(
+              openTray({
                 step: 'billing_summary',
-                visitId: visitInfo?.uuid,
-                patientId: patient?.patient_number,
-              }));
-            } catch (error) {
-              console.error('Failed to open billing summary tray:', error);
-            }
+                visitId: String(activeVisit.visit_id),
+                patientId,
+                patientName,
+              })
+            );
           }}
-          disabled={!isSummaryEnabled}
+          disabled={!summaryEnabled}
           className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
-            isSummaryEnabled 
-              ? colors.button.primary
-              : colors.button.disabled
+            summaryEnabled ? colors.button.primary : colors.button.disabled
           }`}
-          title={isSummaryEnabled ? "Open billing summary" : "Add charges first"}
+          title={summaryEnabled ? 'Open billing summary' : 'No billing items to review'}
         >
           <Receipt className="w-4 h-4 flex-shrink-0" />
-          <span className="truncate">Review & Bill.</span>
+          <span className="truncate">Review & Bill</span>
         </button>
       </div>
-      
-      {/* Visit ID Indicator (hidden but accessible) */}
+
       <div className="sr-only" aria-live="polite">
-        Billing space loaded for visit {visitInfo?.uuid}
+        Billing space loaded for visit {activeVisit?.visit_id}
       </div>
     </div>
   );

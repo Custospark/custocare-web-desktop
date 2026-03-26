@@ -186,34 +186,135 @@ export interface BillingSubmissionResponse {
   };
 }
 
-export interface BillingRetrievalResponse {
+
+export type UiBillingStatus = 'draft' | 'ready' | 'settled';
+export type BillingAdjustmentAction = 'increase' | 'decrease' | 'remove';
+
+export interface BillingChargeItemPermissions {
+  entered_by_staff_id?: number | null;
+  current_staff_id?: number | null;
+  requires_reason_on_cross_staff_edit: boolean;
+  reason_required: boolean;
+  can_edit_without_reason: boolean;
+}
+
+export interface BillingRetrievedChargeItem {
+  id: string;
+  source: 'backend';
+  persisted: true;
+
+  line_item_id: number;
+  line_item_uuid?: string;
+  billing_cycle_id?: number;
+
+  service_key: string;
+  serviceKey?: string;
+
+  service: ServiceItemCore;
+  quantity: number;
+  totalAmount: number;
+
+  line_item_status?: string;
+
+  entered_by_staff_id?: number | null;
+  entered_by_staff_name?: string | null;
+
+  permissions: BillingChargeItemPermissions;
+  audit?: {
+    originated_by_staff_id?: number | null;
+    last_adjusted_by_staff_id?: number | null;
+    last_appended_by_staff_id?: number | null;
+    last_adjusted_at?: string | null;
+  };
+}
+
+export interface BillingRetrievalData {
+  has_billing: boolean;
+  visit_id: number;
+  visit_uuid?: string;
+  patient_id: number;
+  patient_number?: string;
+  patient_name: string;
+
+  billing_cycle_id?: number;
+  billing_cycle_uuid?: string;
+  receipt_number?: string;
+
+  attending_staff_id?: number | null;
+  attending_staff_name?: string | null;
+  attending_staff_role?: string | null;
+  attending_staff_display?: string | null;
+
+  charge_items?: BillingRetrievedChargeItem[];
+  discount?: {
+    type: 'percentage' | 'fixed';
+    value: number;
+    reason?: string | null;
+  };
+  taxes?: Array<{
+    name: string;
+    rate: number;
+    amount: number;
+  }>;
+  payment_methods?: Array<{
+    type: 'cash' | 'card' | 'insurance' | 'mobile' | 'mixed';
+    amount: number;
+    reference?: string;
+    details?: string;
+  }>;
+  additional_notes?: string;
+
+  status?: UiBillingStatus;
+  billing_status?: string;
+  payment_status?: string;
+
+  billing_data?: {
+    subtotal: number;
+    discountAmount: number;
+    taxableAmount: number;
+    taxTotal: number;
+    grandTotal: number;
+    totalPaid: number;
+    balance: number;
+    isPaid?: boolean;
+  };
+
+  billed_at?: string;
+  created_at?: string;
+  updated_at?: string;
+  last_updated?: number;
+  is_dirty?: boolean;
+  is_processing?: boolean;
+}
+
+export interface BillingAdjustmentPayload {
+  line_item_id: number;
+  action: BillingAdjustmentAction;
+  quantity?: number;
+  reason?: string;
+}
+
+export interface BillingAdjustmentResponse {
   success: boolean;
   message: string;
   data: {
-    has_billing: boolean;
-    visit_id: number;
-    visit_uuid?: string;
-    patient_id: number;
-    patient_name: string;
-    billing_cycle_id?: number;
-    billing_cycle_uuid?: string;
-    receipt_number?: string;
-    charge_items?: Array<any>;
-    discount?: any;
-    taxes?: Array<any>;
-    payment_methods?: Array<any>;
-    additional_notes?: string;
-    status?: 'draft' | 'ready' | 'settled';
-    billing_status?: string;
-    billing_data?: any;
-    billed_at?: string;
-    created_at?: string;
-    updated_at?: string;
-    last_updated?: number;
-    is_dirty?: boolean;
-    is_processing?: boolean;
+    billing_cycle_id: number;
+    billing_cycle_uuid: string;
+    line_item_id: number;
+    line_item_uuid: string;
+    billing_status: string;
+    total_paid: number;
+    balance: number;
   };
 }
+
+
+export interface BillingRetrievalResponse {
+  success: boolean;
+  message: string;
+  data: BillingRetrievalData;
+}
+
 
 
 /* -------------------------------------------------------------------------- */

@@ -1,31 +1,31 @@
 // billing-types.ts
-// Types and shared data for hospital billing workflow
-// Single source of truth for billing-item/service shapes is BillingItemsTypes.ts (API types).
-// Mock data removed. Components should fetch via BillingItemsQueries.ts and search client-side.
+// ============================================================================
+// Shared billing types for enterprise healthcare billing workflow
+// Supports dual-source rendering:
+// 1) Persisted backend billing items
+// 2) Unsaved Redux slice draft items
+// ============================================================================
 
-import type { ServiceItemCore } from  '../../../api/billable-items/BillingItemsTypes';
+import type {
+  ServiceItemCore,
+  BillingRetrievedChargeItem,
+  BillingRetrievalData,
+} from '../../../api/billable-items/BillingItemsTypes';
 import { DEFAULT_CURRENCY as API_DEFAULT_CURRENCY } from '../../../api/billable-items/BillingItemsTypes';
 
 /* -------------------------------------------------------------------------- */
 /*                         BILLABLE SERVICE TYPES (API)                        */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Service item used by billing UI.
- * This is derived from BillingItemsTypes.ts as the single source of truth.
- */
 export type ServiceItem = ServiceItemCore;
 
 /**
- * A stable composite key for billable/service items.
- * Your backend may merge multiple tables that can share numeric IDs,
- * so we MUST NOT rely on `id` alone for uniqueness.
+ * Stable key used to identify the underlying billable item.
+ * We do NOT rely on numeric ID alone because backend sources may overlap.
  */
 export type BillableKey = string;
 
 export const makeBillableKey = (s: Pick<ServiceItem, 'id' | 'code' | 'category'>): BillableKey => {
-  // code+category are typically stable across tables; id helps when code overlaps.
-  // Normalize to avoid accidental key splits.
   const code = String(s.code ?? '').trim().toLowerCase();
   const category = String(s.category ?? '').trim().toLowerCase();
   const id = Number(s.id ?? 0);
@@ -33,21 +33,81 @@ export const makeBillableKey = (s: Pick<ServiceItem, 'id' | 'code' | 'category'>
 };
 
 /* -------------------------------------------------------------------------- */
-/*                                   TYPES                                    */
+/*                              SOURCE / POLICY TYPES                         */
 /* -------------------------------------------------------------------------- */
 
-export interface ChargeItem {
-  id: string; // internal UI id (unique per line item)
-  /**
-   * Stable key for the underlying billable item (used for merging duplicates).
-   * This is how we avoid collisions when backend IDs overlap across tables.
-   */
+export type BillingSource = 'slice' | 'backend';
+export type BillingStatus = 'draft' | 'ready' | 'settled';
+export type BillingStep = 'charge_entry' | 'billing_summary';
+export type BillingAdjustmentAction = 'increase' | 'decrease' | 'remove';
+
+export interface LineItemEditPermissions {
+  entered_by_staff_id?: number | null;
+  current_staff_id?: number | null;
+  requires_reason_on_cross_staff_edit: boolean;
+  reason_required: boolean;
+  can_edit_without_reason: boolean;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                CORE TYPES                                  */
+/* -------------------------------------------------------------------------- */
+
+export interface BaseRenderableChargeItem {
+  id: string;
   serviceKey: BillableKey;
   service: ServiceItem;
-
   quantity: number;
   totalAmount: number;
+
+  /**
+   * Source tells the UI whether this row is:
+   * - a persisted backend item
+   * - a draft slice item
+   */
+  source: BillingSource;
+
+  /**
+   * Convenience flag for enterprise edit behavior.
+   */
+  persisted: boolean;
 }
+
+/**
+ * Draft item held only in Redux until user saves billing.
+ */
+export interface ChargeItem extends BaseRenderableChargeItem {
+  source: 'slice';
+  persisted: false;
+}
+
+/**
+ * Persisted billing item retrieved from backend.
+ * This must carry audit/edit metadata.
+ */
+export interface BackendChargeItem extends BaseRenderableChargeItem {
+  source: 'backend';
+  persisted: true;
+
+  lineItemId: number;
+  lineItemUuid?: string;
+  billingCycleId?: number;
+  lineItemStatus?: string;
+
+  enteredByStaffId?: number | null;
+  enteredByStaffName?: string | null;
+
+  permissions: LineItemEditPermissions;
+
+  audit?: {
+    originated_by_staff_id?: number | null;
+    last_adjusted_by_staff_id?: number | null;
+    last_appended_by_staff_id?: number | null;
+    last_adjusted_at?: string | null;
+  };
+}
+
+export type RenderableChargeItem = ChargeItem | BackendChargeItem;
 
 export interface Discount {
   type: 'percentage' | 'fixed';
@@ -68,11 +128,43 @@ export interface PaymentMethod {
   details?: string;
 }
 
-export type BillingStatus = 'draft' | 'ready' | 'settled';
-export type BillingStep = 'charge_entry' | 'billing_summary';
+export interface BillingDataSnapshot {
+  subtotal: number;
+  discountAmount: number;
+  taxableAmount: number;
+  taxTotal: number;
+  grandTotal: number;
+  totalPaid: number;
+  balance: number;
+  isPaid?: boolean;
+}
+
+export interface BackendBillingMeta {
+  loaded: boolean;
+  hasBilling: boolean;
+
+  billingCycleId?: number;
+  billingCycleUuid?: string;
+  receiptNumber?: string;
+
+  status?: BillingStatus;
+  billingStatus?: string;
+  paymentStatus?: string;
+
+  attendingStaffId?: number | null;
+  attendingStaffName?: string | null;
+  attendingStaffRole?: string | null;
+  attendingStaffDisplay?: string | null;
+
+  billedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface BillingState {
-  // Core state
+  // ----------------------------
+  // Draft slice data (unsaved)
+  // ----------------------------
   chargeItems: ChargeItem[];
   discount: Discount;
   taxes: Tax[];
@@ -81,16 +173,29 @@ export interface BillingState {
   status: BillingStatus;
   receiptNumber?: string;
 
+  // ----------------------------
+  // Persisted backend data
+  // ----------------------------
+  backendChargeItems: BackendChargeItem[];
+  backendBillingMeta: BackendBillingMeta;
+  backendBillingData: BillingDataSnapshot | null;
+
+  // ----------------------------
   // UI state
+  // ----------------------------
   trayOpen: boolean;
   currentStep: BillingStep;
 
+  // ----------------------------
   // Patient context
+  // ----------------------------
   visitId?: string;
   patientId?: string;
   patientName?: string;
 
+  // ----------------------------
   // Metadata
+  // ----------------------------
   lastUpdated: number;
   isDirty: boolean;
   isProcessing: boolean;
@@ -113,6 +218,11 @@ export const DEFAULT_DISCOUNT: Discount = {
 
 export const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [{ type: 'cash', amount: 0, details: '' }];
 
+export const EMPTY_BACKEND_META: BackendBillingMeta = {
+  loaded: false,
+  hasBilling: false,
+};
+
 export const INITIAL_BILLING_STATE: BillingState = {
   chargeItems: [],
   discount: DEFAULT_DISCOUNT,
@@ -120,8 +230,19 @@ export const INITIAL_BILLING_STATE: BillingState = {
   paymentMethods: DEFAULT_PAYMENT_METHODS,
   additionalNotes: '',
   status: 'draft',
+  receiptNumber: undefined,
+
+  backendChargeItems: [],
+  backendBillingMeta: EMPTY_BACKEND_META,
+  backendBillingData: null,
+
   trayOpen: false,
   currentStep: 'charge_entry',
+
+  visitId: undefined,
+  patientId: undefined,
+  patientName: undefined,
+
   lastUpdated: Date.now(),
   isDirty: false,
   isProcessing: false,
@@ -147,11 +268,11 @@ export const generateReceiptNumber = (): string => {
   const random = Math.floor(Math.random() * 10000)
     .toString()
     .padStart(4, '0');
+
   return `REC-${year}${month}${day}-${random}`;
 };
 
 export const generateChargeItemId = (serviceKey: BillableKey): string => {
-  // serviceKey is stable and prevents cross-table collisions, add time+rand to keep line item unique
   return `charge::${serviceKey}::${Date.now()}::${Math.random().toString(36).slice(2, 10)}`;
 };
 
@@ -160,7 +281,7 @@ export const calculateBillingData = (
   discount: Discount,
   taxes: Tax[],
   paymentMethods: PaymentMethod[]
-) => {
+): BillingDataSnapshot => {
   const subtotal = chargeItems.reduce((sum, item) => sum + item.totalAmount, 0);
 
   let discountAmount = 0;
@@ -186,7 +307,6 @@ export const calculateBillingData = (
     subtotal,
     discountAmount,
     taxableAmount,
-    taxes: updatedTaxes,
     taxTotal,
     grandTotal,
     totalPaid,
@@ -195,8 +315,65 @@ export const calculateBillingData = (
   };
 };
 
+/**
+ * Maps backend-retrieved line item into the exact UI render shape expected by the list.
+ */
+export const mapRetrievedChargeItemToBackendChargeItem = (
+  item: BillingRetrievedChargeItem
+): BackendChargeItem => {
+  const serviceKey = item.serviceKey || item.service_key || makeBillableKey(item.service);
+
+  return {
+    id: item.id,
+    serviceKey,
+    service: item.service,
+    quantity: Number(item.quantity || 0),
+    totalAmount: Number(item.totalAmount || 0),
+
+    source: 'backend',
+    persisted: true,
+
+    lineItemId: Number(item.line_item_id),
+    lineItemUuid: item.line_item_uuid,
+    billingCycleId: item.billing_cycle_id,
+    lineItemStatus: item.line_item_status,
+
+    enteredByStaffId: item.entered_by_staff_id,
+    enteredByStaffName: item.entered_by_staff_name,
+
+    permissions: item.permissions,
+    audit: item.audit,
+  };
+};
+
+/**
+ * Maps backend retrieval payload into frontend backend state bucket.
+ */
+export const mapRetrievedBillingToBackendState = (data: BillingRetrievalData) => {
+  return {
+    backendChargeItems: (data.charge_items ?? []).map(mapRetrievedChargeItemToBackendChargeItem),
+    backendBillingMeta: {
+      loaded: true,
+      hasBilling: !!data.has_billing,
+      billingCycleId: data.billing_cycle_id,
+      billingCycleUuid: data.billing_cycle_uuid,
+      receiptNumber: data.receipt_number,
+      status: data.status,
+      billingStatus: data.billing_status,
+      paymentStatus: data.payment_status,
+      attendingStaffId: data.attending_staff_id,
+      attendingStaffName: data.attending_staff_name,
+      attendingStaffRole: data.attending_staff_role,
+      attendingStaffDisplay: data.attending_staff_display,
+      billedAt: data.billed_at,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    } as BackendBillingMeta,
+    backendBillingData: data.billing_data ?? null,
+  };
+};
+
 // Storage key for drafts
 export const getDraftStorageKey = (visitId?: string) => `billing_draft_${visitId || 'global'}`;
 
-// Re-export the default currency if you want a single import point in UI
 export const DEFAULT_CURRENCY = API_DEFAULT_CURRENCY;

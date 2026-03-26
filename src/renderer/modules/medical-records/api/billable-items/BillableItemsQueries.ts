@@ -27,6 +27,12 @@ import type {
 } from './BillingItemsTypes';
 import { type RootState } from '../../../../app/store/store';
 import { getActiveFacilityId } from '../../../../app/store/utils/contextSelectors';
+import { useQueryClient } from '@tanstack/react-query';
+import type {
+  BillingAdjustmentPayload,
+  BillingAdjustmentResponse,
+} from './BillingItemsTypes';
+
 
 /* -------------------------------------------------------------------------- */
 /*                               QUERY KEYS                                   */
@@ -167,6 +173,7 @@ export const useGetBillingByVisit = (
 export const useSubmitBilling = (
   callbacks: MutationCallbacks<BillingSubmissionResponse, AxiosError<ApiErrorResponse>> = {}
 ) => {
+  const queryClient = useQueryClient();
   const { showToast } = useToast();
   const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
 
@@ -183,15 +190,17 @@ export const useSubmitBilling = (
       );
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       const successMessage = data.message || 'Billing saved successfully!';
       showToast('success', successMessage, 8000);
+
+      queryClient.invalidateQueries({ queryKey: billingItemsKeys.detail(variables.visit_id) });
+
       callbacks.onSuccess?.(data);
     },
     onError: (error: AxiosError<ApiErrorResponse>) => {
       const apiMessage = error.response?.data?.message || error.message || 'Failed to save billing.';
 
-      // Extract validation errors if present
       let errorDetails = '';
       if (error.response?.data?.errors) {
         errorDetails = Object.entries(error.response.data.errors)
@@ -202,6 +211,46 @@ export const useSubmitBilling = (
       const displayMessage = errorDetails ? `${apiMessage} (${errorDetails})` : apiMessage;
       showToast('error', displayMessage, 8000);
 
+      callbacks.onError?.(error);
+    },
+  });
+
+};
+
+/**
+ * Adjust a persisted backend billing line item.
+ * Used for enterprise-safe edits to already saved charges.
+ */
+export const useAdjustBillingLineItem = (
+  visitId: number,
+  callbacks: MutationCallbacks<BillingAdjustmentResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const { showToast } = useToast();
+  const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
+  const queryClient = useQueryClient();
+
+  return useMutation<BillingAdjustmentResponse, AxiosError<ApiErrorResponse>, BillingAdjustmentPayload>({
+    mutationFn: async (payload: BillingAdjustmentPayload) => {
+      const response = await axiosInstance.patch<BillingAdjustmentResponse>(
+        `/billing/line-item/${payload.line_item_id}/adjust`,
+        payload,
+        {
+          headers: {
+            'X-Facility-Id': facilityId,
+          },
+        }
+      );
+      return response.data;
+    },
+    onSuccess: (data) => {
+      showToast('success', data.message || 'Billing item adjusted successfully.', 8000);
+      queryClient.invalidateQueries({ queryKey: billingItemsKeys.detail(visitId) });
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error) => {
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to adjust billing item.';
+      const details = formatValidationErrors(error.response?.data?.errors);
+      showToast('error', details ? `${apiMessage} (${details})` : apiMessage, 8000);
       callbacks.onError?.(error);
     },
   });
@@ -264,8 +313,11 @@ export default {
   useGetBillableItems,
   useGetBillingByVisit,
 
+
   // Mutation hooks
   useSubmitBilling,
+  useAdjustBillingLineItem,
+
   
 
   // Utilities

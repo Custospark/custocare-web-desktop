@@ -14,7 +14,12 @@ import {
   DEFAULT_PAYMENT_METHODS,
   DEFAULT_DISCOUNT,
   makeBillableKey,
+  mapRetrievedBillingToBackendState,
+  type RenderableChargeItem,
 } from './billing-types';
+
+import type { BillingRetrievalData } from '../../../api/billable-items/BillingItemsTypes';
+
 
 // Helper to check if state is dirty
 const calculateIsDirty = (state: BillingState): boolean => {
@@ -26,6 +31,7 @@ const calculateIsDirty = (state: BillingState): boolean => {
     state.status !== 'draft'
   );
 };
+
 
 // Helper to update metadata
 const updateMetadata = (state: BillingState) => {
@@ -80,7 +86,10 @@ const billingSlice = createSlice({
           service,
           quantity: 1,
           totalAmount: service.unitPrice,
+          source: 'slice',
+          persisted: false,
         };
+
         state.chargeItems.push(newItem);
       }
 
@@ -147,6 +156,7 @@ const billingSlice = createSlice({
       state.discount = action.payload;
       updateMetadata(state);
     },
+
 
     // Payment Methods Actions
     setPaymentMethods: (state, action: PayloadAction<PaymentMethod[]>) => {
@@ -226,6 +236,34 @@ const billingSlice = createSlice({
         console.error('Error saving billing draft:', error);
       }
     },
+        /**
+     * Hydrate persisted backend billing into a dedicated state bucket.
+     * This does NOT overwrite the current draft slice data.
+     */
+    hydrateBackendBilling: (state, action: PayloadAction<BillingRetrievalData>) => {
+      const mapped = mapRetrievedBillingToBackendState(action.payload);
+
+      state.backendChargeItems = mapped.backendChargeItems;
+      state.backendBillingMeta = mapped.backendBillingMeta;
+      state.backendBillingData = mapped.backendBillingData;
+
+      // Do not mark draft dirty from backend hydration.
+      state.lastUpdated = Date.now();
+    },
+
+    /**
+     * Clear persisted backend billing bucket.
+     * Useful when switching visits or when no billing exists.
+     */
+    clearBackendBilling: (state) => {
+      state.backendChargeItems = [];
+      state.backendBillingMeta = {
+        loaded: true,
+        hasBilling: false,
+      };
+      state.backendBillingData = null;
+      state.lastUpdated = Date.now();
+    },
 
     loadDraft: (state, action: PayloadAction<string>) => {
       try {
@@ -240,13 +278,16 @@ const billingSlice = createSlice({
         state.chargeItems = parsed.chargeItems.map((ci: any) => {
           const service: ServiceItem = ci.service;
           const serviceKey = ci.serviceKey || makeBillableKey(service);
+          const quantity = Math.max(1, Math.min(9999, Math.floor(Number(ci.quantity) || 1)));
           return {
             ...ci,
             serviceKey,
-            // keep totals consistent if missing/incorrect
-            quantity: Math.max(1, Math.min(9999, Math.floor(Number(ci.quantity) || 1))),
-            totalAmount: (Math.max(1, Math.min(9999, Math.floor(Number(ci.quantity) || 1))) || 1) * (service?.unitPrice || 0),
+            quantity,
+            totalAmount: quantity * (service?.unitPrice || 0),
+            source: 'slice',
+            persisted: false,
           } as ChargeItem;
+
         });
 
         state.discount = parsed.discount || DEFAULT_DISCOUNT;
@@ -295,7 +336,6 @@ const billingSlice = createSlice({
     },
   },
 });
-
 export const {
   openTray,
   closeTray,
@@ -321,19 +361,57 @@ export const {
   setQuantity,
   setPatientInfo,
   clearAll,
+  hydrateBackendBilling,
+  clearBackendBilling,
 } = billingSlice.actions;
 
-export default billingSlice.reducer;
 
-// Selectors (unchanged shape)
+export default billingSlice.reducer;
 export const selectBilling = (state: { billing: BillingState }) => state.billing;
 export const selectIsTrayOpen = (state: { billing: BillingState }) => state.billing.trayOpen;
 export const selectCurrentStep = (state: { billing: BillingState }) => state.billing.currentStep;
+
+/**
+ * Draft-only charge items.
+ * These are the items that will be submitted on the next save action.
+ */
 export const selectChargeItems = (state: { billing: BillingState }) => state.billing.chargeItems;
+export const selectDraftChargeItems = (state: { billing: BillingState }) => state.billing.chargeItems;
+
+/**
+ * Persisted backend billing items already saved in DB.
+ */
+export const selectBackendChargeItems = (state: { billing: BillingState }) => state.billing.backendChargeItems;
+
+/**
+ * Unified render list for UI.
+ * Backend items are shown first, then current unsaved draft items.
+ */
+export const selectRenderableChargeItems = (state: { billing: BillingState }): RenderableChargeItem[] => [
+  ...state.billing.backendChargeItems,
+  ...state.billing.chargeItems,
+];
+
+/**
+ * Effective status used by UI.
+ * If backend says settled, UI must be read-only even if draft is empty/new.
+ */
 export const selectBillingStatus = (state: { billing: BillingState }) => state.billing.status;
+export const selectEffectiveBillingStatus = (state: { billing: BillingState }) => {
+  const backendStatus = state.billing.backendBillingMeta.status;
+  const draftStatus = state.billing.status;
+
+  if (backendStatus === 'settled') return 'settled';
+  if (draftStatus === 'settled') return 'settled';
+  if (draftStatus === 'ready') return 'ready';
+  return backendStatus || draftStatus || 'draft';
+};
+
 export const selectIsDirty = (state: { billing: BillingState }) => state.billing.isDirty;
 export const selectIsProcessing = (state: { billing: BillingState }) => state.billing.isProcessing;
 export const selectBillingState = (state: { billing: BillingState }) => state.billing;
+export const selectBackendBillingMeta = (state: { billing: BillingState }) => state.billing.backendBillingMeta;
+export const selectBackendBillingData = (state: { billing: BillingState }) => state.billing.backendBillingData;
 
 export const selectPatientInfo = (state: { billing: BillingState }) => ({
   visitId: state.billing.visitId,
@@ -341,11 +419,21 @@ export const selectPatientInfo = (state: { billing: BillingState }) => ({
   patientName: state.billing.patientName,
 });
 
+/**
+ * User can only proceed with unsaved draft items.
+ * Persisted backend items alone should not enable "save" again.
+ */
 export const selectCanProceed = (state: { billing: BillingState }) => {
-  const { chargeItems, status } = state.billing;
-  return chargeItems.length > 0 && status !== 'settled';
+  const { chargeItems } = state.billing;
+  const effectiveStatus = selectEffectiveBillingStatus(state);
+  return chargeItems.length > 0 && effectiveStatus !== 'settled';
 };
 
+/**
+ * Draft-only billing data for submission.
+ * IMPORTANT: This selector intentionally excludes persisted backend items
+ * to avoid double-billing already saved charges.
+ */
 export const selectBillingData = (state: { billing: BillingState }) => {
   const { chargeItems, discount, taxes, paymentMethods } = state.billing;
 
@@ -382,3 +470,30 @@ export const selectBillingData = (state: { billing: BillingState }) => {
     isPaid: balance === 0,
   };
 };
+
+/**
+ * Combined display data for UI summary if you want to show both
+ * persisted totals + current draft totals together.
+ */
+export const selectDisplayBillingData = (state: { billing: BillingState }) => {
+  const draft = selectBillingData(state);
+  const persisted = state.billing.backendBillingData;
+
+  return {
+    persistedSubtotal: persisted?.subtotal ?? 0,
+    persistedGrandTotal: persisted?.grandTotal ?? 0,
+    persistedTotalPaid: persisted?.totalPaid ?? 0,
+    persistedBalance: persisted?.balance ?? 0,
+
+    draftSubtotal: draft.subtotal,
+    draftGrandTotal: draft.grandTotal,
+    draftTotalPaid: draft.totalPaid,
+    draftBalance: draft.balance,
+
+    displayedSubtotal: (persisted?.subtotal ?? 0) + draft.subtotal,
+    displayedGrandTotal: (persisted?.grandTotal ?? 0) + draft.grandTotal,
+    displayedTotalPaid: (persisted?.totalPaid ?? 0) + draft.totalPaid,
+    displayedBalance: (persisted?.balance ?? 0) + draft.balance,
+  };
+};
+
