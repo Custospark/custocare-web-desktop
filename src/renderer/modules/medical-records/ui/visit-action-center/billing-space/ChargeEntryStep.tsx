@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Lock, FileWarning, Loader2 } from 'lucide-react';
+import { Lock, FileWarning, Loader2, X } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   addChargeItem,
@@ -74,6 +74,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearchSticky, setIsSearchSticky] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isBannerVisible, setIsBannerVisible] = useState(true); // New state for banner visibility
 
   /**
    * When a persisted backend line item is edited, we open the adjustment modal
@@ -509,6 +510,10 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     if (!isReadOnly) setSearchTerm(value);
   };
 
+  const handleCloseBanner = () => {
+    setIsBannerVisible(false);
+  };
+
   useEffect(() => {
     if (isError && process.env.NODE_ENV === 'development') {
       console.error('Billable items fetch error:', error);
@@ -573,20 +578,33 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
             />
           </div>
 
-          {/* Information banner for dual-source billing */}
-          <div className={`mb-3 rounded-xl border ${colors.border.primary} ${colors.bg.secondary} p-3`}>
-            <div className="flex items-start gap-3">
-              <FileWarning className={`w-4 h-4 mt-0.5 ${isDark ? 'text-amber-300' : 'text-amber-600'}`} />
-              <div className="text-xs sm:text-sm">
-                <p className={`font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                  Billing items come from two places
-                </p>
-                <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} mt-1`}>
-              Existing items are already saved and tracked. New items you add remain drafts until you save them. If another staff member added an item, you'll need to add a reason before you can adjust it.
-                </p>
+          {/* Information banner for dual-source billing - Hideable */}
+          {isBannerVisible && (
+            <div className={`mb-3 rounded-xl border ${colors.border.primary} ${colors.bg.secondary} p-3 relative`}>
+              <button
+                onClick={handleCloseBanner}
+                className={`absolute top-3 right-3 p-1 rounded-md transition-colors ${
+                  isDark 
+                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200' 
+                    : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
+                }`}
+                aria-label="Close banner"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="flex items-start gap-3 pr-6">
+                <FileWarning className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isDark ? 'text-amber-300' : 'text-amber-600'}`} />
+                <div className="text-xs sm:text-sm">
+                  <p className={`font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                    Billing items come from two places
+                  </p>
+                  <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} mt-1`}>
+                    Existing items are already saved and tracked. New items you add remain drafts until you save them. If another staff member added an item, you'll need to add a reason before you can adjust it.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Items List - REMOVED draftItemCount prop */}
           <ChargeItemsList

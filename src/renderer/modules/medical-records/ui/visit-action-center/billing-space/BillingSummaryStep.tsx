@@ -757,13 +757,13 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
         {backendBillingMeta.hasBilling && (
           <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 text-xs font-semibold border border-amber-200 dark:border-amber-800">
             <Database className="w-3.5 h-3.5" />
-            <span>Persisted billing loaded</span>
+            <span>Saved billing loaded</span>
           </div>
         )}
         {draftChargeItems.length > 0 && (
           <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 text-xs font-semibold border border-emerald-200 dark:border-emerald-800">
             <FilePlus2 className="w-3.5 h-3.5" />
-            <span>{draftChargeItems.length} draft item{draftChargeItems.length === 1 ? '' : 's'}</span>
+            <span>{draftChargeItems.length} New item{draftChargeItems.length === 1 ? '' : 's'}</span>
           </div>
         )}
       </div>
