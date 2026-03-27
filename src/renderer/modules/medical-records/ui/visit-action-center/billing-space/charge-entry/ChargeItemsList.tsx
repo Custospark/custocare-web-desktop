@@ -2,11 +2,11 @@ import React from 'react';
 import { Calculator, Trash2, Hash } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fadeInUp, itemVariants } from '../../../../../../shared/components/animations/motionVariants';
-import { type ChargeItem, formatCurrency } from '../billing-types';
+import { type RenderableChargeItem, formatCurrency } from '../billing-types';
 import { ChargeItemRow } from './ChargeItemRow';
 
 interface ChargeItemsListProps {
-  chargeItems: ChargeItem[];
+  chargeItems: RenderableChargeItem[];
   subtotal: number;
   isReadOnly: boolean;
   isSearchSticky: boolean;

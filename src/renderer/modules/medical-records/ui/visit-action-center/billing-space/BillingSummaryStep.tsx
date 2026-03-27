@@ -293,46 +293,70 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     return { tendered: cashTendered, change, netCash };
   }, [derivedFinancials]);
 
-  const selectedTransactionForReceipt: ReceiptTransactionShape = useMemo(
-    () => ({
-      receipt_number: receiptNumber,
+  const selectedTransactionForReceipt: ReceiptTransactionShape = useMemo(() => {
+    const combinedNotes = [backendBillingMeta?.receiptNumber ? `Existing Receipt: ${backendBillingMeta.receiptNumber}` : null, additionalNotes]
+      .filter(Boolean)
+      .join('\n');
+
+    return {
+      receipt_number: receiptNumber || backendBillingMeta?.receiptNumber || null,
       patient_name: activeVisit?.patient?.name || activePatient?.name || 'Unknown Patient',
       patient_number: activeVisit?.patient?.patient_number || activePatient?.patient_number || 'N/A',
       created_at: new Date().toISOString(),
+
+      // Combined persisted + draft items
       charge_items: renderableChargeItems,
+
+      billing_status:
+        derivedFinancials.balanceDue === 0
+          ? 'paid_in_full'
+          : derivedFinancials.netPaid > 0
+          ? 'partially_paid'
+          : 'pending',
+
+      payment_status:
+        derivedFinancials.balanceDue === 0
+          ? PaymentStatus.PAID_IN_FULL
+          : derivedFinancials.netPaid > 0
+          ? PaymentStatus.PARTIALLY_PAID
+          : PaymentStatus.PENDING,
+
+      attending_staff_display: backendBillingMeta?.attendingStaffDisplay || null,
+      attending_staff_name: backendBillingMeta?.attendingStaffName || null,
+      attending_staff_role: backendBillingMeta?.attendingStaffRole || null,
+
       billing_data: {
         subtotal: displayBillingData.displayedSubtotal,
         discountAmount: draftBillingData.discountAmount,
-        taxableAmount: draftBillingData.taxableAmount,
-        taxTotal: draftBillingData.taxTotal,
+        taxableAmount: Math.max(0, displayBillingData.displayedSubtotal - draftBillingData.discountAmount),
+        taxTotal: displayBillingData.displayedTaxes.reduce((sum, tax) => sum + (Number(tax.amount) || 0), 0),
         grandTotal: derivedFinancials.grandTotal,
         totalPaid: derivedFinancials.netPaid,
         balance: derivedFinancials.balanceDue,
-        taxes: DEFAULT_TAXES.map((tax, index) => ({
-          name: tax.name,
-          rate: tax.rate,
-          amount: draftBillingData.taxes[index]?.amount || 0,
-        })),
+        taxes: displayBillingData.displayedTaxes,
       },
+
       payment_methods: paymentMethods.filter((m) => (Number(m.amount) || 0) > 0),
-      additional_notes: additionalNotes,
+      additional_notes: combinedNotes || undefined,
       facilityData,
-      backend_billing_meta: backendBillingMeta,
-    }),
-    [
-      receiptNumber,
-      activeVisit,
-      activePatient,
-      renderableChargeItems,
-      displayBillingData,
-      draftBillingData,
-      derivedFinancials,
-      paymentMethods,
-      additionalNotes,
-      facilityData,
-      backendBillingMeta,
-    ]
-  );
+
+      persisted_charge_count: renderableChargeItems.filter((item) => item.source === 'backend').length,
+      draft_charge_count: renderableChargeItems.filter((item) => item.source === 'slice').length,
+    };
+  }, [
+    receiptNumber,
+    backendBillingMeta,
+    activeVisit,
+    activePatient,
+    renderableChargeItems,
+    displayBillingData,
+    draftBillingData.discountAmount,
+    derivedFinancials,
+    paymentMethods,
+    additionalNotes,
+    facilityData,
+  ]);
+
 
   const cashChangeByIndex = useMemo(() => {
     const result: Record<number, { dueBefore: number; change: number }> = {};

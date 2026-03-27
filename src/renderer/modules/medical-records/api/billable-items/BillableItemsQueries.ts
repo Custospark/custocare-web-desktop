@@ -217,11 +217,139 @@ export const useSubmitBilling = (
 
 };
 
+const mapBackendBillingStatusToUiStatus = (billingStatus?: string): 'draft' | 'ready' | 'settled' => {
+  switch (billingStatus) {
+    case 'paid_in_full':
+    case 'written_off':
+    case 'charity_care':
+      return 'settled';
+    case 'pending':
+    case 'partially_paid':
+    case 'submitted_to_insurance':
+    case 'payment_plan':
+    default:
+      return 'ready';
+  }
+};
+
+export const applyOptimisticLineItemAdjustment = (
+  previous: BillingRetrievalResponse | undefined,
+  payload: BillingAdjustmentPayload
+): BillingRetrievalResponse | undefined => {
+  if (!previous?.data?.charge_items?.length) return previous;
+
+  const current = previous.data;
+  const existingItem = current.charge_items?.find((item) => item.line_item_id === payload.line_item_id);
+  if (!existingItem) return previous;
+
+  const action = payload.action;
+  const changeQty = Math.max(0, Number(payload.quantity ?? 1));
+  const oldQty = Number(existingItem.quantity || 0);
+  const unitPrice = Number(existingItem.service?.unitPrice || 0);
+
+  let newQty = oldQty;
+
+  if (action === 'increase') newQty = oldQty + changeQty;
+  if (action === 'decrease') newQty = Math.max(0, oldQty - changeQty);
+  if (action === 'remove') newQty = 0;
+
+  const oldLineTotal = Number(existingItem.totalAmount || 0);
+  const newLineTotal = Number((newQty * unitPrice).toFixed(2));
+  const lineDelta = Number((newLineTotal - oldLineTotal).toFixed(2));
+
+  const existingBillingData = current.billing_data ?? {
+    subtotal: 0,
+    discountAmount: 0,
+    taxableAmount: 0,
+    taxTotal: 0,
+    grandTotal: 0,
+    totalPaid: 0,
+    balance: 0,
+    isPaid: false,
+    taxes: [],
+  };
+
+  const newSubtotal = Number(((existingBillingData.subtotal ?? 0) + lineDelta).toFixed(2));
+  const discountAmount = Number(existingBillingData.discountAmount ?? 0);
+  const taxableAmount = Number(Math.max(0, newSubtotal - discountAmount).toFixed(2));
+
+  const recalculatedTaxes = (existingBillingData.taxes ?? []).map((tax) => ({
+    ...tax,
+    amount: Number((taxableAmount * ((Number(tax.rate) || 0) / 100)).toFixed(2)),
+  }));
+
+  const newTaxTotal = Number(
+    recalculatedTaxes.reduce((sum, tax) => sum + (Number(tax.amount) || 0), 0).toFixed(2)
+  );
+
+  const newGrandTotal = Number((taxableAmount + newTaxTotal).toFixed(2));
+  const totalPaid = Number(existingBillingData.totalPaid ?? 0);
+  const newBalance = Number(Math.max(0, newGrandTotal - totalPaid).toFixed(2));
+  const isPaid = newBalance === 0;
+
+  const newBillingStatus =
+    newBalance === 0 ? 'paid_in_full' : totalPaid > 0 ? 'partially_paid' : 'pending';
+
+  const updatedItems = current.charge_items
+    .map((item) => {
+      if (item.line_item_id !== payload.line_item_id) return item;
+
+      if (newQty <= 0) {
+        return {
+          ...item,
+          quantity: 0,
+          totalAmount: 0,
+          line_item_status: 'adjusted',
+          audit: {
+            ...item.audit,
+            last_adjusted_at: new Date().toISOString(),
+            last_adjustment_reason: payload.reason || null,
+          } as any,
+        };
+      }
+
+      return {
+        ...item,
+        quantity: newQty,
+        totalAmount: newLineTotal,
+        line_item_status: 'adjusted',
+        audit: {
+          ...item.audit,
+          last_adjusted_at: new Date().toISOString(),
+          last_adjustment_reason: payload.reason || null,
+        } as any,
+      };
+    })
+    .filter((item) => Number(item.quantity || 0) > 0);
+
+  return {
+    ...previous,
+    data: {
+      ...current,
+      charge_items: updatedItems,
+      billing_status: newBillingStatus,
+      status: mapBackendBillingStatusToUiStatus(newBillingStatus),
+      billing_data: {
+        ...existingBillingData,
+        subtotal: newSubtotal,
+        taxableAmount,
+        taxTotal: newTaxTotal,
+        grandTotal: newGrandTotal,
+        balance: newBalance,
+        isPaid,
+        taxes: recalculatedTaxes,
+      },
+      updated_at: new Date().toISOString(),
+      last_updated: Date.now(),
+    },
+  };
+};
+
+
 /**
  * Adjust a persisted backend billing line item.
  * Used for enterprise-safe edits to already saved charges.
- */
-export const useAdjustBillingLineItem = (
+ */export const useAdjustBillingLineItem = (
   visitId: number,
   callbacks: MutationCallbacks<BillingAdjustmentResponse, AxiosError<ApiErrorResponse>> = {}
 ) => {
@@ -242,19 +370,46 @@ export const useAdjustBillingLineItem = (
       );
       return response.data;
     },
+
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: billingItemsKeys.detail(visitId) });
+
+      const previous = queryClient.getQueryData<BillingRetrievalResponse>(
+        billingItemsKeys.detail(visitId)
+      );
+
+      const optimistic = applyOptimisticLineItemAdjustment(previous, payload);
+
+      if (optimistic) {
+        queryClient.setQueryData(billingItemsKeys.detail(visitId), optimistic);
+      }
+
+      return { previous };
+    },
+
     onSuccess: (data) => {
       showToast('success', data.message || 'Billing item adjusted successfully.', 8000);
-      queryClient.invalidateQueries({ queryKey: billingItemsKeys.detail(visitId) });
       callbacks.onSuccess?.(data);
     },
-    onError: (error) => {
+
+    onError: (error, _payload, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(billingItemsKeys.detail(visitId), context.previous);
+      }
+
       const apiMessage = error.response?.data?.message || error.message || 'Failed to adjust billing item.';
       const details = formatValidationErrors(error.response?.data?.errors);
       showToast('error', details ? `${apiMessage} (${details})` : apiMessage, 8000);
+
       callbacks.onError?.(error);
+    },
+
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: billingItemsKeys.detail(visitId) });
     },
   });
 };
+
 
 
 /* -------------------------------------------------------------------------- */

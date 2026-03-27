@@ -479,21 +479,52 @@ export const selectDisplayBillingData = (state: { billing: BillingState }) => {
   const draft = selectBillingData(state);
   const persisted = state.billing.backendBillingData;
 
+  const mergeTaxes = (
+    existing: Array<{ name: string; rate: number; amount: number }> = [],
+    incoming: Array<{ name: string; rate: number; amount: number }> = []
+  ) => {
+    const merged = new Map<string, { name: string; rate: number; amount: number }>();
+
+    [...existing, ...incoming].forEach((tax) => {
+      const key = `${String(tax.name).toLowerCase()}|${Number(tax.rate || 0).toFixed(2)}`;
+      const current = merged.get(key);
+
+      if (!current) {
+        merged.set(key, {
+          name: tax.name,
+          rate: Number(tax.rate || 0),
+          amount: Number(tax.amount || 0),
+        });
+      } else {
+        current.amount = Number((current.amount + Number(tax.amount || 0)).toFixed(2));
+        merged.set(key, current);
+      }
+    });
+
+    return Array.from(merged.values());
+  };
+
+  const displayedTaxes = mergeTaxes(persisted?.taxes ?? [], draft.taxes ?? []);
+
   return {
     persistedSubtotal: persisted?.subtotal ?? 0,
     persistedGrandTotal: persisted?.grandTotal ?? 0,
     persistedTotalPaid: persisted?.totalPaid ?? 0,
     persistedBalance: persisted?.balance ?? 0,
+    persistedTaxes: persisted?.taxes ?? [],
 
     draftSubtotal: draft.subtotal,
     draftGrandTotal: draft.grandTotal,
     draftTotalPaid: draft.totalPaid,
     draftBalance: draft.balance,
+    draftTaxes: draft.taxes ?? [],
 
     displayedSubtotal: (persisted?.subtotal ?? 0) + draft.subtotal,
     displayedGrandTotal: (persisted?.grandTotal ?? 0) + draft.grandTotal,
     displayedTotalPaid: (persisted?.totalPaid ?? 0) + draft.totalPaid,
     displayedBalance: (persisted?.balance ?? 0) + draft.balance,
+    displayedTaxes,
   };
 };
+
 

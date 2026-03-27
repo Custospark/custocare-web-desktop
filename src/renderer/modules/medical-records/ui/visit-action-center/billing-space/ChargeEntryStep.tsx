@@ -17,6 +17,9 @@ import {
   selectEffectiveBillingStatus,
   selectPatientInfo,
 } from './billingSlice';
+import { selectBackendChargeItems } from './billingSlice';
+import PersistedBillingAdjustmentModal from './charge-entry/PersistedBillingAdjustmentModal';
+
 import { motion } from 'framer-motion';
 import { containerVariants } from '../../../../../shared/components/animations/motionVariants';
 import {
@@ -58,6 +61,8 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   const draftChargeItems = useSelector(selectDraftChargeItems);
   const patientInfo = useSelector(selectPatientInfo);
   const billingStatus = useSelector(selectEffectiveBillingStatus);
+  const backendChargeItems = useSelector(selectBackendChargeItems);
+
 
   // Once backend says settled, the entire charge-entry becomes view only.
   const isReadOnly = billingStatus === 'settled';
@@ -78,10 +83,12 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
    */
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
   const [adjustmentReason, setAdjustmentReason] = useState('');
+  const [adjustmentQuantity, setAdjustmentQuantity] = useState(1);
   const [pendingAdjustment, setPendingAdjustment] = useState<{
     item: BackendChargeItem;
     action: PersistedAction;
   } | null>(null);
+
 
   const searchWrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -267,17 +274,20 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   }, []);
 
   // Outside click + escape for search popup
-  useEffect(() => {
+   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (!searchWrapRef.current) return;
-      if (!searchWrapRef.current.contains(e.target as Node)) setShowSearchResults(false);
+      if (!searchWrapRef.current.contains(e.target as Node)) {
+        setShowSearchResults(false);
+      }
     };
 
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setShowSearchResults(false);
+
         if (adjustmentDialogOpen) {
-          closeReasonDialog();
+          closeAdjustmentDialog();
         }
       }
     };
@@ -290,6 +300,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
       window.removeEventListener('keydown', handleEsc);
     };
   }, [adjustmentDialogOpen]);
+
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -305,89 +316,83 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     return n;
   };
 
-  const openReasonDialog = (item: BackendChargeItem, action: PersistedAction) => {
+
+
+
+
+ 
+  const openAdjustmentDialog = (
+    item: BackendChargeItem,
+    action: PersistedAction = 'increase',
+    quantity = 1
+  ) => {
     setPendingAdjustment({ item, action });
     setAdjustmentReason('');
+    setAdjustmentQuantity(Math.max(1, quantity));
     setAdjustmentDialogOpen(true);
   };
 
-  const closeReasonDialog = () => {
+  const closeAdjustmentDialog = () => {
     setPendingAdjustment(null);
     setAdjustmentReason('');
+    setAdjustmentQuantity(1);
     setAdjustmentDialogOpen(false);
   };
 
   const submitPersistedAdjustment = async (
     item: BackendChargeItem,
     action: PersistedAction,
+    quantity: number,
     reason?: string
   ) => {
     await adjustBillingLineItem({
       line_item_id: item.lineItemId,
       action,
-      quantity: action === 'remove' ? 0 : 1,
+      quantity: action === 'remove' ? 0 : Math.max(1, quantity),
       reason: reason?.trim() || undefined,
     });
   };
 
-  /**
-   * All persisted item edits go through audited backend adjustment.
-   * If cross-staff reason is required, we force the user through a reason dialog.
-   */
-  const handlePersistedItemAction = async (item: BackendChargeItem, action: PersistedAction) => {
-    if (isReadOnly) return;
-
-    const reasonRequired = item.permissions?.reason_required ?? true;
-
-    if (reasonRequired) {
-      openReasonDialog(item, action);
-      return;
-    }
-
-    const confirmed = await confirm({
-      title:
-        action === 'remove'
-          ? 'Remove persisted billing item?'
-          : `Confirm ${action} persisted billing item`,
-      message:
-        action === 'remove'
-          ? `This will remove "${item.service.name}" through an audited billing adjustment.`
-          : `This will ${action} "${item.service.name}" through the backend audit flow.`,
-      confirmText: action === 'remove' ? 'Adjust & remove' : 'Continue',
-      cancelText: 'Cancel',
-      variant: action === 'remove' ? 'warning' : 'info',
-      theme,
-    });
-
-    if (!confirmed) return;
-
-    await submitPersistedAdjustment(item, action);
-  };
-
-  const handleReasonDialogSubmit = async () => {
+  const handleAdjustmentDialogSubmit = async () => {
     if (!pendingAdjustment) return;
-
-    if (!adjustmentReason.trim()) return;
 
     await submitPersistedAdjustment(
       pendingAdjustment.item,
       pendingAdjustment.action,
-      adjustmentReason.trim()
+      adjustmentQuantity,
+      adjustmentReason
     );
 
-    closeReasonDialog();
+    closeAdjustmentDialog();
   };
 
   // ---------------------------------------------------------------------------
   // Handlers
   // ---------------------------------------------------------------------------
-  const handleAddItem = (service: ServiceItem) => {
+   const handleAddItem = (service: ServiceItem) => {
     if (isReadOnly) return;
+
+    const serviceKey = makeBillableKey(service);
+
+    // If the selected item already exists in persisted backend billing,
+    // do NOT create a duplicate draft row. Route user into audited adjustment flow.
+    const existingBackendItem = backendChargeItems.find((item) => item.serviceKey === serviceKey);
+
+    if (existingBackendItem) {
+      openAdjustmentDialog(existingBackendItem, 'increase', 1);
+      setSearchTerm('');
+      setShowSearchResults(false);
+      inputRef.current?.focus();
+      return;
+    }
+
+    // Otherwise let normal draft behavior proceed.
     dispatch(addChargeItem(service));
     setSearchTerm('');
     setShowSearchResults(false);
     inputRef.current?.focus();
   };
+
 
   /**
    * Clear all only affects unsaved draft items.
@@ -451,6 +456,10 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     }
 
     dispatch(removeChargeItem(itemId));
+  };
+  const handlePersistedItemAction = async (item: BackendChargeItem, action: PersistedAction) => {
+    if (isReadOnly) return;
+    openAdjustmentDialog(item, action, 1);
   };
 
   /**
@@ -621,77 +630,23 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
       </div>
 
       {/* Cross-staff reason dialog */}
-      {adjustmentDialogOpen && pendingAdjustment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className={`w-full max-w-lg rounded-2xl border ${colors.border.primary} ${colors.bg.primary} shadow-2xl`}>
-            <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-800">
-              <h3 className={`text-lg font-bold ${colors.text.primary}`}>
-                Reason required for cross-staff billing adjustment
-              </h3>
-              <p className={`mt-1 text-sm ${colors.text.secondary}`}>
-                You are modifying a persisted item entered by another staff member.
-                Please provide a clinical or operational reason for audit purposes.
-              </p>
-            </div>
+          <PersistedBillingAdjustmentModal
+        open={adjustmentDialogOpen}
+        theme={theme}
+        item={pendingAdjustment?.item ?? null}
+        action={pendingAdjustment?.action ?? 'increase'}
+        quantity={adjustmentQuantity}
+        reason={adjustmentReason}
+        isSubmitting={isAdjustingPersistedItem}
+        onClose={closeAdjustmentDialog}
+        onActionChange={(action) =>
+          setPendingAdjustment((prev) => (prev ? { ...prev, action } : prev))
+        }
+        onQuantityChange={setAdjustmentQuantity}
+        onReasonChange={setAdjustmentReason}
+        onSubmit={handleAdjustmentDialogSubmit}
+      />
 
-            <div className="p-5 space-y-4">
-              <div className={`rounded-xl p-3 ${colors.bg.secondary} border ${colors.border.primary}`}>
-                <p className={`text-sm font-semibold ${colors.text.primary}`}>
-                  Item: {pendingAdjustment.item.service.name}
-                </p>
-                <p className={`text-xs mt-1 ${colors.text.secondary}`}>
-                  Action: <span className="font-medium capitalize">{pendingAdjustment.action}</span>
-                </p>
-                <p className={`text-xs mt-1 ${colors.text.secondary}`}>
-                  Entered by: {pendingAdjustment.item.enteredByStaffName || 'Unknown staff'}
-                </p>
-              </div>
-
-              <div>
-                <label className={`block text-sm font-semibold mb-2 ${colors.text.primary}`}>
-                  Adjustment reason
-                </label>
-                <textarea
-                  value={adjustmentReason}
-                  onChange={(e) => setAdjustmentReason(e.target.value)}
-                  rows={4}
-                  className={`w-full rounded-xl border px-3 py-3 resize-none ${
-                    isDark
-                      ? 'bg-gray-800 border-gray-700 text-gray-100 placeholder:text-gray-500'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400'
-                  } focus:outline-none focus:ring-2 focus:ring-blue-500/30`}
-                  placeholder="Example: corrected duplicate entry, approved medication reconciliation, quantity correction after chart review..."
-                />
-              </div>
-            </div>
-
-            <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={closeReasonDialog}
-                className={`px-4 py-2 rounded-lg font-semibold ${
-                  isDark ? 'bg-gray-800 text-gray-200 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                disabled={!adjustmentReason.trim() || isAdjustingPersistedItem}
-                onClick={handleReasonDialogSubmit}
-                className={`px-4 py-2 rounded-lg font-semibold text-white ${
-                  !adjustmentReason.trim() || isAdjustingPersistedItem
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-              >
-                {isAdjustingPersistedItem ? 'Saving adjustment...' : 'Submit adjustment'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -137,7 +137,9 @@ export interface BillingDataSnapshot {
   totalPaid: number;
   balance: number;
   isPaid?: boolean;
+  taxes?: Tax[];
 }
+
 
 export interface BackendBillingMeta {
   loaded: boolean;
