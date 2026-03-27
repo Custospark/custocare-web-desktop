@@ -381,7 +381,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
                   isDark ? 'bg-rose-500/15 text-rose-300' : 'bg-rose-50 text-rose-700'
                 }`}
               >
-                Reason required
+                Change with reason
               </span>
             )}
           </div>

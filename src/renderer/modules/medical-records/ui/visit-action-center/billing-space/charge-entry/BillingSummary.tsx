@@ -482,7 +482,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                 }`}
               >
                 <FilePlus2 className="w-3 h-3" />
-                {draftChargeItems.length} unsaved draft item{draftChargeItems.length === 1 ? '' : 's'}
+                {draftChargeItems.length} New item{draftChargeItems.length === 1 ? '' : 's'}
               </span>
             )}
           </div>

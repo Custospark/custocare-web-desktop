@@ -754,19 +754,19 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
       {/* Source badges */}
       <div className="absolute top-4 right-8 z-10 flex gap-2 no-print">
-        {backendBillingMeta.hasBilling && (
-          <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 text-xs font-semibold border border-amber-200 dark:border-amber-800">
-            <Database className="w-3.5 h-3.5" />
-            <span>Saved billing loaded</span>
-          </div>
-        )}
-        {draftChargeItems.length > 0 && (
-          <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 text-xs font-semibold border border-emerald-200 dark:border-emerald-800">
-            <FilePlus2 className="w-3.5 h-3.5" />
-            <span>{draftChargeItems.length} New item{draftChargeItems.length === 1 ? '' : 's'}</span>
-          </div>
-        )}
-      </div>
+          {backendBillingMeta.hasBilling && (
+            <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 text-xs font-medium border border-amber-200 dark:border-amber-800 shadow-sm">
+              <Database className="w-3.5 h-3.5" />
+              <span>Saved billing loaded</span>
+            </div>
+          )}
+          {draftChargeItems.length > 0 && (
+            <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-xs font-medium border border-emerald-200 dark:border-emerald-800 shadow-sm">
+              <FilePlus2 className="w-3.5 h-3.5" />
+              <span>{draftChargeItems.length} New item{draftChargeItems.length === 1 ? '' : 's'}</span>
+            </div>
+          )}
+        </div>
 
       {/* Print styles */}
       <style>{`

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Lock, FileWarning, Loader2, X } from 'lucide-react';
+import { Lock, FileWarning, Loader2, X, Info } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   addChargeItem,
@@ -593,7 +593,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                 <X className="w-4 h-4" />
               </button>
               <div className="flex items-start gap-3 pr-6">
-                <FileWarning className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isDark ? 'text-amber-300' : 'text-amber-600'}`} />
+              <Info className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isDark ? 'text-blue-300' : 'text-blue-600'}`} />
                 <div className="text-xs sm:text-sm">
                   <p className={`font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
                     Billing items come from two places
