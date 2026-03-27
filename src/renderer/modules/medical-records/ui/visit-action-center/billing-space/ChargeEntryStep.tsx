@@ -1,4 +1,3 @@
-// ChargeEntryStep.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Lock, FileWarning, Loader2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -16,8 +15,8 @@ import {
   clearBackendBilling,
   selectEffectiveBillingStatus,
   selectPatientInfo,
+  selectBackendChargeItems,
 } from './billingSlice';
-import { selectBackendChargeItems } from './billingSlice';
 import PersistedBillingAdjustmentModal from './charge-entry/PersistedBillingAdjustmentModal';
 
 import { motion } from 'framer-motion';
@@ -59,10 +58,9 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   // ---------------------------------------------------------------------------
   const renderableChargeItems = useSelector(selectRenderableChargeItems);
   const draftChargeItems = useSelector(selectDraftChargeItems);
+  const backendChargeItems = useSelector(selectBackendChargeItems);
   const patientInfo = useSelector(selectPatientInfo);
   const billingStatus = useSelector(selectEffectiveBillingStatus);
-  const backendChargeItems = useSelector(selectBackendChargeItems);
-
 
   // Once backend says settled, the entire charge-entry becomes view only.
   const isReadOnly = billingStatus === 'settled';
@@ -78,8 +76,8 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   /**
-   * When a persisted backend line item is edited by another staff member,
-   * we capture the intended action and require a reason before sending.
+   * When a persisted backend line item is edited, we open the adjustment modal
+   * which allows the user to specify quantity and reason in one place.
    */
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
   const [adjustmentReason, setAdjustmentReason] = useState('');
@@ -88,7 +86,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     item: BackendChargeItem;
     action: PersistedAction;
   } | null>(null);
-
 
   const searchWrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -274,7 +271,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   }, []);
 
   // Outside click + escape for search popup
-   useEffect(() => {
+  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (!searchWrapRef.current) return;
       if (!searchWrapRef.current.contains(e.target as Node)) {
@@ -301,7 +298,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     };
   }, [adjustmentDialogOpen]);
 
-
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
@@ -316,11 +312,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     return n;
   };
 
-
-
-
-
- 
   const openAdjustmentDialog = (
     item: BackendChargeItem,
     action: PersistedAction = 'increase',
@@ -369,7 +360,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   // ---------------------------------------------------------------------------
   // Handlers
   // ---------------------------------------------------------------------------
-   const handleAddItem = (service: ServiceItem) => {
+  const handleAddItem = (service: ServiceItem) => {
     if (isReadOnly) return;
 
     const serviceKey = makeBillableKey(service);
@@ -392,7 +383,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     setShowSearchResults(false);
     inputRef.current?.focus();
   };
-
 
   /**
    * Clear all only affects unsaved draft items.
@@ -457,6 +447,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
 
     dispatch(removeChargeItem(itemId));
   };
+
   const handlePersistedItemAction = async (item: BackendChargeItem, action: PersistedAction) => {
     if (isReadOnly) return;
     openAdjustmentDialog(item, action, 1);
@@ -599,11 +590,10 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
             </div>
           </div>
 
-          {/* Items List */}
+          {/* Items List - REMOVED draftItemCount prop */}
           <ChargeItemsList
             chargeItems={renderableChargeItems}
             subtotal={displayedSubtotal}
-            draftItemCount={draftChargeItems.length}
             isReadOnly={isReadOnly}
             isSearchSticky={isSearchSticky}
             theme={theme}
@@ -629,24 +619,19 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
         />
       </div>
 
-      {/* Cross-staff reason dialog */}
-          <PersistedBillingAdjustmentModal
+      {/* Persisted Item Adjustment Modal - REMOVED action and onActionChange props */}
+      <PersistedBillingAdjustmentModal
         open={adjustmentDialogOpen}
         theme={theme}
         item={pendingAdjustment?.item ?? null}
-        action={pendingAdjustment?.action ?? 'increase'}
         quantity={adjustmentQuantity}
         reason={adjustmentReason}
         isSubmitting={isAdjustingPersistedItem}
         onClose={closeAdjustmentDialog}
-        onActionChange={(action) =>
-          setPendingAdjustment((prev) => (prev ? { ...prev, action } : prev))
-        }
         onQuantityChange={setAdjustmentQuantity}
         onReasonChange={setAdjustmentReason}
         onSubmit={handleAdjustmentDialogSubmit}
       />
-
     </div>
   );
 };

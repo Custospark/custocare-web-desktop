@@ -10,7 +10,7 @@
  * @module useBillingItemsQueries
  */
 
-import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
+import { useQuery, type UseQueryOptions, useQueryClient } from '@tanstack/react-query';
 import { useMutation } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { useSelector } from 'react-redux';
@@ -27,12 +27,10 @@ import type {
 } from './BillingItemsTypes';
 import { type RootState } from '../../../../app/store/store';
 import { getActiveFacilityId } from '../../../../app/store/utils/contextSelectors';
-import { useQueryClient } from '@tanstack/react-query';
 import type {
   BillingAdjustmentPayload,
   BillingAdjustmentResponse,
 } from './BillingItemsTypes';
-
 
 /* -------------------------------------------------------------------------- */
 /*                               QUERY KEYS                                   */
@@ -214,9 +212,15 @@ export const useSubmitBilling = (
       callbacks.onError?.(error);
     },
   });
-
 };
 
+/* -------------------------------------------------------------------------- */
+/*                           OPTIMISTIC UPDATE HELPERS                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Maps backend billing status to UI status
+ */
 const mapBackendBillingStatusToUiStatus = (billingStatus?: string): 'draft' | 'ready' | 'settled' => {
   switch (billingStatus) {
     case 'paid_in_full':
@@ -232,6 +236,33 @@ const mapBackendBillingStatusToUiStatus = (billingStatus?: string): 'draft' | 'r
   }
 };
 
+/**
+ * Tax item interface
+ */
+interface TaxItem {
+  name: string;
+  rate: number;
+  amount: number;
+}
+
+/**
+ * Billing data with taxes interface
+ */
+interface BillingDataWithTaxes {
+  subtotal: number;
+  discountAmount: number;
+  taxableAmount: number;
+  taxTotal: number;
+  grandTotal: number;
+  totalPaid: number;
+  balance: number;
+  isPaid?: boolean;
+  taxes?: TaxItem[];
+}
+
+/**
+ * Apply optimistic update for line item adjustment
+ */
 export const applyOptimisticLineItemAdjustment = (
   previous: BillingRetrievalResponse | undefined,
   payload: BillingAdjustmentPayload
@@ -257,40 +288,34 @@ export const applyOptimisticLineItemAdjustment = (
   const newLineTotal = Number((newQty * unitPrice).toFixed(2));
   const lineDelta = Number((newLineTotal - oldLineTotal).toFixed(2));
 
-  const existingBillingData = current.billing_data ?? {
-    subtotal: 0,
-    discountAmount: 0,
-    taxableAmount: 0,
-    taxTotal: 0,
-    grandTotal: 0,
-    totalPaid: 0,
-    balance: 0,
-    isPaid: false,
-    taxes: [],
-  };
+  // Type-safe billing data extraction
+  const existingBillingData = current.billing_data as BillingDataWithTaxes | undefined;
+  const taxes: TaxItem[] = existingBillingData?.taxes ?? [];
 
-  const newSubtotal = Number(((existingBillingData.subtotal ?? 0) + lineDelta).toFixed(2));
-  const discountAmount = Number(existingBillingData.discountAmount ?? 0);
+  const newSubtotal = Number(((existingBillingData?.subtotal ?? 0) + lineDelta).toFixed(2));
+  const discountAmount = Number(existingBillingData?.discountAmount ?? 0);
   const taxableAmount = Number(Math.max(0, newSubtotal - discountAmount).toFixed(2));
 
-  const recalculatedTaxes = (existingBillingData.taxes ?? []).map((tax) => ({
-    ...tax,
+  const recalculatedTaxes: TaxItem[] = taxes.map((tax: TaxItem) => ({
+    name: tax.name,
+    rate: tax.rate,
     amount: Number((taxableAmount * ((Number(tax.rate) || 0) / 100)).toFixed(2)),
   }));
 
   const newTaxTotal = Number(
-    recalculatedTaxes.reduce((sum, tax) => sum + (Number(tax.amount) || 0), 0).toFixed(2)
+    recalculatedTaxes.reduce((sum: number, tax: TaxItem) => sum + (Number(tax.amount) || 0), 0).toFixed(2)
   );
 
   const newGrandTotal = Number((taxableAmount + newTaxTotal).toFixed(2));
-  const totalPaid = Number(existingBillingData.totalPaid ?? 0);
+  const totalPaid = Number(existingBillingData?.totalPaid ?? 0);
   const newBalance = Number(Math.max(0, newGrandTotal - totalPaid).toFixed(2));
   const isPaid = newBalance === 0;
 
   const newBillingStatus =
     newBalance === 0 ? 'paid_in_full' : totalPaid > 0 ? 'partially_paid' : 'pending';
 
-  const updatedItems = current.charge_items
+  // Type-safe charge_items handling
+  const updatedItems = (current.charge_items ?? [])
     .map((item) => {
       if (item.line_item_id !== payload.line_item_id) return item;
 
@@ -322,6 +347,19 @@ export const applyOptimisticLineItemAdjustment = (
     })
     .filter((item) => Number(item.quantity || 0) > 0);
 
+  // Type-safe billing_data update with taxes
+  const updatedBillingData: BillingDataWithTaxes = {
+    subtotal: newSubtotal,
+    discountAmount: discountAmount,
+    taxableAmount: taxableAmount,
+    taxTotal: newTaxTotal,
+    grandTotal: newGrandTotal,
+    totalPaid: totalPaid,
+    balance: newBalance,
+    isPaid: isPaid,
+    taxes: recalculatedTaxes,
+  };
+
   return {
     ...previous,
     data: {
@@ -329,27 +367,25 @@ export const applyOptimisticLineItemAdjustment = (
       charge_items: updatedItems,
       billing_status: newBillingStatus,
       status: mapBackendBillingStatusToUiStatus(newBillingStatus),
-      billing_data: {
-        ...existingBillingData,
-        subtotal: newSubtotal,
-        taxableAmount,
-        taxTotal: newTaxTotal,
-        grandTotal: newGrandTotal,
-        balance: newBalance,
-        isPaid,
-        taxes: recalculatedTaxes,
-      },
+      billing_data: updatedBillingData,
       updated_at: new Date().toISOString(),
       last_updated: Date.now(),
     },
   };
 };
 
+/* -------------------------------------------------------------------------- */
+/*                             ADJUSTMENT HOOK                                */
+/* -------------------------------------------------------------------------- */
 
 /**
  * Adjust a persisted backend billing line item.
  * Used for enterprise-safe edits to already saved charges.
- */export const useAdjustBillingLineItem = (
+ *//**
+ * Adjust a persisted backend billing line item.
+ * Used for enterprise-safe edits to already saved charges.
+ */
+export const useAdjustBillingLineItem = (
   visitId: number,
   callbacks: MutationCallbacks<BillingAdjustmentResponse, AxiosError<ApiErrorResponse>> = {}
 ) => {
@@ -357,7 +393,17 @@ export const applyOptimisticLineItemAdjustment = (
   const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
   const queryClient = useQueryClient();
 
-  return useMutation<BillingAdjustmentResponse, AxiosError<ApiErrorResponse>, BillingAdjustmentPayload>({
+  // Define the context type for the mutation
+  interface MutationContext {
+    previous: BillingRetrievalResponse | undefined;
+  }
+
+  return useMutation<
+    BillingAdjustmentResponse, 
+    AxiosError<ApiErrorResponse>, 
+    BillingAdjustmentPayload,
+    MutationContext  // This is the key - add the context type as the 4th generic parameter
+  >({
     mutationFn: async (payload: BillingAdjustmentPayload) => {
       const response = await axiosInstance.patch<BillingAdjustmentResponse>(
         `/billing/line-item/${payload.line_item_id}/adjust`,
@@ -371,7 +417,7 @@ export const applyOptimisticLineItemAdjustment = (
       return response.data;
     },
 
-    onMutate: async (payload) => {
+    onMutate: async (payload): Promise<MutationContext> => {
       await queryClient.cancelQueries({ queryKey: billingItemsKeys.detail(visitId) });
 
       const previous = queryClient.getQueryData<BillingRetrievalResponse>(
@@ -393,6 +439,7 @@ export const applyOptimisticLineItemAdjustment = (
     },
 
     onError: (error, _payload, context) => {
+      // Now TypeScript knows that context has a 'previous' property
       if (context?.previous) {
         queryClient.setQueryData(billingItemsKeys.detail(visitId), context.previous);
       }
@@ -409,8 +456,6 @@ export const applyOptimisticLineItemAdjustment = (
     },
   });
 };
-
-
 
 /* -------------------------------------------------------------------------- */
 /*                           UTILITY FUNCTIONS                                */
@@ -468,12 +513,9 @@ export default {
   useGetBillableItems,
   useGetBillingByVisit,
 
-
   // Mutation hooks
   useSubmitBilling,
   useAdjustBillingLineItem,
-
-  
 
   // Utilities
   billingItemsKeys,

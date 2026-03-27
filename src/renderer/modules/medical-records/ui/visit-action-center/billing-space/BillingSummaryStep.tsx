@@ -688,7 +688,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
           balance: draftBillingData.balance,
         },
         additional_notes: additionalNotes || undefined,
-        status: status === 'settled' ? 'ready' : status,
+        status: status,
         payment_status:
           derivedFinancials.balanceDue === 0
             ? PaymentStatus.PAID_IN_FULL
