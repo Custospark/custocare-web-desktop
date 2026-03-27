@@ -274,16 +274,16 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     }, 300);
   };
 
-  const handleResetBanner = () => {
-    try {
-      localStorage.removeItem(BANNER_VISIBILITY_KEY);
-      setIsBannerVisible(true);
-      setBannerAnimation('enter');
-      setTimeout(() => setBannerAnimation(null), 300);
-    } catch (error) {
-      console.error('Failed to reset banner:', error);
-    }
-  };
+  // const handleResetBanner = () => {
+  //   try {
+  //     localStorage.removeItem(BANNER_VISIBILITY_KEY);
+  //     setIsBannerVisible(true);
+  //     setBannerAnimation('enter');
+  //     setTimeout(() => setBannerAnimation(null), 300);
+  //   } catch (error) {
+  //     console.error('Failed to reset banner:', error);
+  //   }
+  // };
 
   // Optional: Show banner again after version update
   useEffect(() => {
