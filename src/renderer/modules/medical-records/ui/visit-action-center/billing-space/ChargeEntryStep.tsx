@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Lock, Loader2, X, Info } from 'lucide-react';
+import { Lock, Loader2, X, Info, AlertCircle, CheckCircle2, FileText, Users, Edit3 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   addChargeItem,
@@ -20,7 +20,7 @@ import {
 } from './billingSlice';
 import PersistedBillingAdjustmentModal from './charge-entry/PersistedBillingAdjustmentModal';
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { containerVariants } from '../../../../../shared/components/animations/motionVariants';
 import {
   type ServiceItem,
@@ -46,6 +46,16 @@ interface ChargeEntryStepProps {
 }
 
 type PersistedAction = 'increase' | 'decrease' | 'remove';
+
+// Banner storage key
+const BANNER_VISIBILITY_KEY = 'billing_info_banner_dismissed';
+const BANNER_VERSION = 'v1'; // Increment this to show banner again after updates
+
+interface BannerState {
+  dismissed: boolean;
+  version: string;
+  dismissedAt?: string;
+}
 
 const safeLower = (v: string) => (v || '').toLowerCase();
 
@@ -75,7 +85,26 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearchSticky, setIsSearchSticky] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [isBannerVisible, setIsBannerVisible] = useState(true);
+  
+  // Banner visibility state with localStorage persistence
+  const [isBannerVisible, setIsBannerVisible] = useState(() => {
+    try {
+      const stored = localStorage.getItem(BANNER_VISIBILITY_KEY);
+      if (stored) {
+        const parsed: BannerState = JSON.parse(stored);
+        // Check if the stored version matches current version
+        if (parsed.version === BANNER_VERSION && parsed.dismissed) {
+          return false;
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error('Failed to read banner visibility from localStorage:', error);
+      return true;
+    }
+  });
+  
+  const [bannerAnimation, setBannerAnimation] = useState<'enter' | 'exit' | null>(null);
 
   /**
    * When a persisted backend line item is edited, we open the adjustment modal
@@ -219,6 +248,62 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
 
   const hasAnyItems = renderableChargeItems.length > 0;
   const isDisabledProceed = !hasAnyItems || isReadOnly;
+
+  // ---------------------------------------------------------------------------
+  // Banner management functions
+  // ---------------------------------------------------------------------------
+  const persistBannerDismissal = () => {
+    try {
+      const bannerState: BannerState = {
+        dismissed: true,
+        version: BANNER_VERSION,
+        dismissedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(BANNER_VISIBILITY_KEY, JSON.stringify(bannerState));
+    } catch (error) {
+      console.error('Failed to persist banner dismissal:', error);
+    }
+  };
+
+  const handleCloseBanner = () => {
+    setBannerAnimation('exit');
+    setTimeout(() => {
+      setIsBannerVisible(false);
+      persistBannerDismissal();
+      setBannerAnimation(null);
+    }, 300);
+  };
+
+  const handleResetBanner = () => {
+    try {
+      localStorage.removeItem(BANNER_VISIBILITY_KEY);
+      setIsBannerVisible(true);
+      setBannerAnimation('enter');
+      setTimeout(() => setBannerAnimation(null), 300);
+    } catch (error) {
+      console.error('Failed to reset banner:', error);
+    }
+  };
+
+  // Optional: Show banner again after version update
+  useEffect(() => {
+    const checkBannerVersion = () => {
+      try {
+        const stored = localStorage.getItem(BANNER_VISIBILITY_KEY);
+        if (stored) {
+          const parsed: BannerState = JSON.parse(stored);
+          if (parsed.version !== BANNER_VERSION && parsed.dismissed) {
+            // Version mismatch - show banner again
+            setIsBannerVisible(true);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check banner version:', error);
+      }
+    };
+    
+    checkBannerVersion();
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Client-side search
@@ -550,10 +635,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     if (!isReadOnly) setSearchTerm(value);
   };
 
-  const handleCloseBanner = () => {
-    setIsBannerVisible(false);
-  };
-
   useEffect(() => {
     if (isError && process.env.NODE_ENV === 'development') {
       console.error('Billable items fetch error:', error);
@@ -566,20 +647,35 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   return (
     <div className="p-4 sm:p-5 lg:p-6 h-full relative">
       {/* Read-only indicator */}
-      {isReadOnly && (
-        <div className="absolute top-4 right-8 z-20 flex items-center gap-2 px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-full shadow-sm border border-blue-400 dark:border-blue-400">
-          <Lock className="w-3.5 h-3.5" />
-          <span className="text-xs font-semibold">Payment settled - View only</span>
-        </div>
-      )}
+      <AnimatePresence>
+        {isReadOnly && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            transition={{ type: 'spring', damping: 20 }}
+            className="absolute top-4 right-8 z-20 flex items-center gap-2 px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-full shadow-lg border border-blue-400 dark:border-blue-400"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span className="text-xs font-semibold">Payment settled - View only</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Adjustment in progress indicator */}
-      {isAdjustingPersistedItem && (
-        <div className="absolute top-4 left-8 z-20 flex items-center gap-2 px-3 py-1.5 bg-amber-600 text-white rounded-full shadow-sm border border-amber-400">
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          <span className="text-xs font-semibold">Applying audited backend adjustment...</span>
-        </div>
-      )}
+      <AnimatePresence>
+        {isAdjustingPersistedItem && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-4 left-8 z-20 flex items-center gap-2 px-3 py-1.5 bg-amber-600 text-white rounded-full shadow-lg border border-amber-400"
+          >
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <span className="text-xs font-semibold">Applying audited backend adjustment...</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 h-full">
         {/* Left: Search + Items */}
@@ -618,33 +714,110 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
             />
           </div>
 
-          {/* Information banner for dual-source billing - Hideable */}
-          {isBannerVisible && (
-            <div className={`mb-3 rounded-xl border ${colors.border.primary} ${colors.bg.secondary} p-3 relative`}>
-              <button
-                onClick={handleCloseBanner}
-                className={`absolute top-3 right-3 p-1 rounded-md transition-colors cursor-pointer ${
-                  isDark
-                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-                    : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
-                }`}
-                aria-label="Close banner"
+          {/* Information banner with localStorage persistence and updated messaging */}
+          <AnimatePresence>
+            {isBannerVisible && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, y: -20 }}
+                animate={{ opacity: 1, height: 'auto', y: 0 }}
+                exit={{ opacity: 0, height: 0, y: -20 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className={`mb-3 overflow-hidden rounded-xl border ${colors.border.primary} ${colors.bg.secondary} relative shadow-sm`}
               >
-                <X className="w-4 h-4" />
-              </button>
-              <div className="flex items-start gap-3 pr-6">
-                <Info className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isDark ? 'text-blue-300' : 'text-blue-600'}`} />
-                <div className="text-xs sm:text-sm">
-                  <p className={`font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                    Billing items come from two places
-                  </p>
-                  <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} mt-1`}>
-                    Existing items are already saved and tracked. New items you add remain drafts until you save them. If another staff member added an item, you'll need to add a reason before you can adjust it.
-                  </p>
+                <div className="p-4 pr-10">
+                  <button
+                    onClick={handleCloseBanner}
+                    className={`absolute top-4 right-4 p-1 rounded-md transition-all duration-200 cursor-pointer ${
+                      isDark
+                        ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200 hover:scale-110'
+                        : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700 hover:scale-110'
+                    }`}
+                    aria-label="Close banner"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  
+                  <div className="flex items-start gap-3">
+                    {/* Icon with animation */}
+                    <div className="relative">
+                      <motion.div
+                        animate={{ 
+                          scale: [1, 1.1, 1],
+                          rotate: [0, 5, -5, 0]
+                        }}
+                        transition={{ 
+                          duration: 2,
+                          repeat: Infinity,
+                          repeatDelay: 4,
+                          ease: "easeInOut"
+                        }}
+                        className="p-1.5 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20"
+                      >
+                        <FileText className={`w-5 h-5 ${isDark ? 'text-blue-300' : 'text-blue-600'}`} />
+                      </motion.div>
+                    </div>
+                    
+                    <div className="flex-1">
+                      {/* Title */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                          How billing items work
+                        </h3>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+                          {BANNER_VERSION}
+                        </span>
+                      </div>
+                      
+                      {/* Main message */}
+                      <div className={`text-xs sm:text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'} space-y-2`}>
+                        <p className="leading-relaxed">
+                          <span className="font-medium text-blue-500 dark:text-blue-400">Saved items</span> are already on file — changes to them are recorded.
+                          <span className="mx-1">•</span>
+                          <span className="font-medium text-emerald-500 dark:text-emerald-400">New items</span> you add stay as drafts until payment is collected.
+                        </p>
+                        <p className="leading-relaxed flex items-start gap-1">
+                          <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-amber-500" />
+                          <span>
+                            If another staff member added an item, you'll need to add a reason before making changes.
+                          </span>
+                        </p>
+                      </div>
+                      
+                      {/* Feature indicators */}
+                      <div className={`mt-3 pt-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} flex flex-wrap items-center gap-3 border-t ${colors.border.subtle}`}>
+                        <span className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                          <span>Saved items are audited</span>
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span>Drafts are temporary</span>
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          <span>Changes require reason</span>
+                        </span>
+                        {backendChargeItems.length > 0 && (
+                          <span className="flex items-center gap-1.5 ml-auto">
+                            <CheckCircle2 className="w-3 h-3 text-green-500" />
+                            <span className="font-medium">{backendChargeItems.length} saved item{backendChargeItems.length !== 1 ? 's' : ''}</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+                
+                {/* Animated gradient border at bottom */}
+                <motion.div
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Items List */}
           <ChargeItemsList
