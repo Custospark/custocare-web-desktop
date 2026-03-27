@@ -378,3 +378,20 @@
 .animate-slideIn {
   animation: slideIn 0.3s ease-out;
 }
+@layer utilities {
+  .tray-glass {
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .tray-shadow-enterprise {
+    box-shadow:
+      0 24px 80px rgba(15, 23, 42, 0.18),
+      0 8px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .drag-safe {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}

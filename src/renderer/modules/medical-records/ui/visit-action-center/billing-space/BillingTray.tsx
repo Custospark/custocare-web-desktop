@@ -1,5 +1,16 @@
 import React, { useEffect, useCallback, useRef, useState } from 'react';
-import { X, AlertTriangle, FileText, CreditCard, CheckCircle2, Info, LucideCreditCard, User, Minimize2, Maximize2 } from 'lucide-react';
+import {
+  X,
+  AlertTriangle,
+  FileText,
+  CreditCard,
+  CheckCircle2,
+  Info,
+  LucideCreditCard,
+  User,
+  Minimize2,
+  Maximize2,
+} from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
@@ -22,134 +33,49 @@ import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDia
 import LogoImage from '../../../../../shared/assets/LogoImage';
 import { BrandName } from '../../../../../shared/utils/BrandName';
 
-/**
- * ═══════════════════════════════════════════════════════════════════════════
- * BILLING TRAY COMPONENT
- * ═══════════════════════════════════════════════════════════════════════════
- * 
- * A full-featured billing tray with:
- * - Minimize/Maximize functionality (minimizes to bottom-right corner)
- * - Persistent state preservation when minimized
- * - Professional close handling with discard confirmation
- * - Multi-step workflow (Charges → Payment)
- * - Theme-aware styling
- * - Accessibility support
- * 
- * MINIMIZE BEHAVIOR:
- * - When minimized, tray collapses to a compact widget in bottom-right
- * - All unsaved changes are preserved (no discard on minimize)
- * - Clicking the minimized widget maximizes the tray
- * - Close button discards changes (with confirmation for unsaved changes)
- * 
- * ═══════════════════════════════════════════════════════════════════════════
- */
+type MinimizedDockPosition = 'bottom-center' | 'bottom-right' | 'bottom-left';
 
-export const BillingTray: React.FC = () => {
-  // Get theme from UI slice
+interface BillingTrayProps {
+  minimizedDockPosition?: MinimizedDockPosition;
+}
+
+const DEFAULT_MINIMIZED_DOCK_POSITION: MinimizedDockPosition = 'bottom-right';
+
+export const BillingTray: React.FC<BillingTrayProps> = ({
+  minimizedDockPosition = DEFAULT_MINIMIZED_DOCK_POSITION,
+}) => {
   const theme = useSelector(selectTheme);
   const isDark = theme === 'dark';
-  
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { confirm } = useConfirm();
 
-  // Get active visit info from visit slice
   const activeVisitInfo = useSelector(selectActiveVisitInfo);
   const patientName = activeVisitInfo?.patientName || 'Patient';
   const patientNumber = activeVisitInfo?.patientNumber || '';
 
-  // Redux selectors for billing state
   const isTrayOpen = useSelector(selectIsTrayOpen);
   const currentStep = useSelector(selectCurrentStep);
   const isDirty = useSelector(selectIsDirty);
   const status = useSelector(selectBillingStatus);
 
-  // Local state for minimize/maximize
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [viewMode, setViewMode] = useState<'expanded' | 'minimized'>('expanded');
+
   const [isDragging, setIsDragging] = useState(false);
+  const [hasCustomPosition, setHasCustomPosition] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [position, setPosition] = useState({ x: 0, y: 0 });
+
   const minimizedRef = useRef<HTMLDivElement>(null);
+  const didDragRef = useRef(false);
 
   const QUEUE_ROUTE = MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE;
 
-  // Refs for status message tracking
   const hasShownSettledRef = useRef(false);
   const hasShownReadyRef = useRef(false);
 
-  // Reset minimized state when tray is closed
-  useEffect(() => {
-    if (!isTrayOpen) {
-      setIsMinimized(false);
-    }
-  }, [isTrayOpen]);
-
-  // Reset status message refs when tray is closed
-  useEffect(() => {
-    if (!isTrayOpen) {
-      hasShownSettledRef.current = false;
-      hasShownReadyRef.current = false;
-    }
-  }, [isTrayOpen]);
-
-  // Show status banners based on billing status
-  useEffect(() => {
-    if (status === 'settled' && !hasShownSettledRef.current) {
-      hasShownSettledRef.current = true;
-    } else if (status === 'ready' && !hasShownReadyRef.current) {
-      hasShownReadyRef.current = true;
-    }
-  }, [status]);
-
-  // ---------------------------------------------------------------------------
-  // Drag functionality for minimized widget
-  // ---------------------------------------------------------------------------
-
-  const handleDragStart = useCallback((e: React.MouseEvent) => {
-    if (!minimizedRef.current) return;
-    
-    setIsDragging(true);
-    const rect = minimizedRef.current.getBoundingClientRect();
-    setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
-  }, []);
-
-  const handleDragMove = useCallback((e: MouseEvent) => {
-    if (!isDragging) return;
-    
-    const newX = e.clientX - dragOffset.x;
-    const newY = e.clientY - dragOffset.y;
-    
-    // Keep widget within viewport bounds
-    const maxX = window.innerWidth - (minimizedRef.current?.offsetWidth || 280);
-    const maxY = window.innerHeight - (minimizedRef.current?.offsetHeight || 80);
-    
-    setPosition({
-      x: Math.max(0, Math.min(newX, maxX)),
-      y: Math.max(0, Math.min(newY, maxY)),
-    });
-  }, [isDragging, dragOffset]);
-
-  const handleDragEnd = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleDragMove);
-      window.addEventListener('mouseup', handleDragEnd);
-      return () => {
-        window.removeEventListener('mousemove', handleDragMove);
-        window.removeEventListener('mouseup', handleDragEnd);
-      };
-    }
-  }, [isDragging, handleDragMove, handleDragEnd]);
-
-  // ---------------------------------------------------------------------------
-  // Theme-aware color tokens
-  // ---------------------------------------------------------------------------
+  const isMinimized = viewMode === 'minimized';
 
   const colors = {
     bg: {
@@ -175,31 +101,161 @@ export const BillingTray: React.FC = () => {
     },
   };
 
-  // ---------------------------------------------------------------------------
-  // Handlers
-  // ---------------------------------------------------------------------------
+  const getDockedPosition = useCallback((dockPosition: MinimizedDockPosition) => {
+    const width = minimizedRef.current?.offsetWidth || 380;
+    const height = minimizedRef.current?.offsetHeight || 88;
+    const margin = 16;
 
-  /**
-   * Handle minimize action - preserves all state
-   */
+    switch (dockPosition) {
+      case 'bottom-left':
+        return {
+          x: margin,
+          y: window.innerHeight - height - margin,
+        };
+
+      case 'bottom-center':
+        return {
+          x: Math.max(margin, Math.round((window.innerWidth - width) / 2)),
+          y: window.innerHeight - height - margin,
+        };
+
+      case 'bottom-right':
+      default:
+        return {
+          x: window.innerWidth - width - margin,
+          y: window.innerHeight - height - margin,
+        };
+    }
+  }, []);
+
+  const clampToViewport = useCallback((x: number, y: number) => {
+    const width = minimizedRef.current?.offsetWidth || 380;
+    const height = minimizedRef.current?.offsetHeight || 88;
+    const margin = 8;
+
+    return {
+      x: Math.max(margin, Math.min(x, window.innerWidth - width - margin)),
+      y: Math.max(margin, Math.min(y, window.innerHeight - height - margin)),
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isTrayOpen) {
+      setViewMode('expanded');
+      setIsDragging(false);
+      setHasCustomPosition(false);
+      setPosition({ x: 0, y: 0 });
+      didDragRef.current = false;
+    }
+  }, [isTrayOpen]);
+
+  useEffect(() => {
+    if (!isTrayOpen) {
+      hasShownSettledRef.current = false;
+      hasShownReadyRef.current = false;
+    }
+  }, [isTrayOpen]);
+
+  useEffect(() => {
+    if (status === 'settled' && !hasShownSettledRef.current) {
+      hasShownSettledRef.current = true;
+    } else if (status === 'ready' && !hasShownReadyRef.current) {
+      hasShownReadyRef.current = true;
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (isMinimized && !hasCustomPosition) {
+      const frame = requestAnimationFrame(() => {
+        setPosition(getDockedPosition(minimizedDockPosition));
+      });
+
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [isMinimized, hasCustomPosition, minimizedDockPosition, getDockedPosition]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (!isMinimized) return;
+
+      if (hasCustomPosition) {
+        setPosition((prev) => clampToViewport(prev.x, prev.y));
+      } else {
+        setPosition(getDockedPosition(minimizedDockPosition));
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isMinimized, hasCustomPosition, minimizedDockPosition, clampToViewport, getDockedPosition]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.userSelect = 'none';
+
+    const handleDragMove = (e: MouseEvent) => {
+      const next = clampToViewport(
+        e.clientX - dragOffset.x,
+        e.clientY - dragOffset.y
+      );
+
+      didDragRef.current = true;
+      setPosition(next);
+      setHasCustomPosition(true);
+    };
+
+    const handleDragEnd = () => {
+      setIsDragging(false);
+      window.setTimeout(() => {
+        didDragRef.current = false;
+      }, 0);
+    };
+
+    window.addEventListener('mousemove', handleDragMove);
+    window.addEventListener('mouseup', handleDragEnd);
+
+    return () => {
+      document.body.style.userSelect = previousUserSelect;
+      window.removeEventListener('mousemove', handleDragMove);
+      window.removeEventListener('mouseup', handleDragEnd);
+    };
+  }, [isDragging, dragOffset, clampToViewport]);
+
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    if (!minimizedRef.current) return;
+    if (e.button !== 0) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rect = minimizedRef.current.getBoundingClientRect();
+
+    didDragRef.current = false;
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+    setIsDragging(true);
+  }, []);
+
   const handleMinimize = useCallback(() => {
-    // Save draft before minimizing to preserve state
     if (isDirty) {
       dispatch(saveDraft());
     }
-    setIsMinimized(true);
-  }, [dispatch, isDirty]);
 
-  /**
-   * Handle maximize action - restores the full tray
-   */
+    if (!hasCustomPosition) {
+      setPosition(getDockedPosition(minimizedDockPosition));
+    }
+
+    setViewMode('minimized');
+  }, [dispatch, isDirty, hasCustomPosition, minimizedDockPosition, getDockedPosition]);
+
   const handleMaximize = useCallback(() => {
-    setIsMinimized(false);
+    setViewMode('expanded');
   }, []);
 
-  /**
-   * Handle close - discards changes with confirmation
-   */
   const handleClose = useCallback(async () => {
     if (status === 'settled') {
       const confirmed = await confirm({
@@ -238,14 +294,10 @@ export const BillingTray: React.FC = () => {
       return;
     }
 
-    // Close tray without changes - clear pending forwarding
     dispatch(closeTray());
     dispatch(clearPendingForwarding());
   }, [confirm, dispatch, isDirty, navigate, theme, status, QUEUE_ROUTE]);
 
-  /**
-   * Handle ESC key press
-   */
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isTrayOpen && !isMinimized) {
@@ -257,17 +309,10 @@ export const BillingTray: React.FC = () => {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [isTrayOpen, isMinimized, handleClose]);
 
-  /**
-   * Handle step navigation
-   */
   const handleSetStep = (step: 'charge_entry' | 'billing_summary') => {
     dispatch(setStep(step));
     dispatch(saveDraft());
   };
-
-  // ---------------------------------------------------------------------------
-  // Status configuration
-  // ---------------------------------------------------------------------------
 
   const getStatusConfig = (billingStatus: typeof status) => {
     switch (billingStatus) {
@@ -300,34 +345,37 @@ export const BillingTray: React.FC = () => {
     { key: 'billing_summary', label: 'Payment', icon: CreditCard },
   ] as const;
 
-  // ---------------------------------------------------------------------------
-  // Minimized View Component
-  // ---------------------------------------------------------------------------
+  if (!isTrayOpen) return null;
 
-  const MinimizedView = () => {
-    const itemsCount = 0; // This will come from selector, but simplified for now
-    
+  if (isMinimized) {
     return (
       <div
         ref={minimizedRef}
-        className={`fixed bottom-4 right-4 z-50 cursor-pointer select-none ${colors.bg.minimized} border ${colors.border.primary} rounded-xl shadow-2xl transition-all duration-200 hover:shadow-xl`}
+        draggable={false}
+        onDragStart={(e) => e.preventDefault()}
+        className={`fixed z-50 cursor-pointer select-none ${colors.bg.minimized} border ${colors.border.primary} rounded-xl shadow-2xl transition-shadow duration-200 hover:shadow-xl`}
         style={{
-          transform: `translate(${position.x}px, ${position.y}px)`,
-          transition: isDragging ? 'none' : 'all 0.2s ease',
+          left: position.x,
+          top: position.y,
+          width: 'min(420px, calc(100vw - 16px))',
+        }}
+        onClick={() => {
+          if (didDragRef.current) return;
+          handleMaximize();
         }}
       >
-        {/* Drag Handle */}
         <div
           className="absolute top-0 left-0 right-0 h-8 cursor-grab active:cursor-grabbing"
           onMouseDown={handleDragStart}
-          style={{ cursor: 'grab' }}
+          onDragStart={(e) => e.preventDefault()}
         />
-        
-        <div className="p-3">
+
+        <div className="p-3" onDragStart={(e) => e.preventDefault()}>
           <div className="flex items-center gap-3">
-            {/* Logo and Brand */}
-            <div className="flex items-center gap-2">
-              <LogoImage size="xs" />
+            <div className="flex items-center gap-2" onDragStart={(e) => e.preventDefault()}>
+              <div onDragStart={(e) => e.preventDefault()}>
+                <LogoImage />
+              </div>
               <div className="flex items-center gap-1">
                 <span className={`text-xs font-medium ${colors.text.primary}`}>
                   <BrandName />
@@ -336,7 +384,6 @@ export const BillingTray: React.FC = () => {
               </div>
             </div>
 
-            {/* Patient Info */}
             <div className="flex items-center gap-2 pl-2 border-l border-gray-300 dark:border-gray-700">
               <User className="w-3 h-3 text-gray-500" />
               <span className={`text-xs font-medium ${colors.text.primary} truncate max-w-[120px]`}>
@@ -344,7 +391,6 @@ export const BillingTray: React.FC = () => {
               </span>
             </div>
 
-            {/* Status Badge */}
             <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig.bg}`}>
               <div className="flex items-center gap-1">
                 <StatusIcon className="w-2.5 h-2.5" />
@@ -352,9 +398,7 @@ export const BillingTray: React.FC = () => {
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-1">
-              {/* Dirty Indicator */}
+            <div className="flex items-center gap-1 ml-auto">
               {isDirty && status !== 'settled' && (
                 <div className="relative group">
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
@@ -365,18 +409,19 @@ export const BillingTray: React.FC = () => {
                   </div>
                 </div>
               )}
-              
-              {/* Maximize Button */}
+
               <button
-                onClick={handleMaximize}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMaximize();
+                }}
                 className={`p-1 rounded-md ${colors.bg.hover} ${colors.text.secondary} transition-colors cursor-pointer`}
                 aria-label="Maximize billing tray"
                 title="Maximize"
               >
                 <Maximize2 className="w-3.5 h-3.5" />
               </button>
-              
-              {/* Close Button */}
+
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -391,7 +436,6 @@ export const BillingTray: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick Summary */}
           <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
             <span className={`text-xs ${colors.text.secondary}`}>
               {currentStep === 'charge_entry' ? 'Entering charges' : 'Ready for payment'}
@@ -403,41 +447,32 @@ export const BillingTray: React.FC = () => {
         </div>
       </div>
     );
-  };
+  }
 
-  // ---------------------------------------------------------------------------
-  // Full Tray View
-  // ---------------------------------------------------------------------------
-
-  const FullTrayView = () => (
+  return (
     <>
-      {/* Overlay Backdrop */}
       <div
         className={`fixed inset-0 z-40 ${colors.bg.overlay} transition-opacity cursor-pointer`}
         onClick={() => void handleClose()}
       />
 
-      {/* Tray */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 pointer-events-none">
         <div
           className={`w-full max-w-[95vw] xl:max-w-[90vw] 2xl:max-w-[85vw] min-h-[70vh] sm:min-h-[75vh] max-h-[94vh]
             rounded-lg shadow-2xl pointer-events-auto flex flex-col ${colors.bg.primary}`}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
           <div className={`flex items-center justify-between px-4 py-3 border-b ${colors.border.primary} gap-3`}>
-            
-            {/* Left: App Logo & Patient Info */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <LogoImage size="sm" />
               <div className="hidden sm:flex sm:items-center sm:gap-2">
-                <BrandName/>
+                <BrandName />
                 <LucideCreditCard className="w-4 h-4 text-blue-500" />
                 <span className="text-sm font-medium text-blue-500">
                   Billing
                 </span>
               </div>
-              {/* Patient Info */}
+
               <div className="ml-4 hidden md:flex items-center gap-2 pl-4 border-l border-gray-300 dark:border-gray-700">
                 <User className="w-4 h-4 text-gray-500" />
                 <div className="flex flex-col">
@@ -453,15 +488,14 @@ export const BillingTray: React.FC = () => {
               </div>
             </div>
 
-            {/* Center: Steps */}
             <div className="flex items-center gap-2 flex-shrink-0">
               {steps.map((step, index) => {
                 const isActive = currentStep === step.key;
-                const isCompleted = 
+                const isCompleted =
                   (step.key === 'charge_entry' && currentStep === 'billing_summary') ||
                   (step.key === 'billing_summary' && currentStep === 'billing_summary');
                 const StepIcon = step.icon;
-                
+
                 return (
                   <React.Fragment key={step.key}>
                     <button
@@ -471,12 +505,12 @@ export const BillingTray: React.FC = () => {
                       className={`
                         flex items-center gap-1.5 px-2.5 py-1.5 rounded-md 
                         transition-colors cursor-pointer whitespace-nowrap
-                        ${status === 'settled' && step.key === 'charge_entry' 
-                          ? 'opacity-50 cursor-not-allowed' 
+                        ${status === 'settled' && step.key === 'charge_entry'
+                          ? 'opacity-50 cursor-not-allowed'
                           : ''
                         }
-                        ${isActive 
-                          ? `${colors.accent.primary} ${colors.accent.text}` 
+                        ${isActive
+                          ? `${colors.accent.primary} ${colors.accent.text}`
                           : `bg-transparent ${colors.text.secondary} ${colors.bg.hover}`
                         }
                       `}
@@ -488,7 +522,7 @@ export const BillingTray: React.FC = () => {
                         <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-500 ml-0.5" />
                       )}
                     </button>
-                    
+
                     {index < steps.length - 1 && (
                       <div className="w-3 h-px bg-gray-300 dark:bg-gray-700 mx-0.5" />
                     )}
@@ -497,9 +531,7 @@ export const BillingTray: React.FC = () => {
               })}
             </div>
 
-            {/* Right: Status, Minimize & Close */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              {/* Status Badge with Tooltip */}
               <div className="relative group">
                 <div
                   className={`px-2 py-1 rounded-md text-xs font-medium select-none whitespace-nowrap flex items-center gap-1.5 ${statusConfig.bg}`}
@@ -507,8 +539,7 @@ export const BillingTray: React.FC = () => {
                   <StatusIcon className="w-3 h-3" />
                   <span>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
                 </div>
-                
-                {/* Tooltip with status message */}
+
                 <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-50">
                   <div className={`px-3 py-2 rounded-lg shadow-lg ${colors.bg.secondary} border ${colors.border.primary} max-w-xs`}>
                     <div className="flex items-start gap-2">
@@ -519,7 +550,6 @@ export const BillingTray: React.FC = () => {
                 </div>
               </div>
 
-              {/* Minimize Button */}
               <button
                 onClick={handleMinimize}
                 className={`p-1.5 rounded-md ${colors.bg.hover} ${colors.text.secondary} cursor-pointer flex-shrink-0 transition-colors`}
@@ -528,8 +558,7 @@ export const BillingTray: React.FC = () => {
               >
                 <Minimize2 className="w-4 h-4" />
               </button>
-              
-              {/* Close Button */}
+
               <button
                 onClick={() => void handleClose()}
                 type="button"
@@ -541,7 +570,6 @@ export const BillingTray: React.FC = () => {
             </div>
           </div>
 
-          {/* Content */}
           <div className="flex-1 overflow-y-auto">
             {currentStep === 'charge_entry' ? (
               <ChargeEntryStep theme={theme} />
@@ -550,7 +578,6 @@ export const BillingTray: React.FC = () => {
             )}
           </div>
 
-          {/* Dirty Warning - Only show if not settled */}
           {isDirty && status !== 'settled' && (
             <div className={`p-2 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
               <div className="flex items-center gap-2">
@@ -562,7 +589,6 @@ export const BillingTray: React.FC = () => {
             </div>
           )}
 
-          {/* Settled Status Footer */}
           {status === 'settled' && (
             <div className={`p-2 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
               <div className="flex items-center gap-2">
@@ -577,22 +603,7 @@ export const BillingTray: React.FC = () => {
       </div>
     </>
   );
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-
-  if (!isTrayOpen) return null;
-
-  // Show minimized view
-  if (isMinimized) {
-    return <MinimizedView />;
-  }
-
-  // Show full tray
-  return <FullTrayView />;
 };
 
 BillingTray.displayName = 'BillingTray';
-
 export default BillingTray;
