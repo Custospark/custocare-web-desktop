@@ -74,7 +74,7 @@ export const BillingBottomDisplay: React.FC<BillingBottomDisplayProps> = ({ them
     data: backendBillingResponse, 
     isLoading: isLoadingBilling, 
     isFetching: isFetchingBilling,
-    error: billingError 
+    // error: billingError 
   } = useGetBillingByVisit(visitId, {
     enabled: !!visitId,
     staleTime: 60 * 1000,

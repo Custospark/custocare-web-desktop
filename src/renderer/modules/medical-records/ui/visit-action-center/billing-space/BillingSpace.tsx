@@ -92,7 +92,7 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
     data: backendBillingResponse, 
     isLoading: isLoadingBilling, 
     isFetching: isFetchingBilling,
-    error: billingError 
+    // error: billingError 
   } = useGetBillingByVisit(numericVisitId, {
     enabled: !!numericVisitId,
     staleTime: 60 * 1000,

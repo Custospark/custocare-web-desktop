@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Lock, Loader2, X, Info, AlertCircle, CheckCircle2, FileText, Users, Edit3 } from 'lucide-react';
+import { Lock, Loader2, X, AlertCircle, CheckCircle2, FileText } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   addChargeItem,
@@ -102,9 +102,9 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
       console.error('Failed to read banner visibility from localStorage:', error);
       return true;
     }
-  });
+  })
   
-  const [bannerAnimation, setBannerAnimation] = useState<'enter' | 'exit' | null>(null);
+  const [, setBannerAnimation] = useState<'enter' | 'exit' | null>(null);
 
   /**
    * When a persisted backend line item is edited, we open the adjustment modal
@@ -450,7 +450,8 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   const handleAdjustmentDialogSubmit = () => {
     if (!pendingAdjustment) return;
 
-    const { item, action: originalAction } = pendingAdjustment;
+    // const { item, action: originalAction } = pendingAdjustment;
+    const { item } = pendingAdjustment;
     const finalQuantity = adjustmentNewQuantity;
     const currentQuantity = item.quantity;
     const rsn = adjustmentReason;
