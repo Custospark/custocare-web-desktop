@@ -125,7 +125,7 @@ export const PersistedBillingAdjustmentModal: React.FC<PersistedBillingAdjustmen
               </div>
             </div>
             <div className="text-right">
-              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Entered by</p>
+              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Added by</p>
               <p className={`text-sm font-medium mt-0.5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 {item.enteredByStaffName?.split(' ')[0] || 'Staff'}
               </p>

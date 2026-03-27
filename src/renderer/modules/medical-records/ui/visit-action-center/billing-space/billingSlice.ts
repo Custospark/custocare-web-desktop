@@ -32,7 +32,6 @@ const calculateIsDirty = (state: BillingState): boolean => {
   );
 };
 
-
 // Helper to update metadata
 const updateMetadata = (state: BillingState) => {
   state.lastUpdated = Date.now();
@@ -157,7 +156,6 @@ const billingSlice = createSlice({
       updateMetadata(state);
     },
 
-
     // Payment Methods Actions
     setPaymentMethods: (state, action: PayloadAction<PaymentMethod[]>) => {
       state.paymentMethods = action.payload;
@@ -236,7 +234,8 @@ const billingSlice = createSlice({
         console.error('Error saving billing draft:', error);
       }
     },
-        /**
+
+    /**
      * Hydrate persisted backend billing into a dedicated state bucket.
      * This does NOT overwrite the current draft slice data.
      */
@@ -265,6 +264,59 @@ const billingSlice = createSlice({
       state.lastUpdated = Date.now();
     },
 
+    /**
+     * Optimistically adjust a persisted backend charge item in the Redux slice.
+     *
+     * Called immediately when the user confirms an adjustment, before the API
+     * mutation resolves, so the UI reflects the change with zero perceived latency.
+     *
+     * Recovery path:
+     *  - On success → `onSettled` invalidates the query → refetch → useEffect →
+     *    `hydrateBackendBilling` overwrites this optimistic state with authoritative data.
+     *  - On error  → React Query rolls back its own cache via `onError`, then
+     *    `onSettled` invalidates → refetch → useEffect → `hydrateBackendBilling`
+     *    restores the Redux slice to the pre-mutation server state.
+     *
+     * The payload mirrors `BillingAdjustmentPayload` intentionally so callers
+     * can pass the same values without transformation.
+     */
+    optimisticAdjustBackendItem: (
+      state,
+      action: PayloadAction<{
+        lineItemId: number;
+        action: 'increase' | 'decrease' | 'remove';
+        quantity: number;
+      }>
+    ) => {
+      const { lineItemId, action: adjustAction, quantity } = action.payload;
+
+      const itemIndex = state.backendChargeItems.findIndex(
+        (item) => item.lineItemId === lineItemId
+      );
+
+      if (itemIndex === -1) return;
+
+      const item = state.backendChargeItems[itemIndex];
+      const oldQty = item.quantity;
+      const unitPrice = item.service.unitPrice;
+
+      let newQty = oldQty;
+
+      if (adjustAction === 'increase') newQty = oldQty + Math.max(1, quantity);
+      if (adjustAction === 'decrease') newQty = Math.max(0, oldQty - Math.max(1, quantity));
+      if (adjustAction === 'remove') newQty = 0;
+
+      if (newQty <= 0) {
+        // Item is being removed — splice it out of the list
+        state.backendChargeItems.splice(itemIndex, 1);
+      } else {
+        item.quantity = newQty;
+        item.totalAmount = Number((newQty * unitPrice).toFixed(2));
+      }
+
+      state.lastUpdated = Date.now();
+    },
+
     loadDraft: (state, action: PayloadAction<string>) => {
       try {
         const saved = sessionStorage.getItem(getDraftStorageKey(action.payload));
@@ -287,7 +339,6 @@ const billingSlice = createSlice({
             source: 'slice',
             persisted: false,
           } as ChargeItem;
-
         });
 
         state.discount = parsed.discount || DEFAULT_DISCOUNT;
@@ -314,17 +365,15 @@ const billingSlice = createSlice({
         console.error('Error clearing billing draft:', error);
       }
     },
-  //     clearAll: () => {
-  //   return { ...INITIAL_BILLING_STATE };
-  // },
+
     clearAll: (state) => {
-    try {
-      if (state.visitId) sessionStorage.removeItem(getDraftStorageKey(state.visitId));
-    } catch (error) {
-      console.error('Error clearing draft on clearAll:', error);
-    }
-    return { ...INITIAL_BILLING_STATE };
-  },
+      try {
+        if (state.visitId) sessionStorage.removeItem(getDraftStorageKey(state.visitId));
+      } catch (error) {
+        console.error('Error clearing draft on clearAll:', error);
+      }
+      return { ...INITIAL_BILLING_STATE };
+    },
 
     // Patient Info Actions
     setPatientInfo: (state, action: PayloadAction<{ visitId?: string; patientId?: string; patientName?: string }>) => {
@@ -336,6 +385,7 @@ const billingSlice = createSlice({
     },
   },
 });
+
 export const {
   openTray,
   closeTray,
@@ -363,10 +413,15 @@ export const {
   clearAll,
   hydrateBackendBilling,
   clearBackendBilling,
+  optimisticAdjustBackendItem,
 } = billingSlice.actions;
 
-
 export default billingSlice.reducer;
+
+/* -------------------------------------------------------------------------- */
+/*                                 SELECTORS                                  */
+/* -------------------------------------------------------------------------- */
+
 export const selectBilling = (state: { billing: BillingState }) => state.billing;
 export const selectIsTrayOpen = (state: { billing: BillingState }) => state.billing.trayOpen;
 export const selectCurrentStep = (state: { billing: BillingState }) => state.billing.currentStep;
@@ -526,5 +581,3 @@ export const selectDisplayBillingData = (state: { billing: BillingState }) => {
     displayedTaxes,
   };
 };
-
-

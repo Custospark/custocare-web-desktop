@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Lock, FileWarning, Loader2, X, Info } from 'lucide-react';
+import { Lock, Loader2, X, Info } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   addChargeItem,
@@ -16,6 +16,7 @@ import {
   selectEffectiveBillingStatus,
   selectPatientInfo,
   selectBackendChargeItems,
+  optimisticAdjustBackendItem,
 } from './billingSlice';
 import PersistedBillingAdjustmentModal from './charge-entry/PersistedBillingAdjustmentModal';
 
@@ -74,7 +75,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearchSticky, setIsSearchSticky] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [isBannerVisible, setIsBannerVisible] = useState(true); // New state for banner visibility
+  const [isBannerVisible, setIsBannerVisible] = useState(true);
 
   /**
    * When a persisted backend line item is edited, we open the adjustment modal
@@ -126,6 +127,11 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
 
   // ---------------------------------------------------------------------------
   // Hydrate backend billing into Redux
+  //
+  // This effect fires whenever backendBillingResponse changes — including after
+  // the mutation's onSettled invalidates the query and triggers a fresh fetch.
+  // That second hydration is the "authoritative correction" that reconciles any
+  // optimistic state applied to the Redux slice ahead of the server response.
   // ---------------------------------------------------------------------------
   useEffect(() => {
     if (!backendBillingResponse?.data) return;
@@ -345,17 +351,51 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     });
   };
 
-  const handleAdjustmentDialogSubmit = async () => {
+  /**
+   * Adjustment submit flow:
+   *
+   * 1. Capture all values from state before touching anything (dialog will close).
+   * 2. Dispatch `optimisticAdjustBackendItem` → Redux slice updates instantly,
+   *    so `selectRenderableChargeItems` reflects the new quantity/removal
+   *    with zero wait time.
+   * 3. Close the modal immediately for a snappy feel.
+   * 4. Fire the API mutation (fire-and-forget with silent catch):
+   *    - React Query's `onMutate` also applies an optimistic update to its cache.
+   *    - `onError` rolls back the RQ cache and shows a toast.
+   *    - `onSettled` invalidates the detail query → triggers a refetch.
+   *    - The refetch causes `backendBillingResponse` to change → the
+   *      `useEffect` above dispatches `hydrateBackendBilling` → Redux slice
+   *      is overwritten with the authoritative server state (correcting both
+   *      successful and failed optimistic updates).
+   */
+  const handleAdjustmentDialogSubmit = () => {
     if (!pendingAdjustment) return;
 
-    await submitPersistedAdjustment(
-      pendingAdjustment.item,
-      pendingAdjustment.action,
-      adjustmentQuantity,
-      adjustmentReason
+    // 1. Capture before state is cleared by closeAdjustmentDialog
+    const { item, action } = pendingAdjustment;
+    const qty = adjustmentQuantity;
+    const rsn = adjustmentReason;
+
+    // 2. Optimistically update Redux billing slice immediately
+    dispatch(
+      optimisticAdjustBackendItem({
+        lineItemId: item.lineItemId,
+        action,
+        quantity: qty,
+      })
     );
 
+    // 3. Close dialog right away — user sees the updated list instantly
     closeAdjustmentDialog();
+
+    // 4. Fire the mutation; errors are toasted by onError, and onSettled
+    //    triggers a refetch that will hydrate the correct server state back
+    //    into the Redux slice via the useEffect above.
+    submitPersistedAdjustment(item, action, qty, rsn).catch(() => {
+      // Intentionally silent here — the mutation's onError callback already
+      // shows the user a toast. The subsequent onSettled refetch + hydrateBackendBilling
+      // will restore the Redux slice to the pre-adjustment server state.
+    });
   };
 
   // ---------------------------------------------------------------------------
@@ -395,8 +435,8 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     const confirmed = await confirm({
       title: 'Clear all new items?',
       message: `This will clear ${draftChargeItems.length} new ${
-          draftChargeItems.length === 1 ? 'item' : 'items'
-          } you've added. Nothing already saved will be affected.`,
+        draftChargeItems.length === 1 ? 'item' : 'items'
+      } you've added. Nothing already saved will be affected.`,
       confirmText: 'Clear new items',
       cancelText: 'Cancel',
       variant: 'warning',
@@ -584,8 +624,8 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
               <button
                 onClick={handleCloseBanner}
                 className={`absolute top-3 right-3 p-1 rounded-md transition-colors cursor-pointer ${
-                  isDark 
-                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200' 
+                  isDark
+                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
                 }`}
                 aria-label="Close banner"
@@ -606,7 +646,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
             </div>
           )}
 
-          {/* Items List - REMOVED draftItemCount prop */}
+          {/* Items List */}
           <ChargeItemsList
             chargeItems={renderableChargeItems}
             subtotal={displayedSubtotal}
@@ -635,7 +675,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
         />
       </div>
 
-      {/* Persisted Item Adjustment Modal - REMOVED action and onActionChange props */}
+      {/* Persisted Item Adjustment Modal */}
       <PersistedBillingAdjustmentModal
         open={adjustmentDialogOpen}
         theme={theme}
