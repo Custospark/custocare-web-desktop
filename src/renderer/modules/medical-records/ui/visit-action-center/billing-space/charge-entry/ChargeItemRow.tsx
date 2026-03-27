@@ -200,7 +200,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
           whileTap={{ scale: 0.9 }}
           onClick={() => onRemove(item.id)}
           className={removeButtonClass}
-          title={isPersistedBackendItem ? 'Adjust/remove persisted item' : 'Remove item'}
+          title={isPersistedBackendItem ? 'Adjust/remove saved item' : 'Remove item'}
           aria-label="Remove item"
         >
           <Trash2 className="w-4 h-4" />

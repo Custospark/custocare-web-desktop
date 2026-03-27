@@ -393,11 +393,11 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     if (isReadOnly || draftChargeItems.length === 0) return;
 
     const confirmed = await confirm({
-      title: 'Clear all unsaved draft items?',
-      message: `You are about to remove all ${draftChargeItems.length} draft ${
-        draftChargeItems.length === 1 ? 'item' : 'items'
-      } from the current billing draft. Persisted backend items will remain unchanged.`,
-      confirmText: 'Clear draft items',
+      title: 'Clear all new items?',
+      message: `This will clear ${draftChargeItems.length} new ${
+          draftChargeItems.length === 1 ? 'item' : 'items'
+          } you've added. Nothing already saved will be affected.`,
+      confirmText: 'Clear new items',
       cancelText: 'Cancel',
       variant: 'warning',
       theme,
@@ -583,7 +583,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
             <div className={`mb-3 rounded-xl border ${colors.border.primary} ${colors.bg.secondary} p-3 relative`}>
               <button
                 onClick={handleCloseBanner}
-                className={`absolute top-3 right-3 p-1 rounded-md transition-colors ${
+                className={`absolute top-3 right-3 p-1 rounded-md transition-colors cursor-pointer ${
                   isDark 
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200' 
                     : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
@@ -593,7 +593,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                 <X className="w-4 h-4" />
               </button>
               <div className="flex items-start gap-3 pr-6">
-              <Info className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isDark ? 'text-blue-300' : 'text-blue-600'}`} />
+                <Info className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isDark ? 'text-blue-300' : 'text-blue-600'}`} />
                 <div className="text-xs sm:text-sm">
                   <p className={`font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
                     Billing items come from two places
