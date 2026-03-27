@@ -79,11 +79,11 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
 
   /**
    * When a persisted backend line item is edited, we open the adjustment modal
-   * which allows the user to specify quantity and reason in one place.
+   * which allows the user to specify the final quantity and reason in one place.
    */
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
   const [adjustmentReason, setAdjustmentReason] = useState('');
-  const [adjustmentQuantity, setAdjustmentQuantity] = useState(1);
+  const [adjustmentNewQuantity, setAdjustmentNewQuantity] = useState(1);
   const [pendingAdjustment, setPendingAdjustment] = useState<{
     item: BackendChargeItem;
     action: PersistedAction;
@@ -127,11 +127,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
 
   // ---------------------------------------------------------------------------
   // Hydrate backend billing into Redux
-  //
-  // This effect fires whenever backendBillingResponse changes — including after
-  // the mutation's onSettled invalidates the query and triggers a fresh fetch.
-  // That second hydration is the "authoritative correction" that reconciles any
-  // optimistic state applied to the Redux slice ahead of the server response.
   // ---------------------------------------------------------------------------
   useEffect(() => {
     if (!backendBillingResponse?.data) return;
@@ -216,7 +211,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
 
   /**
    * Unified subtotal shown in the charge entry page.
-   * This displays both persisted backend items and unsaved draft items.
    */
   const displayedSubtotal = useMemo(
     () => renderableChargeItems.reduce((sum, item) => sum + item.totalAmount, 0),
@@ -322,79 +316,94 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   const openAdjustmentDialog = (
     item: BackendChargeItem,
     action: PersistedAction = 'increase',
-    quantity = 1
+    quantityDelta = 1
   ) => {
     setPendingAdjustment({ item, action });
     setAdjustmentReason('');
-    setAdjustmentQuantity(Math.max(1, quantity));
+    
+    // Set the new quantity based on current quantity and action
+    let newQuantity = item.quantity;
+    if (action === 'increase') {
+      newQuantity = item.quantity + quantityDelta;
+    } else if (action === 'decrease') {
+      newQuantity = Math.max(0, item.quantity - quantityDelta);
+    } else if (action === 'remove') {
+      newQuantity = 0;
+    }
+    
+    setAdjustmentNewQuantity(newQuantity);
     setAdjustmentDialogOpen(true);
   };
 
   const closeAdjustmentDialog = () => {
     setPendingAdjustment(null);
     setAdjustmentReason('');
-    setAdjustmentQuantity(1);
+    setAdjustmentNewQuantity(1);
     setAdjustmentDialogOpen(false);
   };
 
   const submitPersistedAdjustment = async (
     item: BackendChargeItem,
     action: PersistedAction,
-    quantity: number,
+    deltaQuantity: number,
     reason?: string
   ) => {
     await adjustBillingLineItem({
       line_item_id: item.lineItemId,
       action,
-      quantity: action === 'remove' ? 0 : Math.max(1, quantity),
+      quantity: action === 'remove' ? 0 : deltaQuantity,
       reason: reason?.trim() || undefined,
     });
   };
 
   /**
-   * Adjustment submit flow:
-   *
-   * 1. Capture all values from state before touching anything (dialog will close).
-   * 2. Dispatch `optimisticAdjustBackendItem` → Redux slice updates instantly,
-   *    so `selectRenderableChargeItems` reflects the new quantity/removal
-   *    with zero wait time.
-   * 3. Close the modal immediately for a snappy feel.
-   * 4. Fire the API mutation (fire-and-forget with silent catch):
-   *    - React Query's `onMutate` also applies an optimistic update to its cache.
-   *    - `onError` rolls back the RQ cache and shows a toast.
-   *    - `onSettled` invalidates the detail query → triggers a refetch.
-   *    - The refetch causes `backendBillingResponse` to change → the
-   *      `useEffect` above dispatches `hydrateBackendBilling` → Redux slice
-   *      is overwritten with the authoritative server state (correcting both
-   *      successful and failed optimistic updates).
+   * Adjustment submit flow with fixed quantity handling:
+   * 
+   * The UI uses "final quantity" (user-friendly), but the API and reducer
+   * expect "delta" (amount to change by). This function converts between them.
    */
   const handleAdjustmentDialogSubmit = () => {
     if (!pendingAdjustment) return;
 
-    // 1. Capture before state is cleared by closeAdjustmentDialog
-    const { item, action } = pendingAdjustment;
-    const qty = adjustmentQuantity;
+    const { item, action: originalAction } = pendingAdjustment;
+    const finalQuantity = adjustmentNewQuantity;
+    const currentQuantity = item.quantity;
     const rsn = adjustmentReason;
 
-    // 2. Optimistically update Redux billing slice immediately
+    // Determine the actual action and delta based on final vs current
+    let apiAction: PersistedAction;
+    let deltaQuantity: number;
+
+    if (finalQuantity === 0) {
+      apiAction = 'remove';
+      deltaQuantity = 0;
+    } else if (finalQuantity > currentQuantity) {
+      apiAction = 'increase';
+      deltaQuantity = finalQuantity - currentQuantity;
+    } else if (finalQuantity < currentQuantity) {
+      apiAction = 'decrease';
+      deltaQuantity = currentQuantity - finalQuantity;
+    } else {
+      // No change - just close
+      closeAdjustmentDialog();
+      return;
+    }
+
+    // Optimistically update Redux billing slice
     dispatch(
       optimisticAdjustBackendItem({
         lineItemId: item.lineItemId,
-        action,
-        quantity: qty,
+        action: apiAction,
+        quantity: deltaQuantity,
       })
     );
 
-    // 3. Close dialog right away — user sees the updated list instantly
+    // Close dialog right away — user sees the updated list instantly
     closeAdjustmentDialog();
 
-    // 4. Fire the mutation; errors are toasted by onError, and onSettled
-    //    triggers a refetch that will hydrate the correct server state back
-    //    into the Redux slice via the useEffect above.
-    submitPersistedAdjustment(item, action, qty, rsn).catch(() => {
-      // Intentionally silent here — the mutation's onError callback already
-      // shows the user a toast. The subsequent onSettled refetch + hydrateBackendBilling
-      // will restore the Redux slice to the pre-adjustment server state.
+    // Fire the mutation
+    submitPersistedAdjustment(item, apiAction, deltaQuantity, rsn).catch(() => {
+      // Error handled by mutation's onError
     });
   };
 
@@ -407,7 +416,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     const serviceKey = makeBillableKey(service);
 
     // If the selected item already exists in persisted backend billing,
-    // do NOT create a duplicate draft row. Route user into audited adjustment flow.
+    // route user into audited adjustment flow instead of creating duplicate.
     const existingBackendItem = backendChargeItems.find((item) => item.serviceKey === serviceKey);
 
     if (existingBackendItem) {
@@ -425,10 +434,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     inputRef.current?.focus();
   };
 
-  /**
-   * Clear all only affects unsaved draft items.
-   * Persisted backend items can only be adjusted individually with audit protection.
-   */
   const handleClearAll = async () => {
     if (isReadOnly || draftChargeItems.length === 0) return;
 
@@ -494,11 +499,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     openAdjustmentDialog(item, action, 1);
   };
 
-  /**
-   * Manual quantity input is allowed only for draft slice items.
-   * Persisted backend items must be adjusted via +/- or remove
-   * to enforce audit-safe server-side changes.
-   */
   const handleQtyChange = (itemId: string, raw: string) => {
     if (isReadOnly) return;
 
@@ -680,11 +680,11 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
         open={adjustmentDialogOpen}
         theme={theme}
         item={pendingAdjustment?.item ?? null}
-        quantity={adjustmentQuantity}
+        newQuantity={adjustmentNewQuantity}
         reason={adjustmentReason}
         isSubmitting={isAdjustingPersistedItem}
         onClose={closeAdjustmentDialog}
-        onQuantityChange={setAdjustmentQuantity}
+        onNewQuantityChange={setAdjustmentNewQuantity}
         onReasonChange={setAdjustmentReason}
         onSubmit={handleAdjustmentDialogSubmit}
       />

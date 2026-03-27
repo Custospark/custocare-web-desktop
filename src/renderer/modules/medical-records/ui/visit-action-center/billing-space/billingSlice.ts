@@ -281,41 +281,44 @@ const billingSlice = createSlice({
      * can pass the same values without transformation.
      */
     optimisticAdjustBackendItem: (
-      state,
-      action: PayloadAction<{
-        lineItemId: number;
-        action: 'increase' | 'decrease' | 'remove';
-        quantity: number;
-      }>
-    ) => {
-      const { lineItemId, action: adjustAction, quantity } = action.payload;
+        state,
+        action: PayloadAction<{
+          lineItemId: number;
+          action: 'increase' | 'decrease' | 'remove';
+          quantity: number;
+        }>
+      ) => {
+        const { lineItemId, action: adjustAction, quantity } = action.payload;
 
-      const itemIndex = state.backendChargeItems.findIndex(
-        (item) => item.lineItemId === lineItemId
-      );
+        const itemIndex = state.backendChargeItems.findIndex(
+          (item) => item.lineItemId === lineItemId
+        );
 
-      if (itemIndex === -1) return;
+        if (itemIndex === -1) return;
 
-      const item = state.backendChargeItems[itemIndex];
-      const oldQty = item.quantity;
-      const unitPrice = item.service.unitPrice;
+        const item = state.backendChargeItems[itemIndex];
+        const oldQty = item.quantity;
+        const unitPrice = item.service.unitPrice;
 
-      let newQty = oldQty;
+        let newQty = oldQty;
 
-      if (adjustAction === 'increase') newQty = oldQty + Math.max(1, quantity);
-      if (adjustAction === 'decrease') newQty = Math.max(0, oldQty - Math.max(1, quantity));
-      if (adjustAction === 'remove') newQty = 0;
+        if (adjustAction === 'increase') {
+          newQty = oldQty + quantity; // quantity is the delta
+        } else if (adjustAction === 'decrease') {
+          newQty = Math.max(0, oldQty - quantity); // quantity is the delta
+        } else if (adjustAction === 'remove') {
+          newQty = 0;
+        }
 
-      if (newQty <= 0) {
-        // Item is being removed — splice it out of the list
-        state.backendChargeItems.splice(itemIndex, 1);
-      } else {
-        item.quantity = newQty;
-        item.totalAmount = Number((newQty * unitPrice).toFixed(2));
-      }
+        if (newQty <= 0) {
+          state.backendChargeItems.splice(itemIndex, 1);
+        } else {
+          item.quantity = newQty;
+          item.totalAmount = Number((newQty * unitPrice).toFixed(2));
+        }
 
-      state.lastUpdated = Date.now();
-    },
+        state.lastUpdated = Date.now();
+      },
 
     loadDraft: (state, action: PayloadAction<string>) => {
       try {

@@ -7,11 +7,11 @@ interface PersistedBillingAdjustmentModalProps {
   open: boolean;
   theme: 'light' | 'dark';
   item: BackendChargeItem | null;
-  quantity: number;
+  newQuantity: number; // Changed from 'quantity' to 'newQuantity' for clarity
   reason: string;
   isSubmitting: boolean;
   onClose: () => void;
-  onQuantityChange: (quantity: number) => void;
+  onNewQuantityChange: (newQuantity: number) => void; // Renamed for clarity
   onReasonChange: (reason: string) => void;
   onSubmit: () => void;
 }
@@ -20,11 +20,11 @@ export const PersistedBillingAdjustmentModal: React.FC<PersistedBillingAdjustmen
   open,
   theme,
   item,
-  quantity,
+  newQuantity,
   reason,
   isSubmitting,
   onClose,
-  onQuantityChange,
+  onNewQuantityChange,
   onReasonChange,
   onSubmit,
 }) => {
@@ -36,10 +36,10 @@ export const PersistedBillingAdjustmentModal: React.FC<PersistedBillingAdjustmen
   const currentQuantity = item.quantity;
   const unitPrice = item.service.unitPrice;
 
-  const isIncrease = quantity > currentQuantity;
-  const isDecrease = quantity < currentQuantity;
-  const isRemove = quantity === 0;
-  const delta = Math.abs(quantity - currentQuantity);
+  const isIncrease = newQuantity > currentQuantity;
+  const isDecrease = newQuantity < currentQuantity;
+  const isRemove = newQuantity === 0;
+  const delta = Math.abs(newQuantity - currentQuantity);
   const deltaAmount = delta * unitPrice;
 
   const getActionLabel = () => {
@@ -63,12 +63,12 @@ export const PersistedBillingAdjustmentModal: React.FC<PersistedBillingAdjustmen
     return '';
   };
 
-  const handleQuantityChange = (newQuantity: number) => {
-    const clamped = Math.min(9999, Math.max(0, newQuantity));
-    onQuantityChange(clamped);
+  const handleNewQuantityChange = (value: number) => {
+    const clamped = Math.min(9999, Math.max(0, value));
+    onNewQuantityChange(clamped);
   };
 
-  const isSubmitDisabled = isSubmitting || (reasonRequired && !reason.trim()) || quantity === currentQuantity;
+  const isSubmitDisabled = isSubmitting || (reasonRequired && !reason.trim()) || newQuantity === currentQuantity;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
@@ -135,7 +135,7 @@ export const PersistedBillingAdjustmentModal: React.FC<PersistedBillingAdjustmen
 
         {/* Main Form */}
         <div className="p-6 space-y-5">
-          {/* New Quantity Input */}
+          {/* New Quantity Input - Now clearly labeled as "New quantity" */}
           <div>
             <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               New quantity
@@ -143,10 +143,10 @@ export const PersistedBillingAdjustmentModal: React.FC<PersistedBillingAdjustmen
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => handleQuantityChange(quantity - 1)}
-                disabled={quantity <= 0}
+                onClick={() => handleNewQuantityChange(newQuantity - 1)}
+                disabled={newQuantity <= 0}
                 className={`w-10 h-10 rounded-xl border transition-all duration-200 flex items-center justify-center cursor-pointer ${
-                  quantity <= 0
+                  newQuantity <= 0
                     ? isDark ? 'border-gray-700 text-gray-600 cursor-not-allowed opacity-50' : 'border-gray-200 text-gray-300 cursor-not-allowed opacity-50'
                     : isDark ? 'border-gray-700 hover:bg-gray-800 text-gray-300 hover:scale-105' : 'border-gray-200 hover:bg-gray-50 text-gray-600 hover:scale-105'
                 }`}
@@ -157,8 +157,8 @@ export const PersistedBillingAdjustmentModal: React.FC<PersistedBillingAdjustmen
                 type="number"
                 min={0}
                 max={9999}
-                value={quantity}
-                onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 0)}
+                value={newQuantity}
+                onChange={(e) => handleNewQuantityChange(parseInt(e.target.value) || 0)}
                 className={`w-28 text-center py-2.5 rounded-xl border font-medium ${
                   isDark
                     ? 'bg-gray-800 border-gray-700 text-gray-100 focus:border-blue-500'
@@ -167,10 +167,10 @@ export const PersistedBillingAdjustmentModal: React.FC<PersistedBillingAdjustmen
               />
               <button
                 type="button"
-                onClick={() => handleQuantityChange(quantity + 1)}
-                disabled={quantity >= 9999}
+                onClick={() => handleNewQuantityChange(newQuantity + 1)}
+                disabled={newQuantity >= 9999}
                 className={`w-10 h-10 rounded-xl border transition-all duration-200 flex items-center justify-center cursor-pointer ${
-                  quantity >= 9999
+                  newQuantity >= 9999
                     ? isDark ? 'border-gray-700 text-gray-600 cursor-not-allowed opacity-50' : 'border-gray-200 text-gray-300 cursor-not-allowed opacity-50'
                     : isDark ? 'border-gray-700 hover:bg-gray-800 text-gray-300 hover:scale-105' : 'border-gray-200 hover:bg-gray-50 text-gray-600 hover:scale-105'
                 }`}
@@ -179,7 +179,7 @@ export const PersistedBillingAdjustmentModal: React.FC<PersistedBillingAdjustmen
               </button>
               <button
                 type="button"
-                onClick={() => handleQuantityChange(0)}
+                onClick={() => handleNewQuantityChange(0)}
                 className={`ml-2 text-sm px-3 py-2.5 rounded-xl border transition-all duration-200 flex items-center gap-2 cursor-pointer ${
                   isDark
                     ? 'border-rose-800/50 text-rose-400 hover:bg-rose-950/30 hover:scale-105'
@@ -192,7 +192,7 @@ export const PersistedBillingAdjustmentModal: React.FC<PersistedBillingAdjustmen
             </div>
           </div>
 
-          {/* Action Summary */}
+          {/* Action Summary - Shows the actual change being made */}
           {(isIncrease || isDecrease || isRemove) && (
             <div className={`rounded-xl p-4 ${getActionBgColor()} border ${isDark ? 'border-gray-800' : 'border-gray-100'} transition-all`}>
               <div className="flex items-center justify-between">
@@ -208,13 +208,13 @@ export const PersistedBillingAdjustmentModal: React.FC<PersistedBillingAdjustmen
                   </span>
                 )}
               </div>
-              {quantity > 0 && (
+              {newQuantity > 0 && (
                 <div className="flex justify-between items-center mt-3 pt-3 border-t border-current border-opacity-20">
                   <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                     New total value
                   </span>
                   <span className={`text-base font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent`}>
-                    {formatCurrency(quantity * unitPrice)}
+                    {formatCurrency(newQuantity * unitPrice)}
                   </span>
                 </div>
               )}
