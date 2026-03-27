@@ -55,7 +55,7 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({ theme, className = '' }
   return (
     <div className={cn(className)}>
       <PatientQueue
-        title="Medical Records Queue"
+        title="Patient Queue"
         description="Patients requiring medical documentation and chart updates"
         onTakeAction={handleTakeAction}
         onNewPatientRegistration={handleCreateNewPatient}

@@ -40,6 +40,7 @@ export type BillingSource = 'slice' | 'backend';
 export type BillingStatus = 'draft' | 'ready' | 'settled';
 export type BillingStep = 'charge_entry' | 'billing_summary';
 export type BillingAdjustmentAction = 'increase' | 'decrease' | 'remove';
+export type BillingTrayViewMode = 'expanded' | 'minimized';
 
 export interface LineItemEditPermissions {
   entered_by_staff_id?: number | null;
@@ -140,7 +141,6 @@ export interface BillingDataSnapshot {
   taxes?: Tax[];
 }
 
-
 export interface BackendBillingMeta {
   loaded: boolean;
   hasBilling: boolean;
@@ -187,6 +187,7 @@ export interface BillingState {
   // ----------------------------
   trayOpen: boolean;
   currentStep: BillingStep;
+  viewMode: BillingTrayViewMode; // ADDED: Single source of truth for tray mode
 
   // ----------------------------
   // Patient context
@@ -240,6 +241,7 @@ export const INITIAL_BILLING_STATE: BillingState = {
 
   trayOpen: false,
   currentStep: 'charge_entry',
+  viewMode: 'expanded', // ADDED: Default to expanded
 
   visitId: undefined,
   patientId: undefined,

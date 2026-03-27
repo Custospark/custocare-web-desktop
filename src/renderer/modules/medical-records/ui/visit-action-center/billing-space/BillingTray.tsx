@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   X,
   AlertTriangle,
@@ -9,14 +9,16 @@ import {
   LucideCreditCard,
   User,
   Minimize2,
-  Maximize2,
   Grid,
   Expand,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
-import { clearActiveVisit, selectActiveVisitInfo } from '../../../../../app/store/slices/visitSlice';
+import {
+  clearActiveVisit,
+  selectActiveVisitInfo,
+} from '../../../../../app/store/slices/visitSlice';
 import { selectTheme } from '../../../../../app/store/slices/uiSlice';
 import { clearPendingForwarding } from '../../../../../app/store/slices/forwardPatientSlice';
 import {
@@ -28,6 +30,9 @@ import {
   selectIsDirty,
   saveDraft,
   clearAll,
+  selectBillingViewMode,
+  minimizeTray,
+  maximizeTray,
 } from './billingSlice';
 import { ChargeEntryStep } from './ChargeEntryStep';
 import { BillingSummaryStep } from './BillingSummaryStep';
@@ -36,6 +41,7 @@ import LogoImage from '../../../../../shared/assets/LogoImage';
 import { BrandName } from '../../../../../shared/utils/BrandName';
 
 type MinimizedDockPosition = 'bottom-center' | 'bottom-right' | 'bottom-left';
+type BillingStep = 'charge_entry' | 'billing_summary';
 
 interface BillingTrayProps {
   minimizedDockPosition?: MinimizedDockPosition;
@@ -46,23 +52,26 @@ const DEFAULT_MINIMIZED_DOCK_POSITION: MinimizedDockPosition = 'bottom-right';
 export const BillingTray: React.FC<BillingTrayProps> = ({
   minimizedDockPosition = DEFAULT_MINIMIZED_DOCK_POSITION,
 }) => {
-  const theme = useSelector(selectTheme);
-  const isDark = theme === 'dark';
-
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { confirm } = useConfirm();
 
-  const activeVisitInfo = useSelector(selectActiveVisitInfo);
-  const patientName = activeVisitInfo?.patientName || 'Patient';
-  const patientNumber = activeVisitInfo?.patientNumber || '';
+  const theme = useSelector(selectTheme);
+  const isDark = theme === 'dark';
 
+  const activeVisitInfo = useSelector(selectActiveVisitInfo);
   const isTrayOpen = useSelector(selectIsTrayOpen);
   const currentStep = useSelector(selectCurrentStep);
   const isDirty = useSelector(selectIsDirty);
   const status = useSelector(selectBillingStatus);
+  const viewMode = useSelector(selectBillingViewMode); // SINGLE SOURCE OF TRUTH
 
-  const [isMinimized, setIsMinimized] = useState(false);
+  const isMinimized = viewMode === 'minimized';
+  const isExpanded = viewMode === 'expanded';
+
+  const patientName = activeVisitInfo?.patientName || 'Patient';
+  const patientNumber = activeVisitInfo?.patientNumber || '';
+
   const [isDragging, setIsDragging] = useState(false);
   const [hasCustomPosition, setHasCustomPosition] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -73,9 +82,6 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
   const didDragRef = useRef(false);
 
   const QUEUE_ROUTE = MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE;
-
-  const hasShownSettledRef = useRef(false);
-  const hasShownReadyRef = useRef(false);
 
   const colors = {
     bg: {
@@ -92,7 +98,6 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     text: {
       primary: isDark ? 'text-gray-100' : 'text-gray-900',
       secondary: isDark ? 'text-gray-400' : 'text-gray-600',
-      tertiary: isDark ? 'text-gray-500' : 'text-gray-500',
     },
     accent: {
       primary: 'bg-blue-600',
@@ -100,6 +105,15 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
       text: 'text-white',
     },
   };
+
+  const steps: Array<{
+    key: BillingStep;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }> = [
+    { key: 'charge_entry', label: 'Charges', icon: FileText },
+    { key: 'billing_summary', label: 'Payment', icon: CreditCard },
+  ];
 
   const getDockedPosition = useCallback((dockPosition: MinimizedDockPosition) => {
     const width = minimizedRef.current?.offsetWidth || 380;
@@ -137,33 +151,24 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     };
   }, []);
 
-  // Reset minimized state when tray closes
+  // Reset drag state when mode changes
+  useEffect(() => {
+    setIsDragging(false);
+    setTouchStart(null);
+    didDragRef.current = false;
+  }, [viewMode]);
+
+  // Reset when tray closes
   useEffect(() => {
     if (!isTrayOpen) {
-      setIsMinimized(false);
       setIsDragging(false);
       setHasCustomPosition(false);
+      setDragOffset({ x: 0, y: 0 });
       setPosition({ x: 0, y: 0 });
+      setTouchStart(null);
       didDragRef.current = false;
     }
   }, [isTrayOpen]);
-
-  // Reset notification refs when tray closes
-  useEffect(() => {
-    if (!isTrayOpen) {
-      hasShownSettledRef.current = false;
-      hasShownReadyRef.current = false;
-    }
-  }, [isTrayOpen]);
-
-  // Track notification display
-  useEffect(() => {
-    if (status === 'settled' && !hasShownSettledRef.current) {
-      hasShownSettledRef.current = true;
-    } else if (status === 'ready' && !hasShownReadyRef.current) {
-      hasShownReadyRef.current = true;
-    }
-  }, [status]);
 
   // Set position when minimized
   useEffect(() => {
@@ -182,9 +187,10 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
 
       if (hasCustomPosition) {
         setPosition((prev) => clampToViewport(prev.x, prev.y));
-      } else {
-        setPosition(getDockedPosition(minimizedDockPosition));
+        return;
       }
+
+      setPosition(getDockedPosition(minimizedDockPosition));
     };
 
     window.addEventListener('resize', handleResize);
@@ -198,7 +204,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     const previousUserSelect = document.body.style.userSelect;
     document.body.style.userSelect = 'none';
 
-    const handleDragMove = (e: MouseEvent) => {
+    const handleMouseMove = (e: MouseEvent) => {
       const next = clampToViewport(
         e.clientX - dragOffset.x,
         e.clientY - dragOffset.y
@@ -209,20 +215,20 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
       setHasCustomPosition(true);
     };
 
-    const handleDragEnd = () => {
+    const handleMouseUp = () => {
       setIsDragging(false);
       window.setTimeout(() => {
         didDragRef.current = false;
       }, 0);
     };
 
-    window.addEventListener('mousemove', handleDragMove);
-    window.addEventListener('mouseup', handleDragEnd);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
 
     return () => {
       document.body.style.userSelect = previousUserSelect;
-      window.removeEventListener('mousemove', handleDragMove);
-      window.removeEventListener('mouseup', handleDragEnd);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging, dragOffset, clampToViewport]);
 
@@ -232,6 +238,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
 
     const handleTouchMove = (e: TouchEvent) => {
       e.preventDefault();
+
       const touch = e.touches[0];
       const next = clampToViewport(
         touch.clientX - dragOffset.x,
@@ -246,6 +253,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     const handleTouchEnd = () => {
       setIsDragging(false);
       setTouchStart(null);
+
       window.setTimeout(() => {
         didDragRef.current = false;
       }, 0);
@@ -258,25 +266,23 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isDragging, dragOffset, clampToViewport, touchStart]);
+  }, [isDragging, touchStart, dragOffset, clampToViewport]);
 
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (!minimizedRef.current) return;
-    
-    // Prevent default to avoid text selection
+
     e.preventDefault();
     e.stopPropagation();
 
-    let clientX: number, clientY: number;
-    
+    let clientX = 0;
+    let clientY = 0;
+
     if ('touches' in e) {
-      // Touch event
       const touch = e.touches[0];
       clientX = touch.clientX;
       clientY = touch.clientY;
       setTouchStart({ x: clientX, y: clientY });
     } else {
-      // Mouse event
       if (e.button !== 0) return;
       clientX = e.clientX;
       clientY = e.clientY;
@@ -292,32 +298,40 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     setIsDragging(true);
   }, []);
 
-  // MINIMIZE: Close expanded view and show minimized dock
-  const handleMinimize = useCallback(() => {
-    // Save draft if there are unsaved changes
-    if (isDirty) {
-      dispatch(saveDraft());
-    }
+  // MINIMIZE: Dispatch action to Redux
+  const handleMinimize = useCallback(
+    (e?: React.MouseEvent<HTMLButtonElement>) => {
+      e?.stopPropagation();
 
-    // Set position if not custom
-    if (!hasCustomPosition) {
-      setPosition(getDockedPosition(minimizedDockPosition));
-    }
+      // Save draft if dirty
+      if (isDirty) {
+        // Use queueMicrotask to ensure state update completes
+        queueMicrotask(() => {
+          dispatch(saveDraft());
+        });
+      }
 
-    // Switch to minimized view
-    setIsMinimized(true);
-  }, [dispatch, isDirty, hasCustomPosition, minimizedDockPosition, getDockedPosition]);
+      // Dispatch minimize action to Redux
+      dispatch(minimizeTray());
+    },
+    [dispatch, isDirty]
+  );
 
-  // MAXIMIZE: Close minimized dock and show expanded view
-  const handleMaximize = useCallback(() => {
-    setIsMinimized(false);
-  }, []);
+  // MAXIMIZE: Dispatch action to Redux
+  const handleMaximize = useCallback(
+    (e?: React.MouseEvent<HTMLButtonElement>) => {
+      e?.stopPropagation();
+      dispatch(maximizeTray());
+    },
+    [dispatch]
+  );
 
   const handleClose = useCallback(async () => {
     if (status === 'settled') {
       const confirmed = await confirm({
         title: 'Close billing window?',
-        message: 'Payment has been successfully completed. All records are saved and the receipt has been generated.',
+        message:
+          'Payment has been successfully completed. All records are saved and the receipt has been generated.',
         confirmText: 'Close',
         cancelText: 'Stay',
         variant: 'info',
@@ -330,6 +344,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
         dispatch(clearPendingForwarding());
         navigate(QUEUE_ROUTE);
       }
+
       return;
     }
 
@@ -348,6 +363,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
         dispatch(clearPendingForwarding());
         dispatch(closeTray());
       }
+
       return;
     }
 
@@ -355,22 +371,24 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     dispatch(clearPendingForwarding());
   }, [confirm, dispatch, isDirty, navigate, theme, status, QUEUE_ROUTE]);
 
-  // Handle ESC key to close expanded view
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isTrayOpen && !isMinimized) {
+      if (e.key === 'Escape' && isTrayOpen && isExpanded) {
         void handleClose();
       }
     };
 
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [isTrayOpen, isMinimized, handleClose]);
+  }, [isTrayOpen, isExpanded, handleClose]);
 
-  const handleSetStep = (step: 'charge_entry' | 'billing_summary') => {
-    dispatch(setStep(step));
-    dispatch(saveDraft());
-  };
+  const handleSetStep = useCallback(
+    (step: BillingStep) => {
+      dispatch(setStep(step));
+      dispatch(saveDraft());
+    },
+    [dispatch]
+  );
 
   const getStatusConfig = (billingStatus: typeof status) => {
     switch (billingStatus) {
@@ -398,15 +416,12 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
   const statusConfig = getStatusConfig(status);
   const StatusIcon = statusConfig.icon;
 
-  const steps = [
-    { key: 'charge_entry', label: 'Charges', icon: FileText },
-    { key: 'billing_summary', label: 'Payment', icon: CreditCard },
-  ] as const;
-
-  // Don't render anything if tray is not open
   if (!isTrayOpen) return null;
 
-  // RENDER MINIMIZED DOCK ONLY (when minimized is true)
+  /**
+   * STRICTLY MUTUALLY EXCLUSIVE RENDERING
+   * Exactly one branch is mounted at any time based on Redux viewMode.
+   */
   if (isMinimized) {
     return (
       <div
@@ -421,7 +436,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
         }}
         onClick={() => {
           if (didDragRef.current) return;
-          handleMaximize();
+          dispatch(maximizeTray());
         }}
       >
         <div
@@ -433,11 +448,11 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
 
         <div className="p-3" onDragStart={(e) => e.preventDefault()}>
           <div className="flex items-center gap-2 md:gap-3">
-            {/* GRID ICON - replaces the logo in minimized mode */}
-            <div className="flex items-center gap-2 flex-shrink-0" onDragStart={(e) => e.preventDefault()}>
+            <div className="flex items-center gap-2 flex-shrink-0">
               <div className="p-1 rounded-md bg-blue-100 dark:bg-blue-900/30">
                 <Grid className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               </div>
+
               <div className="hidden sm:flex items-center gap-1">
                 <span className={`text-xs font-medium ${colors.text.primary}`}>
                   <BrandName />
@@ -448,7 +463,9 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
 
             <div className="flex items-center gap-2 pl-2 border-l border-gray-300 dark:border-gray-700 flex-shrink-0">
               <User className="w-3 h-3 text-gray-500 flex-shrink-0" />
-              <span className={`text-xs font-medium ${colors.text.primary} truncate max-w-[100px] md:max-w-[120px]`}>
+              <span
+                className={`text-xs font-medium ${colors.text.primary} truncate max-w-[100px] md:max-w-[120px]`}
+              >
                 {patientName}
               </span>
             </div>
@@ -456,7 +473,9 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
             <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig.bg} flex-shrink-0`}>
               <div className="flex items-center gap-1">
                 <StatusIcon className="w-2.5 h-2.5" />
-                <span className="hidden sm:inline">{status.charAt(0).toUpperCase() + status.slice(1)}</span>
+                <span className="hidden sm:inline">
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </span>
                 <span className="sm:hidden">{status.charAt(0).toUpperCase()}</span>
               </div>
             </div>
@@ -466,19 +485,18 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
                 <div className="relative group">
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
                   <div className="absolute bottom-full right-0 mb-1 hidden group-hover:block z-50">
-                    <div className={`px-2 py-1 rounded text-xs ${colors.bg.secondary} border ${colors.border.primary} whitespace-nowrap`}>
+                    <div
+                      className={`px-2 py-1 rounded text-xs ${colors.bg.secondary} border ${colors.border.primary} whitespace-nowrap`}
+                    >
                       Unsaved changes
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* EXPAND ICON */}
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleMaximize();
-                }}
+                type="button"
+                onClick={handleMaximize}
                 className={`p-1.5 md:p-1 rounded-md ${colors.bg.hover} ${colors.text.secondary} transition-colors cursor-pointer touch-manipulation`}
                 aria-label="Expand billing tray"
                 title="Expand"
@@ -487,13 +505,14 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
               </button>
 
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   void handleClose();
                 }}
                 className={`p-1.5 md:p-1 rounded-md ${colors.bg.hover} ${colors.text.secondary} transition-colors cursor-pointer touch-manipulation`}
                 aria-label="Close billing"
-                title="Close (discard changes)"
+                title="Close billing"
               >
                 <X className="w-4 h-4 md:w-3.5 md:h-3.5" />
               </button>
@@ -513,7 +532,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     );
   }
 
-  // RENDER EXPANDED VIEW ONLY (when minimized is false)
+  // Expanded view
   return (
     <>
       <div
@@ -523,12 +542,14 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
 
       <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-3 md:p-4 pointer-events-none">
         <div
-          className={`w-full max-w-[98vw] sm:max-w-[95vw] md:max-w-[90vw] lg:max-w-[90vw] xl:max-w-[90vw] 2xl:max-w-[90vw] 
+          className={`w-full max-w-[98vw] sm:max-w-[95vw] md:max-w-[90vw] lg:max-w-[90vw] xl:max-w-[90vw] 2xl:max-w-[90vw]
             min-h-[90vh] sm:min-h-[75vh] max-h-[96vh] sm:max-h-[94vh]
             rounded-lg shadow-2xl pointer-events-auto flex flex-col ${colors.bg.primary}`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between px-3 sm:px-4 py-3 border-b ${colors.border.primary} gap-2 sm:gap-3`}>
+          <div
+            className={`flex flex-col sm:flex-row items-start sm:items-center justify-between px-3 sm:px-4 py-3 border-b ${colors.border.primary} gap-2 sm:gap-3`}
+          >
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full sm:w-auto justify-between sm:justify-start">
               <div className="flex items-center gap-2 flex-shrink-0">
                 <LogoImage size="sm" />
@@ -539,7 +560,6 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
               </div>
 
               <div className="flex items-center gap-2 sm:hidden">
-                {/* Mobile controls in header */}
                 <div className="relative group">
                   <div
                     className={`px-2 py-1 rounded-md text-xs font-medium select-none whitespace-nowrap flex items-center gap-1 ${statusConfig.bg}`}
@@ -550,6 +570,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
                 </div>
 
                 <button
+                  type="button"
                   onClick={handleMinimize}
                   className={`p-1.5 rounded-md ${colors.bg.hover} ${colors.text.secondary} cursor-pointer touch-manipulation`}
                   aria-label="Minimize billing tray"
@@ -559,10 +580,11 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
                 </button>
 
                 <button
-                  onClick={() => void handleClose()}
                   type="button"
+                  onClick={() => void handleClose()}
                   className={`p-1.5 rounded-md ${colors.bg.hover} ${colors.text.secondary} cursor-pointer touch-manipulation`}
                   aria-label="Close billing tray"
+                  title="Close billing"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -594,15 +616,15 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
                 return (
                   <React.Fragment key={step.key}>
                     <button
+                      type="button"
                       onClick={() => handleSetStep(step.key)}
                       disabled={status === 'settled' && step.key === 'charge_entry'}
-                      type="button"
                       className={`
-                        flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-md 
-                        transition-colors cursor-pointer whitespace-nowrap touch-manipulation
+                        flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-md
+                        transition-colors whitespace-nowrap touch-manipulation
                         ${status === 'settled' && step.key === 'charge_entry'
                           ? 'opacity-50 cursor-not-allowed'
-                          : ''
+                          : 'cursor-pointer'
                         }
                         ${isActive
                           ? `${colors.accent.primary} ${colors.accent.text}`
@@ -637,29 +659,35 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
                 </div>
 
                 <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-50">
-                  <div className={`px-3 py-2 rounded-lg shadow-lg ${colors.bg.secondary} border ${colors.border.primary} max-w-xs`}>
+                  <div
+                    className={`px-3 py-2 rounded-lg shadow-lg ${colors.bg.secondary} border ${colors.border.primary} max-w-xs`}
+                  >
                     <div className="flex items-start gap-2">
                       <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-                      <p className={`text-xs ${colors.text.secondary}`}>{statusConfig.message}</p>
+                      <p className={`text-xs ${colors.text.secondary}`}>
+                        {statusConfig.message}
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
 
               <button
+                type="button"
                 onClick={handleMinimize}
                 className={`p-1.5 rounded-md ${colors.bg.hover} ${colors.text.secondary} cursor-pointer flex-shrink-0 transition-colors touch-manipulation`}
                 aria-label="Minimize billing tray"
-                title="Minimize (keeps your changes)"
+                title="Minimize"
               >
                 <Minimize2 className="w-4 h-4" />
               </button>
 
               <button
-                onClick={() => void handleClose()}
                 type="button"
+                onClick={() => void handleClose()}
                 className={`p-1.5 rounded-md ${colors.bg.hover} ${colors.text.secondary} cursor-pointer flex-shrink-0 touch-manipulation`}
-                aria-label="Close billing tray (discard changes)"
+                aria-label="Close billing tray"
+                title="Close billing"
               >
                 <X className="w-4 h-4" />
               </button>

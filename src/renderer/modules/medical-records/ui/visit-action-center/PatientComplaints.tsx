@@ -652,172 +652,178 @@ const PatientComplaints: React.FC<PatientComplaintsProps> = ({
   return (
     <div className={cn('space-y-6', className)}>
       {/* Header Card */}
-      <div className={cn('rounded-xl border', colors.bg, colors.border, 'shadow-sm')}>
-        <div className="p-6 border-b" style={{ borderColor: colors.border }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={cn('p-2.5 rounded-xl', colors.accent.bg)}>
-                <MessageSquare className={cn('w-6 h-6', colors.accent.text)} />
-              </div>
-              <div>
-                <h2 className={cn('text-xl font-bold', colors.text.primary)}>
-                  Primary Reason for Visit
-                </h2>
-                <div className="flex items-center gap-2 mt-1">
-                  <p className={cn('text-sm', colors.text.secondary)}>
-                    {activePatient?.name || visitInfo?.patientName || 'Patient Name Not Available'}
-                  </p>
-                  <span className={cn('text-xs px-2 py-0.5 rounded cursor-default', 
-                    isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
-                  )}>
-                    {visitInfo?.patientNumber || 'N/A'}
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            {!readOnly && !showNewForm && !displayComplaint && (
-              <button
-                type="button"
-                onClick={() => setShowNewForm(true)}
-                disabled={updateVisitMutation.isPending}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 cursor-pointer',
-                  'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-                  isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
-                  isDark 
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow' 
-                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow',
-                  updateVisitMutation.isPending && 'opacity-50 cursor-not-allowed'
-                )}
-              >
-                <Plus className="w-4 h-4" />
-                Add Complaint
-              </button>
-            )}
+     <div className={cn('rounded-xl border', colors.bg, colors.border, 'shadow-sm')}>
+  <div className="p-4 sm:p-6 border-b" style={{ borderColor: colors.border }}>
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <div className={cn('p-2 sm:p-2.5 rounded-xl flex-shrink-0', colors.accent.bg)}>
+          <MessageSquare className={cn('w-5 h-5 sm:w-6 sm:h-6', colors.accent.text)} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className={cn('text-lg sm:text-xl font-bold truncate', colors.text.primary)}>
+            Primary Reason for Visit
+          </h2>
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <p className={cn('text-xs sm:text-sm truncate max-w-[200px] sm:max-w-none', colors.text.secondary)}>
+              {activePatient?.name || visitInfo?.patientName || 'Patient Name Not Available'}
+            </p>
+            <span className={cn('text-[10px] sm:text-xs px-2 py-0.5 rounded cursor-default whitespace-nowrap', 
+              isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
+            )}>
+              {visitInfo?.patientNumber || 'N/A'}
+            </span>
           </div>
         </div>
-
-        {/* Main Content */}
-        <div className="p-6">
-          {/* Error Display */}
-          {error && (
-            <div className={cn(
-              'rounded-lg border p-4 mb-6 flex gap-3 items-start animate-in fade-in',
-              colors.error.bg, colors.error.border
-            )}>
-              <AlertCircle className={cn('w-5 h-5 flex-shrink-0 mt-0.5', colors.error.text)} />
-              <div className="flex-1">
-                <p className={cn('text-sm font-medium mb-1', colors.error.text)}>
-                  {visitError ? 'Load Failed' : 'Update Failed'}
-                </p>
-                <p className={cn('text-sm', colors.error.text)}>
-                  {error}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setError(null)}
-                className={cn(
-                  'p-1 rounded-lg transition-colors cursor-pointer',
-                  isDark 
-                    ? 'hover:bg-red-800/30 text-red-400' 
-                    : 'hover:bg-red-100 text-red-600'
-                )}
-                aria-label="Dismiss error"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      </div>
+      
+      {!readOnly && !showNewForm && !displayComplaint && (
+        <button
+          type="button"
+          onClick={() => setShowNewForm(true)}
+          disabled={updateVisitMutation.isPending}
+          className={cn(
+            'flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium transition-all duration-200 cursor-pointer',
+            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+            isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
+            isDark 
+              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow' 
+              : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow',
+            updateVisitMutation.isPending && 'opacity-50 cursor-not-allowed',
+            'w-full sm:w-auto'
           )}
+        >
+          <Plus className="w-4 h-4" />
+          <span className="text-sm">Add Complaint</span>
+        </button>
+      )}
+    </div>
+  </div>
 
-          {/* Global Loading State */}
-          {isLoading && (
-            <div className="mb-6">
-              <div className="flex items-center justify-center gap-3 p-4 rounded-lg bg-gradient-to-r from-blue-500/10 to-cyan-500/10">
-                <Loader2 className={cn('w-5 h-5 animate-spin', colors.accent.text)} />
-                <span className={cn('text-sm font-medium', colors.accent.text)}>
-                  {updateVisitMutation.isPending ? 'Updating complaint...' : 'Loading...'}
-                </span>
-              </div>
-            </div>
+  {/* Main Content */}
+  <div className="p-4 sm:p-6">
+    {/* Error Display */}
+    {error && (
+      <div className={cn(
+        'rounded-lg border p-3 sm:p-4 mb-4 sm:mb-6 flex flex-col sm:flex-row gap-3 items-start animate-in fade-in',
+        colors.error.bg, colors.error.border
+      )}>
+        <div className="flex gap-3 w-full sm:w-auto">
+          <AlertCircle className={cn('w-5 h-5 flex-shrink-0 mt-0.5', colors.error.text)} />
+          <div className="flex-1 min-w-0">
+            <p className={cn('text-sm font-medium mb-1', colors.error.text)}>
+              {visitError ? 'Load Failed' : 'Update Failed'}
+            </p>
+            <p className={cn('text-sm break-words', colors.error.text)}>
+              {error}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setError(null)}
+          className={cn(
+            'p-1 rounded-lg transition-colors cursor-pointer flex-shrink-0 self-end sm:self-start',
+            isDark 
+              ? 'hover:bg-red-800/30 text-red-400' 
+              : 'hover:bg-red-100 text-red-600'
           )}
+          aria-label="Dismiss error"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    )}
 
-          {/* Empty State - No complaint recorded */}
-          {!displayComplaint && !showNewForm && !isLoading && (
-            <div className={cn(
-              'rounded-xl border-2 border-dashed p-8 text-center transition-colors',
-              colors.border,
-              'hover:border-blue-400/50'
-            )}>
-              <MessageSquare className={cn('w-16 h-16 mx-auto mb-4 opacity-50', colors.text.secondary)} />
-              <h3 className={cn('text-lg font-semibold mb-2', colors.text.primary)}>
-                No Complaint Recorded
-              </h3>
-              <p className={cn('max-w-md mx-auto mb-6', colors.text.secondary)}>
-                {readOnly 
-                  ? "No chief complaint has been recorded for this visit."
-                  : "Document the patient's primary reason for visit or chief complaint."
-                }
-              </p>
-              {!readOnly && (
-                <button
-                  type="button"
-                  onClick={() => setShowNewForm(true)}
-                  className={cn(
-                    'inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all duration-200 cursor-pointer',
-                    'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-                    isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
-                    isDark 
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow' 
-                      : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow'
-                  )}
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Complaint
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Existing Complaint Display */}
-          {displayComplaint && !showNewForm && (
-            <ComplaintDisplay
-              theme={theme}
-              complaint={displayComplaint}
-              isEditing={isEditing}
-              isSaving={updateVisitMutation.isPending && !!optimisticComplaint}
-              onEdit={handleStartEdit}
-              onSave={handleEditComplaint}
-              onCancel={handleCancelEdit}
-              onDelete={handleDeleteComplaint}
-              readOnly={readOnly}
-            />
-          )}
-
-          {/* New Complaint Form */}
-          {showNewForm && (
-            <div className={cn(
-              'mt-6 p-4 rounded-xl border animate-in slide-in-from-bottom-4',
-              colors.accent.bg, colors.accent.border
-            )}>
-              <div className="flex items-center gap-2 mb-3">
-                <Plus className={cn('w-4 h-4', colors.accent.text)} />
-                <h4 className={cn('text-sm font-semibold', colors.accent.text)}>
-                  Add New Complaint
-                </h4>
-              </div>
-              <NewComplaintForm
-                theme={theme}
-                onSubmit={handleAddComplaint}
-                onCancel={handleCancelNew}
-                isLoading={updateVisitMutation.isPending}
-                placeholder="Describe the patient's chief complaint in detail. Include duration, severity, and any associated symptoms..."
-              />
-            </div>
-          )}
+    {/* Global Loading State */}
+    {isLoading && (
+      <div className="mb-4 sm:mb-6">
+        <div className="flex items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg bg-gradient-to-r from-blue-500/10 to-cyan-500/10">
+          <Loader2 className={cn('w-4 h-4 sm:w-5 sm:h-5 animate-spin', colors.accent.text)} />
+          <span className={cn('text-xs sm:text-sm font-medium', colors.accent.text)}>
+            {updateVisitMutation.isPending ? 'Updating complaint...' : 'Loading...'}
+          </span>
         </div>
       </div>
+    )}
+
+    {/* Empty State - No complaint recorded */}
+    {!displayComplaint && !showNewForm && !isLoading && (
+      <div className={cn(
+        'rounded-xl border-2 border-dashed p-6 sm:p-8 text-center transition-colors',
+        colors.border,
+        'hover:border-blue-400/50'
+      )}>
+        <MessageSquare className={cn('w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 opacity-50', colors.text.secondary)} />
+        <h3 className={cn('text-base sm:text-lg font-semibold mb-2', colors.text.primary)}>
+          No Complaint Recorded
+        </h3>
+        <p className={cn('text-sm max-w-md mx-auto mb-4 sm:mb-6 px-2', colors.text.secondary)}>
+          {readOnly 
+            ? "No chief complaint has been recorded for this visit."
+            : "Document the patient's primary reason for visit or chief complaint."
+          }
+        </p>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() => setShowNewForm(true)}
+            className={cn(
+              'inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-all duration-200 cursor-pointer',
+              'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+              isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white',
+              isDark 
+                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow' 
+                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow',
+              'w-full sm:w-auto'
+            )}
+          >
+            <Plus className="w-4 h-4" />
+            Add Complaint
+          </button>
+        )}
+      </div>
+    )}
+
+    {/* Existing Complaint Display */}
+    {displayComplaint && !showNewForm && (
+      <div className="overflow-x-auto">
+        <ComplaintDisplay
+          theme={theme}
+          complaint={displayComplaint}
+          isEditing={isEditing}
+          isSaving={updateVisitMutation.isPending && !!optimisticComplaint}
+          onEdit={handleStartEdit}
+          onSave={handleEditComplaint}
+          onCancel={handleCancelEdit}
+          onDelete={handleDeleteComplaint}
+          readOnly={readOnly}
+        />
+      </div>
+    )}
+
+    {/* New Complaint Form */}
+    {showNewForm && (
+      <div className={cn(
+        'mt-4 sm:mt-6 p-3 sm:p-4 rounded-xl border animate-in slide-in-from-bottom-4',
+        colors.accent.bg, colors.accent.border
+      )}>
+        <div className="flex items-center gap-2 mb-3">
+          <Plus className={cn('w-4 h-4', colors.accent.text)} />
+          <h4 className={cn('text-xs sm:text-sm font-semibold', colors.accent.text)}>
+            Add New Complaint
+          </h4>
+        </div>
+        <NewComplaintForm
+          theme={theme}
+          onSubmit={handleAddComplaint}
+          onCancel={handleCancelNew}
+          isLoading={updateVisitMutation.isPending}
+          placeholder="Describe the patient's chief complaint in detail. Include duration, severity, and any associated symptoms..."
+        />
+      </div>
+    )}
+  </div>
+</div>
 
       {/* Success State Indicator */}
       {updateVisitMutation.isSuccess && !updateVisitMutation.isPending && (
