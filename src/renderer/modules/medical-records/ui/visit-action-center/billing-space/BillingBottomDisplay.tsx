@@ -134,7 +134,7 @@ export const BillingBottomDisplay: React.FC<BillingBottomDisplayProps> = ({ them
         {persistedCount > 0 && (
           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${colors.source.persisted}`}>
             <Database className="w-3 h-3" />
-            {persistedCount} persisted
+            {persistedCount} Saved
           </span>
         )}
         {draftCount > 0 && (

@@ -579,12 +579,10 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
               <FileWarning className={`w-4 h-4 mt-0.5 ${isDark ? 'text-amber-300' : 'text-amber-600'}`} />
               <div className="text-xs sm:text-sm">
                 <p className={`font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                  Billing items may come from two sources
+                  Billing items come from two places
                 </p>
                 <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} mt-1`}>
-                  Persisted backend items are already saved and auditable. New items added here remain draft
-                  until saved. If a persisted item was entered by another staff member, a reason will be
-                  required before any adjustment is allowed.
+              Existing items are already saved and tracked. New items you add remain drafts until you save them. If another staff member added an item, you'll need to add a reason before you can adjust it.
                 </p>
               </div>
             </div>

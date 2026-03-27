@@ -205,12 +205,6 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
         >
           <Trash2 className="w-4 h-4" />
         </motion.button>
-
-        {isPersistedBackendItem && (
-          <span className={`text-[11px] ${isDark ? 'text-amber-300' : 'text-amber-700'} ml-1`}>
-            Audited adjustment
-          </span>
-        )}
       </div>
     );
   };
@@ -369,7 +363,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
                   isDark ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-50 text-amber-700'
                 }`}
               >
-                Persisted
+                Saved
               </span>
             ) : (
               <span
@@ -377,7 +371,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
                   isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-50 text-emerald-700'
                 }`}
               >
-                Draft
+                New
               </span>
             )}
 
@@ -465,7 +459,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
                     isDark ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-50 text-amber-700'
                   }`}
                 >
-                  Persisted
+                  Saved
                 </span>
               ) : (
                 <span
@@ -473,7 +467,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
                     isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-50 text-emerald-700'
                   }`}
                 >
-                  Draft
+                  New
                 </span>
               )}
 

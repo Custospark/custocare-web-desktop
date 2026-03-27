@@ -372,7 +372,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
       default:
         return {
           icon: Lightbulb,
-          text: 'Persisted items came from backend. Newly added items remain draft until you save or collect payment.',
+          text: 'Items we already have are saved. New items stay as drafts until you save or collect payment.',
           color: isDark ? 'text-yellow-400' : 'text-yellow-600',
         };
     }
@@ -427,7 +427,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className={isDark ? 'text-gray-300' : 'text-gray-600'}>Displayed subtotal</span>
+              <span className={isDark ? 'text-gray-300' : 'text-gray-600'}>Subtotal</span>
               <span className="text-lg font-extrabold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
                 {formatCurrency(subtotal)}
               </span>
@@ -435,7 +435,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
 
             <div className="flex items-center justify-between text-sm">
               <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>
-                Existing persisted balance
+                Existing balance
               </span>
               <span className={`font-semibold ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
                 {formatCurrency(displayBillingData.persistedBalance)}
@@ -444,7 +444,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
 
             <div className="flex items-center justify-between text-sm">
               <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>
-                New draft total
+                New items (draft)
               </span>
               <span className={`font-semibold ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
                 {formatCurrency(displayBillingData.draftGrandTotal)}
@@ -454,7 +454,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
             <div className={`pt-4 border-t ${colors.border.primary}`}>
               <div className="flex items-center justify-between">
                 <span className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                  Total amount in view
+                  Total
                 </span>
                 <span className="text-lg font-extrabold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
                   {formatCurrency(displayBillingData.displayedBalance)}
@@ -471,7 +471,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
                 }`}
               >
                 <Database className="w-3 h-3" />
-                Persisted backend billing
+                Saved billing
               </span>
             )}
 
@@ -564,7 +564,6 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
             >
               <p className="text-xs">
                 Save and Forward apply only to <span className="font-semibold">new draft items</span>.
-                Existing persisted backend billing is already stored.
               </p>
             </div>
           )}

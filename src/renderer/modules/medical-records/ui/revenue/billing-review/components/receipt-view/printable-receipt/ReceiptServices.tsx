@@ -40,12 +40,12 @@ export const ReceiptServices: React.FC<ReceiptServicesProps> = ({ selectedTransa
                 <p className="font-bold truncate">{item.service?.name}</p>
                 {item.source === 'backend' && (
                   <span className="text-[8px] sm:text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
-                    Persisted
+                    Saved
                   </span>
                 )}
                 {item.source === 'slice' && (
                   <span className="text-[8px] sm:text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">
-                    Draft
+                    New
                   </span>
                 )}
               </div>
