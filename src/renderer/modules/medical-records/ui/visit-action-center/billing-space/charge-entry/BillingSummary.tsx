@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ArrowRight,
   AlertCircle,
@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { formatCurrency } from '../billing-types';
 import {
+  clearActiveVisit,
   selectActiveVisit,
   selectActiveVisitId,
 } from '../../../../../../app/store/slices/visitSlice';
@@ -27,6 +28,7 @@ import {
   selectPendingForwarding,
 } from '../../../../../../app/store/slices/forwardPatientSlice';
 import {
+  clearAll as clearBillingState,
   closeTray,
   selectBillingData,
   selectBilling,
@@ -70,13 +72,8 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
   const pendingForwarding = useSelector(selectPendingForwarding);
   const activeVisit = useSelector(selectActiveVisit);
   const activeVisitId = useSelector(selectActiveVisitId);
-
-  // Draft-only unsaved items
   const draftChargeItems = useSelector(selectDraftChargeItems);
-
-  // Combined rendered items (backend persisted + draft)
   const renderableChargeItems = useSelector(selectRenderableChargeItems);
-
   const billingState = useSelector(selectBilling);
   const draftBillingData = useSelector(selectBillingData);
   const backendBillingMeta = useSelector(selectBackendBillingMeta);
@@ -87,15 +84,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
   // ---------------------------------------------------------------------------
   const [currentAction, setCurrentAction] = useState<BillingAction>(null);
 
-  /**
-   * Synchronous lock to prevent double-submission before React state updates.
-   * This protects against rapid double clicks/taps on slow networks.
-   */
-  const actionLockRef = useRef(false);
-
   const isDark = theme === 'dark';
-
-  // Check if persisted balance is currently syncing (optimistic update in progress)
   const isPersistedBalanceSyncing = billingState.optimisticPersistedBalanceDelta !== 0;
 
   // ---------------------------------------------------------------------------
@@ -127,25 +116,35 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
     currentAction !== null || billingMutation.isPending || assignMutation.isPending;
 
   // ---------------------------------------------------------------------------
-  // Helpers
+  // CORE LOGIC: Clearing behavior based on action
   // ---------------------------------------------------------------------------
 
   /**
-   * Navigate back to queue.
-   * Used only for Save & Exit and Forward actions.
-   *
-   * closeTray() clears only draft/UI state and preserves persisted backend data.
+   * Helper: Clear ALL billing data (draft + persisted) and UI state.
+   * This intentionally does NOT clear visit state, used by FORWARD.
    */
-  const resetAndExitToQueue = useCallback(() => {
+  const clearBillingDataOnly = useCallback(() => {
+    // Clear forwarding data
     dispatch(clearPendingForwarding());
+
+    // Close the billing tray
     dispatch(closeTray());
-    navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE);
-  }, [dispatch, navigate]);
+
+    // Clear ALL billing state (both draft AND persisted backend data)
+    dispatch(clearBillingState());
+  }, [dispatch]);
 
   /**
-   * Build submission payload from the draft section only.
-   *
-   * Persisted backend items are already saved and must not be re-submitted.
+   * Helper: Clear billing data + active visit.
+   * Used by SAVE & EXIT.
+   */
+  const clearBillingDataAndVisit = useCallback(() => {
+    clearBillingDataOnly();
+    dispatch(clearActiveVisit());
+  }, [clearBillingDataOnly, dispatch]);
+
+  /**
+   * Build submission payload from the DRAFT section only.
    */
   const buildPendingBillingPayload = useCallback((): BillingSubmissionPayload | null => {
     if (!hasDraftChargeItems && draftBillingData.totalPaid <= 0) {
@@ -220,29 +219,98 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
   ]);
 
   /**
-   * Persist pending billing exactly once while request is in-flight.
-   * The hook-level mutateAsync is also deduped, but we keep this UI lock
-   * for immediate click/tap race protection.
+   * Action: FORWARD
+   * - Persists billing data
+   * - Clears billing data AND leaves visit (visit remains active? No, we clear it)
+   * - Navigates to queue
    */
-  const persistPendingBilling = useCallback(async (): Promise<boolean> => {
+  const handleForwardAction = useCallback(async () => {
+    // Persist the draft billing data first
     const payload = buildPendingBillingPayload();
     if (!payload) return false;
 
     try {
       await billingMutation.mutateAsync(payload);
+      
+      // After successful persistence, perform forwarding
+      if (!pendingForwarding?.visitId || !pendingForwarding?.assignedStaffId) {
+        // No forwarding target, just clear billing data and go to forward patient forward page
+        clearBillingDataOnly();
+        navigate(MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT);
+        return true;
+      }
+
+      await assignMutation.mutateAsync({
+        data: {
+          visit_id: pendingForwarding.visitId,
+          assigned_staff_id: pendingForwarding.assignedStaffId,
+        },
+      });
+
+      // FORWARD: Clear billing data and  active visit
+      clearBillingDataAndVisit();
+      navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE);
       return true;
     } catch (error) {
-      console.error('Failed to persist pending billing data:', error);
+      console.error('Failed to complete forward action:', error);
       return false;
     }
-  }, [buildPendingBillingPayload, billingMutation]);
+  }, [billingMutation, assignMutation, pendingForwarding, navigate, buildPendingBillingPayload,clearBillingDataOnly,clearBillingDataAndVisit]);
 
+  /**
+   * Action: SAVE & EXIT
+   * - Persists billing data
+   * - Clears EVERYTHING (billing data AND visit)
+   * - Navigates to queue
+   */
+  const handleSaveAndExitAction = useCallback(async () => {
+    // Persist the draft billing data first
+    const payload = buildPendingBillingPayload();
+    if (!payload) return false;
+
+    try {
+      await billingMutation.mutateAsync(payload);
+      
+      // SAVE & EXIT: Clear EVERYTHING (billing + visit)
+      clearBillingDataAndVisit();
+      navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE);
+      return true;
+    } catch (error) {
+      console.error('Failed to complete save & exit action:', error);
+      return false;
+    }
+  }, [billingMutation, navigate, buildPendingBillingPayload, clearBillingDataAndVisit]);
+
+  /**
+   * Action: PROCEED (to payment)
+   * - Persists billing data
+   * - DOES NOT clear anything
+   * - Navigates to payment screen
+   */
+  const handleProceedAction = useCallback(async () => {
+    // Persist the draft billing data first
+    const payload = buildPendingBillingPayload();
+    if (payload) {
+      try {
+        await billingMutation.mutateAsync(payload);
+      } catch (error) {
+        console.error('Failed to persist billing data before proceeding:', error);
+        // Continue to payment even if persistence fails? Original behavior suggests proceed anyway
+      }
+    }
+    
+    // PROCEED: Don't clear anything - payment will handle its own state
+    onProceedToBilling();
+    return true;
+  }, [billingMutation, onProceedToBilling, buildPendingBillingPayload]);
+
+  // ---------------------------------------------------------------------------
+  // Unified action dispatcher
+  // ---------------------------------------------------------------------------
   const runAction = useCallback(
     async (action: Exclude<BillingAction, null>) => {
       if (
-        actionLockRef.current ||
         isReadOnly ||
-        !hasDraftChargeItems ||
         currentAction !== null ||
         billingMutation.isPending ||
         assignMutation.isPending
@@ -250,52 +318,38 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
         return;
       }
 
-      actionLockRef.current = true;
       setCurrentAction(action);
 
       try {
-        const isSaved = await persistPendingBilling();
-        if (!isSaved) {
-          return;
+        let success = false;
+        
+        switch (action) {
+          case 'save':
+            success = await handleSaveAndExitAction();
+            break;
+          case 'forward':
+            success = await handleForwardAction();
+            break;
+          default:
+            success = false;
         }
-
-        if (action === 'save') {
-          resetAndExitToQueue();
-          return;
+        
+        if (!success) {
+          console.error(`Action ${action} failed`);
         }
-
-        // FORWARD action
-        if (!pendingForwarding?.visitId || !pendingForwarding?.assignedStaffId) {
-          resetAndExitToQueue();
-          navigate(MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT);
-          return;
-        }
-
-        await assignMutation.mutateAsync({
-          data: {
-            visit_id: pendingForwarding.visitId,
-            assigned_staff_id: pendingForwarding.assignedStaffId,
-          },
-        });
-
-        resetAndExitToQueue();
       } catch (error) {
         console.error(`Failed to complete ${action} action:`, error);
       } finally {
-        actionLockRef.current = false;
         setCurrentAction(null);
       }
     },
     [
       isReadOnly,
-      hasDraftChargeItems,
       currentAction,
       billingMutation.isPending,
-      assignMutation,
-      persistPendingBilling,
-      pendingForwarding,
-      navigate,
-      resetAndExitToQueue,
+      assignMutation.isPending,
+      handleSaveAndExitAction,
+      handleForwardAction,
     ]
   );
 
@@ -321,22 +375,28 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
   );
 
   const handleProceedToPayment = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
+    async (e: React.MouseEvent<HTMLButtonElement>) => {
       e.preventDefault();
       e.stopPropagation();
 
-      if (!isDisabledProceed && currentAction === null && !actionLockRef.current) {
-        onProceedToBilling();
+      if (!isDisabledProceed && currentAction === null) {
+        setCurrentAction('proceed' as any); // Use a temporary loading state
+        try {
+          await handleProceedAction();
+        } finally {
+          setCurrentAction(null);
+        }
       }
     },
-    [isDisabledProceed, currentAction, onProceedToBilling]
+    [isDisabledProceed, currentAction, handleProceedAction]
   );
 
   // ---------------------------------------------------------------------------
   // Button states
   // ---------------------------------------------------------------------------
-  const isSaveDisabled = isReadOnly || !hasDraftChargeItems || isActionPending;
-  const isForwardDisabled = isReadOnly || !hasDraftChargeItems || isActionPending;
+  const hasDraftOrPayment = hasDraftChargeItems || draftBillingData.totalPaid > 0;
+  const isSaveDisabled = isReadOnly || !hasDraftOrPayment || isActionPending;
+  const isForwardDisabled = isReadOnly || !hasDraftOrPayment || isActionPending;
   const isPaymentDisabled = isDisabledProceed || isActionPending || !hasAnyRenderedItems;
 
   const showPaymentOption = activeOption === 'payment' || activeOption === 'default';
@@ -366,25 +426,25 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
       case 'payment':
         return {
           icon: CreditCard,
-          text: 'Use this when you want to collect payment for draft items, existing persisted balance, or both.',
+          text: 'PROCEED: Saves draft items and continues to payment without clearing any data.',
           color: isDark ? 'text-blue-400' : 'text-blue-600',
         };
       case 'save':
         return {
           icon: Clock,
-          text: 'Use Save & Exit to persist the current draft without collecting payment immediately. This returns the user to queue after saving.',
+          text: 'SAVE & EXIT: Saves draft items, then CLEARS EVERYTHING (billing data + visit) and returns to queue.',
           color: isDark ? 'text-green-400' : 'text-green-600',
         };
       case 'forward':
         return {
           icon: Users,
-          text: 'Use Forward when more services are still expected before final collection. This saves the draft first, then continues the forwarding workflow.',
+          text: 'FORWARD: Saves draft items, then CLEARS BILLING DATA (visit remains active), then forwards patient.',
           color: isDark ? 'text-purple-400' : 'text-purple-600',
         };
       default:
         return {
           icon: Lightbulb,
-          text: 'Items we already have are saved. New items stay as drafts until you save or collect payment.',
+          text: 'PROCEED saves and continues to payment. SAVE & EXIT and FORWARD clear all data after saving.',
           color: isDark ? 'text-yellow-400' : 'text-yellow-600',
         };
     }
@@ -394,7 +454,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
   const TipIcon = workflowTip.icon;
 
   const renderButtonContent = (
-    action: BillingAction,
+    action: BillingAction | 'proceed',
     defaultIcon: React.ReactNode,
     defaultText: string,
     loadingText: string
@@ -514,8 +574,12 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
               disabled={isPaymentDisabled}
               className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-lg transition-all ${getButtonStyle(isPaymentDisabled)}`}
             >
-              <CreditCard className="w-4 h-4" />
-              <span>Proceed to Payment</span>
+              {renderButtonContent(
+                'proceed',
+                <CreditCard className="w-4 h-4" />,
+                'Proceed to Payment',
+                'Processing...'
+              )}
               <ArrowRight className="w-4 h-4" />
             </button>
           )}
@@ -552,6 +616,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
             </button>
           )}
 
+          {/* Forwarding info */}
           {pendingForwarding?.assignedStaffName && showForwardOption && (
             <div
               className={`rounded-lg border p-3 ${
@@ -569,6 +634,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
             </div>
           )}
 
+          {/* Helpful note when no draft exists */}
           {!hasDraftChargeItems && !isReadOnly && (
             <div
               className={`rounded-lg border p-3 ${
