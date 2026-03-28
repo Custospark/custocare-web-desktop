@@ -162,7 +162,6 @@ export interface BackendBillingMeta {
   createdAt?: string;
   updatedAt?: string;
 }
-
 export interface BillingState {
   // ----------------------------
   // Draft slice data (unsaved)
@@ -183,11 +182,16 @@ export interface BillingState {
   backendBillingData: BillingDataSnapshot | null;
 
   // ----------------------------
+  // Optimistic persisted billing state
+  // ----------------------------
+  optimisticPersistedBalanceDelta: number;
+
+  // ----------------------------
   // UI state
   // ----------------------------
   trayOpen: boolean;
   currentStep: BillingStep;
-  viewMode: BillingTrayViewMode; // ADDED: Single source of truth for tray mode
+  viewMode: BillingTrayViewMode;
 
   // ----------------------------
   // Patient context
@@ -225,7 +229,6 @@ export const EMPTY_BACKEND_META: BackendBillingMeta = {
   loaded: false,
   hasBilling: false,
 };
-
 export const INITIAL_BILLING_STATE: BillingState = {
   chargeItems: [],
   discount: DEFAULT_DISCOUNT,
@@ -239,9 +242,11 @@ export const INITIAL_BILLING_STATE: BillingState = {
   backendBillingMeta: EMPTY_BACKEND_META,
   backendBillingData: null,
 
+  optimisticPersistedBalanceDelta: 0,
+
   trayOpen: false,
   currentStep: 'charge_entry',
-  viewMode: 'expanded', // ADDED: Default to expanded
+  viewMode: 'expanded',
 
   visitId: undefined,
   patientId: undefined,

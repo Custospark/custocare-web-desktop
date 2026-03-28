@@ -1,5 +1,5 @@
 // billingSlice.ts
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction, createSelector } from '@reduxjs/toolkit';
 import {
   type BillingState,
   INITIAL_BILLING_STATE,
@@ -17,11 +17,19 @@ import {
   makeBillableKey,
   mapRetrievedBillingToBackendState,
   type RenderableChargeItem,
+  EMPTY_BACKEND_META,
+  BackendChargeItem,
 } from './billing-types';
 
 import type { BillingRetrievalData } from '../../../api/billable-items/BillingItemsTypes';
+import { RootState } from '../../../../../app/store/rootReducer';
 
-// Helper to check if state is dirty
+/* -------------------------------------------------------------------------- */
+/*                               HELPERS                                      */
+/* -------------------------------------------------------------------------- */
+
+const roundCurrency = (value: number): number => Math.round(value * 100) / 100;
+
 const calculateIsDirty = (state: BillingState): boolean => {
   return (
     state.chargeItems.length > 0 ||
@@ -32,24 +40,52 @@ const calculateIsDirty = (state: BillingState): boolean => {
   );
 };
 
-// Helper to update metadata
-const updateMetadata = (state: BillingState) => {
+const updateMetadata = (state: BillingState): void => {
   state.lastUpdated = Date.now();
   state.isDirty = calculateIsDirty(state);
 };
+
+const mergeTaxes = (
+  existing: Array<{ name: string; rate: number; amount: number }> = [],
+  incoming: Array<{ name: string; rate: number; amount: number }> = []
+): Array<{ name: string; rate: number; amount: number }> => {
+  const merged = new Map<string, { name: string; rate: number; amount: number }>();
+
+  [...existing, ...incoming].forEach((tax) => {
+    const key = `${String(tax.name).toLowerCase()}|${Number(tax.rate || 0).toFixed(2)}`;
+    const current = merged.get(key);
+
+    if (!current) {
+      merged.set(key, {
+        name: tax.name,
+        rate: Number(tax.rate || 0),
+        amount: Number(tax.amount || 0),
+      });
+    } else {
+      current.amount = Number((current.amount + Number(tax.amount || 0)).toFixed(2));
+      merged.set(key, current);
+    }
+  });
+
+  return Array.from(merged.values());
+};
+
+/* -------------------------------------------------------------------------- */
+/*                               SLICE                                        */
+/* -------------------------------------------------------------------------- */
 
 const billingSlice = createSlice({
   name: 'billing',
   initialState: INITIAL_BILLING_STATE,
   reducers: {
-    // UI Actions
+    // ========== UI ACTIONS ==========
     openTray: (
       state,
       action: PayloadAction<{ step?: BillingStep; visitId?: string; patientId?: string; patientName?: string }>
     ) => {
       state.trayOpen = true;
       state.currentStep = action.payload.step || 'charge_entry';
-      state.viewMode = 'expanded'; // Reset to expanded when opening
+      state.viewMode = 'expanded';
 
       if (action.payload.visitId) state.visitId = action.payload.visitId;
       if (action.payload.patientId) state.patientId = action.payload.patientId;
@@ -60,7 +96,7 @@ const billingSlice = createSlice({
 
     closeTray: (state) => {
       state.trayOpen = false;
-      state.viewMode = 'expanded'; // Reset to expanded when closing
+      state.viewMode = 'expanded';
       updateMetadata(state);
     },
 
@@ -69,7 +105,6 @@ const billingSlice = createSlice({
       updateMetadata(state);
     },
 
-    // ========== TRAY MODE MANAGEMENT ==========
     setViewMode: (state, action: PayloadAction<BillingTrayViewMode>) => {
       state.viewMode = action.payload;
       updateMetadata(state);
@@ -84,14 +119,11 @@ const billingSlice = createSlice({
       state.viewMode = 'expanded';
       updateMetadata(state);
     },
-    // =========================================
 
-    // Charge Items Actions
+    // ========== CHARGE ITEMS ACTIONS ==========
     addChargeItem: (state, action: PayloadAction<ServiceItem>) => {
       const service = action.payload;
       const serviceKey = makeBillableKey(service);
-
-      // Merge by composite key (NOT numeric id)
       const existingItem = state.chargeItems.find((item) => item.serviceKey === serviceKey);
 
       if (existingItem) {
@@ -107,18 +139,18 @@ const billingSlice = createSlice({
           source: 'slice',
           persisted: false,
         };
-
         state.chargeItems.push(newItem);
       }
 
-      if (state.chargeItems.length > 0 && state.status === 'draft') state.status = 'ready';
+      if (state.chargeItems.length > 0 && state.status === 'draft') {
+        state.status = 'ready';
+      }
 
       updateMetadata(state);
     },
 
     increaseQuantity: (state, action: PayloadAction<string>) => {
-      const itemId = action.payload;
-      const item = state.chargeItems.find((x) => x.id === itemId);
+      const item = state.chargeItems.find((x) => x.id === action.payload);
       if (!item) return;
 
       item.quantity += 1;
@@ -127,12 +159,11 @@ const billingSlice = createSlice({
     },
 
     decreaseQuantity: (state, action: PayloadAction<string>) => {
-      const itemId = action.payload;
-      const item = state.chargeItems.find((x) => x.id === itemId);
+      const item = state.chargeItems.find((x) => x.id === action.payload);
       if (!item) return;
 
       if (item.quantity === 1) {
-        state.chargeItems = state.chargeItems.filter((x) => x.id !== itemId);
+        state.chargeItems = state.chargeItems.filter((x) => x.id !== action.payload);
         if (state.chargeItems.length === 0) state.status = 'draft';
       } else {
         item.quantity -= 1;
@@ -157,8 +188,11 @@ const billingSlice = createSlice({
       item.quantity = q;
       item.totalAmount = q * item.service.unitPrice;
 
-      if (state.chargeItems.length === 0) state.status = 'draft';
-      else if (state.status === 'draft') state.status = 'ready';
+      if (state.chargeItems.length === 0) {
+        state.status = 'draft';
+      } else if (state.status === 'draft') {
+        state.status = 'ready';
+      }
 
       updateMetadata(state);
     },
@@ -169,13 +203,13 @@ const billingSlice = createSlice({
       updateMetadata(state);
     },
 
-    // Discount Actions
+    // ========== DISCOUNT ACTIONS ==========
     setDiscount: (state, action: PayloadAction<Discount>) => {
       state.discount = action.payload;
       updateMetadata(state);
     },
 
-    // Payment Methods Actions
+    // ========== PAYMENT METHODS ACTIONS ==========
     setPaymentMethods: (state, action: PayloadAction<PaymentMethod[]>) => {
       state.paymentMethods = action.payload;
       updateMetadata(state);
@@ -203,7 +237,7 @@ const billingSlice = createSlice({
       }
     },
 
-    // Other Actions
+    // ========== OTHER ACTIONS ==========
     setAdditionalNotes: (state, action: PayloadAction<string>) => {
       state.additionalNotes = action.payload;
       updateMetadata(state);
@@ -224,13 +258,13 @@ const billingSlice = createSlice({
       updateMetadata(state);
     },
 
-    // Reset Actions
+    // ========== RESET ACTIONS ==========
     resetBilling: (state) => {
       const { visitId, patientId, patientName } = state;
       Object.assign(state, { ...INITIAL_BILLING_STATE, visitId, patientId, patientName });
     },
 
-    // Draft Actions
+    // ========== DRAFT ACTIONS ==========
     saveDraft: (state) => {
       try {
         if (!state.visitId) return;
@@ -254,78 +288,6 @@ const billingSlice = createSlice({
       }
     },
 
-    /**
-     * Hydrate persisted backend billing into a dedicated state bucket.
-     * This does NOT overwrite the current draft slice data.
-     */
-    hydrateBackendBilling: (state, action: PayloadAction<BillingRetrievalData>) => {
-      const mapped = mapRetrievedBillingToBackendState(action.payload);
-
-      state.backendChargeItems = mapped.backendChargeItems;
-      state.backendBillingMeta = mapped.backendBillingMeta;
-      state.backendBillingData = mapped.backendBillingData;
-
-      // Do not mark draft dirty from backend hydration.
-      state.lastUpdated = Date.now();
-    },
-
-    /**
-     * Clear persisted backend billing bucket.
-     * Useful when switching visits or when no billing exists.
-     */
-    clearBackendBilling: (state) => {
-      state.backendChargeItems = [];
-      state.backendBillingMeta = {
-        loaded: true,
-        hasBilling: false,
-      };
-      state.backendBillingData = null;
-      state.lastUpdated = Date.now();
-    },
-
-    /**
-     * Optimistically adjust a persisted backend charge item in the Redux slice.
-     */
-    optimisticAdjustBackendItem: (
-      state,
-      action: PayloadAction<{
-        lineItemId: number;
-        action: 'increase' | 'decrease' | 'remove';
-        quantity: number;
-      }>
-    ) => {
-      const { lineItemId, action: adjustAction, quantity } = action.payload;
-
-      const itemIndex = state.backendChargeItems.findIndex(
-        (item) => item.lineItemId === lineItemId
-      );
-
-      if (itemIndex === -1) return;
-
-      const item = state.backendChargeItems[itemIndex];
-      const oldQty = item.quantity;
-      const unitPrice = item.service.unitPrice;
-
-      let newQty = oldQty;
-
-      if (adjustAction === 'increase') {
-        newQty = oldQty + quantity;
-      } else if (adjustAction === 'decrease') {
-        newQty = Math.max(0, oldQty - quantity);
-      } else if (adjustAction === 'remove') {
-        newQty = 0;
-      }
-
-      if (newQty <= 0) {
-        state.backendChargeItems.splice(itemIndex, 1);
-      } else {
-        item.quantity = newQty;
-        item.totalAmount = Number((newQty * unitPrice).toFixed(2));
-      }
-
-      state.lastUpdated = Date.now();
-    },
-
     loadDraft: (state, action: PayloadAction<string>) => {
       try {
         const saved = sessionStorage.getItem(getDraftStorageKey(action.payload));
@@ -334,8 +296,6 @@ const billingSlice = createSlice({
         const parsed = JSON.parse(saved);
         if (!parsed.chargeItems || !Array.isArray(parsed.chargeItems)) return;
 
-        // Backward/forward safe hydrate:
-        // Ensure every line item has serviceKey; if missing (older drafts), derive it.
         state.chargeItems = parsed.chargeItems.map((ci: any) => {
           const service: ServiceItem = ci.service;
           const serviceKey = ci.serviceKey || makeBillableKey(service);
@@ -355,11 +315,9 @@ const billingSlice = createSlice({
         state.additionalNotes = parsed.additionalNotes || '';
         state.status = parsed.status || 'draft';
         state.receiptNumber = parsed.receiptNumber;
-
         state.visitId = parsed.visitId;
         state.patientId = parsed.patientId;
         state.patientName = parsed.patientName;
-
         state.lastUpdated = parsed.lastUpdated || Date.now();
         state.isDirty = calculateIsDirty(state);
       } catch (error) {
@@ -369,7 +327,9 @@ const billingSlice = createSlice({
 
     clearDraft: (state) => {
       try {
-        if (state.visitId) sessionStorage.removeItem(getDraftStorageKey(state.visitId));
+        if (state.visitId) {
+          sessionStorage.removeItem(getDraftStorageKey(state.visitId));
+        }
       } catch (error) {
         console.error('Error clearing billing draft:', error);
       }
@@ -377,14 +337,16 @@ const billingSlice = createSlice({
 
     clearAll: (state) => {
       try {
-        if (state.visitId) sessionStorage.removeItem(getDraftStorageKey(state.visitId));
+        if (state.visitId) {
+          sessionStorage.removeItem(getDraftStorageKey(state.visitId));
+        }
       } catch (error) {
         console.error('Error clearing draft on clearAll:', error);
       }
       return { ...INITIAL_BILLING_STATE };
     },
 
-    // Patient Info Actions
+    // ========== PATIENT INFO ACTIONS ==========
     setPatientInfo: (state, action: PayloadAction<{ visitId?: string; patientId?: string; patientName?: string }>) => {
       const { visitId, patientId, patientName } = action.payload;
       if (visitId !== undefined) state.visitId = visitId;
@@ -392,8 +354,94 @@ const billingSlice = createSlice({
       if (patientName !== undefined) state.patientName = patientName;
       updateMetadata(state);
     },
+
+    // ========== BACKEND SYNC ACTIONS ==========
+    hydrateBackendBilling: (state, action: PayloadAction<BillingRetrievalData>) => {
+      const mapped = mapRetrievedBillingToBackendState(action.payload);
+      state.backendChargeItems = mapped.backendChargeItems;
+      state.backendBillingMeta = mapped.backendBillingMeta;
+      state.backendBillingData = mapped.backendBillingData;
+      state.optimisticPersistedBalanceDelta = 0;
+      state.lastUpdated = Date.now();
+    },
+
+    clearBackendBilling: (state) => {
+      state.backendChargeItems = [];
+      state.backendBillingMeta = EMPTY_BACKEND_META;
+      state.backendBillingData = null;
+      state.optimisticPersistedBalanceDelta = 0;
+      state.lastUpdated = Date.now();
+    },
+
+    optimisticAdjustBackendItem: (
+      state,
+      action: PayloadAction<{
+        lineItemId: number;
+        action: 'increase' | 'decrease' | 'remove';
+        quantity: number;
+      }>
+    ) => {
+      const { lineItemId, action: adjustmentAction, quantity } = action.payload;
+      const itemIndex = state.backendChargeItems.findIndex((item) => item.lineItemId === lineItemId);
+
+      if (itemIndex === -1) return;
+
+      const item = state.backendChargeItems[itemIndex];
+      const safeQuantity = Math.max(0, Number(quantity) || 0);
+
+      if (safeQuantity === 0 && adjustmentAction !== 'remove') return;
+
+      const unitPrice = item.quantity > 0 ? item.totalAmount / item.quantity : item.service.unitPrice;
+      let balanceDelta = 0;
+
+      if (adjustmentAction === 'increase') {
+        const amountDelta = roundCurrency(unitPrice * safeQuantity);
+        item.quantity += safeQuantity;
+        item.totalAmount = roundCurrency(item.totalAmount + amountDelta);
+        balanceDelta = amountDelta;
+      }
+
+      if (adjustmentAction === 'decrease') {
+        const allowedDecrease = Math.min(safeQuantity, item.quantity);
+        const amountDelta = roundCurrency(unitPrice * allowedDecrease);
+        const nextQuantity = item.quantity - allowedDecrease;
+
+        if (nextQuantity <= 0) {
+          state.backendChargeItems.splice(itemIndex, 1);
+        } else {
+          item.quantity = nextQuantity;
+          item.totalAmount = roundCurrency(item.totalAmount - amountDelta);
+        }
+
+        balanceDelta = -amountDelta;
+      }
+
+      if (adjustmentAction === 'remove') {
+        balanceDelta = -roundCurrency(item.totalAmount);
+        state.backendChargeItems.splice(itemIndex, 1);
+      }
+
+      state.optimisticPersistedBalanceDelta = roundCurrency(state.optimisticPersistedBalanceDelta + balanceDelta);
+      state.lastUpdated = Date.now();
+    },
+
+    rollbackOptimisticBackendAdjustment: (
+      state,
+      action: PayloadAction<{
+        previousBackendChargeItems: BackendChargeItem[];
+        previousOptimisticPersistedBalanceDelta: number;
+      }>
+    ) => {
+      state.backendChargeItems = action.payload.previousBackendChargeItems;
+      state.optimisticPersistedBalanceDelta = action.payload.previousOptimisticPersistedBalanceDelta;
+      state.lastUpdated = Date.now();
+    },
   },
 });
+
+/* -------------------------------------------------------------------------- */
+/*                               EXPORT ACTIONS                               */
+/* -------------------------------------------------------------------------- */
 
 export const {
   openTray,
@@ -426,171 +474,164 @@ export const {
   hydrateBackendBilling,
   clearBackendBilling,
   optimisticAdjustBackendItem,
+  rollbackOptimisticBackendAdjustment,
 } = billingSlice.actions;
 
 export default billingSlice.reducer;
 
 /* -------------------------------------------------------------------------- */
-/*                                 SELECTORS                                  */
+/*                               SELECTORS                                    */
 /* -------------------------------------------------------------------------- */
 
-export const selectBilling = (state: { billing: BillingState }) => state.billing;
-export const selectIsTrayOpen = (state: { billing: BillingState }) => state.billing.trayOpen;
-export const selectCurrentStep = (state: { billing: BillingState }) => state.billing.currentStep;
-export const selectBillingViewMode = (state: { billing: BillingState }) => state.billing.viewMode; // ADDED
+// ========== BASE SELECTORS ==========
+export const selectBilling = (state: RootState) => state.billing;
+export const selectIsTrayOpen = (state: RootState) => state.billing.trayOpen;
+export const selectCurrentStep = (state: RootState) => state.billing.currentStep;
+export const selectBillingViewMode = (state: RootState) => state.billing.viewMode;
+export const selectBillingStatus = (state: RootState) => state.billing.status;
+export const selectIsDirty = (state: RootState) => state.billing.isDirty;
+export const selectIsProcessing = (state: RootState) => state.billing.isProcessing;
+export const selectBackendBillingMeta = (state: RootState) => state.billing.backendBillingMeta;
+export const selectBackendBillingData = (state: RootState) => state.billing.backendBillingData;
 
-/**
- * Draft-only charge items.
- * These are the items that will be submitted on the next save action.
- */
-export const selectChargeItems = (state: { billing: BillingState }) => state.billing.chargeItems;
-export const selectDraftChargeItems = (state: { billing: BillingState }) => state.billing.chargeItems;
+// ========== CHARGE ITEMS SELECTORS ==========
+export const selectChargeItems = (state: RootState) => state.billing.chargeItems;
+export const selectDraftChargeItems = (state: RootState) => state.billing.chargeItems;
+export const selectBackendChargeItems = (state: RootState) => state.billing.backendChargeItems;
 
-/**
- * Persisted backend billing items already saved in DB.
- */
-export const selectBackendChargeItems = (state: { billing: BillingState }) => state.billing.backendChargeItems;
-
-/**
- * Unified render list for UI.
- * Backend items are shown first, then current unsaved draft items.
- */
-export const selectRenderableChargeItems = (state: { billing: BillingState }): RenderableChargeItem[] => [
+export const selectRenderableChargeItems = (state: RootState): RenderableChargeItem[] => [
   ...state.billing.backendChargeItems,
   ...state.billing.chargeItems,
 ];
 
-/**
- * Effective status used by UI.
- * If backend says settled, UI must be read-only even if draft is empty/new.
- */
-export const selectBillingStatus = (state: { billing: BillingState }) => state.billing.status;
-export const selectEffectiveBillingStatus = (state: { billing: BillingState }) => {
-  const backendStatus = state.billing.backendBillingMeta.status;
-  const draftStatus = state.billing.status;
+// ========== PERSISTED BALANCE SELECTOR ==========
+export const selectPersistedBalance = createSelector(
+  [
+    (state: RootState) => state.billing.backendBillingData?.balance ?? 0,
+    (state: RootState) => state.billing.optimisticPersistedBalanceDelta ?? 0,
+  ],
+  (serverBalance, optimisticDelta) => Math.max(0, serverBalance + optimisticDelta)
+);
 
-  if (backendStatus === 'settled') return 'settled';
-  if (draftStatus === 'settled') return 'settled';
-  if (draftStatus === 'ready') return 'ready';
-  return backendStatus || draftStatus || 'draft';
-};
-
-export const selectIsDirty = (state: { billing: BillingState }) => state.billing.isDirty;
-export const selectIsProcessing = (state: { billing: BillingState }) => state.billing.isProcessing;
-export const selectBillingState = (state: { billing: BillingState }) => state.billing;
-export const selectBackendBillingMeta = (state: { billing: BillingState }) => state.billing.backendBillingMeta;
-export const selectBackendBillingData = (state: { billing: BillingState }) => state.billing.backendBillingData;
-
-export const selectPatientInfo = (state: { billing: BillingState }) => ({
+// ========== PATIENT INFO SELECTORS ==========
+export const selectPatientInfo = (state: RootState) => ({
   visitId: state.billing.visitId,
   patientId: state.billing.patientId,
   patientName: state.billing.patientName,
 });
 
-/**
- * User can only proceed with unsaved draft items.
- * Persisted backend items alone should not enable "save" again.
- */
-export const selectCanProceed = (state: { billing: BillingState }) => {
-  const { chargeItems } = state.billing;
-  const effectiveStatus = selectEffectiveBillingStatus(state);
-  return chargeItems.length > 0 && effectiveStatus !== 'settled';
-};
+// ========== EFFECTIVE STATUS SELECTOR ==========
+export const selectEffectiveBillingStatus = createSelector(
+  [
+    (state: RootState) => state.billing.backendBillingMeta.status,
+    (state: RootState) => state.billing.status,
+  ],
+  (backendStatus, draftStatus) => {
+    if (backendStatus === 'settled') return 'settled';
+    if (draftStatus === 'settled') return 'settled';
+    if (draftStatus === 'ready') return 'ready';
+    return backendStatus || draftStatus || 'draft';
+  }
+);
 
-/**
- * Draft-only billing data for submission.
- * IMPORTANT: This selector intentionally excludes persisted backend items
- * to avoid double-billing already saved charges.
- */
-export const selectBillingData = (state: { billing: BillingState }) => {
-  const { chargeItems, discount, taxes, paymentMethods } = state.billing;
+// ========== CAN PROCEED SELECTOR ==========
+export const selectCanProceed = createSelector(
+  [
+    (state: RootState) => state.billing.chargeItems.length,
+    selectEffectiveBillingStatus,
+  ],
+  (hasDraftItems, effectiveStatus) => hasDraftItems > 0 && effectiveStatus !== 'settled'
+);
 
-  const subtotal = chargeItems.reduce((sum, item) => sum + item.totalAmount, 0);
+// ========== DRAFT BILLING DATA SELECTOR ==========
+export const selectBillingData = createSelector(
+  [
+    (state: RootState) => state.billing.chargeItems,
+    (state: RootState) => state.billing.discount,
+    (state: RootState) => state.billing.taxes,
+    (state: RootState) => state.billing.paymentMethods,
+  ],
+  (chargeItems, discount, taxes, paymentMethods) => {
+    const subtotal = chargeItems.reduce((sum, item) => sum + item.totalAmount, 0);
 
-  let discountAmount = 0;
-  if (discount.type === 'percentage') discountAmount = subtotal * (discount.value / 100);
-  else discountAmount = discount.value;
+    let discountAmount = 0;
+    if (discount.type === 'percentage') {
+      discountAmount = subtotal * (discount.value / 100);
+    } else {
+      discountAmount = discount.value;
+    }
+    discountAmount = Math.min(discountAmount, subtotal);
 
-  discountAmount = Math.min(discountAmount, subtotal);
+    const taxableAmount = subtotal - discountAmount;
 
-  const taxableAmount = subtotal - discountAmount;
+    const updatedTaxes = taxes.map((tax) => ({
+      ...tax,
+      amount: taxableAmount * (tax.rate / 100),
+    }));
 
-  const updatedTaxes = taxes.map((tax) => ({
-    ...tax,
-    amount: taxableAmount * (tax.rate / 100),
-  }));
+    const taxTotal = updatedTaxes.reduce((sum, tax) => sum + tax.amount, 0);
+    const grandTotal = taxableAmount + taxTotal;
 
-  const taxTotal = updatedTaxes.reduce((sum, tax) => sum + tax.amount, 0);
-  const grandTotal = taxableAmount + taxTotal;
+    const totalPaid = paymentMethods.reduce((sum, method) => sum + method.amount, 0);
+    const balance = Math.max(0, grandTotal - totalPaid);
 
-  const totalPaid = paymentMethods.reduce((sum, method) => sum + method.amount, 0);
-  const balance = Math.max(0, grandTotal - totalPaid);
+    return {
+      subtotal,
+      discountAmount,
+      taxableAmount,
+      taxes: updatedTaxes,
+      taxTotal,
+      grandTotal,
+      totalPaid,
+      balance,
+      isPaid: balance === 0,
+    };
+  }
+);
 
-  return {
-    subtotal,
-    discountAmount,
-    taxableAmount,
-    taxes: updatedTaxes,
-    taxTotal,
-    grandTotal,
-    totalPaid,
-    balance,
-    isPaid: balance === 0,
-  };
-};
+// ========== DISPLAY BILLING DATA SELECTOR ==========
+export const selectDisplayBillingData = createSelector(
+  [
+    selectBillingData,
+    selectPersistedBalance,
+    selectBackendBillingData,
+    selectBackendChargeItems,
+    selectChargeItems,
+  ],
+  (draft, persistedBalance, persistedBillingData, backendChargeItems, draftChargeItems) => {
+    const displayedSubtotal = [...backendChargeItems, ...draftChargeItems].reduce(
+      (sum, item) => sum + item.totalAmount,
+      0
+    );
 
-/**
- * Combined display data for UI summary if you want to show both
- * persisted totals + current draft totals together.
- */
-export const selectDisplayBillingData = (state: { billing: BillingState }) => {
-  const draft = selectBillingData(state);
-  const persisted = state.billing.backendBillingData;
+    const draftGrandTotal = draft.grandTotal;
+    const displayedBalance = persistedBalance + draftGrandTotal;
+    const displayedGrandTotal = (persistedBillingData?.grandTotal ?? 0) + draftGrandTotal;
+    const displayedTotalPaid = (persistedBillingData?.totalPaid ?? 0) + draft.totalPaid;
 
-  const mergeTaxes = (
-    existing: Array<{ name: string; rate: number; amount: number }> = [],
-    incoming: Array<{ name: string; rate: number; amount: number }> = []
-  ) => {
-    const merged = new Map<string, { name: string; rate: number; amount: number }>();
+    const displayedTaxes = mergeTaxes(persistedBillingData?.taxes ?? [], draft.taxes ?? []);
 
-    [...existing, ...incoming].forEach((tax) => {
-      const key = `${String(tax.name).toLowerCase()}|${Number(tax.rate || 0).toFixed(2)}`;
-      const current = merged.get(key);
+    return {
+      // Persisted values
+      persistedSubtotal: persistedBillingData?.subtotal ?? 0,
+      persistedGrandTotal: persistedBillingData?.grandTotal ?? 0,
+      persistedTotalPaid: persistedBillingData?.totalPaid ?? 0,
+      persistedBalance,
+      persistedTaxes: persistedBillingData?.taxes ?? [],
 
-      if (!current) {
-        merged.set(key, {
-          name: tax.name,
-          rate: Number(tax.rate || 0),
-          amount: Number(tax.amount || 0),
-        });
-      } else {
-        current.amount = Number((current.amount + Number(tax.amount || 0)).toFixed(2));
-        merged.set(key, current);
-      }
-    });
+      // Draft values
+      draftSubtotal: draft.subtotal,
+      draftGrandTotal,
+      draftTotalPaid: draft.totalPaid,
+      draftBalance: draft.balance,
+      draftTaxes: draft.taxes ?? [],
 
-    return Array.from(merged.values());
-  };
-
-  const displayedTaxes = mergeTaxes(persisted?.taxes ?? [], draft.taxes ?? []);
-
-  return {
-    persistedSubtotal: persisted?.subtotal ?? 0,
-    persistedGrandTotal: persisted?.grandTotal ?? 0,
-    persistedTotalPaid: persisted?.totalPaid ?? 0,
-    persistedBalance: persisted?.balance ?? 0,
-    persistedTaxes: persisted?.taxes ?? [],
-
-    draftSubtotal: draft.subtotal,
-    draftGrandTotal: draft.grandTotal,
-    draftTotalPaid: draft.totalPaid,
-    draftBalance: draft.balance,
-    draftTaxes: draft.taxes ?? [],
-
-    displayedSubtotal: (persisted?.subtotal ?? 0) + draft.subtotal,
-    displayedGrandTotal: (persisted?.grandTotal ?? 0) + draft.grandTotal,
-    displayedTotalPaid: (persisted?.totalPaid ?? 0) + draft.totalPaid,
-    displayedBalance: (persisted?.balance ?? 0) + draft.balance,
-    displayedTaxes,
-  };
-};
+      // Displayed values (combined)
+      displayedSubtotal,
+      displayedGrandTotal,
+      displayedTotalPaid,
+      displayedBalance,
+      displayedTaxes,
+    };
+  }
+);

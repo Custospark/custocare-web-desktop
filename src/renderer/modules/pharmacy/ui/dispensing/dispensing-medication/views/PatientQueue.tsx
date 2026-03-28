@@ -315,6 +315,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
   const [selectedVisitUuid, setSelectedVisitUuid] = useState<string | null>(null);
   const [lastRefetchTime, setLastRefetchTime] = useState<Date>(new Date());
+  const [isInlineErrorDismissed, setIsInlineErrorDismissed] = useState(false);
 
   const [filters] = useState<QueueFilters>({
     ...initialFilters,
@@ -354,8 +355,10 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   const isInitialLoading = !hasFetchedQueue && (externalLoading ?? queryLoading);
   const isRefreshing = !isInitialLoading && (isRefetching || isManualRefreshing);
   const showBlockingError = !!error && !hasFetchedQueue;
+  
+  // Only show inline error if it hasn't been dismissed by the user
+  const showInlineError = !!error && hasFetchedQueue && !isInlineErrorDismissed;
   const showInlineRefreshLoader = isRefreshing && hasFetchedQueue;
-  const showInlineError = !!error && hasFetchedQueue;
 
   const filteredAndSortedVisits = useMemo((): QueueVisitItem[] => {
     let filtered = [...queueVisits];
@@ -532,10 +535,16 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     try {
       setIsManualRefreshing(true);
       await refetch();
+      // When manually refreshing, also reset the inline error dismissal so a new error can be shown
+      setIsInlineErrorDismissed(false);
     } finally {
       setIsManualRefreshing(false);
     }
   }, [isManualRefreshing, isRefetching, refetch]);
+
+  const handleDismissInlineError = useCallback(() => {
+    setIsInlineErrorDismissed(true);
+  }, []);
 
   const getLastRefreshDisplay = (): string => {
     const now = new Date();
@@ -916,7 +925,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
             >
               <div className="p-4">
                 <LoadingSkeleton
-                  variant="default"
+                  variant="minimal"
                   theme={theme}
                   message="Refreshing patient queue..."
                 />
@@ -925,7 +934,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Inline stale-data error */}
+        {/* Inline stale-data error with dismiss button */}
         <AnimatePresence>
           {showInlineError && (
             <motion.div
@@ -952,6 +961,21 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                     {error?.message || 'Showing the most recent available queue data.'}
                   </p>
                 </div>
+
+                <button
+                  onClick={handleDismissInlineError}
+                  className={cn(
+                    'flex-shrink-0 rounded-lg p-1.5 transition-all duration-200',
+                    isDark
+                      ? 'hover:bg-red-800/30 text-red-300 hover:text-red-200'
+                      : 'hover:bg-red-100 text-red-500 hover:text-red-700',
+                    'cursor-pointer'
+                  )}
+                  aria-label="Dismiss error"
+                  title="Dismiss"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
             </motion.div>
           )}

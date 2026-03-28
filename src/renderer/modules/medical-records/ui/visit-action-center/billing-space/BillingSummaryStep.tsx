@@ -27,7 +27,7 @@ import {
   selectIsProcessing,
   selectBillingData,
   selectDisplayBillingData,
-  selectBillingState,
+  selectBilling,
   selectBackendBillingMeta,
 } from './billingSlice';
 import {
@@ -156,7 +156,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   // Combined display financial data
   const displayBillingData = useSelector(selectDisplayBillingData);
 
-  const billingState = useSelector(selectBillingState);
+  const billingState = useSelector(selectBilling);
   const backendBillingMeta = useSelector(selectBackendBillingMeta);
 
   const status = useSelector(selectEffectiveBillingStatus);

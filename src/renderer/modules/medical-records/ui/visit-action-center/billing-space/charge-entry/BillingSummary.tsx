@@ -31,7 +31,7 @@ import {
   clearAll as clearBillingState,
   closeTray,
   selectBillingData,
-  selectBillingState,
+  selectBilling,
   selectDraftChargeItems,
   selectRenderableChargeItems,
   selectBackendBillingMeta,
@@ -79,7 +79,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
   // Combined rendered items (backend persisted + draft)
   const renderableChargeItems = useSelector(selectRenderableChargeItems);
 
-  const billingState = useSelector(selectBillingState);
+  const billingState = useSelector(selectBilling);
   const draftBillingData = useSelector(selectBillingData);
   const backendBillingMeta = useSelector(selectBackendBillingMeta);
   const displayBillingData = useSelector(selectDisplayBillingData);
@@ -90,6 +90,9 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
   const [currentAction, setCurrentAction] = useState<BillingAction>(null);
 
   const isDark = theme === 'dark';
+
+  // Check if persisted balance is currently syncing (optimistic update in progress)
+  const isPersistedBalanceSyncing = billingState.optimisticPersistedBalanceDelta !== 0;
 
   // ---------------------------------------------------------------------------
   // Derived values
@@ -437,9 +440,14 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
               <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>
                 Existing balance
               </span>
-              <span className={`font-semibold ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
-                {formatCurrency(displayBillingData.persistedBalance)}
-              </span>
+              <div className="flex items-center gap-2">
+                {isPersistedBalanceSyncing && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" />
+                )}
+                <span className={`font-semibold ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
+                  {formatCurrency(displayBillingData.persistedBalance)}
+                </span>
+              </div>
             </div>
 
             <div className="flex items-center justify-between text-sm">

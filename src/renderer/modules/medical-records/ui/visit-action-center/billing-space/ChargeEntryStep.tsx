@@ -17,6 +17,8 @@ import {
   selectPatientInfo,
   selectBackendChargeItems,
   optimisticAdjustBackendItem,
+  rollbackOptimisticBackendAdjustment,
+  selectBilling,
 } from './billingSlice';
 import PersistedBillingAdjustmentModal from './charge-entry/PersistedBillingAdjustmentModal';
 
@@ -72,6 +74,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   const backendChargeItems = useSelector(selectBackendChargeItems);
   const patientInfo = useSelector(selectPatientInfo);
   const billingStatus = useSelector(selectEffectiveBillingStatus);
+  const billingState = useSelector(selectBilling);
 
   // Once backend says settled, the entire charge-entry becomes view only.
   const isReadOnly = billingStatus === 'settled';
@@ -274,17 +277,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     }, 300);
   };
 
-  // const handleResetBanner = () => {
-  //   try {
-  //     localStorage.removeItem(BANNER_VISIBILITY_KEY);
-  //     setIsBannerVisible(true);
-  //     setBannerAnimation('enter');
-  //     setTimeout(() => setBannerAnimation(null), 300);
-  //   } catch (error) {
-  //     console.error('Failed to reset banner:', error);
-  //   }
-  // };
-
   // Optional: Show banner again after version update
   useEffect(() => {
     const checkBannerVersion = () => {
@@ -450,7 +442,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   const handleAdjustmentDialogSubmit = () => {
     if (!pendingAdjustment) return;
 
-    // const { item, action: originalAction } = pendingAdjustment;
     const { item } = pendingAdjustment;
     const finalQuantity = adjustmentNewQuantity;
     const currentQuantity = item.quantity;
@@ -475,6 +466,16 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
       return;
     }
 
+    // Capture previous state for rollback
+    const previousBackendChargeItems = billingState.backendChargeItems.map((item) => ({
+      ...item,
+      service: { ...item.service },
+      permissions: { ...item.permissions },
+      audit: item.audit ? { ...item.audit } : undefined,
+    }));
+
+    const previousOptimisticPersistedBalanceDelta = billingState.optimisticPersistedBalanceDelta;
+
     // Optimistically update Redux billing slice
     dispatch(
       optimisticAdjustBackendItem({
@@ -487,9 +488,15 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     // Close dialog right away — user sees the updated list instantly
     closeAdjustmentDialog();
 
-    // Fire the mutation
-    submitPersistedAdjustment(item, apiAction, deltaQuantity, rsn).catch(() => {
-      // Error handled by mutation's onError
+    // Fire the mutation with rollback on failure
+    submitPersistedAdjustment(item, apiAction, deltaQuantity, rsn).catch((error) => {
+      console.error('Failed to adjust persisted item:', error);
+      dispatch(
+        rollbackOptimisticBackendAdjustment({
+          previousBackendChargeItems,
+          previousOptimisticPersistedBalanceDelta,
+        })
+      );
     });
   };
 

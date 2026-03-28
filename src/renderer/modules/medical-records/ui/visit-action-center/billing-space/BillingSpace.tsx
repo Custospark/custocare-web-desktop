@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ShoppingCart, Receipt, BadgeDollarSign, RefreshCw, Database, FilePlus2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -16,6 +16,7 @@ import {
   useGetBillingByVisit,
 } from '../../../api/billable-items/BillableItemsQueries';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
+
 interface BillingSpaceProps {
   theme?: 'light' | 'dark';
   className?: string;
@@ -63,7 +64,9 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
 
   // Refs for prefetch tracking
   const hasPrefetchedRef = useRef(false);
-  const initialLoadRef = useRef(true);
+  
+  // State for initial load tracking
+  const [hasInitialLoaded, setHasInitialLoaded] = useState(false);
 
   // Display values with fallbacks
   const displayPatientName = patientName || patientInfo.patientName;
@@ -100,7 +103,7 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
   });
 
   // Determine if billing data is loading (initial load or refetching)
-  const isBillingLoading = isLoadingBilling || (isFetchingBilling && initialLoadRef.current);
+  const isBillingLoading = isLoadingBilling || (isFetchingBilling && !hasInitialLoaded);
 
   // ---------------------------------------------------------------------------
   // Effects
@@ -115,8 +118,8 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
     if (isBillingLoading) return;
     
     // Mark initial load as complete
-    if (initialLoadRef.current) {
-      initialLoadRef.current = false;
+    if (!hasInitialLoaded) {
+      setHasInitialLoaded(true);
     }
 
     // Handle successful response with billing data
@@ -130,7 +133,7 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
     
     // Handle error silently - no need to show error in billing widget
     // The empty state will be shown naturally
-  }, [backendBillingResponse, dispatch, isBillingLoading]);
+  }, [backendBillingResponse, dispatch, isBillingLoading, hasInitialLoaded]);
 
   // ---------------------------------------------------------------------------
   // Memoized computed values
@@ -271,12 +274,13 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
   /**
    * Show loading skeleton while billing data is being fetched
    * This prevents layout shift and provides better UX
+   * Uses variant="default" for consistent loading experience
    */
   if (isBillingLoading) {
     return (
       <div className={className}>
         <LoadingSkeleton
-          variant="card"
+          variant="default"
           message="Loading billing information..."
           theme={theme}
           className="rounded-lg"
@@ -445,8 +449,18 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
             </button>
           </div>
 
+          {/* Loading indicator for background operations (optional) */}
+          {isFetchingBilling && !isBillingLoading && (
+            <div className="flex items-center justify-center gap-1.5 pt-2">
+              <RefreshCw className="w-3 h-3 animate-spin text-blue-500" />
+              <span className={`text-xs ${colors.text.muted}`}>
+                Updating billing...
+              </span>
+            </div>
+          )}
+
           {/* Loading indicator for prefetch */}
-          {isFetchingBillableItems && (
+          {isFetchingBillableItems && !isFetchingBilling && (
             <div className="flex items-center justify-center gap-1.5 pt-2">
               <RefreshCw className="w-3 h-3 animate-spin text-blue-500" />
               <span className={`text-xs ${colors.text.muted}`}>
@@ -454,6 +468,11 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
               </span>
             </div>
           )}
+
+          {/* Accessibility Announcement */}
+          <div className="sr-only" aria-live="polite">
+            {`Billing space loaded for visit ${displayVisitId}. ${itemsCount} items, total due ${formatCurrency(totalDue)}.`}
+          </div>
         </div>
       </div>
     </div>
