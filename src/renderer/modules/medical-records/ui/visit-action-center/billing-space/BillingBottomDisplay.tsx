@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Receipt, ShoppingCart, Database, FilePlus2, RefreshCw } from 'lucide-react';
 import { type RootState } from '../../../../../app/store/rootReducer';
@@ -55,8 +55,8 @@ export const BillingBottomDisplay: React.FC<BillingBottomDisplayProps> = ({ them
   const displayBillingData = useSelector(selectDisplayBillingData);
   const billingStatus = useSelector(selectEffectiveBillingStatus);
 
-  // Refs for tracking initial load
-  const initialLoadRef = useRef(true);
+  // State for tracking initial load
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Derived values with fallbacks
   const visitId = activeVisit?.visit_id ? Number(activeVisit.visit_id) : 0;
@@ -82,7 +82,7 @@ export const BillingBottomDisplay: React.FC<BillingBottomDisplayProps> = ({ them
   });
 
   // Determine if billing data is loading (initial load or refetching)
-  const isBillingLoading = isLoadingBilling || (isFetchingBilling && initialLoadRef.current);
+  const isBillingLoading = isLoadingBilling || (isFetchingBilling && isInitialLoad);
 
   // ---------------------------------------------------------------------------
   // Effects
@@ -96,8 +96,8 @@ export const BillingBottomDisplay: React.FC<BillingBottomDisplayProps> = ({ them
     if (isBillingLoading) return;
     
     // Mark initial load as complete
-    if (initialLoadRef.current) {
-      initialLoadRef.current = false;
+    if (isInitialLoad) {
+      setIsInitialLoad(false);
     }
 
     // Handle successful response with billing data
@@ -110,7 +110,7 @@ export const BillingBottomDisplay: React.FC<BillingBottomDisplayProps> = ({ them
     }
     
     // Handle error silently - component will show empty state naturally
-  }, [backendBillingResponse, dispatch, isBillingLoading]);
+  }, [backendBillingResponse, dispatch, isBillingLoading, isInitialLoad]);
 
   // ---------------------------------------------------------------------------
   // Memoized computed values
