@@ -326,50 +326,50 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     [dispatch]
   );
 
-  const handleClose = useCallback(async () => {
-    if (status === 'settled') {
-      const confirmed = await confirm({
-        title: 'Close billing window?',
-        message:
-          'Payment has been successfully completed. All records are saved and the receipt has been generated.',
-        confirmText: 'Close',
-        cancelText: 'Stay',
-        variant: 'info',
-        theme,
-      });
+const handleClose = useCallback(async () => {
+  if (status === 'settled') {
+    const confirmed = await confirm({
+      title: 'Close billing window?',
+      message:
+        'Payment has been successfully completed. All records are saved and the receipt has been generated.',
+      confirmText: 'Close',
+      cancelText: 'Stay',
+      variant: 'info',
+      theme,
+    });
 
-      if (confirmed) {
-        dispatch(clearAll());
-        dispatch(clearActiveVisit());
-        dispatch(clearPendingForwarding());
-        navigate(QUEUE_ROUTE);
-      }
-
-      return;
+    if (confirmed) {
+      dispatch(clearAll());
+      dispatch(clearActiveVisit());
+      dispatch(clearPendingForwarding());
+      navigate(QUEUE_ROUTE);
     }
 
-    if (isDirty) {
-      const confirmed = await confirm({
-        title: 'Discard billing changes?',
-        message: 'You have unsaved billing changes. Closing will discard them.',
-        confirmText: 'Discard',
-        cancelText: 'Stay',
-        variant: 'warning',
-        theme,
-      });
+    return;
+  }
 
-      if (confirmed) {
-        dispatch(clearAll());
-        dispatch(clearPendingForwarding());
-        dispatch(closeTray());
-      }
+  if (isDirty) {
+    const confirmed = await confirm({
+      title: 'Discard billing changes?',
+      message: 'You have unsaved billing changes. Closing will discard them.',
+      confirmText: 'Discard',
+      cancelText: 'Stay',
+      variant: 'warning',
+      theme,
+    });
 
-      return;
+    if (confirmed) {
+      dispatch(closeTray());
+      dispatch(clearPendingForwarding());
     }
 
-    dispatch(closeTray());
-    dispatch(clearPendingForwarding());
-  }, [confirm, dispatch, isDirty, navigate, theme, status, QUEUE_ROUTE]);
+    return;
+  }
+
+  dispatch(closeTray());
+  dispatch(clearPendingForwarding());
+}, [confirm, dispatch, isDirty, navigate, theme, status, QUEUE_ROUTE]);
+
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {

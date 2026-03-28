@@ -94,9 +94,40 @@ const billingSlice = createSlice({
       updateMetadata(state);
     },
 
-    closeTray: (state) => {
+    /**
+     * Close the billing tray but preserve backend persisted data.
+     * Only clears UI draft data (chargeItems, discount, paymentMethods, etc.)
+     * Backend data (backendChargeItems, backendBillingMeta, backendBillingData) remains intact.
+     */
+      closeTray: (state) => {
+      try {
+        if (state.visitId) {
+          sessionStorage.removeItem(getDraftStorageKey(state.visitId));
+        }
+      } catch (error) {
+        console.error('Error clearing billing draft on close:', error);
+      }
+
+      // Clear only draft/UI state
+      state.chargeItems = [];
+      state.discount = { ...DEFAULT_DISCOUNT };
+      state.taxes = INITIAL_BILLING_STATE.taxes.map((tax) => ({ ...tax }));
+      state.paymentMethods = DEFAULT_PAYMENT_METHODS.map((method) => ({ ...method }));
+      state.additionalNotes = '';
+      state.status = 'draft';
+      state.receiptNumber = undefined;
+      state.isProcessing = false;
+      state.currentStep = 'charge_entry';
       state.trayOpen = false;
       state.viewMode = 'expanded';
+      state.isDirty = false;
+
+      // Preserve backend persisted data:
+      // state.backendChargeItems
+      // state.backendBillingMeta
+      // state.backendBillingData
+      // state.optimisticPersistedBalanceDelta
+
       updateMetadata(state);
     },
 
@@ -335,6 +366,11 @@ const billingSlice = createSlice({
       }
     },
 
+    /**
+     * Completely clear ALL billing data including backend persisted data.
+     * Use this only when explicitly needed (e.g., logging out, switching patients).
+     * For normal tray closing, use closeTray() instead.
+     */
     clearAll: (state) => {
       try {
         if (state.visitId) {
@@ -343,6 +379,8 @@ const billingSlice = createSlice({
       } catch (error) {
         console.error('Error clearing draft on clearAll:', error);
       }
+      
+      // Clear EVERYTHING - both UI draft and backend data
       return { ...INITIAL_BILLING_STATE };
     },
 

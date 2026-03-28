@@ -32,6 +32,24 @@ export const makeBillableKey = (s: Pick<ServiceItem, 'id' | 'code' | 'category'>
   return `${code}::${category}::${id}`;
 };
 
+
+
+export const createDefaultDiscount = (): Discount => ({
+  type: 'percentage',
+  value: 0,
+  reason: '',
+});
+
+export const createDefaultTaxes = (): Tax[] => [
+  { name: 'VAT', rate: 0, amount: 0 },
+  { name: 'Service Charge', rate: 0, amount: 0 },
+];
+
+export const createDefaultPaymentMethods = (): PaymentMethod[] => [
+  { type: 'cash', amount: 0, details: '' },
+];
+
+
 /* -------------------------------------------------------------------------- */
 /*                              SOURCE / POLICY TYPES                         */
 /* -------------------------------------------------------------------------- */
@@ -231,9 +249,9 @@ export const EMPTY_BACKEND_META: BackendBillingMeta = {
 };
 export const INITIAL_BILLING_STATE: BillingState = {
   chargeItems: [],
-  discount: DEFAULT_DISCOUNT,
-  taxes: DEFAULT_TAXES,
-  paymentMethods: DEFAULT_PAYMENT_METHODS,
+  discount: createDefaultDiscount(),
+  taxes: createDefaultTaxes(),
+  paymentMethods: createDefaultPaymentMethods(),
   additionalNotes: '',
   status: 'draft',
   receiptNumber: undefined,
@@ -381,6 +399,7 @@ export const mapRetrievedBillingToBackendState = (data: BillingRetrievalData) =>
     backendBillingData: data.billing_data ?? null,
   };
 };
+
 
 // Storage key for drafts
 export const getDraftStorageKey = (visitId?: string) => `billing_draft_${visitId || 'global'}`;
