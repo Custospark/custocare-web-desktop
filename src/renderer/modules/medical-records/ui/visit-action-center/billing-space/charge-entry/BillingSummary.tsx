@@ -280,29 +280,16 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
       return false;
     }
   }, [billingMutation, navigate, buildPendingBillingPayload, clearBillingDataAndVisit]);
-
   /**
    * Action: PROCEED (to payment)
-   * - Persists billing data
+   * - DOES NOT persist billing data
    * - DOES NOT clear anything
-   * - Navigates to payment screen
+   * - Simply redirects to payment screen
    */
-  const handleProceedAction = useCallback(async () => {
-    // Persist the draft billing data first
-    const payload = buildPendingBillingPayload();
-    if (payload) {
-      try {
-        await billingMutation.mutateAsync(payload);
-      } catch (error) {
-        console.error('Failed to persist billing data before proceeding:', error);
-        // Continue to payment even if persistence fails? Original behavior suggests proceed anyway
-      }
-    }
-    
-    // PROCEED: Don't clear anything - payment will handle its own state
+  const handleProceedAction = useCallback(() => {
+    // PROCEED: Just navigate to payment without any mutations or clearing
     onProceedToBilling();
-    return true;
-  }, [billingMutation, onProceedToBilling, buildPendingBillingPayload]);
+  }, [onProceedToBilling]);
 
   // ---------------------------------------------------------------------------
   // Unified action dispatcher
