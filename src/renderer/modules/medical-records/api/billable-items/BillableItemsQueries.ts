@@ -122,133 +122,171 @@ export const useGetBillingByVisit = (
 /*                             MUTATION HOOKS                                 */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Submit/finalize billing data for a visit.
- *
- * SAFETY GUARANTEE:
- * - Prevents duplicate HTTP POST requests while one billing save is already in-flight.
- * - This protects against rapid double-clicks / repeated taps on slow internet.
- * - Consumers should use mutateAsync (safe wrapped version returned here).
- */
-export const useSubmitBilling = (
-  callbacks: MutationCallbacks<BillingSubmissionResponse, AxiosError<ApiErrorResponse>> = {}
-) => {
-  const queryClient = useQueryClient();
-  const { showToast } = useToast();
-  const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
-
-  /**
-   * Stores the current in-flight billing request promise.
-   * While this exists, duplicate submissions return the same promise instead of
-   * creating a second POST request.
-   */
-  const inFlightRequestRef = useRef<Promise<BillingSubmissionResponse> | null>(null);
-
-  const mutation = useMutation<
-    BillingSubmissionResponse,
-    AxiosError<ApiErrorResponse>,
-    BillingSubmissionPayload
-  >({
-    mutationFn: async (payload: BillingSubmissionPayload) => {
-      const response = await axiosInstance.post<BillingSubmissionResponse>(
-        '/billing/save',
-        payload,
-        {
-          headers: {
-            'X-Facility-Id': facilityId,
-          },
-        }
+    /**
+     * Submit/finalize billing data for a visit.
+     *
+     * SAFETY GUARANTEE:
+     * - Prevents duplicate HTTP POST requests while one billing save is already in-flight.
+     * - This protects against rapid double-clicks / repeated taps on slow internet.
+     * - Consumers should use mutateAsync (safe wrapped version returned here).
+     */
+    export const useSubmitBilling = (
+      callbacks: MutationCallbacks<
+        BillingSubmissionResponse,
+        AxiosError<ApiErrorResponse>
+      > = {}
+    ) => {
+      const queryClient = useQueryClient();
+      const { showToast } = useToast();
+      const facilityId = useSelector((state: RootState) =>
+        getActiveFacilityId(state)
       );
 
-      return response.data;
-    },
+      /**
+       * Tracks current in-flight request (prevents duplicate POSTs)
+       */
+      const inFlightRequestRef = useRef<Promise<BillingSubmissionResponse> | null>(null);
 
-    onSuccess: (data, variables) => {
-      const successMessage = data.message || 'Billing saved successfully!';
-      showToast('success', successMessage, 8000);
+      /**
+       * Stores idempotency key for current request lifecycle
+       */
+      const idempotencyKeyRef = useRef<string | null>(null);
 
-      void queryClient.invalidateQueries({
-        queryKey: billingItemsKeys.detail(variables.visit_id),
-      });
+      /**
+       * Generate unique idempotency key
+       */
+      const generateIdempotencyKey = () => {
+        return crypto.randomUUID(); // modern & reliable
+      };
 
-      callbacks.onSuccess?.(data);
-    },
-
-    onError: (error: AxiosError<ApiErrorResponse>) => {
-      const apiMessage = error.response?.data?.message || error.message || 'Failed to save billing.';
-
-      let errorDetails = '';
-      if (error.response?.data?.errors) {
-        errorDetails = Object.entries(error.response.data.errors)
-          .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
-          .join(' | ');
-      }
-
-      const displayMessage = errorDetails ? `${apiMessage} (${errorDetails})` : apiMessage;
-      showToast('error', displayMessage, 8000);
-
-      callbacks.onError?.(error);
-    },
-  });
-
-  /**
-   * Safe async mutation:
-   * - first call starts the network request
-   * - subsequent calls while pending reuse the same promise
-   * - no second POST is sent
-   */
-  const mutateOnceAsync = useCallback(
-    (payload: BillingSubmissionPayload): Promise<BillingSubmissionResponse> => {
-      if (inFlightRequestRef.current) {
-        return inFlightRequestRef.current;
-      }
-
-      const requestPromise = mutation.mutateAsync(payload).finally(() => {
+      /**
+       * Reset request state after completion
+       */
+      const resetRequestState = () => {
         inFlightRequestRef.current = null;
-      });
+        idempotencyKeyRef.current = null;
+      };
 
-      inFlightRequestRef.current = requestPromise;
-      return requestPromise;
-    },
-    [mutation]
-  );
-
-  /**
-   * Safe callback-style mutation:
-   * - ignored while another billing save is in progress
-   * - prevents duplicate submit taps from creating another request
-   */
-  const mutateOnce = useCallback(
-    (
-      payload: BillingSubmissionPayload,
-      options?: MutateOptions<
+      /**
+       * Core mutation
+       */
+      const mutation = useMutation<
         BillingSubmissionResponse,
         AxiosError<ApiErrorResponse>,
-        BillingSubmissionPayload,
-        unknown
-      >
-    ) => {
-      if (inFlightRequestRef.current) {
-        return;
-      }
+        BillingSubmissionPayload
+      >({
+        mutationFn: async (payload) => {
+          // Ensure one key per request lifecycle
+          if (!idempotencyKeyRef.current) {
+            idempotencyKeyRef.current = generateIdempotencyKey();
+          }
 
-      const requestPromise = mutation.mutateAsync(payload, options).finally(() => {
-        inFlightRequestRef.current = null;
+          const response = await axiosInstance.post<BillingSubmissionResponse>(
+            '/billing/save',
+            payload,
+            {
+              headers: {
+                'X-Facility-Id': facilityId,
+                'X-Idempotency-Key': idempotencyKeyRef.current,
+              },
+            }
+          );
+
+          return response.data;
+        },
+
+        onSuccess: (data, variables) => {
+          const successMessage = data.message || 'Billing saved successfully!';
+          showToast('success', successMessage, 8000);
+
+          // Invalidate relevant queries
+          void queryClient.invalidateQueries({
+            queryKey: billingItemsKeys.detail(variables.visit_id),
+          });
+
+          callbacks.onSuccess?.(data);
+        },
+
+        onError: (error) => {
+          const apiMessage =
+            error.response?.data?.message ||
+            error.message ||
+            'Failed to save billing.';
+
+          let errorDetails = '';
+
+          if (error.response?.data?.errors) {
+            errorDetails = Object.entries(error.response.data.errors)
+              .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
+              .join(' | ');
+          }
+
+          const displayMessage = errorDetails
+            ? `${apiMessage} (${errorDetails})`
+            : apiMessage;
+
+          showToast('error', displayMessage, 8000);
+
+          callbacks.onError?.(error);
+        },
       });
 
-      inFlightRequestRef.current = requestPromise;
-    },
-    [mutation]
-  );
+      /**
+       * Promise-based safe mutation (deduplicated)
+       */
+      const mutateOnceAsync = useCallback(
+        (payload: BillingSubmissionPayload): Promise<BillingSubmissionResponse> => {
+          if (inFlightRequestRef.current) {
+            return inFlightRequestRef.current; // reuse existing request
+          }
 
-  return {
-    ...mutation,
-    mutate: mutateOnce,
-    mutateAsync: mutateOnceAsync,
-    mutateOnceAsync,
-  };
-};
+          const requestPromise = mutation
+            .mutateAsync(payload)
+            .finally(() => {
+              resetRequestState();
+            });
 
+          inFlightRequestRef.current = requestPromise;
+          return requestPromise;
+        },
+        [mutation]
+      );
+
+      /**
+       * Callback-style safe mutation
+       */
+      const mutateOnce = useCallback(
+        (
+          payload: BillingSubmissionPayload,
+          options?: MutateOptions<
+            BillingSubmissionResponse,
+            AxiosError<ApiErrorResponse>,
+            BillingSubmissionPayload,
+            unknown
+          >
+        ) => {
+          if (inFlightRequestRef.current) {
+            return; // ignore duplicate trigger
+          }
+
+          const requestPromise = mutation
+            .mutateAsync(payload, options)
+            .finally(() => {
+              resetRequestState();
+            });
+
+          inFlightRequestRef.current = requestPromise;
+        },
+        [mutation]
+      );
+
+      return {
+        ...mutation,
+        mutate: mutateOnce,
+        mutateAsync: mutateOnceAsync,
+        mutateOnceAsync,
+      };
+    };
 /* -------------------------------------------------------------------------- */
 /*                           OPTIMISTIC UPDATE HELPERS                        */
 /* -------------------------------------------------------------------------- */
