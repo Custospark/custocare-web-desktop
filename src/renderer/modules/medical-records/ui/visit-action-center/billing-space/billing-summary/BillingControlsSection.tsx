@@ -1,9 +1,8 @@
-// components/BillingControlsSection.tsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { PaymentMethodItem } from './PaymentMethodItem';
 import { ActionButtons } from './ActionButtons';
-import { DiscountControl } from './DiscountControl ';
+import { DiscountControl } from './DiscountControl';
 
 interface BillingControlsSectionProps {
   colors: any;
@@ -35,6 +34,14 @@ interface BillingControlsSectionProps {
   onPrintReceipt: () => void;
 }
 
+const toCurrency = (value: number) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'KES',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(value) ? value : 0);
+
 export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
   colors,
   isReadOnly,
@@ -64,6 +71,51 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
   onFinalizePayment,
   onPrintReceipt,
 }) => {
+  const financialSnapshot = useMemo(() => {
+    const grandTotal = Number(billingData?.grandTotal || 0);
+    const totalPaid = Number(billingData?.totalPaid || 0);
+    const balance = Number(billingData?.balance || 0);
+    const discountAmount = Number(billingData?.discountAmount || 0);
+
+    const hasPositivePayment = totalPaid > 0;
+    const isPartialPayment = hasPositivePayment && balance > 0;
+    const isFullyCovered = hasPositivePayment && balance <= 0;
+
+    return {
+      grandTotal,
+      totalPaid,
+      balance,
+      discountAmount,
+      hasPositivePayment,
+      isPartialPayment,
+      isFullyCovered,
+    };
+  }, [billingData]);
+
+  const helperMessage = useMemo(() => {
+    if (isReadOnly) {
+      return 'Payment has already been finalized. You can review the breakdown and print the receipt.';
+    }
+
+    if (!hasRequiredIds) {
+      return 'Cannot finalize yet because visit or patient information is missing.';
+    }
+
+    if (!financialSnapshot.hasPositivePayment) {
+      return 'Enter a payment amount greater than zero to finalize. Partial payments are allowed.';
+    }
+
+    if (financialSnapshot.isPartialPayment) {
+      return 'Partial payment is allowed. Finalizing now will keep the remaining balance due on the visit.';
+    }
+
+    if (financialSnapshot.isFullyCovered) {
+      return 'Payment fully covers the current amount due. You can finalize and then print the receipt.';
+    }
+
+    return 'Receipt preview updates in real-time. Cash entries calculate change automatically, and partial payments are supported.';
+  }, [isReadOnly, hasRequiredIds, financialSnapshot]);
+
   return (
     <div className="flex flex-col h-full min-h-0">
       <div
@@ -71,28 +123,74 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
           isReadOnly ? 'opacity-90' : ''
         }`}
       >
-        {/* Fixed header */}
+        {/* Header */}
         <div className={`shrink-0 px-4 py-3 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
           <h3 className={`text-sm sm:text-base font-bold ${colors.text.primary}`}>
             {isReadOnly ? 'Payment Details (Read-only)' : 'Billing Controls'}
           </h3>
           <p className={`text-xs ${colors.text.secondary} mt-0.5`}>
             {isReadOnly
-              ? 'Payment has been finalized. Only receipt printing is available.'
-              : 'Enter cash tendered amount → system automatically calculates change'}
+              ? 'Payment has been finalized. Only review and receipt printing are available.'
+              : 'Enter payment amounts. Cash tendered calculates change automatically, and partial payments are allowed.'}
           </p>
         </div>
 
-        {/* Scrollable controls content */}
+        {/* Financial snapshot */}
+        <div className={`shrink-0 px-4 py-3 border-b ${colors.border.primary} ${colors.bg.primary}`}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className={`rounded-lg border ${colors.border.primary} ${colors.bg.secondary} p-3`}>
+              <div className={`text-[11px] uppercase tracking-wide ${colors.text.tertiary}`}>
+                Current Amount Due
+              </div>
+              <div className={`mt-1 text-base font-bold ${colors.text.primary}`}>
+                {toCurrency(financialSnapshot.grandTotal)}
+              </div>
+            </div>
+
+            <div className={`rounded-lg border ${colors.border.primary} ${colors.bg.secondary} p-3`}>
+              <div className={`text-[11px] uppercase tracking-wide ${colors.text.tertiary}`}>
+                Payment Entered
+              </div>
+              <div className={`mt-1 text-base font-bold ${colors.text.primary}`}>
+                {toCurrency(financialSnapshot.totalPaid)}
+              </div>
+            </div>
+
+            <div className={`rounded-lg border ${colors.border.primary} ${colors.bg.secondary} p-3`}>
+              <div className={`text-[11px] uppercase tracking-wide ${colors.text.tertiary}`}>
+                Balance Remaining
+              </div>
+              <div
+                className={`mt-1 text-base font-bold ${
+                  financialSnapshot.balance > 0
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-emerald-600 dark:text-emerald-400'
+                }`}
+              >
+                {toCurrency(financialSnapshot.balance)}
+              </div>
+            </div>
+          </div>
+
+          {financialSnapshot.discountAmount > 0 && (
+            <div className={`mt-3 text-xs ${colors.text.secondary}`}>
+              Applied discount: <span className={`font-semibold ${colors.text.primary}`}>
+                {toCurrency(financialSnapshot.discountAmount)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Scrollable controls */}
         <div
           className="flex-1 overflow-y-auto overflow-x-hidden p-4 min-h-0 space-y-4"
           style={{ scrollbarGutter: 'stable' }}
         >
-          {/* Payment methods section */}
           <div className={`border ${colors.border.primary} rounded-lg overflow-hidden shadow-sm`}>
             <div className={`px-4 py-3 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <h4 className={`text-sm font-bold ${colors.text.primary}`}>Payment Methods</h4>
+
                 {!isReadOnly && (
                   <button
                     type="button"
@@ -131,7 +229,6 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
                     isProcessing={isProcessing}
                   />
 
-                  {/* Discount section - only show on last payment method */}
                   {index === paymentMethods.length - 1 && (
                     <>
                       <DiscountControl
@@ -151,6 +248,9 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
                         isSubmitting={isSubmitting}
                         hasRequiredIds={hasRequiredIds}
                         colors={colors}
+                        totalPaid={financialSnapshot.totalPaid}
+                        balanceDue={financialSnapshot.balance}
+                        grandTotal={financialSnapshot.grandTotal}
                         onFinalizePayment={onFinalizePayment}
                         onPrintReceipt={onPrintReceipt}
                       />
@@ -162,14 +262,12 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
           </div>
         </div>
 
-        {/* Fixed footer info */}
+        {/* Footer helper */}
         <div className={`shrink-0 px-4 py-3 border-t ${colors.border.primary} ${colors.bg.secondary}`}>
           <div className="flex items-start gap-2">
             <AlertCircle className={`w-4 h-4 ${colors.text.tertiary} shrink-0 mt-0.5`} />
             <p className={`text-xs ${colors.text.secondary} leading-relaxed`}>
-              {isReadOnly
-                ? 'Payment completed. You can still print the receipt.'
-                : 'Receipt preview updates in real-time. Finalize when balance is fully covered.'}
+              {helperMessage}
             </p>
           </div>
         </div>
