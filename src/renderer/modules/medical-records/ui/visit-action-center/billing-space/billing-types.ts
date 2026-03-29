@@ -32,8 +32,6 @@ export const makeBillableKey = (s: Pick<ServiceItem, 'id' | 'code' | 'category'>
   return `${code}::${category}::${id}`;
 };
 
-
-
 export const createDefaultDiscount = (): Discount => ({
   type: 'percentage',
   value: 0,
@@ -48,7 +46,6 @@ export const createDefaultTaxes = (): Tax[] => [
 export const createDefaultPaymentMethods = (): PaymentMethod[] => [
   { type: 'cash', amount: 0, details: '' },
 ];
-
 
 /* -------------------------------------------------------------------------- */
 /*                              SOURCE / POLICY TYPES                         */
@@ -180,6 +177,7 @@ export interface BackendBillingMeta {
   createdAt?: string;
   updatedAt?: string;
 }
+
 export interface BillingState {
   // ----------------------------
   // Draft slice data (unsaved)
@@ -198,6 +196,10 @@ export interface BillingState {
   backendChargeItems: BackendChargeItem[];
   backendBillingMeta: BackendBillingMeta;
   backendBillingData: BillingDataSnapshot | null;
+
+  // Persisted billing basis for discount/tax calculations
+  backendDiscount: Discount | null;
+  backendTaxes: Tax[];
 
   // ----------------------------
   // Optimistic persisted billing state
@@ -225,8 +227,7 @@ export interface BillingState {
   isDirty: boolean;
   isProcessing: boolean;
 
-  billingDataLoaded?: Record<string, boolean>; // Track loaded status per visit
-
+  billingDataLoaded?: Record<string, boolean>;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -250,6 +251,7 @@ export const EMPTY_BACKEND_META: BackendBillingMeta = {
   loaded: false,
   hasBilling: false,
 };
+
 export const INITIAL_BILLING_STATE: BillingState = {
   chargeItems: [],
   discount: createDefaultDiscount(),
@@ -262,6 +264,8 @@ export const INITIAL_BILLING_STATE: BillingState = {
   backendChargeItems: [],
   backendBillingMeta: EMPTY_BACKEND_META,
   backendBillingData: null,
+  backendDiscount: null,
+  backendTaxes: [],
 
   optimisticPersistedBalanceDelta: 0,
 
@@ -281,6 +285,90 @@ export const INITIAL_BILLING_STATE: BillingState = {
 /* -------------------------------------------------------------------------- */
 /*                              HELPER FUNCTIONS                              */
 /* -------------------------------------------------------------------------- */
+
+const roundCurrencyValue = (value: number): number => Math.round((Number(value) || 0) * 100) / 100;
+
+const normalizeDiscount = (discount?: Partial<Discount> | null): Discount => ({
+  type: discount?.type === 'fixed' ? 'fixed' : 'percentage',
+  value: Number(discount?.value || 0),
+  reason: discount?.reason ?? '',
+});
+
+const normalizeTaxes = (taxes?: Array<Partial<Tax>> | null): Tax[] => {
+  if (!Array.isArray(taxes) || taxes.length === 0) {
+    return createDefaultTaxes();
+  }
+
+  return taxes.map((tax) => ({
+    name: String(tax.name || ''),
+    rate: Number(tax.rate || 0),
+    amount: roundCurrencyValue(Number(tax.amount || 0)),
+  }));
+};
+
+const getDiscountAmount = (subtotal: number, discount: Discount): number => {
+  const safeSubtotal = Math.max(0, Number(subtotal) || 0);
+  const safeValue = Math.max(0, Number(discount?.value) || 0);
+
+  const rawDiscount =
+    discount?.type === 'percentage'
+      ? safeSubtotal * (safeValue / 100)
+      : safeValue;
+
+  return roundCurrencyValue(Math.min(rawDiscount, safeSubtotal));
+};
+
+export const calculateBillingSnapshot = ({
+  chargeItems,
+  discount,
+  taxes,
+  paymentMethods,
+  carriedPaid = 0,
+}: {
+  chargeItems: Array<{ totalAmount: number }>;
+  discount: Discount;
+  taxes: Tax[];
+  paymentMethods: PaymentMethod[];
+  carriedPaid?: number;
+}): BillingDataSnapshot => {
+  const subtotal = roundCurrencyValue(
+    chargeItems.reduce((sum, item) => sum + (Number(item.totalAmount) || 0), 0)
+  );
+
+  const discountAmount = getDiscountAmount(subtotal, discount);
+  const taxableAmount = roundCurrencyValue(Math.max(0, subtotal - discountAmount));
+
+  const updatedTaxes = taxes.map((tax) => ({
+    ...tax,
+    rate: Number(tax.rate) || 0,
+    amount: roundCurrencyValue(taxableAmount * ((Number(tax.rate) || 0) / 100)),
+  }));
+
+  const taxTotal = roundCurrencyValue(
+    updatedTaxes.reduce((sum, tax) => sum + (Number(tax.amount) || 0), 0)
+  );
+
+  const grandTotal = roundCurrencyValue(taxableAmount + taxTotal);
+
+  const draftPaid = roundCurrencyValue(
+    paymentMethods.reduce((sum, method) => sum + (Number(method.amount) || 0), 0)
+  );
+
+  const totalPaid = roundCurrencyValue((Number(carriedPaid) || 0) + draftPaid);
+  const balance = roundCurrencyValue(Math.max(0, grandTotal - totalPaid));
+
+  return {
+    subtotal,
+    discountAmount,
+    taxableAmount,
+    taxTotal,
+    grandTotal,
+    totalPaid,
+    balance,
+    isPaid: balance === 0,
+    taxes: updatedTaxes,
+  };
+};
 
 export const formatCurrency = (amount: number, currency: string = API_DEFAULT_CURRENCY): string => {
   return new Intl.NumberFormat('en-US', {
@@ -312,37 +400,12 @@ export const calculateBillingData = (
   taxes: Tax[],
   paymentMethods: PaymentMethod[]
 ): BillingDataSnapshot => {
-  const subtotal = chargeItems.reduce((sum, item) => sum + item.totalAmount, 0);
-
-  let discountAmount = 0;
-  if (discount.type === 'percentage') discountAmount = subtotal * (discount.value / 100);
-  else discountAmount = discount.value;
-
-  discountAmount = Math.min(discountAmount, subtotal);
-
-  const taxableAmount = subtotal - discountAmount;
-
-  const updatedTaxes = taxes.map((tax) => ({
-    ...tax,
-    amount: taxableAmount * (tax.rate / 100),
-  }));
-
-  const taxTotal = updatedTaxes.reduce((sum, tax) => sum + tax.amount, 0);
-  const grandTotal = taxableAmount + taxTotal;
-
-  const totalPaid = paymentMethods.reduce((sum, method) => sum + (Number(method.amount) || 0), 0);
-  const balance = Math.max(0, grandTotal - totalPaid);
-
-  return {
-    subtotal,
-    discountAmount,
-    taxableAmount,
-    taxTotal,
-    grandTotal,
-    totalPaid,
-    balance,
-    isPaid: balance === 0,
-  };
+  return calculateBillingSnapshot({
+    chargeItems,
+    discount,
+    taxes,
+    paymentMethods,
+  });
 };
 
 /**
@@ -380,6 +443,9 @@ export const mapRetrievedChargeItemToBackendChargeItem = (
  * Maps backend retrieval payload into frontend backend state bucket.
  */
 export const mapRetrievedBillingToBackendState = (data: BillingRetrievalData) => {
+  const backendDiscount = normalizeDiscount(data.discount);
+  const backendTaxes = normalizeTaxes(data.taxes);
+
   return {
     backendChargeItems: (data.charge_items ?? []).map(mapRetrievedChargeItemToBackendChargeItem),
     backendBillingMeta: {
@@ -399,10 +465,16 @@ export const mapRetrievedBillingToBackendState = (data: BillingRetrievalData) =>
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     } as BackendBillingMeta,
-    backendBillingData: data.billing_data ?? null,
+    backendBillingData: data.billing_data
+      ? {
+          ...data.billing_data,
+          taxes: backendTaxes,
+        }
+      : null,
+    backendDiscount,
+    backendTaxes,
   };
 };
-
 
 // Storage key for drafts
 export const getDraftStorageKey = (visitId?: string) => `billing_draft_${visitId || 'global'}`;

@@ -2,12 +2,10 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useReactToPrint } from 'react-to-print';
-import { 
-  PaymentStatus, 
+import {
+  PaymentStatus,
   type BillingReviewItem,
   type PaymentMethod,
-  type ChargeItem,
-  type Tax,
   type Discount,
 } from '../../../../api/billing-review/BillingReviewTypes';
 
@@ -17,6 +15,7 @@ import { ReceiptEmptyState } from './receipt-view/ReceiptEmptyState';
 import { PrintableReceipt } from './receipt-view/PrintableReceipt';
 import { ReceiptSummary } from './receipt-view/ReceiptSummary';
 import { ReceiptFooter } from './receipt-view/ReceiptFooter';
+
 interface ThemeColors {
   bg: {
     primary: string;
@@ -98,7 +97,6 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
   const [isHeaderSticky, setIsHeaderSticky] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-
   // Sticky header effect
   useEffect(() => {
     const handleScroll = () => {
@@ -118,8 +116,12 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
   const handlePrint = useReactToPrint({
     contentRef: receiptRef,
     documentTitle: selectedTransaction?.receipt_number || 'receipt',
-    onBeforePrint: async () => { setIsPrinting(true); },
-    onAfterPrint: async () => { setIsPrinting(false); },
+    onBeforePrint: async () => {
+      setIsPrinting(true);
+    },
+    onAfterPrint: async () => {
+      setIsPrinting(false);
+    },
   });
 
   const onPrintClick = () => {
@@ -128,18 +130,46 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
     onPrint();
   };
 
+  const resolveDiscountAmount = (subtotal: number, discount?: Discount | null): number => {
+    if (!discount) return 0;
+
+    const safeSubtotal = Math.max(0, Number(subtotal) || 0);
+    const safeValue = Math.max(0, Number(discount.value) || 0);
+
+    const rawDiscount =
+      discount.type === 'percentage'
+        ? safeSubtotal * (safeValue / 100)
+        : safeValue;
+
+    return Math.min(rawDiscount, safeSubtotal);
+  };
+
   const calculateCashBreakdown = (cashAmount: number): CashBreakdown => {
-    if (!selectedTransaction) return { tendered: 0, change: 0, netCash: 0 };
-    
-    const grandTotal = selectedTransaction.billing_data.grandTotal || 0;
-    const nonCashTotal = selectedTransaction.payment_methods
-      ?.filter(pm => pm.type !== 'cash')
-      ?.reduce((sum, pm) => sum + (pm.amount || 0), 0) || 0;
-    
+    if (!selectedTransaction) {
+      return { tendered: 0, change: 0, netCash: 0 };
+    }
+
+    // Calculate grand total from actual transaction data
+    const chargeItems = selectedTransaction.charge_items || [];
+    const subtotal = chargeItems.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
+
+    // FIX: respect discount type so percentage discounts are applied correctly
+    const discountAmount = resolveDiscountAmount(subtotal, selectedTransaction.discount);
+    const taxableAmount = Math.max(0, subtotal - discountAmount);
+
+    const taxes = selectedTransaction.taxes || [];
+    const taxTotal = taxes.reduce((sum, tax) => sum + (tax.amount || 0), 0);
+    const grandTotal = taxableAmount + taxTotal;
+
+    const nonCashTotal =
+      selectedTransaction.payment_methods
+        ?.filter((pm) => pm.type !== 'cash')
+        ?.reduce((sum, pm) => sum + (pm.amount || 0), 0) || 0;
+
     const remainingAfterNonCash = Math.max(0, grandTotal - nonCashTotal);
     const change = cashAmount > remainingAfterNonCash ? cashAmount - remainingAfterNonCash : 0;
     const netCash = cashAmount - change;
-    
+
     return {
       tendered: cashAmount,
       change,
@@ -149,81 +179,80 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
 
   const getDerivedFinancials = (): DerivedFinancials | null => {
     if (!selectedTransaction) return null;
-    
-    const billingData = selectedTransaction.billing_data;
-    
-    // Calculate subtotal from charge items
-    const subtotal = selectedTransaction.charge_items?.reduce(
-      (sum: number, item: ChargeItem) => sum + (item.totalAmount || 0), 
-      0
-    ) || 0;
-    
-    // Get discount information
-    const discountAmount = billingData.discountAmount || 0;
+
+    // ========== CALCULATE FROM ACTUAL TRANSACTION DATA ==========
+    // selectedTransaction represents the rendered billing state, so use its
+    // current charge items, discount, taxes, and payment methods as-is.
+
+    // 1. SUBTOTAL: Sum of all charge items
+    const chargeItems = selectedTransaction.charge_items || [];
+    const subtotal = chargeItems.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
+
+    // 2. DISCOUNT
+    // FIX: percentage discount must be converted into an amount from subtotal
     const discountType = selectedTransaction.discount?.type || null;
-    const discountPercent = selectedTransaction.discount?.type === 'percentage' 
-      ? selectedTransaction.discount.value 
-      : 0;
-    
-    // Calculate tax total from billingData.taxes array
-    const taxTotal = billingData.taxes?.reduce(
-      (sum: number, tax: Tax) => sum + (tax.amount || 0), 
-      0
-    ) || 0;
-    
-    // Grand total from billing data
-    const grandTotal = billingData.grandTotal || 0;
-    
-    // Payment method breakdown
+    const discountValue = Number(selectedTransaction.discount?.value || 0);
+    const discountAmount = resolveDiscountAmount(subtotal, selectedTransaction.discount);
+    const discountPercent = discountType === 'percentage' ? discountValue : 0;
+
+    // 3. TAXABLE AMOUNT
+    const taxableAmount = Math.max(0, subtotal - discountAmount);
+
+    // 4. TAX TOTAL
+    const taxes = selectedTransaction.taxes || [];
+    const taxTotal = taxes.reduce((sum, tax) => sum + (tax.amount || 0), 0);
+
+    // 5. GRAND TOTAL
+    const grandTotal = taxableAmount + taxTotal;
+
+    // 6. PAYMENT METHODS
     const paymentMethods = selectedTransaction.payment_methods || [];
-    const hasCashPayment = paymentMethods.some(pm => pm.type === 'cash');
-    
-    // Calculate cash tendered (sum of all cash payments)
+    const hasCashPayment = paymentMethods.some((pm) => pm.type === 'cash');
+
     const cashTendered = paymentMethods
-      .filter(pm => pm.type === 'cash')
+      .filter((pm) => pm.type === 'cash')
       .reduce((sum, pm) => sum + (pm.amount || 0), 0);
-    
-    // Calculate non-cash total
+
     const nonCashTotal = paymentMethods
-      .filter(pm => pm.type !== 'cash')
+      .filter((pm) => pm.type !== 'cash')
       .reduce((sum, pm) => sum + (pm.amount || 0), 0);
-    
-    // Calculate change based on cash tendered vs remaining balance after non-cash payments
-    const remainingAfterNonCash = Math.max(0, grandTotal - nonCashTotal);
-    const changeAmount = cashTendered > remainingAfterNonCash 
-      ? cashTendered - remainingAfterNonCash 
-      : 0;
-    
-    // Total paid from all methods
+
     const totalPaidFromMethods = paymentMethods.reduce(
-      (sum: number, pm: PaymentMethod) => sum + (pm.amount || 0), 
+      (sum: number, pm: PaymentMethod) => sum + (pm.amount || 0),
       0
-    ) || 0;
-    
-    // Net paid after accounting for change
+    );
+
+    // 7. CHANGE
+    const remainingAfterNonCash = Math.max(0, grandTotal - nonCashTotal);
+    const changeAmount =
+      cashTendered > remainingAfterNonCash
+        ? cashTendered - remainingAfterNonCash
+        : 0;
+
+    // 8. NET PAID
     const netPaid = totalPaidFromMethods - changeAmount;
-    
-    // Calculate refunded amount (placeholder)
-    const refunded = 0;
-    
-    // Balance due
+
+    // 9. BALANCE DUE
     const balanceDue = Math.max(0, grandTotal - netPaid);
-    
-    // Determine correct status based on calculated values
+
+    // 10. REFUNDED placeholder
+    const refunded = 0;
+
+    // 11. STATUS
     let status = selectedTransaction.payment_status;
-    
+
     if (grandTotal > 0) {
-      if (changeAmount > 0) {
-        status = PaymentStatus.PAID_IN_FULL; // Overpayment still results in paid status
-      } else if (balanceDue === 0 && netPaid > 0) {
+      if (balanceDue === 0 && netPaid > 0) {
         status = PaymentStatus.PAID_IN_FULL;
       } else if (balanceDue > 0 && balanceDue < grandTotal) {
         status = PaymentStatus.PARTIALLY_PAID;
       } else if (balanceDue === grandTotal && netPaid === 0) {
         status = PaymentStatus.PENDING;
+      } else if (changeAmount > 0) {
+        status = PaymentStatus.PAID_IN_FULL;
       }
     }
-    
+
     return {
       status,
       refunded,
@@ -245,12 +274,11 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
 
   const derivedFinancials = getDerivedFinancials();
 
-  // Calculate cash breakdown if there are cash payments
-  const cashBreakdown: CashBreakdown | null = derivedFinancials?.hasCashPayment && derivedFinancials.cashTendered > 0
-    ? calculateCashBreakdown(derivedFinancials.cashTendered)
-    : null;
+  const cashBreakdown: CashBreakdown | null =
+    derivedFinancials?.hasCashPayment && derivedFinancials.cashTendered > 0
+      ? calculateCashBreakdown(derivedFinancials.cashTendered)
+      : null;
 
-  // Safe access to change property
   const changeAmount = cashBreakdown?.change ?? 0;
 
   return (
@@ -278,7 +306,7 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
       />
 
       {/* Receipt Body */}
-      <div 
+      <div
         ref={containerRef}
         className="flex-1 overflow-y-auto overflow-x-hidden p-5 min-h-0 scroll-smooth"
         style={{ scrollbarGutter: 'stable' }}
