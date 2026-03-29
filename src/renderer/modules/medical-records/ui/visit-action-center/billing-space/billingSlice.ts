@@ -1,4 +1,3 @@
-// billingSlice.ts - Updated clearDraft action
 import { createSlice, type PayloadAction, createSelector } from '@reduxjs/toolkit';
 import {
   type BillingState,
@@ -18,23 +17,126 @@ import {
   mapRetrievedBillingToBackendState,
   type RenderableChargeItem,
   EMPTY_BACKEND_META,
-  BackendChargeItem,
+  type BackendChargeItem,
 } from './billing-types';
 
 import type { BillingRetrievalData } from '../../../api/billable-items/BillingItemsTypes';
-import { RootState } from '../../../../../app/store/rootReducer';
+import type { RootState } from '../../../../../app/store/rootReducer';
 
 /* -------------------------------------------------------------------------- */
 /*                               HELPERS                                      */
 /* -------------------------------------------------------------------------- */
 
-const roundCurrency = (value: number): number => Math.round(value * 100) / 100;
+const roundCurrency = (value: number): number =>
+  Math.round(((Number.isFinite(value) ? value : 0) + Number.EPSILON) * 100) / 100;
+
+const clamp = (value: number, min = 0, max = Number.POSITIVE_INFINITY) =>
+  Math.max(min, Math.min(max, value));
+
+const toFiniteNumber = (value: unknown, fallback = 0): number => {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'string' && value.trim() === '') return fallback;
+
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+};
+
+const isValidDiscountType = (value: unknown): value is Discount['type'] =>
+  value === 'percentage' || value === 'fixed';
+
+const isValidPaymentType = (
+  value: unknown
+): value is PaymentMethod['type'] =>
+  value === 'cash' ||
+  value === 'card' ||
+  value === 'insurance' ||
+  value === 'mobile' ||
+  value === 'mixed';
+
+const cloneDefaultDiscount = (): Discount => ({
+  ...DEFAULT_DISCOUNT,
+});
+
+const cloneDefaultPaymentMethods = (): PaymentMethod[] =>
+  DEFAULT_PAYMENT_METHODS.map((method) => ({ ...method }));
+
+const cloneInitialTaxes = () =>
+  INITIAL_BILLING_STATE.taxes.map((tax) => ({ ...tax }));
+
+const sanitizeDiscount = (discount: Partial<Discount> | null | undefined): Discount => {
+  const type = isValidDiscountType(discount?.type)
+    ? discount!.type
+    : DEFAULT_DISCOUNT.type;
+
+  const value = roundCurrency(Math.max(0, toFiniteNumber(discount?.value, 0)));
+
+  const reason =
+    typeof discount?.reason === 'string' && discount.reason.trim().length > 0
+      ? discount.reason
+      : undefined;
+
+  return {
+    type,
+    value,
+    ...(reason ? { reason } : {}),
+  };
+};
+
+const sanitizePaymentMethod = (
+  method: Partial<PaymentMethod> | null | undefined
+): PaymentMethod => {
+  const type = isValidPaymentType(method?.type) ? method!.type : 'cash';
+
+  return {
+    type,
+    amount: roundCurrency(Math.max(0, toFiniteNumber(method?.amount, 0))),
+    details: typeof method?.details === 'string' ? method.details : '',
+  };
+};
+
+const sanitizePaymentMethods = (
+  methods: Partial<PaymentMethod>[] | PaymentMethod[] | null | undefined
+): PaymentMethod[] => {
+  const sanitized = Array.isArray(methods)
+    ? methods.map(sanitizePaymentMethod)
+    : [];
+
+  return sanitized.length > 0 ? sanitized.slice(0, 3) : cloneDefaultPaymentMethods();
+};
+
+const mergeTaxes = (
+  existing: Array<{ name: string; rate: number; amount: number }> = [],
+  incoming: Array<{ name: string; rate: number; amount: number }> = []
+): Array<{ name: string; rate: number; amount: number }> => {
+  const merged = new Map<string, { name: string; rate: number; amount: number }>();
+
+  [...existing, ...incoming].forEach((tax) => {
+    const key = `${String(tax.name).toLowerCase()}|${toFiniteNumber(tax.rate).toFixed(4)}`;
+    const current = merged.get(key);
+
+    if (!current) {
+      merged.set(key, {
+        name: tax.name,
+        rate: roundCurrency(toFiniteNumber(tax.rate)),
+        amount: roundCurrency(toFiniteNumber(tax.amount)),
+      });
+      return;
+    }
+
+    merged.set(key, {
+      ...current,
+      amount: roundCurrency(toFiniteNumber(current.amount) + toFiniteNumber(tax.amount)),
+    });
+  });
+
+  return Array.from(merged.values());
+};
 
 const calculateIsDirty = (state: BillingState): boolean => {
   return (
     state.chargeItems.length > 0 ||
     state.discount.value > 0 ||
-    state.paymentMethods.some((m) => m.amount > 0) ||
+    state.paymentMethods.some((method) => toFiniteNumber(method.amount) > 0) ||
     state.additionalNotes.trim().length > 0 ||
     state.status !== 'draft'
   );
@@ -45,29 +147,43 @@ const updateMetadata = (state: BillingState): void => {
   state.isDirty = calculateIsDirty(state);
 };
 
-const mergeTaxes = (
-  existing: Array<{ name: string; rate: number; amount: number }> = [],
-  incoming: Array<{ name: string; rate: number; amount: number }> = []
-): Array<{ name: string; rate: number; amount: number }> => {
-  const merged = new Map<string, { name: string; rate: number; amount: number }>();
+const normalizeDraftChargeItem = (raw: any): ChargeItem | null => {
+  const service: ServiceItem | undefined = raw?.service;
+  if (!service) return null;
 
-  [...existing, ...incoming].forEach((tax) => {
-    const key = `${String(tax.name).toLowerCase()}|${Number(tax.rate || 0).toFixed(2)}`;
-    const current = merged.get(key);
+  const serviceKey = raw?.serviceKey || makeBillableKey(service);
+  const quantity = clamp(Math.floor(toFiniteNumber(raw?.quantity, 1)), 1, 9999);
+  const unitPrice = roundCurrency(toFiniteNumber(service?.unitPrice, 0));
+  const totalAmount = roundCurrency(quantity * unitPrice);
 
-    if (!current) {
-      merged.set(key, {
-        name: tax.name,
-        rate: Number(tax.rate || 0),
-        amount: Number(tax.amount || 0),
-      });
-    } else {
-      current.amount = Number((current.amount + Number(tax.amount || 0)).toFixed(2));
-      merged.set(key, current);
+  return {
+    id: raw?.id || generateChargeItemId(serviceKey),
+    serviceKey,
+    service,
+    quantity,
+    totalAmount,
+    source: 'slice',
+    persisted: false,
+  };
+};
+
+const clearDraftStateOnly = (state: BillingState) => {
+  state.chargeItems = [];
+  state.discount = cloneDefaultDiscount();
+  state.taxes = cloneInitialTaxes();
+  state.paymentMethods = cloneDefaultPaymentMethods();
+  state.additionalNotes = '';
+  state.isProcessing = false;
+};
+
+const removePersistedDraftFromSessionStorage = (visitId?: string) => {
+  try {
+    if (visitId) {
+      sessionStorage.removeItem(getDraftStorageKey(visitId));
     }
-  });
-
-  return Array.from(merged.values());
+  } catch (error) {
+    console.error('Error clearing billing draft:', error);
+  }
 };
 
 /* -------------------------------------------------------------------------- */
@@ -78,10 +194,15 @@ const billingSlice = createSlice({
   name: 'billing',
   initialState: INITIAL_BILLING_STATE,
   reducers: {
-    // ========== UI ACTIONS ==========
+    /* ------------------------------- UI STATE ------------------------------ */
     openTray: (
       state,
-      action: PayloadAction<{ step?: BillingStep; visitId?: string; patientId?: string; patientName?: string }>
+      action: PayloadAction<{
+        step?: BillingStep;
+        visitId?: string;
+        patientId?: string;
+        patientName?: string;
+      }>
     ) => {
       state.trayOpen = true;
       state.currentStep = action.payload.step || 'charge_entry';
@@ -94,39 +215,16 @@ const billingSlice = createSlice({
       updateMetadata(state);
     },
 
-    /**
-     * Close the billing tray but preserve backend persisted data.
-     * Only clears UI draft data (chargeItems, discount, paymentMethods, etc.)
-     * Backend data (backendChargeItems, backendBillingMeta, backendBillingData) remains intact.
-     */
     closeTray: (state) => {
-      try {
-        if (state.visitId) {
-          sessionStorage.removeItem(getDraftStorageKey(state.visitId));
-        }
-      } catch (error) {
-        console.error('Error clearing billing draft on close:', error);
-      }
+      removePersistedDraftFromSessionStorage(state.visitId);
 
-      // Clear only draft/UI state
-      state.chargeItems = [];
-      state.discount = { ...DEFAULT_DISCOUNT };
-      state.taxes = INITIAL_BILLING_STATE.taxes.map((tax) => ({ ...tax }));
-      state.paymentMethods = DEFAULT_PAYMENT_METHODS.map((method) => ({ ...method }));
-      state.additionalNotes = '';
+      clearDraftStateOnly(state);
       state.status = 'draft';
       state.receiptNumber = undefined;
-      state.isProcessing = false;
       state.currentStep = 'charge_entry';
       state.trayOpen = false;
       state.viewMode = 'expanded';
       state.isDirty = false;
-
-      // Preserve backend persisted data:
-      // state.backendChargeItems
-      // state.backendBillingMeta
-      // state.backendBillingData
-      // state.optimisticPersistedBalanceDelta
 
       updateMetadata(state);
     },
@@ -151,7 +249,7 @@ const billingSlice = createSlice({
       updateMetadata(state);
     },
 
-    // ========== CHARGE ITEMS ACTIONS ==========
+    /* ---------------------------- CHARGE ITEMS ----------------------------- */
     addChargeItem: (state, action: PayloadAction<ServiceItem>) => {
       const service = action.payload;
       const serviceKey = makeBillableKey(service);
@@ -159,17 +257,21 @@ const billingSlice = createSlice({
 
       if (existingItem) {
         existingItem.quantity += 1;
-        existingItem.totalAmount = existingItem.quantity * existingItem.service.unitPrice;
+        existingItem.totalAmount = roundCurrency(
+          existingItem.quantity * toFiniteNumber(existingItem.service.unitPrice, 0)
+        );
       } else {
+        const unitPrice = roundCurrency(toFiniteNumber(service.unitPrice, 0));
         const newItem: ChargeItem = {
           id: generateChargeItemId(serviceKey),
           serviceKey,
           service,
           quantity: 1,
-          totalAmount: service.unitPrice,
+          totalAmount: unitPrice,
           source: 'slice',
           persisted: false,
         };
+
         state.chargeItems.push(newItem);
       }
 
@@ -185,7 +287,7 @@ const billingSlice = createSlice({
       if (!item) return;
 
       item.quantity += 1;
-      item.totalAmount = item.quantity * item.service.unitPrice;
+      item.totalAmount = roundCurrency(item.quantity * toFiniteNumber(item.service.unitPrice, 0));
       updateMetadata(state);
     },
 
@@ -193,12 +295,15 @@ const billingSlice = createSlice({
       const item = state.chargeItems.find((x) => x.id === action.payload);
       if (!item) return;
 
-      if (item.quantity === 1) {
+      if (item.quantity <= 1) {
         state.chargeItems = state.chargeItems.filter((x) => x.id !== action.payload);
-        if (state.chargeItems.length === 0) state.status = 'draft';
       } else {
         item.quantity -= 1;
-        item.totalAmount = item.quantity * item.service.unitPrice;
+        item.totalAmount = roundCurrency(item.quantity * toFiniteNumber(item.service.unitPrice, 0));
+      }
+
+      if (state.chargeItems.length === 0 && state.status !== 'settled') {
+        state.status = 'draft';
       }
 
       updateMetadata(state);
@@ -206,22 +311,31 @@ const billingSlice = createSlice({
 
     removeChargeItem: (state, action: PayloadAction<string>) => {
       state.chargeItems = state.chargeItems.filter((item) => item.id !== action.payload);
-      if (state.chargeItems.length === 0) state.status = 'draft';
+
+      if (state.chargeItems.length === 0 && state.status !== 'settled') {
+        state.status = 'draft';
+      }
+
       updateMetadata(state);
     },
 
-    setQuantity: (state, action: PayloadAction<{ itemId: string; quantity: number }>) => {
+    setQuantity: (
+      state,
+      action: PayloadAction<{ itemId: string; quantity: number }>
+    ) => {
       const { itemId, quantity } = action.payload;
       const item = state.chargeItems.find((x) => x.id === itemId);
       if (!item) return;
 
-      const q = Math.max(1, Math.min(9999, Math.floor(quantity || 1)));
-      item.quantity = q;
-      item.totalAmount = q * item.service.unitPrice;
+      const sanitizedQuantity = clamp(Math.floor(toFiniteNumber(quantity, 1)), 1, 9999);
+      item.quantity = sanitizedQuantity;
+      item.totalAmount = roundCurrency(
+        sanitizedQuantity * toFiniteNumber(item.service.unitPrice, 0)
+      );
 
-      if (state.chargeItems.length === 0) {
+      if (state.chargeItems.length === 0 && state.status !== 'settled') {
         state.status = 'draft';
-      } else if (state.status === 'draft') {
+      } else if (state.chargeItems.length > 0 && state.status === 'draft') {
         state.status = 'ready';
       }
 
@@ -230,27 +344,36 @@ const billingSlice = createSlice({
 
     clearCharges: (state) => {
       state.chargeItems = [];
-      state.status = 'draft';
+      if (state.status !== 'settled') {
+        state.status = 'draft';
+      }
       updateMetadata(state);
     },
 
-    // ========== DISCOUNT ACTIONS ==========
+    /* ------------------------------ DISCOUNT ------------------------------- */
     setDiscount: (state, action: PayloadAction<Discount>) => {
-      state.discount = action.payload;
+      state.discount = sanitizeDiscount(action.payload);
       updateMetadata(state);
     },
 
-    // ========== PAYMENT METHODS ACTIONS ==========
+    /* --------------------------- PAYMENT METHODS --------------------------- */
     setPaymentMethods: (state, action: PayloadAction<PaymentMethod[]>) => {
-      state.paymentMethods = action.payload;
+      state.paymentMethods = sanitizePaymentMethods(action.payload);
       updateMetadata(state);
     },
 
-    updatePaymentMethod: (state, action: PayloadAction<{ index: number; method: Partial<PaymentMethod> }>) => {
+    updatePaymentMethod: (
+      state,
+      action: PayloadAction<{ index: number; method: Partial<PaymentMethod> }>
+    ) => {
       const { index, method } = action.payload;
       if (!state.paymentMethods[index]) return;
 
-      state.paymentMethods[index] = { ...state.paymentMethods[index], ...method };
+      state.paymentMethods[index] = sanitizePaymentMethod({
+        ...state.paymentMethods[index],
+        ...method,
+      });
+
       updateMetadata(state);
     },
 
@@ -268,14 +391,14 @@ const billingSlice = createSlice({
       }
     },
 
-    // ========== OTHER ACTIONS ==========
+    /* ------------------------------- OTHER -------------------------------- */
     setAdditionalNotes: (state, action: PayloadAction<string>) => {
-      state.additionalNotes = action.payload;
+      state.additionalNotes = typeof action.payload === 'string' ? action.payload : '';
       updateMetadata(state);
     },
 
     setProcessing: (state, action: PayloadAction<boolean>) => {
-      state.isProcessing = action.payload;
+      state.isProcessing = !!action.payload;
       updateMetadata(state);
     },
 
@@ -289,21 +412,27 @@ const billingSlice = createSlice({
       updateMetadata(state);
     },
 
-    // ========== RESET ACTIONS ==========
+    /* ------------------------------- RESET -------------------------------- */
     resetBilling: (state) => {
       const { visitId, patientId, patientName } = state;
-      Object.assign(state, { ...INITIAL_BILLING_STATE, visitId, patientId, patientName });
+
+      Object.assign(state, {
+        ...INITIAL_BILLING_STATE,
+        visitId,
+        patientId,
+        patientName,
+      });
     },
 
-    // ========== DRAFT ACTIONS ==========
+    /* ----------------------------- DRAFT STATE ---------------------------- */
     saveDraft: (state) => {
       try {
         if (!state.visitId) return;
 
         const draft = {
           chargeItems: state.chargeItems,
-          discount: state.discount,
-          paymentMethods: state.paymentMethods,
+          discount: sanitizeDiscount(state.discount),
+          paymentMethods: sanitizePaymentMethods(state.paymentMethods),
           additionalNotes: state.additionalNotes,
           status: state.status,
           receiptNumber: state.receiptNumber,
@@ -325,201 +454,119 @@ const billingSlice = createSlice({
         if (!saved) return;
 
         const parsed = JSON.parse(saved);
-        if (!parsed.chargeItems || !Array.isArray(parsed.chargeItems)) return;
+        const normalizedChargeItems = Array.isArray(parsed?.chargeItems)
+          ? parsed.chargeItems
+              .map(normalizeDraftChargeItem)
+              .filter(Boolean) as ChargeItem[]
+          : [];
 
-        state.chargeItems = parsed.chargeItems.map((ci: any) => {
-          const service: ServiceItem = ci.service;
-          const serviceKey = ci.serviceKey || makeBillableKey(service);
-          const quantity = Math.max(1, Math.min(9999, Math.floor(Number(ci.quantity) || 1)));
-          return {
-            ...ci,
-            serviceKey,
-            quantity,
-            totalAmount: quantity * (service?.unitPrice || 0),
-            source: 'slice',
-            persisted: false,
-          } as ChargeItem;
-        });
-
-        state.discount = parsed.discount || DEFAULT_DISCOUNT;
-        state.paymentMethods = parsed.paymentMethods || DEFAULT_PAYMENT_METHODS;
-        state.additionalNotes = parsed.additionalNotes || '';
-        state.status = parsed.status || 'draft';
-        state.receiptNumber = parsed.receiptNumber;
-        state.visitId = parsed.visitId;
-        state.patientId = parsed.patientId;
-        state.patientName = parsed.patientName;
-        state.lastUpdated = parsed.lastUpdated || Date.now();
+        state.chargeItems = normalizedChargeItems;
+        state.discount = sanitizeDiscount(parsed?.discount);
+        state.paymentMethods = sanitizePaymentMethods(parsed?.paymentMethods);
+        state.additionalNotes =
+          typeof parsed?.additionalNotes === 'string' ? parsed.additionalNotes : '';
+        state.status = parsed?.status || (normalizedChargeItems.length > 0 ? 'ready' : 'draft');
+         typeof parsed?.receiptNumber === 'string' ? parsed.receiptNumber : undefined;
+        state.visitId =
+          typeof parsed?.visitId === 'string' ? parsed.visitId : state.visitId;
+        state.patientId =
+          typeof parsed?.patientId === 'string' ? parsed.patientId : state.patientId;
+        state.patientName =
+          typeof parsed?.patientName === 'string'
+            ? parsed.patientName
+            : state.patientName;
+        state.lastUpdated = toFiniteNumber(parsed?.lastUpdated, Date.now());
         state.isDirty = calculateIsDirty(state);
       } catch (error) {
         console.error('Error loading billing draft:', error);
       }
     },
 
-    /**
-     * Clear ONLY draft data (chargeItems, discount, paymentMethods, notes)
-     * PRESERVE backend data (backendChargeItems, backendBillingMeta, backendBillingData)
-     * 
-     * This should be called after successful billing finalization to clear
-     * temporary draft data while keeping the persisted billing data for display.
-     */
     clearDraft: (state) => {
-      try {
-        if (state.visitId) {
-          sessionStorage.removeItem(getDraftStorageKey(state.visitId));
-        }
-      } catch (error) {
-        console.error('Error clearing billing draft:', error);
-      }
+      removePersistedDraftFromSessionStorage(state.visitId);
 
-      // Clear ONLY draft/UI state
-      state.chargeItems = [];
-      state.discount = { ...DEFAULT_DISCOUNT };
-      state.taxes = INITIAL_BILLING_STATE.taxes.map((tax) => ({ ...tax }));
-      state.paymentMethods = DEFAULT_PAYMENT_METHODS.map((method) => ({ ...method }));
-      state.additionalNotes = '';
-      state.isProcessing = false;
+      clearDraftStateOnly(state);
       state.currentStep = 'billing_summary';
       state.isDirty = false;
-      
-      // DO NOT clear status, receiptNumber, or backend data
-      // Keep status as 'settled' if it was settled
-      // Keep receiptNumber for printing
-      // Keep backendChargeItems, backendBillingMeta, backendBillingData
+
+      // Preserve:
+      // - status
+      // - receiptNumber
+      // - backendChargeItems
+      // - backendBillingMeta
+      // - backendBillingData
+      // - visit/patient context
 
       updateMetadata(state);
     },
-    /**
-     * Clear ONLY draft charge items.
-     * Preserves all other draft data (discount, paymentMethods, taxes, additionalNotes, status, receiptNumber)
-     * This is used after successful billing finalization when we want to keep the draft data that was
-     * submitted (like payment methods, discount) but clear the charge items since they're now persisted.
-     */
+
     clearDraftChargeItemsOnly: (state) => {
-      try {
-        if (state.visitId) {
-          sessionStorage.removeItem(getDraftStorageKey(state.visitId));
-        }
-      } catch (error) {
-        console.error('Error clearing billing draft charge items:', error);
-      }
+      removePersistedDraftFromSessionStorage(state.visitId);
 
-      // Clear ONLY draft charge items
       state.chargeItems = [];
-      
-      // Preserve everything else:
-      // - discount (kept as is)
-      // - taxes (kept as is)
-      // - paymentMethods (kept as is)
-      // - additionalNotes (kept as is)
-      // - status (kept as is - should be 'settled')
-      // - receiptNumber (kept for printing)
-      // - isProcessing (kept)
-      // - currentStep (kept)
-      
-      // Update metadata manually without calling updateMetadata which would recalculate isDirty
       state.lastUpdated = Date.now();
       state.isDirty = calculateIsDirty(state);
     },
 
-    /**
-     * Clear ALL draft data after successful payment finalization.
-     * This dedicated reducer is specifically for use after a billing has been
-     * successfully finalized and the server data has been fetched.
-     * 
-     * Clears:
-     *   - chargeItems (draft charge items)
-     *   - discount (reset to default)
-     *   - taxes (reset to default)
-     *   - paymentMethods (reset to default)
-     *   - additionalNotes (cleared)
-     *   - isProcessing (reset)
-     * 
-     * Preserves:
-     *   - status ('settled')
-     *   - receiptNumber (from finalizePayment)
-     *   - backendChargeItems, backendBillingData, backendBillingMeta
-     *   - visitId, patientId, patientName (context)
-     *   - trayOpen state
-     *   - viewMode
-     * 
-     * This ensures the receipt displays only the server-persisted data without
-     * any leftover draft data from the just-completed transaction.
-     */
-        clearDraftAfterFinalization: (state) => {
-      try {
-        if (state.visitId) {
-          sessionStorage.removeItem(getDraftStorageKey(state.visitId));
-        }
-      } catch (error) {
-        console.error('Error clearing billing draft after finalization:', error);
-      }
+    clearDraftAfterFinalization: (state) => {
+      removePersistedDraftFromSessionStorage(state.visitId);
 
-      // Clear ALL draft/UI state that should not persist after finalization
-      state.chargeItems = [];
-      state.discount = { ...DEFAULT_DISCOUNT };
-      state.taxes = INITIAL_BILLING_STATE.taxes.map((tax) => ({ ...tax }));
-      state.paymentMethods = DEFAULT_PAYMENT_METHODS.map((method) => ({ ...method }));
-      state.additionalNotes = '';
-      state.isProcessing = false;
-      // Keep currentStep as 'billing_summary' (don't reset to charge_entry)
-      // state.currentStep remains unchanged (should be 'billing_summary')
-      
-      // Update metadata
+      clearDraftStateOnly(state);
       state.lastUpdated = Date.now();
       state.isDirty = calculateIsDirty(state);
+
+      // Preserve:
+      // - settled status
+      // - receipt number
+      // - backend data
+      // - tray state / context
     },
 
-    /**
-     * Completely clear ALL billing data including backend persisted data.
-     * Use this only when explicitly needed (e.g., after successful finalization).
-     * 
-     * This reducer ONLY clears billing data and does NOT modify tray state.
-     * Tray state (trayOpen, currentStep, viewMode) should be managed separately.
-     */
     clearAll: (state) => {
-      try {
-        if (state.visitId) {
-          sessionStorage.removeItem(getDraftStorageKey(state.visitId));
-        }
-      } catch (error) {
-        console.error('Error clearing draft on clearAll:', error);
-      }
-      
-      // Preserve visit/patient context and tray state
+      removePersistedDraftFromSessionStorage(state.visitId);
+
       const preservedVisitId = state.visitId;
       const preservedPatientId = state.patientId;
       const preservedPatientName = state.patientName;
       const preservedTrayOpen = state.trayOpen;
       const preservedCurrentStep = state.currentStep;
       const preservedViewMode = state.viewMode;
-      
-      // Reset to initial state
-      const newState = { ...INITIAL_BILLING_STATE };
-      
-      // Restore preserved values
-      newState.visitId = preservedVisitId;
-      newState.patientId = preservedPatientId;
-      newState.patientName = preservedPatientName;
-      newState.trayOpen = preservedTrayOpen;
-      newState.currentStep = preservedCurrentStep;
-      newState.viewMode = preservedViewMode;
-      
-      return newState;
+
+      const nextState: BillingState = {
+        ...INITIAL_BILLING_STATE,
+        visitId: preservedVisitId,
+        patientId: preservedPatientId,
+        patientName: preservedPatientName,
+        trayOpen: preservedTrayOpen,
+        currentStep: preservedCurrentStep,
+        viewMode: preservedViewMode,
+      };
+
+      return nextState;
     },
 
-    // ========== PATIENT INFO ACTIONS ==========
-    setPatientInfo: (state, action: PayloadAction<{ visitId?: string; patientId?: string; patientName?: string }>) => {
+    /* --------------------------- PATIENT CONTEXT --------------------------- */
+    setPatientInfo: (
+      state,
+      action: PayloadAction<{
+        visitId?: string;
+        patientId?: string;
+        patientName?: string;
+      }>
+    ) => {
       const { visitId, patientId, patientName } = action.payload;
+
       if (visitId !== undefined) state.visitId = visitId;
       if (patientId !== undefined) state.patientId = patientId;
       if (patientName !== undefined) state.patientName = patientName;
+
       updateMetadata(state);
     },
 
-    // ========== BACKEND SYNC ACTIONS ==========
+    /* ---------------------------- BACKEND SYNC ----------------------------- */
     hydrateBackendBilling: (state, action: PayloadAction<BillingRetrievalData>) => {
       const mapped = mapRetrievedBillingToBackendState(action.payload);
+
       state.backendChargeItems = mapped.backendChargeItems;
       state.backendBillingMeta = mapped.backendBillingMeta;
       state.backendBillingData = mapped.backendBillingData;
@@ -543,47 +590,66 @@ const billingSlice = createSlice({
         quantity: number;
       }>
     ) => {
-      const { lineItemId, action: adjustmentAction, quantity } = action.payload;
-      const itemIndex = state.backendChargeItems.findIndex((item) => item.lineItemId === lineItemId);
+      const {
+        lineItemId,
+        action: adjustmentAction,
+        quantity,
+      } = action.payload;
+
+      const itemIndex = state.backendChargeItems.findIndex(
+        (item) => item.lineItemId === lineItemId
+      );
 
       if (itemIndex === -1) return;
 
       const item = state.backendChargeItems[itemIndex];
-      const safeQuantity = Math.max(0, Number(quantity) || 0);
+      const safeQuantity = Math.max(0, Math.floor(toFiniteNumber(quantity, 0)));
 
       if (safeQuantity === 0 && adjustmentAction !== 'remove') return;
 
-      const unitPrice = item.quantity > 0 ? item.totalAmount / item.quantity : item.service.unitPrice;
+      const currentQuantity = Math.max(1, toFiniteNumber(item.quantity, 1));
+      const currentTotalAmount = roundCurrency(toFiniteNumber(item.totalAmount, 0));
+      const fallbackUnitPrice = roundCurrency(toFiniteNumber(item.service?.unitPrice, 0));
+
+      const unitPrice =
+        currentQuantity > 0
+          ? roundCurrency(currentTotalAmount / currentQuantity)
+          : fallbackUnitPrice;
+
       let balanceDelta = 0;
 
       if (adjustmentAction === 'increase') {
         const amountDelta = roundCurrency(unitPrice * safeQuantity);
-        item.quantity += safeQuantity;
-        item.totalAmount = roundCurrency(item.totalAmount + amountDelta);
+
+        item.quantity = currentQuantity + safeQuantity;
+        item.totalAmount = roundCurrency(currentTotalAmount + amountDelta);
         balanceDelta = amountDelta;
       }
 
       if (adjustmentAction === 'decrease') {
-        const allowedDecrease = Math.min(safeQuantity, item.quantity);
+        const allowedDecrease = Math.min(safeQuantity, currentQuantity);
         const amountDelta = roundCurrency(unitPrice * allowedDecrease);
-        const nextQuantity = item.quantity - allowedDecrease;
+        const nextQuantity = currentQuantity - allowedDecrease;
 
         if (nextQuantity <= 0) {
           state.backendChargeItems.splice(itemIndex, 1);
         } else {
           item.quantity = nextQuantity;
-          item.totalAmount = roundCurrency(item.totalAmount - amountDelta);
+          item.totalAmount = roundCurrency(currentTotalAmount - amountDelta);
         }
 
         balanceDelta = -amountDelta;
       }
 
       if (adjustmentAction === 'remove') {
-        balanceDelta = -roundCurrency(item.totalAmount);
+        balanceDelta = -roundCurrency(currentTotalAmount);
         state.backendChargeItems.splice(itemIndex, 1);
       }
 
-      state.optimisticPersistedBalanceDelta = roundCurrency(state.optimisticPersistedBalanceDelta + balanceDelta);
+      state.optimisticPersistedBalanceDelta = roundCurrency(
+        toFiniteNumber(state.optimisticPersistedBalanceDelta, 0) + balanceDelta
+      );
+
       state.lastUpdated = Date.now();
     },
 
@@ -595,33 +661,38 @@ const billingSlice = createSlice({
       }>
     ) => {
       state.backendChargeItems = action.payload.previousBackendChargeItems;
-      state.optimisticPersistedBalanceDelta = action.payload.previousOptimisticPersistedBalanceDelta;
+      state.optimisticPersistedBalanceDelta = roundCurrency(
+        toFiniteNumber(action.payload.previousOptimisticPersistedBalanceDelta, 0)
+      );
       state.lastUpdated = Date.now();
     },
 
-    // ========== BOTTOM DISPLAY ACTIONS ==========
-    setBillingDataLoaded: (state, action: PayloadAction<{ visitId: string; loaded: boolean }>) => {
+    /* ------------------------ BILLING DATA LOADED MAP ---------------------- */
+    setBillingDataLoaded: (
+      state,
+      action: PayloadAction<{ visitId: string; loaded: boolean }>
+    ) => {
       const { visitId, loaded } = action.payload;
+
       if (!state.billingDataLoaded) {
         state.billingDataLoaded = {};
       }
+
       state.billingDataLoaded[visitId] = loaded;
       updateMetadata(state);
     },
 
     clearBillingDataLoaded: (state, action: PayloadAction<string>) => {
       const visitId = action.payload;
+
       if (state.billingDataLoaded && state.billingDataLoaded[visitId]) {
         delete state.billingDataLoaded[visitId];
       }
+
       updateMetadata(state);
     },
   },
 });
-
-/* -------------------------------------------------------------------------- */
-/*                               EXPORT ACTIONS                               */
-/* -------------------------------------------------------------------------- */
 
 export const {
   openTray,
@@ -648,8 +719,8 @@ export const {
   saveDraft,
   loadDraft,
   clearDraft,
-  clearDraftChargeItemsOnly,  
-  clearDraftAfterFinalization, 
+  clearDraftChargeItemsOnly,
+  clearDraftAfterFinalization,
   setQuantity,
   setPatientInfo,
   clearAll,
@@ -667,7 +738,7 @@ export default billingSlice.reducer;
 /*                               SELECTORS                                    */
 /* -------------------------------------------------------------------------- */
 
-// ========== BASE SELECTORS ==========
+/* ----------------------------- BASE SELECTORS ----------------------------- */
 export const selectBilling = (state: RootState) => state.billing;
 export const selectIsTrayOpen = (state: RootState) => state.billing.trayOpen;
 export const selectCurrentStep = (state: RootState) => state.billing.currentStep;
@@ -678,7 +749,7 @@ export const selectIsProcessing = (state: RootState) => state.billing.isProcessi
 export const selectBackendBillingMeta = (state: RootState) => state.billing.backendBillingMeta;
 export const selectBackendBillingData = (state: RootState) => state.billing.backendBillingData;
 
-// ========== CHARGE ITEMS SELECTORS ==========
+/* -------------------------- CHARGE ITEM SELECTORS ------------------------- */
 export const selectChargeItems = (state: RootState) => state.billing.chargeItems;
 export const selectDraftChargeItems = (state: RootState) => state.billing.chargeItems;
 export const selectBackendChargeItems = (state: RootState) => state.billing.backendChargeItems;
@@ -688,23 +759,24 @@ export const selectRenderableChargeItems = (state: RootState): RenderableChargeI
   ...state.billing.chargeItems,
 ];
 
-// ========== PERSISTED BALANCE SELECTOR ==========
+/* ----------------------- PERSISTED BALANCE SELECTOR ----------------------- */
 export const selectPersistedBalance = createSelector(
   [
-    (state: RootState) => state.billing.backendBillingData?.balance ?? 0,
-    (state: RootState) => state.billing.optimisticPersistedBalanceDelta ?? 0,
+    (state: RootState) => toFiniteNumber(state.billing.backendBillingData?.balance, 0),
+    (state: RootState) => toFiniteNumber(state.billing.optimisticPersistedBalanceDelta, 0),
   ],
-  (serverBalance, optimisticDelta) => Math.max(0, serverBalance + optimisticDelta)
+  (serverBalance, optimisticDelta) =>
+    roundCurrency(Math.max(0, serverBalance + optimisticDelta))
 );
 
-// ========== PATIENT INFO SELECTORS ==========
+/* -------------------------- PATIENT INFO SELECTOR ------------------------- */
 export const selectPatientInfo = (state: RootState) => ({
   visitId: state.billing.visitId,
   patientId: state.billing.patientId,
   patientName: state.billing.patientName,
 });
 
-// ========== EFFECTIVE STATUS SELECTOR ==========
+/* ---------------------- EFFECTIVE STATUS SELECTOR ------------------------- */
 export const selectEffectiveBillingStatus = createSelector(
   [
     (state: RootState) => state.billing.backendBillingMeta.status,
@@ -718,16 +790,17 @@ export const selectEffectiveBillingStatus = createSelector(
   }
 );
 
-// ========== CAN PROCEED SELECTOR ==========
+/* -------------------------- CAN PROCEED SELECTOR -------------------------- */
 export const selectCanProceed = createSelector(
   [
     (state: RootState) => state.billing.chargeItems.length,
     selectEffectiveBillingStatus,
   ],
-  (hasDraftItems, effectiveStatus) => hasDraftItems > 0 && effectiveStatus !== 'settled'
+  (draftItemCount, effectiveStatus) =>
+    draftItemCount > 0 && effectiveStatus !== 'settled'
 );
 
-// ========== DRAFT BILLING DATA SELECTOR ==========
+/* ----------------------- CORE DRAFT BILLING SELECTOR ---------------------- */
 export const selectBillingData = createSelector(
   [
     (state: RootState) => state.billing.chargeItems,
@@ -736,32 +809,52 @@ export const selectBillingData = createSelector(
     (state: RootState) => state.billing.paymentMethods,
   ],
   (chargeItems, discount, taxes, paymentMethods) => {
-    const subtotal = chargeItems.reduce((sum, item) => sum + item.totalAmount, 0);
+    const subtotal = roundCurrency(
+      chargeItems.reduce(
+        (sum, item) => sum + toFiniteNumber(item.totalAmount, 0),
+        0
+      )
+    );
 
-    let discountAmount = 0;
-    if (discount.type === 'percentage') {
-      discountAmount = subtotal * (discount.value / 100);
-    } else {
-      discountAmount = discount.value;
-    }
-    discountAmount = Math.min(discountAmount, subtotal);
+    const normalizedDiscount = sanitizeDiscount(discount);
 
-    const taxableAmount = subtotal - discountAmount;
+    const rawDiscountAmount =
+      normalizedDiscount.type === 'percentage'
+        ? subtotal * (toFiniteNumber(normalizedDiscount.value, 0) / 100)
+        : toFiniteNumber(normalizedDiscount.value, 0);
+
+    const discountAmount = roundCurrency(clamp(rawDiscountAmount, 0, subtotal));
+
+    const taxableAmount = roundCurrency(Math.max(0, subtotal - discountAmount));
 
     const updatedTaxes = taxes.map((tax) => ({
       ...tax,
-      amount: taxableAmount * (tax.rate / 100),
+      rate: roundCurrency(toFiniteNumber(tax.rate, 0)),
+      amount: roundCurrency(
+        taxableAmount * (toFiniteNumber(tax.rate, 0) / 100)
+      ),
     }));
 
-    const taxTotal = updatedTaxes.reduce((sum, tax) => sum + tax.amount, 0);
-    const grandTotal = taxableAmount + taxTotal;
+    const taxTotal = roundCurrency(
+      updatedTaxes.reduce((sum, tax) => sum + toFiniteNumber(tax.amount, 0), 0)
+    );
 
-    const totalPaid = paymentMethods.reduce((sum, method) => sum + method.amount, 0);
-    const balance = Math.max(0, grandTotal - totalPaid);
+    const grandTotal = roundCurrency(taxableAmount + taxTotal);
+
+    const totalPaid = roundCurrency(
+      paymentMethods.reduce(
+        (sum, method) => sum + toFiniteNumber(method.amount, 0),
+        0
+      )
+    );
+
+    const balance = roundCurrency(Math.max(0, grandTotal - totalPaid));
 
     return {
       subtotal,
       discountAmount,
+      discountType: normalizedDiscount.type,
+      discountValue: roundCurrency(toFiniteNumber(normalizedDiscount.value, 0)),
       taxableAmount,
       taxes: updatedTaxes,
       taxTotal,
@@ -773,7 +866,7 @@ export const selectBillingData = createSelector(
   }
 );
 
-// ========== DISPLAY BILLING DATA SELECTOR ==========
+/* ---------------------- DISPLAY BILLING DATA SELECTOR --------------------- */
 export const selectDisplayBillingData = createSelector(
   [
     selectBillingData,
@@ -783,47 +876,80 @@ export const selectDisplayBillingData = createSelector(
     selectChargeItems,
   ],
   (draft, persistedBalance, persistedBillingData, backendChargeItems, draftChargeItems) => {
-    const displayedSubtotal = [...backendChargeItems, ...draftChargeItems].reduce(
-      (sum, item) => sum + item.totalAmount,
-      0
+    const displayedSubtotal = roundCurrency(
+      [...backendChargeItems, ...draftChargeItems].reduce(
+        (sum, item) => sum + toFiniteNumber(item.totalAmount, 0),
+        0
+      )
     );
 
-    const draftGrandTotal = draft.grandTotal;
-    const displayedBalance = persistedBalance + draftGrandTotal;
-    const displayedGrandTotal = (persistedBillingData?.grandTotal ?? 0) + draftGrandTotal;
-    const displayedTotalPaid = (persistedBillingData?.totalPaid ?? 0) + draft.totalPaid;
+    const persistedGrandTotal = roundCurrency(
+      toFiniteNumber(persistedBillingData?.grandTotal, 0)
+    );
+    const persistedTotalPaid = roundCurrency(
+      toFiniteNumber(persistedBillingData?.totalPaid, 0)
+    );
+    const persistedSubtotal = roundCurrency(
+      toFiniteNumber(persistedBillingData?.subtotal, 0)
+    );
+    const persistedDiscountAmount = roundCurrency(
+      toFiniteNumber(
+        persistedBillingData?.discountAmount ?? persistedBillingData?.discount_amount,
+        0
+      )
+    );
+    const persistedTaxTotal = roundCurrency(
+      toFiniteNumber(persistedBillingData?.taxTotal ?? persistedBillingData?.tax_total, 0)
+    );
 
-    const displayedTaxes = mergeTaxes(persistedBillingData?.taxes ?? [], draft.taxes ?? []);
+    const draftGrandTotal = roundCurrency(draft.grandTotal);
+    const draftTotalPaid = roundCurrency(draft.totalPaid);
+    const draftBalance = roundCurrency(draft.balance);
+    const draftDiscountAmount = roundCurrency(draft.discountAmount);
+    const draftTaxTotal = roundCurrency(draft.taxTotal);
+
+    const displayedBalance = roundCurrency(persistedBalance + draftGrandTotal);
+    const displayedGrandTotal = roundCurrency(persistedGrandTotal + draftGrandTotal);
+    const displayedTotalPaid = roundCurrency(persistedTotalPaid + draftTotalPaid);
+    const displayedDiscountAmount = roundCurrency(
+      persistedDiscountAmount + draftDiscountAmount
+    );
+    const displayedTaxTotal = roundCurrency(persistedTaxTotal + draftTaxTotal);
+
+    const displayedTaxes = mergeTaxes(
+      persistedBillingData?.taxes ?? [],
+      draft.taxes ?? []
+    );
 
     return {
-      // Persisted values
-      persistedSubtotal: persistedBillingData?.subtotal ?? 0,
-      persistedGrandTotal: persistedBillingData?.grandTotal ?? 0,
-      persistedTotalPaid: persistedBillingData?.totalPaid ?? 0,
+      persistedSubtotal,
+      persistedGrandTotal,
+      persistedTotalPaid,
       persistedBalance,
+      persistedDiscountAmount,
+      persistedTaxTotal,
       persistedTaxes: persistedBillingData?.taxes ?? [],
 
-      // Draft values
-      draftSubtotal: draft.subtotal,
+      draftSubtotal: roundCurrency(draft.subtotal),
       draftGrandTotal,
-      draftTotalPaid: draft.totalPaid,
-      draftBalance: draft.balance,
+      draftTotalPaid,
+      draftBalance,
+      draftDiscountAmount,
+      draftTaxTotal,
       draftTaxes: draft.taxes ?? [],
 
-      // Displayed values (combined)
       displayedSubtotal,
       displayedGrandTotal,
       displayedTotalPaid,
       displayedBalance,
+      displayedDiscountAmount,
+      displayedTaxTotal,
       displayedTaxes,
     };
   }
 );
 
-// ========== DISPLAYED DISCOUNT/TAX BILLING DATA SELECTOR ==========
-// This selector computes discount + tax against the DISPLAYED subtotal
-// (backend persisted items + draft items), while keeping the original
-// draft selectors intact for other parts of the app.
+/* -------- DISPLAYED DISCOUNT + TAX AGAINST RENDERABLE ITEM SUBTOTAL ------- */
 export const selectDisplayedDiscountTaxBillingData = createSelector(
   [
     selectRenderableChargeItems,
@@ -833,33 +959,42 @@ export const selectDisplayedDiscountTaxBillingData = createSelector(
   ],
   (renderableChargeItems, discount, taxes, paymentMethods) => {
     const subtotal = roundCurrency(
-      renderableChargeItems.reduce((sum, item) => sum + Number(item.totalAmount || 0), 0)
+      renderableChargeItems.reduce(
+        (sum, item) => sum + toFiniteNumber(item.totalAmount, 0),
+        0
+      )
     );
+
+    const normalizedDiscount = sanitizeDiscount(discount);
 
     const rawDiscountAmount =
-      discount.type === 'percentage'
-        ? subtotal * (Number(discount.value || 0) / 100)
-        : Number(discount.value || 0);
+      normalizedDiscount.type === 'percentage'
+        ? subtotal * (toFiniteNumber(normalizedDiscount.value, 0) / 100)
+        : toFiniteNumber(normalizedDiscount.value, 0);
 
-    const discountAmount = roundCurrency(
-      Math.min(Math.max(0, rawDiscountAmount), subtotal)
-    );
+    const discountAmount = roundCurrency(clamp(rawDiscountAmount, 0, subtotal));
 
     const taxableAmount = roundCurrency(Math.max(0, subtotal - discountAmount));
 
     const computedTaxes = taxes.map((tax) => ({
       ...tax,
-      amount: roundCurrency(taxableAmount * (Number(tax.rate || 0) / 100)),
+      rate: roundCurrency(toFiniteNumber(tax.rate, 0)),
+      amount: roundCurrency(
+        taxableAmount * (toFiniteNumber(tax.rate, 0) / 100)
+      ),
     }));
 
     const taxTotal = roundCurrency(
-      computedTaxes.reduce((sum, tax) => sum + Number(tax.amount || 0), 0)
+      computedTaxes.reduce((sum, tax) => sum + toFiniteNumber(tax.amount, 0), 0)
     );
 
     const grandTotal = roundCurrency(taxableAmount + taxTotal);
 
     const totalPaid = roundCurrency(
-      paymentMethods.reduce((sum, method) => sum + Number(method.amount || 0), 0)
+      paymentMethods.reduce(
+        (sum, method) => sum + toFiniteNumber(method.amount, 0),
+        0
+      )
     );
 
     const balance = roundCurrency(Math.max(0, grandTotal - totalPaid));
@@ -867,6 +1002,8 @@ export const selectDisplayedDiscountTaxBillingData = createSelector(
     return {
       subtotal,
       discountAmount,
+      discountType: normalizedDiscount.type,
+      discountValue: roundCurrency(toFiniteNumber(normalizedDiscount.value, 0)),
       taxableAmount,
       taxes: computedTaxes,
       taxTotal,
@@ -878,6 +1015,8 @@ export const selectDisplayedDiscountTaxBillingData = createSelector(
   }
 );
 
-// ========== BILLING DATA LOADED SELECTOR ==========
-export const selectBillingDataLoaded = (state: RootState, visitId: string): boolean =>
-  state.billing.billingDataLoaded?.[visitId] || false;
+/* ---------------------- BILLING DATA LOADED SELECTOR ---------------------- */
+export const selectBillingDataLoaded = (
+  state: RootState,
+  visitId: string
+): boolean => state.billing.billingDataLoaded?.[visitId] || false;

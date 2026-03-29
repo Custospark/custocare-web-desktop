@@ -21,6 +21,7 @@ import {
   clearDraftAfterFinalization,
   selectDraftChargeItems,
   selectRenderableChargeItems,
+  selectBackendChargeItems,
   selectEffectiveBillingStatus,
   selectIsProcessing,
   selectBillingData,
@@ -63,36 +64,34 @@ import { ReceiptPreviewSection } from './billing-summary/ReceiptPreviewSection';
 /*                                  TYPES                                     */
 /* -------------------------------------------------------------------------- */
 
+interface ReceiptBillingDataShape {
+  servicesSubtotal?: number;
+  existingBalance?: number;
+  newItemsSubtotal?: number;
+  newItemsDiscountAmount?: number;
+  newItemsTaxableAmount?: number;
+  newItemsTaxTotal?: number;
+  newItemsGrandTotal?: number;
+
+  subtotal: number;
+  discountAmount: number;
+  discountValue?: number;
+  discountType?: 'percentage' | 'fixed' | null;
+  taxableAmount: number;
+  taxTotal: number;
+  grandTotal: number;
+  totalPaid: number;
+  balance: number;
+  taxes: Tax[];
+}
+
 interface ReceiptTransactionShape {
   receipt_number: string | null;
   patient_name: string;
   patient_number: string;
   created_at: string;
   charge_items: RenderableChargeItem[];
- billing_data: {
-  // Informational: sum of all rendered services (old persisted services + draft services)
-  servicesSubtotal: number;
-
-  // Authoritative carried-forward unpaid amount from backend
-  existingBalance: number;
-
-  // Draft-only amounts
-  newItemsSubtotal: number;
-  newItemsDiscountAmount: number;
-  newItemsTaxableAmount: number;
-  newItemsTaxTotal: number;
-  newItemsGrandTotal: number;
-
-  // Backward-compatible totals for receipt/payment sections
-  subtotal: number;      // existingBalance + newItemsSubtotal
-  discountAmount: number; // draft only
-  taxableAmount: number;  // existingBalance + newItemsTaxableAmount
-  taxTotal: number;       // draft only
-  grandTotal: number;     // existingBalance + newItemsGrandTotal
-  totalPaid: number;
-  balance: number;
-  taxes: Tax[];
-};
+  billing_data: ReceiptBillingDataShape;
   payment_methods: PaymentMethod[];
   additional_notes?: string;
   facilityData?: any;
@@ -132,7 +131,7 @@ interface NormalizedBillingView {
   transaction: ReceiptTransactionShape;
   derivedFinancials: DerivedFinancials;
   cashBreakdown: CashBreakdown | null;
-  billingData: ReceiptTransactionShape['billing_data'];
+  billingData: ReceiptBillingDataShape;
 }
 
 interface BillingSummaryStepProps {
@@ -145,53 +144,43 @@ interface BillingSummaryStepProps {
 /*                               HELPERS                                      */
 /* -------------------------------------------------------------------------- */
 
-const clamp = (n: number, min = 0, max = Number.POSITIVE_INFINITY) =>
-  Math.max(min, Math.min(max, n));
+const clamp = (value: number, min = 0, max = Number.POSITIVE_INFINITY) =>
+  Math.max(min, Math.min(max, value));
 
-const onlyDigits = (v: string) => v.replace(/[^\d]/g, '');
+const onlyDigits = (value: string) => value.replace(/[^\d]/g, '');
 
-const safeArray = <T,>(arr: T[] | undefined | null): T[] => arr ?? [];
+const safeArray = <T,>(value: T[] | undefined | null): T[] =>
+  Array.isArray(value) ? value : [];
 
-const safeNumber = (val: unknown, defaultValue = 0): number => {
-  const n = Number(val);
-  return Number.isFinite(n) ? n : defaultValue;
+const safeNumber = (value: unknown, fallback = 0): number => {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'string' && value.trim() === '') return fallback;
+
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
 };
 
-const roundCurrency = (value: number) => Math.round((safeNumber(value) + Number.EPSILON) * 100) / 100;
+const roundCurrency = (value: number) =>
+  Math.round((safeNumber(value) + Number.EPSILON) * 100) / 100;
 
-const firstValidNumber = (...values: unknown[]) => {
+const firstMeaningfulNumber = (...values: unknown[]) => {
   for (const value of values) {
-    const n = Number(value);
-    if (Number.isFinite(n)) return n;
+    if (value === null || value === undefined) continue;
+    if (typeof value === 'string' && value.trim() === '') continue;
+
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) return numeric;
   }
   return 0;
 };
 
-const mergeTaxes = (
-  existing: Array<{ name: string; rate: number; amount: number }> = [],
-  incoming: Array<{ name: string; rate: number; amount: number }> = []
-): Tax[] => {
-  const merged = new Map<string, Tax>();
+const normalizeDiscountType = (value: unknown): 'percentage' | 'fixed' | null => {
+  const normalized = String(value ?? '').trim().toLowerCase();
 
-  [...existing, ...incoming].forEach((tax) => {
-    const key = `${String(tax.name).toLowerCase()}|${safeNumber(tax.rate).toFixed(2)}`;
-    const current = merged.get(key);
+  if (normalized === 'percentage' || normalized === 'percent') return 'percentage';
+  if (normalized === 'fixed' || normalized === 'flat') return 'fixed';
 
-    if (!current) {
-      merged.set(key, {
-        name: tax.name,
-        rate: safeNumber(tax.rate),
-        amount: roundCurrency(safeNumber(tax.amount)),
-      } as Tax);
-    } else {
-      merged.set(key, {
-        ...current,
-        amount: roundCurrency(safeNumber(current.amount) + safeNumber(tax.amount)),
-      } as Tax);
-    }
-  });
-
-  return Array.from(merged.values());
+  return null;
 };
 
 const getPaymentStatusFromNumbers = ({
@@ -209,13 +198,71 @@ const getPaymentStatusFromNumbers = ({
   return PaymentStatus.PARTIALLY_PAID;
 };
 
-const buildCashBreakdown = (cashTendered: number, changeAmount: number): CashBreakdown | null => {
+const buildCashBreakdown = (
+  cashTendered: number,
+  changeAmount: number
+): CashBreakdown | null => {
   if (cashTendered <= 0) return null;
 
   return {
     tendered: roundCurrency(cashTendered),
     change: roundCurrency(changeAmount),
     netCash: roundCurrency(cashTendered - changeAmount),
+  };
+};
+
+const extractDiscountSnapshot = (
+  rawBillingData: any,
+  item: any,
+  subtotal: number
+) => {
+  const discountType = normalizeDiscountType(
+    rawBillingData?.discountType ??
+      rawBillingData?.discount_type ??
+      rawBillingData?.discount?.type ??
+      item?.discountType ??
+      item?.discount_type ??
+      item?.discount?.type
+  );
+
+  const discountValue = roundCurrency(
+    firstMeaningfulNumber(
+      rawBillingData?.discountValue,
+      rawBillingData?.discount_value,
+      rawBillingData?.discount?.value,
+      item?.discountValue,
+      item?.discount_value,
+      item?.discount?.value
+    )
+  );
+
+  const explicitDiscountAmount = roundCurrency(
+    firstMeaningfulNumber(
+      rawBillingData?.discountAmount,
+      rawBillingData?.discount_amount,
+      rawBillingData?.discount?.amount,
+      item?.discountAmount,
+      item?.discount_amount,
+      item?.discount?.amount
+    )
+  );
+
+  let computedDiscountAmount = explicitDiscountAmount;
+
+  if (computedDiscountAmount <= 0 && discountType && discountValue > 0) {
+    computedDiscountAmount =
+      discountType === 'percentage'
+        ? roundCurrency(subtotal * (discountValue / 100))
+        : roundCurrency(discountValue);
+  }
+
+  const discountAmount = roundCurrency(clamp(computedDiscountAmount, 0, subtotal));
+
+  return {
+    discountType,
+    discountValue,
+    discountPercent: discountType === 'percentage' ? discountValue : 0,
+    discountAmount,
   };
 };
 
@@ -230,31 +277,63 @@ const normalizeBackendBillingData = (
     )
   );
 
-  const fallbackSubtotal = roundCurrency(safeNumber(billingData?.subtotal));
+  const fallbackSubtotal = roundCurrency(
+    firstMeaningfulNumber(billingData?.subtotal, billingData?.sub_total)
+  );
 
   return {
-    // Historical informational subtotal of persisted services
     servicesSubtotal:
       servicesSubtotalFromItems > 0 ? servicesSubtotalFromItems : fallbackSubtotal,
-
-    // This is the ONLY authoritative persisted collectible amount
-    existingBalance: roundCurrency(safeNumber(billingData?.balance)),
-
-    // Historical persisted values retained only for reference/debugging if needed
-    persistedGrandTotal: roundCurrency(safeNumber(billingData?.grandTotal)),
-    persistedTotalPaid: roundCurrency(safeNumber(billingData?.totalPaid)),
+    existingBalance: roundCurrency(
+      firstMeaningfulNumber(
+        billingData?.balance,
+        billingData?.balance_due,
+        billingData?.amount_due
+      )
+    ),
+    persistedGrandTotal: roundCurrency(
+      firstMeaningfulNumber(billingData?.grandTotal, billingData?.grand_total)
+    ),
+    persistedTotalPaid: roundCurrency(
+      firstMeaningfulNumber(billingData?.totalPaid, billingData?.total_paid)
+    ),
+    persistedDiscountAmount: roundCurrency(
+      firstMeaningfulNumber(
+        billingData?.discountAmount,
+        billingData?.discount_amount,
+        billingData?.discount?.amount
+      )
+    ),
+    persistedTaxes: safeArray<Tax>(billingData?.taxes),
   };
 };
 
 const normalizeDraftBillingData = (billingData: any) => ({
-  subtotal: roundCurrency(safeNumber(billingData?.subtotal)),
-  discountAmount: roundCurrency(safeNumber(billingData?.discountAmount)),
-  taxableAmount: roundCurrency(safeNumber(billingData?.taxableAmount)),
-  taxTotal: roundCurrency(safeNumber(billingData?.taxTotal)),
-  grandTotal: roundCurrency(safeNumber(billingData?.grandTotal)),
+  subtotal: roundCurrency(firstMeaningfulNumber(billingData?.subtotal)),
+  discountAmount: roundCurrency(
+    firstMeaningfulNumber(billingData?.discountAmount, billingData?.discount_amount)
+  ),
+  taxableAmount: roundCurrency(
+    firstMeaningfulNumber(billingData?.taxableAmount, billingData?.taxable_amount)
+  ),
+  taxTotal: roundCurrency(
+    firstMeaningfulNumber(billingData?.taxTotal, billingData?.tax_total)
+  ),
+  grandTotal: roundCurrency(
+    firstMeaningfulNumber(billingData?.grandTotal, billingData?.grand_total)
+  ),
   taxes: safeArray<Tax>(billingData?.taxes),
+  totalPaid: roundCurrency(
+    firstMeaningfulNumber(billingData?.totalPaid, billingData?.total_paid)
+  ),
+  balance: roundCurrency(
+    firstMeaningfulNumber(
+      billingData?.balance,
+      billingData?.balance_due,
+      billingData?.amount_due
+    )
+  ),
 });
-
 
 const normalizeServerBillingItem = (
   item: BillingReviewItem,
@@ -264,52 +343,91 @@ const normalizeServerBillingItem = (
   const rawBillingData: any = item?.billing_data ?? {};
 
   const subtotal = roundCurrency(
-    firstValidNumber(rawBillingData?.subtotal, (item as any)?.subtotal)
+    firstMeaningfulNumber(
+      rawBillingData?.subtotal,
+      rawBillingData?.sub_total,
+      (item as any)?.subtotal,
+      (item as any)?.sub_total
+    )
   );
-  const discountAmount = roundCurrency(
-    firstValidNumber(rawBillingData?.discountAmount, rawBillingData?.discount_amount, (item as any)?.discountAmount)
-  );
+
+  const {
+    discountAmount,
+    discountType,
+    discountValue,
+    discountPercent,
+  } = extractDiscountSnapshot(rawBillingData, item as any, subtotal);
+
   const taxableAmount = roundCurrency(
-    firstValidNumber(rawBillingData?.taxableAmount, rawBillingData?.taxable_amount, (item as any)?.taxableAmount)
+    firstMeaningfulNumber(
+      rawBillingData?.taxableAmount,
+      rawBillingData?.taxable_amount,
+      (item as any)?.taxableAmount,
+      (item as any)?.taxable_amount,
+      subtotal - discountAmount
+    )
   );
+
   const taxTotal = roundCurrency(
-    firstValidNumber(rawBillingData?.taxTotal, rawBillingData?.tax_total, (item as any)?.taxTotal)
+    firstMeaningfulNumber(
+      rawBillingData?.taxTotal,
+      rawBillingData?.tax_total,
+      (item as any)?.taxTotal,
+      (item as any)?.tax_total
+    )
   );
+
   const grandTotal = roundCurrency(
-    firstValidNumber(rawBillingData?.grandTotal, rawBillingData?.grand_total, (item as any)?.grandTotal)
+    firstMeaningfulNumber(
+      rawBillingData?.grandTotal,
+      rawBillingData?.grand_total,
+      (item as any)?.grandTotal,
+      (item as any)?.grand_total,
+      taxableAmount + taxTotal
+    )
   );
+
   const totalPaid = roundCurrency(
-    firstValidNumber(rawBillingData?.totalPaid, rawBillingData?.total_paid, (item as any)?.totalPaid, (item as any)?.total_paid)
+    firstMeaningfulNumber(
+      rawBillingData?.totalPaid,
+      rawBillingData?.total_paid,
+      (item as any)?.totalPaid,
+      (item as any)?.total_paid
+    )
   );
+
   const balance = roundCurrency(
-    firstValidNumber(
+    firstMeaningfulNumber(
       rawBillingData?.balance,
       rawBillingData?.balance_due,
       (item as any)?.balance,
       (item as any)?.balance_due,
-      (item as any)?.amount_due
+      (item as any)?.amount_due,
+      Math.max(0, grandTotal - totalPaid)
     )
   );
 
   const taxes = safeArray<Tax>(rawBillingData?.taxes ?? (item as any)?.taxes);
-
   const paymentMethods = safeArray<PaymentMethod>((item as any)?.payment_methods);
+
   const cashTendered = roundCurrency(
     paymentMethods
-      .filter((m) => m?.type === 'cash')
-      .reduce((sum, m) => sum + safeNumber(m?.amount), 0)
+      .filter((method) => method?.type === 'cash')
+      .reduce((sum, method) => sum + safeNumber(method?.amount), 0)
   );
+
   const nonCashTotal = roundCurrency(
     paymentMethods
-      .filter((m) => m?.type !== 'cash')
-      .reduce((sum, m) => sum + safeNumber(m?.amount), 0)
+      .filter((method) => method?.type !== 'cash')
+      .reduce((sum, method) => sum + safeNumber(method?.amount), 0)
   );
+
   const totalPaidFromMethods = roundCurrency(
-    paymentMethods.reduce((sum, m) => sum + safeNumber(m?.amount), 0)
+    paymentMethods.reduce((sum, method) => sum + safeNumber(method?.amount), 0)
   );
 
   const serverReportedChange = roundCurrency(
-    firstValidNumber(
+    firstMeaningfulNumber(
       rawBillingData?.changeAmount,
       rawBillingData?.change_amount,
       (item as any)?.changeAmount,
@@ -321,18 +439,22 @@ const normalizeServerBillingItem = (
     Math.max(0, cashTendered - Math.max(0, grandTotal - nonCashTotal))
   );
 
-  const changeAmount = serverReportedChange > 0 ? serverReportedChange : fallbackComputedChange;
+  const changeAmount =
+    serverReportedChange > 0 ? serverReportedChange : fallbackComputedChange;
+
+  const netPaid =
+    totalPaid > 0 ? totalPaid : roundCurrency(totalPaidFromMethods - changeAmount);
 
   const derivedFinancials: DerivedFinancials = {
     status: ((item as any)?.payment_status || PaymentStatus.PAID_IN_FULL) as PaymentStatus,
     refunded: 0,
-    netPaid: totalPaid > 0 ? totalPaid : roundCurrency(totalPaidFromMethods - changeAmount),
+    netPaid,
     balanceDue: balance,
     grandTotal,
     subtotal,
     discountAmount,
-    discountPercent: 0,
-    discountType: null,
+    discountPercent,
+    discountType,
     taxTotal,
     totalPaidFromMethods,
     cashTendered,
@@ -341,9 +463,11 @@ const normalizeServerBillingItem = (
     nonCashTotal,
   };
 
-  const billingData = {
+  const billingData: ReceiptBillingDataShape = {
     subtotal,
     discountAmount,
+    discountValue,
+    discountType,
     taxableAmount,
     taxTotal,
     grandTotal,
@@ -410,6 +534,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
   const draftChargeItems = useSelector(selectDraftChargeItems);
   const renderableChargeItems = useSelector(selectRenderableChargeItems);
+  const backendChargeItems = useSelector(selectBackendChargeItems);
   const draftBillingData = useSelector(selectBillingData);
   const backendBillingData = useSelector(selectBackendBillingData);
   const backendBillingMeta = useSelector(selectBackendBillingMeta);
@@ -430,6 +555,9 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   const isFinalized = status === 'settled';
 
   const [discount, setLocalDiscount] = useState(DEFAULT_DISCOUNT);
+  const [discountInputValue, setDiscountInputValue] = useState(
+    DEFAULT_DISCOUNT.value > 0 ? String(DEFAULT_DISCOUNT.value) : ''
+  );
   const [paymentMethods, setLocalPaymentMethods] =
     useState<PaymentMethod[]>(DEFAULT_PAYMENT_METHODS);
   const [additionalNotes, setLocalAdditionalNotes] = useState('');
@@ -443,7 +571,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   const hasPersistedBalance = safeNumber(backendBillingData?.balance) > 0;
   const hasPersistedGrandTotal = safeNumber(backendBillingData?.grandTotal) > 0;
   const hasDraftItems = safeArray(draftChargeItems).length > 0;
-  const hasAnyBillableContext = hasPersistedBalance || hasPersistedGrandTotal || hasDraftItems;
+  const hasAnyBillableContext =
+    hasPersistedBalance || hasPersistedGrandTotal || hasDraftItems;
 
   const isServerMode = !!serverBillingItem;
 
@@ -457,9 +586,12 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     data: fetchedVisitBillingData,
     isSuccess: isBillingFetchSuccess,
     isLoading: isBillingFetchLoading,
-  } = useGetBillingByVisitForFacility(shouldFetchAfterFinalization ? (visitId ?? null) : null, {
-    enabled: shouldFetchAfterFinalization && !!visitId,
-  });
+  } = useGetBillingByVisitForFacility(
+    shouldFetchAfterFinalization ? (visitId ?? null) : null,
+    {
+      enabled: shouldFetchAfterFinalization && !!visitId,
+    }
+  );
 
   const { mutate: submitBilling, isPending: isSubmitting } = useSubmitBilling({
     onSuccess: (response) => {
@@ -489,21 +621,29 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
     setServerBillingItem(authoritativeBillingItem);
     setReceiptNumber(
-      (authoritativeBillingItem as any)?.receipt_number || receiptNumber || `REC-${Date.now().toString().slice(-8)}`
+      (authoritativeBillingItem as any)?.receipt_number ||
+        receiptNumber ||
+        `REC-${Date.now().toString().slice(-8)}`
     );
     setShouldFetchAfterFinalization(false);
 
-    // Critical: clear slice draft only after server data has become authoritative
     dispatch(clearDraftAfterFinalization());
   }, [isBillingFetchSuccess, fetchedVisitBillingData, dispatch, receiptNumber]);
 
   useEffect(() => {
-    setLocalDiscount(billingState?.discount || DEFAULT_DISCOUNT);
+    const nextDiscount = billingState?.discount || DEFAULT_DISCOUNT;
+
+    setLocalDiscount(nextDiscount);
+    setDiscountInputValue(
+      safeNumber(nextDiscount?.value) > 0 ? String(nextDiscount.value) : ''
+    );
+
     setLocalPaymentMethods(
       billingState?.paymentMethods?.length
-        ? billingState.paymentMethods
+        ? (billingState.paymentMethods as PaymentMethod[])
         : DEFAULT_PAYMENT_METHODS
     );
+
     setLocalAdditionalNotes(billingState?.additionalNotes || '');
   }, [billingState?.discount, billingState?.paymentMethods, billingState?.additionalNotes]);
 
@@ -513,195 +653,188 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     }
   }, [status, receiptNumber]);
 
- const normalizedPersistedBilling = useMemo(
-  () => normalizeBackendBillingData(backendBillingData, renderableChargeItems.filter((x: any) => x?.source === 'backend')),
-  [backendBillingData, renderableChargeItems]
-);
-
-const normalizedDraftBilling = useMemo(
-  () => normalizeDraftBillingData(draftBillingData),
-  [draftBillingData]
-);
-
-
-const draftBillingView = useMemo<NormalizedBillingView>(() => {
-  const persisted = normalizedPersistedBilling;
-  const draft = normalizedDraftBilling;
-
-  const currentMethods = safeArray(paymentMethods).filter(
-    (method) => safeNumber(method?.amount) > 0
+  const normalizedPersistedBilling = useMemo(
+    () => normalizeBackendBillingData(backendBillingData, backendChargeItems),
+    [backendBillingData, backendChargeItems]
   );
 
-  // ------------------------------------------------------------------------
-  // ACCOUNTING MODEL
-  // ------------------------------------------------------------------------
-  // persisted.existingBalance = authoritative carried-forward unpaid amount
-  // draft.* = only current unsaved items
-  //
-  // DO NOT recombine persisted grandTotal/subtotal/taxes into current due-now totals.
-  // Existing balance is already net of prior payments/discounts/taxes.
-  // ------------------------------------------------------------------------
-
-  const servicesSubtotal = roundCurrency(
-    persisted.servicesSubtotal + draft.subtotal
+  const normalizedDraftBilling = useMemo(
+    () => normalizeDraftBillingData(draftBillingData),
+    [draftBillingData]
   );
 
-  const existingBalance = roundCurrency(persisted.existingBalance);
+  const draftDiscountBase = useMemo(() => {
+    return roundCurrency(
+      safeNumber(normalizedDraftBilling.subtotal, 0)
+    );
+  }, [normalizedDraftBilling.subtotal]);
 
-  const newItemsSubtotal = roundCurrency(draft.subtotal);
-  const newItemsDiscountAmount = roundCurrency(draft.discountAmount);
-  const newItemsTaxableAmount = roundCurrency(draft.taxableAmount);
-  const newItemsTaxTotal = roundCurrency(draft.taxTotal);
-  const newItemsGrandTotal = roundCurrency(draft.grandTotal);
+  const draftBillingView = useMemo<NormalizedBillingView>(() => {
+    const persisted = normalizedPersistedBilling;
+    const draft = normalizedDraftBilling;
 
-  // This is the correct subtotal for the CURRENT collection session
-  const currentSessionSubtotal = roundCurrency(
-    existingBalance + newItemsSubtotal
-  );
+    const currentMethods = safeArray(paymentMethods).filter(
+      (method) => safeNumber(method?.amount) > 0
+    );
 
-  const currentSessionDiscountAmount = roundCurrency(newItemsDiscountAmount);
+    const servicesSubtotal = roundCurrency(
+      persisted.servicesSubtotal + draft.subtotal
+    );
 
-  const currentSessionTaxableAmount = roundCurrency(
-    existingBalance + newItemsTaxableAmount
-  );
+    const existingBalance = roundCurrency(persisted.existingBalance);
 
-  const currentSessionTaxTotal = roundCurrency(newItemsTaxTotal);
+    const newItemsSubtotal = roundCurrency(draft.subtotal);
+    const newItemsDiscountAmount = roundCurrency(draft.discountAmount);
+    const newItemsTaxableAmount = roundCurrency(draft.taxableAmount);
+    const newItemsTaxTotal = roundCurrency(draft.taxTotal);
+    const newItemsGrandTotal = roundCurrency(draft.grandTotal);
 
-  const amountDueBeforeCurrentPayment = roundCurrency(
-    existingBalance + newItemsGrandTotal
-  );
+    const currentSessionSubtotal = roundCurrency(existingBalance + newItemsSubtotal);
+    const currentSessionDiscountAmount = roundCurrency(newItemsDiscountAmount);
+    const currentSessionTaxableAmount = roundCurrency(
+      existingBalance + newItemsTaxableAmount
+    );
+    const currentSessionTaxTotal = roundCurrency(newItemsTaxTotal);
 
-  const totalPaidFromMethods = roundCurrency(
-    currentMethods.reduce((sum, method) => sum + safeNumber(method?.amount), 0)
-  );
+    const amountDueBeforeCurrentPayment = roundCurrency(
+      existingBalance + newItemsGrandTotal
+    );
 
-  const cashTendered = roundCurrency(
-    currentMethods
-      .filter((method) => method?.type === 'cash')
-      .reduce((sum, method) => sum + safeNumber(method?.amount), 0)
-  );
+    const totalPaidFromMethods = roundCurrency(
+      currentMethods.reduce((sum, method) => sum + safeNumber(method?.amount), 0)
+    );
 
-  const nonCashTotal = roundCurrency(
-    currentMethods
-      .filter((method) => method?.type !== 'cash')
-      .reduce((sum, method) => sum + safeNumber(method?.amount), 0)
-  );
+    const cashTendered = roundCurrency(
+      currentMethods
+        .filter((method) => method?.type === 'cash')
+        .reduce((sum, method) => sum + safeNumber(method?.amount), 0)
+    );
 
-  const remainingAfterNonCash = roundCurrency(
-    Math.max(0, amountDueBeforeCurrentPayment - nonCashTotal)
-  );
+    const nonCashTotal = roundCurrency(
+      currentMethods
+        .filter((method) => method?.type !== 'cash')
+        .reduce((sum, method) => sum + safeNumber(method?.amount), 0)
+    );
 
-  const changeAmount = roundCurrency(
-    Math.max(0, cashTendered - remainingAfterNonCash)
-  );
+    const remainingAfterNonCash = roundCurrency(
+      Math.max(0, amountDueBeforeCurrentPayment - nonCashTotal)
+    );
 
-  const currentNetPaid = roundCurrency(totalPaidFromMethods - changeAmount);
+    const changeAmount = roundCurrency(
+      Math.max(0, cashTendered - remainingAfterNonCash)
+    );
 
-  const balanceDue = roundCurrency(
-    Math.max(0, amountDueBeforeCurrentPayment - currentNetPaid)
-  );
+    const currentNetPaid = roundCurrency(totalPaidFromMethods - changeAmount);
 
-  const paymentStatus = getPaymentStatusFromNumbers({
-    amountDueBeforePayment: amountDueBeforeCurrentPayment,
-    netPaid: currentNetPaid,
-    balanceDue,
-  });
+    const balanceDue = roundCurrency(
+      Math.max(0, amountDueBeforeCurrentPayment - currentNetPaid)
+    );
 
-  const billingData = {
-    // Rich breakdown
-    servicesSubtotal,
-    existingBalance,
-    newItemsSubtotal,
-    newItemsDiscountAmount,
-    newItemsTaxableAmount,
-    newItemsTaxTotal,
-    newItemsGrandTotal,
+    const paymentStatus = getPaymentStatusFromNumbers({
+      amountDueBeforePayment: amountDueBeforeCurrentPayment,
+      netPaid: currentNetPaid,
+      balanceDue,
+    });
 
-    // Receipt-compatible summary for THIS collection session only
-    subtotal: currentSessionSubtotal,
-    discountAmount: currentSessionDiscountAmount,
-    taxableAmount: currentSessionTaxableAmount,
-    taxTotal: currentSessionTaxTotal,
-    grandTotal: amountDueBeforeCurrentPayment,
-    totalPaid: currentNetPaid,
-    balance: balanceDue,
+    const billingData: ReceiptBillingDataShape = {
+      servicesSubtotal,
+      existingBalance,
+      newItemsSubtotal,
+      newItemsDiscountAmount,
+      newItemsTaxableAmount,
+      newItemsTaxTotal,
+      newItemsGrandTotal,
 
-    // IMPORTANT: only draft taxes belong here.
-    // Persisted taxes are already embedded in existingBalance.
-    taxes: draft.taxes,
-  };
+      subtotal: currentSessionSubtotal,
+      discountAmount: currentSessionDiscountAmount,
+      discountValue: roundCurrency(safeNumber(discount?.value)),
+      discountType:
+        discount?.type === 'percentage'
+          ? 'percentage'
+          : discount?.type === 'fixed'
+          ? 'fixed'
+          : null,
+      taxableAmount: currentSessionTaxableAmount,
+      taxTotal: currentSessionTaxTotal,
+      grandTotal: amountDueBeforeCurrentPayment,
+      totalPaid: currentNetPaid,
+      balance: balanceDue,
+      taxes: draft.taxes,
+    };
 
-  const combinedNotes = [
-    backendBillingMeta?.receiptNumber
-      ? `Existing Receipt: ${backendBillingMeta.receiptNumber}`
-      : null,
-    additionalNotes || null,
-  ]
-    .filter(Boolean)
-    .join('\n');
-
-  const transaction: ReceiptTransactionShape = {
-    receipt_number: receiptNumber || backendBillingMeta?.receiptNumber || null,
-    patient_name: activeVisit?.patient?.name || activePatient?.name || 'Unknown Patient',
-    patient_number:
-      activeVisit?.patient?.patient_number || activePatient?.patient_number || 'N/A',
-    created_at: new Date().toISOString(),
-    charge_items: safeArray(renderableChargeItems),
-    billing_data: billingData,
-    payment_methods: currentMethods,
-    additional_notes: combinedNotes || undefined,
-    facilityData,
-    payment_status: paymentStatus,
-    billing_status: status,
-    attending_staff_display: backendBillingMeta?.attendingStaffDisplay || null,
-    attending_staff_name: backendBillingMeta?.attendingStaffName || null,
-    attending_staff_role: backendBillingMeta?.attendingStaffRole || null,
-  };
-
-  const derivedFinancials: DerivedFinancials = {
-    status: paymentStatus,
-    refunded: 0,
-    netPaid: currentNetPaid,
-    balanceDue,
-    grandTotal: amountDueBeforeCurrentPayment,
-    subtotal: currentSessionSubtotal,
-    discountAmount: currentSessionDiscountAmount,
-    discountPercent: discount?.type === 'percentage' ? safeNumber(discount?.value) : 0,
-    discountType:
-      discount?.type === 'percentage'
-        ? 'percentage'
-        : discount?.type === 'fixed'
-        ? 'fixed'
+    const combinedNotes = [
+      backendBillingMeta?.receiptNumber
+        ? `Existing Receipt: ${backendBillingMeta.receiptNumber}`
         : null,
-    taxTotal: currentSessionTaxTotal,
-    totalPaidFromMethods,
-    cashTendered,
-    changeAmount,
-    hasCashPayment: cashTendered > 0,
-    nonCashTotal,
-  };
+      additionalNotes || null,
+    ]
+      .filter(Boolean)
+      .join('\n');
 
-  return {
-    transaction,
-    derivedFinancials,
-    cashBreakdown: buildCashBreakdown(cashTendered, changeAmount),
-    billingData,
-  };
-}, [
-  normalizedPersistedBilling,
-  normalizedDraftBilling,
-  paymentMethods,
-  backendBillingMeta,
-  additionalNotes,
-  receiptNumber,
-  activeVisit,
-  activePatient,
-  renderableChargeItems,
-  facilityData,
-  status,
-  discount,
-]);
+    const transaction: ReceiptTransactionShape = {
+      receipt_number: receiptNumber || backendBillingMeta?.receiptNumber || null,
+      patient_name: activeVisit?.patient?.name || activePatient?.name || 'Unknown Patient',
+      patient_number:
+        activeVisit?.patient?.patient_number ||
+        activePatient?.patient_number ||
+        'N/A',
+      created_at: new Date().toISOString(),
+      charge_items: safeArray(renderableChargeItems),
+      billing_data: billingData,
+      payment_methods: currentMethods,
+      additional_notes: combinedNotes || undefined,
+      facilityData,
+      payment_status: paymentStatus,
+      billing_status: status,
+      attending_staff_display: backendBillingMeta?.attendingStaffDisplay || null,
+      attending_staff_name: backendBillingMeta?.attendingStaffName || null,
+      attending_staff_role: backendBillingMeta?.attendingStaffRole || null,
+    };
 
+    const derivedFinancials: DerivedFinancials = {
+      status: paymentStatus,
+      refunded: 0,
+      netPaid: currentNetPaid,
+      balanceDue,
+      grandTotal: amountDueBeforeCurrentPayment,
+      subtotal: currentSessionSubtotal,
+      discountAmount: currentSessionDiscountAmount,
+      discountPercent:
+        discount?.type === 'percentage' ? safeNumber(discount?.value) : 0,
+      discountType:
+        discount?.type === 'percentage'
+          ? 'percentage'
+          : discount?.type === 'fixed'
+          ? 'fixed'
+          : null,
+      taxTotal: currentSessionTaxTotal,
+      totalPaidFromMethods,
+      cashTendered,
+      changeAmount,
+      hasCashPayment: cashTendered > 0,
+      nonCashTotal,
+    };
+
+    return {
+      transaction,
+      derivedFinancials,
+      cashBreakdown: buildCashBreakdown(cashTendered, changeAmount),
+      billingData,
+    };
+  }, [
+    normalizedPersistedBilling,
+    normalizedDraftBilling,
+    paymentMethods,
+    backendBillingMeta,
+    additionalNotes,
+    receiptNumber,
+    activeVisit,
+    activePatient,
+    renderableChargeItems,
+    facilityData,
+    status,
+    discount,
+  ]);
 
   const serverBillingView = useMemo<NormalizedBillingView | null>(() => {
     if (!serverBillingItem) return null;
@@ -710,45 +843,44 @@ const draftBillingView = useMemo<NormalizedBillingView>(() => {
 
   const activeBillingView = serverBillingView ?? draftBillingView;
 
-const cashChangeByIndex = useMemo(() => {
-  const result: Record<number, { dueBefore: number; change: number }> = {};
+  const cashChangeByIndex = useMemo(() => {
+    const result: Record<number, { dueBefore: number; change: number }> = {};
 
-  if (isServerMode) return result;
+    if (isServerMode) return result;
 
-  const currentMethods = safeArray(paymentMethods);
+    const currentMethods = safeArray(paymentMethods);
 
-  const dueBeforeAnyPayment = roundCurrency(
-    normalizedPersistedBilling.existingBalance + normalizedDraftBilling.grandTotal
-  );
-
-  currentMethods.forEach((method, index) => {
-    if (method?.type !== 'cash') return;
-
-    const otherPaymentsTotal = roundCurrency(
-      currentMethods.reduce((sum, currentMethod, i) => {
-        if (i === index) return sum;
-        return sum + safeNumber(currentMethod?.amount);
-      }, 0)
+    const dueBeforeAnyPayment = roundCurrency(
+      normalizedPersistedBilling.existingBalance + normalizedDraftBilling.grandTotal
     );
 
-    const dueBefore = roundCurrency(
-      Math.max(0, dueBeforeAnyPayment - otherPaymentsTotal)
-    );
+    currentMethods.forEach((method, index) => {
+      if (method?.type !== 'cash') return;
 
-    const tendered = roundCurrency(safeNumber(method?.amount));
-    const change = roundCurrency(Math.max(0, tendered - dueBefore));
+      const otherPaymentsTotal = roundCurrency(
+        currentMethods.reduce((sum, currentMethod, i) => {
+          if (i === index) return sum;
+          return sum + safeNumber(currentMethod?.amount);
+        }, 0)
+      );
 
-    result[index] = { dueBefore, change };
-  });
+      const dueBefore = roundCurrency(
+        Math.max(0, dueBeforeAnyPayment - otherPaymentsTotal)
+      );
 
-  return result;
-}, [
-  paymentMethods,
-  normalizedPersistedBilling.existingBalance,
-  normalizedDraftBilling.grandTotal,
-  isServerMode,
-]);
+      const tendered = roundCurrency(safeNumber(method?.amount));
+      const change = roundCurrency(Math.max(0, tendered - dueBefore));
 
+      result[index] = { dueBefore, change };
+    });
+
+    return result;
+  }, [
+    paymentMethods,
+    normalizedPersistedBilling.existingBalance,
+    normalizedDraftBilling.grandTotal,
+    isServerMode,
+  ]);
 
   const handlePrint = useReactToPrint({
     contentRef: printReceiptRef,
@@ -760,11 +892,6 @@ const cashChangeByIndex = useMemo(() => {
       setIsPrinting(false);
     },
   });
-
-  const handlePrintReceipt = () => {
-    if (!canPrint || !printReceiptRef.current) return;
-    handlePrint();
-  };
 
   const colors = {
     bg: {
@@ -806,7 +933,6 @@ const cashChangeByIndex = useMemo(() => {
     },
   };
 
-  // Finalize is now allowed for partial payments too — but never for zero-payment.
   const canFinalize =
     !isProcessing &&
     !isSubmitting &&
@@ -820,6 +946,11 @@ const cashChangeByIndex = useMemo(() => {
     (!!receiptNumber || !!serverBillingItem?.receipt_number) &&
     !isProcessing &&
     !isSubmitting;
+
+  const handlePrintReceipt = () => {
+    if (!canPrint || !printReceiptRef.current) return;
+    handlePrint();
+  };
 
   const paymentIcon = (type: string) => {
     switch (type) {
@@ -836,22 +967,63 @@ const cashChangeByIndex = useMemo(() => {
     }
   };
 
-  const handleDiscountChange = (type: 'percentage' | 'fixed', rawValue: string) => {
+  const handleDiscountValueChange = (rawValue: string) => {
     if (isReadOnly) return;
 
-    const numericValue = Number(rawValue) || 0;
-    const maxValue = type === 'percentage' ? 100 : safeNumber(draftBillingData?.subtotal);
-    const clampedValue = clamp(numericValue, 0, maxValue);
+    setDiscountInputValue(rawValue);
 
-    const updatedDiscount = { type, value: clampedValue };
+    if (rawValue.trim() === '') {
+      const clearedDiscount = {
+        ...discount,
+        value: 0,
+      };
+
+      setLocalDiscount(clearedDiscount);
+      dispatch(setDiscount(clearedDiscount));
+      return;
+    }
+
+    const numericValue = safeNumber(rawValue, 0);
+    const maxValue = discount.type === 'percentage' ? 100 : draftDiscountBase;
+    const clampedValue = roundCurrency(clamp(numericValue, 0, maxValue));
+
+    const updatedDiscount = {
+      ...discount,
+      value: clampedValue,
+    };
+
     setLocalDiscount(updatedDiscount);
+    dispatch(setDiscount(updatedDiscount));
+  };
+
+  const handleDiscountTypeChange = (type: 'percentage' | 'fixed') => {
+    if (isReadOnly) return;
+
+    const currentRawValue = discountInputValue.trim();
+    const numericValue = currentRawValue === '' ? 0 : safeNumber(currentRawValue, 0);
+    const maxValue = type === 'percentage' ? 100 : draftDiscountBase;
+    const clampedValue = roundCurrency(clamp(numericValue, 0, maxValue));
+
+    const updatedDiscount = {
+      ...discount,
+      type,
+      value: clampedValue,
+    };
+
+    setLocalDiscount(updatedDiscount);
+    setDiscountInputValue(clampedValue > 0 ? String(clampedValue) : '');
     dispatch(setDiscount(updatedDiscount));
   };
 
   const syncPaymentMethodsToRedux = (updatedMethods: PaymentMethod[]) => {
     if (isReadOnly) return;
+
     setLocalPaymentMethods(updatedMethods);
-    dispatch(setPaymentMethods(updatedMethods as import('./billing-types').PaymentMethod[]));
+    dispatch(
+      setPaymentMethods(
+        updatedMethods as import('./billing-types').PaymentMethod[]
+      )
+    );
   };
 
   const handlePaymentTypeChange = (index: number, newType: string) => {
@@ -861,7 +1033,7 @@ const cashChangeByIndex = useMemo(() => {
     updatedMethods[index] = {
       ...updatedMethods[index],
       type: newType as PaymentMethod['type'],
-      details: newType === 'mobile' ? updatedMethods[index]?.details || '' : updatedMethods[index]?.details,
+      details: updatedMethods[index]?.details || '',
     };
 
     syncPaymentMethodsToRedux(updatedMethods);
@@ -875,7 +1047,9 @@ const cashChangeByIndex = useMemo(() => {
 
     updatedMethods[index] = {
       ...updatedMethods[index],
-      amount: Number.isFinite(numericValue) ? Math.max(0, numericValue) : 0,
+      amount: Number.isFinite(numericValue)
+        ? roundCurrency(Math.max(0, numericValue))
+        : 0,
     };
 
     syncPaymentMethodsToRedux(updatedMethods);
@@ -898,12 +1072,14 @@ const cashChangeByIndex = useMemo(() => {
     );
 
     const updatedMethods = [...paymentMethods];
-    updatedMethods[index] = { ...updatedMethods[index], amount: remainingBalance };
+    updatedMethods[index] = {
+      ...updatedMethods[index],
+      amount: remainingBalance,
+    };
 
     setFocusedAmountInputs((prev) => ({ ...prev, [index]: true }));
     syncPaymentMethodsToRedux(updatedMethods);
   };
-
 
   const handleAddPaymentMethod = () => {
     if (isReadOnly || paymentMethods.length >= 3) return;
@@ -996,6 +1172,23 @@ const cashChangeByIndex = useMemo(() => {
     try {
       const currentPaymentStatus = activeBillingView.derivedFinancials.status;
 
+      const billingDataSnapshot = {
+        subtotal: roundCurrency(activeBillingView.billingData.subtotal),
+        discountAmount: roundCurrency(activeBillingView.billingData.discountAmount),
+        taxableAmount: roundCurrency(activeBillingView.billingData.taxableAmount),
+        taxTotal: roundCurrency(activeBillingView.billingData.taxTotal),
+        grandTotal: roundCurrency(activeBillingView.billingData.grandTotal),
+        totalPaid: roundCurrency(activeBillingView.derivedFinancials.netPaid),
+        balance: roundCurrency(activeBillingView.derivedFinancials.balanceDue),
+        discountType:
+          discount.type === 'percentage'
+            ? 'percentage'
+            : discount.type === 'fixed'
+            ? 'fixed'
+            : null,
+        discountValue: roundCurrency(safeNumber(discount.value)),
+      } as BillingSubmissionPayload['billing_data'];
+
       const payload: BillingSubmissionPayload = {
         visit_id: visitId,
         patient_id: patientId,
@@ -1009,19 +1202,19 @@ const cashChangeByIndex = useMemo(() => {
             category: item.service.category,
           },
           quantity: item.quantity,
-          totalAmount: item.totalAmount,
+          totalAmount: roundCurrency(item.totalAmount),
         })),
         discount: {
           type:
             discount.type === 'percentage'
               ? DiscountType.PERCENTAGE
               : DiscountType.FIXED,
-          value: discount.value,
+          value: roundCurrency(safeNumber(discount.value)),
           reason: discount.reason || additionalNotes || undefined,
         },
         taxes: safeArray(activeBillingView.billingData?.taxes).map((tax) => ({
           name: tax.name,
-          rate: tax.rate,
+          rate: roundCurrency(safeNumber(tax.rate)),
           amount: roundCurrency(safeNumber(tax.amount)),
         })),
         payment_methods: safeArray(paymentMethods)
@@ -1032,15 +1225,7 @@ const cashChangeByIndex = useMemo(() => {
             reference: method.details || undefined,
             details: method.details || undefined,
           })),
-        billing_data: {
-         subtotal: roundCurrency(activeBillingView.billingData.subtotal),
-        discountAmount: roundCurrency(activeBillingView.billingData.discountAmount),
-        taxableAmount: roundCurrency(activeBillingView.billingData.taxableAmount),
-        taxTotal: roundCurrency(activeBillingView.billingData.taxTotal),
-        grandTotal: roundCurrency(activeBillingView.billingData.grandTotal),
-        totalPaid: roundCurrency(activeBillingView.derivedFinancials.netPaid),
-        balance: roundCurrency(activeBillingView.derivedFinancials.balanceDue),
-        },
+        billing_data: billingDataSnapshot,
         additional_notes: additionalNotes || undefined,
         status,
         payment_status: currentPaymentStatus,
@@ -1055,24 +1240,28 @@ const cashChangeByIndex = useMemo(() => {
 
   const handleFocusAmountInput = (index: number) => {
     if (isReadOnly) return;
+
     if (!focusedAmountInputs[index]) {
       setFocusedAmountInputs((prev) => ({ ...prev, [index]: true }));
     }
   };
 
-  const shouldHideDiscountControls =
-  isServerMode && safeNumber(activeBillingView.billingData.totalPaid) > 0;
-
   const handleBlurAmountInput = (index: number) => {
     if (isReadOnly) return;
+
     if (paymentMethods[index]?.amount === 0) {
       setFocusedAmountInputs((prev) => ({ ...prev, [index]: false }));
     }
   };
 
   const handleDiscountFocus = () => {
-    if (discount.value === 0) setLocalDiscount((p) => ({ ...p, value: 0 }));
+    if (safeNumber(discount.value) === 0 && discountInputValue === '') {
+      setDiscountInputValue('');
+    }
   };
+
+  const shouldHideDiscountControls =
+    isServerMode && safeNumber(activeBillingView.billingData.totalPaid) > 0;
 
   const getDisplayAmount = (index: number, amount: number) => {
     const isFocused = focusedAmountInputs[index];
@@ -1085,7 +1274,9 @@ const cashChangeByIndex = useMemo(() => {
       {isReadOnly && (
         <div className="absolute top-20 right-8 z-10 flex items-center gap-2 px-3 py-1.5 bg-blue-700 text-white dark:bg-blue-600 dark:text-white rounded-full shadow-md border border-blue-500 dark:border-blue-400 no-print">
           <Lock className="w-3.5 h-3.5" />
-          <span className="text-xs font-semibold">Read-only mode - Payment settled</span>
+          <span className="text-xs font-semibold">
+            Read-only mode - Payment settled
+          </span>
         </div>
       )}
 
@@ -1115,7 +1306,8 @@ const cashChangeByIndex = useMemo(() => {
           <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-xs font-medium border border-emerald-200 dark:border-emerald-800 shadow-sm">
             <FilePlus2 className="w-3.5 h-3.5" />
             <span>
-              {draftChargeItems.length} New item{draftChargeItems.length === 1 ? '' : 's'}
+              {draftChargeItems.length} New item
+              {draftChargeItems.length === 1 ? '' : 's'}
             </span>
           </div>
         )}
@@ -1158,7 +1350,10 @@ const cashChangeByIndex = useMemo(() => {
           isReadOnly={isReadOnly}
           status={String(activeBillingView.derivedFinancials.status || status)}
           receiptNumber={
-            receiptNumber || serverBillingItem?.receipt_number || backendBillingMeta?.receiptNumber || ''
+            receiptNumber ||
+            serverBillingItem?.receipt_number ||
+            backendBillingMeta?.receiptNumber ||
+            ''
           }
           receiptRef={printReceiptRef}
           selectedTransaction={activeBillingView.transaction}
@@ -1170,37 +1365,38 @@ const cashChangeByIndex = useMemo(() => {
           onAdditionalNotesChange={handleAdditionalNotesChange}
         />
 
-      <BillingControlsSection
-        colors={colors}
-        isReadOnly={isReadOnly}
-        paymentMethods={paymentMethods}
-        focusedAmountInputs={focusedAmountInputs}
-        cashChangeByIndex={cashChangeByIndex}
-        discount={discount}
-        billingData={activeBillingView.billingData}
-        isProcessing={isProcessing}
-        isSubmitting={isSubmitting}
-        canFinalize={canFinalize}
-        canPrint={canPrint}
-        hasRequiredIds={hasRequiredIds}
-        paymentIcon={paymentIcon}
-        getDisplayAmount={getDisplayAmount}
-        hideDiscountControl={shouldHideDiscountControls}
-        onPaymentTypeChange={handlePaymentTypeChange}
-        onRemovePaymentMethod={handleRemovePaymentMethod}
-        onAddPaymentMethod={handleAddPaymentMethod}
-        onMobilePhoneChange={handleMobilePhoneChange}
-        onInitiateMobilePayment={handleInitiateMobilePayment}
-        onPaymentAmountChange={handlePaymentAmountChange}
-        onAutoFillRemaining={handleAutoFillRemaining}
-        onFocusAmountInput={handleFocusAmountInput}
-        onBlurAmountInput={handleBlurAmountInput}
-        onDiscountChange={handleDiscountChange}
-        onDiscountFocus={handleDiscountFocus}
-        onFinalizePayment={handleFinalizePayment}
-        onPrintReceipt={handlePrintReceipt}
-      />
-
+        <BillingControlsSection
+              colors={colors}
+              isReadOnly={isReadOnly}
+              paymentMethods={paymentMethods}
+              focusedAmountInputs={focusedAmountInputs}
+              cashChangeByIndex={cashChangeByIndex}
+              discount={discount}
+              discountInputValue={discountInputValue}
+              billingData={activeBillingView.billingData}
+              isProcessing={isProcessing}
+              isSubmitting={isSubmitting}
+              canFinalize={canFinalize}
+              canPrint={canPrint}
+              hasRequiredIds={hasRequiredIds}
+              paymentIcon={paymentIcon}
+              getDisplayAmount={getDisplayAmount}
+              hideDiscountControl={shouldHideDiscountControls}
+              onPaymentTypeChange={handlePaymentTypeChange}
+              onRemovePaymentMethod={handleRemovePaymentMethod}
+              onAddPaymentMethod={handleAddPaymentMethod}
+              onMobilePhoneChange={handleMobilePhoneChange}
+              onInitiateMobilePayment={handleInitiateMobilePayment}
+              onPaymentAmountChange={handlePaymentAmountChange}
+              onAutoFillRemaining={handleAutoFillRemaining}
+              onFocusAmountInput={handleFocusAmountInput}
+              onBlurAmountInput={handleBlurAmountInput}
+              onDiscountValueChange={handleDiscountValueChange}
+              onDiscountTypeChange={handleDiscountTypeChange}
+              onDiscountFocus={handleDiscountFocus}
+              onFinalizePayment={handleFinalizePayment}
+              onPrintReceipt={handlePrintReceipt}
+            />
       </div>
     </div>
   );

@@ -7,33 +7,36 @@ interface DiscountControlProps {
     value: number;
     reason?: string;
   };
+  discountInputValue: string;
   billingData: {
     subtotal?: number;
     discountAmount?: number;
+    newItemsSubtotal?: number;
   };
   isReadOnly: boolean;
   colors: any;
-  onDiscountChange: (type: 'percentage' | 'fixed', rawValue: string) => void;
+  onDiscountValueChange: (rawValue: string) => void;
+  onDiscountTypeChange: (type: 'percentage' | 'fixed') => void;
   onDiscountFocus: () => void;
 }
 
 export const DiscountControl: React.FC<DiscountControlProps> = ({
   discount,
+  discountInputValue,
   billingData,
   isReadOnly,
   colors,
-  onDiscountChange,
+  onDiscountValueChange,
+  onDiscountTypeChange,
   onDiscountFocus,
 }) => {
-  const displayedSubtotal = Number(billingData?.subtotal || 0);
+  const displayedSubtotal = Number(
+    billingData?.newItemsSubtotal ?? billingData?.subtotal ?? 0
+  );
   const appliedDiscountAmount = Number(billingData?.discountAmount || 0);
 
   const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onDiscountChange(discount.type, e.target.value);
-  };
-
-  const handleTypeChange = (type: 'percentage' | 'fixed') => {
-    onDiscountChange(type, String(discount.value || 0));
+    onDiscountValueChange(e.target.value);
   };
 
   return (
@@ -51,7 +54,7 @@ export const DiscountControl: React.FC<DiscountControlProps> = ({
         <div className="flex items-stretch gap-2">
           <input
             type="number"
-            value={discount.value === 0 ? '' : String(discount.value)}
+            value={discountInputValue}
             onFocus={onDiscountFocus}
             onChange={handleValueChange}
             placeholder="0"
@@ -65,7 +68,7 @@ export const DiscountControl: React.FC<DiscountControlProps> = ({
           <div className={`flex border ${colors.border.primary} overflow-hidden rounded-lg`}>
             <button
               type="button"
-              onClick={() => handleTypeChange('percentage')}
+              onClick={() => onDiscountTypeChange('percentage')}
               className={`px-3 sm:px-4 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer
                 ${
                   discount.type === 'percentage'
@@ -78,7 +81,7 @@ export const DiscountControl: React.FC<DiscountControlProps> = ({
 
             <button
               type="button"
-              onClick={() => handleTypeChange('fixed')}
+              onClick={() => onDiscountTypeChange('fixed')}
               className={`px-3 sm:px-4 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer border-l ${colors.border.primary}
                 ${
                   discount.type === 'fixed'
@@ -93,7 +96,11 @@ export const DiscountControl: React.FC<DiscountControlProps> = ({
       ) : (
         <div className={`p-3 ${colors.bg.secondary} rounded-lg text-sm ${colors.text.secondary}`}>
           {discount.value > 0
-            ? `${discount.type === 'percentage' ? `${discount.value}%` : formatCurrency(discount.value)} discount applied`
+            ? `${
+                discount.type === 'percentage'
+                  ? `${discount.value}%`
+                  : formatCurrency(discount.value)
+              } discount applied`
             : 'No discount applied'}
         </div>
       )}

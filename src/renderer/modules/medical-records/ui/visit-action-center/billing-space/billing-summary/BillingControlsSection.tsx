@@ -2,8 +2,7 @@ import React, { useMemo } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { PaymentMethodItem } from './PaymentMethodItem';
 import { ActionButtons } from './ActionButtons';
-import { DiscountControl } from './DiscountControl ';
-
+import { DiscountControl } from './DiscountControl';
 interface BillingControlsSectionProps {
   colors: any;
   isReadOnly: boolean;
@@ -11,6 +10,7 @@ interface BillingControlsSectionProps {
   focusedAmountInputs: Record<number, boolean>;
   cashChangeByIndex: Record<number, { dueBefore: number; change: number }>;
   discount: any;
+  discountInputValue: string;
   billingData: any;
   isProcessing: boolean;
   isSubmitting: boolean;
@@ -29,11 +29,11 @@ interface BillingControlsSectionProps {
   onAutoFillRemaining: (index: number) => void;
   onFocusAmountInput: (index: number) => void;
   onBlurAmountInput: (index: number) => void;
-  onDiscountChange: (type: 'percentage' | 'fixed', rawValue: string) => void;
+  onDiscountValueChange: (rawValue: string) => void;
+  onDiscountTypeChange: (type: 'percentage' | 'fixed') => void;
   onDiscountFocus: () => void;
   onFinalizePayment: () => void;
   onPrintReceipt: () => void;
-
 }
 
 const toCurrency = (value: number) =>
@@ -51,6 +51,7 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
   focusedAmountInputs,
   cashChangeByIndex,
   discount,
+  discountInputValue,
   billingData,
   isProcessing,
   isSubmitting,
@@ -69,7 +70,8 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
   onAutoFillRemaining,
   onFocusAmountInput,
   onBlurAmountInput,
-  onDiscountChange,
+  onDiscountValueChange,
+  onDiscountTypeChange,
   onDiscountFocus,
   onFinalizePayment,
   onPrintReceipt,
@@ -235,14 +237,16 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
                  {index === paymentMethods.length - 1 && (
               <>
                 {!hideDiscountControl && (
-                  <DiscountControl
-                    discount={discount}
-                    billingData={billingData}
-                    isReadOnly={isReadOnly}
-                    colors={colors}
-                    onDiscountChange={onDiscountChange}
-                    onDiscountFocus={onDiscountFocus}
-                  />
+                 <DiscountControl
+                  discount={discount}
+                  discountInputValue={discountInputValue}
+                  billingData={billingData}
+                  isReadOnly={isReadOnly}
+                  colors={colors}
+                  onDiscountValueChange={onDiscountValueChange}
+                  onDiscountTypeChange={onDiscountTypeChange}
+                  onDiscountFocus={onDiscountFocus}
+/>
                 )}
 
                 <ActionButtons
