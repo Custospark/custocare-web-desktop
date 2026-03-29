@@ -224,6 +224,9 @@ export interface BillingState {
   lastUpdated: number;
   isDirty: boolean;
   isProcessing: boolean;
+
+  billingDataLoaded?: Record<string, boolean>; // Track loaded status per visit
+
 }
 
 /* -------------------------------------------------------------------------- */

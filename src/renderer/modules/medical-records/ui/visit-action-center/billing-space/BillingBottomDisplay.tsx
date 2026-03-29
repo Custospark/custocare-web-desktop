@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Receipt, ShoppingCart, Database, FilePlus2, RefreshCw } from 'lucide-react';
 import { type RootState } from '../../../../../app/store/rootReducer';
@@ -13,10 +13,13 @@ import {
   selectEffectiveBillingStatus,
   hydrateBackendBilling,
   clearBackendBilling,
+  setBillingDataLoaded,
+  clearBillingDataLoaded,
 } from './billingSlice';
 import { formatCurrency } from './billing-types';
 import { useGetBillingByVisit } from '../../../api/billable-items/BillableItemsQueries';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
+
 interface BillingBottomDisplayProps {
   theme?: 'light' | 'dark';
 }
@@ -35,6 +38,7 @@ interface BillingBottomDisplayProps {
  * FEATURES:
  * - Fixed position at bottom-right corner
  * - Loading skeleton while fetching billing data
+ * - Uses Redux slice to track loaded state (no localStorage keys)
  * - Theme-aware styling (dark/light mode)
  * - Responsive compact layout
  * - Accessibility support with ARIA labels
@@ -55,62 +59,86 @@ export const BillingBottomDisplay: React.FC<BillingBottomDisplayProps> = ({ them
   const displayBillingData = useSelector(selectDisplayBillingData);
   const billingStatus = useSelector(selectEffectiveBillingStatus);
 
-  // State for tracking initial load
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-
   // Derived values with fallbacks
-  const visitId = activeVisit?.visit_id ? Number(activeVisit.visit_id) : 0;
+  const visitId = activeVisit?.visit_id ? String(activeVisit.visit_id) : '';
+  const numericVisitId = activeVisit?.visit_id ? Number(activeVisit.visit_id) : 0;
   const patientId = activeVisit?.patient_id ? String(activeVisit.patient_id) : undefined;
   const patientName = patient?.name || activeVisit?.patient?.name || 'Unknown Patient';
+
+  // Check if billing data is loaded from Redux slice
+  const isBillingDataLoaded = useSelector((state: any) => 
+    state.billing?.loadedVisits?.[visitId] ?? false
+  );
 
   // ---------------------------------------------------------------------------
   // Query with loading state
   // ---------------------------------------------------------------------------
 
-  /**
-   * Retrieve persisted billing for this visit with loading state
-   */
   const { 
     data: backendBillingResponse, 
     isLoading: isLoadingBilling, 
     isFetching: isFetchingBilling,
-    // error: billingError 
-  } = useGetBillingByVisit(visitId, {
-    enabled: !!visitId,
+  } = useGetBillingByVisit(numericVisitId, {
+    enabled: !!numericVisitId,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: true,
   });
 
-  // Determine if billing data is loading (initial load or refetching)
-  const isBillingLoading = isLoadingBilling || (isFetchingBilling && isInitialLoad);
+  /**
+   * Determine if we should show loading skeleton
+   * Shows skeleton if:
+   * 1. Query is actively loading and data not yet loaded
+   */
+  const shouldShowSkeleton = useMemo(() => {
+    if (isLoadingBilling && !isBillingDataLoaded) return true;
+    return false;
+  }, [isBillingDataLoaded, isLoadingBilling]);
 
   // ---------------------------------------------------------------------------
   // Effects
   // ---------------------------------------------------------------------------
 
   /**
-   * Hydrate backend billing data into Redux store when available
+   * Effect 1: Hydrate backend billing data into Redux store when available
+   * and update the loaded flag in the slice
    */
   useEffect(() => {
     // Skip if still loading
-    if (isBillingLoading) return;
-    
-    // Mark initial load as complete
-    if (isInitialLoad) {
-      setIsInitialLoad(false);
-    }
+    if (isLoadingBilling) return;
 
-    // Handle successful response with billing data
-    if (backendBillingResponse?.data) {
+    // Process backend response
+    if (backendBillingResponse?.data && visitId) {
       if (backendBillingResponse.data.has_billing) {
         dispatch(hydrateBackendBilling(backendBillingResponse.data));
       } else {
         dispatch(clearBackendBilling());
       }
+
+      // Mark data as loaded in Redux slice (no localStorage needed!)
+      dispatch(setBillingDataLoaded({ 
+        visitId, 
+        loaded: true 
+      }));
+    } else if (backendBillingResponse?.data === null && visitId) {
+      // Even if no data, mark as loaded to avoid perpetual loading
+      dispatch(setBillingDataLoaded({ 
+        visitId, 
+        loaded: true 
+      }));
     }
-    
-    // Handle error silently - component will show empty state naturally
-  }, [backendBillingResponse, dispatch, isBillingLoading, isInitialLoad]);
+  }, [backendBillingResponse, dispatch, isLoadingBilling, visitId]);
+
+  /**
+   * Effect 2: Cleanup loaded flag when component unmounts
+   */
+  useEffect(() => {
+    return () => {
+      // Clear the loaded flag when component unmounts
+      if (visitId) {
+        dispatch(clearBillingDataLoaded(visitId));
+      }
+    };
+  }, [dispatch, visitId]);
 
   // ---------------------------------------------------------------------------
   // Memoized computed values
@@ -220,7 +248,7 @@ export const BillingBottomDisplay: React.FC<BillingBottomDisplayProps> = ({ them
    * Show loading skeleton while billing data is being fetched
    * This prevents layout shift and provides better UX
    */
-  if (isBillingLoading) {
+  if (shouldShowSkeleton) {
     return (
       <div className="fixed bottom-4 right-4 z-30">
         <LoadingSkeleton
@@ -239,8 +267,9 @@ export const BillingBottomDisplay: React.FC<BillingBottomDisplayProps> = ({ them
 
   /**
    * Show compact empty state when no billing items exist
+   * Only shows after data is loaded and confirmed empty
    */
-  if (!backendBillingResponse?.data?.has_billing && !isBillingLoading && itemsCount === 0) {
+  if (isBillingDataLoaded && !backendBillingResponse?.data?.has_billing && itemsCount === 0) {
     return (
       <div className={`fixed bottom-4 right-4 z-30 ${colors.bg} ${colors.border} border rounded-xl ${colors.shadow} p-4 w-80`}>
         {/* Patient Info */}
@@ -283,7 +312,7 @@ export const BillingBottomDisplay: React.FC<BillingBottomDisplayProps> = ({ them
               dispatch(
                 openTray({
                   step: 'charge_entry',
-                  visitId: String(activeVisit.visit_id),
+                  visitId,
                   patientId,
                   patientName,
                 })
@@ -389,7 +418,7 @@ export const BillingBottomDisplay: React.FC<BillingBottomDisplayProps> = ({ them
             dispatch(
               openTray({
                 step: 'charge_entry',
-                visitId: String(activeVisit.visit_id),
+                visitId,
                 patientId,
                 patientName,
               })
@@ -410,7 +439,7 @@ export const BillingBottomDisplay: React.FC<BillingBottomDisplayProps> = ({ them
             dispatch(
               openTray({
                 step: 'billing_summary',
-                visitId: String(activeVisit.visit_id),
+                visitId,
                 patientId,
                 patientName,
               })
@@ -430,7 +459,7 @@ export const BillingBottomDisplay: React.FC<BillingBottomDisplayProps> = ({ them
       </div>
 
       {/* Loading indicator for background operations (optional) */}
-      {isFetchingBilling && !isBillingLoading && (
+      {isFetchingBilling && !shouldShowSkeleton && (
         <div className="flex items-center justify-center gap-1.5 mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
           <RefreshCw className="w-3 h-3 animate-spin text-blue-500" />
           <span className={`text-xs ${colors.text.tertiary}`}>

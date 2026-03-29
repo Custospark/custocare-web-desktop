@@ -1,4 +1,4 @@
-// billingSlice.ts
+// billingSlice.ts - Updated clearDraft action
 import { createSlice, type PayloadAction, createSelector } from '@reduxjs/toolkit';
 import {
   type BillingState,
@@ -99,7 +99,7 @@ const billingSlice = createSlice({
      * Only clears UI draft data (chargeItems, discount, paymentMethods, etc.)
      * Backend data (backendChargeItems, backendBillingMeta, backendBillingData) remains intact.
      */
-      closeTray: (state) => {
+    closeTray: (state) => {
       try {
         if (state.visitId) {
           sessionStorage.removeItem(getDraftStorageKey(state.visitId));
@@ -356,6 +356,13 @@ const billingSlice = createSlice({
       }
     },
 
+    /**
+     * Clear ONLY draft data (chargeItems, discount, paymentMethods, notes)
+     * PRESERVE backend data (backendChargeItems, backendBillingMeta, backendBillingData)
+     * 
+     * This should be called after successful billing finalization to clear
+     * temporary draft data while keeping the persisted billing data for display.
+     */
     clearDraft: (state) => {
       try {
         if (state.visitId) {
@@ -364,12 +371,30 @@ const billingSlice = createSlice({
       } catch (error) {
         console.error('Error clearing billing draft:', error);
       }
+
+      // Clear ONLY draft/UI state
+      state.chargeItems = [];
+      state.discount = { ...DEFAULT_DISCOUNT };
+      state.taxes = INITIAL_BILLING_STATE.taxes.map((tax) => ({ ...tax }));
+      state.paymentMethods = DEFAULT_PAYMENT_METHODS.map((method) => ({ ...method }));
+      state.additionalNotes = '';
+      state.isProcessing = false;
+      state.currentStep = 'charge_entry';
+      state.isDirty = false;
+      
+      // DO NOT clear status, receiptNumber, or backend data
+      // Keep status as 'settled' if it was settled
+      // Keep receiptNumber for printing
+      // Keep backendChargeItems, backendBillingMeta, backendBillingData
+
+      updateMetadata(state);
     },
 
     /**
      * Completely clear ALL billing data including backend persisted data.
      * Use this only when explicitly needed (e.g., logging out, switching patients).
      * For normal tray closing, use closeTray() instead.
+     * For clearing draft after payment, use clearDraft() instead.
      */
     clearAll: (state) => {
       try {
@@ -474,6 +499,24 @@ const billingSlice = createSlice({
       state.optimisticPersistedBalanceDelta = action.payload.previousOptimisticPersistedBalanceDelta;
       state.lastUpdated = Date.now();
     },
+
+    // ========== BOTTOM DISPLAY ACTIONS ==========
+    setBillingDataLoaded: (state, action: PayloadAction<{ visitId: string; loaded: boolean }>) => {
+      const { visitId, loaded } = action.payload;
+      if (!state.billingDataLoaded) {
+        state.billingDataLoaded = {};
+      }
+      state.billingDataLoaded[visitId] = loaded;
+      updateMetadata(state);
+    },
+
+    clearBillingDataLoaded: (state, action: PayloadAction<string>) => {
+      const visitId = action.payload;
+      if (state.billingDataLoaded && state.billingDataLoaded[visitId]) {
+        delete state.billingDataLoaded[visitId];
+      }
+      updateMetadata(state);
+    },
   },
 });
 
@@ -513,6 +556,8 @@ export const {
   clearBackendBilling,
   optimisticAdjustBackendItem,
   rollbackOptimisticBackendAdjustment,
+  setBillingDataLoaded,
+  clearBillingDataLoaded,
 } = billingSlice.actions;
 
 export default billingSlice.reducer;
@@ -673,3 +718,7 @@ export const selectDisplayBillingData = createSelector(
     };
   }
 );
+
+// ========== BILLING DATA LOADED SELECTOR ==========
+export const selectBillingDataLoaded = (state: RootState, visitId: string): boolean =>
+  state.billing.billingDataLoaded?.[visitId] || false;

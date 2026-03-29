@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { ShoppingCart, Receipt, BadgeDollarSign, RefreshCw, Database, FilePlus2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -9,6 +9,8 @@ import {
   selectDisplayBillingData,
   hydrateBackendBilling,
   clearBackendBilling,
+  setBillingDataLoaded,
+  clearBillingDataLoaded,
 } from './billingSlice';
 import { formatCurrency } from './billing-types';
 import {
@@ -42,17 +44,16 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
 
   const hasPrefetchedRef = useRef(false);
 
-  /**
-   * Starts as `false` — component stays in skeleton until the server has
-   * replied at least once (or the query is confirmed disabled).
-   * This is the single source of truth that prevents premature empty-state.
-   */
-  const [hasInitialLoaded, setHasInitialLoaded] = useState(false);
-
   const displayPatientName = patientName || patientInfo.patientName;
   const displayPatientId = patientId || patientInfo.patientId;
   const displayVisitId = visitId || patientInfo.visitId;
   const numericVisitId = Number(displayVisitId || 0);
+
+  // Check if billing data is loaded from Redux slice
+  const isBillingDataLoaded = useSelector((state: any) => 
+    state.billing?.loadedVisits?.includes(String(displayVisitId || ''))
+  );
+
 
   // ---------------------------------------------------------------------------
   // Queries
@@ -74,60 +75,57 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
   });
 
   /**
-   * ─── WHY THIS FORMULA ───────────────────────────────────────────────────
-   *
-   *   isBillingLoading = !hasInitialLoaded || isLoadingBilling
-   *
-   * • `!hasInitialLoaded`  → skeleton holds from first paint until the effect
-   *   below flips the flag, regardless of whether numericVisitId is 0 or valid.
-   *   This is the fix for Bug 1: even when visitId is absent/falsy the component
-   *   does NOT jump straight to the empty state.
-   *
-   * • `isLoadingBilling`   → keeps skeleton up if the query is still in-flight
-   *   after hasInitialLoaded has already been set (e.g. visitId arrived late and
-   *   triggered a fresh query).
-   *
-   * • Background refetches (isFetchingBilling=true, isLoadingBilling=false,
-   *   hasInitialLoaded=true) do NOT trigger the skeleton — they surface as the
-   *   subtle "Updating billing…" indicator inside the widget instead.
-   * ────────────────────────────────────────────────────────────────────────
+   * Determine if we should show loading skeleton
+   * Shows skeleton if:
+   * 1. Query is actively loading and data not yet loaded
    */
-  const isBillingLoading = !hasInitialLoaded || isLoadingBilling;
+  const shouldShowSkeleton = useMemo(() => {
+    if (isLoadingBilling && !isBillingDataLoaded) return true;
+    return false;
+  }, [isBillingDataLoaded, isLoadingBilling]);
 
   // ---------------------------------------------------------------------------
-  // Effect — hydrate store + flip hasInitialLoaded
+  // Effect 1: Hydrate backend data and update loaded flag
   // ---------------------------------------------------------------------------
-
   useEffect(() => {
-    /**
-     * ─── WHY WE GUARD ON `isLoadingBilling`, NOT `isBillingLoading` ─────────
-     *
-     * Using `isBillingLoading` here would create a circular deadlock:
-     *
-     *   isBillingLoading = !hasInitialLoaded || …
-     *   effect guard:  if (isBillingLoading) return
-     *   → effect never runs → hasInitialLoaded never flips
-     *   → isBillingLoading stays true forever  ← DEADLOCK
-     *
-     * Guarding on the raw React Query flag `isLoadingBilling` breaks the cycle:
-     * once the query settles, this guard opens and the flag is set correctly.
-     * ────────────────────────────────────────────────────────────────────────
-     */
+    // Don't process if still loading
     if (isLoadingBilling) return;
 
-    // Query has settled (or was never enabled) — mark initial load complete.
-    if (!hasInitialLoaded) {
-      setHasInitialLoaded(true);
-    }
-
+    // Process backend response
     if (backendBillingResponse?.data) {
       if (backendBillingResponse.data.has_billing) {
         dispatch(hydrateBackendBilling(backendBillingResponse.data));
       } else {
         dispatch(clearBackendBilling());
       }
+
+      // Mark data as loaded in Redux slice
+      if (displayVisitId) {
+        dispatch(setBillingDataLoaded({ 
+          visitId: String(displayVisitId), 
+          loaded: true 
+        }));
+      }
+    } else if (backendBillingResponse?.data === null && displayVisitId) {
+      // Even if no data, mark as loaded to avoid perpetual loading
+      dispatch(setBillingDataLoaded({ 
+        visitId: String(displayVisitId), 
+        loaded: true 
+      }));
     }
-  }, [backendBillingResponse, dispatch, isLoadingBilling, hasInitialLoaded]);
+  }, [backendBillingResponse, dispatch, isLoadingBilling, displayVisitId]);
+
+  // ---------------------------------------------------------------------------
+  // Effect 2: Cleanup loaded flag on unmount
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    return () => {
+      // Clear the loaded flag when component unmounts
+      if (displayVisitId) {
+        dispatch(clearBillingDataLoaded(String(displayVisitId)));
+      }
+    };
+  }, [dispatch, displayVisitId]);
 
   // ---------------------------------------------------------------------------
   // Memoised colour tokens
@@ -220,11 +218,10 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
 
   // ---------------------------------------------------------------------------
   // ① Loading skeleton
-  //    Shown on every first paint until hasInitialLoaded flips — guaranteed
-  //    to appear before either the empty state or the data view.
+  //    Shows until billing data is loaded into Redux slice
   // ---------------------------------------------------------------------------
 
-  if (isBillingLoading) {
+  if (shouldShowSkeleton) {
     return (
       <div className={className}>
         <LoadingSkeleton
@@ -239,10 +236,10 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
 
   // ---------------------------------------------------------------------------
   // ② Empty state
-  //    Only reachable after hasInitialLoaded=true (server has confirmed no data).
+  //    Shows after data is loaded and confirmed no billing items exist
   // ---------------------------------------------------------------------------
 
-  if (hasInitialLoaded && !backendBillingResponse?.data?.has_billing && itemsCount === 0) {
+  if (isBillingDataLoaded && !backendBillingResponse?.data?.has_billing && itemsCount === 0) {
     return (
       <div className={className}>
         <div className={`rounded-lg border ${colors.border.primary} ${colors.bg.primary} p-6`}>
@@ -380,7 +377,7 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
           </div>
 
           {/* Background refetch indicator — only shown after initial load */}
-          {isFetchingBilling && !isBillingLoading && (
+          {isFetchingBilling && !shouldShowSkeleton && (
             <div className="flex items-center justify-center gap-1.5 pt-2">
               <RefreshCw className="w-3 h-3 animate-spin text-blue-500" />
               <span className={`text-xs ${colors.text.muted}`}>Updating billing...</span>
