@@ -820,6 +820,64 @@ export const selectDisplayBillingData = createSelector(
   }
 );
 
+// ========== DISPLAYED DISCOUNT/TAX BILLING DATA SELECTOR ==========
+// This selector computes discount + tax against the DISPLAYED subtotal
+// (backend persisted items + draft items), while keeping the original
+// draft selectors intact for other parts of the app.
+export const selectDisplayedDiscountTaxBillingData = createSelector(
+  [
+    selectRenderableChargeItems,
+    (state: RootState) => state.billing.discount,
+    (state: RootState) => state.billing.taxes,
+    (state: RootState) => state.billing.paymentMethods,
+  ],
+  (renderableChargeItems, discount, taxes, paymentMethods) => {
+    const subtotal = roundCurrency(
+      renderableChargeItems.reduce((sum, item) => sum + Number(item.totalAmount || 0), 0)
+    );
+
+    const rawDiscountAmount =
+      discount.type === 'percentage'
+        ? subtotal * (Number(discount.value || 0) / 100)
+        : Number(discount.value || 0);
+
+    const discountAmount = roundCurrency(
+      Math.min(Math.max(0, rawDiscountAmount), subtotal)
+    );
+
+    const taxableAmount = roundCurrency(Math.max(0, subtotal - discountAmount));
+
+    const computedTaxes = taxes.map((tax) => ({
+      ...tax,
+      amount: roundCurrency(taxableAmount * (Number(tax.rate || 0) / 100)),
+    }));
+
+    const taxTotal = roundCurrency(
+      computedTaxes.reduce((sum, tax) => sum + Number(tax.amount || 0), 0)
+    );
+
+    const grandTotal = roundCurrency(taxableAmount + taxTotal);
+
+    const totalPaid = roundCurrency(
+      paymentMethods.reduce((sum, method) => sum + Number(method.amount || 0), 0)
+    );
+
+    const balance = roundCurrency(Math.max(0, grandTotal - totalPaid));
+
+    return {
+      subtotal,
+      discountAmount,
+      taxableAmount,
+      taxes: computedTaxes,
+      taxTotal,
+      grandTotal,
+      totalPaid,
+      balance,
+      isPaid: balance === 0,
+    };
+  }
+);
+
 // ========== BILLING DATA LOADED SELECTOR ==========
 export const selectBillingDataLoaded = (state: RootState, visitId: string): boolean =>
   state.billing.billingDataLoaded?.[visitId] || false;

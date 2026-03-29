@@ -1,4 +1,3 @@
-// BillingSummaryStep.tsx
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   CreditCard,
@@ -27,6 +26,7 @@ import {
   selectIsProcessing,
   selectBillingData,
   selectDisplayBillingData,
+  selectDisplayedDiscountTaxBillingData,
   selectBilling,
   selectBackendBillingMeta,
   selectCurrentStep,
@@ -128,7 +128,7 @@ const clamp = (n: number, min = 0, max = Number.POSITIVE_INFINITY) =>
 const onlyDigits = (v: string) => v.replace(/[^\d]/g, '');
 
 const safeArray = <T,>(arr: T[] | undefined | null): T[] => arr ?? [];
-const safeNumber = (val: number | undefined | null, defaultValue = 0): number => 
+const safeNumber = (val: number | undefined | null, defaultValue = 0): number =>
   typeof val === 'number' && !isNaN(val) ? val : defaultValue;
 
 /* -------------------------------------------------------------------------- */
@@ -152,25 +152,28 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   const activeVisitId = useSelector(selectActiveVisitId);
   const activePatient = useSelector(selectActivePatient);
   const currentStep = useSelector(selectCurrentStep);
-  
+
   // Draft-only items for submission
   const draftChargeItems = useSelector(selectDraftChargeItems);
-  
+
   // Combined items for display / receipt
   const renderableChargeItems = useSelector(selectRenderableChargeItems);
-  
-  // Draft financial data
+
+  // Draft financial data (kept for compatibility elsewhere)
   const draftBillingData = useSelector(selectBillingData);
-  
-  // Combined display financial data
+
+  // Combined display financial data (kept for compatibility elsewhere)
   const displayBillingData = useSelector(selectDisplayBillingData);
-  
+
+  // NEW: discount/tax computation against displayed subtotal
+  const displayedDiscountTaxBillingData = useSelector(selectDisplayedDiscountTaxBillingData);
+
   const billingState = useSelector(selectBilling);
   const backendBillingMeta = useSelector(selectBackendBillingMeta);
-  
+
   const status = useSelector(selectEffectiveBillingStatus);
   const isProcessing = useSelector(selectIsProcessing);
-  
+
   const { data: facilityData } = useGetFacilityIdentity();
 
   const resolvedVisitId = propVisitId ?? activeVisitId ?? activeVisit?.visit_id;
@@ -248,16 +251,16 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   useEffect(() => {
     const items = billingData?.data?.items;
     const hasValidData = isBillingFetchSuccess && items && Array.isArray(items) && items.length > 0;
-    
+
     if (!hasValidData) return;
 
     const authoritativeBillingItem = items[0];
     if (!authoritativeBillingItem) return;
-    
+
     // Store server data for receipt display ONLY
     setServerBillingItem(authoritativeBillingItem);
     setShouldFetchAfterFinalization(false);
-    
+
     console.log('Server billing data loaded for receipt display');
   }, [isBillingFetchSuccess, billingData]);
 
@@ -280,13 +283,13 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   /*                    DRAFT MODE FINANCIALS (FOR BILLING CONTROLS)            */
   /* -------------------------------------------------------------------------- */
   const draftDerivedFinancials = useMemo((): DerivedFinancials => {
-    const subtotal = safeNumber(displayBillingData?.displayedSubtotal);
-    const grandTotal = safeNumber(displayBillingData?.displayedBalance);
-    const discountAmount = safeNumber(draftBillingData?.discountAmount);
-    const taxTotal = safeNumber(draftBillingData?.taxTotal);
+    const subtotal = safeNumber(displayedDiscountTaxBillingData?.subtotal);
+    const grandTotal = safeNumber(displayedDiscountTaxBillingData?.grandTotal);
+    const discountAmount = safeNumber(displayedDiscountTaxBillingData?.discountAmount);
+    const taxTotal = safeNumber(displayedDiscountTaxBillingData?.taxTotal);
 
     const safePaymentMethods = safeArray(paymentMethods);
-    
+
     const totalPaidFromMethods = safePaymentMethods.reduce(
       (sum, m) => sum + safeNumber(m?.amount),
       0
@@ -316,7 +319,12 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     }
 
     const discountPercent = discount?.type === 'percentage' ? safeNumber(discount?.value) : 0;
-    const discountType = discount?.type === 'percentage' ? 'percentage' : discount?.type === 'fixed' ? 'fixed' : null;
+    const discountType =
+      discount?.type === 'percentage'
+        ? 'percentage'
+        : discount?.type === 'fixed'
+        ? 'fixed'
+        : null;
 
     return {
       status: paymentStatus,
@@ -335,7 +343,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
       hasCashPayment: cashTendered > 0,
       nonCashTotal,
     };
-  }, [displayBillingData, draftBillingData, paymentMethods, discount]);
+  }, [displayedDiscountTaxBillingData, paymentMethods, discount]);
 
   /* -------------------------------------------------------------------------- */
   /*                    RECEIPT TRANSACTION - USE SERVER DATA WHEN AVAILABLE    */
@@ -384,7 +392,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
       };
     }
 
-    // Draft mode: use Redux data
+    // Draft mode: use displayed subtotal based discount/tax selector
     const combinedNotes = [
       backendBillingMeta?.receiptNumber ? `Existing Receipt: ${backendBillingMeta.receiptNumber}` : null,
       additionalNotes,
@@ -392,7 +400,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
     const safeChargeItems = safeArray(renderableChargeItems);
     const safePaymentMethods = safeArray(paymentMethods).filter((m) => safeNumber(m?.amount) > 0);
-    const safeDisplayTaxes = safeArray(displayBillingData?.displayedTaxes);
+    const safeComputedTaxes = safeArray(displayedDiscountTaxBillingData?.taxes);
 
     return {
       receipt_number: receiptNumber || backendBillingMeta?.receiptNumber || null,
@@ -401,14 +409,14 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
       created_at: new Date().toISOString(),
       charge_items: safeChargeItems,
       billing_data: {
-        subtotal: safeNumber(displayBillingData?.displayedSubtotal),
-        discountAmount: safeNumber(draftBillingData?.discountAmount),
-        taxableAmount: Math.max(0, safeNumber(displayBillingData?.displayedSubtotal) - safeNumber(draftBillingData?.discountAmount)),
-        taxTotal: safeDisplayTaxes.reduce((sum, tax) => sum + safeNumber(tax?.amount), 0),
-        grandTotal: draftDerivedFinancials.grandTotal,
+        subtotal: safeNumber(displayedDiscountTaxBillingData?.subtotal),
+        discountAmount: safeNumber(displayedDiscountTaxBillingData?.discountAmount),
+        taxableAmount: safeNumber(displayedDiscountTaxBillingData?.taxableAmount),
+        taxTotal: safeNumber(displayedDiscountTaxBillingData?.taxTotal),
+        grandTotal: safeNumber(displayedDiscountTaxBillingData?.grandTotal),
         totalPaid: draftDerivedFinancials.netPaid,
         balance: draftDerivedFinancials.balanceDue,
-        taxes: safeDisplayTaxes,
+        taxes: safeComputedTaxes,
       },
       payment_methods: safePaymentMethods,
       additional_notes: combinedNotes || undefined,
@@ -424,8 +432,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     activeVisit,
     activePatient,
     renderableChargeItems,
-    displayBillingData,
-    draftBillingData,
+    displayedDiscountTaxBillingData,
     draftDerivedFinancials,
     paymentMethods,
     additionalNotes,
@@ -440,17 +447,17 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     if (serverBillingItem) {
       const billingData = serverBillingItem.billing_data;
       if (!billingData) return draftDerivedFinancials;
-      
+
       const paymentMethods = safeArray(serverBillingItem.payment_methods);
-      
+
       const cashTendered = paymentMethods
         .filter((m) => m?.type === 'cash')
         .reduce((sum, m) => sum + safeNumber(m?.amount), 0);
-      
+
       const nonCashTotal = paymentMethods
         .filter((m) => m?.type !== 'cash')
         .reduce((sum, m) => sum + safeNumber(m?.amount), 0);
-      
+
       const grandTotal = safeNumber(billingData.grandTotal);
       const remainingAfterNonCash = Math.max(0, grandTotal - nonCashTotal);
       const changeAmount = cashTendered > remainingAfterNonCash ? cashTendered - remainingAfterNonCash : 0;
@@ -473,7 +480,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
         nonCashTotal: nonCashTotal,
       };
     }
-    
+
     return draftDerivedFinancials;
   }, [serverBillingItem, draftDerivedFinancials]);
 
@@ -591,9 +598,9 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     draftDerivedFinancials.balanceDue === 0 &&
     hasRequiredIds;
 
-  const canPrint = (isFinalized || isServerMode) && 
-    (!!receiptNumber || !!serverBillingItem?.receipt_number) && 
-    !isProcessing && 
+  const canPrint = (isFinalized || isServerMode) &&
+    (!!receiptNumber || !!serverBillingItem?.receipt_number) &&
+    !isProcessing &&
     !isSubmitting;
 
   const paymentIcon = (type: string) => {
@@ -619,7 +626,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     if (isReadOnly) return;
 
     const numericValue = Number(rawValue) || 0;
-    const maxValue = type === 'percentage' ? 100 : safeNumber(draftBillingData?.subtotal);
+    const maxValue = type === 'percentage' ? 100 : safeNumber(displayedDiscountTaxBillingData?.subtotal);
     const clampedValue = clamp(numericValue, 0, maxValue);
 
     const updatedDiscount = { type, value: clampedValue };
@@ -789,10 +796,10 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
           value: discount.value,
           reason: discount.reason || additionalNotes || undefined,
         },
-        taxes: DEFAULT_TAXES.map((tax, index) => ({
+        taxes: safeArray(displayedDiscountTaxBillingData?.taxes).map((tax) => ({
           name: tax.name,
           rate: tax.rate,
-          amount: safeNumber(draftBillingData?.taxes?.[index]?.amount),
+          amount: safeNumber(tax.amount),
         })),
         payment_methods: safeArray(paymentMethods)
           .filter((m) => safeNumber(m?.amount) > 0)
@@ -803,13 +810,13 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
             details: m.details || undefined,
           })),
         billing_data: {
-          subtotal: safeNumber(draftBillingData?.subtotal),
-          discountAmount: safeNumber(draftBillingData?.discountAmount),
-          taxableAmount: safeNumber(draftBillingData?.taxableAmount),
-          taxTotal: safeNumber(draftBillingData?.taxTotal),
-          grandTotal: safeNumber(draftBillingData?.grandTotal),
-          totalPaid: safeNumber(draftBillingData?.totalPaid),
-          balance: safeNumber(draftBillingData?.balance),
+          subtotal: safeNumber(displayedDiscountTaxBillingData?.subtotal),
+          discountAmount: safeNumber(displayedDiscountTaxBillingData?.discountAmount),
+          taxableAmount: safeNumber(displayedDiscountTaxBillingData?.taxableAmount),
+          taxTotal: safeNumber(displayedDiscountTaxBillingData?.taxTotal),
+          grandTotal: safeNumber(displayedDiscountTaxBillingData?.grandTotal),
+          totalPaid: safeNumber(draftDerivedFinancials.netPaid),
+          balance: safeNumber(draftDerivedFinancials.balanceDue),
         },
         additional_notes: additionalNotes || undefined,
         status: status,
@@ -859,14 +866,14 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   return (
     <div className="h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6 relative">
       {/* Missing data warning */}
-      {!hasRequiredIds && (
+      {/* {!hasRequiredIds && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg shadow-lg border border-red-500 no-print">
           <AlertCircle className="w-5 h-5" />
           <span className="text-sm font-semibold">
             Unable to finalize billing: {!visitId ? 'Visit ID missing' : 'Patient ID missing'}
           </span>
         </div>
-      )}
+      )} */}
 
       {/* Read-only indicator */}
       {isReadOnly && (
@@ -953,8 +960,12 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
           additionalNotes={serverBillingItem?.additional_notes || additionalNotes}
           billingData={serverBillingItem?.billing_data || {
             ...draftBillingData,
-            subtotal: safeNumber(displayBillingData?.displayedSubtotal),
-            grandTotal: draftDerivedFinancials.grandTotal,
+            subtotal: safeNumber(displayedDiscountTaxBillingData?.subtotal),
+            discountAmount: safeNumber(displayedDiscountTaxBillingData?.discountAmount),
+            taxableAmount: safeNumber(displayedDiscountTaxBillingData?.taxableAmount),
+            taxTotal: safeNumber(displayedDiscountTaxBillingData?.taxTotal),
+            taxes: safeArray(displayedDiscountTaxBillingData?.taxes),
+            grandTotal: safeNumber(displayedDiscountTaxBillingData?.grandTotal),
             balance: draftDerivedFinancials.balanceDue,
             totalPaid: draftDerivedFinancials.netPaid,
           }}
@@ -971,8 +982,12 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
           discount={discount}
           billingData={{
             ...draftBillingData,
-            subtotal: safeNumber(displayBillingData?.displayedSubtotal),
-            grandTotal: draftDerivedFinancials.grandTotal,
+            subtotal: safeNumber(displayedDiscountTaxBillingData?.subtotal),
+            discountAmount: safeNumber(displayedDiscountTaxBillingData?.discountAmount),
+            taxableAmount: safeNumber(displayedDiscountTaxBillingData?.taxableAmount),
+            taxTotal: safeNumber(displayedDiscountTaxBillingData?.taxTotal),
+            taxes: safeArray(displayedDiscountTaxBillingData?.taxes),
+            grandTotal: safeNumber(displayedDiscountTaxBillingData?.grandTotal),
             balance: draftDerivedFinancials.balanceDue,
             totalPaid: draftDerivedFinancials.netPaid,
           }}
