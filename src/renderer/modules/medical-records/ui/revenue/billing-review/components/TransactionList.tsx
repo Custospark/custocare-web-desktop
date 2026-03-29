@@ -242,7 +242,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         <div className="flex items-start gap-2.5">
           <AlertCircle className={cx('w-4 h-4 shrink-0 mt-0.5', colors.text.tertiary)} />
           <p className={cx('text-xs leading-relaxed', colors.text.secondary)}>
-            Selected payment record to view it's full details.
+            Select payment record to view it's full details.
           </p>
         </div>
       </motion.div>

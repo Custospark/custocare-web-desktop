@@ -379,7 +379,7 @@ const billingSlice = createSlice({
       state.paymentMethods = DEFAULT_PAYMENT_METHODS.map((method) => ({ ...method }));
       state.additionalNotes = '';
       state.isProcessing = false;
-      state.currentStep = 'charge_entry';
+      state.currentStep = 'billing_summary';
       state.isDirty = false;
       
       // DO NOT clear status, receiptNumber, or backend data
@@ -389,12 +389,93 @@ const billingSlice = createSlice({
 
       updateMetadata(state);
     },
+    /**
+     * Clear ONLY draft charge items.
+     * Preserves all other draft data (discount, paymentMethods, taxes, additionalNotes, status, receiptNumber)
+     * This is used after successful billing finalization when we want to keep the draft data that was
+     * submitted (like payment methods, discount) but clear the charge items since they're now persisted.
+     */
+    clearDraftChargeItemsOnly: (state) => {
+      try {
+        if (state.visitId) {
+          sessionStorage.removeItem(getDraftStorageKey(state.visitId));
+        }
+      } catch (error) {
+        console.error('Error clearing billing draft charge items:', error);
+      }
+
+      // Clear ONLY draft charge items
+      state.chargeItems = [];
+      
+      // Preserve everything else:
+      // - discount (kept as is)
+      // - taxes (kept as is)
+      // - paymentMethods (kept as is)
+      // - additionalNotes (kept as is)
+      // - status (kept as is - should be 'settled')
+      // - receiptNumber (kept for printing)
+      // - isProcessing (kept)
+      // - currentStep (kept)
+      
+      // Update metadata manually without calling updateMetadata which would recalculate isDirty
+      state.lastUpdated = Date.now();
+      state.isDirty = calculateIsDirty(state);
+    },
+
+    /**
+     * Clear ALL draft data after successful payment finalization.
+     * This dedicated reducer is specifically for use after a billing has been
+     * successfully finalized and the server data has been fetched.
+     * 
+     * Clears:
+     *   - chargeItems (draft charge items)
+     *   - discount (reset to default)
+     *   - taxes (reset to default)
+     *   - paymentMethods (reset to default)
+     *   - additionalNotes (cleared)
+     *   - isProcessing (reset)
+     * 
+     * Preserves:
+     *   - status ('settled')
+     *   - receiptNumber (from finalizePayment)
+     *   - backendChargeItems, backendBillingData, backendBillingMeta
+     *   - visitId, patientId, patientName (context)
+     *   - trayOpen state
+     *   - viewMode
+     * 
+     * This ensures the receipt displays only the server-persisted data without
+     * any leftover draft data from the just-completed transaction.
+     */
+        clearDraftAfterFinalization: (state) => {
+      try {
+        if (state.visitId) {
+          sessionStorage.removeItem(getDraftStorageKey(state.visitId));
+        }
+      } catch (error) {
+        console.error('Error clearing billing draft after finalization:', error);
+      }
+
+      // Clear ALL draft/UI state that should not persist after finalization
+      state.chargeItems = [];
+      state.discount = { ...DEFAULT_DISCOUNT };
+      state.taxes = INITIAL_BILLING_STATE.taxes.map((tax) => ({ ...tax }));
+      state.paymentMethods = DEFAULT_PAYMENT_METHODS.map((method) => ({ ...method }));
+      state.additionalNotes = '';
+      state.isProcessing = false;
+      // Keep currentStep as 'billing_summary' (don't reset to charge_entry)
+      // state.currentStep remains unchanged (should be 'billing_summary')
+      
+      // Update metadata
+      state.lastUpdated = Date.now();
+      state.isDirty = calculateIsDirty(state);
+    },
 
     /**
      * Completely clear ALL billing data including backend persisted data.
-     * Use this only when explicitly needed (e.g., logging out, switching patients).
-     * For normal tray closing, use closeTray() instead.
-     * For clearing draft after payment, use clearDraft() instead.
+     * Use this only when explicitly needed (e.g., after successful finalization).
+     * 
+     * This reducer ONLY clears billing data and does NOT modify tray state.
+     * Tray state (trayOpen, currentStep, viewMode) should be managed separately.
      */
     clearAll: (state) => {
       try {
@@ -405,8 +486,26 @@ const billingSlice = createSlice({
         console.error('Error clearing draft on clearAll:', error);
       }
       
-      // Clear EVERYTHING - both UI draft and backend data
-      return { ...INITIAL_BILLING_STATE };
+      // Preserve visit/patient context and tray state
+      const preservedVisitId = state.visitId;
+      const preservedPatientId = state.patientId;
+      const preservedPatientName = state.patientName;
+      const preservedTrayOpen = state.trayOpen;
+      const preservedCurrentStep = state.currentStep;
+      const preservedViewMode = state.viewMode;
+      
+      // Reset to initial state
+      const newState = { ...INITIAL_BILLING_STATE };
+      
+      // Restore preserved values
+      newState.visitId = preservedVisitId;
+      newState.patientId = preservedPatientId;
+      newState.patientName = preservedPatientName;
+      newState.trayOpen = preservedTrayOpen;
+      newState.currentStep = preservedCurrentStep;
+      newState.viewMode = preservedViewMode;
+      
+      return newState;
     },
 
     // ========== PATIENT INFO ACTIONS ==========
@@ -549,6 +648,8 @@ export const {
   saveDraft,
   loadDraft,
   clearDraft,
+  clearDraftChargeItemsOnly,  
+  clearDraftAfterFinalization, 
   setQuantity,
   setPatientInfo,
   clearAll,

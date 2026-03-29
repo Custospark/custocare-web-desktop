@@ -1,4 +1,5 @@
 /**
+ * BillingReviewQueries.ts
  * ============================================================================
  * BILLING REVIEW REACT QUERY HOOKS
  * ============================================================================
@@ -19,6 +20,7 @@ import type {
   BillingReviewResponse,
   BillingReviewFilters,
   ApiErrorResponse,
+  BillingDetailResponse,
 } from './BillingReviewTypes';
 import { type RootState } from '../../../../app/store/store';
 import { getActiveFacilityId } from '../../../../app/store/utils/contextSelectors';
@@ -46,6 +48,9 @@ export const billingReviewKeys = {
   details: (facilityId: number) => [...billingReviewKeys.all, 'detail', facilityId] as const,
   detail: (facilityId: number, visitId: number) => 
     [...billingReviewKeys.details(facilityId), visitId] as const,
+  // New key for single visit in facility format
+  facilityVisit: (facilityId: number, visitId: number) => 
+    [...billingReviewKeys.all, 'facility-visit', facilityId, visitId] as const,
   summaries: (facilityId: number) => [...billingReviewKeys.all, 'summary', facilityId] as const,
 };
 
@@ -55,7 +60,7 @@ export const billingReviewKeys = {
 
 /**
  * Fetches billing review data for a specific facility.
- * Calls exactly this endpoint: GET /facility/{facilityId}
+ * Calls exactly this endpoint: GET /billing/facility/{facilityId}
  * Automatically uses active facility ID from Redux context.
  * 
  * @param filters - Optional filters (page, per_page, search, payment_status, etc.)
@@ -103,6 +108,83 @@ export const useGetBillingReview = (
     enabled: !!facilityId,
     staleTime: 3 * 60 * 1000, // 3 minutes
     placeholderData: (previousData) => previousData, // Keep previous data while loading new page
+    ...options,
+  });
+};
+
+/**
+ * Fetches billing data for a single visit in the facility endpoint format.
+ * This returns data structured the same way as getByFacility but for a single visit.
+ * 
+ * This is the primary hook to use after billing finalization.
+ * 
+ * @param visitId - The visit ID to fetch billing data for
+ * @param options - React Query options
+ * @returns Query result with billing data in facility format
+ * 
+ * @example
+ * const { data, refetch } = useGetBillingByVisitForFacility(visitId);
+ */
+export const useGetBillingByVisitForFacility = (
+  visitId: number | null,
+  options?: Omit<
+    UseQueryOptions<BillingReviewResponse, AxiosError<ApiErrorResponse>>,
+    'queryKey' | 'queryFn'
+  >
+) => {
+  const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
+
+  return useQuery<BillingReviewResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: billingReviewKeys.facilityVisit(facilityId ?? 0, visitId ?? 0),
+    queryFn: async () => {
+      const response = await axiosInstance.get<BillingReviewResponse>(
+        `/billing/visit/${visitId}/facility-format`,
+        {
+          headers: {
+            'X-Facility-Id': facilityId,
+          },
+        }
+      );
+      return response.data;
+    },
+    enabled: !!facilityId && !!visitId,
+    staleTime: 0, // Always fresh after finalization
+    retry: 1,
+    ...options,
+  });
+};
+
+/**
+ * Fetches billing data for a single visit (original method - for backward compatibility)
+ * 
+ * @param visitId - The visit ID to fetch billing data for
+ * @param options - React Query options
+ * @returns Query result with single billing item
+ */
+export const useGetBillingByVisit = (
+  visitId: number | null,
+  options?: Omit<
+    UseQueryOptions<BillingDetailResponse, AxiosError<ApiErrorResponse>>,
+    'queryKey' | 'queryFn'
+  >
+) => {
+  const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
+
+  return useQuery<BillingDetailResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: billingReviewKeys.detail(facilityId ?? 0, visitId ?? 0),
+    queryFn: async () => {
+      const response = await axiosInstance.get<BillingDetailResponse>(
+        `/billing/visit/${visitId}`,
+        {
+          headers: {
+            'X-Facility-Id': facilityId,
+          },
+        }
+      );
+      return response.data;
+    },
+    enabled: !!facilityId && !!visitId,
+    staleTime: 3 * 60 * 1000,
     ...options,
   });
 };
@@ -196,6 +278,8 @@ export const prefetchNextBillingPage = async (
 export default {
   // Query hooks
   useGetBillingReview,
+  useGetBillingByVisitForFacility,
+  useGetBillingByVisit,
   
   // Utilities
   billingReviewKeys,
