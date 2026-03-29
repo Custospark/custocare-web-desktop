@@ -1,4 +1,5 @@
-// BillingSummaryStep.tsx
+// BillingSummaryStep.tsx - COMPLETE FIXED VERSION
+
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   CreditCard,
@@ -130,8 +131,6 @@ const onlyDigits = (v: string) => v.replace(/[^\d]/g, '');
 const safeArray = <T,>(arr: T[] | undefined | null): T[] => arr ?? [];
 const safeNumber = (val: number | undefined | null, defaultValue = 0): number => 
   typeof val === 'number' && !isNaN(val) ? val : defaultValue;
-const safeString = (val: string | undefined | null, defaultValue = ''): string => 
-  val ?? defaultValue;
 
 /* -------------------------------------------------------------------------- */
 /*                           MAIN COMPONENT                                   */
@@ -149,18 +148,12 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   const printReceiptRef = useRef<HTMLDivElement>(null);
   const [isPrinting, setIsPrinting] = useState(false);
 
-  // Active visit / patient context
+  // Active visit / patient context - ALL SELECTORS AT TOP LEVEL
   const activeVisit = useSelector(selectActiveVisit);
   const activeVisitId = useSelector(selectActiveVisitId);
   const activePatient = useSelector(selectActivePatient);
   const currentStep = useSelector(selectCurrentStep);
-
-  const resolvedVisitId = propVisitId ?? activeVisitId ?? activeVisit?.visit_id;
-  const resolvedPatientId = propPatientId ?? activeVisit?.patient_id;
-
-  const visitId = resolvedVisitId;
-  const patientId = resolvedPatientId;
-
+  
   // Draft-only items for submission
   const draftChargeItems = useSelector(selectDraftChargeItems);
   
@@ -181,6 +174,12 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   
   const { data: facilityData } = useGetFacilityIdentity();
 
+  const resolvedVisitId = propVisitId ?? activeVisitId ?? activeVisit?.visit_id;
+  const resolvedPatientId = propPatientId ?? activeVisit?.patient_id;
+
+  const visitId = resolvedVisitId;
+  const patientId = resolvedPatientId;
+
   const isReadOnly = status === 'settled';
   const isFinalized = status === 'settled';
 
@@ -192,7 +191,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
   const [focusedAmountInputs, setFocusedAmountInputs] = useState<Record<number, boolean>>({});
 
-  // State for server-fetched billing data (after finalization)
+  // State for server-fetched billing data (after finalization) - SINGLE SOURCE OF TRUTH
   const [serverBillingItem, setServerBillingItem] = useState<BillingReviewItem | null>(null);
   const [shouldFetchAfterFinalization, setShouldFetchAfterFinalization] = useState(false);
 
@@ -201,6 +200,9 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   const hasPersistedBalance = safeNumber(displayBillingData?.persistedBalance) > 0;
   const hasDraftItems = safeArray(draftChargeItems).length > 0;
   const hasAnyBillableContext = hasPersistedBalance || hasDraftItems;
+
+  // Whether we are in server mode (finalized) - use server data exclusively
+  const isServerMode = !!serverBillingItem;
 
   /* -------------------------------------------------------------------------- */
   /*  Force stay on billing_summary when status is settled                      */
@@ -242,6 +244,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
   /* -------------------------------------------------------------------------- */
   /*  Handle fetched server data - store in local state and clear Redux slice   */
+  /*  After this point, serverBillingItem becomes the SINGLE SOURCE OF TRUTH    */
   /* -------------------------------------------------------------------------- */
   useEffect(() => {
     const items = billingData?.data?.items;
@@ -252,27 +255,31 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     const authoritativeBillingItem = items[0];
     if (!authoritativeBillingItem) return;
     
+    // Store server data - this becomes the single source of truth
     setServerBillingItem(authoritativeBillingItem);
+    // Clear ALL Redux data - no more draft data
     dispatch(clearAll());
     setShouldFetchAfterFinalization(false);
     
-    console.log('Server billing data loaded and Redux cleared');
+    console.log('Server billing data loaded - now single source of truth');
   }, [isBillingFetchSuccess, billingData, dispatch]);
 
-  // Keep local fields in sync with Redux on mount / visit switch
+  // Keep local fields in sync with Redux on mount / visit switch (only in draft mode)
   useEffect(() => {
-    setLocalDiscount(billingState?.discount || DEFAULT_DISCOUNT);
-    setLocalPaymentMethods(
-      billingState?.paymentMethods?.length ? billingState.paymentMethods : DEFAULT_PAYMENT_METHODS
-    );
-    setLocalAdditionalNotes(billingState?.additionalNotes || '');
-  }, [billingState?.discount, billingState?.paymentMethods, billingState?.additionalNotes]);
+    if (!isServerMode) {
+      setLocalDiscount(billingState?.discount || DEFAULT_DISCOUNT);
+      setLocalPaymentMethods(
+        billingState?.paymentMethods?.length ? billingState.paymentMethods : DEFAULT_PAYMENT_METHODS
+      );
+      setLocalAdditionalNotes(billingState?.additionalNotes || '');
+    }
+  }, [billingState?.discount, billingState?.paymentMethods, billingState?.additionalNotes, isServerMode]);
 
   useEffect(() => {
-    if (status === 'settled' && !receiptNumber) {
+    if (status === 'settled' && !receiptNumber && !isServerMode) {
       setReceiptNumber(`REC-${Date.now().toString().slice(-8)}`);
     }
-  }, [status, receiptNumber]);
+  }, [status, receiptNumber, isServerMode]);
 
   /* -------------------------------------------------------------------------- */
   /*                    DRAFT MODE FINANCIALS (NO SERVER DATA)                  */
@@ -336,7 +343,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   }, [displayBillingData, draftBillingData, paymentMethods, discount]);
 
   /* -------------------------------------------------------------------------- */
-  /*                    SERVER MODE FINANCIALS (WHEN SERVER DATA EXISTS)        */
+  /*                    SERVER MODE FINANCIALS (FROM SERVER DATA)               */
   /* -------------------------------------------------------------------------- */
   const serverDerivedFinancials = useMemo((): DerivedFinancials | null => {
     if (!serverBillingItem) return null;
@@ -377,18 +384,63 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     };
   }, [serverBillingItem]);
 
-  // Final derived financials
+  // Final derived financials - use server data when available
   const derivedFinancials = serverDerivedFinancials || draftDerivedFinancials;
 
   /* -------------------------------------------------------------------------- */
-  /*                    DRAFT MODE RECEIPT TRANSACTION                          */
+  /*                    RECEIPT TRANSACTION - SINGLE SOURCE OF TRUTH            */
   /* -------------------------------------------------------------------------- */
-  const draftReceiptTransaction = useMemo((): ReceiptTransactionShape => {
+  const selectedTransactionForReceipt: ReceiptTransactionShape = useMemo(() => {
+    // SERVER MODE: Use ONLY server data - NO Redux data whatsoever
+    if (serverBillingItem) {
+      const combinedNotes = [
+        serverBillingItem.receipt_number ? `Receipt: ${serverBillingItem.receipt_number}` : null,
+        serverBillingItem.additional_notes,
+      ].filter(Boolean).join('\n');
+
+      // Transform server charge items to match RenderableChargeItem format
+      const serverChargeItems = safeArray(serverBillingItem.charge_items).map((item: any) => ({
+        ...item,
+        source: 'backend',
+        persisted: true,
+      })) as RenderableChargeItem[];
+
+      const billingData = serverBillingItem.billing_data || {
+        subtotal: 0, discountAmount: 0, taxableAmount: 0, taxTotal: 0, grandTotal: 0, totalPaid: 0, balance: 0, taxes: [],
+      };
+
+      return {
+        receipt_number: serverBillingItem.receipt_number || null,
+        patient_name: serverBillingItem.patient_name || 'Unknown Patient',
+        patient_number: serverBillingItem.patient_number || 'N/A',
+        created_at: serverBillingItem.created_at || new Date().toISOString(),
+        charge_items: serverChargeItems,
+        billing_data: {
+          subtotal: safeNumber(billingData.subtotal),
+          discountAmount: safeNumber(billingData.discountAmount),
+          taxableAmount: safeNumber(billingData.taxableAmount),
+          taxTotal: safeNumber(billingData.taxTotal),
+          grandTotal: safeNumber(billingData.grandTotal),
+          totalPaid: safeNumber(billingData.totalPaid),
+          balance: safeNumber(billingData.balance),
+          taxes: safeArray(billingData.taxes),
+        },
+        payment_methods: safeArray(serverBillingItem.payment_methods),
+        additional_notes: combinedNotes || undefined,
+        facilityData,
+        attending_staff_display: serverBillingItem.attending_staff_display || null,
+        attending_staff_name: serverBillingItem.attending_staff_name || null,
+        attending_staff_role: serverBillingItem.attending_staff_role || null,
+      };
+    }
+
+    // DRAFT MODE: Use Redux data (only when no server data exists)
     const combinedNotes = [
       backendBillingMeta?.receiptNumber ? `Existing Receipt: ${backendBillingMeta.receiptNumber}` : null,
       additionalNotes,
     ].filter(Boolean).join('\n');
 
+    // Use the selector value that was captured at the top level
     const safeChargeItems = safeArray(renderableChargeItems);
     const safePaymentMethods = safeArray(paymentMethods).filter((m) => safeNumber(m?.amount) > 0);
     const safeDisplayTaxes = safeArray(displayBillingData?.displayedTaxes);
@@ -417,11 +469,12 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
       attending_staff_role: backendBillingMeta?.attendingStaffRole || null,
     };
   }, [
+    serverBillingItem,
     receiptNumber,
     backendBillingMeta,
     activeVisit,
     activePatient,
-    renderableChargeItems,
+    renderableChargeItems,  // This is now a stable value from top-level selector
     displayBillingData,
     draftBillingData,
     draftDerivedFinancials,
@@ -429,51 +482,6 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     additionalNotes,
     facilityData,
   ]);
-
-  /* -------------------------------------------------------------------------- */
-  /*                    SERVER MODE RECEIPT TRANSACTION                         */
-  /* -------------------------------------------------------------------------- */
-  const serverReceiptTransaction = useMemo((): ReceiptTransactionShape | null => {
-    if (!serverBillingItem) return null;
-
-    const combinedNotes = [
-      serverBillingItem.receipt_number ? `Receipt: ${serverBillingItem.receipt_number}` : null,
-      serverBillingItem.additional_notes,
-    ].filter(Boolean).join('\n');
-
-    const safeChargeItems = safeArray(serverBillingItem.charge_items) as unknown as RenderableChargeItem[];
-    const safePaymentMethods = safeArray(serverBillingItem.payment_methods);
-    const billingData = serverBillingItem.billing_data || {
-      subtotal: 0, discountAmount: 0, taxableAmount: 0, taxTotal: 0, grandTotal: 0, totalPaid: 0, balance: 0, taxes: [],
-    };
-
-    return {
-      receipt_number: serverBillingItem.receipt_number || null,
-      patient_name: serverBillingItem.patient_name || 'Unknown Patient',
-      patient_number: serverBillingItem.patient_number || 'N/A',
-      created_at: serverBillingItem.created_at || new Date().toISOString(),
-      charge_items: safeChargeItems,
-      billing_data: {
-        subtotal: safeNumber(billingData.subtotal),
-        discountAmount: safeNumber(billingData.discountAmount),
-        taxableAmount: safeNumber(billingData.taxableAmount),
-        taxTotal: safeNumber(billingData.taxTotal),
-        grandTotal: safeNumber(billingData.grandTotal),
-        totalPaid: safeNumber(billingData.totalPaid),
-        balance: safeNumber(billingData.balance),
-        taxes: safeArray(billingData.taxes),
-      },
-      payment_methods: safePaymentMethods,
-      additional_notes: combinedNotes || undefined,
-      facilityData,
-      attending_staff_display: serverBillingItem.attending_staff_display || null,
-      attending_staff_name: serverBillingItem.attending_staff_name || null,
-      attending_staff_role: serverBillingItem.attending_staff_role || null,
-    };
-  }, [serverBillingItem, facilityData]);
-
-  // Final receipt transaction
-  const selectedTransactionForReceipt = serverReceiptTransaction || draftReceiptTransaction;
 
   const cashBreakdown = useMemo((): CashBreakdown | null => {
     if (!derivedFinancials.hasCashPayment || derivedFinancials.cashTendered === 0) return null;
@@ -487,7 +495,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   }, [derivedFinancials]);
 
   const cashChangeByIndex = useMemo(() => {
-    if (serverBillingItem) return {};
+    if (isServerMode) return {};
     
     const result: Record<number, { dueBefore: number; change: number }> = {};
     const safePaymentMethods = safeArray(paymentMethods);
@@ -509,7 +517,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     });
 
     return result;
-  }, [paymentMethods, draftDerivedFinancials.grandTotal, serverBillingItem]);
+  }, [paymentMethods, draftDerivedFinancials.grandTotal, isServerMode]);
 
   /* -------------------------------------------------------------------------- */
   /*                              PRINT HANDLER                                 */
@@ -587,12 +595,12 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     !isProcessing &&
     !isSubmitting &&
     !isReadOnly &&
-    !serverBillingItem &&
+    !isServerMode &&
     hasAnyBillableContext &&
     draftDerivedFinancials.balanceDue === 0 &&
     hasRequiredIds;
 
-  const canPrint = (isFinalized || !!serverBillingItem) && 
+  const canPrint = (isFinalized || isServerMode) && 
     (!!receiptNumber || !!serverBillingItem?.receipt_number) && 
     !isProcessing && 
     !isSubmitting;
@@ -617,7 +625,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   /* -------------------------------------------------------------------------- */
 
   const handleDiscountChange = (type: 'percentage' | 'fixed', rawValue: string) => {
-    if (isReadOnly || serverBillingItem) return;
+    if (isReadOnly || isServerMode) return;
 
     const numericValue = Number(rawValue) || 0;
     const maxValue = type === 'percentage' ? 100 : safeNumber(draftBillingData?.subtotal);
@@ -629,7 +637,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   };
 
   const syncPaymentMethodsToRedux = (updatedMethods: PaymentMethod[]) => {
-    if (isReadOnly || serverBillingItem) return;
+    if (isReadOnly || isServerMode) return;
 
     setLocalPaymentMethods(updatedMethods);
 
@@ -648,7 +656,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   };
 
   const handlePaymentTypeChange = (index: number, newType: string) => {
-    if (isReadOnly || serverBillingItem) return;
+    if (isReadOnly || isServerMode) return;
 
     const updatedMethods = [...paymentMethods];
     updatedMethods[index] = { ...updatedMethods[index], type: newType as any };
@@ -661,7 +669,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   };
 
   const handlePaymentAmountChange = (index: number, rawValue: string) => {
-    if (isReadOnly || serverBillingItem) return;
+    if (isReadOnly || isServerMode) return;
 
     const numericValue = Number(rawValue);
     const updatedMethods = [...paymentMethods];
@@ -675,7 +683,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   };
 
   const handleAutoFillRemaining = (index: number) => {
-    if (isReadOnly || serverBillingItem) return;
+    if (isReadOnly || isServerMode) return;
 
     const otherPaymentsTotal = paymentMethods.reduce(
       (sum, m, i) => (i === index ? sum : sum + safeNumber(m?.amount)),
@@ -691,7 +699,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   };
 
   const handleAddPaymentMethod = () => {
-    if (isReadOnly || serverBillingItem || paymentMethods.length >= 3) return;
+    if (isReadOnly || isServerMode || paymentMethods.length >= 3) return;
 
     const updatedMethods = [...paymentMethods, { type: 'cash' as const, amount: 0, details: '' }];
     setFocusedAmountInputs((prev) => ({ ...prev, [updatedMethods.length - 1]: false }));
@@ -700,7 +708,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   };
 
   const handleRemovePaymentMethod = (index: number) => {
-    if (isReadOnly || serverBillingItem || paymentMethods.length <= 1) return;
+    if (isReadOnly || isServerMode || paymentMethods.length <= 1) return;
 
     const updatedMethods = paymentMethods.filter((_, i) => i !== index);
     const updatedFocusState: Record<number, boolean> = {};
@@ -715,7 +723,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   };
 
   const handleMobilePhoneChange = (index: number, rawValue: string) => {
-    if (isReadOnly || serverBillingItem) return;
+    if (isReadOnly || isServerMode) return;
 
     const updatedMethods = [...paymentMethods];
     updatedMethods[index] = {
@@ -727,7 +735,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   };
 
   const handleInitiateMobilePayment = async (index: number) => {
-    if (isReadOnly || serverBillingItem) return;
+    if (isReadOnly || isServerMode) return;
 
     const method = paymentMethods[index];
     if (method?.type !== 'mobile') return;
@@ -748,7 +756,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   };
 
   const handleAdditionalNotesChange = (notes: string) => {
-    if (isReadOnly || serverBillingItem) return;
+    if (isReadOnly || isServerMode) return;
     setLocalAdditionalNotes(notes);
     dispatch(setAdditionalNotes(notes));
   };
@@ -830,14 +838,14 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   };
 
   const handleFocusAmountInput = (index: number) => {
-    if (isReadOnly || serverBillingItem) return;
+    if (isReadOnly || isServerMode) return;
     if (!focusedAmountInputs[index]) {
       setFocusedAmountInputs((prev) => ({ ...prev, [index]: true }));
     }
   };
 
   const handleBlurAmountInput = (index: number) => {
-    if (isReadOnly || serverBillingItem) return;
+    if (isReadOnly || isServerMode) return;
     if (paymentMethods[index]?.amount === 0) {
       setFocusedAmountInputs((prev) => ({ ...prev, [index]: false }));
     }
@@ -870,11 +878,11 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
       )}
 
       {/* Read-only indicator */}
-      {(isReadOnly || serverBillingItem) && (
+      {(isReadOnly || isServerMode) && (
         <div className="absolute top-20 right-8 z-10 flex items-center gap-2 px-3 py-1.5 bg-blue-700 text-white dark:bg-blue-600 dark:text-white rounded-full shadow-md border border-blue-500 dark:border-blue-400 no-print">
           <Lock className="w-3.5 h-3.5" />
           <span className="text-xs font-semibold">
-            {serverBillingItem ? 'View-only - Server data loaded' : 'Read-only mode - Payment settled'}
+            {isServerMode ? 'View-only - Server data loaded' : 'Read-only mode - Payment settled'}
           </span>
         </div>
       )}
@@ -889,19 +897,19 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
       {/* Source badges */}
       <div className="absolute top-4 right-8 z-10 flex gap-2 no-print">
-        {serverBillingItem && (
+        {isServerMode && (
           <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 text-xs font-medium border border-amber-200 dark:border-amber-800 shadow-sm">
             <Database className="w-3.5 h-3.5" />
             <span>Server billing data loaded</span>
           </div>
         )}
-        {!serverBillingItem && backendBillingMeta?.hasBilling && (
+        {!isServerMode && backendBillingMeta?.hasBilling && (
           <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 text-xs font-medium border border-amber-200 dark:border-amber-800 shadow-sm">
             <Database className="w-3.5 h-3.5" />
             <span>Saved billing loaded</span>
           </div>
         )}
-        {!serverBillingItem && safeArray(draftChargeItems).length > 0 && (
+        {!isServerMode && safeArray(draftChargeItems).length > 0 && (
           <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-xs font-medium border border-emerald-200 dark:border-emerald-800 shadow-sm">
             <FilePlus2 className="w-3.5 h-3.5" />
             <span>
@@ -947,8 +955,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
         {/* LEFT: Receipt Preview */}
         <ReceiptPreviewSection
           colors={colors}
-          isReadOnly={isReadOnly || !!serverBillingItem}
-          status={serverBillingItem ? 'settled' : status}
+          isReadOnly={isReadOnly || isServerMode}
+          status={isServerMode ? 'settled' : status}
           receiptNumber={receiptNumber || serverBillingItem?.receipt_number || ''}
           receiptRef={printReceiptRef}
           selectedTransaction={selectedTransactionForReceipt}
@@ -967,7 +975,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
         />
 
         {/* RIGHT: Billing controls - Hide when server data is loaded */}
-        {!serverBillingItem && (
+        {!isServerMode && (
           <BillingControlsSection
             colors={colors}
             isReadOnly={isReadOnly}
@@ -1006,7 +1014,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
         )}
 
         {/* Show a message when server data is loaded (right side empty) */}
-        {serverBillingItem && (
+        {isServerMode && (
           <div className={`flex flex-col items-center justify-center h-full border ${colors.border.primary} ${colors.bg.secondary} rounded-lg p-8 no-print`}>
             <Database className={`w-16 h-16 ${colors.text.secondary} mb-4`} />
             <p className={`text-center ${colors.text.primary} font-semibold mb-2`}>
