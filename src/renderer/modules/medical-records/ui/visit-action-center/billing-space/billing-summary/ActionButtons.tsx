@@ -19,7 +19,7 @@ interface ActionButtonsProps {
 const toCurrency = (value: number) =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'KES',
+    currency: 'UGX',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Number.isFinite(value) ? value : 0);

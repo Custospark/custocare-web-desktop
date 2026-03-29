@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { PaymentMethodItem } from './PaymentMethodItem';
 import { ActionButtons } from './ActionButtons';
-import { DiscountControl } from './DiscountControl';
+import { DiscountControl } from './DiscountControl ';
 
 interface BillingControlsSectionProps {
   colors: any;
@@ -17,6 +17,7 @@ interface BillingControlsSectionProps {
   canFinalize: boolean;
   canPrint: boolean;
   hasRequiredIds: boolean;
+  hideDiscountControl?: boolean;
   paymentIcon: (type: string) => React.ReactNode;
   getDisplayAmount: (index: number, amount: number) => string;
   onAddPaymentMethod: () => void;
@@ -32,12 +33,13 @@ interface BillingControlsSectionProps {
   onDiscountFocus: () => void;
   onFinalizePayment: () => void;
   onPrintReceipt: () => void;
+
 }
 
 const toCurrency = (value: number) =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'KES',
+    currency: 'UGX',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Number.isFinite(value) ? value : 0);
@@ -55,6 +57,7 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
   canFinalize,
   canPrint,
   hasRequiredIds,
+  hideDiscountControl,
   paymentIcon,
   getDisplayAmount,
   onAddPaymentMethod,
@@ -140,7 +143,7 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className={`rounded-lg border ${colors.border.primary} ${colors.bg.secondary} p-3`}>
               <div className={`text-[11px] uppercase tracking-wide ${colors.text.tertiary}`}>
-                Current Amount Due
+               Total
               </div>
               <div className={`mt-1 text-base font-bold ${colors.text.primary}`}>
                 {toCurrency(financialSnapshot.grandTotal)}
@@ -149,7 +152,7 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
 
             <div className={`rounded-lg border ${colors.border.primary} ${colors.bg.secondary} p-3`}>
               <div className={`text-[11px] uppercase tracking-wide ${colors.text.tertiary}`}>
-                Payment Entered
+                Payment Received
               </div>
               <div className={`mt-1 text-base font-bold ${colors.text.primary}`}>
                 {toCurrency(financialSnapshot.totalPaid)}
@@ -229,33 +232,36 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
                     isProcessing={isProcessing}
                   />
 
-                  {index === paymentMethods.length - 1 && (
-                    <>
-                      <DiscountControl
-                        discount={discount}
-                        billingData={billingData}
-                        isReadOnly={isReadOnly}
-                        colors={colors}
-                        onDiscountChange={onDiscountChange}
-                        onDiscountFocus={onDiscountFocus}
-                      />
+                 {index === paymentMethods.length - 1 && (
+              <>
+                {!hideDiscountControl && (
+                  <DiscountControl
+                    discount={discount}
+                    billingData={billingData}
+                    isReadOnly={isReadOnly}
+                    colors={colors}
+                    onDiscountChange={onDiscountChange}
+                    onDiscountFocus={onDiscountFocus}
+                  />
+                )}
 
-                      <ActionButtons
-                        isReadOnly={isReadOnly}
-                        canFinalize={canFinalize}
-                        canPrint={canPrint}
-                        isProcessing={isProcessing}
-                        isSubmitting={isSubmitting}
-                        hasRequiredIds={hasRequiredIds}
-                        colors={colors}
-                        totalPaid={financialSnapshot.totalPaid}
-                        balanceDue={financialSnapshot.balance}
-                        grandTotal={financialSnapshot.grandTotal}
-                        onFinalizePayment={onFinalizePayment}
-                        onPrintReceipt={onPrintReceipt}
-                      />
-                    </>
-                  )}
+                <ActionButtons
+                  isReadOnly={isReadOnly}
+                  canFinalize={canFinalize}
+                  canPrint={canPrint}
+                  isProcessing={isProcessing}
+                  isSubmitting={isSubmitting}
+                  hasRequiredIds={hasRequiredIds}
+                  colors={colors}
+                  totalPaid={Number(billingData?.totalPaid || 0)}
+                  balanceDue={Number(billingData?.balance || 0)}
+                  grandTotal={Number(billingData?.grandTotal || 0)}
+                  onFinalizePayment={onFinalizePayment}
+                  onPrintReceipt={onPrintReceipt}
+                />
+              </>
+            )}
+
                 </div>
               ))}
             </div>
