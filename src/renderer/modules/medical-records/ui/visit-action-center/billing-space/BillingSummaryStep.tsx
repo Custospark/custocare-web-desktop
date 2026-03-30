@@ -140,6 +140,13 @@ interface BillingSummaryStepProps {
   patientId?: number;
 }
 
+interface ComputedDiscountSnapshot {
+  discountType: 'percentage' | 'fixed' | null;
+  rawDiscountValue: number;
+  discountPercent: number;
+  discountAmount: number;
+}
+
 /* -------------------------------------------------------------------------- */
 /*                               HELPERS                                      */
 /* -------------------------------------------------------------------------- */
@@ -183,6 +190,45 @@ const normalizeDiscountType = (value: unknown): 'percentage' | 'fixed' | null =>
   return null;
 };
 
+const computeDiscountSnapshot = ({
+  subtotal,
+  discountType,
+  discountValue,
+  explicitDiscountAmount,
+}: {
+  subtotal: number;
+  discountType: unknown;
+  discountValue: unknown;
+  explicitDiscountAmount?: unknown;
+}): ComputedDiscountSnapshot => {
+  const normalizedType = normalizeDiscountType(discountType);
+  const normalizedSubtotal = roundCurrency(Math.max(0, safeNumber(subtotal)));
+  const normalizedRawValue = roundCurrency(Math.max(0, safeNumber(discountValue)));
+  const normalizedExplicitAmount = roundCurrency(
+    Math.max(0, safeNumber(explicitDiscountAmount))
+  );
+
+  let computedAmount = normalizedExplicitAmount;
+
+  if (computedAmount <= 0 && normalizedType && normalizedRawValue > 0) {
+    computedAmount =
+      normalizedType === 'percentage'
+        ? roundCurrency(normalizedSubtotal * (normalizedRawValue / 100))
+        : roundCurrency(normalizedRawValue);
+  }
+
+  const discountAmount = roundCurrency(
+    clamp(computedAmount, 0, normalizedSubtotal)
+  );
+
+  return {
+    discountType: normalizedType,
+    rawDiscountValue: normalizedRawValue,
+    discountPercent: normalizedType === 'percentage' ? normalizedRawValue : 0,
+    discountAmount,
+  };
+};
+
 const getPaymentStatusFromNumbers = ({
   amountDueBeforePayment,
   netPaid,
@@ -216,54 +262,30 @@ const extractDiscountSnapshot = (
   item: any,
   subtotal: number
 ) => {
-  const discountType = normalizeDiscountType(
-    rawBillingData?.discountType ??
+  return computeDiscountSnapshot({
+    subtotal,
+    discountType:
+      rawBillingData?.discountType ??
       rawBillingData?.discount_type ??
       rawBillingData?.discount?.type ??
       item?.discountType ??
       item?.discount_type ??
-      item?.discount?.type
-  );
-
-  const discountValue = roundCurrency(
-    firstMeaningfulNumber(
-      rawBillingData?.discountValue,
-      rawBillingData?.discount_value,
-      rawBillingData?.discount?.value,
-      item?.discountValue,
-      item?.discount_value,
-      item?.discount?.value
-    )
-  );
-
-  const explicitDiscountAmount = roundCurrency(
-    firstMeaningfulNumber(
-      rawBillingData?.discountAmount,
-      rawBillingData?.discount_amount,
-      rawBillingData?.discount?.amount,
-      item?.discountAmount,
-      item?.discount_amount,
-      item?.discount?.amount
-    )
-  );
-
-  let computedDiscountAmount = explicitDiscountAmount;
-
-  if (computedDiscountAmount <= 0 && discountType && discountValue > 0) {
-    computedDiscountAmount =
-      discountType === 'percentage'
-        ? roundCurrency(subtotal * (discountValue / 100))
-        : roundCurrency(discountValue);
-  }
-
-  const discountAmount = roundCurrency(clamp(computedDiscountAmount, 0, subtotal));
-
-  return {
-    discountType,
-    discountValue,
-    discountPercent: discountType === 'percentage' ? discountValue : 0,
-    discountAmount,
-  };
+      item?.discount?.type,
+    discountValue:
+      rawBillingData?.discountValue ??
+      rawBillingData?.discount_value ??
+      rawBillingData?.discount?.value ??
+      item?.discountValue ??
+      item?.discount_value ??
+      item?.discount?.value,
+    explicitDiscountAmount:
+      rawBillingData?.discountAmount ??
+      rawBillingData?.discount_amount ??
+      rawBillingData?.discount?.amount ??
+      item?.discountAmount ??
+      item?.discount_amount ??
+      item?.discount?.amount,
+  });
 };
 
 const normalizeBackendBillingData = (
@@ -354,7 +376,7 @@ const normalizeServerBillingItem = (
   const {
     discountAmount,
     discountType,
-    discountValue,
+    rawDiscountValue,
     discountPercent,
   } = extractDiscountSnapshot(rawBillingData, item as any, subtotal);
 
@@ -466,7 +488,7 @@ const normalizeServerBillingItem = (
   const billingData: ReceiptBillingDataShape = {
     subtotal,
     discountAmount,
-    discountValue,
+    discountValue: rawDiscountValue,
     discountType,
     taxableAmount,
     taxTotal,
@@ -665,9 +687,13 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
   const draftDiscountBase = useMemo(() => {
     return roundCurrency(
-      safeNumber(normalizedDraftBilling.subtotal, 0)
+      safeNumber(normalizedPersistedBilling.existingBalance) +
+        safeNumber(normalizedDraftBilling.subtotal)
     );
-  }, [normalizedDraftBilling.subtotal]);
+  }, [
+    normalizedPersistedBilling.existingBalance,
+    normalizedDraftBilling.subtotal,
+  ]);
 
   const draftBillingView = useMemo<NormalizedBillingView>(() => {
     const persisted = normalizedPersistedBilling;
@@ -678,27 +704,35 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     );
 
     const servicesSubtotal = roundCurrency(
-      persisted.servicesSubtotal + draft.subtotal
+      safeNumber(persisted.servicesSubtotal) + safeNumber(draft.subtotal)
     );
 
-    const existingBalance = roundCurrency(persisted.existingBalance);
-
-    const newItemsSubtotal = roundCurrency(draft.subtotal);
-    const newItemsDiscountAmount = roundCurrency(draft.discountAmount);
-    const newItemsTaxableAmount = roundCurrency(draft.taxableAmount);
-    const newItemsTaxTotal = roundCurrency(draft.taxTotal);
-    const newItemsGrandTotal = roundCurrency(draft.grandTotal);
+    const existingBalance = roundCurrency(safeNumber(persisted.existingBalance));
+    const newItemsSubtotal = roundCurrency(safeNumber(draft.subtotal));
 
     const currentSessionSubtotal = roundCurrency(existingBalance + newItemsSubtotal);
-    const currentSessionDiscountAmount = roundCurrency(newItemsDiscountAmount);
+
+    const discountSnapshot = computeDiscountSnapshot({
+      subtotal: currentSessionSubtotal,
+      discountType: discount?.type,
+      discountValue: discount?.value,
+    });
+
+    const currentSessionDiscountAmount = roundCurrency(discountSnapshot.discountAmount);
     const currentSessionTaxableAmount = roundCurrency(
-      existingBalance + newItemsTaxableAmount
+      Math.max(0, currentSessionSubtotal - currentSessionDiscountAmount)
     );
-    const currentSessionTaxTotal = roundCurrency(newItemsTaxTotal);
+
+    const currentSessionTaxTotal = roundCurrency(safeNumber(draft.taxTotal));
 
     const amountDueBeforeCurrentPayment = roundCurrency(
-      existingBalance + newItemsGrandTotal
+      currentSessionTaxableAmount + currentSessionTaxTotal
     );
+
+    const newItemsDiscountAmount = roundCurrency(currentSessionDiscountAmount);
+    const newItemsTaxableAmount = roundCurrency(currentSessionTaxableAmount);
+    const newItemsTaxTotal = roundCurrency(currentSessionTaxTotal);
+    const newItemsGrandTotal = roundCurrency(amountDueBeforeCurrentPayment);
 
     const totalPaidFromMethods = roundCurrency(
       currentMethods.reduce((sum, method) => sum + safeNumber(method?.amount), 0)
@@ -747,13 +781,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
       subtotal: currentSessionSubtotal,
       discountAmount: currentSessionDiscountAmount,
-      discountValue: roundCurrency(safeNumber(discount?.value)),
-      discountType:
-        discount?.type === 'percentage'
-          ? 'percentage'
-          : discount?.type === 'fixed'
-          ? 'fixed'
-          : null,
+      discountValue: roundCurrency(discountSnapshot.rawDiscountValue),
+      discountType: discountSnapshot.discountType,
       taxableAmount: currentSessionTaxableAmount,
       taxTotal: currentSessionTaxTotal,
       grandTotal: amountDueBeforeCurrentPayment,
@@ -799,14 +828,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
       grandTotal: amountDueBeforeCurrentPayment,
       subtotal: currentSessionSubtotal,
       discountAmount: currentSessionDiscountAmount,
-      discountPercent:
-        discount?.type === 'percentage' ? safeNumber(discount?.value) : 0,
-      discountType:
-        discount?.type === 'percentage'
-          ? 'percentage'
-          : discount?.type === 'fixed'
-          ? 'fixed'
-          : null,
+      discountPercent: discountSnapshot.discountPercent,
+      discountType: discountSnapshot.discountType,
       taxTotal: currentSessionTaxTotal,
       totalPaidFromMethods,
       cashTendered,
@@ -849,10 +872,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     if (isServerMode) return result;
 
     const currentMethods = safeArray(paymentMethods);
-
-    const dueBeforeAnyPayment = roundCurrency(
-      normalizedPersistedBilling.existingBalance + normalizedDraftBilling.grandTotal
-    );
+    const dueBeforeAnyPayment = roundCurrency(draftBillingView.billingData.grandTotal);
 
     currentMethods.forEach((method, index) => {
       if (method?.type !== 'cash') return;
@@ -877,8 +897,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     return result;
   }, [
     paymentMethods,
-    normalizedPersistedBilling.existingBalance,
-    normalizedDraftBilling.grandTotal,
+    draftBillingView.billingData.grandTotal,
     isServerMode,
   ]);
 
@@ -1058,9 +1077,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   const handleAutoFillRemaining = (index: number) => {
     if (isReadOnly) return;
 
-    const dueBeforeAnyPayment = roundCurrency(
-      normalizedPersistedBilling.existingBalance + normalizedDraftBilling.grandTotal
-    );
+    const dueBeforeAnyPayment = roundCurrency(draftBillingView.billingData.grandTotal);
 
     const otherPaymentsTotal = paymentMethods.reduce(
       (sum, method, i) => (i === index ? sum : sum + safeNumber(method?.amount)),
@@ -1171,22 +1188,24 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
     try {
       const currentPaymentStatus = activeBillingView.derivedFinancials.status;
+      const effectiveDiscountType = activeBillingView.billingData.discountType;
+      const effectiveDiscountValue = roundCurrency(
+        safeNumber(activeBillingView.billingData.discountValue)
+      );
+      const exactDiscountAmount = roundCurrency(
+        safeNumber(activeBillingView.billingData.discountAmount)
+      );
 
       const billingDataSnapshot = {
         subtotal: roundCurrency(activeBillingView.billingData.subtotal),
-        discountAmount: roundCurrency(activeBillingView.billingData.discountAmount),
+        discountAmount: exactDiscountAmount,
         taxableAmount: roundCurrency(activeBillingView.billingData.taxableAmount),
         taxTotal: roundCurrency(activeBillingView.billingData.taxTotal),
         grandTotal: roundCurrency(activeBillingView.billingData.grandTotal),
         totalPaid: roundCurrency(activeBillingView.derivedFinancials.netPaid),
         balance: roundCurrency(activeBillingView.derivedFinancials.balanceDue),
-        discountType:
-          discount.type === 'percentage'
-            ? 'percentage'
-            : discount.type === 'fixed'
-            ? 'fixed'
-            : null,
-        discountValue: roundCurrency(safeNumber(discount.value)),
+        discountType: effectiveDiscountType,
+        discountValue: effectiveDiscountValue,
       } as BillingSubmissionPayload['billing_data'];
 
       const payload: BillingSubmissionPayload = {
@@ -1206,10 +1225,10 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
         })),
         discount: {
           type:
-            discount.type === 'percentage'
+            effectiveDiscountType === 'percentage'
               ? DiscountType.PERCENTAGE
               : DiscountType.FIXED,
-          value: roundCurrency(safeNumber(discount.value)),
+          value: effectiveDiscountValue,
           reason: discount.reason || additionalNotes || undefined,
         },
         taxes: safeArray(activeBillingView.billingData?.taxes).map((tax) => ({
@@ -1366,37 +1385,37 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
         />
 
         <BillingControlsSection
-              colors={colors}
-              isReadOnly={isReadOnly}
-              paymentMethods={paymentMethods}
-              focusedAmountInputs={focusedAmountInputs}
-              cashChangeByIndex={cashChangeByIndex}
-              discount={discount}
-              discountInputValue={discountInputValue}
-              billingData={activeBillingView.billingData}
-              isProcessing={isProcessing}
-              isSubmitting={isSubmitting}
-              canFinalize={canFinalize}
-              canPrint={canPrint}
-              hasRequiredIds={hasRequiredIds}
-              paymentIcon={paymentIcon}
-              getDisplayAmount={getDisplayAmount}
-              hideDiscountControl={shouldHideDiscountControls}
-              onPaymentTypeChange={handlePaymentTypeChange}
-              onRemovePaymentMethod={handleRemovePaymentMethod}
-              onAddPaymentMethod={handleAddPaymentMethod}
-              onMobilePhoneChange={handleMobilePhoneChange}
-              onInitiateMobilePayment={handleInitiateMobilePayment}
-              onPaymentAmountChange={handlePaymentAmountChange}
-              onAutoFillRemaining={handleAutoFillRemaining}
-              onFocusAmountInput={handleFocusAmountInput}
-              onBlurAmountInput={handleBlurAmountInput}
-              onDiscountValueChange={handleDiscountValueChange}
-              onDiscountTypeChange={handleDiscountTypeChange}
-              onDiscountFocus={handleDiscountFocus}
-              onFinalizePayment={handleFinalizePayment}
-              onPrintReceipt={handlePrintReceipt}
-            />
+          colors={colors}
+          isReadOnly={isReadOnly}
+          paymentMethods={paymentMethods}
+          focusedAmountInputs={focusedAmountInputs}
+          cashChangeByIndex={cashChangeByIndex}
+          discount={discount}
+          discountInputValue={discountInputValue}
+          billingData={activeBillingView.billingData}
+          isProcessing={isProcessing}
+          isSubmitting={isSubmitting}
+          canFinalize={canFinalize}
+          canPrint={canPrint}
+          hasRequiredIds={hasRequiredIds}
+          paymentIcon={paymentIcon}
+          getDisplayAmount={getDisplayAmount}
+          hideDiscountControl={shouldHideDiscountControls}
+          onPaymentTypeChange={handlePaymentTypeChange}
+          onRemovePaymentMethod={handleRemovePaymentMethod}
+          onAddPaymentMethod={handleAddPaymentMethod}
+          onMobilePhoneChange={handleMobilePhoneChange}
+          onInitiateMobilePayment={handleInitiateMobilePayment}
+          onPaymentAmountChange={handlePaymentAmountChange}
+          onAutoFillRemaining={handleAutoFillRemaining}
+          onFocusAmountInput={handleFocusAmountInput}
+          onBlurAmountInput={handleBlurAmountInput}
+          onDiscountValueChange={handleDiscountValueChange}
+          onDiscountTypeChange={handleDiscountTypeChange}
+          onDiscountFocus={handleDiscountFocus}
+          onFinalizePayment={handleFinalizePayment}
+          onPrintReceipt={handlePrintReceipt}
+        />
       </div>
     </div>
   );
