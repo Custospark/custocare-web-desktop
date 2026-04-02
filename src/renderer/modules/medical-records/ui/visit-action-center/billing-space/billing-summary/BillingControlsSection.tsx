@@ -131,7 +131,7 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
         {/* Header */}
         <div className={`shrink-0 px-4 py-3 border-b ${colors.border.primary} ${colors.bg.secondary}`}>
           <h3 className={`text-sm sm:text-base font-bold ${colors.text.primary}`}>
-            {isReadOnly ? 'Payment Details (Read-only)' : 'Billing Controls'}
+            {isReadOnly ? 'Payment Details' : 'Billing Controls'}
           </h3>
           <p className={`text-xs ${colors.text.secondary} mt-0.5`}>
             {isReadOnly

@@ -21,10 +21,9 @@ import {
   mapRetrievedBillingToBackendState,
   EMPTY_BACKEND_META,
   calculateBillingSnapshot,
-} from './billing-types';
-
-import type { BillingRetrievalData } from '../../../api/billable-items/BillingItemsTypes';
-import { RootState } from '../../../../../app/store/rootReducer';
+} from '../../../modules/medical-records/ui/visit-action-center/billing-space';
+import { BillingRetrievalData } from '../../../modules/medical-records/api/billable-items/BillingItemsTypes';
+import { RootState } from '../rootReducer';
 
 /* -------------------------------------------------------------------------- */
 /*                               HELPERS                                      */

@@ -1290,14 +1290,14 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
   return (
     <div className="h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6 relative">
-      {isReadOnly && (
+      {/* {isReadOnly && (
         <div className="absolute top-20 right-8 z-10 flex items-center gap-2 px-3 py-1.5 bg-blue-700 text-white dark:bg-blue-600 dark:text-white rounded-full shadow-md border border-blue-500 dark:border-blue-400 no-print">
           <Lock className="w-3.5 h-3.5" />
           <span className="text-xs font-semibold">
             Read-only mode - Payment settled
           </span>
         </div>
-      )}
+      )} */}
 
       {isBillingFetchLoading && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow-lg border border-blue-500 no-print">
@@ -1307,19 +1307,19 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
       )}
 
       <div className="absolute top-4 right-8 z-10 flex gap-2 no-print">
-        {serverBillingItem && (
+        {/* {serverBillingItem && (
           <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 text-xs font-medium border border-amber-200 dark:border-amber-800 shadow-sm">
             <Database className="w-3.5 h-3.5" />
             <span>Server billing data loaded</span>
           </div>
-        )}
+        )} */}
 
-        {!serverBillingItem && backendBillingMeta?.hasBilling && (
+        {/* {!serverBillingItem && backendBillingMeta?.hasBilling && (
           <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 text-xs font-medium border border-amber-200 dark:border-amber-800 shadow-sm">
             <Database className="w-3.5 h-3.5" />
             <span>Saved billing loaded</span>
           </div>
-        )}
+        )} */}
 
         {draftChargeItems.length > 0 && (
           <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-xs font-medium border border-emerald-200 dark:border-emerald-800 shadow-sm">

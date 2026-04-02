@@ -894,12 +894,12 @@ export const selectDisplayBillingData = createSelector(
     );
     const persistedDiscountAmount = roundCurrency(
       toFiniteNumber(
-        persistedBillingData?.discountAmount ?? persistedBillingData?.discount_amount,
+        persistedBillingData?.discountAmount ?? persistedBillingData?.discountAmount,
         0
       )
     );
     const persistedTaxTotal = roundCurrency(
-      toFiniteNumber(persistedBillingData?.taxTotal ?? persistedBillingData?.tax_total, 0)
+      toFiniteNumber(persistedBillingData?.taxTotal ?? persistedBillingData?.taxTotal, 0)
     );
 
     const draftGrandTotal = roundCurrency(draft.grandTotal);

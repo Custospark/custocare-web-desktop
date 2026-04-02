@@ -288,11 +288,14 @@ export const INITIAL_BILLING_STATE: BillingState = {
 
 const roundCurrencyValue = (value: number): number => Math.round((Number(value) || 0) * 100) / 100;
 
-const normalizeDiscount = (discount?: Partial<Discount> | null): Discount => ({
-  type: discount?.type === 'fixed' ? 'fixed' : 'percentage',
-  value: Number(discount?.value || 0),
-  reason: discount?.reason ?? '',
-});
+function normalizeDiscount(discount: any) {
+  if (!discount) return discount;
+  return {
+    type: discount.type,
+    value: discount.value,
+    reason: discount.reason === null ? undefined : discount.reason
+  };
+}
 
 const normalizeTaxes = (taxes?: Array<Partial<Tax>> | null): Tax[] => {
   if (!Array.isArray(taxes) || taxes.length === 0) {
