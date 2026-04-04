@@ -130,7 +130,7 @@ export interface BillingSubmissionPayload {
     quantity: number;
     totalAmount: number;
   }>;
-  discount: {
+  discount?: {
     type: 'percentage' | 'fixed';
     value: number;
     reason?: string;
@@ -415,3 +415,7 @@ export function formatItemDisplayName(item: BillableItem): string {
   }
   return item.name;
 }
+
+
+
+

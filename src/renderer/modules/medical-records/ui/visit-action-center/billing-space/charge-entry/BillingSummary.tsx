@@ -142,81 +142,77 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
     clearBillingDataOnly();
     dispatch(clearActiveVisit());
   }, [clearBillingDataOnly, dispatch]);
+/**
+ * Build submission payload from the DRAFT section only.
+ */
+const buildPendingBillingPayload = useCallback((): BillingSubmissionPayload | null => {
+  if (!hasDraftChargeItems && draftBillingData.totalPaid <= 0) return null;
+  if (visitId == null || patientId == null) {
+    console.error('Unable to persist billing: missing visit ID or patient ID.', { visitId, patientId });
+    return null;
+  }
 
-  /**
-   * Build submission payload from the DRAFT section only.
-   */
-  const buildPendingBillingPayload = useCallback((): BillingSubmissionPayload | null => {
-    if (!hasDraftChargeItems && draftBillingData.totalPaid <= 0) {
-      return null;
-    }
+  const discount = billingState.discount;
+  const hasDiscount = discount?.value !== undefined && discount?.value !== null;
 
-    if (visitId == null || patientId == null) {
-      console.error('Unable to persist billing: missing visit ID or patient ID.', {
-        visitId,
-        patientId,
-      });
-      return null;
-    }
-
-    return {
-      visit_id: visitId,
-      patient_id: patientId,
-      charge_items: draftChargeItems.map((item) => ({
-        service_key: item.serviceKey,
-        service: {
-          id: item.service.id,
-          code: item.service.code,
-          name: item.service.name.toUpperCase(),
-          unitPrice: item.service.unitPrice,
-          category: item.service.category,
-        },
-        quantity: item.quantity,
-        totalAmount: item.totalAmount,
-      })),
+  return {
+    visit_id: visitId,
+    patient_id: patientId,
+    charge_items: draftChargeItems.map((item) => ({
+      service_key: item.serviceKey,
+      service: {
+        id: item.service.id,
+        code: item.service.code,
+        name: item.service.name.toUpperCase(),
+        unitPrice: item.service.unitPrice,
+        category: item.service.category,
+      },
+      quantity: item.quantity,
+      totalAmount: item.totalAmount,
+    })),
+    ...(hasDiscount && {
       discount: {
-        type: billingState.discount.type,
-        value: billingState.discount.value,
-        reason: billingState.discount.reason || undefined,
-      },
-      taxes: draftBillingData.taxes.map((tax) => ({
-        name: tax.name,
-        rate: tax.rate,
-        amount: tax.amount,
+        type: discount.type,
+        value: discount.value,
+        ...(discount.reason && { reason: discount.reason }),
+      }
+    }),
+    taxes: draftBillingData.taxes.map((tax) => ({
+      name: tax.name,
+      rate: tax.rate,
+      amount: tax.amount,
+    })),
+    payment_methods: billingState.paymentMethods
+      .filter((method) => (Number(method.amount) || 0) > 0)
+      .map((method) => ({
+        type: method.type,
+        amount: Number(method.amount),
+        reference: method.reference || method.details || undefined,
+        details: method.details || undefined,
       })),
-      payment_methods: billingState.paymentMethods
-        .filter((method) => (Number(method.amount) || 0) > 0)
-        .map((method) => ({
-          type: method.type,
-          amount: Number(method.amount),
-          reference: method.reference || method.details || undefined,
-          details: method.details || undefined,
-        })),
-      billing_data: {
-        subtotal: draftBillingData.subtotal,
-        discountAmount: draftBillingData.discountAmount,
-        taxableAmount: draftBillingData.taxableAmount,
-        taxTotal: draftBillingData.taxTotal,
-        grandTotal: draftBillingData.grandTotal,
-        totalPaid: draftBillingData.totalPaid,
-        balance: draftBillingData.balance,
-      },
-      additional_notes: billingState.additionalNotes || undefined,
-      status: 'ready',
-      payment_status: PaymentStatus.PENDING,
-    };
-  }, [
-    hasDraftChargeItems,
-    visitId,
-    patientId,
-    draftChargeItems,
-    billingState.discount.type,
-    billingState.discount.value,
-    billingState.discount.reason,
-    billingState.paymentMethods,
-    billingState.additionalNotes,
-    draftBillingData,
-  ]);
+    billing_data: {
+      subtotal: draftBillingData.subtotal,
+      discountAmount: draftBillingData.discountAmount,
+      taxableAmount: draftBillingData.taxableAmount,
+      taxTotal: draftBillingData.taxTotal,
+      grandTotal: draftBillingData.grandTotal,
+      totalPaid: draftBillingData.totalPaid,
+      balance: draftBillingData.balance,
+    },
+    additional_notes: billingState.additionalNotes || undefined,
+    status: 'ready',
+    payment_status: PaymentStatus.PENDING,
+  };
+}, [
+  hasDraftChargeItems,
+  visitId,
+  patientId,
+  draftChargeItems,
+  billingState.discount,
+  billingState.paymentMethods,
+  billingState.additionalNotes,
+  draftBillingData,
+]);
 
   /**
    * Action: FORWARD
@@ -431,7 +427,7 @@ const handleProceedAction = useCallback(() => {
       default:
         return {
           icon: Lightbulb,
-          text: 'PROCEED saves and continues to payment. SAVE & EXIT and FORWARD clear all data after saving.',
+          text: 'Keep cursor in the search box to start searching for item/service',
           color: isDark ? 'text-yellow-400' : 'text-yellow-600',
         };
     }

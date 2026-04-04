@@ -3,7 +3,6 @@ import {
   CreditCard,
   Wallet,
   Banknote,
-  Lock,
   Shield,
   Database,
   FilePlus2,
@@ -633,6 +632,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
 
   useEffect(() => {
     const items = fetchedVisitBillingData?.data?.items;
+    console.log("Items");
+    console.log(items);
     const hasValidData =
       isBillingFetchSuccess && Array.isArray(items) && items.length > 0;
 
@@ -1168,94 +1169,105 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   };
 
   const handleFinalizePayment = async () => {
-    if (!canFinalize) {
-      if (!hasRequiredIds) {
-        alert('Unable to finalize billing. Visit or patient information is missing.');
-        return;
-      }
-
-      if (activeBillingView.derivedFinancials.netPaid <= 0) {
-        alert('Enter a payment amount greater than zero before finalizing.');
-        return;
-      }
-
+  if (!canFinalize) {
+    if (!hasRequiredIds) {
+      alert('Unable to finalize billing. Visit or patient information is missing.');
       return;
     }
 
-    if (visitId == null || patientId == null) return;
-
-    dispatch(setProcessing(true));
-
-    try {
-      const currentPaymentStatus = activeBillingView.derivedFinancials.status;
-      const effectiveDiscountType = activeBillingView.billingData.discountType;
-      const effectiveDiscountValue = roundCurrency(
-        safeNumber(activeBillingView.billingData.discountValue)
-      );
-      const exactDiscountAmount = roundCurrency(
-        safeNumber(activeBillingView.billingData.discountAmount)
-      );
-
-      const billingDataSnapshot = {
-        subtotal: roundCurrency(activeBillingView.billingData.subtotal),
-        discountAmount: exactDiscountAmount,
-        taxableAmount: roundCurrency(activeBillingView.billingData.taxableAmount),
-        taxTotal: roundCurrency(activeBillingView.billingData.taxTotal),
-        grandTotal: roundCurrency(activeBillingView.billingData.grandTotal),
-        totalPaid: roundCurrency(activeBillingView.derivedFinancials.netPaid),
-        balance: roundCurrency(activeBillingView.derivedFinancials.balanceDue),
-        discountType: effectiveDiscountType,
-        discountValue: effectiveDiscountValue,
-      } as BillingSubmissionPayload['billing_data'];
-
-      const payload: BillingSubmissionPayload = {
-        visit_id: visitId,
-        patient_id: patientId,
-        charge_items: safeArray(draftChargeItems).map((item) => ({
-          service_key: item.serviceKey,
-          service: {
-            id: item.service.id,
-            code: item.service.code,
-            name: item.service.name.toUpperCase(),
-            unitPrice: item.service.unitPrice,
-            category: item.service.category,
-          },
-          quantity: item.quantity,
-          totalAmount: roundCurrency(item.totalAmount),
-        })),
-        discount: {
-          type:
-            effectiveDiscountType === 'percentage'
-              ? DiscountType.PERCENTAGE
-              : DiscountType.FIXED,
-          value: effectiveDiscountValue,
-          reason: discount.reason || additionalNotes || undefined,
-        },
-        taxes: safeArray(activeBillingView.billingData?.taxes).map((tax) => ({
-          name: tax.name,
-          rate: roundCurrency(safeNumber(tax.rate)),
-          amount: roundCurrency(safeNumber(tax.amount)),
-        })),
-        payment_methods: safeArray(paymentMethods)
-          .filter((method) => safeNumber(method?.amount) > 0)
-          .map((method) => ({
-            type: method.type as 'cash' | 'card' | 'insurance' | 'mobile' | 'mixed',
-            amount: roundCurrency(safeNumber(method.amount)),
-            reference: method.details || undefined,
-            details: method.details || undefined,
-          })),
-        billing_data: billingDataSnapshot,
-        additional_notes: additionalNotes || undefined,
-        status,
-        payment_status: currentPaymentStatus,
-      };
-
-      submitBilling(payload);
-    } catch (error) {
-      console.error('Payment processing failed:', error);
-      dispatch(setProcessing(false));
+    if (activeBillingView.derivedFinancials.netPaid <= 0) {
+      alert('Enter a payment amount greater than zero before finalizing.');
+      return;
     }
-  };
+
+    return;
+  }
+
+  if (visitId == null || patientId == null) return;
+
+  dispatch(setProcessing(true));
+
+  try {
+    const currentPaymentStatus = activeBillingView.derivedFinancials.status;
+    const effectiveDiscountType = activeBillingView.billingData.discountType;
+    const effectiveDiscountValue = roundCurrency(
+      safeNumber(activeBillingView.billingData.discountValue)
+    );
+    const exactDiscountAmount = roundCurrency(
+      safeNumber(activeBillingView.billingData.discountAmount)
+    );
+
+    const billingDataSnapshot = {
+      subtotal: roundCurrency(activeBillingView.billingData.subtotal),
+      discountAmount: exactDiscountAmount,
+      taxableAmount: roundCurrency(activeBillingView.billingData.taxableAmount),
+      taxTotal: roundCurrency(activeBillingView.billingData.taxTotal),
+      grandTotal: roundCurrency(activeBillingView.billingData.grandTotal),
+      totalPaid: roundCurrency(activeBillingView.derivedFinancials.netPaid),
+      balance: roundCurrency(activeBillingView.derivedFinancials.balanceDue),
+      discountType: effectiveDiscountType,
+      discountValue: effectiveDiscountValue,
+    } as BillingSubmissionPayload['billing_data'];
+
+    // Build discount object only if value is valid and non-zero
+    let discountPayload = undefined;
+    const hasActiveDiscount = effectiveDiscountValue !== undefined && 
+                              effectiveDiscountValue !== null && 
+                              effectiveDiscountValue !== 0;
+
+    if (hasActiveDiscount) {
+      discountPayload = {
+        type: effectiveDiscountType === 'percentage' ? DiscountType.PERCENTAGE : DiscountType.FIXED,
+        value: effectiveDiscountValue,
+        reason: discount.reason || additionalNotes || undefined,
+      };
+    }
+
+    const payload: BillingSubmissionPayload = {
+      visit_id: visitId,
+      patient_id: patientId,
+      charge_items: safeArray(draftChargeItems).map((item) => ({
+        service_key: item.serviceKey,
+        service: {
+          id: item.service.id,
+          code: item.service.code,
+          name: item.service.name.toUpperCase(),
+          unitPrice: item.service.unitPrice,
+          category: item.service.category,
+        },
+        quantity: item.quantity,
+        totalAmount: roundCurrency(item.totalAmount),
+      })),
+      taxes: safeArray(activeBillingView.billingData?.taxes).map((tax) => ({
+        name: tax.name,
+        rate: roundCurrency(safeNumber(tax.rate)),
+        amount: roundCurrency(safeNumber(tax.amount)),
+      })),
+      payment_methods: safeArray(paymentMethods)
+        .filter((method) => safeNumber(method?.amount) > 0)
+        .map((method) => ({
+          type: method.type as 'cash' | 'card' | 'insurance' | 'mobile' | 'mixed',
+          amount: roundCurrency(safeNumber(method.amount)),
+          reference: method.details || undefined,
+          details: method.details || undefined,
+        })),
+      billing_data: billingDataSnapshot,
+      additional_notes: additionalNotes || undefined,
+      status,
+      payment_status: currentPaymentStatus,
+    };
+
+    // Only add discount if it exists
+    if (discountPayload) {
+      payload.discount = discountPayload;
+    }
+
+    submitBilling(payload);
+  } catch (error) {
+    console.error('Payment processing failed:', error);
+    dispatch(setProcessing(false));
+  }
+};
 
   const handleFocusAmountInput = (index: number) => {
     if (isReadOnly) return;
