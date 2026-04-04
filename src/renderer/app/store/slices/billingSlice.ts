@@ -22,8 +22,8 @@ import {
   EMPTY_BACKEND_META,
   calculateBillingSnapshot,
 } from '../../../modules/medical-records/ui/visit-action-center/billing-space';
-import { BillingRetrievalData } from '../../../modules/medical-records/api/billable-items/BillingItemsTypes';
-import { RootState } from '../rootReducer';
+import { type BillingRetrievalData } from '../../../modules/medical-records/api/billable-items/BillingItemsTypes';
+import { type RootState } from '../rootReducer';
 
 /* -------------------------------------------------------------------------- */
 /*                               HELPERS                                      */

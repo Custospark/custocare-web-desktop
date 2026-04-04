@@ -64,7 +64,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
   const currentStep = useSelector(selectCurrentStep);
   const isDirty = useSelector(selectIsDirty);
   const status = useSelector(selectBillingStatus);
-  const viewMode = useSelector(selectBillingViewMode); // SINGLE SOURCE OF TRUTH
+  const viewMode = useSelector(selectBillingViewMode);
 
   const isMinimized = viewMode === 'minimized';
   const isExpanded = viewMode === 'expanded';
@@ -80,6 +80,12 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
 
   const minimizedRef = useRef<HTMLDivElement>(null);
   const didDragRef = useRef(false);
+
+  /**
+   * Prevents duplicate close flows while the confirm dialog is active
+   * or while close cleanup is being processed.
+   */
+  const closeFlowInProgressRef = useRef(false);
 
   const QUEUE_ROUTE = MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE;
 
@@ -151,14 +157,12 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     };
   }, []);
 
-  // Reset drag state when mode changes
   useEffect(() => {
     setIsDragging(false);
     setTouchStart(null);
     didDragRef.current = false;
   }, [viewMode]);
 
-  // Reset when tray closes
   useEffect(() => {
     if (!isTrayOpen) {
       setIsDragging(false);
@@ -167,10 +171,10 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
       setPosition({ x: 0, y: 0 });
       setTouchStart(null);
       didDragRef.current = false;
+      closeFlowInProgressRef.current = false;
     }
   }, [isTrayOpen]);
 
-  // Set position when minimized
   useEffect(() => {
     if (isMinimized && !hasCustomPosition) {
       const frame = requestAnimationFrame(() => {
@@ -180,7 +184,6 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     }
   }, [isMinimized, hasCustomPosition, minimizedDockPosition, getDockedPosition]);
 
-  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       if (!isMinimized) return;
@@ -197,7 +200,6 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [isMinimized, hasCustomPosition, minimizedDockPosition, clampToViewport, getDockedPosition]);
 
-  // Handle mouse drag movement
   useEffect(() => {
     if (!isDragging) return;
 
@@ -205,10 +207,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     document.body.style.userSelect = 'none';
 
     const handleMouseMove = (e: MouseEvent) => {
-      const next = clampToViewport(
-        e.clientX - dragOffset.x,
-        e.clientY - dragOffset.y
-      );
+      const next = clampToViewport(e.clientX - dragOffset.x, e.clientY - dragOffset.y);
 
       didDragRef.current = true;
       setPosition(next);
@@ -232,7 +231,6 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     };
   }, [isDragging, dragOffset, clampToViewport]);
 
-  // Handle touch drag for mobile
   useEffect(() => {
     if (!isDragging || !touchStart) return;
 
@@ -240,10 +238,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
       e.preventDefault();
 
       const touch = e.touches[0];
-      const next = clampToViewport(
-        touch.clientX - dragOffset.x,
-        touch.clientY - dragOffset.y
-      );
+      const next = clampToViewport(touch.clientX - dragOffset.x, touch.clientY - dragOffset.y);
 
       didDragRef.current = true;
       setPosition(next);
@@ -298,26 +293,21 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     setIsDragging(true);
   }, []);
 
-  // MINIMIZE: Dispatch action to Redux
   const handleMinimize = useCallback(
     (e?: React.MouseEvent<HTMLButtonElement>) => {
       e?.stopPropagation();
 
-      // Save draft if dirty
       if (isDirty) {
-        // Use queueMicrotask to ensure state update completes
         queueMicrotask(() => {
           dispatch(saveDraft());
         });
       }
 
-      // Dispatch minimize action to Redux
       dispatch(minimizeTray());
     },
     [dispatch, isDirty]
   );
 
-  // MAXIMIZE: Dispatch action to Redux
   const handleMaximize = useCallback(
     (e?: React.MouseEvent<HTMLButtonElement>) => {
       e?.stopPropagation();
@@ -326,55 +316,84 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     [dispatch]
   );
 
-const handleClose = useCallback(async () => {
-  if (status === 'settled') {
-    const confirmed = await confirm({
-      title: 'Close billing window?',
-      message:
-        'Payment has been successfully completed. All records are saved and the receipt has been generated.',
-      confirmText: 'Close',
-      cancelText: 'Stay',
-      variant: 'info',
-      theme,
-    });
+  /**
+   * Immediate local close.
+   * Use this for non-settled tray closure and as the first step of settled closure.
+   */
+  const closeTrayImmediately = useCallback(() => {
+    dispatch(closeTray());
+    dispatch(clearPendingForwarding());
+  }, [dispatch]);
 
-    if (confirmed) {
-      dispatch(clearAll());
-      dispatch(clearActiveVisit());
-      dispatch(clearPendingForwarding());
-      navigate(QUEUE_ROUTE);
-    }
+  /**
+   * Full settled-payment close flow.
+   * IMPORTANT:
+   * - closeTray() happens first so the UI closes immediately
+   * - then we reset billing state and clear external context
+   */
+  const closeSettledTrayImmediately = useCallback(() => {
+    dispatch(closeTray());
+    dispatch(clearAll());
+    dispatch(clearActiveVisit());
+    dispatch(clearPendingForwarding());
+    navigate(QUEUE_ROUTE);
+  }, [dispatch, navigate, QUEUE_ROUTE]);
 
-    return;
-  }
+  const handleClose = useCallback(
+    async (e?: React.MouseEvent | React.KeyboardEvent) => {
+      e?.stopPropagation?.();
 
-  if (isDirty) {
-    const confirmed = await confirm({
-      title: 'Discard billing changes?',
-      message: 'You have unsaved billing changes. Closing will discard them.',
-      confirmText: 'Discard',
-      cancelText: 'Stay',
-      variant: 'warning',
-      theme,
-    });
+      if (closeFlowInProgressRef.current) return;
+      closeFlowInProgressRef.current = true;
 
-    if (confirmed) {
-      dispatch(closeTray());
-      dispatch(clearPendingForwarding());
-    }
+      try {
+        if (status === 'settled') {
+          const confirmed = await confirm({
+            title: 'Close billing window?',
+            message:
+              'Payment has been successfully completed. All records are saved and the receipt has been generated.',
+            confirmText: 'Close',
+            cancelText: 'Stay',
+            variant: 'info',
+            theme,
+          });
 
-    return;
-  }
+          if (confirmed) {
+            closeSettledTrayImmediately();
+          }
 
-  dispatch(closeTray());
-  dispatch(clearPendingForwarding());
-}, [confirm, dispatch, isDirty, navigate, theme, status, QUEUE_ROUTE]);
+          return;
+        }
 
+        if (isDirty) {
+          const confirmed = await confirm({
+            title: 'Discard billing changes?',
+            message: 'You have unsaved billing changes. Closing will discard them.',
+            confirmText: 'Discard',
+            cancelText: 'Stay',
+            variant: 'warning',
+            theme,
+          });
+
+          if (confirmed) {
+            closeTrayImmediately();
+          }
+
+          return;
+        }
+
+        closeTrayImmediately();
+      } finally {
+        closeFlowInProgressRef.current = false;
+      }
+    },
+    [status, confirm, theme, isDirty, closeTrayImmediately, closeSettledTrayImmediately]
+  );
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isTrayOpen && isExpanded) {
-        void handleClose();
+        void handleClose(e);
       }
     };
 
@@ -418,10 +437,6 @@ const handleClose = useCallback(async () => {
 
   if (!isTrayOpen) return null;
 
-  /**
-   * STRICTLY MUTUALLY EXCLUSIVE RENDERING
-   * Exactly one branch is mounted at any time based on Redux viewMode.
-   */
   if (isMinimized) {
     return (
       <div
@@ -506,10 +521,7 @@ const handleClose = useCallback(async () => {
 
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void handleClose();
-                }}
+                onClick={(e) => void handleClose(e)}
                 className={`p-1.5 md:p-1 rounded-md ${colors.bg.hover} ${colors.text.secondary} transition-colors cursor-pointer touch-manipulation`}
                 aria-label="Close billing"
                 title="Close billing"
@@ -532,12 +544,11 @@ const handleClose = useCallback(async () => {
     );
   }
 
-  // Expanded view
   return (
     <>
       <div
         className={`fixed inset-0 z-40 ${colors.bg.overlay} transition-opacity cursor-pointer`}
-        onClick={() => void handleClose()}
+        onClick={(e) => void handleClose(e)}
       />
 
       <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-3 md:p-4 pointer-events-none">
@@ -581,7 +592,7 @@ const handleClose = useCallback(async () => {
 
                 <button
                   type="button"
-                  onClick={() => void handleClose()}
+                  onClick={(e) => void handleClose(e)}
                   className={`p-1.5 rounded-md ${colors.bg.hover} ${colors.text.secondary} cursor-pointer touch-manipulation`}
                   aria-label="Close billing tray"
                   title="Close billing"
@@ -622,13 +633,15 @@ const handleClose = useCallback(async () => {
                       className={`
                         flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-md
                         transition-colors whitespace-nowrap touch-manipulation
-                        ${status === 'settled' && step.key === 'charge_entry'
-                          ? 'opacity-50 cursor-not-allowed'
-                          : 'cursor-pointer'
+                        ${
+                          status === 'settled' && step.key === 'charge_entry'
+                            ? 'opacity-50 cursor-not-allowed'
+                            : 'cursor-pointer'
                         }
-                        ${isActive
-                          ? `${colors.accent.primary} ${colors.accent.text}`
-                          : `bg-transparent ${colors.text.secondary} ${colors.bg.hover}`
+                        ${
+                          isActive
+                            ? `${colors.accent.primary} ${colors.accent.text}`
+                            : `bg-transparent ${colors.text.secondary} ${colors.bg.hover}`
                         }
                       `}
                     >
@@ -684,7 +697,7 @@ const handleClose = useCallback(async () => {
 
               <button
                 type="button"
-                onClick={() => void handleClose()}
+                onClick={(e) => void handleClose(e)}
                 className={`p-1.5 rounded-md ${colors.bg.hover} ${colors.text.secondary} cursor-pointer flex-shrink-0 touch-manipulation`}
                 aria-label="Close billing tray"
                 title="Close billing"

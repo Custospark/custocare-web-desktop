@@ -1,6 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Lock, Loader2, X, AlertCircle, CheckCircle2, FileText } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
+import { motion, AnimatePresence } from 'framer-motion';
+
+import { type RootState } from '../../../../../app/store/rootReducer';
+import { selectActiveVisit } from '../../../../../app/store/slices/visitSlice';
+
 import {
   addChargeItem,
   increaseQuantity,
@@ -14,31 +19,33 @@ import {
   hydrateBackendBilling,
   clearBackendBilling,
   selectEffectiveBillingStatus,
-  selectPatientInfo,
   selectBackendChargeItems,
   optimisticAdjustBackendItem,
   rollbackOptimisticBackendAdjustment,
   selectBilling,
+  setBillingDataLoaded,
+  clearBillingDataLoaded,
 } from './billingSlice';
-import PersistedBillingAdjustmentModal from './charge-entry/PersistedBillingAdjustmentModal';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import PersistedBillingAdjustmentModal from './charge-entry/PersistedBillingAdjustmentModal';
 import { containerVariants } from '../../../../../shared/components/animations/motionVariants';
+
 import {
   type ServiceItem,
   type BackendChargeItem,
   type RenderableChargeItem,
   makeBillableKey,
 } from './billing-types';
+
 import {
   useGetBillableItems,
   useGetBillingByVisit,
   useAdjustBillingLineItem,
 } from '../../../api/billable-items/BillableItemsQueries';
+
 import { BillableItemType } from '../../../api/billable-items/BillingItemsTypes';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 
-// Import sub-components
 import { SearchBar } from './charge-entry/SearchBar';
 import { ChargeItemsList } from './charge-entry/ChargeItemsList';
 import { BillingSummary } from './charge-entry/BillingSummary';
@@ -49,9 +56,8 @@ interface ChargeEntryStepProps {
 
 type PersistedAction = 'increase' | 'decrease' | 'remove';
 
-// Banner storage key
 const BANNER_VISIBILITY_KEY = 'billing_info_banner_dismissed';
-const BANNER_VERSION = 'v1'; // Increment this to show banner again after updates
+const BANNER_VERSION = 'v1';
 
 interface BannerState {
   dismissed: boolean;
@@ -67,18 +73,23 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   const { confirm } = useConfirm();
 
   // ---------------------------------------------------------------------------
+  // Visit identity - aligned with BillingBottomDisplay
+  // ---------------------------------------------------------------------------
+  const activeVisit = useSelector((state: RootState) => selectActiveVisit(state));
+  const visitId = activeVisit?.visit_id ? String(activeVisit.visit_id) : '';
+  const numericVisitId = activeVisit?.visit_id ? Number(activeVisit.visit_id) : 0;
+
+  // ---------------------------------------------------------------------------
   // Redux state
   // ---------------------------------------------------------------------------
   const renderableChargeItems = useSelector(selectRenderableChargeItems);
   const draftChargeItems = useSelector(selectDraftChargeItems);
   const backendChargeItems = useSelector(selectBackendChargeItems);
-  const patientInfo = useSelector(selectPatientInfo);
   const billingStatus = useSelector(selectEffectiveBillingStatus);
   const billingState = useSelector(selectBilling);
 
   // Once backend says settled, the entire charge-entry becomes view only.
   const isReadOnly = billingStatus === 'settled';
-  const visitIdNumber = Number(patientInfo.visitId || 0);
 
   // ---------------------------------------------------------------------------
   // UI local state
@@ -88,14 +99,12 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearchSticky, setIsSearchSticky] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  
-  // Banner visibility state with localStorage persistence
+
   const [isBannerVisible, setIsBannerVisible] = useState(() => {
     try {
       const stored = localStorage.getItem(BANNER_VISIBILITY_KEY);
       if (stored) {
         const parsed: BannerState = JSON.parse(stored);
-        // Check if the stored version matches current version
         if (parsed.version === BANNER_VERSION && parsed.dismissed) {
           return false;
         }
@@ -105,8 +114,8 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
       console.error('Failed to read banner visibility from localStorage:', error);
       return true;
     }
-  })
-  
+  });
+
   const [, setBannerAnimation] = useState<'enter' | 'exit' | null>(null);
 
   /**
@@ -142,10 +151,14 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
 
   /**
    * Load persisted billing for the current visit.
-   * The backend returns billing in a UI-compatible structure.
+   * Uses numeric visit id sourced exactly like BillingBottomDisplay.
    */
-  const { data: backendBillingResponse } = useGetBillingByVisit(visitIdNumber, {
-    enabled: !!visitIdNumber,
+  const {
+    data: backendBillingResponse,
+    isLoading: isLoadingBilling,
+    refetch: refetchBilling,
+  } = useGetBillingByVisit(numericVisitId, {
+    enabled: !!numericVisitId,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: true,
   });
@@ -155,20 +168,84 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
    * through an audited server-side flow.
    */
   const { mutateAsync: adjustBillingLineItem, isPending: isAdjustingPersistedItem } =
-    useAdjustBillingLineItem(visitIdNumber);
+    useAdjustBillingLineItem(numericVisitId);
 
   // ---------------------------------------------------------------------------
-  // Hydrate backend billing into Redux
+  // Backend -> Redux hydration (same pattern as BillingBottomDisplay)
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (!backendBillingResponse?.data) return;
+    if (!numericVisitId || !visitId) {
+      dispatch(clearBackendBilling());
+      return;
+    }
 
-    if (backendBillingResponse.data.has_billing) {
-      dispatch(hydrateBackendBilling(backendBillingResponse.data));
+    if (isLoadingBilling) return;
+
+    if (backendBillingResponse?.data && visitId) {
+      if (backendBillingResponse.data.has_billing) {
+        dispatch(hydrateBackendBilling(backendBillingResponse.data));
+      } else {
+        dispatch(clearBackendBilling());
+      }
+
+      dispatch(
+        setBillingDataLoaded({
+          visitId,
+          loaded: true,
+        })
+      );
+      return;
+    }
+
+    if (backendBillingResponse?.data === null && visitId) {
+      dispatch(clearBackendBilling());
+      dispatch(
+        setBillingDataLoaded({
+          visitId,
+          loaded: true,
+        })
+      );
+    }
+  }, [backendBillingResponse, dispatch, isLoadingBilling, numericVisitId, visitId]);
+
+  /**
+   * Cleanup loaded flag when component unmounts or visit changes.
+   */
+  useEffect(() => {
+    return () => {
+      if (visitId) {
+        dispatch(clearBillingDataLoaded(visitId));
+      }
+    };
+  }, [dispatch, visitId]);
+
+  /**
+   * Hard sync helper:
+   * After a successful persisted adjustment, re-fetch authoritative backend billing
+   * and hydrate the slice again so the store matches the server exactly.
+   */
+  const syncBillingSliceFromServer = async () => {
+    if (!numericVisitId || !visitId) {
+      dispatch(clearBackendBilling());
+      return;
+    }
+
+    const refreshed = await refetchBilling();
+    const refreshedPayload = refreshed.data?.data;
+
+    if (refreshedPayload?.has_billing) {
+      dispatch(hydrateBackendBilling(refreshedPayload));
     } else {
       dispatch(clearBackendBilling());
     }
-  }, [backendBillingResponse, dispatch]);
+
+    dispatch(
+      setBillingDataLoaded({
+        visitId,
+        loaded: true,
+      })
+    );
+  };
 
   // ---------------------------------------------------------------------------
   // Build services list for search
@@ -277,7 +354,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     }, 300);
   };
 
-  // Optional: Show banner again after version update
   useEffect(() => {
     const checkBannerVersion = () => {
       try {
@@ -285,7 +361,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
         if (stored) {
           const parsed: BannerState = JSON.parse(stored);
           if (parsed.version !== BANNER_VERSION && parsed.dismissed) {
-            // Version mismatch - show banner again
             setIsBannerVisible(true);
           }
         }
@@ -293,7 +368,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
         console.error('Failed to check banner version:', error);
       }
     };
-    
+
     checkBannerVersion();
   }, []);
 
@@ -397,9 +472,9 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   ) => {
     setPendingAdjustment({ item, action });
     setAdjustmentReason('');
-    
-    // Set the new quantity based on current quantity and action
+
     let newQuantity = item.quantity;
+
     if (action === 'increase') {
       newQuantity = item.quantity + quantityDelta;
     } else if (action === 'decrease') {
@@ -407,7 +482,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     } else if (action === 'remove') {
       newQuantity = 0;
     }
-    
+
     setAdjustmentNewQuantity(newQuantity);
     setAdjustmentDialogOpen(true);
   };
@@ -434,12 +509,14 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   };
 
   /**
-   * Adjustment submit flow with fixed quantity handling:
-   * 
-   * The UI uses "final quantity" (user-friendly), but the API and reducer
-   * expect "delta" (amount to change by). This function converts between them.
+   * Adjustment submit flow:
+   * - Compute delta from final desired quantity
+   * - Apply optimistic reducer
+   * - Submit audited backend mutation
+   * - On success, re-fetch billing and hydrate slice from backend
+   * - On failure, rollback optimistic state
    */
-  const handleAdjustmentDialogSubmit = () => {
+  const handleAdjustmentDialogSubmit = async () => {
     if (!pendingAdjustment) return;
 
     const { item } = pendingAdjustment;
@@ -447,7 +524,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     const currentQuantity = item.quantity;
     const rsn = adjustmentReason;
 
-    // Determine the actual action and delta based on final vs current
     let apiAction: PersistedAction;
     let deltaQuantity: number;
 
@@ -461,22 +537,19 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
       apiAction = 'decrease';
       deltaQuantity = currentQuantity - finalQuantity;
     } else {
-      // No change - just close
       closeAdjustmentDialog();
       return;
     }
 
-    // Capture previous state for rollback
-    const previousBackendChargeItems = billingState.backendChargeItems.map((item) => ({
-      ...item,
-      service: { ...item.service },
-      permissions: { ...item.permissions },
-      audit: item.audit ? { ...item.audit } : undefined,
+    const previousBackendChargeItems = billingState.backendChargeItems.map((backendItem) => ({
+      ...backendItem,
+      service: { ...backendItem.service },
+      permissions: { ...backendItem.permissions },
+      audit: backendItem.audit ? { ...backendItem.audit } : undefined,
     }));
 
     const previousOptimisticPersistedBalanceDelta = billingState.optimisticPersistedBalanceDelta;
 
-    // Optimistically update Redux billing slice
     dispatch(
       optimisticAdjustBackendItem({
         lineItemId: item.lineItemId,
@@ -485,19 +558,27 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
       })
     );
 
-    // Close dialog right away — user sees the updated list instantly
     closeAdjustmentDialog();
 
-    // Fire the mutation with rollback on failure
-    submitPersistedAdjustment(item, apiAction, deltaQuantity, rsn).catch((error) => {
+    try {
+      await submitPersistedAdjustment(item, apiAction, deltaQuantity, rsn);
+
+      // Authoritative post-success sync from backend -> Redux
+      try {
+        await syncBillingSliceFromServer();
+      } catch (syncError) {
+        console.error('Persisted adjustment succeeded, but backend re-sync failed:', syncError);
+      }
+    } catch (error) {
       console.error('Failed to adjust persisted item:', error);
+
       dispatch(
         rollbackOptimisticBackendAdjustment({
           previousBackendChargeItems,
           previousOptimisticPersistedBalanceDelta,
         })
       );
-    });
+    }
   };
 
   // ---------------------------------------------------------------------------
@@ -508,8 +589,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
 
     const serviceKey = makeBillableKey(service);
 
-    // If the selected item already exists in persisted backend billing,
-    // route user into audited adjustment flow instead of creating duplicate.
     const existingBackendItem = backendChargeItems.find((item) => item.serviceKey === serviceKey);
 
     if (existingBackendItem) {
@@ -520,7 +599,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
       return;
     }
 
-    // Otherwise let normal draft behavior proceed.
     dispatch(addChargeItem(service));
     setSearchTerm('');
     setShowSearchResults(false);
@@ -654,7 +732,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   // ---------------------------------------------------------------------------
   return (
     <div className="p-4 sm:p-5 lg:p-6 h-full relative">
-      {/* Read-only indicator */}
       <AnimatePresence>
         {isReadOnly && (
           <motion.div
@@ -670,7 +747,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
         )}
       </AnimatePresence>
 
-      {/* Adjustment in progress indicator */}
       <AnimatePresence>
         {isAdjustingPersistedItem && (
           <motion.div
@@ -680,13 +756,12 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
             className="absolute top-4 left-8 z-20 flex items-center gap-2 px-3 py-1.5 bg-amber-600 text-white rounded-full shadow-lg border border-amber-400"
           >
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            <span className="text-xs font-semibold">Applying audited backend adjustment...</span>
+            <span className="text-xs font-semibold">Applying audited adjustment...</span>
           </motion.div>
         )}
       </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 h-full">
-        {/* Left: Search + Items */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -694,7 +769,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
           className="lg:col-span-8 xl:col-span-9 flex flex-col min-h-0"
           ref={containerRef}
         >
-          {/* Sticky Search Section */}
           <div
             className={`sticky top-0 z-30 pb-3 ${colors.bg.primary} transition-all duration-200 ${
               isSearchSticky ? 'pt-1 bg-opacity-95 backdrop-blur-sm' : ''
@@ -722,7 +796,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
             />
           </div>
 
-          {/* Information banner with localStorage persistence and updated messaging */}
           <AnimatePresence>
             {isBannerVisible && (
               <motion.div
@@ -744,39 +817,40 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                   >
                     <X className="w-4 h-4" />
                   </button>
-                  
+
                   <div className="flex items-start gap-3">
-                    {/* Icon with animation */}
                     <div className="relative">
                       <motion.div
-                        animate={{ 
+                        animate={{
                           scale: [1, 1.1, 1],
-                          rotate: [0, 5, -5, 0]
+                          rotate: [0, 5, -5, 0],
                         }}
-                        transition={{ 
+                        transition={{
                           duration: 2,
                           repeat: Infinity,
                           repeatDelay: 4,
-                          ease: "easeInOut"
+                          ease: 'easeInOut',
                         }}
                         className="p-1.5 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20"
                       >
                         <FileText className={`w-5 h-5 ${isDark ? 'text-blue-300' : 'text-blue-600'}`} />
                       </motion.div>
                     </div>
-                    
+
                     <div className="flex-1">
-                      {/* Title */}
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
                           How billing items work
                         </h3>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                            isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'
+                          }`}
+                        >
                           {BANNER_VERSION}
                         </span>
                       </div>
-                      
-                      {/* Main message */}
+
                       <div className={`text-xs sm:text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'} space-y-2`}>
                         <p className="leading-relaxed">
                           <span className="font-medium text-blue-500 dark:text-blue-400">Saved items</span> are already on file — changes to them are recorded.
@@ -785,13 +859,10 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                         </p>
                         <p className="leading-relaxed flex items-start gap-1">
                           <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-amber-500" />
-                          <span>
-                            If another staff member added an item, you'll need to add a reason before making changes.
-                          </span>
+                          <span>If another staff member added an item, you'll need to add a reason before making changes.</span>
                         </p>
                       </div>
-                      
-                      {/* Feature indicators */}
+
                       <div className={`mt-3 pt-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} flex flex-wrap items-center gap-3 border-t ${colors.border.subtle}`}>
                         <span className="flex items-center gap-1.5">
                           <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
@@ -808,15 +879,16 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
                         {backendChargeItems.length > 0 && (
                           <span className="flex items-center gap-1.5 ml-auto">
                             <CheckCircle2 className="w-3 h-3 text-green-500" />
-                            <span className="font-medium">{backendChargeItems.length} saved item{backendChargeItems.length !== 1 ? 's' : ''}</span>
+                            <span className="font-medium">
+                              {backendChargeItems.length} saved item{backendChargeItems.length !== 1 ? 's' : ''}
+                            </span>
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
                 </div>
-                
-                {/* Animated gradient border at bottom */}
+
                 <motion.div
                   className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"
                   initial={{ scaleX: 0 }}
@@ -827,7 +899,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
             )}
           </AnimatePresence>
 
-          {/* Items List */}
           <ChargeItemsList
             chargeItems={renderableChargeItems}
             subtotal={displayedSubtotal}
@@ -845,7 +916,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
           />
         </motion.div>
 
-        {/* Right: Summary / actions */}
         <BillingSummary
           subtotal={displayedSubtotal}
           isReadOnly={isReadOnly}
@@ -856,7 +926,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
         />
       </div>
 
-      {/* Persisted Item Adjustment Modal */}
       <PersistedBillingAdjustmentModal
         open={adjustmentDialogOpen}
         theme={theme}

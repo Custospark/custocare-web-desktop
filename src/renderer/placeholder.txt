@@ -1,41 +1,63 @@
-import React from 'react';
-import { Database, FilePlus2 } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import {
+  CreditCard,
+  Wallet,
+  Banknote,
+  Shield,
+  Database,
+  FilePlus2,
+} from 'lucide-react';
+import { FaCashRegister } from 'react-icons/fa';
+import { useReactToPrint } from 'react-to-print';
 
-import type { BillingSubmissionPayload } from '../../../api/billable-items/BillingItemsTypes';
+import type { BillingSummaryStepProps } from './billing-summary-step/types';
+import { useBillingSummaryController } from './billing-summary-step/useBillingSummaryController';
+import { useBillingSummaryViewModel } from './billing-summary-step/useBillingSummaryViewModel';
+import { useBillingSummaryActions } from './billing-summary-step/useBillingSummaryActions';
 
 import { BillingControlsSection } from './billing-summary/BillingControlsSection';
 import { ReceiptPreviewSection } from './billing-summary/ReceiptPreviewSection';
-import { getBillingSummaryColors, getPaymentIcon } from './billing-summary-step/presentation';
-import { useBillingSummaryHandlers } from './billing-summary-step/useBillingSummaryHandlers';
-import { useBillingSummaryState } from './billing-summary-step/useBillingSummaryState';
-import type { BillingSummaryStepProps } from './billing-summary-step/types';
+
+/* -------------------------------------------------------------------------- */
+/*                            MAIN COMPONENT                                  */
+/* -------------------------------------------------------------------------- */
 
 export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
   theme = 'light',
   visitId: propVisitId,
   patientId: propPatientId,
 }) => {
-  const colors = getBillingSummaryColors(theme);
+  const printReceiptRef = useRef<HTMLDivElement>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  const controller = useBillingSummaryController({
+    visitId: propVisitId,
+    patientId: propPatientId,
+  });
 
   const {
+    activeVisit,
+    activePatient,
     draftChargeItems,
+    renderableChargeItems,
+    backendChargeItems,
+    draftBillingData,
+    backendBillingData,
     backendBillingMeta,
     status,
     isProcessing,
-    isSubmitting,
-    isBillingFetchLoading,
-
+    facilityData,
     visitId,
     patientId,
     hasRequiredIds,
+    hasAnyBillableContext,
     isReadOnly,
-
+    isFinalized,
+    isServerMode,
     discount,
     setLocalDiscount,
     discountInputValue,
     setDiscountInputValue,
-    draftDiscountBase,
-
     paymentMethods,
     setLocalPaymentMethods,
     additionalNotes,
@@ -43,33 +65,54 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     receiptNumber,
     focusedAmountInputs,
     setFocusedAmountInputs,
-
     serverBillingItem,
-    activeBillingView,
-    cashChangeByIndex,
-    shouldHideDiscountControls,
-
-    canFinalize,
-    canPrint,
-
+    isBillingFetchLoading,
     submitBilling,
-  } = useBillingSummaryState({
-    theme,
-    visitId: propVisitId,
-    patientId: propPatientId,
-  });
+    isSubmitting,
+    dispatch,
+  } = controller;
 
-  const normalizedStatus: BillingSubmissionPayload['status'] =
-    status === 'draft' || status === 'ready' || status === 'settled'
-      ? status
-      : 'draft';
+  const billingStatus = status as 'settled' | 'draft' | 'ready';
 
   const {
-    printReceiptRef,
-    isPrinting,
-    handlePrintReceipt,
-    handleDiscountValueChange,
+    draftDiscountBase,
+    draftBillingView,
+    activeBillingView,
+    cashChangeByIndex,
+    colors,
+    canFinalize,
+    canPrint,
+    shouldHideDiscountControls,
+    getDisplayAmount,
+  } = useBillingSummaryViewModel({
+    theme,
+    activeVisit,
+    activePatient,
+    backendBillingData,
+    backendBillingMeta,
+    backendChargeItems,
+    draftBillingData,
+    renderableChargeItems,
+    facilityData,
+    status,
+    paymentMethods,
+    discount,
+    additionalNotes,
+    receiptNumber,
+    serverBillingItem,
+    isServerMode,
+    isReadOnly,
+    isFinalized,
+    isProcessing,
+    isSubmitting,
+    hasAnyBillableContext,
+    hasRequiredIds,
+    focusedAmountInputs,
+  });
+
+  const {
     handleDiscountTypeChange,
+    handleDiscountValueChange,
     handlePaymentTypeChange,
     handlePaymentAmountChange,
     handleAutoFillRemaining,
@@ -82,44 +125,67 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
     handleFocusAmountInput,
     handleBlurAmountInput,
     handleDiscountFocus,
-    getDisplayAmount,
-  } = useBillingSummaryHandlers({
+  } = useBillingSummaryActions({
+    dispatch,
     isReadOnly,
+    canFinalize,
+    hasRequiredIds,
+    visitId,
+    patientId,
+    status: billingStatus,
     discount,
     setLocalDiscount,
     discountInputValue,
     setDiscountInputValue,
     draftDiscountBase,
-
     paymentMethods,
     setLocalPaymentMethods,
-    focusedAmountInputs,
-    setFocusedAmountInputs,
-
     additionalNotes,
     setLocalAdditionalNotes,
-
+    focusedAmountInputs,
+    setFocusedAmountInputs,
+    draftBillingView,
     activeBillingView,
-    receiptNumber,
-    serverBillingItem,
-
-    canFinalize,
-    canPrint,
-    hasRequiredIds,
-
-    visitId,
-    patientId,
     draftChargeItems,
-    status: normalizedStatus,
-
     submitBilling,
   });
 
+  const handlePrint = useReactToPrint({
+    contentRef: printReceiptRef,
+    documentTitle: receiptNumber || serverBillingItem?.receipt_number || 'receipt',
+    onBeforePrint: async () => setIsPrinting(true),
+    onAfterPrint: async () => setIsPrinting(false),
+    onPrintError: (error) => {
+      console.error('Print failed:', error);
+      setIsPrinting(false);
+    },
+  });
+
+  const handlePrintReceipt = () => {
+    if (!canPrint || !printReceiptRef.current) return;
+    handlePrint();
+  };
+
+  const paymentIcon = (type: string) => {
+    switch (type) {
+      case 'cash':
+        return <FaCashRegister className="w-4 h-4 text-green-500" />;
+      case 'card':
+        return <CreditCard className="w-4 h-4 text-blue-500" />;
+      case 'insurance':
+        return <Shield className="w-4 h-4 text-purple-500" />;
+      case 'mobile':
+        return <Banknote className="w-4 h-4 text-yellow-500" />;
+      default:
+        return <Wallet className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
   return (
-    <div className="relative h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6">
+    <div className="h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6 relative">
       {/* {isReadOnly && (
-        <div className="absolute top-20 right-8 z-10 flex items-center gap-2 rounded-full border border-blue-500 bg-blue-700 px-3 py-1.5 text-white shadow-md dark:border-blue-400 dark:bg-blue-600 dark:text-white no-print">
-          <Lock className="h-3.5 w-3.5" />
+        <div className="absolute top-20 right-8 z-10 flex items-center gap-2 px-3 py-1.5 bg-blue-700 text-white dark:bg-blue-600 dark:text-white rounded-full shadow-md border border-blue-500 dark:border-blue-400 no-print">
+          <Lock className="w-3.5 h-3.5" />
           <span className="text-xs font-semibold">
             Read-only mode - Payment settled
           </span>
@@ -127,30 +193,30 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
       )} */}
 
       {isBillingFetchLoading && (
-        <div className="no-print absolute left-1/2 top-4 z-20 flex -translate-x-1/2 transform items-center gap-2 rounded-lg border border-blue-500 bg-blue-600 px-4 py-2 text-white shadow-lg">
-          <Database className="h-4 w-4 animate-pulse" />
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow-lg border border-blue-500 no-print">
+          <Database className="w-4 h-4 animate-pulse" />
           <span className="text-sm font-semibold">Syncing billing record…</span>
         </div>
       )}
 
-      <div className="no-print absolute right-8 top-4 z-10 flex gap-2">
+      <div className="absolute top-4 right-8 z-10 flex gap-2 no-print">
         {/* {serverBillingItem && (
-          <div className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800 shadow-sm dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
-            <Database className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 text-xs font-medium border border-amber-200 dark:border-amber-800 shadow-sm">
+            <Database className="w-3.5 h-3.5" />
             <span>Server billing data loaded</span>
           </div>
         )} */}
 
         {/* {!serverBillingItem && backendBillingMeta?.hasBilling && (
-          <div className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800 shadow-sm dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
-            <Database className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 text-xs font-medium border border-amber-200 dark:border-amber-800 shadow-sm">
+            <Database className="w-3.5 h-3.5" />
             <span>Saved billing loaded</span>
           </div>
         )} */}
 
         {draftChargeItems.length > 0 && (
-          <div className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800 shadow-sm dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
-            <FilePlus2 className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-xs font-medium border border-emerald-200 dark:border-emerald-800 shadow-sm">
+            <FilePlus2 className="w-3.5 h-3.5" />
             <span>
               {draftChargeItems.length} New item
               {draftChargeItems.length === 1 ? '' : 's'}
@@ -165,31 +231,24 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
-
-          .no-print,
-          button,
-          .no-print * {
+          .no-print, button, .no-print * {
             display: none !important;
           }
-
           .receipt-print {
             margin: 0 !important;
             box-shadow: none !important;
             border: none !important;
             background: white !important;
           }
-
           @page {
             margin: 0.5in;
             size: auto;
           }
-
           .opacity-\\[0\\.06\\] {
             opacity: 0.06 !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
-
           .bg-gradient-to-r {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -197,11 +256,11 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
         }
       `}</style>
 
-      <div className="grid h-full min-h-0 grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 h-full min-h-0">
         <ReceiptPreviewSection
           colors={colors}
           isReadOnly={isReadOnly}
-          status={String(activeBillingView.derivedFinancials.status || normalizedStatus)}
+          status={String(activeBillingView.derivedFinancials.status || status)}
           receiptNumber={
             receiptNumber ||
             serverBillingItem?.receipt_number ||
@@ -232,7 +291,7 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
           canFinalize={canFinalize}
           canPrint={canPrint}
           hasRequiredIds={hasRequiredIds}
-          paymentIcon={getPaymentIcon}
+          paymentIcon={paymentIcon}
           getDisplayAmount={getDisplayAmount}
           hideDiscountControl={shouldHideDiscountControls}
           onPaymentTypeChange={handlePaymentTypeChange}
@@ -244,8 +303,8 @@ export const BillingSummaryStep: React.FC<BillingSummaryStepProps> = ({
           onAutoFillRemaining={handleAutoFillRemaining}
           onFocusAmountInput={handleFocusAmountInput}
           onBlurAmountInput={handleBlurAmountInput}
-          onDiscountValueChange={handleDiscountValueChange}
           onDiscountTypeChange={handleDiscountTypeChange}
+          onDiscountValueChange={handleDiscountValueChange}
           onDiscountFocus={handleDiscountFocus}
           onFinalizePayment={handleFinalizePayment}
           onPrintReceipt={handlePrintReceipt}
