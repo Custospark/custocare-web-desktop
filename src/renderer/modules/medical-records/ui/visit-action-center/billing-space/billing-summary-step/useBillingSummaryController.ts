@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
 import {
@@ -41,6 +41,8 @@ import type {
   BillingReviewItem,
   PaymentMethod,
 } from '../../../../api/billing-review/BillingReviewTypes';
+import { PaymentStatus } from '../../../../api/billing-review/BillingReviewTypes';
+
 import { safeArray, safeNumber } from './helpers';
 import type { BillingSummaryStepProps } from './types';
 
@@ -49,106 +51,94 @@ interface UseBillingSummaryControllerParams {
   patientId?: BillingSummaryStepProps['patientId'];
 }
 
+type SliceBillingStatus = 'pending' | 'settled';
+
+const deriveSliceBillingStatus = (item: BillingReviewItem | null): SliceBillingStatus => {
+  if (!item) return 'pending';
+
+  if (
+    item.payment_status === PaymentStatus.PAID_IN_FULL ||
+    item.billing_data?.isPaid ||
+    safeNumber(item.billing_data?.balance) <= 0
+  ) {
+    return 'settled';
+  }
+
+  return 'pending';
+};
+
 /**
- * Converts facility billing-review payload into the billing slice hydration shape.
- *
- * IMPORTANT:
- * If your facility response field names differ, only adjust this adapter.
- * The rest of the hook can stay unchanged.
+ * Adapts BillingReviewItem into the payload shape expected by hydrateBackendBilling.
+ * This mirrors the persisted-billing shape used by charge entry.
  */
-const buildHydrationPayloadFromFacilityBilling = (
-  billingItem: BillingReviewItem | null,
+const mapBillingReviewItemToHydrationPayload = (
+  item: BillingReviewItem | null,
   visitId: string
 ) => {
-  if (!billingItem || !visitId) {
+  if (!item || !item.has_billing) {
     return {
       has_billing: false,
       visit_id: visitId,
-      status: 'pending',
+      status: 'pending' as SliceBillingStatus,
       items: [],
       billing: null,
     };
   }
 
-  const raw = billingItem as any;
-  const rawItems = Array.isArray(raw.items) ? raw.items : [];
-
-  const normalizedItems = rawItems.map((item: any, index: number) => {
-    const quantity = Number(item?.quantity ?? item?.qty ?? 1);
-    const unitPrice = Number(item?.unit_price ?? item?.unitPrice ?? item?.price ?? 0);
-    const totalAmount = Number(
-      item?.total_amount ??
-        item?.totalAmount ??
-        item?.line_total ??
-        item?.subtotal ??
-        quantity * unitPrice
-    );
-
-    const serviceId =
-      item?.service_id ??
-      item?.billable_item_id ??
-      item?.item_id ??
-      item?.id ??
-      null;
-
-    const serviceCode = item?.code ?? item?.service_code ?? item?.item_code ?? '';
-    const serviceName = item?.name ?? item?.service_name ?? item?.description ?? 'Unnamed item';
-    const serviceCategory = item?.category ?? item?.service_category ?? '';
+  const mappedItems = safeArray(item.charge_items).map((chargeItem) => {
+    const unitPrice = safeNumber(chargeItem?.service?.unitPrice);
+    const quantity = safeNumber(chargeItem?.quantity) || 1;
+    const totalAmount =
+      safeNumber(chargeItem?.totalAmount) || unitPrice * quantity;
 
     return {
-      line_item_id: String(item?.line_item_id ?? item?.lineItemId ?? item?.id ?? `line-${index}`),
+      line_item_id: String(chargeItem.id),
+      service_key: chargeItem.service_key,
       quantity,
       unit_price: unitPrice,
       total_amount: totalAmount,
-      source: 'backend',
       service: {
-        id: serviceId,
-        code: serviceCode,
-        name: serviceName,
-        category: serviceCategory,
+        id: chargeItem.service.id,
+        code: chargeItem.service.code,
+        name: chargeItem.service.name,
         unitPrice,
+        category: chargeItem.service.category,
       },
       permissions: {
-        can_increase: item?.permissions?.can_increase ?? true,
-        can_decrease: item?.permissions?.can_decrease ?? true,
-        can_remove: item?.permissions?.can_remove ?? true,
-        requires_reason: item?.permissions?.requires_reason ?? false,
+        can_increase: true,
+        can_decrease: true,
+        can_remove: true,
+        requires_reason: false,
       },
-      audit: item?.audit
-        ? {
-            ...item.audit,
-          }
-        : undefined,
     };
   });
 
-  const subtotal = Number(raw?.subtotal ?? raw?.sub_total ?? 0);
-  const discountAmount = Number(raw?.discount_amount ?? raw?.discountAmount ?? 0);
-  const grandTotal = Number(
-    raw?.grand_total ?? raw?.grandTotal ?? raw?.total ?? subtotal - discountAmount
-  );
-  const amountPaid = Number(raw?.amount_paid ?? raw?.amountPaid ?? grandTotal);
-  const balance = Number(raw?.balance ?? Math.max(grandTotal - amountPaid, 0));
-  const status = raw?.status ?? (balance <= 0 ? 'settled' : 'pending');
-
   return {
-    has_billing: true,
-    visit_id: visitId,
-    status,
-    items: normalizedItems,
+    has_billing: item.has_billing,
+    visit_id: item.visit_id,
+    status: deriveSliceBillingStatus(item),
+    items: mappedItems,
     billing: {
-      subtotal,
-      discount_amount: discountAmount,
-      grand_total: grandTotal,
-      amount_paid: amountPaid,
-      balance,
-      receipt_number: raw?.receipt_number ?? raw?.receiptNumber ?? '',
-      notes: raw?.notes ?? raw?.additional_notes ?? '',
-      payment_methods: Array.isArray(raw?.payment_methods)
-        ? raw.payment_methods
-        : Array.isArray(raw?.paymentMethods)
-        ? raw.paymentMethods
-        : [],
+      subtotal: safeNumber(item.billing_data?.subtotal),
+      discount_amount: safeNumber(item.billing_data?.discountAmount),
+      taxable_amount: safeNumber(item.billing_data?.taxableAmount),
+      taxes: safeArray(item.taxes),
+      tax_total: safeNumber(item.billing_data?.taxTotal),
+      grand_total: safeNumber(item.billing_data?.grandTotal),
+      amount_paid: safeNumber(item.billing_data?.totalPaid),
+      balance: safeNumber(item.billing_data?.balance),
+      is_paid: !!item.billing_data?.isPaid,
+      receipt_number: item.receipt_number ?? '',
+      notes: item.additional_notes ?? '',
+      payment_methods: safeArray(item.payment_methods),
+      discount: item.discount,
+      billing_cycle_id: item.billing_cycle_id,
+      billing_cycle_uuid: item.billing_cycle_uuid,
+      payment_status: item.payment_status,
+      billing_status: item.billing_status,
+      billed_at: item.billed_at,
+      updated_at: item.updated_at,
+      last_updated: item.last_updated,
     },
   };
 };
@@ -182,7 +172,6 @@ export const useBillingSummaryController = ({
 
   const visitId = resolvedVisitId;
   const patientId = resolvedPatientId;
-
   const visitIdString = visitId != null ? String(visitId) : '';
 
   const isReadOnly = status === 'settled';
@@ -201,10 +190,13 @@ export const useBillingSummaryController = ({
   const [serverBillingItem, setServerBillingItem] = useState<BillingReviewItem | null>(null);
 
   /**
-   * This flag turns on the facility billing fetch only
-   * after billing submission succeeds.
+   * This pair replaces the fragile "enabled boolean only" pattern.
+   *
+   * - shouldFetchAfterFinalization tells us a post-submit sync is pending
+   * - postSubmitFetchNonce guarantees each successful submit creates a fresh fetch cycle
    */
   const [shouldFetchAfterFinalization, setShouldFetchAfterFinalization] = useState(false);
+  const [postSubmitFetchNonce, setPostSubmitFetchNonce] = useState(0);
 
   const hasRequiredIds = visitId != null && patientId != null;
   const hasPersistedBalance = safeNumber(backendBillingData?.balance) > 0;
@@ -223,33 +215,29 @@ export const useBillingSummaryController = ({
   }, [status, currentStep, dispatch]);
 
   /**
-   * Automatic post-submit fetch:
-   * enabled only after submitBilling succeeds.
+   * Keep the hook mounted, but disable automatic fetching on mount.
+   * We trigger it ourselves automatically after successful billing submit.
    */
   const {
     data: fetchedVisitBillingData,
     isSuccess: isBillingFetchSuccess,
     isLoading: isBillingFetchLoading,
-    isError: isBillingFetchError,
-    error: billingFetchError,
-  } = useGetBillingByVisitForFacility(
-    shouldFetchAfterFinalization ? (visitId ?? null) : null,
-    {
-      enabled: shouldFetchAfterFinalization && !!visitId,
-      refetchOnWindowFocus: false,
-      staleTime: 0,
-    }
-  );
+    refetch: refetchBillingAfterSubmit,
+  } = useGetBillingByVisitForFacility(visitId ?? null, {
+    enabled: false,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+  });
 
-  const hydrateBillingSliceFromFacilityItem = (billingItem: BillingReviewItem | null) => {
+  const hydrateBillingSliceFromReviewItem = useCallback((item: BillingReviewItem | null) => {
     if (!visitIdString) {
       dispatch(clearBackendBilling());
       return;
     }
 
-    const payload = buildHydrationPayloadFromFacilityBilling(billingItem, visitIdString);
+    const payload = mapBillingReviewItemToHydrationPayload(item, visitIdString);
 
-    if (payload?.has_billing) {
+    if (payload.has_billing) {
       dispatch(hydrateBackendBilling(payload as any));
     } else {
       dispatch(clearBackendBilling());
@@ -261,7 +249,7 @@ export const useBillingSummaryController = ({
         loaded: true,
       })
     );
-  };
+  }, [dispatch, visitIdString]);
 
   const { mutate: submitBilling, isPending: isSubmitting } = useSubmitBilling({
     onSuccess: (response) => {
@@ -271,11 +259,11 @@ export const useBillingSummaryController = ({
       setReceiptNumber(generatedReceiptNumber);
 
       /**
-       * Do not finalize immediately.
-       * First let the authoritative facility billing query run automatically,
-       * then hydrate the slice from that response.
+       * Automatic post-submit sync trigger.
+       * The nonce guarantees a brand new fetch cycle every successful submit.
        */
       setShouldFetchAfterFinalization(true);
+      setPostSubmitFetchNonce((prev) => prev + 1);
     },
     onError: (error) => {
       dispatch(setProcessing(false));
@@ -284,69 +272,73 @@ export const useBillingSummaryController = ({
   });
 
   /**
-   * When the automatic post-submit facility fetch succeeds:
-   * - store authoritative billing item locally
-   * - hydrate redux slice
-   * - clear drafts
-   * - finalize payment state
-   * - stop processing
+   * Automatic post-submit facility fetch.
+   *
+   * Why this is more reliable than relying on `enabled` alone:
+   * - it runs after every successful submit
+   * - it does not depend on "true -> true" state transitions
+   * - it avoids missing the request when payment completion causes rapid UI changes
    */
   useEffect(() => {
-    if (!shouldFetchAfterFinalization || !isBillingFetchSuccess) return;
+    if (!shouldFetchAfterFinalization) return;
+    if (postSubmitFetchNonce === 0) return;
 
-    const items = fetchedVisitBillingData?.data?.items;
-    const authoritativeBillingItem =
-      Array.isArray(items) && items.length > 0 ? items[0] : null;
-
-    setServerBillingItem(authoritativeBillingItem);
-
-    if (authoritativeBillingItem) {
-      const raw = authoritativeBillingItem as any;
-      setReceiptNumber(
-        raw?.receipt_number ||
-          raw?.receiptNumber ||
-          receiptNumber ||
-          `REC-${Date.now().toString().slice(-8)}`
-      );
+    if (!visitId) {
+      dispatch(clearDraftAfterFinalization());
+      dispatch(finalizePayment());
+      dispatch(setProcessing(false));
+      setShouldFetchAfterFinalization(false);
+      return;
     }
 
-    hydrateBillingSliceFromFacilityItem(authoritativeBillingItem);
+    let cancelled = false;
 
-    dispatch(clearDraftAfterFinalization());
-    dispatch(finalizePayment());
-    dispatch(setProcessing(false));
+    const runPostSubmitBillingRefresh = async () => {
+      try {
+        const result = await refetchBillingAfterSubmit();
 
-    setShouldFetchAfterFinalization(false);
+        if (cancelled) return;
+
+        const items = result.data?.data?.items;
+        const authoritativeBillingItem =
+          Array.isArray(items) && items.length > 0 ? items[0] : null;
+
+        setServerBillingItem(authoritativeBillingItem);
+
+        if (authoritativeBillingItem?.receipt_number) {
+          setReceiptNumber(authoritativeBillingItem.receipt_number);
+        }
+
+        hydrateBillingSliceFromReviewItem(authoritativeBillingItem);
+      } catch (error) {
+        if (cancelled) return;
+
+        console.error(
+          'Billing submit succeeded, but post-submit billing fetch failed:',
+          error
+        );
+      } finally {
+        if (cancelled) return;
+
+        dispatch(clearDraftAfterFinalization());
+        dispatch(finalizePayment());
+        dispatch(setProcessing(false));
+        setShouldFetchAfterFinalization(false);
+      }
+    };
+
+    void runPostSubmitBillingRefresh();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     shouldFetchAfterFinalization,
-    isBillingFetchSuccess,
-    fetchedVisitBillingData,
+    postSubmitFetchNonce,
+    visitId,
+    refetchBillingAfterSubmit,
     dispatch,
-    receiptNumber,
-  ]);
-
-  /**
-   * If submit succeeded but the automatic billing fetch fails,
-   * stop processing so the UI does not hang.
-   *
-   * We still finalize payment because submission itself already succeeded.
-   * The only failed step is the follow-up read.
-   */
-  useEffect(() => {
-    if (!shouldFetchAfterFinalization || !isBillingFetchError) return;
-
-    console.error('Billing submit succeeded, but post-submit facility fetch failed:', billingFetchError);
-
-    dispatch(clearDraftAfterFinalization());
-    dispatch(finalizePayment());
-    dispatch(setProcessing(false));
-
-    setShouldFetchAfterFinalization(false);
-  }, [
-    shouldFetchAfterFinalization,
-    isBillingFetchError,
-    billingFetchError,
-    dispatch,
+    hydrateBillingSliceFromReviewItem,
   ]);
 
   useEffect(() => {
