@@ -390,16 +390,16 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     [status, confirm, theme, isDirty, closeTrayImmediately, closeSettledTrayImmediately]
   );
 
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isTrayOpen && isExpanded) {
-        void handleClose(e);
-      }
-    };
+useEffect(() => {
+  const handleEsc = (e: globalThis.KeyboardEvent) => {
+    if (e.key === 'Escape' && isTrayOpen && isExpanded) {
+      void handleClose(e as any);
+    }
+  };
 
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [isTrayOpen, isExpanded, handleClose]);
+  window.addEventListener('keydown', handleEsc);
+  return () => window.removeEventListener('keydown', handleEsc);
+}, [isTrayOpen, isExpanded, handleClose]);
 
   const handleSetStep = useCallback(
     (step: BillingStep) => {
