@@ -1,14 +1,11 @@
-import { useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useReactToPrint } from 'react-to-print';
-
 import {
-  setAdditionalNotes,
   setDiscount,
   setPaymentMethods,
+  setAdditionalNotes,
   setProcessing,
 } from '../billingSlice';
 
+import type { PaymentMethod as ReduxPaymentMethod } from '../billing-types';
 import type { BillingSubmissionPayload } from '../../../../api/billable-items/BillingItemsTypes';
 import {
   DiscountType,
@@ -22,44 +19,42 @@ import {
   safeArray,
   safeNumber,
 } from './helpers';
-import type { NormalizedBillingView } from './types';
 
-interface UseBillingSummaryHandlersParams {
+interface UseBillingSummaryActionsParams {
+  dispatch: any;
   isReadOnly: boolean;
+  canFinalize: boolean;
+  hasRequiredIds: boolean;
+  visitId?: number | null;
+  patientId?: number | null;
+  status: 'draft' | 'ready' | 'settled';
   discount: any;
   setLocalDiscount: React.Dispatch<React.SetStateAction<any>>;
   discountInputValue: string;
   setDiscountInputValue: React.Dispatch<React.SetStateAction<string>>;
   draftDiscountBase: number;
-
   paymentMethods: PaymentMethod[];
   setLocalPaymentMethods: React.Dispatch<React.SetStateAction<PaymentMethod[]>>;
+  additionalNotes: string;
+  setLocalAdditionalNotes: React.Dispatch<React.SetStateAction<string>>;
   focusedAmountInputs: Record<number, boolean>;
   setFocusedAmountInputs: React.Dispatch<
     React.SetStateAction<Record<number, boolean>>
   >;
-
-  additionalNotes: string;
-  setLocalAdditionalNotes: React.Dispatch<React.SetStateAction<string>>;
-
-  activeBillingView: NormalizedBillingView;
-  receiptNumber: string;
-  serverBillingItem: any;
-
-  canFinalize: boolean;
-  canPrint: boolean;
-  hasRequiredIds: boolean;
-
-  visitId?: number;
-  patientId?: number;
+  draftBillingView: any;
+  activeBillingView: any;
   draftChargeItems: any[];
-    status: BillingSubmissionPayload['status'];
-
   submitBilling: (payload: BillingSubmissionPayload) => void;
 }
 
-export const useBillingSummaryHandlers = ({
+export const useBillingSummaryActions = ({
+  dispatch,
   isReadOnly,
+  canFinalize,
+  hasRequiredIds,
+  visitId,
+  patientId,
+  status,
   discount,
   setLocalDiscount,
   discountInputValue,
@@ -67,54 +62,15 @@ export const useBillingSummaryHandlers = ({
   draftDiscountBase,
   paymentMethods,
   setLocalPaymentMethods,
-  focusedAmountInputs,
-  setFocusedAmountInputs,
   additionalNotes,
   setLocalAdditionalNotes,
+  focusedAmountInputs,
+  setFocusedAmountInputs,
+  draftBillingView,
   activeBillingView,
-  receiptNumber,
-  serverBillingItem,
-  canFinalize,
-  canPrint,
-  hasRequiredIds,
-  visitId,
-  patientId,
   draftChargeItems,
-  status,
   submitBilling,
-}: UseBillingSummaryHandlersParams) => {
-  const dispatch = useDispatch();
-
-  const printReceiptRef = useRef<HTMLDivElement>(null);
-  const [isPrinting, setIsPrinting] = useState(false);
-
-  const handlePrint = useReactToPrint({
-    contentRef: printReceiptRef,
-    documentTitle: receiptNumber || serverBillingItem?.receipt_number || 'receipt',
-    onBeforePrint: async () => setIsPrinting(true),
-    onAfterPrint: async () => setIsPrinting(false),
-    onPrintError: (error) => {
-      console.error('Print failed:', error);
-      setIsPrinting(false);
-    },
-  });
-
-  const syncPaymentMethodsToRedux = (updatedMethods: PaymentMethod[]) => {
-    if (isReadOnly) return;
-
-    setLocalPaymentMethods(updatedMethods);
-    dispatch(
-      setPaymentMethods(
-        updatedMethods as import('../billing-types').PaymentMethod[]
-      )
-    );
-  };
-
-  const handlePrintReceipt = () => {
-    if (!canPrint || !printReceiptRef.current) return;
-    handlePrint();
-  };
-
+}: UseBillingSummaryActionsParams) => {
   const handleDiscountValueChange = (rawValue: string) => {
     if (isReadOnly) return;
 
@@ -163,6 +119,15 @@ export const useBillingSummaryHandlers = ({
     dispatch(setDiscount(updatedDiscount));
   };
 
+  const syncPaymentMethodsToRedux = (updatedMethods: PaymentMethod[]) => {
+    if (isReadOnly) return;
+
+    setLocalPaymentMethods(updatedMethods);
+    dispatch(
+      setPaymentMethods(updatedMethods as ReduxPaymentMethod[])
+    );
+  };
+
   const handlePaymentTypeChange = (index: number, newType: string) => {
     if (isReadOnly) return;
 
@@ -195,7 +160,7 @@ export const useBillingSummaryHandlers = ({
   const handleAutoFillRemaining = (index: number) => {
     if (isReadOnly) return;
 
-    const dueBeforeAnyPayment = roundCurrency(activeBillingView.billingData.grandTotal);
+    const dueBeforeAnyPayment = roundCurrency(draftBillingView.billingData.grandTotal);
 
     const otherPaymentsTotal = paymentMethods.reduce(
       (sum, method, i) => (i === index ? sum : sum + safeNumber(method?.amount)),
@@ -326,53 +291,58 @@ export const useBillingSummaryHandlers = ({
         discountValue: effectiveDiscountValue,
       } as BillingSubmissionPayload['billing_data'];
 
-    const normalizedStatus: BillingSubmissionPayload['status'] =
-  status === 'draft' || status === 'ready' || status === 'settled'
-    ? status
-    : 'draft';
+      // Build discount object only if value is valid and non-zero
+      let discountPayload = undefined;
+      const hasActiveDiscount = effectiveDiscountValue !== undefined &&
+                                effectiveDiscountValue !== null &&
+                                effectiveDiscountValue !== 0;
 
-    const payload: BillingSubmissionPayload = {
-    visit_id: visitId,
-    patient_id: patientId,
-    charge_items: safeArray(draftChargeItems).map((item) => ({
-        service_key: item.serviceKey,
-        service: {
-        id: item.service.id,
-        code: item.service.code,
-        name: item.service.name.toUpperCase(),
-        unitPrice: item.service.unitPrice,
-        category: item.service.category,
-        },
-        quantity: item.quantity,
-        totalAmount: roundCurrency(item.totalAmount),
-    })),
-    discount: {
-        type:
-        effectiveDiscountType === 'percentage'
-            ? DiscountType.PERCENTAGE
-            : DiscountType.FIXED,
-        value: effectiveDiscountValue,
-        reason: discount.reason || additionalNotes || undefined,
-    },
-    taxes: safeArray(activeBillingView.billingData?.taxes).map((tax) => ({
-        name: tax.name,
-        rate: roundCurrency(safeNumber(tax.rate)),
-        amount: roundCurrency(safeNumber(tax.amount)),
-    })),
-    payment_methods: safeArray(paymentMethods)
-        .filter((method) => safeNumber(method?.amount) > 0)
-        .map((method) => ({
-        type: method.type as 'cash' | 'card' | 'insurance' | 'mobile' | 'mixed',
-        amount: roundCurrency(safeNumber(method.amount)),
-        reference: method.details || undefined,
-        details: method.details || undefined,
+      if (hasActiveDiscount) {
+        discountPayload = {
+          type: effectiveDiscountType === 'percentage' ? DiscountType.PERCENTAGE : DiscountType.FIXED,
+          value: effectiveDiscountValue,
+          reason: discount.reason || additionalNotes || undefined,
+        };
+      }
+
+      const payload: BillingSubmissionPayload = {
+        visit_id: visitId,
+        patient_id: patientId,
+        charge_items: safeArray(draftChargeItems).map((item) => ({
+          service_key: item.serviceKey,
+          service: {
+            id: item.service.id,
+            code: item.service.code,
+            name: item.service.name.toUpperCase(),
+            unitPrice: item.service.unitPrice,
+            category: item.service.category,
+          },
+          quantity: item.quantity,
+          totalAmount: roundCurrency(item.totalAmount),
         })),
-    billing_data: billingDataSnapshot,
-    additional_notes: additionalNotes || undefined,
-    status: normalizedStatus,
-    payment_status: currentPaymentStatus,
-    };
+        taxes: safeArray(activeBillingView.billingData?.taxes).map((tax: any) => ({
+          name: tax.name,
+          rate: roundCurrency(safeNumber(tax.rate)),
+          amount: roundCurrency(safeNumber(tax.amount)),
+        })),
+        payment_methods: safeArray(paymentMethods)
+          .filter((method) => safeNumber(method?.amount) > 0)
+          .map((method) => ({
+            type: method.type as 'cash' | 'card' | 'insurance' | 'mobile' | 'mixed',
+            amount: roundCurrency(safeNumber(method.amount)),
+            reference: method.details || undefined,
+            details: method.details || undefined,
+          })),
+        billing_data: billingDataSnapshot,
+        additional_notes: additionalNotes || undefined,
+        status,
+        payment_status: currentPaymentStatus,
+      };
 
+      // Only add discount if it exists
+      if (discountPayload) {
+        payload.discount = discountPayload;
+      }
 
       submitBilling(payload);
     } catch (error) {
@@ -403,16 +373,7 @@ export const useBillingSummaryHandlers = ({
     }
   };
 
-  const getDisplayAmount = (index: number, amount: number) => {
-    const isFocused = focusedAmountInputs[index];
-    const isZero = amount === 0;
-    return !isFocused && isZero ? '' : String(amount);
-  };
-
   return {
-    printReceiptRef,
-    isPrinting,
-    handlePrintReceipt,
     handleDiscountValueChange,
     handleDiscountTypeChange,
     handlePaymentTypeChange,
@@ -427,6 +388,5 @@ export const useBillingSummaryHandlers = ({
     handleFocusAmountInput,
     handleBlurAmountInput,
     handleDiscountFocus,
-    getDisplayAmount,
   };
 };

@@ -1,9 +1,5 @@
+import type { Tax, PaymentMethod, PaymentStatus } from '../../../../api/billing-review/BillingReviewTypes';
 import type { RenderableChargeItem } from '../billing-types';
-import type {
-  PaymentMethod,
-  PaymentStatus,
-  Tax,
-} from '../../../../api/billing-review/BillingReviewTypes';
 
 export interface ReceiptBillingDataShape {
   servicesSubtotal?: number;
@@ -88,22 +84,4 @@ export interface ComputedDiscountSnapshot {
   discountAmount: number;
 }
 
-export interface NormalizedPersistedBillingData {
-  servicesSubtotal: number;
-  existingBalance: number;
-  persistedGrandTotal: number;
-  persistedTotalPaid: number;
-  persistedDiscountAmount: number;
-  persistedTaxes: Tax[];
-}
-
-export interface NormalizedDraftBillingData {
-  subtotal: number;
-  discountAmount: number;
-  taxableAmount: number;
-  taxTotal: number;
-  grandTotal: number;
-  taxes: Tax[];
-  totalPaid: number;
-  balance: number;
-}
+export type BillingSummaryTheme = 'light' | 'dark';
