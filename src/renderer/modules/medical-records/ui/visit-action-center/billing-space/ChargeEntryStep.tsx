@@ -563,7 +563,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
     try {
       await submitPersistedAdjustment(item, apiAction, deltaQuantity, rsn);
 
-      // Authoritative post-success sync from backend -> Redux
       try {
         await syncBillingSliceFromServer();
       } catch (syncError) {
@@ -732,35 +731,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   // ---------------------------------------------------------------------------
   return (
     <div className="p-4 sm:p-5 lg:p-6 h-full relative">
-      <AnimatePresence>
-        {isReadOnly && (
-          <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            transition={{ type: 'spring', damping: 20 }}
-            className="absolute top-4 right-8 z-20 flex items-center gap-2 px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-full shadow-lg border border-blue-400 dark:border-blue-400"
-          >
-            <Lock className="w-3.5 h-3.5" />
-            <span className="text-xs font-semibold">Payment settled - View only</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {isAdjustingPersistedItem && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="absolute top-4 left-8 z-20 flex items-center gap-2 px-3 py-1.5 bg-amber-600 text-white rounded-full shadow-lg border border-amber-400"
-          >
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            <span className="text-xs font-semibold">Applying audited adjustment...</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 h-full">
         <motion.div
           variants={containerVariants}
@@ -769,6 +739,37 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
           className="lg:col-span-8 xl:col-span-9 flex flex-col min-h-0"
           ref={containerRef}
         >
+          <div className="mb-3 space-y-2">
+            <AnimatePresence>
+              {isReadOnly && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                  transition={{ type: 'spring', damping: 20 }}
+                  className="w-fit flex items-center gap-2 px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-full shadow-lg border border-blue-400 dark:border-blue-400"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span className="text-xs font-semibold">Payment settled - View only</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {isAdjustingPersistedItem && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="w-fit flex items-center gap-2 px-3 py-1.5 bg-amber-600 text-white rounded-full shadow-lg border border-amber-400"
+                >
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span className="text-xs font-semibold">Applying audited adjustment...</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           <div
             className={`sticky top-0 z-30 pb-3 ${colors.bg.primary} transition-all duration-200 ${
               isSearchSticky ? 'pt-1 bg-opacity-95 backdrop-blur-sm' : ''
