@@ -412,7 +412,7 @@ export const BILLING_CYCLE_STATUS_COLORS: Record<BillingCycleStatus, string> = {
   [BillingCycleStatus.DRAFT]: 'info',
   [BillingCycleStatus.PENDING_REVIEW]: 'info',
   [BillingCycleStatus.PENDING_SUBMISSION]: 'info',
-  [BillingCycleStatus.PENDING]: 'info',
+  [BillingCycleStatus.PENDING]: 'warning',
   [BillingCycleStatus.SUBMITTED_TO_INSURANCE]: 'secondary',
   [BillingCycleStatus.PAYMENT_PLAN]: 'secondary',
   [BillingCycleStatus.COLLECTIONS]: 'secondary',
