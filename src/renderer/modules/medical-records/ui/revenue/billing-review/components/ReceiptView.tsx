@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { useReactToPrint } from 'react-to-print';
 import {
   PaymentStatus,
-  type BillingReviewItem,
   type PaymentMethod,
   type Discount,
 } from '../../../../api/billing-review/BillingReviewTypes';
@@ -15,6 +14,7 @@ import { ReceiptEmptyState } from './receipt-view/ReceiptEmptyState';
 import { PrintableReceipt } from './receipt-view/PrintableReceipt';
 import { ReceiptSummary } from './receipt-view/ReceiptSummary';
 import { ReceiptFooter } from './receipt-view/ReceiptFooter';
+import type { ReceiptTransactionShape } from './receipt-view/printable-receipt/ReceiptTypes';
 
 interface ThemeColors {
   bg: {
@@ -45,7 +45,7 @@ interface ThemeColors {
 }
 
 interface ReceiptViewProps {
-  selectedTransaction: BillingReviewItem | null;
+  selectedTransaction: ReceiptTransactionShape;
   theme: 'light' | 'dark';
   colors: ThemeColors;
   onPrint: () => void;
@@ -239,7 +239,7 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
     const refunded = 0;
 
     // 11. STATUS
-    let status = selectedTransaction.payment_status;
+    let status = selectedTransaction.payment_status as PaymentStatus;
 
     if (grandTotal > 0) {
       if (balanceDue === 0 && netPaid > 0) {

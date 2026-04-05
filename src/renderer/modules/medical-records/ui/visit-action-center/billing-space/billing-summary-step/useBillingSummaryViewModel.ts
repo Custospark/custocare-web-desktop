@@ -259,7 +259,7 @@ export const useBillingSummaryViewModel = ({
     discount,
   ]);
 
-  const serverBillingView = useMemo<NormalizedBillingView | null>(() => {
+  const serverBillingView = useMemo<NormalizedBillingView | ReceiptTransactionShape | null>(() => {
     if (!serverBillingItem) return null;
     return normalizeServerBillingItem(serverBillingItem, status, facilityData);
   }, [serverBillingItem, status, facilityData]);

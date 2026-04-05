@@ -1,4 +1,4 @@
-// MRBillingReview.tsx - Updated with refresh on success
+// MRBillingReview.tsx - Updated with conditional modal rendering
 import React, { useMemo, useState, useCallback } from 'react';
 import { TransactionList } from './billing-review/components/TransactionList';
 import { ReceiptView } from './billing-review/components/ReceiptView';
@@ -40,7 +40,7 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
     sort_order: 'desc'
   });
 
-  // Transform transactions with derived date/time fields
+  // Transform transactions with derived date/time fields AND ensure required fields
   const transactions = useMemo(() => {
     if (!billingResponse?.data.items) return [];
     return billingResponse.data.items.map(item => ({
@@ -50,6 +50,11 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
         hour: '2-digit', 
         minute: '2-digit' 
       }),
+      // Ensure charge_items have service_key
+      charge_items: item.charge_items?.map((chargeItem: any) => ({
+        ...chargeItem,
+        service_key: chargeItem.service_key || chargeItem.code || chargeItem.id || '',
+      })) || [],
     }));
   }, [billingResponse]);
 
@@ -72,9 +77,9 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
   // Mobile view state
   const [mobileView, setMobileView] = useState<'list' | 'receipt'>('list');
 
-  // Derived state
+  // Derived state - selected transaction is properly typed
   const selectedTransaction = useMemo(
-    () => transactions.find((t) => t.visit_uuid === selectedId) ?? null,
+    () => transactions.find((t) => t.visit_uuid === selectedId) || null,
     [transactions, selectedId]
   );
 
@@ -138,6 +143,7 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
       await refetch();
       showToast('success', 'Data refreshed successfully', 3000);
     } catch (error) {
+      console.log(error);
       showToast('error', 'Failed to refresh data', 5000);
     }
   }, [refetch, showToast]);
@@ -147,10 +153,14 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
     handleRefresh();
   }, [handleRefresh]);
 
-  // Action handlers
+  // Action handlers - only open modals if transaction exists
   const handlePrint = useCallback(() => {
+    if (!selectedTransaction) {
+      showToast('error', 'No transaction selected', 3000);
+      return;
+    }
     showToast('info', 'Print request sent to the printing queue...', 3000);
-  }, [showToast]);
+  }, [selectedTransaction, showToast]);
 
   const handleEmail = useCallback(() => {
     if (!selectedTransaction) {
@@ -332,15 +342,29 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
           transition={{ duration: 0.2 }}
         >
           <div>
-            <ReceiptView
-              selectedTransaction={selectedTransaction}
-              theme={theme}
-              colors={colors}
-              onPrint={handlePrint}
-              onEmail={handleEmail}
-              onRefund={handleRefund}
-              onVoid={handleVoid}
-            />
+            {/* Only render ReceiptView when a transaction is selected */}
+            {selectedTransaction ? (
+              <ReceiptView
+                selectedTransaction={selectedTransaction}
+                theme={theme}
+                colors={colors}
+                onPrint={handlePrint}
+                onEmail={handleEmail}
+                onRefund={handleRefund}
+                onVoid={handleVoid}
+              />
+            ) : (
+              /* Empty state when no transaction is selected */
+              <div className={`flex flex-col items-center justify-center h-full min-h-[400px] rounded-xl border ${colors.border.primary} ${colors.bg.secondary} p-8 text-center`}>
+                <Receipt className={`w-16 h-16 mb-4 ${colors.text.tertiary}`} />
+                <h3 className={`text-lg font-semibold mb-2 ${colors.text.primary}`}>
+                  No Transaction Selected
+                </h3>
+                <p className={`text-sm ${colors.text.secondary}`}>
+                  Select a transaction from the list to view receipt details
+                </p>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -373,33 +397,37 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
         </motion.div>
       </div>
 
-      {/* Modals */}
-      <RefundModal
-        open={refundOpen}
-        selectedTransaction={selectedTransaction}
-        theme={theme}
-        colors={colors}
-        onClose={() => setRefundOpen(false)}
-        onSuccess={handleModalSuccess} // Add this prop to RefundModal
-      />
+      {/* Modals - Only render when transaction exists and modal is open */}
+      {selectedTransaction && (
+        <>
+          <RefundModal
+            open={refundOpen}
+            selectedTransaction={selectedTransaction}
+            theme={theme}
+            colors={colors}
+            onClose={() => setRefundOpen(false)}
+            onSuccess={handleModalSuccess}
+          />
 
-      <EmailModal
-        open={emailOpen}
-        selectedTransaction={selectedTransaction}
-        theme={theme}
-        colors={colors}
-        onClose={() => setEmailOpen(false)}
-        onSubmit={handleEmailSubmit}
-      />
+          <EmailModal
+            open={emailOpen}
+            selectedTransaction={selectedTransaction}
+            theme={theme}
+            colors={colors}
+            onClose={() => setEmailOpen(false)}
+            onSubmit={handleEmailSubmit}
+          />
 
-      <VoidModal
-        open={voidOpen}
-        selectedTransaction={selectedTransaction}
-        theme={theme}
-        colors={colors}
-        onClose={() => setVoidOpen(false)}
-        onSuccess={handleModalSuccess}
-      />
+          <VoidModal
+            open={voidOpen}
+            selectedTransaction={selectedTransaction}
+            theme={theme}
+            colors={colors}
+            onClose={() => setVoidOpen(false)}
+            onSuccess={handleModalSuccess}
+          />
+        </>
+      )}
     </div>
   );
 };

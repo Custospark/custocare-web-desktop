@@ -1,4 +1,5 @@
 import type { Tax, PaymentMethod, PaymentStatus } from '../../../../api/billing-review/BillingReviewTypes';
+import { type RefundedItem } from '../../../revenue/billing-review/components/receipt-view/printable-receipt/ReceiptTypes';
 import type { RenderableChargeItem } from '../billing-types';
 
 export interface ReceiptBillingDataShape {
@@ -38,6 +39,7 @@ export interface ReceiptTransactionShape {
   attending_staff_name?: string | null;
   attending_staff_role?: string | null;
   [key: string]: any;
+  refunded_items?:RefundedItem;
 }
 
 export interface DerivedFinancials {

@@ -110,7 +110,7 @@ export interface ReceiptTransactionShape {
   patient_number: string;
   created_at: string;
   charge_items: ChargeItem[];
-  refunded_items: RefundedItem[];
+  refunded_items?: RefundedItem[];
   billing_data: BillingData;
   payment_methods: PaymentMethod[];
   additional_notes?: string;

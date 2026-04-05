@@ -11,7 +11,8 @@
  * @module refundTypes
  */
 
-import { BillingCycleStatus } from "../billing-review/BillingReviewTypes";
+import  { BillingCycleStatus } from "../billing-review/BillingReviewTypes";
+export   {BillingCycleStatus}
 
 /* -------------------------------------------------------------------------- */
 /*                                   ENUMS                                    */

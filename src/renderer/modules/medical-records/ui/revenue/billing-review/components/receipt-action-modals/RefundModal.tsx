@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { BillingReviewItem } from '../../../../../api/billing-review/BillingReviewTypes';
+import type { ReceiptTransactionShape } from '../receipt-view/printable-receipt/ReceiptTypes';
 import { 
   RefundReason, 
   RefundMethodType,
-  type RefundableLineItem 
+  type RefundableLineItem,
+  BillingCycleStatus
 } from '../../../../../api/refund/RefundTypes';
 import { isRefundable } from '../../../../../api/refund/RefundTypes';
 import { useRefundTransaction } from '../../../../../api/refund/RefundQueries';
@@ -45,8 +47,13 @@ interface RefundModalProps {
   onSuccess?: () => void;
   theme: 'light' | 'dark';
   colors: ThemeColors;
-  selectedTransaction: BillingReviewItem | null;
+  selectedTransaction: BillingReviewItem | ReceiptTransactionShape;
 }
+
+// Type guard to check if transaction is BillingReviewItem
+const isBillingReviewItem = (transaction: BillingReviewItem | ReceiptTransactionShape): transaction is BillingReviewItem => {
+  return 'has_billing' in transaction && 'visit_id' in transaction;
+};
 
 export const RefundModal: React.FC<RefundModalProps> = ({
   open,
@@ -78,13 +85,15 @@ export const RefundModal: React.FC<RefundModalProps> = ({
   // Line items for partial refund
   const [lineItems, setLineItems] = useState<RefundableLineItem[]>([]);
 
-
-  // Memoized eligibility check
+  // Memoized eligibility check - handle undefined billing_status
   const eligibilityWarning = useMemo(() => {
     if (!selectedTransaction) return null;
     
+    // Safely get billing_status with fallback
+    const billingStatus = selectedTransaction.billing_status || BillingCycleStatus.DRAFT;
+    
     const eligibility = isRefundable({
-      billing_status: selectedTransaction.billing_status,
+      billing_status: billingStatus,
       patient_payment_received: selectedTransaction.billing_data.totalPaid,
       insurance_payment_received: 0,
     });
@@ -92,50 +101,60 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     return eligibility.eligible ? null : (eligibility.message || null);
   }, [selectedTransaction]);
 
-  // Memoized initial line items generation - FIXED ID ISSUE
+  // Memoized initial line items generation - works with both types
   const generateInitialLineItems = useCallback((
-    transaction: BillingReviewItem | null,
+    transaction: BillingReviewItem | ReceiptTransactionShape | null,
     type: 'full' | 'partial'
   ): RefundableLineItem[] => {
     if (!transaction) return [];
     
-    return transaction.charge_items
-      .map((item) => {
-            
+    // Handle both transaction types
+    const chargeItems = transaction.charge_items || [];
+    
+    return chargeItems
+      .map((item: any) => {
+        // Extract service info based on transaction type
+        const serviceId = item.service?.id || item.id;
+        const serviceCode = item.service?.code || item.service_code || '';
+        const serviceName = item.service?.name || item.service_name || '';
+        const unitPrice = item.service?.unitPrice || item.unit_price || item.unitPrice || 0;
+        const totalAmount = item.totalAmount || item.line_total || item.amount || 0;
+        const quantity = item.quantity || 1;
+        
         // Create a complete object that matches RefundableLineItem
         const lineItem: RefundableLineItem = {
-          id: item.service.id,
-          line_item_uuid: typeof item.service.id === 'string' ? item.id.replace('charge::', '') : String(item.id),
-          service_code: item.service.code,
-          service_name: item.service.name,
-          unit_price: item.service.unitPrice,
-          line_total: item.totalAmount,
-          net_amount: item.totalAmount,
-          max_refundable_amount: item.totalAmount,
+          id: typeof serviceId === 'number' ? serviceId : parseInt(serviceId) || 0,
+          line_item_uuid: typeof serviceId === 'string' ? serviceId : String(serviceId),
+          service_code: serviceCode,
+          service_name: serviceName,
+          unit_price: unitPrice,
+          line_total: totalAmount,
+          net_amount: totalAmount,
+          max_refundable_amount: totalAmount,
           is_selected: type === 'full',
-          refund_amount: type === 'full' ? item.totalAmount : 0,
-          quantity: type === 'full' ? item.quantity : 0,
-          original_quantity: item.quantity,
+          refund_amount: type === 'full' ? totalAmount : 0,
+          quantity: type === 'full' ? quantity : 0,
+          original_quantity: quantity,
         };
         
         return lineItem;
       })
-      .filter((item): item is RefundableLineItem => item !== null); // Remove invalid items
+      .filter((item): item is RefundableLineItem => item !== null && item.id > 0);
   }, []);
 
-  // Memoized initial payment methods generation
+  // Memoized initial payment methods generation - works with both types
   const generateInitialPaymentMethods = useCallback((
-    transaction: BillingReviewItem | null
+    transaction: BillingReviewItem | ReceiptTransactionShape | null
   ): RefundMethod[] => {
     if (!transaction || !transaction.payment_methods?.length) {
       return [{ type: RefundMethodType.CASH, amount: 0, reference: '', originalAmount: 0 }];
     }
     
     return transaction.payment_methods.map(pm => ({
-      type: pm.type as RefundMethodType,
-      amount: pm.amount,
+      type: (pm.type as RefundMethodType) || RefundMethodType.CASH,
+      amount: pm.amount || 0,
       reference: pm.reference || '',
-      originalAmount: pm.amount,
+      originalAmount: pm.amount || 0,
     }));
   }, []);
 
@@ -244,7 +263,6 @@ export const RefundModal: React.FC<RefundModalProps> = ({
       const initialPaymentMethods = generateInitialPaymentMethods(selectedTransaction);
       setRefundMethods(initialPaymentMethods);
       
-      // Debug log to verify IDs
       console.log('Initialized line items with IDs:', 
         initialLineItems.map(item => ({ id: item.id, name: item.service_name }))
       );
@@ -407,7 +425,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
     }
   );
 
- const handleSubmit = useCallback((e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     
     // Prevent double submission
@@ -493,8 +511,6 @@ export const RefundModal: React.FC<RefundModalProps> = ({
         return;
       }
 
-    
-
       payload.line_items = selectedLineItems;
 
       console.log('Processing partial refund:', {
@@ -534,6 +550,17 @@ export const RefundModal: React.FC<RefundModalProps> = ({
 
   if (!selectedTransaction) return null;
 
+  // Convert to BillingReviewItem-like shape for RefundModalBody if needed
+  const transactionForBody = isBillingReviewItem(selectedTransaction) 
+    ? selectedTransaction 
+    : {
+        ...selectedTransaction,
+        has_billing: true,
+        visit_id: 0,
+        visit_uuid: '',
+        patient_id: 0,
+      } as BillingReviewItem;
+
   return (
     <>
       <ModalBackdrop open={open} onClick={handleClose} />
@@ -554,7 +581,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
           />
           
           <RefundModalBody
-            selectedTransaction={selectedTransaction}
+            selectedTransaction={transactionForBody}
             colors={colors}
             isDark={isDark}
             isProcessing={isProcessing}
