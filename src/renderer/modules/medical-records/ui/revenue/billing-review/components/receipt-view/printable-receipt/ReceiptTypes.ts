@@ -6,11 +6,11 @@ import { BillingCycleStatus, PaymentStatus } from '../../../../../../api/billing
 /*                              CONSTANTS                                     */
 /* -------------------------------------------------------------------------- */
 
-export const WATERMARK_OPACITY = 0.5;
+export const WATERMARK_OPACITY = 0.4;
 export const Z_INDEX = {
   BACKGROUND: 0,
-  WATERMARK: 1,
-  CONTENT: 2,
+  WATERMARK: 9999,
+  CONTENT: 1,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -18,9 +18,33 @@ export const Z_INDEX = {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Refunded item - same shape as ChargeItem but with refund-specific fields
+ * Base charge item type (what we extend from)
+ * This matches the shape from BillingReviewTypes
  */
-export interface RefundedItem extends ChargeItem {
+export interface BaseChargeItem {
+  id: string;
+  source?: string;
+  persisted?: boolean;
+  service_key?: string;
+  serviceKey?: string;
+  service: {
+    id?: number | null;
+    code: string;
+    name: string;
+    unitPrice: number;
+    category?: string;
+  };
+  quantity: number;
+  totalAmount: number;
+  line_item_status?: string;
+  [key: string]: any;
+}
+
+/**
+ * Refunded item - uses Omit to exclude the quantity property from ChargeItem
+ * so we can define our own quantity object
+ */
+export interface RefundedItem extends Omit<ChargeItem, 'quantity'> {
   refunded: true;
   adjustment_id?: number;
   adjustment_reference?: string;
@@ -52,7 +76,7 @@ export interface RefundedItem extends ChargeItem {
     refund_reason?: string;
     refunded_at?: string;
     refunded_by_staff_id?: number | null;
-    refunded_by_staff_name?:string;
+    refunded_by_staff_name?: string;
   };
 }
 
@@ -86,7 +110,7 @@ export interface ReceiptTransactionShape {
   patient_number: string;
   created_at: string;
   charge_items: ChargeItem[];
-  refunded_items: RefundedItem[];  // Added refunded items field
+  refunded_items: RefundedItem[];
   billing_data: BillingData;
   payment_methods: PaymentMethod[];
   additional_notes?: string;
@@ -98,6 +122,7 @@ export interface ReceiptTransactionShape {
   discount?: any;
   taxes?: Tax[];
   payment_status?: PaymentStatus;
+  billing_status?: BillingCycleStatus;
   [key: string]: any;
 }
 

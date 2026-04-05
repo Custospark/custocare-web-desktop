@@ -1,23 +1,9 @@
 // ReceiptPreviewSection.tsx
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
-import { PrintableReceipt } from '../../../revenue/billing-review/components/receipt-view/PrintableReceipt';
 import { DEFAULT_TAXES, formatCurrency } from '../billing-types';
-
-// Define the shape that matches what PrintableReceipt expects
-interface ReceiptTransactionShape {
-  receipt_number: string | null;
-  patient_name: string;
-  patient_number: string;
-  created_at: string;
-  charge_items: any[];
-  billing_data: any;
-  payment_methods: any[];
-  additional_notes?: string;
-  facilityData?: any;
-  [key: string]: any;
-}
-
+import { type ReceiptTransactionShape } from '../../../revenue/billing-review/components/receipt-view/printable-receipt/ReceiptTypes';// Define the shape that matches what PrintableReceipt expects
+import { PrintableReceipt } from '../../../revenue/billing-review/components/receipt-view/PrintableReceipt';
 interface ReceiptPreviewSectionProps {
   colors: any;
   isReadOnly: boolean;
