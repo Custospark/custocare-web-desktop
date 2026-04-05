@@ -54,6 +54,7 @@ export enum ServiceCategory {
 
 export enum BillingCycleStatus {
   DRAFT                  = 'draft',
+  PENDING                  = 'pending',
   PENDING_REVIEW         = 'pending_review',
   PENDING_SUBMISSION     = 'pending_submission',
   SUBMITTED_TO_INSURANCE = 'submitted_to_insurance',
@@ -391,6 +392,7 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
 export const BILLING_CYCLE_STATUS_LABELS: Record<BillingCycleStatus, string> = {
   [BillingCycleStatus.DRAFT]: 'Draft',
   [BillingCycleStatus.PENDING_REVIEW]: 'Pending Review',
+  [BillingCycleStatus.PENDING]: 'Pending',
   [BillingCycleStatus.PENDING_SUBMISSION]: 'Pending Submission',
   [BillingCycleStatus.SUBMITTED_TO_INSURANCE]: 'Submitted to Insurance',
   [BillingCycleStatus.PARTIALLY_PAID]: 'Partial',
@@ -410,6 +412,7 @@ export const BILLING_CYCLE_STATUS_COLORS: Record<BillingCycleStatus, string> = {
   [BillingCycleStatus.DRAFT]: 'info',
   [BillingCycleStatus.PENDING_REVIEW]: 'info',
   [BillingCycleStatus.PENDING_SUBMISSION]: 'info',
+  [BillingCycleStatus.PENDING]: 'info',
   [BillingCycleStatus.SUBMITTED_TO_INSURANCE]: 'secondary',
   [BillingCycleStatus.PAYMENT_PLAN]: 'secondary',
   [BillingCycleStatus.COLLECTIONS]: 'secondary',
