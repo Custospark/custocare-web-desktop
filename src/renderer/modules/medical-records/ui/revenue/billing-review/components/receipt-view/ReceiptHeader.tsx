@@ -73,9 +73,12 @@ const getStatusPillClass = (isDark: boolean, status: BillingCycleStatus) => {
     [BillingCycleStatus.PAID_IN_FULL]: isDark 
       ? 'bg-green-900/30 text-green-300 border-green-700' 
       : 'bg-green-100 text-green-800 border-green-200',
-    [BillingCycleStatus.PENDING_SUBMISSION]: isDark 
+    [BillingCycleStatus.PENDING]: isDark 
       ? 'bg-yellow-900/30 text-yellow-300 border-yellow-700' 
       : 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    [BillingCycleStatus.PENDING_SUBMISSION]: isDark 
+      ? 'bg-orange-900/30 text-orange-300 border-orange-700' 
+      : 'bg-orange-100 text-orange-800 border-orange-200',
     [BillingCycleStatus.PARTIALLY_PAID]: isDark 
       ? 'bg-blue-900/30 text-blue-300 border-blue-700' 
       : 'bg-blue-100 text-blue-800 border-blue-200',
@@ -105,7 +108,6 @@ const getStatusPillClass = (isDark: boolean, status: BillingCycleStatus) => {
       : 'bg-indigo-100 text-indigo-800 border-indigo-200',
   };
   
-  // Use type assertion or check if status exists
   const variantClass = variants[status];
   return `${variantClass || (isDark ? 'bg-gray-700 text-gray-300 border-gray-600' : 'bg-gray-100 text-gray-800 border-gray-300')} border`;
 };
@@ -117,7 +119,7 @@ interface ActionButtonProps {
   label: string;
   variant?: 'primary' | 'secondary' | 'email' | 'warn' | 'danger';
   isDark: boolean;
-  show?: boolean; // Add show prop for conditional rendering
+  show?: boolean;
 }
 
 const ActionButton: React.FC<ActionButtonProps> = ({
@@ -127,9 +129,8 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   label,
   variant = 'primary',
   isDark,
-  show = true, // Default to true
+  show = true,
 }) => {
-  // Don't render if show is false
   if (!show) return null;
   
   const base = 'inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer';
@@ -175,10 +176,9 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
 }) => {
   const [isLargeScreen, setIsLargeScreen] = useState(false);
 
-  // Check screen size on mount and resize
   useEffect(() => {
     const checkScreenSize = () => {
-      setIsLargeScreen(window.innerWidth >= 768); // md breakpoint
+      setIsLargeScreen(window.innerWidth >= 768);
     };
     
     checkScreenSize();
@@ -186,84 +186,106 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  // Helper function to safely get status label
   const getStatusLabel = (status: BillingCycleStatus | undefined): string => {
     if (!status) return 'Unknown';
-    
-    // Check if the status exists in PAYMENT_STATUS_LABELS
     const label = BILLING_CYCLE_STATUS_LABELS[status as BillingCycleStatus];
     return label || 'Unknown';
   };
 
   // Smart button visibility based on billing status
- // Smart button visibility based on billing status
-const buttonVisibility = useMemo(() => {
-  if (!selectedTransaction || !derivedFinancials) {
-    return {
-      showPrint: true,
-      showRefund: false,
-      showVoid: false,
-    };
-  }
-
-  const status = selectedTransaction.billing_status;
-  const hasPayment = derivedFinancials.totalPaidFromMethods > 0;
-
-  switch (status) {
-    case BillingCycleStatus.PAID_IN_FULL:
-      return {
-        showPrint: true,
-        showRefund: true,
-        showVoid: false,
-      };
-    
-    case BillingCycleStatus.PARTIALLY_PAID:
-      return {
-        showPrint: true,
-        showRefund: true,
-        showVoid: false,
-      };
-    
-    case BillingCycleStatus.PARTIALLY_REFUNDED:
-      return {
-        showPrint: true,
-        showRefund: true, // Allow additional refunds
-        showVoid: false,
-      };
-    
-    case BillingCycleStatus.FULLY_REFUNDED:
-      return {
-        showPrint: true,
-        showRefund: false, // No more refunds allowed
-        showVoid: false,
-      };
-    
-    case BillingCycleStatus.PENDING_SUBMISSION:
-    case BillingCycleStatus.DRAFT:
-      return {
-        showPrint: true,
-        showRefund: false,
-        showVoid: true,
-      };
-    
-    case BillingCycleStatus.WRITTEN_OFF:
-    case BillingCycleStatus.DISPUTED:
+  const buttonVisibility = useMemo(() => {
+    if (!selectedTransaction || !derivedFinancials) {
       return {
         showPrint: true,
         showRefund: false,
         showVoid: false,
       };
-    
-    default:
-      return {
-        showPrint: true,
-        showRefund: hasPayment,
-        showVoid: status === BillingCycleStatus.DRAFT || status === BillingCycleStatus.PENDING_SUBMISSION,
-      };
-  }
-}, [selectedTransaction, derivedFinancials]);
+    }
 
-  // Button configuration with smart visibility
+    const status = selectedTransaction.billing_status;
+    const hasPayment = derivedFinancials.totalPaidFromMethods > 0;
+
+    switch (status) {
+      case BillingCycleStatus.PAID_IN_FULL:
+        return {
+          showPrint: true,
+          showRefund: true,
+          showVoid: false,
+        };
+      
+      case BillingCycleStatus.PARTIALLY_PAID:
+        return {
+          showPrint: true,
+          showRefund: true,
+          showVoid: false,
+        };
+      
+      case BillingCycleStatus.PARTIALLY_REFUNDED:
+        return {
+          showPrint: true,
+          showRefund: true, // Allow additional refunds
+          showVoid: false,
+        };
+      
+      case BillingCycleStatus.FULLY_REFUNDED:
+        return {
+          showPrint: true,
+          showRefund: false,
+          showVoid: false,
+        };
+      
+      case BillingCycleStatus.PENDING:
+        // Generic pending state - can void but not refund
+        return {
+          showPrint: true,
+          showRefund: false,
+          showVoid: true,
+        };
+      
+      case BillingCycleStatus.PENDING_SUBMISSION:
+        // Ready to submit to insurance - can void but not refund
+        return {
+          showPrint: true,
+          showRefund: false,
+          showVoid: true,
+        };
+      
+      case BillingCycleStatus.PENDING_REVIEW:
+        // Under review - can void but not refund
+        return {
+          showPrint: true,
+          showRefund: false,
+          showVoid: true,
+        };
+      
+      case BillingCycleStatus.DRAFT:
+        // Draft status - can void but not refund
+        return {
+          showPrint: true,
+          showRefund: false,
+          showVoid: true,
+        };
+      
+      case BillingCycleStatus.WRITTEN_OFF:
+      case BillingCycleStatus.DISPUTED:
+        return {
+          showPrint: true,
+          showRefund: false,
+          showVoid: false,
+        };
+      
+      default:
+        return {
+          showPrint: true,
+          showRefund: hasPayment,
+          showVoid: status === BillingCycleStatus.DRAFT || 
+                   status === BillingCycleStatus.PENDING ||
+                   status === BillingCycleStatus.PENDING_SUBMISSION ||
+                   status === BillingCycleStatus.PENDING_REVIEW,
+        };
+    }
+  }, [selectedTransaction, derivedFinancials]);
+
   const buttonConfigs = useMemo(() => [
     {
       onClick: onPrintClick,
@@ -274,15 +296,6 @@ const buttonVisibility = useMemo(() => {
       key: 'print',
       show: buttonVisibility.showPrint
     },
-    // {
-    //   onClick: onEmail,
-    //   disabled: !selectedTransaction,
-    //   icon: <Mail className="w-4 h-4" />,
-    //   label: 'Email',
-    //   variant: 'email' as const,
-    //   key: 'email',
-    //   show: true // Email always shown but disabled TODO: Implement email in the future.
-    // },
     {
       onClick: onRefund,
       disabled: !selectedTransaction,
@@ -303,10 +316,9 @@ const buttonVisibility = useMemo(() => {
     }
   ].filter(config => config.show), [selectedTransaction, isPrinting, onPrintClick, onRefund, onVoid, buttonVisibility]);
 
-  // Order buttons based on screen size
   const orderedButtons = isLargeScreen 
-    ? [...buttonConfigs].reverse() // Desktop: Void, Refund, Print (if they exist)
-    : buttonConfigs; // Mobile: Print, Refund, Void (if they exist)
+    ? [...buttonConfigs].reverse()
+    : buttonConfigs;
 
   return (
     <div
@@ -355,7 +367,6 @@ const buttonVisibility = useMemo(() => {
         )}
       </div>
 
-      {/* Actions with animation - Only shows relevant buttons */}
       <motion.div 
         layout
         className="mt-4 flex flex-wrap gap-2 no-print"
@@ -377,9 +388,7 @@ const buttonVisibility = useMemo(() => {
   );
 };
 
-// Helper function to provide contextual hints
 const getActionHint = (status: BillingCycleStatus, visibility: any): string => {
-  console.log(status);
   if (visibility.showRefund && visibility.showVoid) {
     return 'Print, refund, or void this transaction';
   }
@@ -387,7 +396,18 @@ const getActionHint = (status: BillingCycleStatus, visibility: any): string => {
     return 'Print or refund this transaction';
   }
   if (visibility.showVoid) {
-    return 'Print or void this transaction';
+    switch (status) {
+      case BillingCycleStatus.PENDING:
+        return 'Print or void this pending transaction';
+      case BillingCycleStatus.PENDING_SUBMISSION:
+        return 'Print or void this pending submission';
+      case BillingCycleStatus.PENDING_REVIEW:
+        return 'Print or void this pending review';
+      case BillingCycleStatus.DRAFT:
+        return 'Print or void this draft';
+      default:
+        return 'Print or void this transaction';
+    }
   }
   return 'View transaction details';
 };
