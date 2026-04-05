@@ -17,6 +17,45 @@ export const Z_INDEX = {
 /*                              TYPE DEFINITIONS                              */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Refunded item - same shape as ChargeItem but with refund-specific fields
+ */
+export interface RefundedItem extends ChargeItem {
+  refunded: true;
+  adjustment_id?: number;
+  adjustment_reference?: string;
+  adjustment_type?: 'full_refund' | 'partial_refund';
+  adjustment_created_at?: string;
+  quantity: {
+    original: number;
+    refunded: number;
+    remaining: number;
+  };
+  amounts?: {
+    original_subtotal: number;
+    refund_subtotal: number;
+    remaining_subtotal: number;
+  };
+  matched_reference?: {
+    id?: number | null;
+    type?: string | null;
+  };
+  refund_info: {
+    refund_amount: number;
+    patient_refund: number;
+    insurance_refund: number;
+    refund_methods: Array<{
+      type: string;
+      amount: number;
+      reference?: string | null;
+    }>;
+    refund_reason?: string;
+    refunded_at?: string;
+    refunded_by_staff_id?: number | null;
+    refunded_by_staff_name?:string;
+  };
+}
+
 export interface DerivedFinancials {
   status: any;
   refunded: number;
@@ -47,6 +86,7 @@ export interface ReceiptTransactionShape {
   patient_number: string;
   created_at: string;
   charge_items: ChargeItem[];
+  refunded_items: RefundedItem[];  // Added refunded items field
   billing_data: BillingData;
   payment_methods: PaymentMethod[];
   additional_notes?: string;
@@ -107,7 +147,7 @@ export const shouldShowDiscountPercentage = (discountAmount: number, subtotal: n
   return null;
 };
 
-    export const getWatermarkConfig = (derivedFinancials: DerivedFinancials, billingCycleStatus?: BillingCycleStatus, paymentStatus?: PaymentStatus): WatermarkConfig | null => {
+export const getWatermarkConfig = (derivedFinancials: DerivedFinancials, billingCycleStatus?: BillingCycleStatus, paymentStatus?: PaymentStatus): WatermarkConfig | null => {
     const { balanceDue, grandTotal, changeAmount } = derivedFinancials;
     
     // ===== PRIORITY 1: Use BillingCycleStatus if available =====
@@ -205,7 +245,7 @@ export const shouldShowDiscountPercentage = (discountAmount: number, subtotal: n
     }
     
     return null;
-    };
+};
 
 export const getWatermarkFontSize = (text: string): string => {
   if (text === 'CHANGE GIVEN' || text === 'FULL REFUND' || text === 'PARTIAL REFUND') {
@@ -215,4 +255,27 @@ export const getWatermarkFontSize = (text: string): string => {
     return 'clamp(2rem, 16cqw, 5rem)';
   }
   return 'clamp(2.5rem, 20cqw, 6rem)';
+};
+
+/**
+ * Helper function to calculate total refunded amount from refunded items
+ */
+export const getTotalRefundedAmount = (refundedItems: RefundedItem[]): number => {
+  return refundedItems.reduce((total, item) => {
+    return total + (item.refund_info?.refund_amount || 0);
+  }, 0);
+};
+
+/**
+ * Helper function to get net amount after refunds
+ */
+export const getNetAmountAfterRefunds = (chargeItemsTotal: number, refundedItemsTotal: number): number => {
+  return Math.max(0, chargeItemsTotal - refundedItemsTotal);
+};
+
+/**
+ * Helper function to check if there are any refunded items
+ */
+export const hasRefundedItems = (refundedItems: RefundedItem[]): boolean => {
+  return refundedItems && refundedItems.length > 0;
 };

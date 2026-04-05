@@ -1,4 +1,3 @@
-// PrintableReceipt.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
 import type { DerivedFinancials, CashBreakdown, ReceiptTransactionShape } from './printable-receipt/ReceiptTypes';
@@ -6,6 +5,7 @@ import { cx, getWatermarkConfig, Z_INDEX } from './printable-receipt/ReceiptType
 import { ReceiptHeader } from './printable-receipt/ReceiptHeader';
 import { ReceiptMetaInfo } from './printable-receipt/ReceiptMetaInfo';
 import { ReceiptServices } from './printable-receipt/ReceiptServices';
+import { ReceiptRefunds } from './printable-receipt/ReceiptRefunds';
 import { ReceiptFinancials } from './printable-receipt/ReceiptFinancials';
 import { PrintableReceiptFooter } from './printable-receipt/PrintableReceiptFooter';
 import { Watermark } from './printable-receipt/Watermark';
@@ -35,9 +35,10 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
 }, ref) => {
   const watermarkConfig = getWatermarkConfig(
     derivedFinancials, 
-    selectedTransaction?.billing_status,  // BillingCycleStatus
-    selectedTransaction?.payment_status    // PaymentStatus (fallback)
-  )
+    selectedTransaction?.billing_status,
+    selectedTransaction?.payment_status
+  );
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -73,16 +74,14 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
 
             {/* Content wrapper - sits above watermark */}
             <div className="relative" style={{ zIndex: Z_INDEX.CONTENT }}>
-              {/* 1. Receipt Header */}
               <ReceiptHeader />
-
-              {/* 2. Receipt Meta Info */}
               <ReceiptMetaInfo selectedTransaction={selectedTransaction} />
-
-              {/* 3. Services */}
               <ReceiptServices selectedTransaction={selectedTransaction} />
 
-              {/* 4. Financials (includes Totals, Payments, Attending Staff) */}
+              {selectedTransaction?.refunded_items && selectedTransaction.refunded_items.length > 0 && (
+                <ReceiptRefunds selectedTransaction={selectedTransaction} />
+              )}
+
               <ReceiptFinancials
                 selectedTransaction={selectedTransaction}
                 derivedFinancials={derivedFinancials}
@@ -90,7 +89,6 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
                 changeAmount={changeAmount}
               />
 
-              {/* 5. Footer */}
               <PrintableReceiptFooter />
             </div>
           </div>

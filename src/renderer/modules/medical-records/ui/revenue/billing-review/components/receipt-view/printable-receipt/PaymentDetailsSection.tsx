@@ -1,6 +1,5 @@
-// PaymentDetailsSection.tsx
 import React from 'react';
-import { Banknote, ArrowLeftRight } from 'lucide-react';
+import { Banknote, ArrowLeftRight, RefreshCw } from 'lucide-react';
 import PaymentIcon from './PaymentIcon';
 import type { PaymentMethod } from '../../../../../../api/billing-review/BillingReviewTypes';
 import { type CashBreakdown } from './ReceiptTypes';
@@ -14,6 +13,8 @@ interface PaymentDetailsSectionProps {
   netPaid: number;
   balanceDue: number;
   changeAmount: number;
+  hasRefunds?: boolean;
+  totalRefunded?: number;
 }
 
 const PaymentDetailsSection: React.FC<PaymentDetailsSectionProps> = ({ 
@@ -22,9 +23,14 @@ const PaymentDetailsSection: React.FC<PaymentDetailsSectionProps> = ({
   totalPaidFromMethods, 
   netPaid, 
   balanceDue, 
-  changeAmount 
+  changeAmount,
+  hasRefunds = false,
+  totalRefunded = 0
 }) => {
   if (!paymentMethods || paymentMethods.length === 0) return null;
+
+  // Ensure totalRefunded is properly rounded
+  const roundedTotalRefunded = Math.round(totalRefunded * 100) / 100;
 
   return (
     <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t-2 border-gray-300 text-[10px] sm:text-xs relative">
@@ -60,7 +66,7 @@ const PaymentDetailsSection: React.FC<PaymentDetailsSectionProps> = ({
             </span>
             <span className="font-black tabular-nums bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
               {formatCurrency(cashBreakdown.tendered)}
-                </span>
+            </span>
           </div>
           
           {cashBreakdown.change > 0 && (
@@ -96,11 +102,24 @@ const PaymentDetailsSection: React.FC<PaymentDetailsSectionProps> = ({
 
       <div className="mt-3 sm:mt-4 pt-2 sm:pt-3 border-t border-gray-200">
         <div className="flex justify-between">
-          <span className="text-gray-600 font-semibold">Amount Paid</span>
+          <span className="text-gray-600 font-semibold">
+            {hasRefunds ? 'Amount After Refund' : 'Amount Paid'}
+          </span>
           <span className="font-black bg-linear-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent tabular-nums">
             {formatCurrency(netPaid)}
           </span>
         </div>
+
+        {hasRefunds && roundedTotalRefunded > 0 && (
+          <div className="flex justify-between mt-1 sm:mt-2">
+            <span className="text-gray-600 font-semibold flex items-center gap-1">
+              <RefreshCw className="w-3 h-3 text-red-500" /> Total Refunded:
+            </span>
+            <span className="font-black text-red-600 tabular-nums">
+              -{formatCurrency(roundedTotalRefunded)}
+            </span>
+          </div>
+        )}
 
         <div className="flex justify-between mt-1 sm:mt-2">
           <span className="text-gray-600 font-semibold">Balance Due</span>
@@ -118,7 +137,16 @@ const PaymentDetailsSection: React.FC<PaymentDetailsSectionProps> = ({
           </span>
         </div>
 
-        {changeAmount > 0 && (
+        {/* Refund message when refunds exist and balance is paid in full */}
+        {hasRefunds && roundedTotalRefunded > 0 && balanceDue === 0 && (
+          <div className="mt-1 sm:mt-2 text-[8px] sm:text-xs text-red-600 italic flex items-center gap-1">
+            <RefreshCw className="w-2.5 h-2.5" />
+            * Refund of {formatCurrency(roundedTotalRefunded)} has been processed.
+          </div>
+        )}
+
+        {/* Change message for non-refund transactions */}
+        {!hasRefunds && changeAmount > 0 && (
           <div className="mt-1 sm:mt-2 text-[8px] sm:text-xs text-gray-500 italic">
             * Change of {formatCurrency(changeAmount)} returned to Patient.
           </div>
