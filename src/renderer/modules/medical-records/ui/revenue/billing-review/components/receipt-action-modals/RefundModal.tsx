@@ -15,6 +15,7 @@ import { ActionModal, type ThemeColors } from './ModalPrimitives';
 import { cx } from '../../utils';
 import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
 import { RefundModalBody } from './refund-modal-components/RefundModalBody';
+export {ThemeColors}
 
 export interface RefundMethod {
   type: RefundMethodType;

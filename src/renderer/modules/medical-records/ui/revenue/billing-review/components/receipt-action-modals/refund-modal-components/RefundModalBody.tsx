@@ -2,7 +2,7 @@ import React from 'react';
 import { Undo2, AlertTriangle } from 'lucide-react';
 import { type BillingReviewItem } from '../../Modals';
 import { type RefundReason, type RefundableLineItem } from '../../../../../../api/refund/RefundTypes';
-import type { ThemeColors } from '../RefundModal';
+import  { ThemeColors } from '../RefundModal';
 import { cx } from '../../../utils';
 // Import sub-components
 import { TransactionSummaryCard } from './TransactionSummaryCard';
