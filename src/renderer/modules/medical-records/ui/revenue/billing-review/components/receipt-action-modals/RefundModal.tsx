@@ -506,7 +506,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({
       title="Process Refund"
       subtitle="Review refund details, verify line items, and complete the refund securely."
       icon={<RotateCcw className={cx('h-5 w-5', isDark ? 'text-blue-300' : 'text-blue-600')} />}
-      maxWidthClass="max-w-4xl"
+      maxWidthClass="max-w-2xl"
       isBusy={isProcessing}
       disableClose={isProcessing}
       busyTitle="Processing refund"
