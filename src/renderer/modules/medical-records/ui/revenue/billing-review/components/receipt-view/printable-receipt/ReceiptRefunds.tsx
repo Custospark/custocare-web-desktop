@@ -121,31 +121,83 @@ export const ReceiptRefunds: React.FC<ReceiptRefundsProps> = ({ selectedTransact
     </div>
   );
 
-  // Refund Item Row Component
+  // Refund Item Row Component - Shows TOTAL refund amount per item
   const RefundItemRow = ({ item }: { item: RefundedItem }) => {
-    const refundPortion = Number(item.totalAmount) || 0;
+    // Use the total refund amount for this line item
+    const totalRefundAmount = item.refund_info?.refund_amount || 
+                              item.totalRefundAmount || 
+                              item.refund_amount || 
+                              0;
+    
+    const refundQuantity = item.quantity?.refunded ?? item.refunded_quantity ?? 0;
+    const originalQuantity = item.quantity?.original ?? item.quantity ?? 0;
+    const unitPrice = item.service?.unitPrice || 0;
+    
+    // Calculate net amount (after discount) if available
+    const netRefundAmount = item.refund_info?.refund_net || 
+                           item.refund_net || 
+                           totalRefundAmount;
+    
+    const discountAmount = totalRefundAmount - netRefundAmount;
     
     return (
       <div className="flex justify-between text-[10px] sm:text-xs border-b border-red-100 pb-1 sm:pb-2 p-0.5 sm:p-1 rounded gap-2">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="font-bold truncate text-gray-700">{item.service?.name}</p>
-            <span className="text-[8px] sm:text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700">Refunded</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-bold truncate text-gray-700">{item.service?.name || item.service_description}</p>
+            <span className="text-[8px] sm:text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 whitespace-nowrap">
+              Refunded
+            </span>
           </div>
-          <div className="mt-0.5">
-            <p className="text-[9px] sm:text-[11px] text-gray-600">
-              Qty: {item.quantity?.original ?? item.quantity} → {item.quantity?.refunded ?? (refundPortion / (item.service?.unitPrice || 1)).toFixed(2)}
-            </p>
-            <p className="text-[9px] sm:text-[11px] text-gray-500">
-              @ {formatCurrency(Number(item.service?.unitPrice || 0))} = {formatCurrency(refundPortion)}
-            </p>
+          
+          <div className="mt-1">
+            {/* Show quantity info */}
+            {refundQuantity > 0 && (
+              <p className="text-[9px] sm:text-[11px] text-gray-600">
+                Qty Refunded: {refundQuantity.toFixed(2)} of {originalQuantity.toFixed(2)}
+              </p>
+            )}
+            
+            {/* Show unit price for reference */}
+            {unitPrice > 0 && (
+              <p className="text-[9px] sm:text-[11px] text-gray-500">
+                Unit Price: {formatCurrency(unitPrice)}
+              </p>
+            )}
+            
+            {/* Show discount info if applicable */}
+            {discountAmount > 0.01 && (
+              <p className="text-[8px] sm:text-[10px] text-green-600">
+                Discount Applied: {formatCurrency(discountAmount)}
+              </p>
+            )}
+            
+            {/* Show service code */}
             {item.service?.code && (
-              <p className="text-[8px] sm:text-[10px] text-gray-500 mt-0.5">Code: {item.service.code}</p>
+              <p className="text-[8px] sm:text-[10px] text-gray-500 mt-0.5">
+                Code: {item.service.code}
+              </p>
+            )}
+            
+            {/* Show net refund amount (after discount) if different from total */}
+            {netRefundAmount !== totalRefundAmount && netRefundAmount > 0 && (
+              <p className="text-[8px] sm:text-[10px] text-gray-500">
+                Net Refund: {formatCurrency(netRefundAmount)}
+              </p>
             )}
           </div>
         </div>
+        
+        {/* TOTAL REFUND AMOUNT for this item */}
         <div className="text-right shrink-0">
-          <span className="font-black text-red-600">{formatCurrency(refundPortion)}</span>
+          <div className="font-black text-red-600 text-sm sm:text-base">
+            {formatCurrency(totalRefundAmount)}
+          </div>
+          {netRefundAmount !== totalRefundAmount && netRefundAmount > 0 && (
+            <div className="text-[8px] sm:text-[9px] text-gray-500 mt-0.5">
+              Net: {formatCurrency(netRefundAmount)}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -161,8 +213,8 @@ export const ReceiptRefunds: React.FC<ReceiptRefundsProps> = ({ selectedTransact
         <div key={group.adjustment_id || group.adjustment_reference} className="mb-3">
           <RefundHeader group={group} />
           <div className="space-y-1.5 sm:space-y-2">
-            {group.items.map((item: RefundedItem) => (
-              <RefundItemRow key={item.id} item={item} />
+            {group.items.map((item: RefundedItem, idx: number) => (
+              <RefundItemRow key={item.id || idx} item={item} />
             ))}
           </div>
         </div>
