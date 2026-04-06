@@ -198,7 +198,7 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
 
   const handleEmailSubmit = useCallback(
     async (_payload: { email: string; message: string }) => {
-      consolelog(_payload)
+      console.log(_payload)
       showToast('info', 'Email sending will be wired to backend next.', 4000);
       setActiveModal(null);
     },
