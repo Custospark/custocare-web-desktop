@@ -203,7 +203,7 @@ export const ReceiptRefunds: React.FC<ReceiptRefundsProps> = ({ selectedTransact
           <RefundHeader group={group} />
           <div className="space-y-1.5 sm:space-y-2">
             {group.items.map((item: RefundedItem, idx: number) => (
-              <RefundItemRow key={item.id || item.line_item_id || idx} item={item} />
+              <RefundItemRow key={item.id || idx} item={item} />
             ))}
           </div>
         </div>
