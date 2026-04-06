@@ -124,19 +124,14 @@ export const ReceiptRefunds: React.FC<ReceiptRefundsProps> = ({ selectedTransact
   // Refund Item Row Component - Shows TOTAL refund amount per item
   const RefundItemRow = ({ item }: { item: RefundedItem }) => {
     // Use the total refund amount for this line item
-    const totalRefundAmount = item.refund_info?.refund_amount || 
-                              item.totalRefundAmount || 
-                              item.refund_amount || 
-                              0;
+    const totalRefundAmount = item.refund_info?.refund_amount || 0;
     
-    const refundQuantity = item.quantity?.refunded ?? item.refunded_quantity ?? 0;
+    const refundQuantity = item.quantity?.refunded ?? 0;
     const originalQuantity = item.quantity?.original ?? item.quantity ?? 0;
     const unitPrice = item.service?.unitPrice || 0;
     
     // Calculate net amount (after discount) if available
-    const netRefundAmount = item.refund_info?.refund_net || 
-                           item.refund_net || 
-                           totalRefundAmount;
+    const netRefundAmount = item.refund_info?.refund_amount || totalRefundAmount;
     
     const discountAmount = totalRefundAmount - netRefundAmount;
     
@@ -144,7 +139,7 @@ export const ReceiptRefunds: React.FC<ReceiptRefundsProps> = ({ selectedTransact
       <div className="flex justify-between text-[10px] sm:text-xs border-b border-red-100 pb-1 sm:pb-2 p-0.5 sm:p-1 rounded gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-bold truncate text-gray-700">{item.service?.name || item.service_description}</p>
+            <p className="font-bold truncate text-gray-700">{item.service?.name || "NA"}</p>
             <span className="text-[8px] sm:text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 whitespace-nowrap">
               Refunded
             </span>

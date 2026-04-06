@@ -1,28 +1,9 @@
 // EmailModal.tsx
-import React, { useState } from 'react';
-import { X, Mail, Send } from 'lucide-react';
-import type { BillingReviewItem } from  '../../../../../api/billing-review/BillingReviewTypes';
-import { ModalBackdrop, ModalContainer, } from './ModalPrimitives';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { Mail, Send, ReceiptText } from 'lucide-react';
+import type { BillingReviewItem } from '../../../../../api/billing-review/BillingReviewTypes';
+import { ActionModal, type ThemeColors } from './ModalPrimitives';
 import { cx } from '../../utils';
-
-interface ThemeColors {
-  bg: {
-    primary: string;
-    secondary: string;
-    elevated: string;
-    hover: string;
-    selected: string;
-  };
-  text: {
-    primary: string;
-    secondary: string;
-    tertiary: string;
-  };
-  border: {
-    primary: string;
-  };
-  ring: string;
-}
 
 interface EmailModalProps {
   open: boolean;
@@ -31,7 +12,7 @@ interface EmailModalProps {
   colors: ThemeColors;
   isProcessing?: boolean;
   selectedTransaction: BillingReviewItem | null;
-  onSubmit: () => void;
+  onSubmit: (payload: { email: string; message: string }) => void | Promise<void>;
 }
 
 export const EmailModal: React.FC<EmailModalProps> = ({
@@ -47,146 +28,166 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isProcessing) {
-      onSubmit();
+  useEffect(() => {
+    if (!open) return;
+    setEmail('');
+    setMessage('');
+  }, [open]);
+
+  const defaultMessage = useMemo(() => {
+    if (!selectedTransaction) return '';
+    return `Hello,
+
+Please find your receipt attached for visit ${selectedTransaction.receipt_number || 'Draft'}.
+
+Thank you.`;
+  }, [selectedTransaction]);
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (isProcessing) return;
+
+      await onSubmit({
+        email: email.trim(),
+        message: message.trim(),
+      });
+
       setEmail('');
       setMessage('');
-    }
-  };
+    },
+    [email, message, isProcessing, onSubmit]
+  );
 
-  const handleClose = () => {
-    if (!isProcessing) {
-      onClose();
-    }
-  };
+  const handleClose = useCallback(() => {
+    if (isProcessing) return;
+    onClose();
+  }, [isProcessing, onClose]);
+
+  if (!selectedTransaction) return null;
 
   return (
-    <>
-      <ModalBackdrop open={open} onClick={handleClose} />
-      <ModalContainer open={open}>
-        <div
-          className={cx(
-            'rounded-xl shadow-2xl border',
-            colors.border.primary,
-            colors.bg.elevated,
-            isProcessing && 'pointer-events-none opacity-75'
-          )}
-        >
-          {/* Header */}
-          <div className={cx('flex items-center justify-between p-5 border-b', colors.border.primary)}>
-            <div className="flex items-center gap-3">
-              <div className={cx('p-2 rounded-lg', isDark ? 'bg-blue-900/30' : 'bg-blue-100')}>
-                <Mail className={cx('w-5 h-5', isDark ? 'text-blue-400' : 'text-blue-600')} />
-              </div>
-              <div>
-                <h3 className={cx('text-lg font-bold', colors.text.primary)}>Email Receipt</h3>
-                <p className={cx('text-xs mt-0.5', colors.text.secondary)}>
-                  Send to patient or custom email
-                </p>
-              </div>
+    <ActionModal
+      open={open}
+      onClose={handleClose}
+      theme={theme}
+      colors={colors}
+      title="Email Receipt"
+      subtitle="Send a copy of the receipt to the patient or a custom recipient."
+      icon={<Mail className={cx('h-5 w-5', isDark ? 'text-blue-300' : 'text-blue-600')} />}
+      maxWidthClass="max-w-lg"
+      isBusy={isProcessing}
+      disableClose={isProcessing}
+      busyTitle="Sending receipt"
+      busyDescription="We’re preparing the receipt and delivering it to the selected email address."
+    >
+      <form onSubmit={handleSubmit} className="space-y-5 p-5 sm:p-6">
+        <div className={cx('rounded-xl p-4', isDark ? 'bg-gray-900' : 'bg-gray-50')}>
+          <div className="flex items-start gap-3">
+            <div className={cx('rounded-xl p-2', isDark ? 'bg-blue-900/20' : 'bg-blue-100')}>
+              <ReceiptText className={cx('h-5 w-5', isDark ? 'text-blue-300' : 'text-blue-600')} />
             </div>
-            <button
-              onClick={handleClose}
-              disabled={isProcessing}
-              className={cx(
-                'p-2 rounded-lg transition cursor-pointer',
-                colors.text.tertiary,
-                isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
-                isProcessing && 'cursor-not-allowed opacity-50'
-              )}
-            >
-              <X className="w-5 h-5" />
-            </button>
+
+            <div className="min-w-0 flex-1">
+              <p className={cx('text-sm font-semibold', colors.text.primary)}>
+                {selectedTransaction.receipt_number || 'Draft Receipt'}
+              </p>
+              <p className={cx('mt-1 text-sm', colors.text.secondary)}>
+                Patient: {selectedTransaction.patient_name}
+              </p>
+              <p className={cx('mt-1 text-sm', colors.text.secondary)}>
+                Amount: UGX {selectedTransaction.billing_data.grandTotal.toLocaleString()}
+              </p>
+            </div>
           </div>
+        </div>
 
-          {/* Body */}
-          <form onSubmit={handleSubmit} className="p-5 space-y-4">
-            <div>
-              <label className={cx('block text-sm font-semibold mb-2', colors.text.primary)}>
-                Recipient Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="patient@example.com"
-                required
-                disabled={isProcessing}
-                className={cx(
-                  'w-full px-4 py-2.5 rounded-lg border text-sm cursor-text',
-                  colors.border.primary,
-                  isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
-                  colors.ring,
-                  isProcessing && 'cursor-not-allowed opacity-50'
-                )}
-              />
-            </div>
-
-            <div>
-              <label className={cx('block text-sm font-semibold mb-2', colors.text.primary)}>
-                Message (Optional)
-              </label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Add a custom message..."
-                rows={3}
-                disabled={isProcessing}
-                className={cx(
-                  'w-full px-4 py-2.5 rounded-lg border text-sm resize-none cursor-text',
-                  colors.border.primary,
-                  isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
-                  colors.ring,
-                  isProcessing && 'cursor-not-allowed opacity-50'
-                )}
-              />
-            </div>
-
-            {selectedTransaction && (
-              <div className={cx('p-3 rounded-lg text-xs', isDark ? 'bg-gray-900' : 'bg-gray-50')}>
-                <p className={cx('font-semibold', colors.text.primary)}>
-                  Receipt: {selectedTransaction.receipt_number || 'Draft'}
-                </p>
-                <p className={colors.text.secondary}>
-                  Patient: {selectedTransaction.patient_name}
-                </p>
-              </div>
+        <div>
+          <label className={cx('mb-2 block text-sm font-semibold', colors.text.primary)}>
+            Recipient Email
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="patient@example.com"
+            required
+            disabled={isProcessing}
+            className={cx(
+              'w-full rounded-xl border px-4 py-3 text-sm',
+              colors.border.primary,
+              isDark ? 'bg-gray-900 text-gray-100 placeholder:text-gray-500' : 'bg-white text-gray-900 placeholder:text-gray-400',
+              colors.ring,
+              isProcessing && 'cursor-not-allowed opacity-60'
             )}
+          />
+        </div>
 
-            {/* Actions */}
-            <div className="flex gap-3 pt-2">
+        <div>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <label className={cx('block text-sm font-semibold', colors.text.primary)}>
+              Message
+            </label>
+
+            {!message && (
               <button
                 type="button"
-                onClick={handleClose}
+                onClick={() => setMessage(defaultMessage)}
                 disabled={isProcessing}
                 className={cx(
-                  'flex-1 px-4 py-2.5 rounded-lg border text-sm font-bold transition cursor-pointer',
-                  colors.border.primary,
-                  isDark ? 'text-gray-100 hover:bg-gray-800' : 'text-gray-900 hover:bg-gray-50',
-                  isProcessing && 'cursor-not-allowed opacity-50'
+                  'text-xs font-medium transition-colors',
+                  isDark ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-700'
                 )}
               >
-                Cancel
+                Use suggested message
               </button>
-              <button
-                type="submit"
-                disabled={isProcessing}
-                className={cx(
-                  'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition cursor-pointer',
-                  'bg-blue-600 hover:bg-blue-700 text-white',
-                  'flex items-center justify-center gap-2',
-                  isProcessing && 'cursor-not-allowed opacity-50'
-                )}
-              >
-                <Send className="w-4 h-4" />
-                {isProcessing ? 'Sending...' : 'Send Email'}
-              </button>
-            </div>
-          </form>
+            )}
+          </div>
+
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Add a short message for the recipient..."
+            rows={4}
+            disabled={isProcessing}
+            className={cx(
+              'w-full resize-none rounded-xl border px-4 py-3 text-sm',
+              colors.border.primary,
+              isDark ? 'bg-gray-900 text-gray-100 placeholder:text-gray-500' : 'bg-white text-gray-900 placeholder:text-gray-400',
+              colors.ring,
+              isProcessing && 'cursor-not-allowed opacity-60'
+            )}
+          />
         </div>
-      </ModalContainer>
-    </>
+
+        <div className="flex flex-col-reverse gap-3 border-t pt-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={isProcessing}
+            className={cx(
+              'rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors',
+              colors.border.primary,
+              isDark ? 'text-gray-100 hover:bg-gray-800' : 'text-gray-900 hover:bg-gray-50',
+              isProcessing && 'cursor-not-allowed opacity-50'
+            )}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            disabled={isProcessing || !email.trim()}
+            className={cx(
+              'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700',
+              'disabled:cursor-not-allowed disabled:opacity-50'
+            )}
+          >
+            <Send className="h-4 w-4" />
+            {isProcessing ? 'Sending...' : 'Send Receipt'}
+          </button>
+        </div>
+      </form>
+    </ActionModal>
   );
 };

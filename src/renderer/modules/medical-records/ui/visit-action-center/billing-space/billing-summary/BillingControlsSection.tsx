@@ -154,7 +154,7 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
 
             <div className={`rounded-lg border ${colors.border.primary} ${colors.bg.secondary} p-3`}>
               <div className={`text-[11px] uppercase tracking-wide ${colors.text.tertiary}`}>
-                Payment Received
+                Amount Received
               </div>
               <div className={`mt-1 text-base font-bold ${colors.text.primary}`}>
                 {toCurrency(financialSnapshot.totalPaid)}

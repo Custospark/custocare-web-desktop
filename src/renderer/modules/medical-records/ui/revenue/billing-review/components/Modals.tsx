@@ -30,7 +30,6 @@ export interface BaseModalProps {
 }
 
 // Re-export all modals and primitives
-export { ModalBackdrop, ModalContainer }  from './receipt-action-modals/ModalPrimitives';
 export { EmailModal } from './receipt-action-modals/EmailModal';
 export { RefundModal } from './receipt-action-modals/RefundModal';
 export { VoidModal } from './receipt-action-modals/VoidModal';

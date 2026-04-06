@@ -1,14 +1,14 @@
-// MRBillingReview.tsx - Updated with conditional modal rendering
-import React, { useMemo, useState, useCallback } from 'react';
+// MRBillingReview.tsx
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { TransactionList } from './billing-review/components/TransactionList';
 import { ReceiptView } from './billing-review/components/ReceiptView';
 import { EmailModal, RefundModal, VoidModal } from './billing-review/components/Modals';
 import { useGetBillingReview } from '../../api/billing-review/BillingReviewQueries';
+import type { BillingReviewItem, BillingCycleStatus } from '../../api/billing-review/BillingReviewTypes';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 import { AlertCircle, LayoutGrid, Receipt } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
-import { BillingCycleStatus } from '../../api/billing-review/BillingReviewTypes';
 
 interface FilterState {
   searchTerm: string;
@@ -23,76 +23,82 @@ interface MRBillingReviewProps {
   theme?: 'light' | 'dark';
 }
 
+type ActiveModal = 'email' | 'refund' | 'void' | null;
+
+type EnrichedBillingReviewItem = BillingReviewItem & {
+  date: string;
+  time: string;
+};
+
+const INITIAL_FILTERS: FilterState = {
+  searchTerm: '',
+  statusFilter: 'all',
+  dateRange: { start: '', end: '' },
+  sortBy: 'date',
+  sortOrder: 'desc',
+  showAdvancedFilters: false,
+};
+
 export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light' }) => {
   const isDark = theme === 'dark';
   const { showToast } = useToast();
-  
-  // Backend Integration with refresh capability
-  const { 
-    data: billingResponse, 
-    isLoading, 
+
+  const {
+    data: billingResponse,
+    isLoading,
     error,
     refetch,
-    isFetching 
+    isFetching,
   } = useGetBillingReview({
     per_page: 50,
     sort_by: 'created_at',
-    sort_order: 'desc'
+    sort_order: 'desc',
   });
 
-  // Transform transactions with derived date/time fields AND ensure required fields
-  const transactions = useMemo(() => {
+  const transactions = useMemo<EnrichedBillingReviewItem[]>(() => {
     if (!billingResponse?.data.items) return [];
-    return billingResponse.data.items.map(item => ({
+
+    return billingResponse.data.items.map((item) => ({
       ...item,
-      date: item.created_at.split('T')[0],
-      time: new Date(item.created_at).toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      date: item.created_at?.split('T')[0] || '',
+      time: new Date(item.created_at).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
       }),
-      // Ensure charge_items have service_key
-      charge_items: item.charge_items?.map((chargeItem: any) => ({
-        ...chargeItem,
-        service_key: chargeItem.service_key || chargeItem.code || chargeItem.id || '',
-      })) || [],
+      charge_items:
+        item.charge_items?.map((chargeItem: any) => ({
+          ...chargeItem,
+          service_key: chargeItem.service_key || chargeItem.code || chargeItem.id || '',
+        })) || [],
     }));
   }, [billingResponse]);
 
-  // Core state
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [filters, setFilters] = useState<FilterState>({
-    searchTerm: '',
-    statusFilter: 'all',
-    dateRange: { start: '', end: '' },
-    sortBy: 'date',
-    sortOrder: 'desc',
-    showAdvancedFilters: false,
-  });
-
-  // Modal states
-  const [refundOpen, setRefundOpen] = useState(false);
-  const [emailOpen, setEmailOpen] = useState(false);
-  const [voidOpen, setVoidOpen] = useState(false);
-
-  // Mobile view state
+  const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [mobileView, setMobileView] = useState<'list' | 'receipt'>('list');
 
-  // Derived state - selected transaction is properly typed
+  const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+  const [modalTransaction, setModalTransaction] = useState<EnrichedBillingReviewItem | null>(null);
+
   const selectedTransaction = useMemo(
     () => transactions.find((t) => t.visit_uuid === selectedId) || null,
     [transactions, selectedId]
   );
 
-  // Auto-switch to receipt view on mobile when a transaction is selected
+  useEffect(() => {
+    if (!selectedId && transactions.length > 0) {
+      setSelectedId(transactions[0].visit_uuid);
+    }
+  }, [selectedId, transactions]);
+
   const handleSelectTransaction = useCallback((id: string) => {
     setSelectedId(id);
-    // On mobile, automatically switch to receipt view when selecting
+
     if (window.innerWidth < 1024) {
       setMobileView('receipt');
     }
   }, []);
 
-  // Filter transactions based on current filters
   const filteredTransactions = useMemo(() => {
     let filtered = [...transactions];
 
@@ -114,12 +120,14 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
     if (filters.dateRange.start) {
       filtered = filtered.filter((t) => t.date >= filters.dateRange.start);
     }
+
     if (filters.dateRange.end) {
       filtered = filtered.filter((t) => t.date <= filters.dateRange.end);
     }
 
     filtered.sort((a, b) => {
       let comparison = 0;
+
       switch (filters.sortBy) {
         case 'date':
           comparison = a.date.localeCompare(b.date);
@@ -131,84 +139,80 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
           comparison = a.patient_name.localeCompare(b.patient_name);
           break;
       }
+
       return filters.sortOrder === 'asc' ? comparison : -comparison;
     });
 
     return filtered;
   }, [transactions, filters]);
 
-  // Refresh handler
   const handleRefresh = useCallback(async () => {
     try {
       await refetch();
-      showToast('success', 'Data refreshed successfully', 3000);
-    } catch (error) {
-      console.log(error);
-      showToast('error', 'Failed to refresh data', 5000);
+      showToast('success', 'Billing records refreshed successfully.', 2500);
+    } catch {
+      showToast('error', 'Failed to refresh billing records.', 4000);
     }
   }, [refetch, showToast]);
 
-  // Success handler for modal operations
-  const handleModalSuccess = useCallback(() => {
-    handleRefresh();
+  const handleModalSuccess = useCallback(async () => {
+    setActiveModal(null);
+    await handleRefresh();
   }, [handleRefresh]);
 
-  // Action handlers - only open modals if transaction exists
+  const openModal = useCallback(
+    (type: Exclude<ActiveModal, null>) => {
+      if (!selectedTransaction) {
+        showToast('error', 'Select a transaction first.', 2500);
+        return;
+      }
+
+      setModalTransaction(selectedTransaction);
+      setActiveModal(type);
+    },
+    [selectedTransaction, showToast]
+  );
+
+  const closeModal = useCallback(() => {
+    setActiveModal(null);
+  }, []);
+
+  useEffect(() => {
+    if (!activeModal) {
+      const timer = window.setTimeout(() => {
+        setModalTransaction(null);
+      }, 180);
+
+      return () => window.clearTimeout(timer);
+    }
+  }, [activeModal]);
+
   const handlePrint = useCallback(() => {
     if (!selectedTransaction) {
-      showToast('error', 'No transaction selected', 3000);
+      showToast('error', 'No transaction selected.', 2500);
       return;
     }
-    showToast('info', 'Print request sent to the printing queue...', 3000);
+
+    showToast('info', 'Receipt sent to the print queue.', 2500);
   }, [selectedTransaction, showToast]);
 
-  const handleEmail = useCallback(() => {
-    if (!selectedTransaction) {
-      showToast('error', 'No transaction selected', 3000);
-      return;
-    }
-    setEmailOpen(true);
-  }, [selectedTransaction, showToast]);
+  const handleEmailSubmit = useCallback(
+    async (_payload: { email: string; message: string }) => {
+      consolelog(_payload)
+      showToast('info', 'Email sending will be wired to backend next.', 4000);
+      setActiveModal(null);
+    },
+    [showToast]
+  );
 
-  const handleRefund = useCallback(() => {
-    if (!selectedTransaction) {
-      showToast('error', 'No transaction selected', 3000);
-      return;
-    }
-    setRefundOpen(true);
-  }, [selectedTransaction, showToast]);
-
-  const handleVoid = useCallback(() => {
-    if (!selectedTransaction) {
-      showToast('error', 'No transaction selected', 3000);
-      return;
-    }
-    setVoidOpen(true);
-  }, [selectedTransaction, showToast]);
-
-  const handleEmailSubmit = useCallback(() => {
-    // Email functionality will be implemented separately
-    showToast('info', 'Email functionality - backend integration pending', 5000);
-    setEmailOpen(false);
-  }, [showToast]);
-
-  // Filter management
   const updateFilter = useCallback(<K extends keyof FilterState>(key: K, value: FilterState[K]) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
   }, []);
 
   const clearFilters = useCallback(() => {
-    setFilters({
-      searchTerm: '',
-      statusFilter: 'all',
-      dateRange: { start: '', end: '' },
-      sortBy: 'date',
-      sortOrder: 'desc',
-      showAdvancedFilters: false,
-    });
+    setFilters(INITIAL_FILTERS);
   }, []);
 
-  // Theme colors
   const colors = {
     bg: {
       primary: isDark ? 'bg-gray-900' : 'bg-gray-50',
@@ -231,42 +235,39 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
     },
     ring: 'focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none',
     accent: {
-      primary: isDark ? 'bg-blue-600' : 'bg-blue-600',
-      hover: isDark ? 'hover:bg-blue-700' : 'hover:bg-blue-700',
+      primary: 'bg-blue-600',
+      hover: 'hover:bg-blue-700',
       text: 'text-white',
     },
   };
 
   const pillBg = isDark ? 'bg-gray-700' : 'bg-gray-100';
 
-  // Loading state
   if (isLoading) {
     return <LoadingSkeleton variant="detail" theme={theme} message="Loading billing records..." />;
   }
 
-  // Error state
   if (error) {
     return (
-      <div className={`flex items-center justify-center h-full ${colors.bg.primary} p-8`}>
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center max-w-md"
-        >
-          <div className={`p-4 rounded-xl mb-4 inline-block ${isDark ? 'bg-red-900/20' : 'bg-red-100'}`}>
-            <AlertCircle className={`w-12 h-12 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
+      <div className={`flex h-full items-center justify-center ${colors.bg.primary} p-8`}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md text-center">
+          <div className={`mb-4 inline-block rounded-xl p-4 ${isDark ? 'bg-red-900/20' : 'bg-red-100'}`}>
+            <AlertCircle className={`h-12 w-12 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
           </div>
-          <h3 className={`text-lg font-bold mb-2 ${colors.text.primary}`}>
+
+          <h3 className={`mb-2 text-lg font-bold ${colors.text.primary}`}>
             Error Loading Billing Records
           </h3>
+
           <p className={`text-sm ${colors.text.secondary}`}>
             {error.message || 'An unexpected error occurred. Please try again later.'}
           </p>
+
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleRefresh}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+            className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
           >
             Try Again
           </motion.button>
@@ -277,7 +278,6 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
 
   return (
     <div className={`h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6 ${colors.bg.primary}`}>
-      {/* Print Styles */}
       <style>{`
         @media print {
           html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -291,13 +291,12 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
         }
       `}</style>
 
-      {/* Mobile View Toggle */}
-      <div className="no-print lg:hidden mb-4">
-        <div className={`flex items-center gap-2 p-1 rounded-xl border ${colors.border.primary} ${colors.bg.elevated}`}>
+      <div className="no-print mb-4 lg:hidden">
+        <div className={`flex items-center gap-2 rounded-xl border p-1 ${colors.border.primary} ${colors.bg.elevated}`}>
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={() => setMobileView('list')}
-            className={`flex-1 px-4 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
               mobileView === 'list'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : isDark
@@ -305,75 +304,65 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
                 : 'text-gray-900 hover:bg-gray-100'
             }`}
           >
-            <LayoutGrid className="w-4 h-4" />
+            <LayoutGrid className="h-4 w-4" />
             Records ({filteredTransactions.length})
           </motion.button>
+
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={() => setMobileView('receipt')}
             disabled={!selectedId}
-            className={`flex-1 px-4 py-2.5 text-sm font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
               mobileView === 'receipt'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : !selectedId
                 ? isDark
-                  ? 'text-gray-600 cursor-not-allowed'
-                  : 'text-gray-400 cursor-not-allowed'
+                  ? 'cursor-not-allowed text-gray-600'
+                  : 'cursor-not-allowed text-gray-400'
                 : isDark
                 ? 'text-gray-200 hover:bg-gray-700'
                 : 'text-gray-900 hover:bg-gray-100'
             }`}
           >
-            <Receipt className="w-4 h-4" />
+            <Receipt className="h-4 w-4" />
             Receipt
           </motion.button>
         </div>
       </div>
 
-      {/* Main Grid - Both panels sticky */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-6 h-[calc(100%-4rem)]">
-        {/* Receipt Preview */}
-        <motion.div 
-          className={`
-            ${mobileView === 'list' ? 'hidden md:block' : 'block'}
-            md:block
-          `}
+      <div className="grid h-[calc(100%-4rem)] grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
+        <motion.div
+          className={`${mobileView === 'list' ? 'hidden md:block' : 'block'} md:block`}
           layout
           transition={{ duration: 0.2 }}
         >
           <div>
-            {/* Only render ReceiptView when a transaction is selected */}
             {selectedTransaction ? (
               <ReceiptView
                 selectedTransaction={selectedTransaction}
                 theme={theme}
                 colors={colors}
                 onPrint={handlePrint}
-                onEmail={handleEmail}
-                onRefund={handleRefund}
-                onVoid={handleVoid}
+                onEmail={() => openModal('email')}
+                onRefund={() => openModal('refund')}
+                onVoid={() => openModal('void')}
               />
             ) : (
-              /* Empty state when no transaction is selected */
-              <div className={`flex flex-col items-center justify-center h-full min-h-[400px] rounded-xl border ${colors.border.primary} ${colors.bg.secondary} p-8 text-center`}>
-                <Receipt className={`w-16 h-16 mb-4 ${colors.text.tertiary}`} />
-                <h3 className={`text-lg font-semibold mb-2 ${colors.text.primary}`}>
+              <div className={`flex min-h-[400px] h-full flex-col items-center justify-center rounded-xl border p-8 text-center ${colors.border.primary} ${colors.bg.secondary}`}>
+                <Receipt className={`mb-4 h-16 w-16 ${colors.text.tertiary}`} />
+                <h3 className={`mb-2 text-lg font-semibold ${colors.text.primary}`}>
                   No Transaction Selected
                 </h3>
                 <p className={`text-sm ${colors.text.secondary}`}>
-                  Select a transaction from the list to view receipt details
+                  Select a transaction from the list to view receipt details.
                 </p>
               </div>
             )}
           </div>
         </motion.div>
 
-        {/* Transaction List */}
-        <motion.div 
-          className={`
-            ${mobileView === 'receipt' ? 'hidden md:block' : 'block'}
-            md:block h-full
-          `}
+        <motion.div
+          className={`${mobileView === 'receipt' ? 'hidden md:block' : 'block'} md:block h-full`}
           layout
           transition={{ duration: 0.2 }}
         >
@@ -397,37 +386,32 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
         </motion.div>
       </div>
 
-      {/* Modals - Only render when transaction exists and modal is open */}
-      {selectedTransaction && (
-        <>
-          <RefundModal
-            open={refundOpen}
-            selectedTransaction={selectedTransaction}
-            theme={theme}
-            colors={colors}
-            onClose={() => setRefundOpen(false)}
-            onSuccess={handleModalSuccess}
-          />
+      <RefundModal
+        open={activeModal === 'refund'}
+        selectedTransaction={modalTransaction}
+        theme={theme}
+        colors={colors}
+        onClose={closeModal}
+        onSuccess={handleModalSuccess}
+      />
 
-          <EmailModal
-            open={emailOpen}
-            selectedTransaction={selectedTransaction}
-            theme={theme}
-            colors={colors}
-            onClose={() => setEmailOpen(false)}
-            onSubmit={handleEmailSubmit}
-          />
+      <EmailModal
+        open={activeModal === 'email'}
+        selectedTransaction={modalTransaction}
+        theme={theme}
+        colors={colors}
+        onClose={closeModal}
+        onSubmit={handleEmailSubmit}
+      />
 
-          <VoidModal
-            open={voidOpen}
-            selectedTransaction={selectedTransaction}
-            theme={theme}
-            colors={colors}
-            onClose={() => setVoidOpen(false)}
-            onSuccess={handleModalSuccess}
-          />
-        </>
-      )}
+      <VoidModal
+        open={activeModal === 'void'}
+        selectedTransaction={modalTransaction}
+        theme={theme}
+        colors={colors}
+        onClose={closeModal}
+        onSuccess={handleModalSuccess}
+      />
     </div>
   );
 };

@@ -346,7 +346,7 @@ export function formatCurrency(amount: number, currency: string = 'UGX'): string
     style: 'currency',
     currency,
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   }).format(amount);
 }
 
