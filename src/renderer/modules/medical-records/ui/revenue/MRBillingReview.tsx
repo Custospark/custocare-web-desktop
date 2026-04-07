@@ -57,23 +57,27 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
     sort_order: 'desc',
   });
 
-  const transactions = useMemo<EnrichedBillingReviewItem[]>(() => {
-    if (!billingResponse?.data.items) return [];
+    const transactions = useMemo<EnrichedBillingReviewItem[]>(() => {
+      if (!billingResponse?.data.items) return [];
 
-    return billingResponse.data.items.map((item) => ({
-      ...item,
-      date: item.created_at?.split('T')[0] || '',
-      time: new Date(item.created_at).toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      charge_items:
-        item.charge_items?.map((chargeItem: any) => ({
+      return billingResponse.data.items.map((item) => ({
+        ...item,
+        date: item.created_at?.split('T')[0] || '',
+        time: new Date(item.created_at).toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        charge_items: item.charge_items?.map((chargeItem: any) => ({
           ...chargeItem,
           service_key: chargeItem.service_key || chargeItem.code || chargeItem.id || '',
         })) || [],
-    }));
-  }, [billingResponse]);
+        // Transform refunded_items if needed
+        refunded_items: item.refunded_items?.map((refundedItem: any) => ({
+          ...refundedItem,
+          refunded: true, // Ensure refunded is always true as per type requirement
+        })) || [],
+      }));
+    }, [billingResponse]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
