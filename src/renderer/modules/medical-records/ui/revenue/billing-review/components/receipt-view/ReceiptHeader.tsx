@@ -1,7 +1,7 @@
 // components/billing-review/components/receipt-view/ReceiptHeader.tsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Receipt, Printer, Undo2, Ban, History, Clock, FileText } from 'lucide-react';
+import { Receipt, Printer, Undo2, Ban, History, Clock } from 'lucide-react';
 import { BillingCycleStatus, BILLING_CYCLE_STATUS_LABELS, PaymentStatus } from '../../../../../api/billing-review/BillingReviewTypes';
 
 interface ThemeColors {
@@ -138,26 +138,30 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   
   const base = 'inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer';
   
-  const styles = variant === 'primary'
-    ? 'bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white shadow-sm hover:shadow focus:ring-blue-500'
-    : variant === 'email'
-    ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-sm hover:shadow focus:ring-purple-500'
-    : variant === 'secondary'
-    ? cx(
-        isDark
-          ? 'bg-gray-800 hover:bg-gray-700 text-gray-100 border border-gray-700 shadow-sm'
-          : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm'
-      )
-    : variant === 'warn'
-    ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-sm hover:shadow focus:ring-amber-500'
-    : variant === 'danger'
-    ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-sm hover:shadow focus:ring-red-500'
-    : variant === 'history'
-    ? cx(
-        'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-sm hover:shadow focus:ring-purple-500',
-        'before:content-[""] before:absolute before:inset-0 before:bg-gradient-to-r before:from-indigo-400 before:to-purple-500 before:opacity-0 hover:before:opacity-20 before:transition-opacity relative overflow-hidden'
-      )
-    : '';
+  const getStyles = () => {
+    switch (variant) {
+      case 'primary':
+        return 'bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white shadow-sm hover:shadow focus:ring-blue-500';
+      case 'email':
+        return 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-sm hover:shadow focus:ring-purple-500';
+      case 'warn':
+        return 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-sm hover:shadow focus:ring-amber-500';
+      case 'danger':
+        return 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-sm hover:shadow focus:ring-red-500';
+      case 'history':
+        return cx(
+          'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-sm hover:shadow focus:ring-indigo-500',
+          'relative overflow-hidden group'
+        );
+      case 'secondary':
+      default:
+        return cx(
+          isDark
+            ? 'bg-gray-800 hover:bg-gray-700 text-gray-100 border border-gray-700 shadow-sm'
+            : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm'
+        );
+    }
+  };
 
   return (
     <motion.button
@@ -165,10 +169,39 @@ const ActionButton: React.FC<ActionButtonProps> = ({
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       disabled={disabled}
-      className={cx(base, styles, disabled && 'opacity-50 cursor-not-allowed')}
+      className={cx(base, getStyles(), disabled && 'opacity-50 cursor-not-allowed')}
     >
-      {icon}
-      <span>{label}</span>
+      {variant === 'history' && (
+        <>
+          {/* Animated background effect for history button */}
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-purple-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300"
+            initial={false}
+            animate={{ opacity: 0 }}
+            whileHover={{ opacity: 0.2 }}
+          />
+          {/* Rotating clock icon effect on hover */}
+          <motion.div
+            whileHover={{ rotate: 180 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+          >
+            {icon}
+          </motion.div>
+        </>
+      )}
+      {variant !== 'history' && icon}
+      <span className="relative z-10">{label}</span>
+      {variant === 'history' && (
+        <motion.div
+          className="absolute inset-0 rounded-lg"
+          initial={{ scale: 0, opacity: 0 }}
+          whileHover={{ scale: 1, opacity: 0.1 }}
+          transition={{ duration: 0.3 }}
+          style={{
+            background: 'radial-gradient(circle at center, rgba(255,255,255,0.8) 0%, transparent 70%)',
+          }}
+        />
+      )}
     </motion.button>
   );
 };
@@ -440,5 +473,8 @@ const getActionHint = (status: BillingCycleStatus, visibility: any): string => {
         return 'Print or void this transaction';
     }
   }
-  return 'View transaction details or history';
+  if (visibility.showHistory) {
+    return 'View transaction history or print receipt';
+  }
+  return 'View transaction details';
 };
