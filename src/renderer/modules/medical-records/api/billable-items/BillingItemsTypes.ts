@@ -14,6 +14,8 @@
 /*                                   ENUMS                                    */
 /* -------------------------------------------------------------------------- */
 import { PaymentStatus } from '../billing-review/BillingReviewTypes';
+import type { AuditLogEntry, AuditLogSummary } from '../billing-review/BillingReviewTypes';
+
 export enum BillableItemType {
   INVENTORY = 'inventory',
   SERVICE = 'service',
@@ -200,8 +202,9 @@ export interface BillingChargeItemPermissions {
 
 export interface BillingRetrievedChargeItem {
   id: string;
-  source: 'backend';
+  source: 'backend' | 'refund';
   persisted: true;
+  refunded?: boolean;
 
   line_item_id: number;
   line_item_uuid?: string;
@@ -211,7 +214,11 @@ export interface BillingRetrievedChargeItem {
   serviceKey?: string;
 
   service: ServiceItemCore;
-  quantity: number;
+  quantity: number | {
+    original: number;
+    refunded: number;
+    remaining: number;
+  };
   totalAmount: number;
 
   line_item_status?: string;
@@ -225,6 +232,25 @@ export interface BillingRetrievedChargeItem {
     last_adjusted_by_staff_id?: number | null;
     last_appended_by_staff_id?: number | null;
     last_adjusted_at?: string | null;
+    adjustment_history?: any[];
+  };
+
+  audit_logs?: AuditLogEntry[];
+  audit_logs_summary?: AuditLogSummary;
+
+  refund_info?: {
+    refund_amount: number;
+    patient_refund: number;
+    insurance_refund: number;
+    refund_methods: Array<{
+      type: string;
+      amount: number;
+      reference?: string | null;
+    }>;
+    refund_reason?: string;
+    refunded_at?: string;
+    refunded_by_staff_id?: string | number | null;
+    refunded_by_staff_name?: string;
   };
 }
 
@@ -246,6 +272,7 @@ export interface BillingRetrievalData {
   attending_staff_display?: string | null;
 
   charge_items?: BillingRetrievedChargeItem[];
+  refunded_items?: BillingRetrievedChargeItem[];
   discount?: {
     type: 'percentage' | 'fixed';
     value: number;
@@ -278,6 +305,9 @@ export interface BillingRetrievalData {
     balance: number;
     isPaid?: boolean;
   };
+
+  audit_logs?: AuditLogEntry[];
+  audit_logs_summary?: AuditLogSummary;
 
   billed_at?: string;
   created_at?: string;
@@ -415,7 +445,3 @@ export function formatItemDisplayName(item: BillableItem): string {
   }
   return item.name;
 }
-
-
-
-

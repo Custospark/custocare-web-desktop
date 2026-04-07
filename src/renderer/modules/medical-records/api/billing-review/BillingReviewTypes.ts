@@ -84,15 +84,128 @@ export interface ServiceCore {
   category: string;
 }
 
+/* -------------------------------------------------------------------------- */
+/*                           AUDIT TRAIL TYPES                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Actor who performed an audit event
+ */
+export interface AuditActor {
+  type: 'staff' | 'patient' | 'system' | 'external_api' | 'scheduled_job' | string;
+  id: number | null;
+  identifier?: string | null;
+  name?: string | null;
+  role?: string | null;
+  display?: string | null;
+}
+
+/**
+ * Entity reference in audit log
+ */
+export interface AuditEntityReference {
+  type: string;
+  id: number | null;
+  identifier?: string | null;
+  billing_cycle_id?: number | null;
+  line_item_id?: number | null;
+  financial_adjustment_id?: number | null;
+}
+
+/**
+ * Individual audit log entry
+ */
+export interface AuditLogEntry {
+  id: number;
+  audit_uuid: string;
+  event_key: string;
+  scope: 'billing_cycle' | 'line_item' | string;
+  title: string;
+  action: string;
+  description?: string | null;
+  reason?: string | null;
+  why?: string | null;
+  performed_at: string | null;
+  performed_at_unix_ms?: number | null;
+  performed_by: AuditActor;
+  entity: AuditEntityReference;
+  changed_fields: string[];
+  before?: Record<string, any> | null;
+  after?: Record<string, any> | null;
+  result: 'success' | 'failure' | 'partial' | 'denied' | string;
+}
+
+/**
+ * Summary of audit logs for an entity
+ */
+export interface AuditLogSummary {
+  count: number;
+  last_event_at: string | null;
+  last_event?: AuditLogEntry | null;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                           CHARGE ITEM TYPES                                */
+/* -------------------------------------------------------------------------- */
+
 /**
  * Individual charge item within a billing cycle
+ * Extended to support both active and refunded items
  */
 export interface ChargeItem {
-  id: string; // Format: "charge::uuid"
+  id: string; // Format: "charge::uuid" or "refund::uuid"
+  source?: string;
+  persisted?: boolean;
+  refunded?: boolean;
+  line_item_id?: number | null;
+  line_item_uuid?: string | null;
+  billing_cycle_id?: number | null;
   service_key: string;
+  serviceKey?: string;
   service: ServiceCore;
-  quantity: number;
+  quantity: number | {
+    original: number;
+    refunded: number;
+    remaining: number;
+  };
   totalAmount: number;
+  line_item_status?: string;
+  entered_by_staff_id?: number | null;
+  entered_by_staff_name?: string | null;
+  permissions?: {
+    entered_by_staff_id?: number | null;
+    current_staff_id?: number | null;
+    requires_reason_on_cross_staff_edit: boolean;
+    reason_required: boolean;
+    can_edit_without_reason: boolean;
+  };
+  audit?: Record<string, any>;
+  audit_logs?: AuditLogEntry[];
+  audit_logs_summary?: AuditLogSummary;
+  refund_info?: {
+    refund_amount: number;
+    patient_refund: number;
+    insurance_refund: number;
+    refund_methods: Array<{
+      type: string;
+      amount: number;
+      reference?: string | null;
+    }>;
+    refund_reason?: string;
+    refunded_at?: string;
+    refunded_by_staff_id?: string | number | null;
+    refunded_by_staff_name?: string;
+  };
+  amounts?: {
+    original_subtotal: number;
+    refund_subtotal: number;
+    remaining_subtotal: number;
+  };
+  matched_reference?: {
+    id?: number | null;
+    type?: string | null;
+  };
+  [key: string]: any;
 }
 
 /**
@@ -160,18 +273,26 @@ export interface BillingReviewItem {
   attending_staff_display: string | null;
   
   charge_items: ChargeItem[];
+  refunded_items?: ChargeItem[];
   discount: Discount;
   taxes: Tax[];
   payment_methods: PaymentMethod[];
   additional_notes: string;
   payment_status: PaymentStatus;
   billing_data: BillingData;
+  
+  // Audit trail fields
+  audit_logs?: AuditLogEntry[];
+  audit_logs_summary?: AuditLogSummary;
+  
   billed_at: string | null;
   created_at: string;
   updated_at: string;
   last_updated: number; // Timestamp in milliseconds
   is_dirty: boolean;
   is_processing: boolean;
+  
+  [key: string]: any;
 }
 
 /**
@@ -206,6 +327,7 @@ export interface BillingReviewFilters {
   has_billing?: boolean;
   sort_by?: 'created_at' | 'updated_at' | 'patient_name' | 'grandTotal';
   sort_order?: 'asc' | 'desc';
+  current_staff_id?: number;
 }
 
 /**
@@ -350,6 +472,20 @@ export function formatCurrency(amount: number, currency: string = 'UGX'): string
   }).format(amount);
 }
 
+/**
+ * Type guard to check if a charge item is a refunded item
+ */
+export function isRefundedItem(item: ChargeItem): boolean {
+  return item.refunded === true || item.source === 'refund';
+}
+
+/**
+ * Type guard to check if quantity is an object (refunded item) or number
+ */
+export function isRefundedQuantity(quantity: number | { original: number; refunded: number; remaining: number }): quantity is { original: number; refunded: number; remaining: number } {
+  return typeof quantity === 'object' && 'original' in quantity && 'refunded' in quantity && 'remaining' in quantity;
+}
+
 /* -------------------------------------------------------------------------- */
 /*                            CONSTANTS & DEFAULTS                            */
 /* -------------------------------------------------------------------------- */
@@ -403,7 +539,7 @@ export const BILLING_CYCLE_STATUS_LABELS: Record<BillingCycleStatus, string> = {
   [BillingCycleStatus.WRITTEN_OFF]: 'Void',
   [BillingCycleStatus.CHARITY_CARE]: 'Charity Care',
   [BillingCycleStatus.PARTIALLY_REFUNDED]: 'Partially Refunded',
-[BillingCycleStatus.FULLY_REFUNDED]: 'Fully Refunded',
+  [BillingCycleStatus.FULLY_REFUNDED]: 'Fully Refunded',
 };
 
 export const BILLING_CYCLE_STATUS_COLORS: Record<BillingCycleStatus, string> = {

@@ -1,6 +1,7 @@
+// components/billing-review/components/receipt-view/ReceiptHeader.tsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Receipt, Printer, Undo2, Ban } from 'lucide-react';
+import { Receipt, Printer, Undo2, Ban, History, Clock, FileText } from 'lucide-react';
 import { BillingCycleStatus, BILLING_CYCLE_STATUS_LABELS, PaymentStatus } from '../../../../../api/billing-review/BillingReviewTypes';
 
 interface ThemeColors {
@@ -30,6 +31,7 @@ interface ThemeColors {
     text: string;
   };
 }
+
 type ReceiptStatus = BillingCycleStatus | PaymentStatus;
 
 // Define the DerivedFinancials interface properly
@@ -61,6 +63,7 @@ interface ReceiptHeaderProps {
   onEmail: () => void;
   onRefund: () => void;
   onVoid: () => void;
+  onHistory: () => void;
   isPrinting: boolean;
 }
 
@@ -117,7 +120,7 @@ interface ActionButtonProps {
   disabled?: boolean;
   icon: React.ReactNode;
   label: string;
-  variant?: 'primary' | 'secondary' | 'email' | 'warn' | 'danger';
+  variant?: 'primary' | 'secondary' | 'email' | 'warn' | 'danger' | 'history';
   isDark: boolean;
   show?: boolean;
 }
@@ -147,7 +150,14 @@ const ActionButton: React.FC<ActionButtonProps> = ({
       )
     : variant === 'warn'
     ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-sm hover:shadow focus:ring-amber-500'
-    : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-sm hover:shadow focus:ring-red-500';
+    : variant === 'danger'
+    ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-sm hover:shadow focus:ring-red-500'
+    : variant === 'history'
+    ? cx(
+        'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-sm hover:shadow focus:ring-purple-500',
+        'before:content-[""] before:absolute before:inset-0 before:bg-gradient-to-r before:from-indigo-400 before:to-purple-500 before:opacity-0 hover:before:opacity-20 before:transition-opacity relative overflow-hidden'
+      )
+    : '';
 
   return (
     <motion.button
@@ -172,6 +182,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
   onPrintClick,
   onRefund,
   onVoid,
+  onHistory,
   isPrinting,
 }) => {
   const [isLargeScreen, setIsLargeScreen] = useState(false);
@@ -199,6 +210,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
         showPrint: true,
         showRefund: false,
         showVoid: false,
+        showHistory: true,
       };
     }
 
@@ -211,6 +223,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
           showPrint: true,
           showRefund: true,
           showVoid: false,
+          showHistory: true,
         };
       
       case BillingCycleStatus.PARTIALLY_PAID:
@@ -218,6 +231,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
           showPrint: true,
           showRefund: true,
           showVoid: false,
+          showHistory: true,
         };
       
       case BillingCycleStatus.PARTIALLY_REFUNDED:
@@ -225,6 +239,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
           showPrint: true,
           showRefund: true, // Allow additional refunds
           showVoid: false,
+          showHistory: true,
         };
       
       case BillingCycleStatus.FULLY_REFUNDED:
@@ -232,6 +247,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
           showPrint: true,
           showRefund: false,
           showVoid: false,
+          showHistory: true,
         };
       
       case BillingCycleStatus.PENDING:
@@ -240,6 +256,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
           showPrint: true,
           showRefund: false,
           showVoid: true,
+          showHistory: true,
         };
       
       case BillingCycleStatus.PENDING_SUBMISSION:
@@ -248,6 +265,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
           showPrint: true,
           showRefund: false,
           showVoid: true,
+          showHistory: true,
         };
       
       case BillingCycleStatus.PENDING_REVIEW:
@@ -256,6 +274,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
           showPrint: true,
           showRefund: false,
           showVoid: true,
+          showHistory: true,
         };
       
       case BillingCycleStatus.DRAFT:
@@ -264,6 +283,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
           showPrint: true,
           showRefund: false,
           showVoid: true,
+          showHistory: true,
         };
       
       case BillingCycleStatus.WRITTEN_OFF:
@@ -272,6 +292,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
           showPrint: true,
           showRefund: false,
           showVoid: false,
+          showHistory: true,
         };
       
       default:
@@ -282,6 +303,7 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
                    status === BillingCycleStatus.PENDING ||
                    status === BillingCycleStatus.PENDING_SUBMISSION ||
                    status === BillingCycleStatus.PENDING_REVIEW,
+          showHistory: true,
         };
     }
   }, [selectedTransaction, derivedFinancials]);
@@ -313,8 +335,17 @@ export const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({
       variant: 'danger' as const,
       key: 'void',
       show: buttonVisibility.showVoid
+    },
+    {
+      onClick: onHistory,
+      disabled: !selectedTransaction,
+      icon: <History className="w-4 h-4" />,
+      label: 'History',
+      variant: 'history' as const,
+      key: 'history',
+      show: buttonVisibility.showHistory
     }
-  ].filter(config => config.show), [selectedTransaction, isPrinting, onPrintClick, onRefund, onVoid, buttonVisibility]);
+  ].filter(config => config.show), [selectedTransaction, isPrinting, onPrintClick, onRefund, onVoid, onHistory, buttonVisibility]);
 
   const orderedButtons = isLargeScreen 
     ? [...buttonConfigs].reverse()
@@ -409,5 +440,5 @@ const getActionHint = (status: BillingCycleStatus, visibility: any): string => {
         return 'Print or void this transaction';
     }
   }
-  return 'View transaction details';
+  return 'View transaction details or history';
 };

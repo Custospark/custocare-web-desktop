@@ -97,8 +97,11 @@ export interface RefundMethod {
  */
 export interface RefundLineItem {
   line_item_id: number;
+  service_code?: string;
   refund_amount?: number | null;
+  quantity?: number | null;
 }
+
 
 /**
  * Base refund request (shared fields)

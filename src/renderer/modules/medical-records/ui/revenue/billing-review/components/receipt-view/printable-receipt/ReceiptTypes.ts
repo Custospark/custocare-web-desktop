@@ -1,6 +1,7 @@
 // ReceiptTypes.ts
-import type {ChargeItem, Tax, PaymentMethod, BillingData } from  '../../../../../../api/billing-review/BillingReviewTypes';
+import type { ChargeItem, Tax, PaymentMethod, BillingData } from '../../../../../../api/billing-review/BillingReviewTypes';
 import { BillingCycleStatus, PaymentStatus } from '../../../../../../api/billing-review/BillingReviewTypes';
+import type { AuditLogEntry, AuditLogSummary } from '../../../../../../api/billing-review/BillingReviewTypes';
 
 /* -------------------------------------------------------------------------- */
 /*                              CONSTANTS                                     */
@@ -37,6 +38,11 @@ export interface BaseChargeItem {
   quantity: number;
   totalAmount: number;
   line_item_status?: string;
+  line_item_id?: number | null;
+  line_item_uuid?: string | null;
+  billing_cycle_id?: number | null;
+  audit_logs?: AuditLogEntry[];
+  audit_logs_summary?: AuditLogSummary;
   [key: string]: any;
 }
 
@@ -78,6 +84,8 @@ export interface RefundedItem extends Omit<ChargeItem, 'quantity'> {
     refunded_by_staff_id?: number | null;
     refunded_by_staff_name?: string;
   };
+  audit_logs?: AuditLogEntry[];
+  audit_logs_summary?: AuditLogSummary;
 }
 
 export interface DerivedFinancials {
@@ -123,6 +131,8 @@ export interface ReceiptTransactionShape {
   taxes?: Tax[];
   payment_status?: PaymentStatus;
   billing_status?: BillingCycleStatus;
+  audit_logs?: AuditLogEntry[];
+  audit_logs_summary?: AuditLogSummary;
   [key: string]: any;
 }
 

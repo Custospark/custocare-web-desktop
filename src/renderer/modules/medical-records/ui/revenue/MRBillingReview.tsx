@@ -3,8 +3,10 @@ import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { TransactionList } from './billing-review/components/TransactionList';
 import { ReceiptView } from './billing-review/components/ReceiptView';
 import { EmailModal, RefundModal, VoidModal } from './billing-review/components/Modals';
+import LineItemHistoryModal from './billing-review/components/receipt-action-modals/LineItemHistoryModal';
+import BillingHistoryModal from './billing-review/components/receipt-action-modals/BillingHistoryModal';
 import { useGetBillingReview } from '../../api/billing-review/BillingReviewQueries';
-import type { BillingReviewItem, BillingCycleStatus } from '../../api/billing-review/BillingReviewTypes';
+import type { BillingReviewItem, BillingCycleStatus, ChargeItem } from '../../api/billing-review/BillingReviewTypes';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 import { AlertCircle, LayoutGrid, Receipt } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -79,6 +81,11 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
 
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [modalTransaction, setModalTransaction] = useState<EnrichedBillingReviewItem | null>(null);
+
+  // New states for history modals
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [lineItemHistoryOpen, setLineItemHistoryOpen] = useState(false);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<ChargeItem | null>(null);
 
   const selectedTransaction = useMemo(
     () => transactions.find((t) => t.visit_uuid === selectedId) || null,
@@ -175,6 +182,30 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
 
   const closeModal = useCallback(() => {
     setActiveModal(null);
+  }, []);
+
+  // New handlers for history modals
+  const openBillingHistory = useCallback(() => {
+    if (!selectedTransaction) {
+      showToast('error', 'Select a transaction first.', 2500);
+      return;
+    }
+
+    setHistoryOpen(true);
+  }, [selectedTransaction, showToast]);
+
+  const closeBillingHistory = useCallback(() => {
+    setHistoryOpen(false);
+  }, []);
+
+  const openLineItemHistory = useCallback((item: ChargeItem) => {
+    setSelectedHistoryItem(item);
+    setLineItemHistoryOpen(true);
+  }, []);
+
+  const closeLineItemHistory = useCallback(() => {
+    setLineItemHistoryOpen(false);
+    setTimeout(() => setSelectedHistoryItem(null), 180);
   }, []);
 
   useEffect(() => {
@@ -346,6 +377,8 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
                 onEmail={() => openModal('email')}
                 onRefund={() => openModal('refund')}
                 onVoid={() => openModal('void')}
+                onHistory={openBillingHistory}
+                onLineItemHistory={openLineItemHistory}
               />
             ) : (
               <div className={`flex min-h-[400px] h-full flex-col items-center justify-center rounded-xl border p-8 text-center ${colors.border.primary} ${colors.bg.secondary}`}>
@@ -411,6 +444,22 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
         colors={colors}
         onClose={closeModal}
         onSuccess={handleModalSuccess}
+      />
+
+      <BillingHistoryModal
+        open={historyOpen}
+        onClose={closeBillingHistory}
+        theme={theme}
+        title={selectedTransaction ? `${selectedTransaction.receipt_number || 'Billing Cycle'} History` : 'Billing History'}
+        logs={selectedTransaction?.audit_logs || []}
+      />
+
+      <LineItemHistoryModal
+        open={lineItemHistoryOpen}
+        onClose={closeLineItemHistory}
+        theme={theme}
+        itemName={selectedHistoryItem?.service?.name}
+        logs={selectedHistoryItem?.audit_logs || []}
       />
     </div>
   );

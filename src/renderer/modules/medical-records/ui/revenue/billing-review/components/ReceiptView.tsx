@@ -52,6 +52,8 @@ interface ReceiptViewProps {
   onEmail: () => void;
   onRefund: () => void;
   onVoid: () => void;
+  onHistory: () => void;
+  onLineItemHistory: (item: any) => void;
 }
 
 interface DerivedFinancials {
@@ -90,6 +92,7 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
   onEmail,
   onRefund,
   onVoid,
+  onHistory,
 }) => {
   const isDark = theme === 'dark';
   const receiptRef = useRef<HTMLDivElement>(null);
@@ -176,102 +179,103 @@ export const ReceiptView: React.FC<ReceiptViewProps> = ({
       netCash,
     };
   };
-const getDerivedFinancials = (): DerivedFinancials | null => {
-  if (!selectedTransaction) return null;
+  
+  const getDerivedFinancials = (): DerivedFinancials | null => {
+    if (!selectedTransaction) return null;
 
-  // ========== CALCULATE FROM ACTUAL TRANSACTION DATA ==========
-  // selectedTransaction represents the rendered billing state, so use its
-  // current charge items, discount, taxes, and payment methods as-is.
+    // ========== CALCULATE FROM ACTUAL TRANSACTION DATA ==========
+    // selectedTransaction represents the rendered billing state, so use its
+    // current charge items, discount, taxes, and payment methods as-is.
 
-  // 1. SUBTOTAL: Sum of all charge items
-  const chargeItems = selectedTransaction.charge_items || [];
-  const subtotal = chargeItems.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
+    // 1. SUBTOTAL: Sum of all charge items
+    const chargeItems = selectedTransaction.charge_items || [];
+    const subtotal = chargeItems.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
 
-  // 2. DISCOUNT
-  // Percentage discount must be converted into an amount from subtotal
-  const discountType = selectedTransaction.discount?.type || null;
-  const discountValue = Number(selectedTransaction.discount?.value || 0);
-  const discountAmount = resolveDiscountAmount(subtotal, selectedTransaction.discount);
-  const discountPercent = discountType === 'percentage' ? discountValue : 0;
+    // 2. DISCOUNT
+    // Percentage discount must be converted into an amount from subtotal
+    const discountType = selectedTransaction.discount?.type || null;
+    const discountValue = Number(selectedTransaction.discount?.value || 0);
+    const discountAmount = resolveDiscountAmount(subtotal, selectedTransaction.discount);
+    const discountPercent = discountType === 'percentage' ? discountValue : 0;
 
-  // 3. TAXABLE AMOUNT
-  const taxableAmount = Math.max(0, subtotal - discountAmount);
+    // 3. TAXABLE AMOUNT
+    const taxableAmount = Math.max(0, subtotal - discountAmount);
 
-  // 4. TAX TOTAL
-  const taxes = selectedTransaction.taxes || [];
-  const taxTotal = taxes.reduce((sum, tax) => sum + (tax.amount || 0), 0);
+    // 4. TAX TOTAL
+    const taxes = selectedTransaction.taxes || [];
+    const taxTotal = taxes.reduce((sum, tax) => sum + (tax.amount || 0), 0);
 
-  // 5. GRAND TOTAL
-  const grandTotal = taxableAmount + taxTotal;
+    // 5. GRAND TOTAL
+    const grandTotal = taxableAmount + taxTotal;
 
-  // 6. PAYMENT METHODS
-  const paymentMethods = selectedTransaction.payment_methods || [];
-  const hasCashPayment = paymentMethods.some((pm) => pm.type === 'cash');
+    // 6. PAYMENT METHODS
+    const paymentMethods = selectedTransaction.payment_methods || [];
+    const hasCashPayment = paymentMethods.some((pm) => pm.type === 'cash');
 
-  const cashTendered = paymentMethods
-    .filter((pm) => pm.type === 'cash')
-    .reduce((sum, pm) => sum + (pm.amount || 0), 0);
+    const cashTendered = paymentMethods
+      .filter((pm) => pm.type === 'cash')
+      .reduce((sum, pm) => sum + (pm.amount || 0), 0);
 
-  const nonCashTotal = paymentMethods
-    .filter((pm) => pm.type !== 'cash')
-    .reduce((sum, pm) => sum + (pm.amount || 0), 0);
+    const nonCashTotal = paymentMethods
+      .filter((pm) => pm.type !== 'cash')
+      .reduce((sum, pm) => sum + (pm.amount || 0), 0);
 
-  const totalPaidFromMethods = paymentMethods.reduce(
-    (sum: number, pm: PaymentMethod) => sum + (pm.amount || 0),
-    0
-  );
+    const totalPaidFromMethods = paymentMethods.reduce(
+      (sum: number, pm: PaymentMethod) => sum + (pm.amount || 0),
+      0
+    );
 
-  // 7. CHANGE
-  const remainingAfterNonCash = Math.max(0, grandTotal - nonCashTotal);
-  const changeAmount =
-    cashTendered > remainingAfterNonCash
-      ? cashTendered - remainingAfterNonCash
-      : 0;
+    // 7. CHANGE
+    const remainingAfterNonCash = Math.max(0, grandTotal - nonCashTotal);
+    const changeAmount =
+      cashTendered > remainingAfterNonCash
+        ? cashTendered - remainingAfterNonCash
+        : 0;
 
-  // 8. NET PAID (FIXED)
-  // Net paid = actual cash applied to bill + all non-cash payments
-  const cashApplied = cashTendered - changeAmount;
-  const netPaid = cashApplied + nonCashTotal;
+    // 8. NET PAID (FIXED)
+    // Net paid = actual cash applied to bill + all non-cash payments
+    const cashApplied = cashTendered - changeAmount;
+    const netPaid = cashApplied + nonCashTotal;
 
-  // 9. BALANCE DUE
-  const balanceDue = Math.max(0, grandTotal - netPaid);
+    // 9. BALANCE DUE
+    const balanceDue = Math.max(0, grandTotal - netPaid);
 
-  // 10. REFUNDED placeholder
-  const refunded = 0;
+    // 10. REFUNDED placeholder
+    const refunded = 0;
 
-  // 11. STATUS
-  let status = selectedTransaction.payment_status as PaymentStatus;
+    // 11. STATUS
+    let status = selectedTransaction.payment_status as PaymentStatus;
 
-  if (grandTotal > 0) {
-    if (balanceDue === 0 && netPaid > 0) {
-      status = PaymentStatus.PAID_IN_FULL;
-    } else if (balanceDue > 0 && balanceDue < grandTotal) {
-      status = PaymentStatus.PARTIALLY_PAID;
-    } else if (balanceDue === grandTotal && netPaid === 0) {
-      status = PaymentStatus.PENDING;
-    } else if (changeAmount > 0) {
-      status = PaymentStatus.PAID_IN_FULL;
+    if (grandTotal > 0) {
+      if (balanceDue === 0 && netPaid > 0) {
+        status = PaymentStatus.PAID_IN_FULL;
+      } else if (balanceDue > 0 && balanceDue < grandTotal) {
+        status = PaymentStatus.PARTIALLY_PAID;
+      } else if (balanceDue === grandTotal && netPaid === 0) {
+        status = PaymentStatus.PENDING;
+      } else if (changeAmount > 0) {
+        status = PaymentStatus.PAID_IN_FULL;
+      }
     }
-  }
 
-  return {
-    status,
-    refunded,
-    netPaid,
-    balanceDue,
-    grandTotal,
-    subtotal,
-    discountAmount,
-    discountPercent,
-    discountType,
-    taxTotal,
-    totalPaidFromMethods,
-    cashTendered,
-    changeAmount,
-    hasCashPayment,
-    nonCashTotal,
+    return {
+      status,
+      refunded,
+      netPaid,
+      balanceDue,
+      grandTotal,
+      subtotal,
+      discountAmount,
+      discountPercent,
+      discountType,
+      taxTotal,
+      totalPaidFromMethods,
+      cashTendered,
+      changeAmount,
+      hasCashPayment,
+      nonCashTotal,
+    };
   };
-};
 
   const derivedFinancials = getDerivedFinancials();
 
@@ -303,6 +307,7 @@ const getDerivedFinancials = (): DerivedFinancials | null => {
         onEmail={onEmail}
         onRefund={onRefund}
         onVoid={onVoid}
+        onHistory={onHistory}
         isPrinting={isPrinting}
       />
 
