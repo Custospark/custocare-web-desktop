@@ -29,10 +29,13 @@ export const MainRefundModalHeader: React.FC<RefundModalHeaderProps> = ({
         type="button"
         onClick={onClose}
         disabled={isProcessing}
+        style={{ cursor: isProcessing ? 'not-allowed' : 'pointer' }}
         className={cx(
-          'p-2 rounded-lg transition cursor-pointer',
+          'p-2 rounded-lg transition',
           isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600',
-          isProcessing && 'cursor-not-allowed opacity-50'
+          isProcessing && 'opacity-50',
+          // Force cursor styles with important if needed
+          !isProcessing && 'cursor-pointer'
         )}
       >
         <X className="w-5 h-5" />
