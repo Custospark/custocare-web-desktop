@@ -1,10 +1,11 @@
 import React from 'react';
-import { Plus, Minus, Trash2 } from 'lucide-react';
+import { Plus, Minus, Trash2, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
   type RenderableChargeItem,
   type BackendChargeItem,
   formatCurrency,
+  getChargeItemQuantity,
 } from '../billing-types';
 import { isInventoryItem } from '../../../../api/billable-items/BillingItemsTypes';
 import { getRoleDisplayName as formatName } from '../../../../../../shared/utils/facilityRoleFormator';
@@ -22,6 +23,7 @@ interface ChargeItemRowProps {
   onRemove: (itemId: string) => void;
   onQuantityChange: (itemId: string, value: string) => void;
   onQuantityBlur: (itemId: string, value: string) => void;
+  onViewHistory: (item: RenderableChargeItem) => void;
 }
 
 const getStockBadge = (
@@ -105,12 +107,15 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
   onRemove,
   onQuantityChange,
   onQuantityBlur,
+  onViewHistory,
 }) => {
   const isDark = theme === 'dark';
 
-  const isPersistedBackendItem = item.source === 'backend';
+  const isPersistedBackendItem = item.source === 'backend' || item.source === 'refund';
   const backendItem = isPersistedBackendItem ? (item as BackendChargeItem) : null;
   const requiresReason = !!backendItem?.permissions?.reason_required;
+  const hasAuditLogs = isPersistedBackendItem && backendItem?.audit_logs && backendItem.audit_logs.length > 0;
+  const displayQuantity = getChargeItemQuantity(item);
 
   const actionButtonClass = `p-2 border ${
     isDark
@@ -124,6 +129,12 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
       : 'bg-gray-50 hover:bg-red-50 text-gray-500 hover:text-red-500'
   } transition-colors cursor-pointer rounded-full`;
 
+  const historyButtonClass = `ml-1 p-2 ${
+    isDark
+      ? 'bg-gray-800 hover:bg-blue-900/20 text-gray-300 hover:text-blue-400'
+      : 'bg-gray-50 hover:bg-blue-50 text-gray-500 hover:text-blue-500'
+  } transition-colors cursor-pointer rounded-full`;
+
   const renderQuantityControlDesktop = () => {
     if (isReadOnly) {
       return (
@@ -135,11 +146,26 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
                 : 'border-gray-200 bg-gray-50 text-gray-900'
             } rounded text-center w-20`}
           >
-            {item.quantity}
+            {displayQuantity}
           </span>
           <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} ml-2`}>
             × {formatCurrency(item.service.unitPrice)}
           </span>
+          
+          {/* Eye button for history - visible even in read-only mode */}
+          {isPersistedBackendItem && hasAuditLogs && (
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => onViewHistory(item)}
+              className={historyButtonClass}
+              title="View item history"
+              aria-label="View history"
+            >
+              <Eye className="w-4 h-4" />
+            </motion.button>
+          )}
         </div>
       );
     }
@@ -165,7 +191,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
             }`}
             title="Persisted item quantity is adjusted via audited modal"
           >
-            {item.quantity}
+            {displayQuantity}
           </div>
         ) : (
           <input
@@ -173,7 +199,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
             inputMode="numeric"
             min={1}
             max={9999}
-            value={item.quantity}
+            value={displayQuantity}
             onChange={(e) => onQuantityChange(item.id, e.target.value)}
             onBlur={(e) => onQuantityBlur(item.id, e.target.value)}
             className={`w-20 px-2 py-2 text-center border ${
@@ -205,6 +231,21 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
         >
           <Trash2 className="w-4 h-4" />
         </motion.button>
+
+        {/* Eye button for history - only for backend items with logs */}
+        {isPersistedBackendItem && hasAuditLogs && (
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => onViewHistory(item)}
+            className={historyButtonClass}
+            title="View item history"
+            aria-label="View history"
+          >
+            <Eye className="w-4 h-4" />
+          </motion.button>
+        )}
       </div>
     );
   };
@@ -219,9 +260,27 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
             } border ${colors.border.primary} rounded-lg text-center`}
           >
             <span className={`font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-              Quantity: {item.quantity}
+              Quantity: {displayQuantity}
             </span>
           </div>
+          
+          {/* Eye button for history - visible even in read-only mode */}
+          {isPersistedBackendItem && hasAuditLogs && (
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.9 }}
+              onClick={() => onViewHistory(item)}
+              className={`w-full py-2 flex items-center justify-center gap-2 ${
+                isDark
+                  ? 'bg-blue-900/20 text-blue-300 hover:bg-blue-900/30'
+                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+              } transition-colors cursor-pointer rounded-lg`}
+              title="View item history"
+            >
+              <Eye className="w-4 h-4" />
+              <span className="text-sm font-medium">View History</span>
+            </motion.button>
+          )}
         </div>
       );
     }
@@ -250,7 +309,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
                   : 'border-gray-200 bg-white text-gray-900'
               }`}
             >
-              {item.quantity}
+              {displayQuantity}
             </div>
           ) : (
             <input
@@ -258,7 +317,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
               inputMode="numeric"
               min={1}
               max={9999}
-              value={item.quantity}
+              value={displayQuantity}
               onChange={(e) => onQuantityChange(item.id, e.target.value)}
               onBlur={(e) => onQuantityBlur(item.id, e.target.value)}
               className={`w-20 px-2 py-2 text-center border ${
@@ -295,6 +354,24 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
           >
             <Trash2 className="w-4 h-4" />
           </motion.button>
+
+          {/* Eye button for history - only for backend items with logs */}
+          {isPersistedBackendItem && hasAuditLogs && (
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.9 }}
+              onClick={() => onViewHistory(item)}
+              className={`p-2 ${
+                isDark
+                  ? 'bg-gray-700 hover:bg-blue-900/20 text-gray-300 hover:text-blue-400'
+                  : 'bg-gray-100 hover:bg-blue-50 text-gray-500 hover:text-blue-500'
+              } cursor-pointer rounded-full shrink-0`}
+              title="View item history"
+              aria-label="View history"
+            >
+              <Eye className="w-4 h-4" />
+            </motion.button>
+          )}
         </div>
 
         {isPersistedBackendItem && (
@@ -382,6 +459,16 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
                 }`}
               >
                 Change with reason
+              </span>
+            )}
+
+            {hasAuditLogs && (
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                  isDark ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-50 text-blue-700'
+                }`}
+              >
+                {backendItem?.audit_logs?.length} {backendItem?.audit_logs?.length === 1 ? 'change' : 'changes'}
               </span>
             )}
           </div>
@@ -478,6 +565,16 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
                   }`}
                 >
                   Reason required
+                </span>
+              )}
+
+              {hasAuditLogs && (
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                    isDark ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-50 text-blue-700'
+                  }`}
+                >
+                  {backendItem?.audit_logs?.length} {backendItem?.audit_logs?.length === 1 ? 'change' : 'changes'}
                 </span>
               )}
             </div>

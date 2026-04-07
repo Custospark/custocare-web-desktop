@@ -1,1078 +1,3124 @@
-<?php
+Lets fix the bugs in these files,one by one with precision.In making the updates or changes,say replace this with this or update this with this so its easy to follow
 
-namespace App\Services\Billing;
+npm run react:build
 
-use App\Models\BillingCycle;
-use App\Models\FinancialAdjustment;
-use App\Models\InvoiceLineItem;
-use App\Models\Patient;
-use App\Models\Staff;
-use App\Models\User;
-use App\Models\Visit;
-use App\Services\Billing\Processing\BillingProcessor;
-use App\Services\Billing\Traits\BillingHelpers;
-use App\Services\Billing\Validation\BillingValidation;
-use Illuminate\Support\Facades\Log;
-use Throwable;
-use App\Services\Billing\Support\BillingAuditTrailService;
+> CUSTOCARE@2.13.2 react:build
+> tsc -b && vite build
+
+src/renderer/app/store/slices/billingSlice.ts:599:25 - error TS2365: Operator '>' cannot be applied to types 'number | WritableNonArrayDraft<RefundedItemQuantity>' and 'number'.
+
+599       const unitPrice = item.quantity > 0 ? item.totalAmount / item.quantity : item.service.unitPrice;
+                            ~~~~~~~~~~~~~~~~~
+
+src/renderer/app/store/slices/billingSlice.ts:599:64 - error TS2363: The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+
+599       const unitPrice = item.quantity > 0 ? item.totalAmount / item.quantity : item.service.unitPrice;
+                                                                   ~~~~~~~~~~~~~
+
+src/renderer/app/store/slices/billingSlice.ts:604:9 - error TS2365: Operator '+=' cannot be applied to types 'number | WritableNonArrayDraft<RefundedItemQuantity>' and 'number'.
+
+604         item.quantity += safeQuantity;
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+src/renderer/app/store/slices/billingSlice.ts:610:56 - error TS2345: Argument of type 'number | WritableNonArrayDraft<RefundedItemQuantity>' is not assignable to parameter of type 'number'.
+  Type 'WritableNonArrayDraft<RefundedItemQuantity>' is not assignable to type 'number'.
+
+610         const allowedDecrease = Math.min(safeQuantity, item.quantity);
+                                                           ~~~~~~~~~~~~~
+
+src/renderer/app/store/slices/billingSlice.ts:612:30 - error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+
+612         const nextQuantity = item.quantity - allowedDecrease;
+                                 ~~~~~~~~~~~~~
+
+src/renderer/modules/medical-records/api/billable-items/BillingItemsTypes.ts:247:18 - error TS2430: Interface 'RefundedItem' incorrectly extends interface 'BackendChargeItem'.
+  Types of property 'quantity' are incompatible.
+    Type '{ original: number; refunded: number; remaining: number; }' is not assignable to type 'number'.
+
+247 export interface RefundedItem extends BackendChargeItem {
+                     ~~~~~~~~~~~~
+
+src/renderer/modules/medical-records/ui/visit-action-center/billing-space/billing-types.ts:186:18 - error TS2430: Interface 'RefundedChargeItem' incorrectly extends interface 'BaseRenderableChargeItem'.
+  Types of property 'quantity' are incompatible.
+    Type 'RefundedItemQuantity' is not assignable to type 'number'.
+
+186 export interface RefundedChargeItem extends BaseRenderableChargeItem, BaseBackendChargeItemFields {
+                     ~~~~~~~~~~~~~~~~~~
+
+src/renderer/modules/medical-records/ui/visit-action-center/billing-space/billing-types.ts:523:3 - error TS2322: Type 'number | RefundedItemQuantity' is not assignable to type 'number'.
+  Type 'RefundedItemQuantity' is not assignable to type 'number'.
+
+523   return item.quantity;
+      ~~~~~~
+
+src/renderer/modules/medical-records/ui/visit-action-center/billing-space/billing-types.ts:534:3 - error TS2322: Type 'number | RefundedItemQuantity' is not assignable to type 'number'.
+  Type 'RefundedItemQuantity' is not assignable to type 'number'.
+
+534   return item.quantity;
+      ~~~~~~
+
+src/renderer/modules/medical-records/ui/visit-action-center/billing-space/charge-entry/ChargeItemRow.tsx:147:13 - error TS2322: Type 'number | RefundedItemQuantity' is not assignable to type 'ReactNode'.
+  Type 'RefundedItemQuantity' is not assignable to type 'ReactNode'.
+
+147             {item.quantity}
+                ~~~~~~~~~~~~~~~
+
+  node_modules/@types/react/index.d.ts:2267:9
+    2267         children?: ReactNode | undefined;
+                 ~~~~~~~~
+    The expected type comes from property 'children' which is declared here on type 'DetailedHTMLProps<HTMLAttributes<HTMLSpanElement>, HTMLSpanElement>'
+
+src/renderer/modules/medical-records/ui/visit-action-center/billing-space/charge-entry/ChargeItemRow.tsx:192:13 - error TS2322: Type 'number | RefundedItemQuantity' is not assignable to type 'ReactNode'.
+  Type 'RefundedItemQuantity' is not assignable to type 'ReactNode'.
+
+192             {item.quantity}
+                ~~~~~~~~~~~~~~~
+
+  node_modules/@types/react/index.d.ts:2267:9
+    2267         children?: ReactNode | undefined;
+                 ~~~~~~~~
+    The expected type comes from property 'children' which is declared here on type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'
+
+src/renderer/modules/medical-records/ui/visit-action-center/billing-space/charge-entry/ChargeItemRow.tsx:261:25 - error TS2322: Type 'number | RefundedItemQuantity' is not assignable to type 'ReactNode'.
+  Type 'RefundedItemQuantity' is not assignable to type 'ReactNode'.
+
+261               Quantity: {item.quantity}
+                            ~~~~~~~~~~~~~~~
+
+src/renderer/modules/medical-records/ui/visit-action-center/billing-space/charge-entry/ChargeItemRow.tsx:310:15 - error TS2322: Type 'number | RefundedItemQuantity' is not assignable to type 'ReactNode'.
+  Type 'RefundedItemQuantity' is not assignable to type 'ReactNode'.
+
+310               {item.quantity}
+                  ~~~~~~~~~~~~~~~
+
+  node_modules/@types/react/index.d.ts:2267:9
+    2267         children?: ReactNode | undefined;
+                 ~~~~~~~~
+    The expected type comes from property 'children' which is declared here on type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'
+
+src/renderer/modules/medical-records/ui/visit-action-center/billing-space/ChargeEntryStep.tsx:601:11 - error TS2322: Type '({ service: { id: number | null; code: string; name: string; unitPrice: number; category: string; }; permissions: { entered_by_staff_id?: number | null | undefined; current_staff_id?: number | null | undefined; requires_reason_on_cross_staff_edit: boolean; reason_required: boolean; can_edit_without_reason: boolean; ...' is not assignable to type 'BackendChargeItem[]'.
+  Type '{ service: { id: number | null; code: string; name: string; unitPrice: number; category: string; }; permissions: { entered_by_staff_id?: number | null | undefined; current_staff_id?: number | null | undefined; requires_reason_on_cross_staff_edit: boolean; reason_required: boolean; can_edit_without_reason: boolean; }...' is not assignable to type 'BackendChargeItem'.
+    Type '{ service: { id: number | null; code: string; name: string; unitPrice: number; category: string; }; permissions: { entered_by_staff_id?: number | null; current_staff_id?: number | null; requires_reason_on_cross_staff_edit: boolean; reason_required: boolean; can_edit_without_reason: boolean; }; ... 21 more ...; audit...' is not assignable to type 'BackendChargeItem'.
+      Types of property 'quantity' are incompatible.
+        Type 'RefundedItemQuantity' is not assignable to type 'number'.
+
+601           previousBackendChargeItems,
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  src/renderer/modules/medical-records/ui/visit-action-center/billing-space/billingSlice.ts:659:9
+    659         previousBackendChargeItems: BackendChargeItem[];
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    The expected type comes from property 'previousBackendChargeItems' which is declared here on type '{ previousBackendChargeItems: BackendChargeItem[]; previousOptimisticPersistedBalanceDelta: number; }'
+
+src/renderer/modules/medical-records/ui/visit-action-center/billing-space/ChargeEntryStep.tsx:619:28 - error TS2345: Argument of type 'AnyBackendChargeItem' is not assignable to parameter of type 'BackendChargeItem'.
+  Type 'RefundedChargeItem' is not assignable to type 'BackendChargeItem'.
+    Types of property 'quantity' are incompatible.
+      Type 'RefundedItemQuantity' is not assignable to type 'number'.
+
+619       openAdjustmentDialog(existingBackendItem, 'increase', 1);
+                               ~~~~~~~~~~~~~~~~~~~
 
 
-class BillingService
-{
-    use BillingHelpers;
+Found 15 errors.
+// billingSlice.ts
+import { createSlice, type PayloadAction, createSelector } from '@reduxjs/toolkit';
+import {
+  type BillingState,
+  INITIAL_BILLING_STATE,
+  type ServiceItem,
+  type ChargeItem,
+  type Discount,
+  type PaymentMethod,
+  type BillingStep,
+  type BillingTrayViewMode,
+  type RenderableChargeItem,
+  type BackendChargeItem,
+  type Tax,
+  generateChargeItemId,
+  generateReceiptNumber,
+  getDraftStorageKey,
+  DEFAULT_PAYMENT_METHODS,
+  DEFAULT_DISCOUNT,
+  makeBillableKey,
+  mapRetrievedBillingToBackendState,
+  EMPTY_BACKEND_META,
+  calculateBillingSnapshot,
+} from '../../../modules/medical-records/ui/visit-action-center/billing-space';
+import { type BillingRetrievalData } from '../../../modules/medical-records/api/billable-items/BillingItemsTypes';
+import { type RootState } from '../rootReducer';
 
-    protected BillingValidation $validation;
-    protected BillingProcessor $processor;
+/* -------------------------------------------------------------------------- */
+/*                               HELPERS                                      */
+/* -------------------------------------------------------------------------- */
 
-   protected BillingAuditTrailService $billingAuditTrail;
+const roundCurrency = (value: number): number => Math.round((Number(value) || 0) * 100) / 100;
 
-    public function __construct(
-        BillingValidation $validation,
-        BillingProcessor $processor,
-        BillingAuditTrailService $billingAuditTrail
-    ) {
-        $this->validation = $validation;
-        $this->processor = $processor;
-        $this->billingAuditTrail = $billingAuditTrail;
+const cloneDiscount = (discount?: Discount | null): Discount => ({
+  type: discount?.type === 'fixed' ? 'fixed' : 'percentage',
+  value: Number(discount?.value || 0),
+  reason: discount?.reason || '',
+});
+
+const cloneTaxes = (taxes?: Tax[] | null): Tax[] => {
+  if (!Array.isArray(taxes) || taxes.length === 0) {
+    return INITIAL_BILLING_STATE.taxes.map((tax) => ({ ...tax }));
+  }
+
+  return taxes.map((tax) => ({
+    name: tax.name,
+    rate: Number(tax.rate || 0),
+    amount: Number(tax.amount || 0),
+  }));
+};
+
+const getBaselineDiscount = (state: BillingState): Discount => {
+  if (state.backendBillingMeta.hasBilling && state.backendDiscount) {
+    return cloneDiscount(state.backendDiscount);
+  }
+  return cloneDiscount(DEFAULT_DISCOUNT);
+};
+
+const getBaselineTaxes = (state: BillingState): Tax[] => {
+  if (state.backendBillingMeta.hasBilling && state.backendTaxes.length > 0) {
+    return cloneTaxes(state.backendTaxes);
+  }
+  return INITIAL_BILLING_STATE.taxes.map((tax) => ({ ...tax }));
+};
+
+const areDiscountsEqual = (left?: Discount | null, right?: Discount | null): boolean => {
+  return (
+    (left?.type || 'percentage') === (right?.type || 'percentage') &&
+    Number(left?.value || 0) === Number(right?.value || 0) &&
+    String(left?.reason || '') === String(right?.reason || '')
+  );
+};
+
+const normalizeTaxKey = (tax: Pick<Tax, 'name' | 'rate'>): string =>
+  `${String(tax.name || '').toLowerCase()}|${Number(tax.rate || 0).toFixed(4)}`;
+
+const areTaxesEqual = (left: Tax[] = [], right: Tax[] = []): boolean => {
+  if (left.length !== right.length) return false;
+
+  const leftMap = new Map<string, number>();
+  const rightMap = new Map<string, number>();
+
+  left.forEach((tax) => leftMap.set(normalizeTaxKey(tax), Number(tax.rate || 0)));
+  right.forEach((tax) => rightMap.set(normalizeTaxKey(tax), Number(tax.rate || 0)));
+
+  if (leftMap.size !== rightMap.size) return false;
+
+  for (const [key, rate] of leftMap.entries()) {
+    if (!rightMap.has(key) || rightMap.get(key) !== rate) {
+      return false;
     }
+  }
 
+  return true;
+};
+
+const calculateIsDirty = (state: BillingState): boolean => {
+  const baselineDiscount = getBaselineDiscount(state);
+  const baselineTaxes = getBaselineTaxes(state);
+
+  return (
+    state.chargeItems.length > 0 ||
+    !areDiscountsEqual(state.discount, baselineDiscount) ||
+    !areTaxesEqual(state.taxes, baselineTaxes) ||
+    state.paymentMethods.some((m) => m.amount > 0) ||
+    state.additionalNotes.trim().length > 0 ||
+    state.status !== 'draft'
+  );
+};
+
+const updateMetadata = (state: BillingState): void => {
+  state.lastUpdated = Date.now();
+  state.isDirty = calculateIsDirty(state);
+};
+
+const mergeTaxes = (
+  existing: Array<{ name: string; rate: number; amount: number }> = [],
+  incoming: Array<{ name: string; rate: number; amount: number }> = []
+): Array<{ name: string; rate: number; amount: number }> => {
+  const merged = new Map<string, { name: string; rate: number; amount: number }>();
+
+  [...existing, ...incoming].forEach((tax) => {
+    const key = `${String(tax.name).toLowerCase()}|${Number(tax.rate || 0).toFixed(2)}`;
+    const current = merged.get(key);
+
+    if (!current) {
+      merged.set(key, {
+        name: tax.name,
+        rate: Number(tax.rate || 0),
+        amount: Number(tax.amount || 0),
+      });
+    } else {
+      current.amount = Number((current.amount + Number(tax.amount || 0)).toFixed(2));
+      merged.set(key, current);
+    }
+  });
+
+  return Array.from(merged.values());
+};
+
+const subtractTaxes = (
+  combined: Array<{ name: string; rate: number; amount: number }> = [],
+  base: Array<{ name: string; rate: number; amount: number }> = []
+): Array<{ name: string; rate: number; amount: number }> => {
+  const baseMap = new Map<string, number>();
+
+  base.forEach((tax) => {
+    const key = `${String(tax.name).toLowerCase()}|${Number(tax.rate || 0).toFixed(2)}`;
+    const current = baseMap.get(key) || 0;
+    baseMap.set(key, Number((current + Number(tax.amount || 0)).toFixed(2)));
+  });
+
+  return combined.map((tax) => {
+    const key = `${String(tax.name).toLowerCase()}|${Number(tax.rate || 0).toFixed(2)}`;
+    const baseAmount = baseMap.get(key) || 0;
+
+    return {
+      ...tax,
+      amount: Number(Math.max(0, Number(tax.amount || 0) - baseAmount).toFixed(2)),
+    };
+  });
+};
+
+/* -------------------------------------------------------------------------- */
+/*                               SLICE                                        */
+/* -------------------------------------------------------------------------- */
+
+const billingSlice = createSlice({
+  name: 'billing',
+  initialState: INITIAL_BILLING_STATE,
+  reducers: {
+    // ========== UI ACTIONS ==========
+    openTray: (
+      state,
+      action: PayloadAction<{ step?: BillingStep; visitId?: string; patientId?: string; patientName?: string }>
+    ) => {
+      state.trayOpen = true;
+      state.currentStep = action.payload.step || 'charge_entry';
+      state.viewMode = 'expanded';
+
+      if (action.payload.visitId) state.visitId = action.payload.visitId;
+      if (action.payload.patientId) state.patientId = action.payload.patientId;
+      if (action.payload.patientName) state.patientName = action.payload.patientName;
+
+      updateMetadata(state);
+    },
 
     /**
-     * Save a billing submission.
-     *
-     * Design principles in this rewrite:
-     * - persisted billing cycle data is authoritative
-     * - discounts are owned by the billing cycle, never by line items
-     * - payments are derived from persisted cycle history + current request
-     * - balances, totals, and statuses are derived by determineBillingState()
+     * Close the billing tray but preserve backend persisted data.
+     * Only clears UI draft data (chargeItems, discount, paymentMethods, etc.)
+     * Backend data remains intact.
      */
-    public function saveBilling(array $data, int $facilityId, int $staffId): array
-    {
-        try {
-            $visitVerification = $this->verifyVisit(
-                (int) $data['visit_id'],
-                $facilityId,
-                (int) $data['patient_id']
-            );
-
-            if (empty($visitVerification['success'])) {
-                return $visitVerification;
-            }
-
-            /** @var Visit $visit */
-            $visit = $visitVerification['data'];
-
-            $data['charge_items'] = $this->normalizeChargeItems($data['charge_items'] ?? []);
-            $data['payment_methods'] = $this->normalizePaymentMethods($data['payment_methods'] ?? []);
-            $data['taxes'] = $this->normalizeTaxDefinitions($data['taxes'] ?? []);
-
-            $existingBillingCheck = $this->checkExistingBilling($visit->id, $facilityId);
-            if (empty($existingBillingCheck['success'])) {
-                return $existingBillingCheck;
-            }
-
-            /** @var BillingCycle|null $existingEditableBillingCycle */
-            $existingEditableBillingCycle = $existingBillingCheck['data'] ?? null;
-
-            $billingEligibility = $this->canBeBilled($visit, $existingEditableBillingCycle);
-            if (empty($billingEligibility['success'])) {
-                return $billingEligibility;
-            }
-
-            if ($existingEditableBillingCycle === null && empty($data['charge_items'])) {
-                return [
-                    'success' => false,
-                    'message' => 'At least one charge item is required to create a billing cycle.',
-                    'errors' => ['charge_items' => ['No charge items were supplied for billing.']],
-                ];
-            }
-
-            $discountWasProvided = array_key_exists('discount', $data);
-            $taxesWereProvided = array_key_exists('taxes', $data) && !empty($data['taxes']);
-
-            $data['discount'] = $this->resolveEffectiveDiscount(
-                $discountWasProvided ? ($data['discount'] ?? null) : null,
-                $existingEditableBillingCycle,
-                $discountWasProvided
-            );
-
-            $data['taxes'] = $this->resolveEffectiveTaxes(
-                $taxesWereProvided ? $data['taxes'] : null,
-                $existingEditableBillingCycle,
-                $taxesWereProvided
-            );
-
-            $paymentSplit = $this->calculatePaymentSplit(
-                $data['payment_methods'] ?? [],
-                (float) (($data['billing_data']['totalPaid'] ?? 0))
-            );
-
-            $authoritativeState = $this->buildAuthoritativeBillingDataForSave(
-                $data['charge_items'],
-                $existingEditableBillingCycle,
-                $data['discount'],
-                $data['taxes'],
-                $data['payment_methods'],
-                (string) ($data['status'] ?? 'ready')
-            );
-
-            if ($this->billingDataMismatch($data['billing_data'] ?? [], $authoritativeState)) {
-                Log::warning('Client billing_data mismatch detected. Backend state will be used.', [
-                    'visit_id' => $data['visit_id'] ?? null,
-                    'provided' => $data['billing_data'] ?? [],
-                    'computed' => $this->buildBillingDataFromState($authoritativeState),
-                ]);
-            }
-
-            $data['billing_data'] = $this->buildBillingDataFromState($authoritativeState);
-            $data['payment_status'] = $authoritativeState['payment_status'];
-            $data['resolved_billing_status'] = $authoritativeState['billing_status'];
-            $data['resolved_ui_status'] = $authoritativeState['ui_status'];
-            $data['resolved_total_paid'] = $authoritativeState['total_paid'];
-            $data['resolved_balance'] = $authoritativeState['balance'];
-            $data['resolved_is_fully_paid'] = $authoritativeState['is_fully_paid'];
-            $data['resolved_patient_payment'] = $authoritativeState['patient_payment'];
-            $data['resolved_insurance_payment'] = $authoritativeState['insurance_payment'];
-
-            $data['submission_fingerprint'] = $this->buildBillingSubmissionFingerprint($data, $facilityId);
-            $replayedCycle = $this->findReplaySubmission(
-                (int) $data['visit_id'],
-                $facilityId,
-                $data['submission_fingerprint']
-            );
-
-            if ($replayedCycle) {
-                Log::info('Idempotent billing replay detected.', [
-                    'visit_id' => $data['visit_id'],
-                    'billing_cycle_id' => $replayedCycle->id,
-                ]);
-
-                return $this->buildReplaySuccessResponse($replayedCycle);
-            }
-
-            $inventoryValidation = $this->validation->validateInventoryAvailability(
-                $data['charge_items'],
-                $staffId
-            );
-
-            if (empty($inventoryValidation['success'])) {
-                return $inventoryValidation;
-            }
-
-            $largestPaymentMethod = collect($data['payment_methods'] ?? [])
-                ->sortByDesc('amount')
-                ->first();
-
-            $isPrimaryCash = ($largestPaymentMethod['type'] ?? null) === 'cash';
-            $isInsuranceInvolved = $this->isInsuranceInvolved($data['payment_methods'] ?? []);
-
-            $result = $this->processor->processBillingTransaction(
-                $data,
-                $facilityId,
-                $staffId,
-                (float) ($authoritativeState['discount_amount'] ?? 0),
-                $paymentSplit,
-                $isPrimaryCash,
-                $isInsuranceInvolved,
-                $visit,
-                $existingEditableBillingCycle
-            );
-
-            /** @var BillingCycle $billingCycle */
-            $billingCycle = $result['billing_cycle']->fresh(['lineItems']);
-            $finalState = $this->buildCycleStateSnapshot($billingCycle);
-            $wasExistingCycleUpdated = $existingEditableBillingCycle !== null;
-
-            Log::info('Billing finalized successfully.', [
-                'billing_cycle_id' => $billingCycle->id,
-                'visit_id' => $visit->id,
-                'facility_id' => $facilityId,
-                'staff_id' => $staffId,
-                'grand_total' => $finalState['grand_total'],
-                'total_paid' => $finalState['total_paid'],
-                'balance' => $finalState['balance'],
-                'billing_status' => $finalState['billing_status'],
-                'was_existing_cycle_updated' => $wasExistingCycleUpdated,
-            ]);
-
-            return [
-                'success' => true,
-                'message' => !empty($finalState['is_fully_paid'])
-                    ? 'Payment successfully settled. Visit has been completed.'
-                    : ($wasExistingCycleUpdated
-                        ? 'Existing billing cycle updated successfully.'
-                        : 'Billing saved successfully.'),
-                'data' => [
-                    'billing_cycle_id' => $billingCycle->id,
-                    'billing_cycle_uuid' => $billingCycle->billing_cycle_uuid,
-                    'receipt_number' => 'REC-' . $billingCycle->id,
-                    'billing_status' => $billingCycle->billing_status,
-                    'net_amount' => round((float) ($billingCycle->net_amount ?? 0), 2),
-                    'total_paid' => round((float) ($billingCycle->total_paid_amount ?? 0), 2),
-                    'balance' => round((float) ($billingCycle->balance_amount ?? 0), 2),
-                    'created_at' => optional($billingCycle->created_at)->toISOString() ?? now()->toISOString(),
-                    'line_items_count' => $billingCycle->lineItems->count(),
-                    'was_existing_cycle_updated' => $wasExistingCycleUpdated,
-                    'idempotent_replay' => false,
-                ],
-            ];
-        } catch (Throwable $e) {
-            Log::error('Billing save failed unexpectedly.', [
-                'visit_id' => $data['visit_id'] ?? null,
-                'patient_id' => $data['patient_id'] ?? null,
-                'facility_id' => $facilityId,
-                'staff_id' => $staffId,
-                'error_message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'An unexpected error occurred while submitting billing. Please try again.',
-                'errors' => ['system' => ['Billing transaction failed. All changes have been rolled back.']],
-                'error' => config('app.debug') ? $e->getMessage() : null,
-            ];
+    closeTray: (state) => {
+      try {
+        if (state.visitId) {
+          sessionStorage.removeItem(getDraftStorageKey(state.visitId));
         }
-    }
+      } catch (error) {
+        console.error('Error clearing billing draft on close:', error);
+      }
+
+      state.chargeItems = [];
+      state.discount = getBaselineDiscount(state);
+      state.taxes = getBaselineTaxes(state);
+      state.paymentMethods = DEFAULT_PAYMENT_METHODS.map((method) => ({ ...method }));
+      state.additionalNotes = '';
+      state.status = 'draft';
+      state.receiptNumber = undefined;
+      state.isProcessing = false;
+      state.currentStep = 'charge_entry';
+      state.trayOpen = false;
+      state.viewMode = 'expanded';
+      state.isDirty = false;
+
+      updateMetadata(state);
+    },
+
+    setStep: (state, action: PayloadAction<BillingStep>) => {
+      state.currentStep = action.payload;
+      updateMetadata(state);
+    },
+
+    setViewMode: (state, action: PayloadAction<BillingTrayViewMode>) => {
+      state.viewMode = action.payload;
+      updateMetadata(state);
+    },
+
+    minimizeTray: (state) => {
+      state.viewMode = 'minimized';
+      updateMetadata(state);
+    },
+
+    maximizeTray: (state) => {
+      state.viewMode = 'expanded';
+      updateMetadata(state);
+    },
+
+    // ========== CHARGE ITEMS ACTIONS ==========
+    addChargeItem: (state, action: PayloadAction<ServiceItem>) => {
+      const service = action.payload;
+      const serviceKey = makeBillableKey(service);
+      const existingItem = state.chargeItems.find((item) => item.serviceKey === serviceKey);
+
+      if (existingItem) {
+        existingItem.quantity += 1;
+        existingItem.totalAmount = existingItem.quantity * existingItem.service.unitPrice;
+      } else {
+        const newItem: ChargeItem = {
+          id: generateChargeItemId(serviceKey),
+          serviceKey,
+          service,
+          quantity: 1,
+          totalAmount: service.unitPrice,
+          source: 'slice',
+          persisted: false,
+        };
+        state.chargeItems.push(newItem);
+      }
+
+      if (state.chargeItems.length > 0 && state.status === 'draft') {
+        state.status = 'ready';
+      }
+
+      updateMetadata(state);
+    },
+
+    increaseQuantity: (state, action: PayloadAction<string>) => {
+      const item = state.chargeItems.find((x) => x.id === action.payload);
+      if (!item) return;
+
+      item.quantity += 1;
+      item.totalAmount = item.quantity * item.service.unitPrice;
+      updateMetadata(state);
+    },
+
+    decreaseQuantity: (state, action: PayloadAction<string>) => {
+      const item = state.chargeItems.find((x) => x.id === action.payload);
+      if (!item) return;
+
+      if (item.quantity === 1) {
+        state.chargeItems = state.chargeItems.filter((x) => x.id !== action.payload);
+        if (state.chargeItems.length === 0) state.status = 'draft';
+      } else {
+        item.quantity -= 1;
+        item.totalAmount = item.quantity * item.service.unitPrice;
+      }
+
+      updateMetadata(state);
+    },
+
+    removeChargeItem: (state, action: PayloadAction<string>) => {
+      state.chargeItems = state.chargeItems.filter((item) => item.id !== action.payload);
+      if (state.chargeItems.length === 0) state.status = 'draft';
+      updateMetadata(state);
+    },
+
+    setQuantity: (state, action: PayloadAction<{ itemId: string; quantity: number }>) => {
+      const { itemId, quantity } = action.payload;
+      const item = state.chargeItems.find((x) => x.id === itemId);
+      if (!item) return;
+
+      const q = Math.max(1, Math.min(9999, Math.floor(quantity || 1)));
+      item.quantity = q;
+      item.totalAmount = q * item.service.unitPrice;
+
+      if (state.chargeItems.length === 0) {
+        state.status = 'draft';
+      } else if (state.status === 'draft') {
+        state.status = 'ready';
+      }
+
+      updateMetadata(state);
+    },
+
+    clearCharges: (state) => {
+      state.chargeItems = [];
+      state.status = 'draft';
+      updateMetadata(state);
+    },
+
+    // ========== DISCOUNT ACTIONS ==========
+    setDiscount: (state, action: PayloadAction<Discount>) => {
+      state.discount = cloneDiscount(action.payload);
+      updateMetadata(state);
+    },
+
+    // ========== PAYMENT METHODS ACTIONS ==========
+    setPaymentMethods: (state, action: PayloadAction<PaymentMethod[]>) => {
+      state.paymentMethods = action.payload;
+      updateMetadata(state);
+    },
+
+    updatePaymentMethod: (state, action: PayloadAction<{ index: number; method: Partial<PaymentMethod> }>) => {
+      const { index, method } = action.payload;
+      if (!state.paymentMethods[index]) return;
+
+      state.paymentMethods[index] = { ...state.paymentMethods[index], ...method };
+      updateMetadata(state);
+    },
+
+    addPaymentMethod: (state) => {
+      if (state.paymentMethods.length < 3) {
+        state.paymentMethods.push({ type: 'cash', amount: 0, details: '' });
+        updateMetadata(state);
+      }
+    },
+
+    removePaymentMethod: (state, action: PayloadAction<number>) => {
+      if (state.paymentMethods.length > 1) {
+        state.paymentMethods.splice(action.payload, 1);
+        updateMetadata(state);
+      }
+    },
+
+    // ========== OTHER ACTIONS ==========
+    setAdditionalNotes: (state, action: PayloadAction<string>) => {
+      state.additionalNotes = action.payload;
+      updateMetadata(state);
+    },
+
+    setProcessing: (state, action: PayloadAction<boolean>) => {
+      state.isProcessing = action.payload;
+      updateMetadata(state);
+    },
+
+    finalizePayment: (state) => {
+      state.receiptNumber = generateReceiptNumber();
+      state.status = 'settled';
+      updateMetadata(state);
+    },
+
+    printReceipt: (state) => {
+      updateMetadata(state);
+    },
+
+    // ========== RESET ACTIONS ==========
+    resetBilling: (state) => {
+      const { visitId, patientId, patientName } = state;
+      Object.assign(state, { ...INITIAL_BILLING_STATE, visitId, patientId, patientName });
+    },
+
+    // ========== DRAFT ACTIONS ==========
+    saveDraft: (state) => {
+      try {
+        if (!state.visitId) return;
+
+        const draft = {
+          chargeItems: state.chargeItems,
+          discount: state.discount,
+          paymentMethods: state.paymentMethods,
+          additionalNotes: state.additionalNotes,
+          status: state.status,
+          receiptNumber: state.receiptNumber,
+          visitId: state.visitId,
+          patientId: state.patientId,
+          patientName: state.patientName,
+          lastUpdated: Date.now(),
+        };
+
+        sessionStorage.setItem(getDraftStorageKey(state.visitId), JSON.stringify(draft));
+      } catch (error) {
+        console.error('Error saving billing draft:', error);
+      }
+    },
+
+    loadDraft: (state, action: PayloadAction<string>) => {
+      try {
+        const saved = sessionStorage.getItem(getDraftStorageKey(action.payload));
+        if (!saved) return;
+
+        const parsed = JSON.parse(saved);
+        if (!parsed.chargeItems || !Array.isArray(parsed.chargeItems)) return;
+
+        state.chargeItems = parsed.chargeItems.map((ci: any) => {
+          const service: ServiceItem = ci.service;
+          const serviceKey = ci.serviceKey || makeBillableKey(service);
+          const quantity = Math.max(1, Math.min(9999, Math.floor(Number(ci.quantity) || 1)));
+          return {
+            ...ci,
+            serviceKey,
+            quantity,
+            totalAmount: quantity * (service?.unitPrice || 0),
+            source: 'slice',
+            persisted: false,
+          } as ChargeItem;
+        });
+
+        state.discount = parsed.discount ? cloneDiscount(parsed.discount) : getBaselineDiscount(state);
+        state.paymentMethods = parsed.paymentMethods || DEFAULT_PAYMENT_METHODS;
+        state.additionalNotes = parsed.additionalNotes || '';
+        state.status = parsed.status || 'draft';
+        state.receiptNumber = parsed.receiptNumber;
+        state.visitId = parsed.visitId;
+        state.patientId = parsed.patientId;
+        state.patientName = parsed.patientName;
+        state.lastUpdated = parsed.lastUpdated || Date.now();
+        state.isDirty = calculateIsDirty(state);
+      } catch (error) {
+        console.error('Error loading billing draft:', error);
+      }
+    },
 
     /**
-     * Resolve the effective cycle-level discount rule.
+     * Clear ONLY draft data and preserve backend data.
      */
-    protected function resolveEffectiveDiscount(
-        $incomingDiscount,
-        ?BillingCycle $existingBillingCycle,
-        bool $discountWasProvided
-    ): array {
-        if ($discountWasProvided) {
-            return is_array($incomingDiscount)
-                ? $this->normalizeDiscount($incomingDiscount)
-                : $this->normalizeDiscount([]);
+    clearDraft: (state) => {
+      try {
+        if (state.visitId) {
+          sessionStorage.removeItem(getDraftStorageKey(state.visitId));
         }
+      } catch (error) {
+        console.error('Error clearing billing draft:', error);
+      }
 
-        if ($existingBillingCycle) {
-            $metadata = $this->decodeJsonishToArray($existingBillingCycle->metadata ?? null);
-            $storedRule = is_array($metadata['discount_rule'] ?? null)
-                ? $metadata['discount_rule']
-                : [];
+      state.chargeItems = [];
+      state.discount = getBaselineDiscount(state);
+      state.taxes = getBaselineTaxes(state);
+      state.paymentMethods = DEFAULT_PAYMENT_METHODS.map((method) => ({ ...method }));
+      state.additionalNotes = '';
+      state.isProcessing = false;
+      state.currentStep = 'billing_summary';
+      state.isDirty = false;
 
-            return $this->normalizeDiscount([
-                'type' => $storedRule['type'] ?? 'fixed',
-                'value' => $storedRule['value'] ?? $existingBillingCycle->discount_applied ?? 0,
-                'reason' => $storedRule['reason'] ?? $existingBillingCycle->discount_reason,
-            ]);
-        }
-
-        return $this->normalizeDiscount([]);
-    }
+      updateMetadata(state);
+    },
 
     /**
-     * Resolve the effective tax definitions for the cycle.
+     * Clear ONLY draft charge items.
+     * Preserves all other draft data.
      */
-    protected function resolveEffectiveTaxes(
-        ?array $incomingTaxes,
-        ?BillingCycle $existingBillingCycle,
-        bool $taxesWereProvided
-    ): array {
-        if ($taxesWereProvided) {
-            return $this->normalizeTaxDefinitions($incomingTaxes ?? []);
+    clearDraftChargeItemsOnly: (state) => {
+      try {
+        if (state.visitId) {
+          sessionStorage.removeItem(getDraftStorageKey(state.visitId));
         }
+      } catch (error) {
+        console.error('Error clearing billing draft charge items:', error);
+      }
 
-        if ($existingBillingCycle) {
-            $metadata = $this->decodeJsonishToArray($existingBillingCycle->metadata ?? null);
-            $storedTaxDefinitions = $metadata['tax_definitions'] ?? null;
-
-            if (is_array($storedTaxDefinitions) && !empty($storedTaxDefinitions)) {
-                return $this->normalizeTaxDefinitions($storedTaxDefinitions);
-            }
-
-            return $this->normalizeTaxDefinitions(
-                $this->decodeJsonishToArray($existingBillingCycle->tax_details ?? null)
-            );
-        }
-
-        return [];
-    }
-
-    protected function buildReplaySuccessResponse(BillingCycle $billingCycle): array
-    {
-        $billingCycle = $billingCycle->fresh();
-
-        return [
-            'success' => true,
-            'message' => 'Duplicate billing submission ignored. Existing billing record returned.',
-            'data' => [
-                'billing_cycle_id' => $billingCycle->id,
-                'billing_cycle_uuid' => $billingCycle->billing_cycle_uuid,
-                'receipt_number' => 'REC-' . $billingCycle->id,
-                'billing_status' => $billingCycle->billing_status,
-                'net_amount' => round((float) ($billingCycle->net_amount ?? 0), 2),
-                'total_paid' => round((float) ($billingCycle->total_paid_amount ?? 0), 2),
-                'balance' => round((float) ($billingCycle->balance_amount ?? 0), 2),
-                'created_at' => optional($billingCycle->created_at)->toISOString() ?? now()->toISOString(),
-                'line_items_count' => $billingCycle->lineItems()->count(),
-                'was_existing_cycle_updated' => true,
-                'idempotent_replay' => true,
-            ],
-        ];
-    }
-
-    public function getBillingByVisit(int $visitId, int $facilityId, ?int $currentStaffId = null): array
-    {
-        try {
-            $visit = Visit::query()
-                ->where('id', $visitId)
-                ->where('facility_id', $facilityId)
-                ->with(['patient.user'])
-                ->first();
-
-            if (!$visit) {
-                return [
-                    'success' => false,
-                    'message' => 'Visit not found or does not belong to this facility.',
-                    'errors' => ['visit_id' => ['Invalid visit for this facility.']],
-                ];
-            }
-
-            $billingCycle = BillingCycle::query()
-                ->where('visit_id', $visitId)
-                ->where('facility_id', $facilityId)
-                ->with(['lineItems'])
-                ->latest('id')
-                ->first();
-
-            if (!$billingCycle) {
-                return [
-                    'success' => true,
-                    'message' => 'No billing record found for this visit.',
-                    'data' => [
-                        'has_billing' => false,
-                        'visit_id' => $visitId,
-                        'visit' => [
-                            'id' => $visit->id,
-                            'current_phase' => $visit->current_phase,
-                            'payment_status' => $visit->payment_status,
-                            'status' => $visit->status,
-                        ],
-                        'patient' => [
-                            'id' => $visit->patient_id,
-                            'name' => $visit->patient?->user?->display_name
-                                ?: trim((string) ($visit->patient?->user?->first_name ?? '') . ' ' . (string) ($visit->patient?->user?->last_name ?? '')),
-                        ],
-                    ],
-                ];
-            }
-
-            return [
-                'success' => true,
-                'message' => 'Billing data retrieved successfully.',
-                'data' => $this->transformBillingData($billingCycle, $visit, $currentStaffId),
-            ];
-        } catch (Throwable $e) {
-            Log::error('Billing retrieval by visit failed.', [
-                'visit_id' => $visitId,
-                'facility_id' => $facilityId,
-                'error_message' => $e->getMessage(),
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'An unexpected error occurred while retrieving billing data.',
-                'errors' => ['system' => ['Failed to retrieve billing information.']],
-                'error' => config('app.debug') ? $e->getMessage() : null,
-            ];
-        }
-    }
+      state.chargeItems = [];
+      state.lastUpdated = Date.now();
+      state.isDirty = calculateIsDirty(state);
+    },
 
     /**
- * Transform persisted billing into the frontend billing shape.
- *
- * Retrieval reuses the same state engine so that read-side numbers stay in
- * lockstep with save-side numbers.
- */
-public function transformBillingData(BillingCycle $billingCycle, Visit $visit, ?int $currentStaffId = null): array
-{
-    $metadata = $this->decodeJsonishToArray($billingCycle->metadata ?? null);
-    $lineItems = $billingCycle->relationLoaded('lineItems')
-        ? $billingCycle->lineItems
-        : $billingCycle->lineItems()->get();
+     * Clear ALL draft data after successful payment finalization.
+     */
+    clearDraftAfterFinalization: (state) => {
+      try {
+        if (state.visitId) {
+          sessionStorage.removeItem(getDraftStorageKey(state.visitId));
+        }
+      } catch (error) {
+        console.error('Error clearing billing draft after finalization:', error);
+      }
 
-    $billingCycle->setRelation('lineItems', $lineItems);
+      state.chargeItems = [];
+      state.discount = getBaselineDiscount(state);
+      state.taxes = getBaselineTaxes(state);
+      state.paymentMethods = DEFAULT_PAYMENT_METHODS.map((method) => ({ ...method }));
+      state.additionalNotes = '';
+      state.isProcessing = false;
 
-    $activeLineItems = $this->getActiveBillingCycleLineItems($billingCycle);
-    $auditBundle = $this->billingAuditTrail->buildBillingCycleAuditBundle($billingCycle);
-    $lineItemAuditMap = $auditBundle['line_items'] ?? [];
+      state.lastUpdated = Date.now();
+      state.isDirty = calculateIsDirty(state);
+    },
 
-    $refundedItems = $this->getRefundedItemsFromAdjustments(
-        $billingCycle,
-        $currentStaffId,
-        $lineItemAuditMap
+    /**
+     * Completely clear ALL billing data including backend persisted data.
+     * Does NOT modify tray state.
+     */
+    clearAll: (state) => {
+      try {
+        if (state.visitId) {
+          sessionStorage.removeItem(getDraftStorageKey(state.visitId));
+        }
+      } catch (error) {
+        console.error('Error clearing draft on clearAll:', error);
+      }
+
+      const preservedVisitId = state.visitId;
+      const preservedPatientId = state.patientId;
+      const preservedPatientName = state.patientName;
+      const preservedTrayOpen = state.trayOpen;
+      const preservedCurrentStep = state.currentStep;
+      const preservedViewMode = state.viewMode;
+
+      const newState = { ...INITIAL_BILLING_STATE };
+
+      newState.visitId = preservedVisitId;
+      newState.patientId = preservedPatientId;
+      newState.patientName = preservedPatientName;
+      newState.trayOpen = preservedTrayOpen;
+      newState.currentStep = preservedCurrentStep;
+      newState.viewMode = preservedViewMode;
+
+      return newState;
+    },
+
+    // ========== PATIENT INFO ACTIONS ==========
+    setPatientInfo: (state, action: PayloadAction<{ visitId?: string; patientId?: string; patientName?: string }>) => {
+      const { visitId, patientId, patientName } = action.payload;
+      if (visitId !== undefined) state.visitId = visitId;
+      if (patientId !== undefined) state.patientId = patientId;
+      if (patientName !== undefined) state.patientName = patientName;
+      updateMetadata(state);
+    },
+
+    // ========== BACKEND SYNC ACTIONS ==========
+    hydrateBackendBilling: (state, action: PayloadAction<BillingRetrievalData>) => {
+      const mapped = mapRetrievedBillingToBackendState(action.payload);
+
+      state.backendChargeItems = mapped.backendChargeItems;
+      state.backendBillingMeta = mapped.backendBillingMeta;
+      state.backendBillingData = mapped.backendBillingData;
+      state.backendDiscount = cloneDiscount(mapped.backendDiscount);
+      state.backendTaxes = cloneTaxes(mapped.backendTaxes);
+      state.optimisticPersistedBalanceDelta = 0;
+
+      // Keep working values aligned with persisted basis so discount/taxes apply to combined total.
+      state.discount = cloneDiscount(mapped.backendDiscount);
+      state.taxes = cloneTaxes(mapped.backendTaxes);
+
+      state.lastUpdated = Date.now();
+      state.isDirty = calculateIsDirty(state);
+    },
+
+    clearBackendBilling: (state) => {
+      state.backendChargeItems = [];
+      state.backendBillingMeta = EMPTY_BACKEND_META;
+      state.backendBillingData = null;
+      state.backendDiscount = null;
+      state.backendTaxes = [];
+      state.optimisticPersistedBalanceDelta = 0;
+      state.discount = cloneDiscount(DEFAULT_DISCOUNT);
+      state.taxes = INITIAL_BILLING_STATE.taxes.map((tax) => ({ ...tax }));
+      state.lastUpdated = Date.now();
+      state.isDirty = calculateIsDirty(state);
+    },
+
+    optimisticAdjustBackendItem: (
+      state,
+      action: PayloadAction<{
+        lineItemId: number;
+        action: 'increase' | 'decrease' | 'remove';
+        quantity: number;
+      }>
+    ) => {
+      const { lineItemId, action: adjustmentAction, quantity } = action.payload;
+      const itemIndex = state.backendChargeItems.findIndex((item) => item.lineItemId === lineItemId);
+
+      if (itemIndex === -1) return;
+
+      const item = state.backendChargeItems[itemIndex];
+      const safeQuantity = Math.max(0, Number(quantity) || 0);
+
+      if (safeQuantity === 0 && adjustmentAction !== 'remove') return;
+
+      const unitPrice = item.quantity > 0 ? item.totalAmount / item.quantity : item.service.unitPrice;
+      let balanceDelta = 0;
+
+      if (adjustmentAction === 'increase') {
+        const amountDelta = roundCurrency(unitPrice * safeQuantity);
+        item.quantity += safeQuantity;
+        item.totalAmount = roundCurrency(item.totalAmount + amountDelta);
+        balanceDelta = amountDelta;
+      }
+
+      if (adjustmentAction === 'decrease') {
+        const allowedDecrease = Math.min(safeQuantity, item.quantity);
+        const amountDelta = roundCurrency(unitPrice * allowedDecrease);
+        const nextQuantity = item.quantity - allowedDecrease;
+
+        if (nextQuantity <= 0) {
+          state.backendChargeItems.splice(itemIndex, 1);
+        } else {
+          item.quantity = nextQuantity;
+          item.totalAmount = roundCurrency(item.totalAmount - amountDelta);
+        }
+
+        balanceDelta = -amountDelta;
+      }
+
+      if (adjustmentAction === 'remove') {
+        balanceDelta = -roundCurrency(item.totalAmount);
+        state.backendChargeItems.splice(itemIndex, 1);
+      }
+
+      state.optimisticPersistedBalanceDelta = roundCurrency(state.optimisticPersistedBalanceDelta + balanceDelta);
+      state.lastUpdated = Date.now();
+    },
+
+    rollbackOptimisticBackendAdjustment: (
+      state,
+      action: PayloadAction<{
+        previousBackendChargeItems: BackendChargeItem[];
+        previousOptimisticPersistedBalanceDelta: number;
+      }>
+    ) => {
+      state.backendChargeItems = action.payload.previousBackendChargeItems;
+      state.optimisticPersistedBalanceDelta = action.payload.previousOptimisticPersistedBalanceDelta;
+      state.lastUpdated = Date.now();
+    },
+
+    // ========== BOTTOM DISPLAY ACTIONS ==========
+    setBillingDataLoaded: (state, action: PayloadAction<{ visitId: string; loaded: boolean }>) => {
+      const { visitId, loaded } = action.payload;
+      if (!state.billingDataLoaded) {
+        state.billingDataLoaded = {};
+      }
+      state.billingDataLoaded[visitId] = loaded;
+      updateMetadata(state);
+    },
+
+    clearBillingDataLoaded: (state, action: PayloadAction<string>) => {
+      const visitId = action.payload;
+      if (state.billingDataLoaded && state.billingDataLoaded[visitId]) {
+        delete state.billingDataLoaded[visitId];
+      }
+      updateMetadata(state);
+    },
+  },
+});
+
+/* -------------------------------------------------------------------------- */
+/*                               EXPORT ACTIONS                               */
+/* -------------------------------------------------------------------------- */
+
+export const {
+  openTray,
+  closeTray,
+  setStep,
+  setViewMode,
+  minimizeTray,
+  maximizeTray,
+  addChargeItem,
+  increaseQuantity,
+  decreaseQuantity,
+  removeChargeItem,
+  clearCharges,
+  setDiscount,
+  setPaymentMethods,
+  updatePaymentMethod,
+  addPaymentMethod,
+  removePaymentMethod,
+  setAdditionalNotes,
+  setProcessing,
+  finalizePayment,
+  printReceipt,
+  resetBilling,
+  saveDraft,
+  loadDraft,
+  clearDraft,
+  clearDraftChargeItemsOnly,
+  clearDraftAfterFinalization,
+  setQuantity,
+  setPatientInfo,
+  clearAll,
+  hydrateBackendBilling,
+  clearBackendBilling,
+  optimisticAdjustBackendItem,
+  rollbackOptimisticBackendAdjustment,
+  setBillingDataLoaded,
+  clearBillingDataLoaded,
+} = billingSlice.actions;
+
+export default billingSlice.reducer;
+
+/* -------------------------------------------------------------------------- */
+/*                               SELECTORS                                    */
+/* -------------------------------------------------------------------------- */
+
+// ========== BASE SELECTORS ==========
+export const selectBilling = (state: RootState) => state.billing;
+export const selectIsTrayOpen = (state: RootState) => state.billing.trayOpen;
+export const selectCurrentStep = (state: RootState) => state.billing.currentStep;
+export const selectBillingViewMode = (state: RootState) => state.billing.viewMode;
+export const selectBillingStatus = (state: RootState) => state.billing.status;
+export const selectIsDirty = (state: RootState) => state.billing.isDirty;
+export const selectIsProcessing = (state: RootState) => state.billing.isProcessing;
+export const selectBackendBillingMeta = (state: RootState) => state.billing.backendBillingMeta;
+export const selectBackendBillingData = (state: RootState) => state.billing.backendBillingData;
+
+// ========== CHARGE ITEMS SELECTORS ==========
+export const selectChargeItems = (state: RootState) => state.billing.chargeItems;
+export const selectDraftChargeItems = (state: RootState) => state.billing.chargeItems;
+export const selectBackendChargeItems = (state: RootState) => state.billing.backendChargeItems;
+
+export const selectRenderableChargeItems = (state: RootState): RenderableChargeItem[] => [
+  ...state.billing.backendChargeItems,
+  ...state.billing.chargeItems,
+];
+
+// ========== PERSISTED BALANCE SELECTOR ==========
+export const selectPersistedBalance = createSelector(
+  [
+    (state: RootState) => state.billing.backendBillingData?.balance ?? 0,
+    (state: RootState) => state.billing.optimisticPersistedBalanceDelta ?? 0,
+  ],
+  (serverBalance, optimisticDelta) => Math.max(0, serverBalance + optimisticDelta)
+);
+
+// ========== PATIENT INFO SELECTORS ==========
+export const selectPatientInfo = (state: RootState) => ({
+  visitId: state.billing.visitId,
+  patientId: state.billing.patientId,
+  patientName: state.billing.patientName,
+});
+
+// ========== EFFECTIVE STATUS SELECTOR ==========
+export const selectEffectiveBillingStatus = createSelector(
+  [
+    (state: RootState) => state.billing.backendBillingMeta.status,
+    (state: RootState) => state.billing.status,
+  ],
+  (backendStatus, draftStatus) => {
+    if (backendStatus === 'settled') return 'settled';
+    if (draftStatus === 'settled') return 'settled';
+    if (draftStatus === 'ready') return 'ready';
+    return backendStatus || draftStatus || 'draft';
+  }
+);
+
+// ========== CAN PROCEED SELECTOR ==========
+export const selectCanProceed = createSelector(
+  [
+    (state: RootState) => state.billing.chargeItems.length,
+    selectEffectiveBillingStatus,
+  ],
+  (hasDraftItems, effectiveStatus) => hasDraftItems > 0 && effectiveStatus !== 'settled'
+);
+
+// ========== DRAFT BILLING DATA SELECTOR ==========
+export const selectBillingData = createSelector(
+  [
+    (state: RootState) => state.billing.chargeItems,
+    (state: RootState) => state.billing.discount,
+    (state: RootState) => state.billing.taxes,
+    (state: RootState) => state.billing.paymentMethods,
+  ],
+  (chargeItems, discount, taxes, paymentMethods) => {
+    return calculateBillingSnapshot({
+      chargeItems,
+      discount,
+      taxes,
+      paymentMethods,
+    });
+  }
+);
+
+// ========== COMBINED BILLING DATA SELECTOR ==========
+export const selectCombinedBillingData = createSelector(
+  [
+    (state: RootState) => state.billing.backendChargeItems,
+    (state: RootState) => state.billing.chargeItems,
+    (state: RootState) => state.billing.discount,
+    (state: RootState) => state.billing.taxes,
+    (state: RootState) => state.billing.paymentMethods,
+    (state: RootState) => state.billing.backendBillingData?.totalPaid ?? 0,
+  ],
+  (backendChargeItems, draftChargeItems, discount, taxes, paymentMethods, persistedTotalPaid) => {
+    return calculateBillingSnapshot({
+      chargeItems: [...backendChargeItems, ...draftChargeItems],
+      discount,
+      taxes,
+      paymentMethods,
+      carriedPaid: Number(persistedTotalPaid || 0),
+    });
+  }
+);
+
+const selectComparablePersistedBillingData = createSelector(
+  [
+    (state: RootState) => state.billing.backendChargeItems,
+    (state: RootState) => state.billing.discount,
+    (state: RootState) => state.billing.taxes,
+    (state: RootState) => state.billing.backendBillingData?.totalPaid ?? 0,
+  ],
+  (backendChargeItems, discount, taxes, persistedTotalPaid) => {
+    return calculateBillingSnapshot({
+      chargeItems: backendChargeItems,
+      discount,
+      taxes,
+      paymentMethods: [],
+      carriedPaid: Number(persistedTotalPaid || 0),
+    });
+  }
+);
+
+// ========== DISPLAY BILLING DATA SELECTOR ==========
+export const selectDisplayBillingData = createSelector(
+  [
+    selectCombinedBillingData,
+    selectComparablePersistedBillingData,
+    selectPersistedBalance,
+    selectBackendBillingData,
+    selectBackendChargeItems,
+    selectChargeItems,
+  ],
+  (
+    combined,
+    comparablePersisted,
+    persistedBalance,
+    persistedBillingData,
+    backendChargeItems,
+    draftChargeItems
+  ) => {
+    const persistedSubtotal = backendChargeItems.reduce(
+      (sum, item) => sum + (Number(item.totalAmount) || 0),
+      0
     );
 
-    $state = $this->buildCycleStateSnapshot($billingCycle);
-    $billingData = $this->buildBillingDataFromState($state);
+    const draftSubtotal = draftChargeItems.reduce(
+      (sum, item) => sum + (Number(item.totalAmount) || 0),
+      0
+    );
 
-    $paymentMethods = is_array($metadata['payment_methods'] ?? null)
-        ? $metadata['payment_methods']
-        : [];
-    $additionalNotes = isset($metadata['additional_notes'])
-        ? (string) $metadata['additional_notes']
-        : '';
+    const persistedGrandTotal = persistedBillingData?.grandTotal ?? comparablePersisted.grandTotal;
+    const persistedTotalPaid = persistedBillingData?.totalPaid ?? comparablePersisted.totalPaid;
+    const persistedTaxes = persistedBillingData?.taxes ?? comparablePersisted.taxes ?? [];
 
-    $discount = [
-        'type' => $state['discount_rule']['type'] ?? 'fixed',
-        'value' => ($state['discount_rule']['type'] ?? 'fixed') === 'percentage'
-            ? round((float) ($state['discount_rule']['value'] ?? 0), 2)
-            : round((float) ($state['discount_amount'] ?? 0), 2),
-        'reason' => $state['discount_rule']['reason'] ?? $billingCycle->discount_reason,
-    ];
+    const draftGrandTotal = roundCurrency(
+      Math.max(0, combined.grandTotal - comparablePersisted.grandTotal)
+    );
 
-    $patientUser = $visit->patient?->user;
-    $patientName = $patientUser?->display_name
-        ?: trim((string) ($patientUser->first_name ?? '') . ' ' . (string) ($patientUser->last_name ?? ''));
+    const draftTotalPaid = roundCurrency(
+      Math.max(0, combined.totalPaid - persistedTotalPaid)
+    );
 
-    return [
-        'has_billing' => true,
-        'visit_id' => $visit->id,
-        'visit_uuid' => $visit->visit_uuid,
-        'patient_id' => $visit->patient_id,
-        'patient_number' => Patient::query()->where('id', $visit->patient_id)->value('patient_uuid'),
-        'patient_name' => $patientName ?: 'Unknown',
-        'billing_cycle_id' => $billingCycle->id,
-        'billing_cycle_uuid' => $billingCycle->billing_cycle_uuid,
-        'receipt_number' => "REC-{$billingCycle->id}",
-        'billing_status' => (string) ($billingCycle->billing_status ?? $state['billing_status']),
-        'attending_staff_id' => $billingCycle->created_by_staff_id,
-        'attending_staff_name' => $this->resolveStaffDisplayName($billingCycle->created_by_staff_id),
-        'attending_staff_role' => $this->resolveFacilityRoleCode($billingCycle->created_by_staff_id, $visit->facility_id),
-        'attending_staff_display' => $this->resolveAttendingStaffDisplay($billingCycle->created_by_staff_id, $visit->facility_id),
-        'charge_items' => $activeLineItems->map(function (InvoiceLineItem $lineItem) use ($billingCycle, $currentStaffId, $lineItemAuditMap) {
-            return $this->transformLineItem(
-                $lineItem,
-                $billingCycle,
-                $currentStaffId,
-                $lineItemAuditMap[(int) $lineItem->id] ?? []
-            );
-        })->values()->toArray(),
-        'refunded_items' => $refundedItems,
-        'discount' => $discount,
-        'taxes' => $billingData['taxes'],
-        'payment_methods' => $paymentMethods,
-        'additional_notes' => $additionalNotes,
-        'payment_status' => (string) ($state['payment_status'] ?? 'pending'),
-        'status' => (string) ($state['ui_status'] ?? $this->mapBillingStatusToUI((string) $billingCycle->billing_status)),
-        'billing_data' => $billingData,
-        'audit_logs' => $auditBundle['timeline'] ?? [],
-        'audit_logs_summary' => $auditBundle['summary'] ?? [
-            'count' => 0,
-            'last_event_at' => null,
-            'last_event' => null,
-        ],
-        'billed_at' => optional($billingCycle->billed_at)->toIso8601String(),
-        'created_at' => optional($billingCycle->created_at)->toIso8601String(),
-        'updated_at' => optional($billingCycle->updated_at)->toIso8601String(),
-        'last_updated' => optional($billingCycle->updated_at)->getTimestamp() ? optional($billingCycle->updated_at)->getTimestamp() * 1000 : 0,
-        'is_dirty' => false,
-        'is_processing' => false,
-        '_debug' => [
-            'discount_scope' => 'billing_cycle',
-            'stored_billing_status' => $billingCycle->billing_status,
-            'computed_billing_status' => $state['billing_status'] ?? null,
-            'total_line_items' => $lineItems->count(),
-            'active_line_items' => $activeLineItems->count(),
-            'refunded_items_count' => count($refundedItems),
-        ],
-    ];
-}
-/**
- * Get refunded items from financial adjustments for a billing cycle.
- * This extracts the affected_line_items from refund adjustments.
+    const draftTaxes = subtractTaxes(combined.taxes ?? [], comparablePersisted.taxes ?? []);
+
+    const draftBalance = roundCurrency(
+      Math.max(0, combined.balance - persistedBalance)
+    );
+
+    return {
+      // Persisted values
+      persistedSubtotal,
+      persistedGrandTotal,
+      persistedTotalPaid,
+      persistedBalance,
+      persistedTaxes,
+
+      // Draft values
+      draftSubtotal,
+      draftGrandTotal,
+      draftTotalPaid,
+      draftBalance,
+      draftTaxes,
+
+      // Displayed values (combined)
+      displayedSubtotal: combined.subtotal,
+      displayedGrandTotal: combined.grandTotal,
+      displayedTotalPaid: combined.totalPaid,
+      displayedBalance: combined.balance,
+      displayedTaxes: mergeTaxes([], combined.taxes ?? []),
+
+      // Extra combined values
+      displayedDiscountAmount: combined.discountAmount,
+      displayedTaxableAmount: combined.taxableAmount,
+      displayedTaxTotal: combined.taxTotal,
+    };
+  }
+);
+
+// ========== BILLING DATA LOADED SELECTOR ==========
+export const selectBillingDataLoaded = (state: RootState, visitId: string): boolean =>
+  state.billing.billingDataLoaded?.[visitId] || false;
+
+  /**
+ * BillableItemTypes.ts
+ * ============================================================================
+ * BILLING ITEMS TYPE DEFINITIONS - CORRECTED FOR BACKEND RESPONSE
+ * ============================================================================
  */
+
+import { PaymentStatus } from '../billing-review/BillingReviewTypes';
+import type { AuditLogEntry, AuditLogSummary } from '../billing-review/BillingReviewTypes';
+
+/* -------------------------------------------------------------------------- */
+/*                                   ENUMS                                    */
+/* -------------------------------------------------------------------------- */
+
+export enum BillableItemType {
+  INVENTORY = 'inventory',
+  SERVICE = 'service',
+  ALL = 'all',
+}
+
+export enum ItemStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  DISCONTINUED = 'discontinued',
+  OUT_OF_STOCK = 'out_of_stock',
+}
+
+export enum RiskLevel {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+  CRITICAL = 'critical',
+}
+
+export enum CodeSystem {
+  CPT = 'cpt',
+  ICD10 = 'icd10',
+  CDT = 'cdt',
+  HCPCS = 'hcpcs',
+  LOCAL = 'local',
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              NESTED TYPES                                  */
+/* -------------------------------------------------------------------------- */
+
+export interface InventoryStock {
+  available_packages: number;
+  available_units: number;
+  units_per_package: number;
+  has_stock: boolean;
+  is_low_stock: boolean;
+}
+
+export interface ServiceStock {
+  has_stock: true;
+  available: 'unlimited';
+}
+
+export type ItemStock = InventoryStock | ServiceStock;
+
+export interface BaseBillableItem {
+  id: number;
+  code: string;
+  name: string;
+  unitPrice: number;
+  category: string;
+  _type: BillableItemType;
+  _uuid: string;
+  status: ItemStatus;
+  is_active: boolean;
+}
+
+export interface InventoryItem extends BaseBillableItem {
+  _type: BillableItemType.INVENTORY;
+  description: string;
+  subcategory: string | null;
+  generic_name: string | null;
+  brand_name: string | null;
+  dosage_form: string | null;
+  strength: string | null;
+  unit_of_measure: string;
+  package_quantity: number;
+  requires_prescription: boolean;
+  currency: string;
+  stock: InventoryStock;
+}
+
+export interface ServiceItem extends BaseBillableItem {
+  _type: BillableItemType.SERVICE;
+  currency: string;
+  code_system: CodeSystem;
+  default_duration_minutes: number | null;
+  risk_level: RiskLevel | null;
+  requires_consent: boolean;
+  stock: ServiceStock;
+}
+
+export type BillableItem = InventoryItem | ServiceItem;
+
+export interface ServiceItemCore {
+  id: number | null;
+  code: string;
+  name: string;
+  unitPrice: number;
+  category: string;
+}
+
+export interface GroupedCategoryItems {
+  category: string;
+  items: ServiceItemCore[];
+  count: number;
+}
+
+export type LowStockItem = InventoryItem;
+
+/* -------------------------------------------------------------------------- */
+/*                        BILLING SUBMISSION TYPES                            */
+/* -------------------------------------------------------------------------- */
+
+export interface BillingSubmissionPayload {
+  visit_id: number;
+  patient_id: number;
+  charge_items: Array<{
+    service_key: string;
+    service: ServiceItemCore;
+    quantity: number;
+    totalAmount: number;
+  }>;
+  discount?: {
+    type: 'percentage' | 'fixed';
+    value: number;
+    reason?: string;
+  };
+  taxes: Array<{
+    name: string;
+    rate: number;
+    amount: number;
+  }>;
+  payment_methods: Array<{
+    type: 'cash' | 'card' | 'insurance' | 'mobile' | 'mixed';
+    amount: number;
+    reference?: string;
+    details?: string;
+  }>;
+  billing_data: {
+    subtotal: number;
+    discountAmount: number;
+    taxableAmount: number;
+    taxTotal: number;
+    grandTotal: number;
+    totalPaid: number;
+    balance: number;
+  };
+  additional_notes?: string;
+  status: 'draft' | 'ready' | 'settled';
+  payment_status?: PaymentStatus;
+}
+
+export interface BillingSubmissionResponse {
+  success: boolean;
+  message: string;
+  data: {
+    billing_cycle_id: number;
+    billing_cycle_uuid: string;
+    receipt_number: string;
+    billing_status: string;
+    net_amount: number;
+    total_paid: number;
+    balance: number;
+    created_at: string;
+    line_items_count: number;
+    was_existing_cycle_updated: boolean;
+    idempotent_replay: boolean;
+  };
+}
+
+export type UiBillingStatus = 'draft' | 'ready' | 'settled';
+export type BillingAdjustmentAction = 'increase' | 'decrease' | 'remove';
+
+export interface BillingChargeItemPermissions {
+  entered_by_staff_id: number | null;
+  current_staff_id: number | null;
+  requires_reason_on_cross_staff_edit: boolean;
+  reason_required: boolean;
+  can_edit_without_reason: boolean;
+}
+
 /**
- * Get refunded items from financial adjustments for a billing cycle.
+ * BackendChargeItem - Matches the transformLineItem() output from PHP
  */
-protected function getRefundedItemsFromAdjustments(
-    BillingCycle $billingCycle,
-    ?int $currentStaffId = null,
-    array $lineItemAuditMap = []
-): array {
-    $refundedItems = [];
-    
-    // Get all refund adjustments for this billing cycle
-    $refundAdjustments = FinancialAdjustment::query()
-        ->where('billing_cycle_id', $billingCycle->id)
-        ->whereIn('adjustment_type', ['full_refund', 'partial_refund'])
-        ->where('status', 'completed')
-        ->orderBy('created_at', 'desc')
-        ->get();
-    
-    foreach ($refundAdjustments as $adjustment) {
-        // Get the affected line items from the adjustment
-        $affectedLineItems = $adjustment->affected_line_items ?? [];
-        
-        if (is_string($affectedLineItems)) {
-            $affectedLineItems = json_decode($affectedLineItems, true);
-        }
-        
-        if (!is_array($affectedLineItems)) {
-            continue;
-        }
-        
-        // Get refund methods for this adjustment
-        $refundMethods = $adjustment->refund_methods ?? [];
-        if (is_string($refundMethods)) {
-            $refundMethods = json_decode($refundMethods, true);
-        }
-        
-        // Get the staff member who processed the refund
-        $refundedByStaffId = $adjustment->approved_by_staff_id ?? $adjustment->requested_by_staff_id;
-        $refundedByStaffName = null;
-        $staffNumber = Staff::where('id', $refundedByStaffId)->value('staff_uuid');
-        
-        if ($refundedByStaffId) {
-            $staff = Staff::query()->find($refundedByStaffId);
-            if ($staff && $staff->user) {
-                $refundedByStaffName = trim(($staff->user->display_name ?: ($staff->user->first_name . ' ' . $staff->user->last_name)));
-            }
-        }
-        
-        foreach ($affectedLineItems as $item) {
-            // Try to find the original line item to get service details
-            $originalLineItem = InvoiceLineItem::query()
-                ->where('id', $item['line_item_id'] ?? 0)
-                ->withTrashed()
-                ->first();
-            
-            // Get audit logs for this line item
-            $lineItemId = (int) ($item['line_item_id'] ?? 0);
-            $auditLogs = $lineItemId > 0 ? ($lineItemAuditMap[$lineItemId] ?? []) : [];
-            
-            $refundedItems[] = [
-                'id' => 'refund::' . ($item['line_item_uuid'] ?? $item['line_item_id']),
-                'source' => 'refund',
-                'persisted' => true,
-                'refunded' => true,
-                'line_item_id' => $item['line_item_id'] ?? null,
-                'line_item_uuid' => $item['line_item_uuid'] ?? null,
-                'billing_cycle_id' => $billingCycle->id,
-                'adjustment_id' => $adjustment->id,
-                'adjustment_reference' => $adjustment->reference_number,
-                'adjustment_type' => $adjustment->adjustment_type,
-                'adjustment_created_at' => optional($adjustment->created_at)->toIso8601String(),
-                'service_key' => $item['service_code'] ?? 'unknown',
-                'serviceKey' => $item['service_code'] ?? 'unknown',
-                'service' => [
-                    'id' => null,
-                    'code' => $item['service_code'] ?? '',
-                    'name' => $item['service_description'] ?? ($originalLineItem->service_description ?? 'Refunded Item'),
-                    'unitPrice' => $originalLineItem 
-                        ? round((float) ($originalLineItem->unit_price_at_time ?? 0), 2)
-                        : round($item['original_subtotal'] / max(0.01, $item['original_quantity']), 2),
-                    'category' => 'Refunded',
-                ],
-                'quantity' => [
-                    'original' => round((float) ($item['original_quantity'] ?? 0), 2),
-                    'refunded' => round((float) ($item['refund_quantity'] ?? 0), 2),
-                    'remaining' => round((float) ($item['remaining_quantity'] ?? 0), 2),
-                ],
-                'amounts' => [
-                    'original_subtotal' => round((float) ($item['original_subtotal'] ?? 0), 2),
-                    'refund_subtotal' => round((float) ($item['refund_subtotal'] ?? 0), 2),
-                    'remaining_subtotal' => round((float) ($item['remaining_subtotal'] ?? 0), 2),
-                ],
-                'totalAmount' => round((float) ($item['refund_subtotal'] ?? 0), 2),
-                'line_item_status' => 'refunded',
-                'matched_reference' => [
-                    'id' => $item['matched_reference_id'] ?? null,
-                    'type' => $item['matched_reference_type'] ?? null,
-                ],
-                'refund_info' => [
-                    'refund_amount' => round((float) ($adjustment->adjustment_amount ?? 0), 2),
-                    'patient_refund' => round((float) ($adjustment->patient_refund_amount ?? 0), 2),
-                    'insurance_refund' => round((float) ($adjustment->insurance_refund_amount ?? 0), 2),
-                    'refund_methods' => $refundMethods,
-                    'refund_reason' => $adjustment->adjustment_reason,
-                    'refunded_at' => optional($adjustment->completed_at)->toIso8601String() ?? optional($adjustment->created_at)->toIso8601String(),
-                    'refunded_by_staff_id' => $staffNumber,
-                    'refunded_by_staff_name' => $refundedByStaffName,
-                ],
-                'permissions' => [
-                    'entered_by_staff_id' => null,
-                    'current_staff_id' => $currentStaffId ?? null,
-                    'requires_reason_on_cross_staff_edit' => true,
-                    'reason_required' => false,
-                    'can_edit_without_reason' => false,
-                ],
-                'audit' => [
-                    'adjustment_id' => $adjustment->id,
-                    'reference_number' => $adjustment->reference_number,
-                    'adjustment_type' => $adjustment->adjustment_type,
-                    'completed_at' => optional($adjustment->completed_at)->toIso8601String(),
-                ],
-                'audit_logs' => $auditLogs,
-                'audit_logs_summary' => [
-                    'count' => count($auditLogs),
-                    'last_event_at' => $auditLogs[0]['performed_at'] ?? null,
-                    'last_event' => $auditLogs[0] ?? null,
-                ],
-            ];
-        }
-    }
-    
-    return $refundedItems;
+export interface BackendChargeItem {
+  id: string; // 'backend-charge::' + line_item_uuid or line_item_id
+  source: 'backend' | 'refund';
+  persisted: true;
+  refunded?: boolean;
+  
+  line_item_id: number;
+  line_item_uuid?: string;
+  billing_cycle_id: number;
+  
+  service_key: string;
+  serviceKey: string;
+  
+  service: ServiceItemCore;
+  quantity: number; // Simple number, not object (quantity refunds handled separately)
+  totalAmount: number;
+  
+  line_item_status?: string;
+  
+  entered_by_staff_id?: number | null;
+  entered_by_staff_name?: string | null;
+  
+  permissions: BillingChargeItemPermissions;
+  
+  audit?: {
+    originated_by_staff_id?: number | null;
+    last_adjusted_by_staff_id?: number | null;
+    last_appended_by_staff_id?: number | null;
+    last_adjusted_at?: string | null;
+    adjustment_history?: any[];
+    discount_scope?: string;
+  };
+  
+  audit_logs?: AuditLogEntry[];
+  audit_logs_summary?: AuditLogSummary;
+  
+  refund_info?: {
+    refund_amount: number;
+    patient_refund: number;
+    insurance_refund: number;
+    refund_methods: Array<{
+      type: string;
+      amount: number;
+      reference?: string | null;
+    }>;
+    refund_reason?: string;
+    refunded_at?: string;
+    refunded_by_staff_id?: string | number | null;
+    refunded_by_staff_name?: string;
+  };
 }
-    public function getBillingByVisitForFacility(int $visitId, int $facilityId, ?int $currentStaffId = null): array
-    {
-        try {
-            $visit = Visit::query()
-                ->where('id', $visitId)
-                ->where('facility_id', $facilityId)
-                ->with(['patient.user'])
-                ->first();
 
-            if (!$visit) {
-                return [
-                    'success' => false,
-                    'message' => 'Visit not found or does not belong to this facility.',
-                    'errors' => ['visit_id' => ['Invalid visit for this facility.']],
-                ];
-            }
-
-            $billingCycle = BillingCycle::query()
-                ->where('visit_id', $visitId)
-                ->where('facility_id', $facilityId)
-                ->with(['lineItems' => fn ($q) => $q->withTrashed()])
-                ->latest('id')
-                ->first();
-
-            if (!$billingCycle) {
-                return [
-                    'success' => true,
-                    'message' => 'No billing record found for this visit.',
-                    'data' => [
-                        'items' => [],
-                        'pagination' => [
-                            'current_page' => 1,
-                            'per_page' => 1,
-                            'total_items' => 0,
-                            'total_pages' => 0,
-                            'from' => null,
-                            'to' => null,
-                            'has_previous' => false,
-                            'has_next' => false,
-                        ],
-                        'filters_applied' => [],
-                        'search_term' => null,
-                        'visit_id' => $visitId,
-                        'has_billing' => false,
-                    ],
-                ];
-            }
-
-            return [
-                'success' => true,
-                'message' => 'Billing data retrieved successfully.',
-                'data' => [
-                    'items' => [$this->transformBillingData($billingCycle, $visit, $currentStaffId)],
-                    'pagination' => [
-                        'current_page' => 1,
-                        'per_page' => 1,
-                        'total_items' => 1,
-                        'total_pages' => 1,
-                        'from' => 1,
-                        'to' => 1,
-                        'has_previous' => false,
-                        'has_next' => false,
-                    ],
-                    'filters_applied' => [],
-                    'search_term' => null,
-                ],
-            ];
-        } catch (Throwable $e) {
-            Log::error('Billing retrieval by visit/facility shape failed.', [
-                'visit_id' => $visitId,
-                'facility_id' => $facilityId,
-                'error_message' => $e->getMessage(),
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'An unexpected error occurred while retrieving billing data.',
-                'errors' => ['system' => ['Failed to retrieve billing information.']],
-                'error' => config('app.debug') ? $e->getMessage() : null,
-            ];
-        }
-    }
-
-    public function getBillingStatistics(int $facilityId, array $filters = []): array
-    {
-        try {
-            $query = BillingCycle::query()->where('facility_id', $facilityId);
-
-            if (!empty($filters['date_from'])) {
-                $query->whereDate('created_at', '>=', $filters['date_from']);
-            }
-
-            if (!empty($filters['date_to'])) {
-                $query->whereDate('created_at', '<=', $filters['date_to']);
-            }
-
-            $statusTotals = (clone $query)
-                ->selectRaw('billing_status, COUNT(*) as count, SUM(grand_total_amount) as total_amount, SUM(patient_payment_received) as total_patient_paid, SUM(insurance_payment_received) as total_insurance_paid, SUM(discount_applied) as total_discount')
-                ->groupBy('billing_status')
-                ->get();
-
-            $statistics = [
-                'total_billing_cycles' => (clone $query)->count(),
-                'total_revenue' => round((float) (clone $query)->sum('grand_total_amount'), 2),
-                'total_patient_payments' => round((float) (clone $query)->sum('patient_payment_received'), 2),
-                'total_insurance_payments' => round((float) (clone $query)->sum('insurance_payment_received'), 2),
-                'total_discounts_applied' => round((float) (clone $query)->sum('discount_applied'), 2),
-                'average_cycle_amount' => round((float) ((clone $query)->avg('grand_total_amount') ?? 0), 2),
-                'by_status' => [],
-            ];
-
-            foreach ($statusTotals as $statusTotal) {
-                $uiStatus = $this->mapBillingStatusToUI((string) $statusTotal->billing_status);
-
-                if (!isset($statistics['by_status'][$uiStatus])) {
-                    $statistics['by_status'][$uiStatus] = [
-                        'count' => 0,
-                        'total_amount' => 0.00,
-                        'breakdown' => [],
-                    ];
-                }
-
-                $statistics['by_status'][$uiStatus]['count'] += (int) $statusTotal->count;
-                $statistics['by_status'][$uiStatus]['total_amount'] += round((float) $statusTotal->total_amount, 2);
-                $statistics['by_status'][$uiStatus]['breakdown'][$statusTotal->billing_status] = [
-                    'count' => (int) $statusTotal->count,
-                    'total_amount' => round((float) $statusTotal->total_amount, 2),
-                    'patient_paid' => round((float) $statusTotal->total_patient_paid, 2),
-                    'insurance_paid' => round((float) $statusTotal->total_insurance_paid, 2),
-                    'discount_applied' => round((float) $statusTotal->total_discount, 2),
-                ];
-            }
-
-            return [
-                'success' => true,
-                'message' => 'Billing statistics retrieved successfully.',
-                'data' => $statistics,
-            ];
-        } catch (Throwable $e) {
-            Log::error('Billing statistics retrieval failed.', [
-                'facility_id' => $facilityId,
-                'filters' => $filters,
-                'error_message' => $e->getMessage(),
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'Failed to retrieve billing statistics.',
-                'errors' => ['system' => [$e->getMessage()]],
-            ];
-        }
-    }
-
-    public function getBillingByPatient(int $patientId, int $facilityId, ?int $currentStaffId = null): array
-    {
-        try {
-            $billingCycles = BillingCycle::query()
-                ->where('facility_id', $facilityId)
-                ->where('patient_id', $patientId)
-                ->with(['visit.patient.user', 'lineItems'])
-                ->latest('id')
-                ->get();
-
-            if ($billingCycles->isEmpty()) {
-                return [
-                    'success' => true,
-                    'message' => 'No billing records found for this patient.',
-                    'data' => [],
-                ];
-            }
-
-            $items = $billingCycles
-                ->filter(fn (BillingCycle $cycle) => $cycle->visit !== null)
-                ->map(fn (BillingCycle $cycle) => $this->transformBillingData($cycle, $cycle->visit, $currentStaffId))
-                ->values()
-                ->toArray();
-
-            return [
-                'success' => true,
-                'message' => 'Patient billing data retrieved successfully.',
-                'data' => $items,
-            ];
-        } catch (Throwable $e) {
-            Log::error('Patient billing retrieval failed.', [
-                'patient_id' => $patientId,
-                'facility_id' => $facilityId,
-                'error_message' => $e->getMessage(),
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'Failed to retrieve patient billing data.',
-                'errors' => ['system' => ['Failed to retrieve patient billing information.']],
-            ];
-        }
-    }
-
-    public function adjustBillingLineItem(int $lineItemId, array $data, int $facilityId, int $staffId): array
-    {
-        try {
-            $lineItem = InvoiceLineItem::query()
-                ->where('id', $lineItemId)
-                ->whereHas('billingCycle', function ($query) use ($facilityId) {
-                    $query->where('facility_id', $facilityId);
-                })
-                ->first();
-
-            if (!$lineItem) {
-                return [
-                    'success' => false,
-                    'message' => 'Billing line item not found for this facility.',
-                    'errors' => ['line_item_id' => ['Invalid billing line item.']],
-                ];
-            }
-
-            $action = (string) ($data['action'] ?? '');
-            $quantity = round((float) ($data['quantity'] ?? 1), 2);
-            $reason = trim((string) ($data['reason'] ?? ''));
-
-            if (!in_array($action, ['increase', 'decrease', 'remove'], true)) {
-                return [
-                    'success' => false,
-                    'message' => 'Invalid billing adjustment action.',
-                    'errors' => ['action' => ['Action must be increase, decrease, or remove.']],
-                ];
-            }
-
-            if ($action !== 'remove' && $quantity <= 0) {
-                return [
-                    'success' => false,
-                    'message' => 'Quantity must be greater than zero.',
-                    'errors' => ['quantity' => ['Quantity must be greater than zero for this action.']],
-                ];
-            }
-
-            $lineMetadata = $this->decodeJsonishToArray($lineItem->metadata ?? null);
-            $enteredByStaffId = $lineMetadata['originated_by_staff_id'] ?? $lineItem->created_by_staff_id;
-
-            if ($this->shouldRequireCrossStaffReason($enteredByStaffId, $staffId) && $reason === '') {
-                return [
-                    'success' => false,
-                    'message' => 'Reason is required when editing an item entered by another staff member.',
-                    'errors' => ['reason' => ['Please provide a reason for this cross-staff billing adjustment.']],
-                ];
-            }
-
-            if ($action === 'increase') {
-                $inventoryValidation = $this->validation->validateInventoryAvailability([
-                    [
-                        'service' => [
-                            'code' => $lineItem->service_code,
-                            'name' => $lineItem->service_description,
-                        ],
-                        'quantity' => $quantity,
-                    ],
-                ], $staffId);
-
-                if (empty($inventoryValidation['success'])) {
-                    return $inventoryValidation;
-                }
-            }
-
-            $result = $this->processor->processPersistedLineItemAdjustment(
-                $lineItem,
-                $action,
-                $quantity,
-                $reason !== '' ? $reason : null,
-                $staffId
-            );
-
-            return [
-                'success' => true,
-                'message' => 'Billing line item adjusted successfully.',
-                'data' => [
-                    'billing_cycle_id' => $result['billing_cycle']->id,
-                    'billing_cycle_uuid' => $result['billing_cycle']->billing_cycle_uuid,
-                    'line_item_id' => $result['line_item']->id,
-                    'line_item_uuid' => $result['line_item']->line_item_uuid,
-                    'billing_status' => $result['billing_cycle']->billing_status,
-                    'total_paid' => round((float) ($result['billing_cycle']->total_paid_amount ?? 0), 2),
-                    'balance' => round((float) ($result['billing_cycle']->balance_amount ?? 0), 2),
-                ],
-            ];
-        } catch (Throwable $e) {
-            Log::error('Billing line item adjustment failed.', [
-                'line_item_id' => $lineItemId,
-                'facility_id' => $facilityId,
-                'staff_id' => $staffId,
-                'error_message' => $e->getMessage(),
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'An unexpected error occurred while adjusting the billing item.',
-                'errors' => ['system' => ['Billing adjustment failed.']],
-                'error' => config('app.debug') ? $e->getMessage() : null,
-            ];
-        }
-    }
-
-    public function shouldRequireCrossStaffReason(?int $enteredByStaffId, ?int $currentStaffId): bool
-    {
-        if (!$enteredByStaffId || !$currentStaffId) {
-            return true;
-        }
-
-        return (int) $enteredByStaffId !== (int) $currentStaffId;
-    }
-
-    public function buildLineItemEditPolicy(?int $enteredByStaffId, ?int $currentStaffId): array
-    {
-        $reasonRequired = $this->shouldRequireCrossStaffReason($enteredByStaffId, $currentStaffId);
-
-        return [
-            'entered_by_staff_id' => $enteredByStaffId,
-            'current_staff_id' => $currentStaffId,
-            'requires_reason_on_cross_staff_edit' => true,
-            'reason_required' => $reasonRequired,
-            'can_edit_without_reason' => !$reasonRequired,
-        ];
-    }
-
-    /**
-     * Build a read-side cycle state snapshot from stored data + active line items.
-     */
-    protected function buildCycleStateSnapshot(BillingCycle $billingCycle): array
-    {
-        $metadata = $this->decodeJsonishToArray($billingCycle->metadata ?? null);
-        $discountRule = is_array($metadata['discount_rule'] ?? null)
-            ? $metadata['discount_rule']
-            : [
-                'type' => 'fixed',
-                'value' => $billingCycle->discount_applied ?? 0,
-                'reason' => $billingCycle->discount_reason,
-            ];
-
-        $taxDefinitions = is_array($metadata['tax_definitions'] ?? null) && !empty($metadata['tax_definitions'])
-            ? $metadata['tax_definitions']
-            : $this->decodeJsonishToArray($billingCycle->tax_details ?? null);
-
-        $requestedUiStatus = (string) ($metadata['frontend_ui_status'] ?? $this->mapBillingStatusToUI((string) $billingCycle->billing_status));
-        $subtotal = $this->getActiveBillingCycleSubtotal($billingCycle);
-
-        return $this->determineBillingState(
-            $subtotal,
-            $discountRule,
-            $taxDefinitions,
-            [
-                'patient_payment' => 0,
-                'insurance_payment' => 0,
-                'total_paid' => 0,
-            ],
-            $requestedUiStatus,
-            $billingCycle
-        );
-    }
-
-   protected function transformLineItem(
-    InvoiceLineItem $lineItem,
-    BillingCycle $billingCycle,
-    ?int $currentStaffId = null,
-    array $auditLogs = []
-): array {
-    $serviceSnapshot = $this->decodeJsonishToArray($lineItem->service_version_snapshot ?? null);
-    $lineMetadata = $this->decodeJsonishToArray($lineItem->metadata ?? null);
-
-    $serviceCode = (string) ($lineItem->service_code ?? '');
-    $serviceKey = (string) ($lineMetadata['service_key'] ?? ($serviceCode !== '' ? "key::{$serviceCode}" : 'key::unknown'));
-    $enteredByStaffId = $lineMetadata['originated_by_staff_id']
-        ?? $lineItem->created_by_staff_id
-        ?? $billingCycle->created_by_staff_id;
-
-    return [
-        'id' => $lineItem->line_item_uuid ? 'backend-charge::' . $lineItem->line_item_uuid : 'backend-charge::' . $lineItem->id,
-        'source' => 'backend',
-        'persisted' => true,
-        'line_item_id' => $lineItem->id,
-        'line_item_uuid' => $lineItem->line_item_uuid,
-        'billing_cycle_id' => $billingCycle->id,
-        'service_key' => $serviceKey,
-        'serviceKey' => $serviceKey,
-        'service' => [
-            'id' => $lineItem->service_version_id ?? ($serviceSnapshot['id'] ?? null),
-            'code' => $serviceCode,
-            'name' => (string) ($lineItem->service_description ?? ($serviceSnapshot['name'] ?? '')),
-            'unitPrice' => round((float) ($lineItem->unit_price_at_time ?? 0), 2),
-            'category' => (string) ($lineMetadata['category'] ?? ($serviceSnapshot['category'] ?? 'General')),
-        ],
-        'quantity' => round((float) ($lineItem->quantity ?? 0), 2),
-        'totalAmount' => round((float) ($lineItem->line_total_amount ?? 0), 2),
-        'line_item_status' => (string) ($lineItem->line_item_status ?? 'pending'),
-        'entered_by_staff_id' => $enteredByStaffId,
-        'entered_by_staff_name' => $this->resolveStaffDisplayName($enteredByStaffId),
-        'permissions' => $this->buildLineItemEditPolicy($enteredByStaffId ? (int) $enteredByStaffId : null, $currentStaffId),
-        'audit' => [
-            'originated_by_staff_id' => $enteredByStaffId,
-            'last_adjusted_by_staff_id' => $lineMetadata['last_adjusted_by_staff_id'] ?? null,
-            'last_appended_by_staff_id' => $lineMetadata['last_appended_by_staff_id'] ?? null,
-            'last_adjusted_at' => $lineMetadata['last_adjusted_at'] ?? null,
-            'adjustment_history' => $lineMetadata['adjustment_history'] ?? [],
-            'discount_scope' => 'billing_cycle',
-        ],
-        'audit_logs' => $auditLogs,
-        'audit_logs_summary' => [
-            'count' => count($auditLogs),
-            'last_event_at' => $auditLogs[0]['performed_at'] ?? null,
-            'last_event' => $auditLogs[0] ?? null,
-        ],
-    ];
+/**
+ * RefundedItem - Matches getRefundedItemsFromAdjustments() output
+ */
+export interface RefundedItem extends BackendChargeItem {
+  source: 'refund';
+  refunded: true;
+  adjustment_id?: number;
+  adjustment_reference?: string;
+  adjustment_type?: string;
+  adjustment_created_at?: string;
+  quantity: {
+    original: number;
+    refunded: number;
+    remaining: number;
+  };
+  amounts?: {
+    original_subtotal: number;
+    refund_subtotal: number;
+    remaining_subtotal: number;
+  };
+  matched_reference?: {
+    id: number | null;
+    type: string | null;
+  };
 }
-    protected function resolveStaffDisplayName(?int $staffId): ?string
-    {
-        if (!$staffId) {
-            return null;
-        }
 
-        $staff = Staff::query()->find($staffId);
-        if (!$staff) {
-            return null;
-        }
-
-        $user = User::query()->find($staff->user_id);
-        if (!$user) {
-            return null;
-        }
-
-        return trim((string) ($user->display_name ?: (($user->first_name ?? '') . ' ' . ($user->last_name ?? ''))));
-    }
-
-    protected function resolveFacilityRoleCode(?int $staffId, int $facilityId): ?string
-    {
-        if (!$staffId) {
-            return null;
-        }
-
-        return \App\Models\FacilityStaffRole::query()
-            ->where('staff_id', $staffId)
-            ->where('facility_id', $facilityId)
-            ->value('role_code');
-    }
-
-    protected function resolveAttendingStaffDisplay(?int $staffId, int $facilityId): ?string
-    {
-        $name = $this->resolveStaffDisplayName($staffId);
-        $role = $this->resolveFacilityRoleCode($staffId, $facilityId);
-
-        if (!$role) {
-            return $name;
-        }
-
-        $formattedRole = ucwords(strtolower(str_replace(['_', '-'], ' ', $role)));
-
-        return $name ? "{$name} ({$formattedRole})" : $formattedRole;
-    }
+/**
+ * BillingRetrievalData - Matches transformBillingData() output from PHP
+ */
+export interface BillingRetrievalData {
+  has_billing: boolean;
+  visit_id: number;
+  visit_uuid?: string;
+  patient_id: number;
+  patient_number?: string;
+  patient_name: string;
+  
+  billing_cycle_id?: number;
+  billing_cycle_uuid?: string;
+  receipt_number?: string;
+  
+  attending_staff_id?: number | null;
+  attending_staff_name?: string | null;
+  attending_staff_role?: string | null;
+  attending_staff_display?: string | null;
+  
+  charge_items?: BackendChargeItem[];
+  refunded_items?: RefundedItem[];
+  
+  discount?: {
+    type: 'percentage' | 'fixed';
+    value: number;
+    reason?: string | null;
+  };
+  
+  taxes?: Array<{
+    name: string;
+    rate: number;
+    amount: number;
+  }>;
+  
+  payment_methods?: Array<{
+    type: 'cash' | 'card' | 'insurance' | 'mobile' | 'mixed';
+    amount: number;
+    reference?: string;
+    details?: string;
+  }>;
+  
+  additional_notes?: string;
+  
+  payment_status?: string;
+  status?: UiBillingStatus;
+  billing_status?: string;
+  
+  billing_data?: {
+    subtotal: number;
+    discountAmount: number;
+    taxableAmount: number;
+    taxTotal: number;
+    grandTotal: number;
+    totalPaid: number;
+    balance: number;
+    isPaid?: boolean;
+    taxes?: Array<{
+      name: string;
+      rate: number;
+      amount: number;
+    }>;
+  };
+  
+  audit_logs?: AuditLogEntry[];
+  audit_logs_summary?: AuditLogSummary;
+  
+  billed_at?: string;
+  created_at?: string;
+  updated_at?: string;
+  last_updated?: number;
+  is_dirty?: boolean;
+  is_processing?: boolean;
+  
+  _debug?: {
+    discount_scope?: string;
+    stored_billing_status?: string;
+    computed_billing_status?: string | null;
+    total_line_items?: number;
+    active_line_items?: number;
+    refunded_items_count?: number;
+  };
 }
+
+export interface BillingRetrievalResponse {
+  success: boolean;
+  message: string;
+  data: BillingRetrievalData;
+}
+
+export interface BillingAdjustmentPayload {
+  line_item_id: number;
+  action: BillingAdjustmentAction;
+  quantity?: number;
+  reason?: string;
+}
+
+export interface BillingAdjustmentResponse {
+  success: boolean;
+  message: string;
+  data: {
+    billing_cycle_id: number;
+    billing_cycle_uuid: string;
+    line_item_id: number;
+    line_item_uuid: string;
+    billing_status: string;
+    total_paid: number;
+    balance: number;
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          REQUEST/RESPONSE TYPES                            */
+/* -------------------------------------------------------------------------- */
+
+export interface BillableItemsFilters {
+  category?: string | null;
+  search?: string | null;
+  limit?: number | null;
+  include_inactive?: boolean | null;
+  type?: BillableItemType | null;
+}
+
+export interface BillableItemsSummary {
+  total_items: number;
+  total_inventory: number;
+  total_services: number;
+  categories: string[];
+  total_value: number;
+  average_price: number;
+}
+
+export interface BillableItemsMeta {
+  facility_id: number;
+  filters_applied: Partial<BillableItemsFilters>;
+  timestamp: string;
+}
+
+export interface BillableItemsData {
+  services: ServiceItemCore[];
+  items_full: BillableItem[];
+  grouped_by_category: GroupedCategoryItems[];
+  low_stock_items: LowStockItem[];
+}
+
+export interface BillableItemsResponse {
+  success: boolean;
+  message: string;
+  data: BillableItemsData;
+  summary: BillableItemsSummary;
+  meta: BillableItemsMeta;
+}
+
+export interface ApiErrorResponse {
+  success: false;
+  message: string;
+  errors?: Record<string, string[]>;
+  error?: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                              UTILITY TYPES                                 */
+/* -------------------------------------------------------------------------- */
+
+export type FacilityId = number;
+
+export function isInventoryItem(item: BillableItem): item is InventoryItem {
+  return item._type === BillableItemType.INVENTORY;
+}
+
+export function isServiceItem(item: BillableItem): item is ServiceItem {
+  return item._type === BillableItemType.SERVICE;
+}
+
+export function isInventoryStock(stock: ItemStock): stock is InventoryStock {
+  return 'available_packages' in stock;
+}
+
+export function isRefundedItem(item: BackendChargeItem | RefundedItem): item is RefundedItem {
+  return item.source === 'refund' && item.refunded === true;
+}
+
+export interface MutationCallbacks<TData, TError = Error> {
+  onSuccess?: (data: TData) => void;
+  onError?: (error: TError) => void;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            CONSTANTS & DEFAULTS                            */
+/* -------------------------------------------------------------------------- */
+
+export const DEFAULT_CURRENCY = 'UGX';
+export const DEFAULT_ITEM_LIMIT = 500;
+export const MAX_ITEM_LIMIT = 500;
+
+export function getAvailableQuantity(item: InventoryItem): number {
+  return item.stock.available_units;
+}
+
+export function hasSufficientStock(item: InventoryItem, requiredQuantity: number): boolean {
+  return item.stock.available_units >= requiredQuantity;
+}
+
+export function formatItemDisplayName(item: BillableItem): string {
+  if (isInventoryItem(item)) {
+    const parts = [item.name];
+    if (item.strength) parts.push(item.strength);
+    if (item.dosage_form) parts.push(item.dosage_form);
+    if (item.brand_name && item.brand_name !== item.generic_name) {
+      parts.push(`(${item.brand_name})`);
+    }
+    return parts.join(' ');
+  }
+  return item.name;
+}
+
+export function makeBillableKey(service: ServiceItemCore): string {
+  return `${service.code}|${service.category}`;
+}
+
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: DEFAULT_CURRENCY,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+/**
+ * RenderableChargeItem - Union type for display in UI
+ */
+export type RenderableChargeItem = BackendChargeItem | {
+  id: string;
+  source: 'draft';
+  persisted: false;
+  service: ServiceItemCore;
+  quantity: number;
+  totalAmount: number;
+};
+import React from 'react';
+import { Plus, Minus, Trash2, Eye } from 'lucide-react';
+import { motion } from 'framer-motion';
+import {
+  type RenderableChargeItem,
+  type BackendChargeItem,
+  formatCurrency,
+} from '../billing-types';
+import { isInventoryItem } from '../../../../api/billable-items/BillingItemsTypes';
+import { getRoleDisplayName as formatName } from '../../../../../../shared/utils/facilityRoleFormator';
+
+interface ChargeItemRowProps {
+  item: RenderableChargeItem;
+  index: number;
+  isReadOnly: boolean;
+  theme: 'light' | 'dark';
+  colors: any;
+  itemsFullData?: any[];
+  viewMode: 'desktop' | 'mobile';
+  onIncrease: (itemId: string) => void;
+  onDecrease: (itemId: string) => void;
+  onRemove: (itemId: string) => void;
+  onQuantityChange: (itemId: string, value: string) => void;
+  onQuantityBlur: (itemId: string, value: string) => void;
+  onViewHistory: (item: RenderableChargeItem) => void;
+}
+
+const getStockBadge = (
+  item: RenderableChargeItem,
+  itemsFullData: any[] | undefined,
+  isDark: boolean
+) => {
+  const service = item.service;
+  const fullItem = itemsFullData?.find(
+    (x) => x.id === service.id && x.code === service.code && x.category === service.category
+  );
+
+  if (!fullItem) {
+    return (
+      <span
+        className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+          isDark ? 'bg-purple-900/50 text-purple-200' : 'bg-purple-50 text-purple-700'
+        }`}
+      >
+        Service
+      </span>
+    );
+  }
+
+  if (isInventoryItem(fullItem)) {
+    const units = fullItem.package_quantity;
+    const isLow = fullItem.stock.is_low_stock;
+    const isOut = units <= 0;
+
+    const unitName = fullItem.unit_of_measure ?? 'unit';
+    const pluralUnit = unitName.endsWith('y')
+      ? unitName.slice(0, -1) + 'ies'
+      : unitName.endsWith('s')
+      ? unitName
+      : unitName + 's';
+
+    const displayUnit = units === 1 ? unitName : pluralUnit;
+
+    return (
+      <span
+        className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap ${
+          isOut
+            ? isDark
+              ? 'bg-red-900/50 text-red-200'
+              : 'bg-red-100 text-red-700'
+            : isLow
+            ? isDark
+              ? 'bg-yellow-900/50 text-yellow-200'
+              : 'bg-yellow-100 text-yellow-700'
+            : isDark
+            ? 'bg-green-900/50 text-green-200'
+            : 'bg-green-100 text-green-700'
+        }`}
+      >
+        {isOut ? 'Out of stock' : `${units} ${displayUnit}`}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+        isDark ? 'bg-purple-900/50 text-purple-200' : 'bg-purple-50 text-purple-700'
+      }`}
+    >
+      Service
+    </span>
+  );
+};
+
+export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
+  item,
+  index,
+  isReadOnly,
+  theme,
+  colors,
+  itemsFullData,
+  viewMode,
+  onIncrease,
+  onDecrease,
+  onRemove,
+  onQuantityChange,
+  onQuantityBlur,
+  onViewHistory,
+}) => {
+  const isDark = theme === 'dark';
+
+  const isPersistedBackendItem = item.source === 'backend';
+  const backendItem = isPersistedBackendItem ? (item as BackendChargeItem) : null;
+  const requiresReason = !!backendItem?.permissions?.reason_required;
+  const hasAuditLogs = isPersistedBackendItem && backendItem?.audit_logs && backendItem.audit_logs.length > 0;
+
+  const actionButtonClass = `p-2 border ${
+    isDark
+      ? 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300'
+      : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600'
+  } transition-colors cursor-pointer rounded`;
+
+  const removeButtonClass = `ml-1 p-2 ${
+    isDark
+      ? 'bg-gray-800 hover:bg-red-900/20 text-gray-300 hover:text-red-400'
+      : 'bg-gray-50 hover:bg-red-50 text-gray-500 hover:text-red-500'
+  } transition-colors cursor-pointer rounded-full`;
+
+  const historyButtonClass = `ml-1 p-2 ${
+    isDark
+      ? 'bg-gray-800 hover:bg-blue-900/20 text-gray-300 hover:text-blue-400'
+      : 'bg-gray-50 hover:bg-blue-50 text-gray-500 hover:text-blue-500'
+  } transition-colors cursor-pointer rounded-full`;
+
+  const renderQuantityControlDesktop = () => {
+    if (isReadOnly) {
+      return (
+        <div className="flex items-center gap-2">
+          <span
+            className={`px-3 py-2 border ${
+              isDark
+                ? 'border-gray-700 bg-gray-800 text-gray-100'
+                : 'border-gray-200 bg-gray-50 text-gray-900'
+            } rounded text-center w-20`}
+          >
+            {item.quantity}
+          </span>
+          <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} ml-2`}>
+            × {formatCurrency(item.service.unitPrice)}
+          </span>
+          
+          {/* Eye button for history - visible even in read-only mode */}
+          {isPersistedBackendItem && hasAuditLogs && (
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => onViewHistory(item)}
+              className={historyButtonClass}
+              title="View item history"
+              aria-label="View history"
+            >
+              <Eye className="w-4 h-4" />
+            </motion.button>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-2">
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.9 }}
+          onClick={() => onDecrease(item.id)}
+          className={actionButtonClass}
+          aria-label="Decrease quantity"
+        >
+          <Minus className="w-4 h-4" />
+        </motion.button>
+
+        {isPersistedBackendItem ? (
+          <div
+            className={`w-20 px-2 py-2 text-center border rounded ${
+              isDark
+                ? 'border-gray-700 bg-gray-800 text-gray-100'
+                : 'border-gray-200 bg-white text-gray-900'
+            }`}
+            title="Persisted item quantity is adjusted via audited modal"
+          >
+            {item.quantity}
+          </div>
+        ) : (
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={9999}
+            value={item.quantity}
+            onChange={(e) => onQuantityChange(item.id, e.target.value)}
+            onBlur={(e) => onQuantityBlur(item.id, e.target.value)}
+            className={`w-20 px-2 py-2 text-center border ${
+              isDark
+                ? 'border-gray-700 bg-gray-800 text-gray-100'
+                : 'border-gray-200 bg-white text-gray-900'
+            } focus:outline-none focus:ring-2 focus:ring-blue-500/30 rounded`}
+          />
+        )}
+
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.9 }}
+          onClick={() => onIncrease(item.id)}
+          className={actionButtonClass}
+          aria-label="Increase quantity"
+        >
+          <Plus className="w-4 h-4" />
+        </motion.button>
+
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => onRemove(item.id)}
+          className={removeButtonClass}
+          title={isPersistedBackendItem ? 'Adjust/remove saved item' : 'Remove item'}
+          aria-label="Remove item"
+        >
+          <Trash2 className="w-4 h-4" />
+        </motion.button>
+
+        {/* Eye button for history - only for backend items with logs */}
+        {isPersistedBackendItem && hasAuditLogs && (
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => onViewHistory(item)}
+            className={historyButtonClass}
+            title="View item history"
+            aria-label="View history"
+          >
+            <Eye className="w-4 h-4" />
+          </motion.button>
+        )}
+      </div>
+    );
+  };
+
+  const renderQuantityControlMobile = () => {
+    if (isReadOnly) {
+      return (
+        <div className="space-y-2">
+          <div
+            className={`p-3 ${
+              isDark ? 'bg-gray-700' : 'bg-gray-100'
+            } border ${colors.border.primary} rounded-lg text-center`}
+          >
+            <span className={`font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+              Quantity: {item.quantity}
+            </span>
+          </div>
+          
+          {/* Eye button for history - visible even in read-only mode */}
+          {isPersistedBackendItem && hasAuditLogs && (
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.9 }}
+              onClick={() => onViewHistory(item)}
+              className={`w-full py-2 flex items-center justify-center gap-2 ${
+                isDark
+                  ? 'bg-blue-900/20 text-blue-300 hover:bg-blue-900/30'
+                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+              } transition-colors cursor-pointer rounded-lg`}
+              title="View item history"
+            >
+              <Eye className="w-4 h-4" />
+              <span className="text-sm font-medium">View History</span>
+            </motion.button>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.9 }}
+            onClick={() => onDecrease(item.id)}
+            className={`flex-1 p-2 border ${
+              isDark
+                ? 'border-gray-700 bg-gray-700 hover:bg-gray-600 text-gray-300'
+                : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600'
+            } transition-colors cursor-pointer rounded-lg`}
+          >
+            <Minus className="w-4 h-4 mx-auto" />
+          </motion.button>
+
+          {isPersistedBackendItem ? (
+            <div
+              className={`w-20 px-2 py-2 text-center border rounded ${
+                isDark
+                  ? 'border-gray-700 bg-gray-800 text-gray-100'
+                  : 'border-gray-200 bg-white text-gray-900'
+              }`}
+            >
+              {item.quantity}
+            </div>
+          ) : (
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={9999}
+              value={item.quantity}
+              onChange={(e) => onQuantityChange(item.id, e.target.value)}
+              onBlur={(e) => onQuantityBlur(item.id, e.target.value)}
+              className={`w-20 px-2 py-2 text-center border ${
+                isDark
+                  ? 'border-gray-700 bg-gray-800 text-gray-100'
+                  : 'border-gray-200 bg-white text-gray-900'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500/30 rounded`}
+            />
+          )}
+
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.9 }}
+            onClick={() => onIncrease(item.id)}
+            className={`flex-1 p-2 border ${
+              isDark
+                ? 'border-gray-700 bg-gray-700 hover:bg-gray-600 text-gray-300'
+                : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600'
+            } transition-colors cursor-pointer rounded-lg`}
+          >
+            <Plus className="w-4 h-4 mx-auto" />
+          </motion.button>
+
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.9 }}
+            onClick={() => onRemove(item.id)}
+            className={`p-2 ${
+              isDark
+                ? 'bg-gray-700 hover:bg-red-900/20 text-gray-300 hover:text-red-400'
+                : 'bg-gray-100 hover:bg-red-50 text-gray-500 hover:text-red-500'
+            } cursor-pointer rounded-full shrink-0`}
+            aria-label="Remove item"
+          >
+            <Trash2 className="w-4 h-4" />
+          </motion.button>
+
+          {/* Eye button for history - only for backend items with logs */}
+          {isPersistedBackendItem && hasAuditLogs && (
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.9 }}
+              onClick={() => onViewHistory(item)}
+              className={`p-2 ${
+                isDark
+                  ? 'bg-gray-700 hover:bg-blue-900/20 text-gray-300 hover:text-blue-400'
+                  : 'bg-gray-100 hover:bg-blue-50 text-gray-500 hover:text-blue-500'
+              } cursor-pointer rounded-full shrink-0`}
+              title="View item history"
+              aria-label="View history"
+            >
+              <Eye className="w-4 h-4" />
+            </motion.button>
+          )}
+        </div>
+
+        {isPersistedBackendItem && (
+          <div className={`text-center text-[11px] ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
+            Quantity changes open audited adjustment modal
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (viewMode === 'desktop') {
+    return (
+      <motion.div
+        key={item.id}
+        layout
+        initial={{ opacity: 0, x: -16 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 16, height: 0 }}
+        transition={{ duration: 0.22, ease: 'easeOut' }}
+        className={`grid grid-cols-12 gap-3 px-4 py-3 items-center border-b last:border-b-0
+          ${colors.border.primary} transition-colors duration-150
+          ${!isReadOnly ? `hover:${colors.bg.hover}` : ''}
+          ${
+            index % 2 === 0
+              ? isDark
+                ? 'bg-gray-800/30'
+                : 'bg-gray-50/50'
+              : isDark
+              ? 'bg-transparent'
+              : 'bg-transparent'
+          }`}
+      >
+        <div className="col-span-1">
+          <div
+            className={`flex items-center justify-center w-7 h-7 rounded-full
+              ${isDark ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-600'} text-sm font-medium`}
+          >
+            {index + 1}
+          </div>
+        </div>
+
+        <div className="col-span-4 min-w-0">
+          <p className={`font-semibold truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+            {item.service.name ?? 'NA'}
+          </p>
+
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <span
+              className={`text-xs px-1.5 py-0.5 ${
+                isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'
+              } rounded`}
+            >
+              {item.service.code}
+            </span>
+
+            <span className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              {formatName(item.service.category)}
+            </span>
+
+            {getStockBadge(item, itemsFullData, isDark)}
+
+            {isPersistedBackendItem ? (
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                  isDark ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-50 text-amber-700'
+                }`}
+              >
+                Saved
+              </span>
+            ) : (
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                  isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-50 text-emerald-700'
+                }`}
+              >
+                New
+              </span>
+            )}
+
+            {requiresReason && (
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                  isDark ? 'bg-rose-500/15 text-rose-300' : 'bg-rose-50 text-rose-700'
+                }`}
+              >
+                Change with reason
+              </span>
+            )}
+
+            {hasAuditLogs && (
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                  isDark ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-50 text-blue-700'
+                }`}
+              >
+                {backendItem?.audit_logs?.length} {backendItem?.audit_logs?.length === 1 ? 'change' : 'changes'}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="col-span-2">
+          <span className={`font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+            {formatCurrency(item.service.unitPrice)}
+          </span>
+        </div>
+
+        <div className="col-span-3">{renderQuantityControlDesktop()}</div>
+
+        <div className="col-span-2 text-right">
+          <span className="font-extrabold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+            {formatCurrency(item.totalAmount)}
+          </span>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      key={item.id}
+      layout
+      initial={{ opacity: 0, y: -12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 12, height: 0 }}
+      transition={{ duration: 0.2 }}
+      className={`border ${colors.border.primary} ${
+        isDark ? 'bg-gray-800' : 'bg-gray-50'
+      } p-4 rounded-xl ${
+        index % 2 === 0
+          ? isDark
+            ? 'bg-gray-800/80'
+            : 'bg-gray-50'
+          : isDark
+          ? 'bg-gray-800/60'
+          : 'bg-gray-50/80'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <div
+            className={`flex items-center justify-center w-6 h-6 rounded-full
+              ${isDark ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-600'} text-xs font-medium shrink-0`}
+          >
+            {index + 1}
+          </div>
+
+          <div className="min-w-0">
+            <p className={`font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'} truncate`}>
+              {item.service.name}
+            </p>
+
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <span
+                className={`text-xs px-1.5 py-0.5 ${
+                  isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+                } rounded`}
+              >
+                {item.service.code}
+              </span>
+
+              <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} truncate`}>
+                {item.service.category}
+              </span>
+
+              {getStockBadge(item, itemsFullData, isDark)}
+
+              {isPersistedBackendItem ? (
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                    isDark ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-50 text-amber-700'
+                  }`}
+                >
+                  Saved
+                </span>
+              ) : (
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                    isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-50 text-emerald-700'
+                  }`}
+                >
+                  New
+                </span>
+              )}
+
+              {requiresReason && (
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                    isDark ? 'bg-rose-500/15 text-rose-300' : 'bg-rose-50 text-rose-700'
+                  }`}
+                >
+                  Reason required
+                </span>
+              )}
+
+              {hasAuditLogs && (
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                    isDark ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-50 text-blue-700'
+                  }`}
+                >
+                  {backendItem?.audit_logs?.length} {backendItem?.audit_logs?.length === 1 ? 'change' : 'changes'}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-4 items-center">
+        <div>
+          <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Unit price</p>
+          <p className={`font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+            {formatCurrency(item.service.unitPrice)}
+          </p>
+        </div>
+
+        <div className="text-right">
+          <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Total</p>
+          <p className="font-extrabold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+            {formatCurrency(item.totalAmount)}
+          </p>
+        </div>
+
+        <div className="col-span-2">
+          <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mb-2`}>Quantity</p>
+          {renderQuantityControlMobile()}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Lock, Loader2, X, AlertCircle, CheckCircle2, FileText } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { motion, AnimatePresence } from 'framer-motion';
+
+import { type RootState } from '../../../../../app/store/rootReducer';
+import { selectActiveVisit } from '../../../../../app/store/slices/visitSlice';
+
+import {
+  addChargeItem,
+  increaseQuantity,
+  decreaseQuantity,
+  removeChargeItem,
+  clearCharges,
+  setStep,
+  setQuantity,
+  selectDraftChargeItems,
+  selectRenderableChargeItems,
+  hydrateBackendBilling,
+  clearBackendBilling,
+  selectEffectiveBillingStatus,
+  selectBackendChargeItems,
+  optimisticAdjustBackendItem,
+  rollbackOptimisticBackendAdjustment,
+  selectBilling,
+  setBillingDataLoaded,
+  clearBillingDataLoaded,
+} from './billingSlice';
+
+import PersistedBillingAdjustmentModal from './charge-entry/PersistedBillingAdjustmentModal';
+import { containerVariants } from '../../../../../shared/components/animations/motionVariants';
+
+import {
+  type ServiceItem,
+  type BackendChargeItem,
+  type RenderableChargeItem,
+  makeBillableKey,
+} from './billing-types';
+
+import {
+  useGetBillableItems,
+  useGetBillingByVisit,
+  useAdjustBillingLineItem,
+} from '../../../api/billable-items/BillableItemsQueries';
+
+import { BillableItemType } from '../../../api/billable-items/BillingItemsTypes';
+import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
+
+import { SearchBar } from './charge-entry/SearchBar';
+import { ChargeItemsList } from './charge-entry/ChargeItemsList';
+import { BillingSummary } from './charge-entry/BillingSummary';
+import LineItemHistoryModal from '../../revenue/billing-review/components/receipt-action-modals/LineItemHistoryModal';
+
+interface ChargeEntryStepProps {
+  theme?: 'light' | 'dark';
+}
+
+type PersistedAction = 'increase' | 'decrease' | 'remove';
+
+const BANNER_VISIBILITY_KEY = 'billing_info_banner_dismissed';
+const BANNER_VERSION = 'v1';
+
+interface BannerState {
+  dismissed: boolean;
+  version: string;
+  dismissedAt?: string;
+}
+
+const safeLower = (v: string) => (v || '').toLowerCase();
+
+export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light' }) => {
+  const isDark = theme === 'dark';
+  const dispatch = useDispatch();
+  const { confirm } = useConfirm();
+
+  // ---------------------------------------------------------------------------
+  // Visit identity - aligned with BillingBottomDisplay
+  // ---------------------------------------------------------------------------
+  const activeVisit = useSelector((state: RootState) => selectActiveVisit(state));
+  const visitId = activeVisit?.visit_id ? String(activeVisit.visit_id) : '';
+  const numericVisitId = activeVisit?.visit_id ? Number(activeVisit.visit_id) : 0;
+
+  // ---------------------------------------------------------------------------
+  // Redux state
+  // ---------------------------------------------------------------------------
+  const renderableChargeItems = useSelector(selectRenderableChargeItems);
+  const draftChargeItems = useSelector(selectDraftChargeItems);
+  const backendChargeItems = useSelector(selectBackendChargeItems);
+  const billingStatus = useSelector(selectEffectiveBillingStatus);
+  const billingState = useSelector(selectBilling);
+
+  // Once backend says settled, the entire charge-entry becomes view only.
+  const isReadOnly = billingStatus === 'settled';
+
+  // ---------------------------------------------------------------------------
+  // UI local state
+  // ---------------------------------------------------------------------------
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<ServiceItem[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isSearchSticky, setIsSearchSticky] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // History modal state
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<BackendChargeItem | null>(null);
+
+  const [isBannerVisible, setIsBannerVisible] = useState(() => {
+    try {
+      const stored = localStorage.getItem(BANNER_VISIBILITY_KEY);
+      if (stored) {
+        const parsed: BannerState = JSON.parse(stored);
+        if (parsed.version === BANNER_VERSION && parsed.dismissed) {
+          return false;
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error('Failed to read banner visibility from localStorage:', error);
+      return true;
+    }
+  });
+
+  const [, setBannerAnimation] = useState<'enter' | 'exit' | null>(null);
+
+  /**
+   * When a persisted backend line item is edited, we open the adjustment modal
+   * which allows the user to specify the final quantity and reason in one place.
+   */
+  const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
+  const [adjustmentReason, setAdjustmentReason] = useState('');
+  const [adjustmentNewQuantity, setAdjustmentNewQuantity] = useState(1);
+  const [pendingAdjustment, setPendingAdjustment] = useState<{
+    item: BackendChargeItem;
+    action: PersistedAction;
+  } | null>(null);
+
+  const searchWrapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // ---------------------------------------------------------------------------
+  // Queries
+  // ---------------------------------------------------------------------------
+  const { data, isLoading, isError, error } = useGetBillableItems(
+    {
+      limit: 500,
+      include_inactive: false,
+      type: BillableItemType.ALL,
+    },
+    {
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  /**
+   * Load persisted billing for the current visit.
+   * Uses numeric visit id sourced exactly like BillingBottomDisplay.
+   */
+  const {
+    data: backendBillingResponse,
+    isLoading: isLoadingBilling,
+    refetch: refetchBilling,
+  } = useGetBillingByVisit(numericVisitId, {
+    enabled: !!numericVisitId,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  /**
+   * Mutation used to adjust a persisted backend line item
+   * through an audited server-side flow.
+   */
+  const { mutateAsync: adjustBillingLineItem, isPending: isAdjustingPersistedItem } =
+    useAdjustBillingLineItem(numericVisitId);
+
+  // ---------------------------------------------------------------------------
+  // Backend -> Redux hydration (same pattern as BillingBottomDisplay)
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (!numericVisitId || !visitId) {
+      dispatch(clearBackendBilling());
+      return;
+    }
+
+    if (isLoadingBilling) return;
+
+    if (backendBillingResponse?.data && visitId) {
+      if (backendBillingResponse.data.has_billing) {
+        dispatch(hydrateBackendBilling(backendBillingResponse.data));
+      } else {
+        dispatch(clearBackendBilling());
+      }
+
+      dispatch(
+        setBillingDataLoaded({
+          visitId,
+          loaded: true,
+        })
+      );
+      return;
+    }
+
+    if (backendBillingResponse?.data === null && visitId) {
+      dispatch(clearBackendBilling());
+      dispatch(
+        setBillingDataLoaded({
+          visitId,
+          loaded: true,
+        })
+      );
+    }
+  }, [backendBillingResponse, dispatch, isLoadingBilling, numericVisitId, visitId]);
+
+  /**
+   * Cleanup loaded flag when component unmounts or visit changes.
+   */
+  useEffect(() => {
+    return () => {
+      if (visitId) {
+        dispatch(clearBillingDataLoaded(visitId));
+      }
+    };
+  }, [dispatch, visitId]);
+
+  /**
+   * Hard sync helper:
+   * After a successful persisted adjustment, re-fetch authoritative backend billing
+   * and hydrate the slice again so the store matches the server exactly.
+   */
+  const syncBillingSliceFromServer = async () => {
+    if (!numericVisitId || !visitId) {
+      dispatch(clearBackendBilling());
+      return;
+    }
+
+    const refreshed = await refetchBilling();
+    const refreshedPayload = refreshed.data?.data;
+
+    if (refreshedPayload?.has_billing) {
+      dispatch(hydrateBackendBilling(refreshedPayload));
+    } else {
+      dispatch(clearBackendBilling());
+    }
+
+    dispatch(
+      setBillingDataLoaded({
+        visitId,
+        loaded: true,
+      })
+    );
+  };
+
+  // ---------------------------------------------------------------------------
+  // Build services list for search
+  // ---------------------------------------------------------------------------
+  const allServices: ServiceItem[] = useMemo(() => {
+    const services = data?.data?.services ?? [];
+    if (services.length > 0) return services;
+
+    const itemsFull = data?.data?.items_full ?? [];
+    return itemsFull.map((x) => ({
+      id: x.id,
+      code: x.code,
+      name: x.name,
+      unitPrice: x.unitPrice,
+      category: x.category,
+    }));
+  }, [data]);
+
+  /**
+   * De-duplicate by stable billable key to prevent duplicate results
+   * when backend merges multiple sources.
+   */
+  const dedupedServices: ServiceItem[] = useMemo(() => {
+    const seen = new Set<string>();
+    const out: ServiceItem[] = [];
+
+    for (const s of allServices) {
+      const k = makeBillableKey(s);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(s);
+    }
+
+    return out;
+  }, [allServices]);
+
+  const colors = {
+    bg: {
+      primary: isDark ? 'bg-gray-900' : 'bg-white',
+      secondary: isDark ? 'bg-gray-800' : 'bg-gray-50',
+      hover: isDark ? 'bg-gray-800/60' : 'bg-gray-50',
+      elevated: isDark ? 'bg-gray-900' : 'bg-white',
+      overlay: isDark ? 'bg-gray-900/95' : 'bg-white/95',
+      stripe: isDark ? 'bg-gray-800/30' : 'bg-gray-50/50',
+      stripeAlt: isDark ? 'bg-gray-900/50' : 'bg-white/50',
+      disabled: isDark ? 'bg-gray-800/50' : 'bg-gray-50',
+    },
+    border: {
+      primary: isDark ? 'border-gray-800' : 'border-gray-200',
+      subtle: isDark ? 'border-gray-700' : 'border-gray-100',
+      disabled: isDark ? 'border-gray-700' : 'border-gray-200',
+    },
+    text: {
+      primary: isDark ? 'text-gray-100' : 'text-gray-900',
+      secondary: isDark ? 'text-gray-400' : 'text-gray-600',
+      tertiary: isDark ? 'text-gray-500' : 'text-gray-500',
+      muted: isDark ? 'text-gray-500' : 'text-gray-400',
+      disabled: isDark ? 'text-gray-500' : 'text-gray-400',
+    },
+    accent: {
+      primary: 'bg-blue-600',
+      hover: 'hover:bg-blue-700',
+      text: 'text-white',
+    },
+    status: {
+      settledBadge: isDark ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-50 text-blue-700',
+      backendBadge: isDark ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-50 text-amber-700',
+      draftBadge: isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-50 text-emerald-700',
+      warningBadge: isDark ? 'bg-rose-500/15 text-rose-300' : 'bg-rose-50 text-rose-700',
+    },
+  };
+
+  /**
+   * Unified subtotal shown in the charge entry page.
+   */
+  const displayedSubtotal = useMemo(
+    () => renderableChargeItems.reduce((sum, item) => sum + item.totalAmount, 0),
+    [renderableChargeItems]
+  );
+
+  const hasAnyItems = renderableChargeItems.length > 0;
+  const isDisabledProceed = !hasAnyItems || isReadOnly;
+
+  // ---------------------------------------------------------------------------
+  // History Modal Handlers
+  // ---------------------------------------------------------------------------
+  const handleViewHistory = (item: RenderableChargeItem) => {
+    // Only backend items have audit logs
+    if (item.source === 'backend') {
+      setSelectedHistoryItem(item as BackendChargeItem);
+      setHistoryModalOpen(true);
+    }
+  };
+
+  const handleCloseHistoryModal = () => {
+    setHistoryModalOpen(false);
+    setSelectedHistoryItem(null);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Banner management functions
+  // ---------------------------------------------------------------------------
+  const persistBannerDismissal = () => {
+    try {
+      const bannerState: BannerState = {
+        dismissed: true,
+        version: BANNER_VERSION,
+        dismissedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(BANNER_VISIBILITY_KEY, JSON.stringify(bannerState));
+    } catch (error) {
+      console.error('Failed to persist banner dismissal:', error);
+    }
+  };
+
+  const handleCloseBanner = () => {
+    setBannerAnimation('exit');
+    setTimeout(() => {
+      setIsBannerVisible(false);
+      persistBannerDismissal();
+      setBannerAnimation(null);
+    }, 300);
+  };
+
+  useEffect(() => {
+    const checkBannerVersion = () => {
+      try {
+        const stored = localStorage.getItem(BANNER_VISIBILITY_KEY);
+        if (stored) {
+          const parsed: BannerState = JSON.parse(stored);
+          if (parsed.version !== BANNER_VERSION && parsed.dismissed) {
+            setIsBannerVisible(true);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check banner version:', error);
+      }
+    };
+
+    checkBannerVersion();
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // Client-side search
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      const term = searchTerm.trim();
+
+      if (isLoading) {
+        setShowSearchResults(true);
+        setSearchResults([]);
+        return;
+      }
+
+      if (!term) {
+        setSearchResults([]);
+        setShowSearchResults(false);
+        return;
+      }
+
+      const t = safeLower(term);
+      const results = dedupedServices
+        .filter((s) => {
+          return (
+            safeLower(s.name).includes(t) ||
+            safeLower(s.code).includes(t) ||
+            safeLower(s.category).includes(t)
+          );
+        })
+        .slice(0, 8);
+
+      setSearchResults(results);
+      setShowSearchResults(true);
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, dedupedServices, isLoading]);
+
+  // Sticky search bar
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!containerRef.current) return;
+      setIsSearchSticky(containerRef.current.scrollTop > 50);
+    };
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Outside click + escape for search popup
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!searchWrapRef.current) return;
+      if (!searchWrapRef.current.contains(e.target as Node)) {
+        setShowSearchResults(false);
+      }
+    };
+
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowSearchResults(false);
+
+        if (adjustmentDialogOpen) {
+          closeAdjustmentDialog();
+        }
+        
+        if (historyModalOpen) {
+          handleCloseHistoryModal();
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('keydown', handleEsc);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, [adjustmentDialogOpen, historyModalOpen]);
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+  const findRenderableItemById = (itemId: string): RenderableChargeItem | undefined =>
+    renderableChargeItems.find((item) => item.id === itemId);
+
+  const clampQty = (val: number) => {
+    if (!Number.isFinite(val)) return 1;
+    const n = Math.floor(val);
+    if (n < 1) return 1;
+    if (n > 9999) return 9999;
+    return n;
+  };
+
+  const openAdjustmentDialog = (
+    item: BackendChargeItem,
+    action: PersistedAction = 'increase',
+    quantityDelta = 1
+  ) => {
+    setPendingAdjustment({ item, action });
+    setAdjustmentReason('');
+
+    let newQuantity = item.quantity;
+
+    if (action === 'increase') {
+      newQuantity = item.quantity + quantityDelta;
+    } else if (action === 'decrease') {
+      newQuantity = Math.max(0, item.quantity - quantityDelta);
+    } else if (action === 'remove') {
+      newQuantity = 0;
+    }
+
+    setAdjustmentNewQuantity(newQuantity);
+    setAdjustmentDialogOpen(true);
+  };
+
+  const closeAdjustmentDialog = () => {
+    setPendingAdjustment(null);
+    setAdjustmentReason('');
+    setAdjustmentNewQuantity(1);
+    setAdjustmentDialogOpen(false);
+  };
+
+  const submitPersistedAdjustment = async (
+    item: BackendChargeItem,
+    action: PersistedAction,
+    deltaQuantity: number,
+    reason?: string
+  ) => {
+    await adjustBillingLineItem({
+      line_item_id: item.lineItemId,
+      action,
+      quantity: action === 'remove' ? 0 : deltaQuantity,
+      reason: reason?.trim() || undefined,
+    });
+  };
+
+  /**
+   * Adjustment submit flow:
+   * - Compute delta from final desired quantity
+   * - Apply optimistic reducer
+   * - Submit audited backend mutation
+   * - On success, re-fetch billing and hydrate slice from backend
+   * - On failure, rollback optimistic state
+   */
+  const handleAdjustmentDialogSubmit = async () => {
+    if (!pendingAdjustment) return;
+
+    const { item } = pendingAdjustment;
+    const finalQuantity = adjustmentNewQuantity;
+    const currentQuantity = item.quantity;
+    const rsn = adjustmentReason;
+
+    let apiAction: PersistedAction;
+    let deltaQuantity: number;
+
+    if (finalQuantity === 0) {
+      apiAction = 'remove';
+      deltaQuantity = 0;
+    } else if (finalQuantity > currentQuantity) {
+      apiAction = 'increase';
+      deltaQuantity = finalQuantity - currentQuantity;
+    } else if (finalQuantity < currentQuantity) {
+      apiAction = 'decrease';
+      deltaQuantity = currentQuantity - finalQuantity;
+    } else {
+      closeAdjustmentDialog();
+      return;
+    }
+
+    const previousBackendChargeItems = billingState.backendChargeItems.map((backendItem) => ({
+      ...backendItem,
+      service: { ...backendItem.service },
+      permissions: { ...backendItem.permissions },
+      audit: backendItem.audit ? { ...backendItem.audit } : undefined,
+    }));
+
+    const previousOptimisticPersistedBalanceDelta = billingState.optimisticPersistedBalanceDelta;
+
+    dispatch(
+      optimisticAdjustBackendItem({
+        lineItemId: item.lineItemId,
+        action: apiAction,
+        quantity: deltaQuantity,
+      })
+    );
+
+    closeAdjustmentDialog();
+
+    try {
+      await submitPersistedAdjustment(item, apiAction, deltaQuantity, rsn);
+
+      try {
+        await syncBillingSliceFromServer();
+      } catch (syncError) {
+        console.error('Persisted adjustment succeeded, but backend re-sync failed:', syncError);
+      }
+    } catch (error) {
+      console.error('Failed to adjust persisted item:', error);
+
+      dispatch(
+        rollbackOptimisticBackendAdjustment({
+          previousBackendChargeItems,
+          previousOptimisticPersistedBalanceDelta,
+        })
+      );
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Handlers
+  // ---------------------------------------------------------------------------
+  const handleAddItem = (service: ServiceItem) => {
+    if (isReadOnly) return;
+
+    const serviceKey = makeBillableKey(service);
+
+    const existingBackendItem = backendChargeItems.find((item) => item.serviceKey === serviceKey);
+
+    if (existingBackendItem) {
+      openAdjustmentDialog(existingBackendItem, 'increase', 1);
+      setSearchTerm('');
+      setShowSearchResults(false);
+      inputRef.current?.focus();
+      return;
+    }
+
+    dispatch(addChargeItem(service));
+    setSearchTerm('');
+    setShowSearchResults(false);
+    inputRef.current?.focus();
+  };
+
+  const handleClearAll = async () => {
+    if (isReadOnly || draftChargeItems.length === 0) return;
+
+    const confirmed = await confirm({
+      title: 'Clear all new items?',
+      message: `This will clear ${draftChargeItems.length} new ${
+        draftChargeItems.length === 1 ? 'item' : 'items'
+      } you've added. Nothing already saved will be affected.`,
+      confirmText: 'Clear new items',
+      cancelText: 'Cancel',
+      variant: 'warning',
+      theme,
+    });
+
+    if (confirmed) {
+      dispatch(clearCharges());
+    }
+  };
+
+  const handleProceedToBilling = () => {
+    if (isReadOnly || isDisabledProceed) return;
+    dispatch(setStep('billing_summary'));
+  };
+
+  const handleIncreaseAction = async (itemId: string) => {
+    const item = findRenderableItemById(itemId);
+    if (!item || isReadOnly) return;
+
+    if (item.source === 'backend') {
+      await handlePersistedItemAction(item as BackendChargeItem, 'increase');
+      return;
+    }
+
+    dispatch(increaseQuantity(itemId));
+  };
+
+  const handleDecreaseAction = async (itemId: string) => {
+    const item = findRenderableItemById(itemId);
+    if (!item || isReadOnly) return;
+
+    if (item.source === 'backend') {
+      await handlePersistedItemAction(item as BackendChargeItem, 'decrease');
+      return;
+    }
+
+    dispatch(decreaseQuantity(itemId));
+  };
+
+  const handleRemoveAction = async (itemId: string) => {
+    const item = findRenderableItemById(itemId);
+    if (!item || isReadOnly) return;
+
+    if (item.source === 'backend') {
+      await handlePersistedItemAction(item as BackendChargeItem, 'remove');
+      return;
+    }
+
+    dispatch(removeChargeItem(itemId));
+  };
+
+  const handlePersistedItemAction = async (item: BackendChargeItem, action: PersistedAction) => {
+    if (isReadOnly) return;
+    openAdjustmentDialog(item, action, 1);
+  };
+
+  const handleQtyChange = (itemId: string, raw: string) => {
+    if (isReadOnly) return;
+
+    const item = findRenderableItemById(itemId);
+    if (!item) return;
+
+    if (item.source === 'backend') {
+      return;
+    }
+
+    if (raw.trim() === '') {
+      dispatch(setQuantity({ itemId, quantity: 1 }));
+      return;
+    }
+
+    dispatch(setQuantity({ itemId, quantity: clampQty(Number(raw)) }));
+  };
+
+  const handleQtyBlur = (itemId: string, raw: string) => {
+    if (isReadOnly) return;
+
+    const item = findRenderableItemById(itemId);
+    if (!item) return;
+
+    if (item.source === 'backend') {
+      return;
+    }
+
+    dispatch(setQuantity({ itemId, quantity: clampQty(Number(raw)) }));
+  };
+
+  const handleSearchFocus = () => {
+    if (isReadOnly) return;
+    setIsSearchFocused(true);
+    if (searchTerm.trim() || isLoading) setShowSearchResults(true);
+  };
+
+  const handleSearchBlur = () => {
+    setIsSearchFocused(false);
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setShowSearchResults(false);
+    inputRef.current?.focus();
+  };
+
+  const handleSearchChange = (value: string) => {
+    if (!isReadOnly) setSearchTerm(value);
+  };
+
+  useEffect(() => {
+    if (isError && process.env.NODE_ENV === 'development') {
+      console.error('Billable items fetch error:', error);
+    }
+  }, [isError, error]);
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+  return (
+    <div className="p-4 sm:p-5 lg:p-6 h-full relative">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 h-full">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="lg:col-span-8 xl:col-span-9 flex flex-col min-h-0"
+          ref={containerRef}
+        >
+          <div className="mb-3 space-y-2">
+            <AnimatePresence>
+              {isReadOnly && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                  transition={{ type: 'spring', damping: 20 }}
+                  className="w-fit flex items-center gap-2 px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-full shadow-lg border border-blue-400 dark:border-blue-400"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span className="text-xs font-semibold">Payment settled - View only</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {isAdjustingPersistedItem && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="w-fit flex items-center gap-2 px-3 py-1.5 bg-amber-600 text-white rounded-full shadow-lg border border-amber-400"
+                >
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span className="text-xs font-semibold">Applying audited adjustment...</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div
+            className={`sticky top-0 z-30 pb-3 ${colors.bg.primary} transition-all duration-200 ${
+              isSearchSticky ? 'pt-1 bg-opacity-95 backdrop-blur-sm' : ''
+            }`}
+          >
+            <SearchBar
+              searchTerm={searchTerm}
+              searchResults={searchResults}
+              showSearchResults={showSearchResults}
+              isLoading={isLoading}
+              isError={isError}
+              isReadOnly={isReadOnly}
+              isSearchFocused={isSearchFocused}
+              theme={theme}
+              colors={colors}
+              itemsFullData={data?.data?.items_full}
+              error={error}
+              onSearchChange={handleSearchChange}
+              onSearchFocus={handleSearchFocus}
+              onSearchBlur={handleSearchBlur}
+              onAddItem={handleAddItem}
+              onClearSearch={handleClearSearch}
+              searchWrapRef={searchWrapRef as React.RefObject<HTMLDivElement>}
+              inputRef={inputRef as React.RefObject<HTMLInputElement>}
+            />
+          </div>
+
+          <AnimatePresence>
+            {isBannerVisible && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, y: -20 }}
+                animate={{ opacity: 1, height: 'auto', y: 0 }}
+                exit={{ opacity: 0, height: 0, y: -20 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className={`mb-3 overflow-hidden rounded-xl border ${colors.border.primary} ${colors.bg.secondary} relative shadow-sm`}
+              >
+                <div className="p-4 pr-10">
+                  <button
+                    onClick={handleCloseBanner}
+                    className={`absolute top-4 right-4 p-1 rounded-md transition-all duration-200 cursor-pointer ${
+                      isDark
+                        ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200 hover:scale-110'
+                        : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700 hover:scale-110'
+                    }`}
+                    aria-label="Close banner"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+
+                  <div className="flex items-start gap-3">
+                    <div className="relative">
+                      <motion.div
+                        animate={{
+                          scale: [1, 1.1, 1],
+                          rotate: [0, 5, -5, 0],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          repeatDelay: 4,
+                          ease: 'easeInOut',
+                        }}
+                        className="p-1.5 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20"
+                      >
+                        <FileText className={`w-5 h-5 ${isDark ? 'text-blue-300' : 'text-blue-600'}`} />
+                      </motion.div>
+                    </div>
+
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                          How billing items work
+                        </h3>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                            isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'
+                          }`}
+                        >
+                          {BANNER_VERSION}
+                        </span>
+                      </div>
+
+                      <div className={`text-xs sm:text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'} space-y-2`}>
+                        <p className="leading-relaxed">
+                          <span className="font-medium text-blue-500 dark:text-blue-400">Saved items</span> are already on file — changes to them are recorded.
+                          <span className="mx-1">•</span>
+                          <span className="font-medium text-emerald-500 dark:text-emerald-400">New items</span> you add stay as drafts until payment is collected.
+                        </p>
+                        <p className="leading-relaxed flex items-start gap-1">
+                          <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-amber-500" />
+                          <span>If another staff member added an item, you'll need to add a reason before making changes.</span>
+                        </p>
+                      </div>
+
+                      <div className={`mt-3 pt-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} flex flex-wrap items-center gap-3 border-t ${colors.border.subtle}`}>
+                        <span className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                          <span>Saved items are audited</span>
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span>Drafts are temporary</span>
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          <span>Changes require reason</span>
+                        </span>
+                        {backendChargeItems.length > 0 && (
+                          <span className="flex items-center gap-1.5 ml-auto">
+                            <CheckCircle2 className="w-3 h-3 text-green-500" />
+                            <span className="font-medium">
+                              {backendChargeItems.length} saved item{backendChargeItems.length !== 1 ? 's' : ''}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <motion.div
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <ChargeItemsList
+            chargeItems={renderableChargeItems}
+            subtotal={displayedSubtotal}
+            isReadOnly={isReadOnly}
+            isSearchSticky={isSearchSticky}
+            theme={theme}
+            colors={colors}
+            itemsFullData={data?.data?.items_full}
+            onClearAll={handleClearAll}
+            onIncrease={handleIncreaseAction}
+            onDecrease={handleDecreaseAction}
+            onRemove={handleRemoveAction}
+            onQuantityChange={handleQtyChange}
+            onQuantityBlur={handleQtyBlur}
+            onViewHistory={handleViewHistory}
+          />
+        </motion.div>
+
+        <BillingSummary
+          subtotal={displayedSubtotal}
+          isReadOnly={isReadOnly}
+          isDisabledProceed={isDisabledProceed}
+          theme={theme}
+          colors={colors}
+          onProceedToBilling={handleProceedToBilling}
+        />
+      </div>
+
+      <PersistedBillingAdjustmentModal
+        open={adjustmentDialogOpen}
+        theme={theme}
+        item={pendingAdjustment?.item ?? null}
+        newQuantity={adjustmentNewQuantity}
+        reason={adjustmentReason}
+        isSubmitting={isAdjustingPersistedItem}
+        onClose={closeAdjustmentDialog}
+        onNewQuantityChange={setAdjustmentNewQuantity}
+        onReasonChange={setAdjustmentReason}
+        onSubmit={handleAdjustmentDialogSubmit}
+      />
+
+      <LineItemHistoryModal
+        open={historyModalOpen}
+        onClose={handleCloseHistoryModal}
+        theme={theme}
+        itemName={selectedHistoryItem?.service.name}
+        logs={selectedHistoryItem?.audit_logs || []}
+      />
+    </div>
+  );
+};

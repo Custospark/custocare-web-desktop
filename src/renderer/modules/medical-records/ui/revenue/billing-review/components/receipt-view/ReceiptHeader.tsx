@@ -1,7 +1,7 @@
 // components/billing-review/components/receipt-view/ReceiptHeader.tsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Receipt, Printer, Undo2, Ban, History, Clock } from 'lucide-react';
+import { Receipt, Printer, Undo2, Ban, History } from 'lucide-react';
 import { BillingCycleStatus, BILLING_CYCLE_STATUS_LABELS, PaymentStatus } from '../../../../../api/billing-review/BillingReviewTypes';
 
 interface ThemeColors {

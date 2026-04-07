@@ -17,7 +17,7 @@ import {
   mapRetrievedBillingToBackendState,
   type RenderableChargeItem,
   EMPTY_BACKEND_META,
-  type BackendChargeItem,
+  type AnyBackendChargeItem,
 } from './billing-types';
 
 import type { BillingRetrievalData } from '../../../api/billable-items/BillingItemsTypes';
@@ -656,7 +656,7 @@ const billingSlice = createSlice({
     rollbackOptimisticBackendAdjustment: (
       state,
       action: PayloadAction<{
-        previousBackendChargeItems: BackendChargeItem[];
+        previousBackendChargeItems: AnyBackendChargeItem[];
         previousOptimisticPersistedBalanceDelta: number;
       }>
     ) => {

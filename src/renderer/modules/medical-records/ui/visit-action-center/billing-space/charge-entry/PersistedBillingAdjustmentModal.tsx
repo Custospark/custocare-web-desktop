@@ -71,7 +71,7 @@ export const PersistedBillingAdjustmentModal: React.FC<PersistedBillingAdjustmen
   const isSubmitDisabled = isSubmitting || (reasonRequired && !reason.trim()) || newQuantity === currentQuantity;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 animate-in fade-in duration-200">
       <div
         className={`w-full max-w-lg rounded-2xl border shadow-2xl overflow-hidden ${
           isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'

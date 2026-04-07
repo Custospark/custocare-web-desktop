@@ -19,6 +19,7 @@ interface ChargeItemsListProps {
   onRemove: (itemId: string) => void;
   onQuantityChange: (itemId: string, value: string) => void;
   onQuantityBlur: (itemId: string, value: string) => void;
+  onViewHistory: (item: RenderableChargeItem) => void;
 }
 
 export const ChargeItemsList: React.FC<ChargeItemsListProps> = ({
@@ -35,6 +36,7 @@ export const ChargeItemsList: React.FC<ChargeItemsListProps> = ({
   onRemove,
   onQuantityChange,
   onQuantityBlur,
+  onViewHistory,
 }) => {
   const isDark = theme === 'dark';
 
@@ -163,6 +165,7 @@ export const ChargeItemsList: React.FC<ChargeItemsListProps> = ({
                     onRemove={onRemove}
                     onQuantityChange={onQuantityChange}
                     onQuantityBlur={onQuantityBlur}
+                    onViewHistory={onViewHistory}
                   />
                 ))}
               </AnimatePresence>
@@ -186,6 +189,7 @@ export const ChargeItemsList: React.FC<ChargeItemsListProps> = ({
                     onRemove={onRemove}
                     onQuantityChange={onQuantityChange}
                     onQuantityBlur={onQuantityBlur}
+                    onViewHistory={onViewHistory}
                   />
                 ))}
               </AnimatePresence>

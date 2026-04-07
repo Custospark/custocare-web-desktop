@@ -34,6 +34,7 @@ import {
   type ServiceItem,
   type BackendChargeItem,
   type RenderableChargeItem,
+  type AnyBackendChargeItem,
   makeBillableKey,
 } from './billing-types';
 
@@ -49,6 +50,7 @@ import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDia
 import { SearchBar } from './charge-entry/SearchBar';
 import { ChargeItemsList } from './charge-entry/ChargeItemsList';
 import { BillingSummary } from './charge-entry/BillingSummary';
+import LineItemHistoryModal from '../../revenue/billing-review/components/receipt-action-modals/LineItemHistoryModal';
 
 interface ChargeEntryStepProps {
   theme?: 'light' | 'dark';
@@ -99,6 +101,10 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearchSticky, setIsSearchSticky] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // History modal state
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<BackendChargeItem | null>(null);
 
   const [isBannerVisible, setIsBannerVisible] = useState(() => {
     try {
@@ -291,7 +297,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
       overlay: isDark ? 'bg-gray-900/95' : 'bg-white/95',
       stripe: isDark ? 'bg-gray-800/30' : 'bg-gray-50/50',
       stripeAlt: isDark ? 'bg-gray-900/50' : 'bg-white/50',
-      disabled: isDark ? 'bg-gray-800/50' : 'bg-gray-100',
+      disabled: isDark ? 'bg-gray-800/50' : 'bg-gray-50',
     },
     border: {
       primary: isDark ? 'border-gray-800' : 'border-gray-200',
@@ -328,6 +334,22 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
 
   const hasAnyItems = renderableChargeItems.length > 0;
   const isDisabledProceed = !hasAnyItems || isReadOnly;
+
+  // ---------------------------------------------------------------------------
+  // History Modal Handlers
+  // ---------------------------------------------------------------------------
+  const handleViewHistory = (item: RenderableChargeItem) => {
+    // Only backend items have audit logs
+    if (item.source === 'backend') {
+      setSelectedHistoryItem(item as BackendChargeItem);
+      setHistoryModalOpen(true);
+    }
+  };
+
+  const handleCloseHistoryModal = () => {
+    setHistoryModalOpen(false);
+    setSelectedHistoryItem(null);
+  };
 
   // ---------------------------------------------------------------------------
   // Banner management functions
@@ -439,6 +461,10 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
         if (adjustmentDialogOpen) {
           closeAdjustmentDialog();
         }
+        
+        if (historyModalOpen) {
+          handleCloseHistoryModal();
+        }
       }
     };
 
@@ -449,7 +475,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
       document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('keydown', handleEsc);
     };
-  }, [adjustmentDialogOpen]);
+  }, [adjustmentDialogOpen, historyModalOpen]);
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -541,12 +567,32 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
       return;
     }
 
-    const previousBackendChargeItems = billingState.backendChargeItems.map((backendItem) => ({
+ const previousBackendChargeItems: AnyBackendChargeItem[] = billingState.backendChargeItems.map(
+  (backendItem): AnyBackendChargeItem => {
+    if (backendItem.source === 'refund') {
+      return {
+        ...backendItem,
+        source: 'refund',
+        refunded: true,
+        service: { ...backendItem.service },
+        quantity: { ...backendItem.quantity },
+        permissions: { ...backendItem.permissions },
+        audit: backendItem.audit ? { ...backendItem.audit } : undefined,
+      };
+    }
+
+    return {
       ...backendItem,
+      source: 'backend',
       service: { ...backendItem.service },
+      quantity: backendItem.quantity,
       permissions: { ...backendItem.permissions },
       audit: backendItem.audit ? { ...backendItem.audit } : undefined,
-    }));
+    };
+  }
+);
+
+
 
     const previousOptimisticPersistedBalanceDelta = billingState.optimisticPersistedBalanceDelta;
 
@@ -588,7 +634,10 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
 
     const serviceKey = makeBillableKey(service);
 
-    const existingBackendItem = backendChargeItems.find((item) => item.serviceKey === serviceKey);
+      const existingBackendItem = backendChargeItems.find(
+        (item): item is BackendChargeItem =>
+          item.source === 'backend' && item.serviceKey === serviceKey
+      );
 
     if (existingBackendItem) {
       openAdjustmentDialog(existingBackendItem, 'increase', 1);
@@ -914,6 +963,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
             onRemove={handleRemoveAction}
             onQuantityChange={handleQtyChange}
             onQuantityBlur={handleQtyBlur}
+            onViewHistory={handleViewHistory}
           />
         </motion.div>
 
@@ -938,6 +988,14 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
         onNewQuantityChange={setAdjustmentNewQuantity}
         onReasonChange={setAdjustmentReason}
         onSubmit={handleAdjustmentDialogSubmit}
+      />
+
+      <LineItemHistoryModal
+        open={historyModalOpen}
+        onClose={handleCloseHistoryModal}
+        theme={theme}
+        itemName={selectedHistoryItem?.service.name}
+        logs={selectedHistoryItem?.audit_logs || []}
       />
     </div>
   );

@@ -592,24 +592,32 @@ const billingSlice = createSlice({
       if (itemIndex === -1) return;
 
       const item = state.backendChargeItems[itemIndex];
+
+      if (typeof item.quantity !== 'number') {
+        return;
+      }
+
+      const currentQuantity = item.quantity;
       const safeQuantity = Math.max(0, Number(quantity) || 0);
 
       if (safeQuantity === 0 && adjustmentAction !== 'remove') return;
 
-      const unitPrice = item.quantity > 0 ? item.totalAmount / item.quantity : item.service.unitPrice;
+      const unitPrice =
+        currentQuantity > 0 ? item.totalAmount / currentQuantity : item.service.unitPrice;
+
       let balanceDelta = 0;
 
       if (adjustmentAction === 'increase') {
         const amountDelta = roundCurrency(unitPrice * safeQuantity);
-        item.quantity += safeQuantity;
+        item.quantity = currentQuantity + safeQuantity;
         item.totalAmount = roundCurrency(item.totalAmount + amountDelta);
         balanceDelta = amountDelta;
       }
 
       if (adjustmentAction === 'decrease') {
-        const allowedDecrease = Math.min(safeQuantity, item.quantity);
+        const allowedDecrease = Math.min(safeQuantity, currentQuantity);
         const amountDelta = roundCurrency(unitPrice * allowedDecrease);
-        const nextQuantity = item.quantity - allowedDecrease;
+        const nextQuantity = currentQuantity - allowedDecrease;
 
         if (nextQuantity <= 0) {
           state.backendChargeItems.splice(itemIndex, 1);
@@ -620,6 +628,7 @@ const billingSlice = createSlice({
 
         balanceDelta = -amountDelta;
       }
+
 
       if (adjustmentAction === 'remove') {
         balanceDelta = -roundCurrency(item.totalAmount);

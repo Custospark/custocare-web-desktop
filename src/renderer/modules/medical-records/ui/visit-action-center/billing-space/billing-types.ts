@@ -8,10 +8,11 @@
 
 import type {
   ServiceItemCore,
-  BillingRetrievedChargeItem,
+  BackendChargeItem as APIBackendChargeItem,
   BillingRetrievalData,
 } from '../../../api/billable-items/BillingItemsTypes';
 import { DEFAULT_CURRENCY as API_DEFAULT_CURRENCY } from '../../../api/billable-items/BillingItemsTypes';
+import type { AuditLogEntry, AuditLogSummary } from '../../../api/billing-review/BillingReviewTypes';
 
 /* -------------------------------------------------------------------------- */
 /*                         BILLABLE SERVICE TYPES (API)                        */
@@ -51,7 +52,7 @@ export const createDefaultPaymentMethods = (): PaymentMethod[] => [
 /*                              SOURCE / POLICY TYPES                         */
 /* -------------------------------------------------------------------------- */
 
-export type BillingSource = 'slice' | 'backend';
+export type BillingSource = 'slice' | 'backend' | 'refund';
 export type BillingStatus = 'draft' | 'ready' | 'settled';
 export type BillingStep = 'charge_entry' | 'billing_summary';
 export type BillingAdjustmentAction = 'increase' | 'decrease' | 'remove';
@@ -80,6 +81,7 @@ export interface BaseRenderableChargeItem {
    * Source tells the UI whether this row is:
    * - a persisted backend item
    * - a draft slice item
+   * - a refunded item
    */
   source: BillingSource;
 
@@ -97,12 +99,44 @@ export interface ChargeItem extends BaseRenderableChargeItem {
   persisted: false;
 }
 
+/* -------------------------------------------------------------------------- */
+/*                    REFUNDED ITEM QUANTITY AND AMOUNTS TYPES               */
+/* -------------------------------------------------------------------------- */
+
 /**
- * Persisted billing item retrieved from backend.
- * This must carry audit/edit metadata.
+ * Quantity structure for refunded items
  */
-export interface BackendChargeItem extends BaseRenderableChargeItem {
-  source: 'backend';
+export interface RefundedItemQuantity {
+  original: number;
+  refunded: number;
+  remaining: number;
+}
+
+/**
+ * Amounts structure for refunded items
+ */
+export interface RefundedItemAmounts {
+  original_subtotal: number;
+  refund_subtotal: number;
+  remaining_subtotal: number;
+}
+
+/**
+ * Matched reference for refunded items
+ */
+export interface RefundedItemMatchedReference {
+  id: number | null;
+  type: string | null;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          BACKEND CHARGE ITEM TYPES                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Base interface for backend charge items (common fields)
+ */
+interface BaseBackendChargeItemFields {
   persisted: true;
 
   lineItemId: number;
@@ -120,10 +154,67 @@ export interface BackendChargeItem extends BaseRenderableChargeItem {
     last_adjusted_by_staff_id?: number | null;
     last_appended_by_staff_id?: number | null;
     last_adjusted_at?: string | null;
+    adjustment_history?: any[];
+    discount_scope?: string;
+  };
+
+  /**
+   * Full audit log entries for this line item
+   * Used by LineItemHistoryModal to display the audit trail
+   */
+  audit_logs?: AuditLogEntry[];
+  
+  /**
+   * Summary of audit logs (count and last event)
+   */
+  audit_logs_summary?: AuditLogSummary;
+}
+
+/**
+ * Persisted billing item retrieved from backend (regular, non-refunded)
+ */
+export interface BackendChargeItem extends BaseRenderableChargeItem, BaseBackendChargeItemFields {
+  source: 'backend';
+  persisted: true;
+  quantity: number; // Simple number for regular items
+}
+
+/**
+ * Refunded billing item retrieved from backend
+ * This represents a charge item that has been partially or fully refunded
+ */
+export interface RefundedChargeItem
+  extends Omit<BaseRenderableChargeItem, 'quantity' | 'source' | 'persisted'>,
+    BaseBackendChargeItemFields {
+  source: 'refund';
+  persisted: true;
+  refunded: true;
+  quantity: RefundedItemQuantity;
+  adjustment_id?: number;
+  adjustment_reference?: string;
+  adjustment_type?: string;
+  adjustment_created_at?: string;
+  amounts?: {
+    original_subtotal: number;
+    refund_subtotal: number;
+    remaining_subtotal: number;
+  };
+  matched_reference?: {
+    id: number | null;
+    type: string | null;
   };
 }
 
-export type RenderableChargeItem = ChargeItem | BackendChargeItem;
+/**
+ * Union type for all backend charge items (regular or refunded)
+ */
+export type AnyBackendChargeItem = BackendChargeItem | RefundedChargeItem;
+
+export type RenderableChargeItem = ChargeItem | AnyBackendChargeItem;
+
+/* -------------------------------------------------------------------------- */
+/*                          BILLING FINANCIAL TYPES                           */
+/* -------------------------------------------------------------------------- */
 
 export interface Discount {
   type: 'percentage' | 'fixed';
@@ -193,7 +284,7 @@ export interface BillingState {
   // ----------------------------
   // Persisted backend data
   // ----------------------------
-  backendChargeItems: BackendChargeItem[];
+  backendChargeItems: AnyBackendChargeItem[];
   backendBillingMeta: BackendBillingMeta;
   backendBillingData: BillingDataSnapshot | null;
 
@@ -296,6 +387,18 @@ function normalizeDiscount(discount: any) {
     reason: discount.reason === null ? undefined : discount.reason
   };
 }
+
+export const isRefundedItemQuantity = (
+  quantity: number | RefundedItemQuantity
+): quantity is RefundedItemQuantity => {
+  return typeof quantity === 'object' && quantity !== null;
+};
+
+export const getChargeItemQuantity = (
+  item: { quantity: number | RefundedItemQuantity }
+): number => {
+  return isRefundedItemQuantity(item.quantity) ? item.quantity.remaining : item.quantity;
+};
 
 const normalizeTaxes = (taxes?: Array<Partial<Tax>> | null): Tax[] => {
   if (!Array.isArray(taxes) || taxes.length === 0) {
@@ -411,35 +514,148 @@ export const calculateBillingData = (
   });
 };
 
+/* -------------------------------------------------------------------------- */
+/*                          TYPE GUARD FUNCTIONS                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Check if a backend charge item is a refunded item
+ */
+export const isRefundedChargeItem = (item: AnyBackendChargeItem): item is RefundedChargeItem => {
+  return item.source === 'refund';
+};
+
+/**
+ * Check if a backend charge item is a regular (non-refunded) item
+ */
+export const isRegularBackendChargeItem = (item: AnyBackendChargeItem): item is BackendChargeItem => {
+  return item.source === 'backend';
+};
+
+/**
+ * Get numeric quantity from any charge item
+ * For regular items: returns the quantity number
+ * For refunded items: returns the remaining quantity
+ */
+export const getNumericQuantity = (item: AnyBackendChargeItem | ChargeItem): number => {
+  if (isRefundedChargeItem(item as AnyBackendChargeItem)) {
+    return (item as RefundedChargeItem).quantity.remaining;
+  }
+  return getChargeItemQuantity(item);
+};
+
+/**
+ * Get original quantity (for refunded items)
+ * For regular items: returns the quantity
+ */
+export const getOriginalQuantity = (item: AnyBackendChargeItem | ChargeItem): number => {
+  if (isRefundedChargeItem(item as AnyBackendChargeItem)) {
+    return (item as RefundedChargeItem).quantity.original;
+  }
+  return getChargeItemQuantity(item);
+};
+
+/**
+ * Get refunded quantity (for refunded items)
+ * For regular items: returns 0
+ */
+export const getRefundedQuantity = (item: AnyBackendChargeItem | ChargeItem): number => {
+  if (isRefundedChargeItem(item as AnyBackendChargeItem)) {
+    return (item as RefundedChargeItem).quantity.refunded;
+  }
+  return 0;
+};
+
+/* -------------------------------------------------------------------------- */
+/*                          MAPPING FUNCTIONS                                 */
+/* -------------------------------------------------------------------------- */
+
 /**
  * Maps backend-retrieved line item into the exact UI render shape expected by the list.
+ * Handles both regular and refunded items appropriately.
+ * Now includes audit_logs and audit_logs_summary for history modal support.
  */
 export const mapRetrievedChargeItemToBackendChargeItem = (
-  item: BillingRetrievedChargeItem
-): BackendChargeItem => {
+  item: APIBackendChargeItem
+): AnyBackendChargeItem => {
   const serviceKey = item.serviceKey || item.service_key || makeBillableKey(item.service);
-
-  return {
+  
+  // Type-safe quantity extraction
+  let quantityValue: number | RefundedItemQuantity;
+  let isRefunded = false;
+  
+  // Check if this is a refunded item
+  if (item.refunded === true || item.source === 'refund') {
+    isRefunded = true;
+    // It's a refunded item - quantity should be an object
+    if (typeof item.quantity === 'object' && item.quantity !== null && 'remaining' in item.quantity) {
+      quantityValue = item.quantity as RefundedItemQuantity;
+    } else {
+      // Fallback: create a default refunded quantity object
+      quantityValue = {
+        original: typeof item.quantity === 'number' ? item.quantity : 0,
+        refunded: 0,
+        remaining: typeof item.quantity === 'number' ? item.quantity : 0,
+      };
+    }
+  } else {
+    // Regular item - quantity should be a number
+    if (typeof item.quantity === 'number') {
+      quantityValue = item.quantity;
+    } else if (typeof item.quantity === 'object' && item.quantity !== null && 'remaining' in item.quantity) {
+      // If it's an object but not marked as refunded, extract remaining
+      quantityValue = (item.quantity as RefundedItemQuantity).remaining;
+    } else {
+      quantityValue = 0;
+    }
+  }
+  
+  const baseFields = {
     id: item.id,
     serviceKey,
     service: item.service,
-    quantity: Number(item.quantity || 0),
     totalAmount: Number(item.totalAmount || 0),
-
-    source: 'backend',
-    persisted: true,
-
+    
+    persisted: true as const,
+    
     lineItemId: Number(item.line_item_id),
     lineItemUuid: item.line_item_uuid,
     billingCycleId: item.billing_cycle_id,
     lineItemStatus: item.line_item_status,
-
+    
     enteredByStaffId: item.entered_by_staff_id,
     enteredByStaffName: item.entered_by_staff_name,
-
+    
     permissions: item.permissions,
     audit: item.audit,
+    
+    // Include audit logs for history modal
+    audit_logs: item.audit_logs,
+    audit_logs_summary: item.audit_logs_summary,
   };
+  
+  if (isRefunded) {
+    // Handle refunded item
+    return {
+      ...baseFields,
+      source: 'refund' as const,
+      quantity: quantityValue as RefundedItemQuantity,
+      refunded: true,
+      adjustment_id: (item as any).adjustment_id,
+      adjustment_reference: (item as any).adjustment_reference,
+      adjustment_type: (item as any).adjustment_type,
+      adjustment_created_at: (item as any).adjustment_created_at,
+      amounts: (item as any).amounts,
+      matched_reference: (item as any).matched_reference,
+    } as RefundedChargeItem;
+  } else {
+    // Handle regular item
+    return {
+      ...baseFields,
+      source: 'backend' as const,
+      quantity: quantityValue as number,
+    } as BackendChargeItem;
+  }
 };
 
 /**
