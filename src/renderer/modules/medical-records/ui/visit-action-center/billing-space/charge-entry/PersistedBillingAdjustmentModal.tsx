@@ -7,11 +7,11 @@ interface PersistedBillingAdjustmentModalProps {
   open: boolean;
   theme: 'light' | 'dark';
   item: BackendChargeItem | null;
-  newQuantity: number; // Changed from 'quantity' to 'newQuantity' for clarity
+  newQuantity: number;
   reason: string;
   isSubmitting: boolean;
   onClose: () => void;
-  onNewQuantityChange: (newQuantity: number) => void; // Renamed for clarity
+  onNewQuantityChange: (newQuantity: number) => void;
   onReasonChange: (reason: string) => void;
   onSubmit: () => void;
 }
@@ -220,26 +220,40 @@ export const PersistedBillingAdjustmentModal: React.FC<PersistedBillingAdjustmen
               )}
             </div>
           )}
-
-          {/* Reason Field */}
+          
+          {/* Reason Field with Predefined Options */}
           <div>
             <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               Reason for adjustment
               {reasonRequired && <span className="text-rose-500 ml-1">*</span>}
             </label>
-            <textarea
+            
+            <select
               value={reason}
               onChange={(e) => onReasonChange(e.target.value)}
-              rows={3}
-              placeholder="Required for audit trail: e.g., duplicate correction, quantity error, medication reconciliation..."
-              className={`w-full rounded-xl border px-4 py-2.5 text-sm resize-none transition-all ${
+              className={`w-full rounded-xl border px-4 py-2.5 text-sm transition-all ${
                 isDark
-                  ? 'bg-gray-800 border-gray-700 text-gray-100 placeholder:text-gray-500 focus:border-blue-500'
-                  : 'bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 focus:border-blue-500'
+                  ? 'bg-gray-800 border-gray-700 text-gray-100 focus:border-blue-500'
+                  : 'bg-white border-gray-200 text-gray-900 focus:border-blue-500'
               } focus:outline-none focus:ring-2 focus:ring-blue-500/30`}
-            />
+            >
+              <option value="">Select a reason...</option>
+              <option value="Duplicate charge">Duplicate charge</option>
+              <option value="Quantity entry error">Quantity entry error</option>
+              <option value="Wrong item billed">Wrong item billed</option>
+              <option value="Medication adjustment">Medication adjustment</option>
+              <option value="Dosage changed">Dosage changed</option>
+              <option value="Treatment modified">Treatment modified</option>
+              <option value="Stock correction">Stock correction</option>
+              <option value="Item unavailable">Item unavailable</option>
+              <option value="Insurance adjustment">Insurance adjustment</option>
+              <option value="Patient request">Patient request</option>
+              <option value="Staff error">Staff error</option>
+              <option value="System correction">System correction</option>
+            </select>
+            
             <p className={`text-xs mt-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-              Add a reason — this will be saved with the change.
+              Select a reason — this will be saved with the change for audit trail.
             </p>
           </div>
         </div>

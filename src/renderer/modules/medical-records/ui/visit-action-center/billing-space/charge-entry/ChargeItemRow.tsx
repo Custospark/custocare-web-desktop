@@ -558,7 +558,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
                 </span>
               )}
 
-              {requiresReason && (
+              {/* {requiresReason && (
                 <span
                   className={`text-xs px-1.5 py-0.5 rounded font-medium ${
                     isDark ? 'bg-rose-500/15 text-rose-300' : 'bg-rose-50 text-rose-700'
@@ -566,7 +566,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
                 >
                   Reason required
                 </span>
-              )}
+              )} */}
 
               {hasAuditLogs && (
                 <span
