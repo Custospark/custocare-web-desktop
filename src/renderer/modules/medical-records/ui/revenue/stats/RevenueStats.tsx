@@ -383,138 +383,144 @@ export const BillingRevenueDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className={cx(cardClassName, 'space-y-4')}>
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h2 className={cx('text-base font-semibold', ui.text)}>Filters</h2>
-            <p className={cx('text-sm mt-1', ui.textSecondary)}>
-              Choose a date range and grouping to update dashboard views
-            </p>
-          </div>
-
-          <span className={cx('text-sm', ui.textSecondary)}>
+    {/* Filters – Compact Enterprise Layout */}
+    <div className={cx(cardClassName, 'space-y-2')}>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className={cx('text-sm font-semibold', ui.text)}>Filters</h2>
+          <p className={cx('text-xs', ui.textSecondary)}>Date range & grouping</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={cx('text-xs', ui.textSecondary)}>
             Last updated: {lastRefreshed.toLocaleTimeString()}
           </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-          <div>
-            <label className={cx('block text-sm font-medium mb-1', ui.textSecondary)}>
-              Date from
-            </label>
-            <input
-              type="date"
-              value={draftFilters.date_from ?? ''}
-              onChange={(e) =>
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  date_from: e.target.value || undefined,
-                }))
-              }
-              className={cx(
-                'w-full rounded-lg border px-3 py-2 text-sm outline-none',
-                isDark
-                  ? 'bg-gray-950 border-gray-700 text-gray-100'
-                  : 'bg-white border-gray-300 text-gray-900'
-              )}
-            />
-          </div>
-
-          <div>
-            <label className={cx('block text-sm font-medium mb-1', ui.textSecondary)}>
-              Date to
-            </label>
-            <input
-              type="date"
-              value={draftFilters.date_to ?? ''}
-              onChange={(e) =>
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  date_to: e.target.value || undefined,
-                }))
-              }
-              className={cx(
-                'w-full rounded-lg border px-3 py-2 text-sm outline-none',
-                isDark
-                  ? 'bg-gray-950 border-gray-700 text-gray-100'
-                  : 'bg-white border-gray-300 text-gray-900'
-              )}
-            />
-          </div>
-
-          <div>
-            <label className={cx('block text-sm font-medium mb-1', ui.textSecondary)}>
-              Group by
-            </label>
-            <select
-              value={draftFilters.group_by ?? 'day'}
-              onChange={(e) =>
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  group_by: e.target.value as BillingRevenueDashboardFilters['group_by'],
-                }))
-              }
-              className={cx(
-                'w-full rounded-lg border px-3 py-2 text-sm outline-none',
-                isDark
-                  ? 'bg-gray-950 border-gray-700 text-gray-100'
-                  : 'bg-white border-gray-300 text-gray-900'
-              )}
-            >
-              <option value="day">Day</option>
-              <option value="week">Week</option>
-              <option value="month">Month</option>
-            </select>
-          </div>
-
-          <div>
-            <label className={cx('block text-sm font-medium mb-1', ui.textSecondary)}>
-              Top results
-            </label>
-            <select
-              value={draftFilters.top ?? 10}
-              onChange={(e) =>
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  top: Number(e.target.value),
-                }))
-              }
-              className={cx(
-                'w-full rounded-lg border px-3 py-2 text-sm outline-none',
-                isDark
-                  ? 'bg-gray-950 border-gray-700 text-gray-100'
-                  : 'bg-white border-gray-300 text-gray-900'
-              )}
-            >
-              <option value={5}>Top 5</option>
-              <option value={10}>Top 10</option>
-              <option value={15}>Top 15</option>
-              <option value={20}>Top 20</option>
-            </select>
-          </div>
-
-          <div className="flex items-end gap-2">
-            <button
-              onClick={handleApplyFilters}
-              className="cursor-pointer w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition"
-            >
-              Apply
-            </button>
-            <button
-              onClick={handleResetFilters}
-              className={cx(
-                'cursor-pointer rounded-lg border px-4 py-2 text-sm font-medium transition',
-                isDark
-                  ? 'border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800'
-                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-              )}
-            >
-              Reset
-            </button>
-          </div>
+          <button
+            onClick={() => refetch()}
+            className={cx(
+              'p-1 rounded-md transition',
+              isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+            )}
+            aria-label="Refresh"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
+
+      <div className="flex flex-wrap items-end gap-2">
+        {/* Date from */}
+        <div className="min-w-[130px]">
+          <div className={cx('text-xs mb-0.5', ui.textSecondary)}>From</div>
+          <input
+            type="date"
+            value={draftFilters.date_from ?? ''}
+            onChange={(e) =>
+              setDraftFilters((prev) => ({
+                ...prev,
+                date_from: e.target.value || undefined,
+              }))
+            }
+            className={cx(
+              'w-full rounded-md border px-2 py-1 text-sm outline-none',
+              isDark
+                ? 'bg-gray-950 border-gray-700 text-gray-100'
+                : 'bg-white border-gray-300 text-gray-900'
+            )}
+          />
+        </div>
+
+        {/* Date to */}
+        <div className="min-w-[130px]">
+          <div className={cx('text-xs mb-0.5', ui.textSecondary)}>To</div>
+          <input
+            type="date"
+            value={draftFilters.date_to ?? ''}
+            onChange={(e) =>
+              setDraftFilters((prev) => ({
+                ...prev,
+                date_to: e.target.value || undefined,
+              }))
+            }
+            className={cx(
+              'w-full rounded-md border px-2 py-1 text-sm outline-none',
+              isDark
+                ? 'bg-gray-950 border-gray-700 text-gray-100'
+                : 'bg-white border-gray-300 text-gray-900'
+            )}
+          />
+        </div>
+
+        {/* Group by */}
+        <div className="w-[100px]">
+          <div className={cx('text-xs mb-0.5', ui.textSecondary)}>Group</div>
+          <select
+            value={draftFilters.group_by ?? 'day'}
+            onChange={(e) =>
+              setDraftFilters((prev) => ({
+                ...prev,
+                group_by: e.target.value as BillingRevenueDashboardFilters['group_by'],
+              }))
+            }
+            className={cx(
+              'w-full rounded-md border px-2 py-1 text-sm outline-none',
+              isDark
+                ? 'bg-gray-950 border-gray-700 text-gray-100'
+                : 'bg-white border-gray-300 text-gray-900'
+            )}
+          >
+            <option value="day">Day</option>
+            <option value="week">Week</option>
+            <option value="month">Month</option>
+          </select>
+        </div>
+
+        {/* Top results */}
+        <div className="w-[80px]">
+          <div className={cx('text-xs mb-0.5', ui.textSecondary)}>Top</div>
+          <select
+            value={draftFilters.top ?? 10}
+            onChange={(e) =>
+              setDraftFilters((prev) => ({
+                ...prev,
+                top: Number(e.target.value),
+              }))
+            }
+            className={cx(
+              'w-full rounded-md border px-2 py-1 text-sm outline-none',
+              isDark
+                ? 'bg-gray-950 border-gray-700 text-gray-100'
+                : 'bg-white border-gray-300 text-gray-900'
+            )}
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={15}>15</option>
+            <option value={20}>20</option>
+          </select>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-2">
+          <button
+            onClick={handleApplyFilters}
+            className="cursor-pointer rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700 transition"
+          >
+            Apply
+          </button>
+          <button
+            onClick={handleResetFilters}
+            className={cx(
+              'cursor-pointer rounded-md border px-3 py-1 text-sm font-medium transition',
+              isDark
+                ? 'border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800'
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+            )}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
 
       {/* Tabs */}
       <nav
