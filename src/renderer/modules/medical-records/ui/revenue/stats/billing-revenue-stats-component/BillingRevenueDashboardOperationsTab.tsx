@@ -262,10 +262,10 @@ const BillingRevenueDashboardOperationsTab: React.FC<BillingRevenueDashboardTabP
                       </div>
                     </div>
 
-                    <div className="mt-3 pt-3 border-t border-dashed" className={cx(
-                      'mt-3 pt-3 border-t border-dashed',
-                      isDark ? 'border-gray-700' : 'border-gray-200'
-                    )}>
+                  <div className={cx(
+                        'mt-3 pt-3 border-t border-dashed',
+                        isDark ? 'border-gray-700' : 'border-gray-200'
+                        )}>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                         <div className="flex justify-between">
                           <span className={cx('text-xs', ui.textMuted)}>vs Best Day:</span>
