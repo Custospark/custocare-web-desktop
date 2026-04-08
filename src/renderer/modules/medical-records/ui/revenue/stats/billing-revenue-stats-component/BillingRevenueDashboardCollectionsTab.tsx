@@ -287,80 +287,111 @@ const BillingRevenueDashboardCollectionsTab: React.FC<BillingRevenueDashboardTab
         textSecondary={ui.textSecondary}
       >
         {hasData(collectionsStatusDistribution) ? (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 20, right: 20, bottom: 60, left: 20 }}>
-                  <Pie
-                    data={collectionsStatusDistribution}
-                    cx="50%"
-                    cy="45%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    dataKey="amount"
-                    nameKey="billing_status"
-                    paddingAngle={2}
-                    label={false}
-                  >
-                    {collectionsStatusDistribution.map((item, index) => (
-                      <Cell
-                        key={`status-distribution-${item.billing_status}-${index}`}
-                        fill={STATUS_COLORS[index % STATUS_COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <BillingRevenueDashboardChartTooltip
-                    isDark={isDark}
-                    bg={ui.tooltipBg}
-                    border={ui.tooltipBorder}
-                    text={ui.tooltipText}
-                  />
-                  <Legend 
-                    wrapperStyle={{ 
-                      color: isDark ? '#E2E8F0' : '#334155',
-                      paddingTop: '20px',
-                      width: '100%',
-                      position: 'relative'
-                    }}
-                    formatter={(value) => formatText(value)}
-                    layout="horizontal"
-                    verticalAlign="bottom"
-                    align="center"
-                    iconSize={10}
-                    iconType="circle"
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+          <div className="flex flex-col space-y-6">
+            {/* Chart Section - Responsive */}
+            <div className="w-full">
+              <div className="h-80 sm:h-96 md:h-80 lg:h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                    <Pie
+                      data={collectionsStatusDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius="30%"
+                      outerRadius="60%"
+                      dataKey="amount"
+                      nameKey="billing_status"
+                      paddingAngle={2}
+                      label={false}
+                    >
+                      {collectionsStatusDistribution.map((item, index) => (
+                        <Cell
+                          key={`status-distribution-${item.billing_status}-${index}`}
+                          fill={STATUS_COLORS[index % STATUS_COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <BillingRevenueDashboardChartTooltip
+                      isDark={isDark}
+                      bg={ui.tooltipBg}
+                      border={ui.tooltipBorder}
+                      text={ui.tooltipText}
+                    />
+                    <Legend 
+                      wrapperStyle={{ 
+                        color: isDark ? '#E2E8F0' : '#334155',
+                        fontSize: '12px',
+                        width: '100%',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        marginTop: '20px'
+                      }}
+                      formatter={(value) => formatText(value)}
+                      layout="horizontal"
+                      verticalAlign="bottom"
+                      align="center"
+                      iconSize={10}
+                      iconType="circle"
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
-            <div className="space-y-3 overflow-y-auto max-h-96">
+            {/* Status List - Responsive Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3">
               {collectionsStatusDistribution.map((item, index) => (
                 <div
                   key={item.billing_status}
                   className={cx(
-                    'rounded-xl border p-4',
+                    'rounded-xl border p-4 transition-all hover:shadow-md',
                     isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
                   )}
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
                       <div
                         className="w-3 h-3 rounded-full shrink-0"
                         style={{ backgroundColor: STATUS_COLORS[index % STATUS_COLORS.length] }}
                       />
                       <div className="min-w-0">
-                        <p className={cx('text-sm font-medium', ui.text)}>
+                        <p className={cx('text-sm font-medium truncate', ui.text)}>
                           {formatText(item.billing_status)}
                         </p>
-                        <p className={cx('text-xs mt-1', ui.textMuted)}>
+                        <p className={cx('text-xs mt-0.5', ui.textMuted)}>
                           {formatNumber(item.count)} invoices
                         </p>
                       </div>
                     </div>
 
-                    <p className={cx('text-sm font-semibold shrink-0', ui.text)}>
-                      {formatCurrency(item.amount)}
-                    </p>
+                    <div className="text-left sm:text-right shrink-0">
+                      <p className={cx('text-sm font-semibold', ui.text)}>
+                        {formatCurrency(item.amount)}
+                      </p>
+                      <p className={cx('text-xs', ui.textMuted)}>
+                        {formatCompactCurrency(item.amount)}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Progress bar for visual representation */}
+                  <div className="mt-3">
+                    <div
+                      className={cx(
+                        'w-full h-1.5 rounded-full overflow-hidden',
+                        isDark ? 'bg-gray-800' : 'bg-gray-100'
+                      )}
+                    >
+                      <div
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{
+                          width: `${(item.amount / collectionsStatusDistribution.reduce((sum, i) => sum + i.amount, 0)) * 100}%`,
+                          backgroundColor: STATUS_COLORS[index % STATUS_COLORS.length]
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
