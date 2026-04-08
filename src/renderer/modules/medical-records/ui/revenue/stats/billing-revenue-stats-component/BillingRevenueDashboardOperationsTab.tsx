@@ -1,4 +1,4 @@
-import React, { useMemo,useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   Bar,
   CartesianGrid,
@@ -10,7 +10,6 @@ import {
   YAxis,
 } from 'recharts';
 import { Activity, Database, Calendar, Users } from 'lucide-react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 
 import BillingRevenueDashboardChartTooltip from './BillingRevenueDashboardChartTooltip';
 import BillingRevenueDashboardSectionCard from './BillingRevenueDashboardSectionCard';
@@ -33,19 +32,8 @@ const BillingRevenueDashboardOperationsTab: React.FC<BillingRevenueDashboardTabP
   const billingActivity = dashboard?.billing_activity ?? [];
   const performanceByDay = dashboard?.performance_by_day ?? [];
   const staffContribution = dashboard?.staff_contribution ?? [];
-  const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set());
 
-    const toggleDayExpand = (dayNumber: number) => {
-    setExpandedDays(prev => {
-        const newSet = new Set(prev);
-        if (newSet.has(dayNumber)) {
-        newSet.delete(dayNumber);
-        } else {
-        newSet.add(dayNumber);
-        }
-        return newSet;
-    });
-    };
+   
 
   const maxStaffNetRevenue = useMemo(
     () => Math.max(...staffContribution.map((item) => item.net_revenue), 0),
