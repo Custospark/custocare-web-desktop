@@ -1,5 +1,5 @@
 import React from 'react';
-import { cx } from '../../billing-review/utils';
+import { cx } from './revenueDashboardUtils';
 
 type BillingRevenueDashboardSectionCardProps = {
   title: string;
@@ -34,7 +34,7 @@ const BillingRevenueDashboardSectionCard: React.FC<
         {icon ? (
           <div
             className={cx(
-              'mt-0.5 p-2 rounded-lg border',
+              'mt-0.5 p-2 rounded-lg border shrink-0',
               isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'
             )}
           >
@@ -42,7 +42,7 @@ const BillingRevenueDashboardSectionCard: React.FC<
           </div>
         ) : null}
 
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h2 className={cx('text-base sm:text-lg font-semibold leading-tight', text)}>
             {title}
           </h2>
@@ -52,7 +52,7 @@ const BillingRevenueDashboardSectionCard: React.FC<
           ) : null}
         </div>
 
-        {right ? <div className="ml-auto flex items-center gap-2">{right}</div> : null}
+        {right ? <div className="ml-auto flex items-center gap-2 shrink-0">{right}</div> : null}
       </header>
 
       {children}
