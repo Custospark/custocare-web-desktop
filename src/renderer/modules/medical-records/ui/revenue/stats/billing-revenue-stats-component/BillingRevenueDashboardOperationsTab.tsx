@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo,useState } from 'react';
 import {
   Bar,
   CartesianGrid,
@@ -9,7 +9,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Activity, Database, Calendar, Users, ChevronDown, ChevronUp } from 'lucide-react';
+import { Activity, Database, Calendar, Users } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 import BillingRevenueDashboardChartTooltip from './BillingRevenueDashboardChartTooltip';
 import BillingRevenueDashboardSectionCard from './BillingRevenueDashboardSectionCard';
@@ -20,7 +21,6 @@ import {
   formatCompactNumber,
   formatCurrency,
   formatNumber,
-  formatPercent,
   hasData,
 } from './revenueDashboardUtils';
 
@@ -33,7 +33,19 @@ const BillingRevenueDashboardOperationsTab: React.FC<BillingRevenueDashboardTabP
   const billingActivity = dashboard?.billing_activity ?? [];
   const performanceByDay = dashboard?.performance_by_day ?? [];
   const staffContribution = dashboard?.staff_contribution ?? [];
-  const [showAllDaysDetails, setShowAllDaysDetails] = useState(false);
+  const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set());
+
+    const toggleDayExpand = (dayNumber: number) => {
+    setExpandedDays(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(dayNumber)) {
+        newSet.delete(dayNumber);
+        } else {
+        newSet.add(dayNumber);
+        }
+        return newSet;
+    });
+    };
 
   const maxStaffNetRevenue = useMemo(
     () => Math.max(...staffContribution.map((item) => item.net_revenue), 0),
@@ -59,7 +71,7 @@ const BillingRevenueDashboardOperationsTab: React.FC<BillingRevenueDashboardTabP
 
   return (
     <div className="space-y-6">
-      {/* Performance by Day - Full Width */}
+      {/* Performance by Day - First Graph (full width) */}
       <BillingRevenueDashboardSectionCard
         title="Performance by Day"
         subtitle="Day-of-week invoice count, revenue, and average bill value"
@@ -141,156 +153,55 @@ const BillingRevenueDashboardOperationsTab: React.FC<BillingRevenueDashboardTabP
               </ResponsiveContainer>
             </div>
 
-            {/* Summary Cards - Always Visible */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className={cx(
-                'rounded-lg border p-4',
-                isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
-              )}>
-                <p className={cx('text-xs', ui.textMuted)}>Total Weekly Revenue</p>
-                <p className={cx('text-xl font-bold mt-1', ui.text)}>
-                  {formatCurrency(performanceByDay.reduce((sum, day) => sum + day.net_revenue, 0))}
-                </p>
-              </div>
-              <div className={cx(
-                'rounded-lg border p-4',
-                isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
-              )}>
-                <p className={cx('text-xs', ui.textMuted)}>Total Invoices</p>
-                <p className={cx('text-xl font-bold mt-1', ui.text)}>
-                  {formatNumber(performanceByDay.reduce((sum, day) => sum + day.invoice_count, 0))}
-                </p>
-              </div>
-              <div className={cx(
-                'rounded-lg border p-4',
-                isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
-              )}>
-                <p className={cx('text-xs', ui.textMuted)}>Best Day</p>
-                <p className={cx('text-xl font-bold mt-1', ui.text)}>
-                  {performanceByDay.reduce((best, current) => 
-                    current.net_revenue > best.net_revenue ? current : best
-                  ).day_of_week}
-                </p>
-              </div>
-              <div className={cx(
-                'rounded-lg border p-4',
-                isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
-              )}>
-                <p className={cx('text-xs', ui.textMuted)}>Avg Daily Revenue</p>
-                <p className={cx('text-xl font-bold mt-1', ui.text)}>
-                  {formatCurrency(performanceByDay.reduce((sum, day) => sum + day.net_revenue, 0) / performanceByDay.length)}
-                </p>
-              </div>
-            </div>
-
-            {/* Toggle Button for Details */}
-            <button
-              onClick={() => setShowAllDaysDetails(!showAllDaysDetails)}
-              className={cx(
-                'w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg border text-sm transition-colors',
-                isDark
-                  ? 'bg-gray-800 hover:bg-gray-700 border-gray-700 text-gray-200'
-                  : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
-              )}
-            >
-              {showAllDaysDetails ? (
-                <>
-                  <ChevronUp className="w-4 h-4" />
-                  Show Less Details
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-4 h-4" />
-                  Show More Details
-                </>
-              )}
-            </button>
-
-            {/* Detailed Metrics - Shows/Hides for ALL days */}
-            {showAllDaysDetails && (
-              <div className="space-y-3 mt-4">
-                <p className={cx('text-sm font-semibold', ui.text)}>
-                  Detailed Metrics by Day
-                </p>
-                {performanceByDay.map((item) => (
-                  <div
-                    key={`${item.day_of_week_number}-${item.day_of_week}`}
-                    className={cx(
-                      'rounded-xl border p-4',
-                      isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
-                    )}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className={cx('text-sm font-medium', ui.text)}>
-                          {item.day_of_week}
-                        </p>
-                        <p className={cx('text-xs mt-1', ui.textMuted)}>
-                          Day #{formatNumber(item.day_of_week_number)}
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                        <div>
-                          <p className={cx('text-xs', ui.textMuted)}>Collection Efficiency</p>
-                          <p className={cx('font-semibold', ui.text)}>
-                            {item.gross_billed_amount > 0
-                              ? formatPercent((item.net_revenue / item.gross_billed_amount) * 100)
-                              : '0%'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className={cx('text-xs', ui.textMuted)}>Revenue per Invoice</p>
-                          <p className={cx('font-semibold', ui.text)}>
-                            {formatCurrency(item.average_bill_value)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className={cx('text-xs', ui.textMuted)}>Gross to Net Ratio</p>
-                          <p className={cx('font-semibold', ui.text)}>
-                            {item.gross_billed_amount > 0
-                              ? formatPercent((item.net_revenue / item.gross_billed_amount) * 100)
-                              : '0%'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className={cx('text-xs', ui.textMuted)}>Total Adjustments</p>
-                          <p className={cx('font-semibold', ui.text)}>
-                            {formatCurrency(item.gross_billed_amount - item.net_revenue)}
-                          </p>
-                        </div>
-                      </div>
+            <div className="space-y-3">
+              {performanceByDay.map((item) => (
+                <div
+                  key={`${item.day_of_week_number}-${item.day_of_week}`}
+                  className={cx(
+                    'rounded-xl border p-4',
+                    isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
+                  )}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className={cx('text-sm font-medium truncate', ui.text)}>
+                        {item.day_of_week}
+                      </p>
+                      <p className={cx('text-xs mt-1', ui.textMuted)}>
+                        Day #{formatNumber(item.day_of_week_number)}
+                      </p>
                     </div>
 
-                  <div className={cx(
-                        'mt-3 pt-3 border-t border-dashed',
-                        isDark ? 'border-gray-700' : 'border-gray-200'
-                        )}>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                        <div className="flex justify-between">
-                          <span className={cx('text-xs', ui.textMuted)}>vs Best Day:</span>
-                          <span className={cx('font-semibold', ui.text)}>
-                            {formatPercent((item.net_revenue / Math.max(...performanceByDay.map(d => d.net_revenue))) * 100)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className={cx('text-xs', ui.textMuted)}>vs Average:</span>
-                          <span className={cx('font-semibold', ui.text)}>
-                            {formatPercent((item.net_revenue / (performanceByDay.reduce((sum, d) => sum + d.net_revenue, 0) / performanceByDay.length)) * 100)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className={cx('text-xs', ui.textMuted)}>Contribution:</span>
-                          <span className={cx('font-semibold', ui.text)}>
-                            {formatPercent((item.net_revenue / performanceByDay.reduce((sum, d) => sum + d.net_revenue, 0)) * 100)}
-                          </span>
-                        </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                      <div>
+                        <p className={cx('text-xs', ui.textMuted)}>Invoices</p>
+                        <p className={cx('font-semibold', ui.text)}>
+                          {formatNumber(item.invoice_count)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={cx('text-xs', ui.textMuted)}>Net Revenue</p>
+                        <p className={cx('font-semibold', ui.text)}>
+                          {formatCurrency(item.net_revenue)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={cx('text-xs', ui.textMuted)}>Gross Billed</p>
+                        <p className={cx('font-semibold', ui.text)}>
+                          {formatCurrency(item.gross_billed_amount)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={cx('text-xs', ui.textMuted)}>Avg Bill Value</p>
+                        <p className={cx('font-semibold', ui.text)}>
+                          {formatCurrency(item.average_bill_value)}
+                        </p>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           renderEmptyState(
