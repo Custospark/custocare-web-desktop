@@ -345,37 +345,39 @@ const BillingRevenueDashboardOverviewTab: React.FC<BillingRevenueDashboardTabPro
                     </ResponsiveContainer>
                 </div>
 
-                <div className="space-y-3">
-                    {revenueBreakdownByCategory.map((item) => (
-                    <div
-                        key={item.category}
-                        className={cx(
-                        'rounded-xl border p-4',
-                        isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
-                        )}
-                    >
-                        <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                            <p className={cx('text-sm font-medium', ui.text)}>
-                            {formatText(item.category)}
-                            </p>
-                            <p className={cx('text-xs mt-1', ui.textMuted)}>
-                            Quantity sold {formatNumber(item.quantity_sold)}
-                            </p>
-                        </div>
-
-                        <div className="text-right shrink-0">
-                            <p className={cx('text-sm font-semibold', ui.text)}>
-                            {formatCurrency(item.revenue)}
-                            </p>
-                            <p className={cx('text-xs', ui.textMuted)}>
-                            {formatPercent(item.share_percentage)}
-                            </p>
-                        </div>
-                        </div>
+               <div className="space-y-3">
+              {revenueBreakdownByCategory.map((item) => (
+                <div
+                  key={item.category}
+                  className={cx(
+                    'rounded-xl border p-3 sm:p-4',
+                    isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
+                  )}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className={cx('text-sm sm:text-base font-medium break-words', ui.text)}>
+                        {formatText(item.category)}
+                      </p>
+                      <p className={cx('text-xs mt-1 break-words', ui.textMuted)}>
+                        Quantity sold {formatNumber(item.quantity_sold)}
+                      </p>
                     </div>
-                    ))}
+
+                    <div className="flex flex-row sm:flex-col justify-between items-center sm:items-end gap-2 sm:gap-1">
+                      <div className="text-left sm:text-right">
+                        <p className={cx('text-sm sm:text-base font-semibold whitespace-nowrap sm:whitespace-normal', ui.text)}>
+                          {formatCurrency(item.revenue)}
+                        </p>
+                        <p className={cx('text-xs text-left sm:text-right', ui.textMuted)}>
+                          {formatPercent(item.share_percentage)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              ))}
+            </div>
                 </div>
             ) : (
                 renderEmptyState(
