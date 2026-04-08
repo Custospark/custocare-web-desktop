@@ -277,95 +277,102 @@ const BillingRevenueDashboardCollectionsTab: React.FC<BillingRevenueDashboardTab
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <BillingRevenueDashboardSectionCard
-            title="Status Distribution"
-            subtitle="Status count and amount from collections.status_distribution"
-            icon={<CreditCard className={isDark ? 'text-blue-300' : 'text-blue-700'} />}
-            cardClassName={cardClassName}
-            isDark={isDark}
-            text={ui.text}
-            textSecondary={ui.textSecondary}
-            >
-            {hasData(collectionsStatusDistribution) ? (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie
-                        data={collectionsStatusDistribution}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={120}
-                        dataKey="amount"
-                        nameKey="billing_status"
-                        paddingAngle={2}
-                        label={false}
-                        >
-                        {collectionsStatusDistribution.map((item, index) => (
-                            <Cell
-                            key={`status-distribution-${item.billing_status}-${index}`}
-                            fill={STATUS_COLORS[index % STATUS_COLORS.length]}
-                            />
-                        ))}
-                        </Pie>
-                        <BillingRevenueDashboardChartTooltip
-                        isDark={isDark}
-                        bg={ui.tooltipBg}
-                        border={ui.tooltipBorder}
-                        text={ui.tooltipText}
-                        />
-                        <Legend 
-                        wrapperStyle={{ color: isDark ? '#E2E8F0' : '#334155' }}
-                        formatter={(value) => formatText(value)}
-                        layout="horizontal"
-                        verticalAlign="bottom"
-                        align="center"
-                        />
-                    </PieChart>
-                    </ResponsiveContainer>
-                </div>
-
-                <div className="space-y-3">
+      <BillingRevenueDashboardSectionCard
+        title="Status Distribution"
+        subtitle="Status count and amount from collections.status_distribution"
+        icon={<CreditCard className={isDark ? 'text-blue-300' : 'text-blue-700'} />}
+        cardClassName={cardClassName}
+        isDark={isDark}
+        text={ui.text}
+        textSecondary={ui.textSecondary}
+      >
+        {hasData(collectionsStatusDistribution) ? (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="h-96">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart margin={{ top: 20, right: 20, bottom: 60, left: 20 }}>
+                  <Pie
+                    data={collectionsStatusDistribution}
+                    cx="50%"
+                    cy="45%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    dataKey="amount"
+                    nameKey="billing_status"
+                    paddingAngle={2}
+                    label={false}
+                  >
                     {collectionsStatusDistribution.map((item, index) => (
-                    <div
-                        key={item.billing_status}
-                        className={cx(
-                        'rounded-xl border p-4',
-                        isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
-                        )}
-                    >
-                        <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2 min-w-0">
-                            <div
-                            className="w-3 h-3 rounded-full shrink-0"
-                            style={{ backgroundColor: STATUS_COLORS[index % STATUS_COLORS.length] }}
-                            />
-                            <div className="min-w-0">
-                            <p className={cx('text-sm font-medium', ui.text)}>
-                                {formatText(item.billing_status)}
-                            </p>
-                            <p className={cx('text-xs mt-1', ui.textMuted)}>
-                                {formatNumber(item.count)} invoices
-                            </p>
-                            </div>
-                        </div>
-
-                        <p className={cx('text-sm font-semibold shrink-0', ui.text)}>
-                            {formatCurrency(item.amount)}
-                        </p>
-                        </div>
-                    </div>
+                      <Cell
+                        key={`status-distribution-${item.billing_status}-${index}`}
+                        fill={STATUS_COLORS[index % STATUS_COLORS.length]}
+                      />
                     ))}
+                  </Pie>
+                  <BillingRevenueDashboardChartTooltip
+                    isDark={isDark}
+                    bg={ui.tooltipBg}
+                    border={ui.tooltipBorder}
+                    text={ui.tooltipText}
+                  />
+                  <Legend 
+                    wrapperStyle={{ 
+                      color: isDark ? '#E2E8F0' : '#334155',
+                      paddingTop: '20px',
+                      width: '100%',
+                      position: 'relative'
+                    }}
+                    formatter={(value) => formatText(value)}
+                    layout="horizontal"
+                    verticalAlign="bottom"
+                    align="center"
+                    iconSize={10}
+                    iconType="circle"
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="space-y-3 overflow-y-auto max-h-96">
+              {collectionsStatusDistribution.map((item, index) => (
+                <div
+                  key={item.billing_status}
+                  className={cx(
+                    'rounded-xl border p-4',
+                    isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: STATUS_COLORS[index % STATUS_COLORS.length] }}
+                      />
+                      <div className="min-w-0">
+                        <p className={cx('text-sm font-medium', ui.text)}>
+                          {formatText(item.billing_status)}
+                        </p>
+                        <p className={cx('text-xs mt-1', ui.textMuted)}>
+                          {formatNumber(item.count)} invoices
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className={cx('text-sm font-semibold shrink-0', ui.text)}>
+                      {formatCurrency(item.amount)}
+                    </p>
+                  </div>
                 </div>
-                </div>
-            ) : (
-                renderEmptyState(
-                'No status distribution data',
-                'Billing status distribution will appear here when available.'
-                )
-            )}
-            </BillingRevenueDashboardSectionCard>
+              ))}
+            </div>
+          </div>
+        ) : (
+          renderEmptyState(
+            'No status distribution data',
+            'Billing status distribution will appear here when available.'
+          )
+        )}
+      </BillingRevenueDashboardSectionCard>
 
         <BillingRevenueDashboardSectionCard
           title="Payment Mix Summary"
@@ -397,7 +404,7 @@ const BillingRevenueDashboardCollectionsTab: React.FC<BillingRevenueDashboardTab
                                 backgroundColor: PAYMENT_MIX_COLORS[index % PAYMENT_MIX_COLORS.length],
                               }}
                             />
-                            <p className={cx('text-sm font-medium truncate', ui.text)}>
+                            <p className={cx('text-sm font-medium', ui.text)}>
                               {item.payment_method}
                             </p>
                           </div>

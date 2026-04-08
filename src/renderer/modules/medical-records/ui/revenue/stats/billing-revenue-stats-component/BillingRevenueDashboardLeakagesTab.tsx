@@ -239,7 +239,7 @@ const BillingRevenueDashboardLeakagesTab: React.FC<BillingRevenueDashboardTabPro
                               }}
                             />
                             <div className="min-w-0">
-                              <p className={cx('text-sm font-medium truncate', ui.text)}>
+                              <p className={cx('text-sm font-medium', ui.text)}>
                                 {item.reason}
                               </p>
                               <p className={cx('text-xs mt-1', ui.textMuted)}>
@@ -327,7 +327,7 @@ const BillingRevenueDashboardLeakagesTab: React.FC<BillingRevenueDashboardTabPro
                   >
                     <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-3">
                       <div className="min-w-0">
-                        <p className={cx('text-sm font-medium truncate', ui.text)}>
+                        <p className={cx('text-sm font-medium', ui.text)}>
                           {item.item_name}
                         </p>
                         <p className={cx('text-xs mt-1', ui.textMuted)}>
@@ -496,7 +496,7 @@ const BillingRevenueDashboardLeakagesTab: React.FC<BillingRevenueDashboardTabPro
                     >
                     <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-3">
                         <div className="min-w-0">
-                        <p className={cx('text-sm font-semibold truncate', ui.text)}>
+                        <p className={cx('text-sm font-semibold', ui.text)}>
                             {item.reference_number}
                         </p>
                         <p className={cx('text-xs mt-1', ui.textMuted)}>

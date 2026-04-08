@@ -356,7 +356,7 @@ const BillingRevenueDashboardOverviewTab: React.FC<BillingRevenueDashboardTabPro
                     >
                         <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                            <p className={cx('text-sm font-medium truncate', ui.text)}>
+                            <p className={cx('text-sm font-medium', ui.text)}>
                             {formatText(item.category)}
                             </p>
                             <p className={cx('text-xs mt-1', ui.textMuted)}>
@@ -408,7 +408,7 @@ const BillingRevenueDashboardOverviewTab: React.FC<BillingRevenueDashboardTabPro
                 >
                     <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-3">
                     <div className="min-w-0">
-                        <p className={cx('text-sm font-semibold truncate', ui.text)}>
+                        <p className={cx('text-sm font-semibold ', ui.text)}>
                         {item.service_name}
                         </p>
                         <p className={cx('text-xs mt-1', ui.textMuted)}>
@@ -614,7 +614,7 @@ const BillingRevenueDashboardOverviewTab: React.FC<BillingRevenueDashboardTabPro
                                 }}
                             />
                             <div className="min-w-0">
-                                <p className={cx('text-sm font-medium truncate', ui.text)}>
+                                <p className={cx('text-sm font-medium ', ui.text)}>
                                 {formatText(item.payment_method)}
                                 </p>
                                 <p className={cx('text-xs', ui.textMuted)}>

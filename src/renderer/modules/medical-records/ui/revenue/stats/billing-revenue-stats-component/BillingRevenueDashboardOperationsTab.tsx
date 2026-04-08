@@ -152,7 +152,7 @@ const BillingRevenueDashboardOperationsTab: React.FC<BillingRevenueDashboardTabP
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div className="min-w-0">
-                      <p className={cx('text-sm font-medium truncate', ui.text)}>
+                      <p className={cx('text-sm font-medium', ui.text)}>
                         {item.day_of_week}
                       </p>
                       <p className={cx('text-xs mt-1', ui.textMuted)}>
@@ -326,7 +326,7 @@ const BillingRevenueDashboardOperationsTab: React.FC<BillingRevenueDashboardTabP
                   >
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="min-w-0">
-                        <p className={cx('text-sm font-medium truncate', ui.text)}>
+                        <p className={cx('text-sm font-medium', ui.text)}>
                           {item.staff_name}
                         </p>
                         <p className={cx('text-xs mt-1', ui.textMuted)}>
