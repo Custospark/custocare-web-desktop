@@ -463,7 +463,7 @@ export function isOverdue(item: BillingReviewItem, daysThreshold: number = 30): 
 /**
  * Format currency amount
  */
-export function formatCurrency(amount: number, currency: string = 'UGX'): string {
+export function formatCurrency(amount: number, currency: string = DEFAULT_CURRENCY): string {
   return new Intl.NumberFormat('en-UG', {
     style: 'currency',
     currency,

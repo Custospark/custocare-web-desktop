@@ -38,7 +38,6 @@ import {
   extractArray,
   formatCompactCurrency,
   formatCompactNumber,
-  formatCurrency,
   formatNumber,
   formatPercent,
   hasData,
@@ -46,6 +45,7 @@ import {
   pickString,
   toRecord,
 } from  './billing-revenue-stats-component/revenueDashboardUtils';
+import { formatCurrency   } from '../../../api/billing-review/BillingReviewTypes';
 
 type TabKey = 'overview' | 'collections' | 'operations' | 'leakages';
 

@@ -8,6 +8,7 @@ import {
   RefreshCcw,
   Wallet,
 } from 'lucide-react';
+import { DEFAULT_CURRENCY } from '../../../visit-action-center/billing-space';
 
 export const cx = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(' ');
@@ -109,14 +110,14 @@ export const pickOptionalNumber = (
   return null;
 };
 
-export const formatCurrency = (value: number, currency = 'USD') =>
+export const formatCurrency = (value: number, currency = DEFAULT_CURRENCY) =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
     maximumFractionDigits: 2,
   }).format(Number.isFinite(value) ? value : 0);
 
-export const formatCompactCurrency = (value: number, currency = 'USD') =>
+export const formatCompactCurrency = (value: number, currency = DEFAULT_CURRENCY) =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
