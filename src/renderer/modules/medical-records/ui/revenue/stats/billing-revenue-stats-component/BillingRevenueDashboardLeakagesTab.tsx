@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { AlertCircle, AlertTriangle, PackageX } from 'lucide-react';
+import { Database, AlertTriangle, PackageX } from 'lucide-react';
 
 import BillingRevenueDashboardChartTooltip from './BillingRevenueDashboardChartTooltip';
 import BillingRevenueDashboardSectionCard from './BillingRevenueDashboardSectionCard';
@@ -29,6 +29,7 @@ import {
   formatCurrency,
   formatNumber,
   formatPercent,
+  formatText,
   hasData,
 } from './revenueDashboardUtils';
 
@@ -58,7 +59,7 @@ const BillingRevenueDashboardLeakagesTab: React.FC<BillingRevenueDashboardTabPro
         isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
       )}
     >
-      <AlertCircle className="w-12 h-12 mx-auto mb-3 text-amber-500" />
+      <Database className="w-12 h-12 mx-auto mb-3 text-amber-500" />
       <h3 className={cx('text-lg font-semibold', isDark ? 'text-gray-100' : 'text-gray-900')}>
         {title}
       </h3>
@@ -97,7 +98,7 @@ const BillingRevenueDashboardLeakagesTab: React.FC<BillingRevenueDashboardTabPro
         <BillingRevenueDashboardSectionCard
           title="Financial Leakage by Reason"
           subtitle="Reason counts and amounts from financial_leakages.by_reason"
-          icon={<AlertCircle className={isDark ? 'text-red-300' : 'text-red-700'} />}
+          icon={<Database className={isDark ? 'text-red-300' : 'text-red-700'} />}
           cardClassName={cardClassName}
           isDark={isDark}
           text={ui.text}
@@ -260,7 +261,7 @@ const BillingRevenueDashboardLeakagesTab: React.FC<BillingRevenueDashboardTabPro
           ) : (
             renderEmptyState(
               'No financial leakage data',
-              'Financial leakage summary and reason breakdown will appear here when returned by the backend.'
+              'Financial leakage summary and reason breakdown will appear here when available.'
             )
           )}
         </BillingRevenueDashboardSectionCard>
@@ -474,86 +475,72 @@ const BillingRevenueDashboardLeakagesTab: React.FC<BillingRevenueDashboardTabPro
             )
           )}
         </BillingRevenueDashboardSectionCard>
-
         <BillingRevenueDashboardSectionCard
-          title="Financial Leakage Top Cases"
-          subtitle="Top adjustment cases exactly as returned by the backend"
-          icon={<AlertCircle className={isDark ? 'text-amber-300' : 'text-amber-700'} />}
-          cardClassName={cardClassName}
-          isDark={isDark}
-          text={ui.text}
-          textSecondary={ui.textSecondary}
-        >
-          {hasData(financialLeakageTopCases) ? (
-            <div className="space-y-3">
-              {financialLeakageTopCases.map((item) => (
-                <div
-                  key={item.adjustment_id}
-                  className={cx(
-                    'rounded-xl border p-4',
-                    isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
-                  )}
-                >
-                  <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className={cx('text-sm font-semibold truncate', ui.text)}>
-                        {item.reference_number}
-                      </p>
-                      <p className={cx('text-xs mt-1', ui.textMuted)}>
-                        {item.adjustment_type} • {item.adjustment_reason}
-                      </p>
-                      <p className={cx('text-xs mt-1', ui.textMuted)}>
-                        Adjustment ID {formatNumber(item.adjustment_id)}
-                      </p>
+            title="Financial Leakage Top Cases"
+            subtitle="Top adjustment cases exactly as available"
+            icon={<Database className={isDark ? 'text-amber-300' : 'text-amber-700'} />}
+            cardClassName={cardClassName}
+            isDark={isDark}
+            text={ui.text}
+            textSecondary={ui.textSecondary}
+            >
+            {hasData(financialLeakageTopCases) ? (
+                <div className="space-y-3">
+                {financialLeakageTopCases.map((item) => (
+                    <div
+                    key={item.adjustment_id}
+                    className={cx(
+                        'rounded-xl border p-4',
+                        isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
+                    )}
+                    >
+                    <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-3">
+                        <div className="min-w-0">
+                        <p className={cx('text-sm font-semibold truncate', ui.text)}>
+                            {item.reference_number}
+                        </p>
+                        <p className={cx('text-xs mt-1', ui.textMuted)}>
+                            {formatText(item.adjustment_type)} • {formatText(item.adjustment_reason)}
+                        </p>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                        <p className={cx('text-sm font-semibold', ui.text)}>
+                            {formatCurrency(item.amount)}
+                        </p>
+                        <p className={cx('text-xs', ui.textMuted)}>
+                            {item.completed_at ?? 'No completion date'}
+                        </p>
+                        </div>
                     </div>
 
-                    <div className="text-right shrink-0">
-                      <p className={cx('text-sm font-semibold', ui.text)}>
-                        {formatCurrency(item.amount)}
-                      </p>
-                      <p className={cx('text-xs', ui.textMuted)}>
-                        {item.completed_at ?? 'No completion date'}
-                      </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 text-sm mt-3">
+                        <div>
+                        <p className={cx('text-xs', ui.textMuted)}>Patient Number</p>
+                        <p className={cx('font-semibold', ui.text)}>
+                            {item.patient_id === null ? '—' : formatNumber(item.patient_id)}
+                        </p>
+                        </div>
+                        <div>
+                        </div>
+                        <div>
+                        </div>
+                        <div>
+                        <p className={cx('text-xs', ui.textMuted)}>Billing Cycle Number</p>
+                        <p className={cx('font-semibold break-all', ui.text)}>
+                            {item.billing_cycle_uuid ?? '—'}
+                        </p>
+                        </div>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 text-sm mt-3">
-                    <div>
-                      <p className={cx('text-xs', ui.textMuted)}>Patient ID</p>
-                      <p className={cx('font-semibold', ui.text)}>
-                        {item.patient_id === null ? '—' : formatNumber(item.patient_id)}
-                      </p>
                     </div>
-                    <div>
-                      <p className={cx('text-xs', ui.textMuted)}>Visit ID</p>
-                      <p className={cx('font-semibold', ui.text)}>
-                        {item.visit_id === null ? '—' : formatNumber(item.visit_id)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className={cx('text-xs', ui.textMuted)}>Billing Cycle ID</p>
-                      <p className={cx('font-semibold', ui.text)}>
-                        {item.billing_cycle_id === null
-                          ? '—'
-                          : formatNumber(item.billing_cycle_id)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className={cx('text-xs', ui.textMuted)}>Billing Cycle UUID</p>
-                      <p className={cx('font-semibold break-all', ui.text)}>
-                        {item.billing_cycle_uuid ?? '—'}
-                      </p>
-                    </div>
-                  </div>
+                ))}
                 </div>
-              ))}
-            </div>
-          ) : (
-            renderEmptyState(
-              'No top leakage cases',
-              'Top financial leakage cases will appear here when available.'
-            )
-          )}
+            ) : (
+                renderEmptyState(
+                'No top leakage cases',
+                'Top financial leakage cases will appear here when available.'
+                )
+            )}
         </BillingRevenueDashboardSectionCard>
       </div>
     </div>

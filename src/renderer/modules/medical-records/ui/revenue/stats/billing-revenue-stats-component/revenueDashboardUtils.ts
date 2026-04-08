@@ -36,6 +36,15 @@ export const formatCompactNumber = (value: number) =>
 export const formatPercent = (value: number, digits = 1) =>
   `${(Number.isFinite(value) ? value : 0).toFixed(digits)}%`;
 
+export const formatText = (text: string): string => {
+  return text
+    .replace(/[,-]/g, ' ')           // Replace commas and hyphens with spaces
+    .split('_')                       // Split by underscore
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')                        // Join with spaces
+    .replace(/\s+/g, ' ')             // Clean up multiple spaces
+    .trim();                          // Remove leading/trailing spaces
+};
 export type DashboardMetricCard = {
   label: string;
   value: string;
