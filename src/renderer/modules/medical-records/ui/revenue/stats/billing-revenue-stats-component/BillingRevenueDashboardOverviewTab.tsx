@@ -293,99 +293,158 @@ const BillingRevenueDashboardOverviewTab: React.FC<BillingRevenueDashboardTabPro
             )
           )}
         </BillingRevenueDashboardSectionCard>
-
        <BillingRevenueDashboardSectionCard
-            title="Revenue Breakdown by Category"
-            subtitle="Category revenue, quantity sold, and share percentage"
-            icon={<Activity className={isDark ? 'text-violet-300' : 'text-violet-700'} />}
-            cardClassName={cardClassName}
-            isDark={isDark}
-            text={ui.text}
-            textSecondary={ui.textSecondary}
+  title="Revenue Breakdown by Category"
+  subtitle="Category revenue, quantity sold, and share percentage"
+  icon={<Activity className={isDark ? 'text-violet-300' : 'text-violet-700'} />}
+  cardClassName={cardClassName}
+  isDark={isDark}
+  text={ui.text}
+  textSecondary={ui.textSecondary}
+>
+  {hasData(revenueBreakdownByCategory) ? (
+    <div className="flex flex-col space-y-8">
+      {/* Chart Section */}
+      <div className="w-full">
+        <div className="h-80 sm:h-96 md:h-80 lg:h-96">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={revenueBreakdownByCategory}
+              layout="vertical"
+              margin={{ top: 8, right: 16, left: 120, bottom: 8 }}
             >
-            {hasData(revenueBreakdownByCategory) ? (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                        data={revenueBreakdownByCategory}
-                        layout="vertical"
-                        margin={{ top: 8, right: 16, left: 24, bottom: 8 }}
-                    >
-                        <CartesianGrid strokeDasharray="3 3" stroke={ui.grid} />
-                        <XAxis
-                        type="number"
-                        stroke={ui.grid}
-                        tickFormatter={(value) => formatCompactCurrency(Number(value))}
-                        tick={{ fill: isDark ? '#CBD5E1' : '#475569', fontSize: 12 }}
-                        />
-                        <YAxis
-                        type="category"
-                        dataKey="category"
-                        width={120}
-                        stroke={ui.grid}
-                        tick={{ fill: isDark ? '#CBD5E1' : '#475569', fontSize: 12 }}
-                        tickFormatter={(value) => formatText(value)}
-                        />
-                        <BillingRevenueDashboardChartTooltip
-                        isDark={isDark}
-                        bg={ui.tooltipBg}
-                        border={ui.tooltipBorder}
-                        text={ui.tooltipText}
-                        />
-                        <Bar dataKey="revenue" radius={[0, 4, 4, 0]}>
-                        {revenueBreakdownByCategory.map((entry, index) => (
-                            <Cell
-                            key={`breakdown-category-${entry.category}-${index}`}
-                            fill={BREAKDOWN_COLORS[index % BREAKDOWN_COLORS.length]}
-                            />
-                        ))}
-                        </Bar>
-                    </BarChart>
-                    </ResponsiveContainer>
-                </div>
+              <CartesianGrid strokeDasharray="3 3" stroke={ui.grid} />
+              <XAxis
+                type="number"
+                stroke={ui.grid}
+                tickFormatter={(value) => formatCompactCurrency(Number(value))}
+                tick={{ fill: isDark ? '#CBD5E1' : '#475569', fontSize: 12 }}
+              />
+              <YAxis
+                type="category"
+                dataKey="category"
+                width={140}
+                stroke={ui.grid}
+                tick={{ fill: isDark ? '#CBD5E1' : '#475569', fontSize: 11 }}
+                tickFormatter={(value) => formatText(value)}
+              />
+              <BillingRevenueDashboardChartTooltip
+                isDark={isDark}
+                bg={ui.tooltipBg}
+                border={ui.tooltipBorder}
+                text={ui.tooltipText}
+              />
+              <Bar dataKey="revenue" radius={[0, 4, 4, 0]}>
+                {revenueBreakdownByCategory.map((entry, index) => (
+                  <Cell
+                    key={`breakdown-category-${entry.category}-${index}`}
+                    fill={BREAKDOWN_COLORS[index % BREAKDOWN_COLORS.length]}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
-               <div className="space-y-3">
-              {revenueBreakdownByCategory.map((item) => (
-                <div
-                  key={item.category}
-                  className={cx(
-                    'rounded-xl border p-3 sm:p-4',
-                    isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
-                  )}
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className={cx('text-sm sm:text-base font-medium break-words', ui.text)}>
-                        {formatText(item.category)}
-                      </p>
-                      <p className={cx('text-xs mt-1 break-words', ui.textMuted)}>
-                        Quantity sold {formatNumber(item.quantity_sold)}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-row sm:flex-col justify-between items-center sm:items-end gap-2 sm:gap-1">
-                      <div className="text-left sm:text-right">
-                        <p className={cx('text-sm sm:text-base font-semibold whitespace-nowrap sm:whitespace-normal', ui.text)}>
-                          {formatCurrency(item.revenue)}
-                        </p>
-                        <p className={cx('text-xs text-left sm:text-right', ui.textMuted)}>
-                          {formatPercent(item.share_percentage)}
-                        </p>
-                      </div>
-                    </div>
+      {/* Categories Container - VERTICALLY SCROLLABLE */}
+      <div className="w-full">
+        <h3 className={cx('text-sm font-semibold mb-3 px-1', ui.text)}>
+          Category Details ({revenueBreakdownByCategory.length} categories)
+        </h3>
+        
+        {/* Scrollable Container */}
+        <div 
+          className={cx(
+            'overflow-y-auto',
+            'max-h-[400px] md:max-h-[500px] lg:max-h-[600px]',
+            'pr-2',
+            'scrollbar-thin',
+            isDark ? 'scrollbar-thumb-gray-700' : 'scrollbar-thumb-gray-300',
+            'scrollbar-track-transparent'
+          )}
+        >
+          <div className="flex flex-col space-y-4">
+            {revenueBreakdownByCategory.map((item, idx) => (
+              <div
+                key={item.category}
+                className={cx(
+                  'rounded-xl border p-5 transition-all duration-200 hover:shadow-md',
+                  isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
+                )}
+              >
+                {/* Category Header */}
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div 
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: BREAKDOWN_COLORS[idx % BREAKDOWN_COLORS.length] }}
+                    />
+                    <p className={cx('text-base font-semibold break-words line-clamp-2', ui.text)}>
+                      {formatText(item.category)}
+                    </p>
+                  </div>
+                  <div className="flex items-baseline gap-2 ml-5">
+                    <span className={cx('text-xs', ui.textMuted)}>Quantity sold:</span>
+                    <p className={cx('text-sm font-medium', ui.text)}>
+                      {formatNumber(item.quantity_sold)}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
+
+                {/* Metrics */}
+                <div className="space-y-3 ml-5">
+                  <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-800">
+                    <span className={cx('text-sm font-medium', ui.textMuted)}>Revenue</span>
+                    <p className={cx('text-lg font-bold', ui.text)}>
+                      {formatCurrency(item.revenue)}
+                    </p>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className={cx('text-sm font-medium', ui.textMuted)}>Share of Total</span>
+                    <p className={cx('text-lg font-bold', ui.text)}>
+                      {formatPercent(item.share_percentage)}
+                    </p>
+                  </div>
                 </div>
-            ) : (
-                renderEmptyState(
-                'No category breakdown data',
-                'Revenue breakdown by category will appear here when available.'
-                )
-            )}
-            </BillingRevenueDashboardSectionCard>
+
+                {/* Progress Bar */}
+                <div className="mt-4 ml-5">
+                  <div
+                    className={cx(
+                      'w-full h-2 rounded-full overflow-hidden',
+                      isDark ? 'bg-gray-800' : 'bg-gray-100'
+                    )}
+                  >
+                    <div
+                      className="h-full rounded-full transition-all duration-500 ease-in-out"
+                      style={{
+                        width: `${Math.min(item.share_percentage, 100)}%`,
+                        backgroundColor: BREAKDOWN_COLORS[idx % BREAKDOWN_COLORS.length]
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-end mt-1">
+                    <span className={cx('text-xs', ui.textMuted)}>
+                      {formatPercent(item.share_percentage)} of total revenue
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : (
+    renderEmptyState(
+      'No category breakdown data',
+      'Revenue breakdown by category will appear here when available.'
+    )
+  )}
+</BillingRevenueDashboardSectionCard>
+
       </div>
 
       <BillingRevenueDashboardSectionCard
@@ -410,7 +469,7 @@ const BillingRevenueDashboardOverviewTab: React.FC<BillingRevenueDashboardTabPro
                 >
                     <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-3">
                     <div className="min-w-0">
-                        <p className={cx('text-sm font-semibold ', ui.text)}>
+                        <p className={cx('text-sm font-semibold truncate', ui.text)}>
                         {item.service_name}
                         </p>
                         <p className={cx('text-xs mt-1', ui.textMuted)}>
@@ -616,7 +675,7 @@ const BillingRevenueDashboardOverviewTab: React.FC<BillingRevenueDashboardTabPro
                                 }}
                             />
                             <div className="min-w-0">
-                                <p className={cx('text-sm font-medium ', ui.text)}>
+                                <p className={cx('text-sm font-medium truncate', ui.text)}>
                                 {formatText(item.payment_method)}
                                 </p>
                                 <p className={cx('text-xs', ui.textMuted)}>
