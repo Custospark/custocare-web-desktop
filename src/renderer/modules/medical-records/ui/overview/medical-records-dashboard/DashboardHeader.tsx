@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CalendarRange, DollarSign, HeartPulse, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import type {
   DashboardPeriod,
   DashboardResponse,
@@ -8,9 +8,6 @@ import type {
 import {
   PERIOD_OPTIONS,
   cn,
-  formatCurrency,
-  formatFullDate,
-  formatNumber,
   getPanelClass,
   getSubtlePanelClass,
 } from './dashboard.utils';
