@@ -41,61 +41,64 @@ const DashboardOperationsSection: React.FC<DashboardOperationsSectionProps> = ({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {/* Stacked layout - Patient Flow above, Retention below */}
+      <div className="space-y-4">
+        {/* Patient Flow Card */}
         <div className={cn(subtlePanelClass, 'p-4')}>
-          <div className="mb-4 flex items-center gap-3">
-            <div className={cn(
-              'flex h-10 w-10 items-center justify-center rounded-2xl',
-              isDark ? 'bg-blue-500/10 text-blue-300' : 'bg-blue-100 text-blue-700'
-            )}>
-              <Clock3 className="h-5 w-5" />
+            <div className="mb-4 flex items-center gap-3">
+              <div className={cn(
+                'flex h-10 w-10 items-center justify-center rounded-2xl',
+                isDark ? 'bg-blue-500/10 text-blue-300' : 'bg-blue-100 text-blue-700'
+              )}>
+                <Clock3 className="h-5 w-5" />
+              </div>
+              <div>
+                <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                  Patient Flow
+                </p>
+                <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
+                  Avg operational timings
+                </p>
+              </div>
             </div>
-            <div>
-              <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-                Patient Flow
-              </p>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                Avg operational timings
-              </p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className={cn('rounded-2xl border p-4', isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white')}>
+                <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>Waiting</p>
+                <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+                  {formatNumber(flow.average_waiting_minutes)}
+                  <span className="ml-1 text-sm font-medium">min</span>
+                </p>
+              </div>
+
+              <div className={cn('rounded-2xl border p-4', isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white')}>
+                <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>Consultation</p>
+                <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+                  {formatNumber(flow.average_consultation_minutes)}
+                  <span className="ml-1 text-sm font-medium">min</span>
+                </p>
+              </div>
+
+              <div className={cn('rounded-2xl border p-4', isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white')}>
+                <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>Arrival → Consult</p>
+                <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+                  {formatNumber(flow.average_arrival_to_consultation_minutes)}
+                  <span className="ml-1 text-sm font-medium">min</span>
+                </p>
+              </div>
+
+              <div className={cn('rounded-2xl border p-4', isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white')}>
+                <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>Queue Length</p>
+                <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+                  {formatNumber(flow.queue_length)}
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className={cn('rounded-2xl border p-4', isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white')}>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>Waiting</p>
-              <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-                {formatNumber(flow.average_waiting_minutes)}
-                <span className="ml-1 text-sm font-medium">min</span>
-              </p>
-            </div>
-
-            <div className={cn('rounded-2xl border p-4', isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white')}>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>Consultation</p>
-              <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-                {formatNumber(flow.average_consultation_minutes)}
-                <span className="ml-1 text-sm font-medium">min</span>
-              </p>
-            </div>
-
-            <div className={cn('rounded-2xl border p-4', isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white')}>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>Arrival → Consult</p>
-              <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-                {formatNumber(flow.average_arrival_to_consultation_minutes)}
-                <span className="ml-1 text-sm font-medium">min</span>
-              </p>
-            </div>
-
-            <div className={cn('rounded-2xl border p-4', isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white')}>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>Queue Length</p>
-              <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-                {formatNumber(flow.queue_length)}
-              </p>
-            </div>
-          </div>
-        </div>
-
+        {/* Retention & Continuity Card */}
         <div className={cn(subtlePanelClass, 'p-4')}>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
                 Retention & Continuity
@@ -106,7 +109,7 @@ const DashboardOperationsSection: React.FC<DashboardOperationsSectionProps> = ({
             </div>
 
             <div className={cn(
-              'rounded-2xl border px-3 py-2 text-right',
+              'rounded-2xl border px-3 py-2 text-center sm:text-right',
               isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white'
             )}>
               <p className={cn('text-[10px] uppercase tracking-[0.14em]', isDark ? 'text-slate-500' : 'text-slate-500')}>
@@ -153,6 +156,7 @@ const DashboardOperationsSection: React.FC<DashboardOperationsSectionProps> = ({
         </div>
       </div>
 
+      {/* Peak Day Intelligence - Remains at bottom */}
       <div className={cn(subtlePanelClass, 'mt-4 p-4')}>
         <div className="mb-4 flex items-center justify-between">
           <div>

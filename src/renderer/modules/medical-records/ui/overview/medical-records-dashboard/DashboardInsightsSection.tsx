@@ -76,7 +76,9 @@ const DashboardInsightsSection: React.FC<DashboardInsightsSectionProps> = ({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Stacked vertical layout for Visit Types and Most Treated Conditions */}
+          <div className="space-y-6">
+            {/* Visit Types - Stacked First */}
             <div className={cn(subtlePanelClass, 'p-4')}>
               <div className="mb-4 flex items-center justify-between">
                 <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
@@ -128,6 +130,7 @@ const DashboardInsightsSection: React.FC<DashboardInsightsSectionProps> = ({
               </div>
             </div>
 
+            {/* Most Treated Conditions - Stacked Second */}
             <div className={cn(subtlePanelClass, 'p-4')}>
               <div className="mb-4 flex items-center justify-between">
                 <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
@@ -209,7 +212,8 @@ const DashboardInsightsSection: React.FC<DashboardInsightsSectionProps> = ({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Stacked vertical layout for Revenue Metrics */}
+          <div className="space-y-3">
             <div className={cn(subtlePanelClass, 'p-4')}>
               <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
                 Revenue / Patient
@@ -398,7 +402,7 @@ const DashboardInsightsSection: React.FC<DashboardInsightsSectionProps> = ({
                 No critical alerts detected
               </h3>
               <p className={cn('mt-2 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
-                The dashboard did not return any active operational alerts for the selected period.
+                There is currently no active operational alerts for the selected period.
               </p>
             </div>
           )}

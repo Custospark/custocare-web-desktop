@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Workflow } from 'lucide-react';
 import { cn, formatNumber, getTrendMeta, type AccentTone } from './dashboard.utils';
+import { formatText } from '../../revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 
 export const EmptyChartState: React.FC<{
   title: string;
@@ -54,7 +55,7 @@ export const EnterpriseTooltip: React.FC<{
     >
       {label && (
         <div className={cn('mb-2 text-xs font-medium', isDark ? 'text-slate-400' : 'text-slate-500')}>
-          {labelFormatter ? labelFormatter(label) : label}
+          {labelFormatter ? formatText(labelFormatter(label)) : label}
         </div>
       )}
 

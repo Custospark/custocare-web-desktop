@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { EmptyChartState, EnterpriseTooltip } from './dashboard.primitives';
 import { cn, getPanelClass, getSubtlePanelClass, formatNumber, AGE_COLORS } from './dashboard.utils';
+import { formatText } from '../../revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 
 interface AgeGroupChartItem {
   group: string;
@@ -99,7 +100,7 @@ const DashboardDemographicsSection: React.FC<DashboardDemographicsSectionProps> 
                     paddingAngle={3}
                   >
                     {genderDistribution.map((entry) => (
-                      <Cell key={entry.gender} fill={entry.fill} />
+                      <Cell key={formatText(entry.gender)} fill={formatText(entry.fill)} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -133,7 +134,7 @@ const DashboardDemographicsSection: React.FC<DashboardDemographicsSectionProps> 
                 <div className="flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.fill }} />
                   <span className={cn('text-sm', isDark ? 'text-slate-300' : 'text-slate-700')}>
-                    {item.gender}
+                    {formatText(item.gender)}
                   </span>
                 </div>
                 <span className="text-sm font-semibold">{formatNumber(item.count)}</span>

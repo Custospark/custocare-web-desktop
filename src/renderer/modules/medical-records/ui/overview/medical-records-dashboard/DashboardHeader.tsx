@@ -28,7 +28,6 @@ interface DashboardHeaderProps {
 
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   isDark,
-  dashboard,
   selectedPeriod,
   customFrom,
   customTo,
