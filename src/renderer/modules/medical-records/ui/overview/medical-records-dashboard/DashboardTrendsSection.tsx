@@ -55,37 +55,39 @@ const DashboardTrendsSection: React.FC<DashboardTrendsSectionProps> = ({
         transition={{ duration: 0.35, delay: 0.08 }}
         className={cn(panelClass, 'xl:col-span-8 p-6')}
       >
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <h2 className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-              Patient Volume Trajectory
-            </h2>
-            <p className={cn('mt-1 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
-              Daily patients and new patient acquisition over the selected reporting window.
+       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex-1 min-w-0">
+          <h2 className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+            Patient Volume Trajectory
+          </h2>
+          <p className={cn('mt-1 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
+            Daily patients and new patient acquisition over the selected reporting window.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-shrink-0">
+          <div className={cn(subtlePanelClass, 'px-3 sm:px-4 py-2 sm:py-3 min-w-0')}>
+            <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>Avg / Day</p>
+            <p className={cn('mt-1 text-base sm:text-lg font-bold truncate', isDark ? 'text-white' : 'text-slate-950')}>
+              {formatNumber(Math.round(averageDailyPatients))}
             </p>
           </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div className={cn(subtlePanelClass, 'px-4 py-3')}>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>Avg / Day</p>
-              <p className={cn('mt-1 text-lg font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-                {formatNumber(Math.round(averageDailyPatients))}
-              </p>
-            </div>
-            <div className={cn(subtlePanelClass, 'px-4 py-3')}>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>Peak Day</p>
-              <p className={cn('mt-1 text-lg font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-                {peakDay ? peakDay.day : '—'}
-              </p>
-            </div>
-            <div className={cn(subtlePanelClass, 'px-4 py-3')}>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>New Patients</p>
-              <p className={cn('mt-1 text-lg font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-                {formatNumber(totalNewPatients)}
-              </p>
-            </div>
+          
+          <div className={cn(subtlePanelClass, 'px-3 sm:px-4 py-2 sm:py-3 min-w-0')}>
+            <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>Peak Day</p>
+            <p className={cn('mt-1 text-base sm:text-lg font-bold truncate', isDark ? 'text-white' : 'text-slate-950')}>
+              {peakDay ? peakDay.day : '—'}
+            </p>
+          </div>
+          
+          <div className={cn(subtlePanelClass, 'px-3 sm:px-4 py-2 sm:py-3 min-w-0')}>
+            <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>New Patients</p>
+            <p className={cn('mt-1 text-base sm:text-lg font-bold truncate', isDark ? 'text-white' : 'text-slate-950')}>
+              {formatNumber(totalNewPatients)}
+            </p>
           </div>
         </div>
+      </div>
 
         <div className="h-[340px]">
           {trendSeries.length ? (

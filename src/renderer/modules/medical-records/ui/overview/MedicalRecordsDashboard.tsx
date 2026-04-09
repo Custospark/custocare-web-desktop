@@ -33,8 +33,6 @@ import {
   formatDateLabel,
   formatNumber,
   formatPercent,
-  getPageShellClass,
-  getPanelClass,
 } from './medical-records-dashboard/dashboard.utils';
 
 interface ThemeRootState {
@@ -43,9 +41,43 @@ interface ThemeRootState {
   };
 }
 
+// ============================================
+// ADJUSTMENT 1: Added UI theme object matching Revenue Stats pattern
+// ============================================
+interface DashboardUi {
+  pageBg: string;
+  surface: string;
+  border: string;
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  grid: string;
+  tooltipBg: string;
+  tooltipBorder: string;
+  tooltipText: string;
+}
+
 function MedicalRecordsDashboard() {
   const theme = useSelector((state: ThemeRootState) => state.ui?.theme ?? 'light');
   const isDark = theme === 'dark';
+
+  // ============================================
+  // ADJUSTMENT 2: Created UI theme object with consistent colors
+  // ============================================
+  const ui = useMemo<DashboardUi>(() => {
+    return {
+      pageBg: isDark ? 'bg-gray-950' : 'bg-gray-50',
+      surface: isDark ? 'bg-gray-900' : 'bg-white',
+      border: isDark ? 'border-gray-700' : 'border-gray-200',
+      text: isDark ? 'text-gray-100' : 'text-gray-900',
+      textSecondary: isDark ? 'text-gray-300' : 'text-gray-600',
+      textMuted: isDark ? 'text-gray-400' : 'text-gray-500',
+      grid: isDark ? '#334155' : '#E5E7EB',
+      tooltipBg: isDark ? '#0B1220' : '#FFFFFF',
+      tooltipBorder: isDark ? '#334155' : '#E5E7EB',
+      tooltipText: isDark ? '#E5E7EB' : '#0F172A',
+    };
+  }, [isDark]);
 
   const [appliedParams, setAppliedParams] = useState<DashboardQueryParams>({ period: 'week' });
   const [selectedPeriod, setSelectedPeriod] = useState<DashboardPeriod>('week');
@@ -177,8 +209,6 @@ function MedicalRecordsDashboard() {
     });
   };
 
-  const pageShell = getPageShellClass(isDark);
-  const panelClass = getPanelClass(isDark);
 
   // Use the new LoadingSkeleton for loading state
   if (isLoading) {
@@ -192,11 +222,14 @@ function MedicalRecordsDashboard() {
     );
   }
 
+  // ============================================
+  // ADJUSTMENT 4: Updated error state to use ui object for consistent styling
+  // ============================================
   if (isError) {
     return (
-      <div className={pageShell}>
+      <div className={cn('p-4 sm:p-6 min-h-screen', ui.pageBg)}>
         <div className="mx-auto max-w-[1600px]">
-          <div className={cn(panelClass, 'p-10')}>
+          <div className={cn('rounded-2xl border p-10', ui.surface, ui.border)}>
             <div className="mx-auto max-w-lg text-center">
               <div
                 className={cn(
@@ -206,10 +239,10 @@ function MedicalRecordsDashboard() {
               >
                 <CircleAlert className="h-8 w-8" />
               </div>
-              <h2 className={cn('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              <h2 className={cn('text-2xl font-bold', ui.text)}>
                 Unable to load dashboard
               </h2>
-              <p className={cn('mt-2 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
+              <p className={cn('mt-2 text-sm', ui.textSecondary)}>
                 {error?.message || 'Something went wrong while fetching dashboard analytics.'}
               </p>
 
@@ -217,9 +250,7 @@ function MedicalRecordsDashboard() {
                 onClick={() => refetch()}
                 className={cn(
                   'mt-6 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition-all',
-                  isDark
-                    ? 'bg-blue-600 text-white hover:bg-blue-500'
-                    : 'bg-slate-900 text-white hover:bg-slate-800'
+                  'bg-blue-600 text-white hover:bg-blue-500'
                 )}
               >
                 <CircleAlert className="h-4 w-4" />
@@ -232,11 +263,14 @@ function MedicalRecordsDashboard() {
     );
   }
 
+  // ============================================
+  // ADJUSTMENT 5: Updated empty state to use ui object
+  // ============================================
   if (!dashboard || response?.success === false) {
     return (
-      <div className={pageShell}>
+      <div className={cn('p-4 sm:p-6 min-h-screen', ui.pageBg)}>
         <div className="mx-auto max-w-[1600px]">
-          <div className={cn(panelClass, 'p-10')}>
+          <div className={cn('rounded-2xl border p-10', ui.surface, ui.border)}>
             <div className="mx-auto max-w-lg text-center">
               <div
                 className={cn(
@@ -246,10 +280,10 @@ function MedicalRecordsDashboard() {
               >
                 <Workflow className="h-8 w-8" />
               </div>
-              <h2 className={cn('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              <h2 className={cn('text-2xl font-bold', ui.text)}>
                 No dashboard data available
               </h2>
-              <p className={cn('mt-2 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
+              <p className={cn('mt-2 text-sm', ui.textSecondary)}>
                 {response?.message || 'No analytics payload was returned for the selected period.'}
               </p>
             </div>
@@ -303,8 +337,11 @@ function MedicalRecordsDashboard() {
     },
   ];
 
+  // ============================================
+  // ADJUSTMENT 6: Main return uses ui.pageBg instead of pageShell
+  // ============================================
   return (
-    <div className={pageShell}>
+    <div className={cn('p-4 sm:p-6 space-y-6 min-h-screen', ui.pageBg)}>
       <div className="mx-auto max-w-[1600px] space-y-6">
         <DashboardHeader
           isDark={isDark}
