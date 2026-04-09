@@ -54,7 +54,7 @@ export const ProtectedRoutes = () => [
             }
           >
             {/* <Route index element={<Navigate to={ROUTES.MEDICAL_RECORDS} replace />} /> */}
-            <Route index element={<Navigate to={MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH} replace />} />
+            <Route index element={<Navigate to={MEDICAL_RECORDS_ROUTES.OVERVIEW} replace />} />
             {medicalRecordsRoutes}
           </Route>
 

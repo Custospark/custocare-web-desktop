@@ -36,7 +36,7 @@ export const medicalRecordsRoutes = [
       </SuspenseWrapper>
     }
   >
-    <Route index element={<Navigate to={MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH} replace />} />
+    <Route index element={<Navigate to={MEDICAL_RECORDS_ROUTES.OVERVIEW} replace />} />
     <Route path={MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH} element={
         <SuspenseWrapper variant="table">
           <WithThemeProp Component={MRPatientSearch} />

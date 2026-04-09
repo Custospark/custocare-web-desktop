@@ -50,6 +50,15 @@ export const allModules: SearchableModule[] = [
     keywords: ['front desk', 'reception', 'records', 'medical', 'registration', 'patient intake'],
     category: 'Clinical',
   },
+    {
+    id: 'medical-records-dashboard',
+    label: 'Medical Records Dashboard',
+    route: MEDICAL_RECORDS_ROUTES.OVERVIEW,
+    description: 'Overview dashboard for Medical Records - View patient statistics, recent registrations, queue status, billing summary and visit analytics',
+    moduleCode: 'medical_records',
+    keywords: ['dashboard', 'overview', 'medical records', 'analytics', 'statistics', 'summary', 'patient overview', 'queue overview', 'billing overview', 'visits'],
+    category: 'Clinical',
+  },
   {
     id: 'patient-search',
     label: 'Search Patient',
