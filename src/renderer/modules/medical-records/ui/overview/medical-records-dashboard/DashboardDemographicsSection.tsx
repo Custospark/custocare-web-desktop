@@ -76,7 +76,9 @@ const DashboardDemographicsSection: React.FC<DashboardDemographicsSectionProps> 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {/* Stacked layout: gender and insurance/cash charts appear one below the other */}
+      <div className="space-y-6">
+        {/* Gender Distribution */}
         <div className={cn(subtlePanelClass, 'p-4')}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
@@ -140,6 +142,7 @@ const DashboardDemographicsSection: React.FC<DashboardDemographicsSectionProps> 
           </div>
         </div>
 
+        {/* Insurance vs Cash */}
         <div className={cn(subtlePanelClass, 'p-4')}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
@@ -204,6 +207,7 @@ const DashboardDemographicsSection: React.FC<DashboardDemographicsSectionProps> 
         </div>
       </div>
 
+      {/* Age Group Bar Chart (remains at bottom) */}
       <div className={cn(subtlePanelClass, 'mt-6 p-4')}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>

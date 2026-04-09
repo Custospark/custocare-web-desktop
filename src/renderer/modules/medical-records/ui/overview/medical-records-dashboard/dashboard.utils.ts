@@ -11,6 +11,8 @@ import type {
   DashboardAlert,
   DashboardPeriod,
 } from '../../../api/facility-patient-analytics/FacilityPatientAnalyticsTypes';
+import { formatCurrency,formatCompactCurrency } from '../../revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
+export {formatCompactCurrency,formatCurrency}
 
 export const cn = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(' ');
@@ -21,6 +23,7 @@ export const PERIOD_OPTIONS: Array<{ label: string; value: DashboardPeriod }> = 
   { label: 'Month', value: 'month' },
   { label: 'Custom', value: 'custom' },
 ];
+
 
 export const PIE_COLORS = [
   '#2563EB',
@@ -48,21 +51,6 @@ export const formatNumber = (value?: number | null) =>
 
 export const formatPercent = (value?: number | null, digits = 1) =>
   `${Number(value ?? 0).toFixed(digits)}%`;
-
-export const formatCurrency = (value?: number | null) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(Number(value ?? 0));
-
-export const formatCompactCurrency = (value?: number | null) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(Number(value ?? 0));
 
 export const formatDateLabel = (value: string) => {
   const date = new Date(value);

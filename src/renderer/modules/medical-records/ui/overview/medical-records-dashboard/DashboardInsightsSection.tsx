@@ -285,7 +285,7 @@ const DashboardInsightsSection: React.FC<DashboardInsightsSectionProps> = ({
               ) : (
                 <EmptyChartState
                   title="No revenue service data"
-                  subtitle="Top paying services will appear once available from the backend."
+                  subtitle="Top paying services will appear once available."
                   isDark={isDark}
                 />
               )}

@@ -23,6 +23,9 @@ import DashboardDemographicsSection from './medical-records-dashboard/DashboardD
 import DashboardOperationsSection from './medical-records-dashboard//DashboardOperationsSection';
 import DashboardInsightsSection from './medical-records-dashboard/DashboardInsightsSection';
 
+// Import the enterprise-grade loading skeleton
+import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
+
 import {
   AGE_COLORS,
   PIE_COLORS,
@@ -177,36 +180,15 @@ function MedicalRecordsDashboard() {
   const pageShell = getPageShellClass(isDark);
   const panelClass = getPanelClass(isDark);
 
+  // Use the new LoadingSkeleton for loading state
   if (isLoading) {
     return (
-      <div className={pageShell}>
-        <div className="mx-auto max-w-[1600px] space-y-6">
-          <div className={cn(panelClass, 'p-6 md:p-8')}>
-            <div className="animate-pulse space-y-4">
-              <div className={cn('h-8 w-72 rounded-xl', isDark ? 'bg-white/10' : 'bg-slate-200')} />
-              <div className={cn('h-4 w-96 rounded-xl', isDark ? 'bg-white/5' : 'bg-slate-100')} />
-              <div className="grid grid-cols-1 gap-4 pt-4 md:grid-cols-2 xl:grid-cols-5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      'h-40 rounded-3xl border animate-pulse',
-                      isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-slate-50'
-                    )}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-            <div className={cn(panelClass, 'xl:col-span-8 h-[420px] animate-pulse')} />
-            <div className={cn(panelClass, 'xl:col-span-4 h-[420px] animate-pulse')} />
-            <div className={cn(panelClass, 'xl:col-span-6 h-[420px] animate-pulse')} />
-            <div className={cn(panelClass, 'xl:col-span-6 h-[420px] animate-pulse')} />
-          </div>
-        </div>
-      </div>
+      <LoadingSkeleton
+        variant="dashboard"
+        message="Loading patient analytics dashboard..."
+        theme={isDark ? 'dark' : 'light'}
+        className="min-h-screen"
+      />
     );
   }
 
