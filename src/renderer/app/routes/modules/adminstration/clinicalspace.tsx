@@ -12,7 +12,7 @@ export const clinicalSpaceManagementRoutes = [
     key="clinical-rooms"
     path={ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.CLINICAL_ROOMS}
     element={
-      <SuspenseWrapper variant="table">
+      <SuspenseWrapper variant="detail">
         <WithThemeProp Component={FacilitySpace} />
       </SuspenseWrapper>
     }
@@ -22,7 +22,7 @@ export const clinicalSpaceManagementRoutes = [
     key="ward-management"
     path={ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.WARD_MANAGEMENT}
     element={
-      <SuspenseWrapper variant="table">
+      <SuspenseWrapper variant="detail">
         <WithThemeProp Component={FacilityWard} />
       </SuspenseWrapper>
     }
@@ -32,7 +32,7 @@ export const clinicalSpaceManagementRoutes = [
     key="facility-zones"
     path={ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.FACILITY_ZONES}
     element={
-      <SuspenseWrapper variant="table">
+      <SuspenseWrapper variant="detail">
         <WithThemeProp Component={FacilityZones} />
       </SuspenseWrapper>
     }
@@ -42,7 +42,7 @@ export const clinicalSpaceManagementRoutes = [
     key="space-allocation"
     path={ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.SPACE_ALLOCATION}
     element={
-      <SuspenseWrapper variant="table">
+      <SuspenseWrapper variant="detail">
         <WithThemeProp Component={SpaceAllocation} />
       </SuspenseWrapper>
     }

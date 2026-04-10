@@ -29,10 +29,9 @@ const MEDICAL_RECORDS_OPERATIONS = [
     label: 'Clinical Encounter Workflow', 
     icon: <Workflow className="w-4 h-4" /> 
   },
-
   {  
     id: 'revenue',  
-    label: 'Revenue Cycle Management',  
+    label: 'Billing & Reconciliation',  
     icon: <Receipt className="w-4 h-4" />, 
     subtext: 'Validate and reconcile clinical charges'
   }

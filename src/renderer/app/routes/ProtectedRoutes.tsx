@@ -18,7 +18,7 @@ import { adminRoutes } from './modules/adminstration/admin.routes';
 import PlansAndSubscriptions from '../../modules/administration/admin-module/ui/plans-and-subscriptions/PlansAndSubscriptions';
 import FacilitySettings from '../../modules/administration/admin-module/ui/facility-settings/FacilitySettings';
 import ClinicalSpaceManagement from '../../modules/administration/admin-module/ui/clinical-space/ClinicalSpaceManagement';
-import { ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from './constants/administration.paths';
+import { ADMIN_ROUTES, ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from './constants/administration.paths';
 
 
 // Lazy load modules
@@ -37,6 +37,8 @@ const BillingModule = React.lazy(() => import('../../modules/billling/ui/Billing
 const ModuleAccessMiddleware = React.lazy(() => import('./middleware/ModuleAccessMiddleware'));
 const PlatformAdministrationModule = React.lazy(() => import('../../modules/platform-administration/PlatformAdministrationModule'));
 import { MEDICAL_RECORDS_ROUTES } from './routeConstants';
+import FacilityAdminBillingCycle from '../../modules/billling/ui/billling/FacilityAdminBillingCycle';
+import { facilityAdminBillingCycleRoutes } from './modules/adminstration/billing-cycle.routes';
 export const ProtectedRoutes = () => [
   <Route key="protected-routes" element={<AuthMiddlewareRoute />}>
     <Route key="restricted-module-codes" element={<ModuleAccessMiddleware />}>
@@ -129,6 +131,16 @@ export const ProtectedRoutes = () => [
             }
           >
               {clinicalSpaceManagementRoutes}
+          </Route>      
+          <Route
+            path={ADMIN_ROUTES.BILLING_CYCLE}
+            element={
+              <SuspenseWrapper variant="detail">
+                <WithThemeProp Component={FacilityAdminBillingCycle} />
+              </SuspenseWrapper>
+            }
+          >
+              {facilityAdminBillingCycleRoutes}
           </Route>      
           <Route
             path="settings"

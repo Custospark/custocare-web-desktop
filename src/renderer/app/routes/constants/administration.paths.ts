@@ -76,7 +76,16 @@ export const ADMIN_ROUTES = {
   
   // Inventory
   INVENTORY: `${ROUTES.ADMINISTRATION}/inventory`,
-  
+
+
+  //Billing Cycle
+  BILLING_CYCLE: `${ROUTES.ADMINISTRATION}/billing-cycle-management`,
+
+  //Billing cycle sub routes.
+  BILLING_CYCLE_REVENUE_STATS:`${ROUTES.ADMINISTRATION}/billing-cycle-management/billing-stats`,
+  BILLING_CYCLE_BILLING_REVIEW:`${ROUTES.ADMINISTRATION}/billing-cycle-management/billing-review`,
+
+
   // Clinical Space Management
   SPACE_GOVERNANCE: `${ROUTES.ADMINISTRATION}/space-governance`,
   CLINICAL_ROOMS: `${ROUTES.ADMINISTRATION}/space-governance/clinical-rooms`,

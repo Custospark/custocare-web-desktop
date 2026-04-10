@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { LayoutDashboard, Users, Building2, Layers, Boxes, MapIcon, Settings2 } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, Layers, Boxes, MapIcon, Settings2, Receipt } from 'lucide-react';
 
 import { BaseModuleWorkspace } from '../../../../shared/components/workspace/BaseModuleWorkspace';
 import { ADMIN_ROUTES } from '../../../../app/routes/constants/administration.paths';
@@ -55,6 +55,12 @@ const ADMIN_OPERATIONS = [
   //   description: 'Manage facility plans, subscriptions, and billing',
   //   // requiredTier: 'essential' as const,
   // },
+   {  
+    id: 'billing-cycle-management',  
+    label: 'Revenue Cycle Management',  
+    icon: <Receipt className="w-4 h-4" />, 
+    subtext: 'Validate and reconcile clinical charges'
+  },
   {
     id: 'settings',
     label: 'Enterprise Facility Settings',
