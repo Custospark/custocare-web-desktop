@@ -2,9 +2,11 @@
 import React from 'react';
 import { CheckCircle, ChevronUp, DollarSign, Layers, Plus,TrendingUp } from 'lucide-react';
 import type { ServiceCatalog } from '../../../api/service-catalog/serviceCatalogTypes';
-import { formatPrice, normalizeAmount } from '../utils/serviceCatalogUiUtils';
+import { normalizeAmount } from '../utils/serviceCatalogUiUtils';
 import  {ServiceStatus } from '../../../api/service-catalog/serviceCatalogTypes';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
+import { formatCurrency } from '../../../../../medical-records/ui/overview/medical-records-dashboard/dashboard.utils';
+
 
 
 interface Props {
@@ -222,7 +224,7 @@ export const ServiceCatalogHeader: React.FC<Props> = ({
             'text-3xl font-bold mb-1',
             isDark ? 'text-white' : 'text-gray-900'
           )}>
-            {formatPrice(avgPrice, 'UGX')}
+            {formatCurrency(avgPrice)}
           </p>
           
           {/* Label */}
@@ -286,7 +288,7 @@ export const ServiceCatalogHeader: React.FC<Props> = ({
             'text-3xl font-bold mb-1',
             isDark ? 'text-white' : 'text-gray-900'
           )}>
-            {formatPrice(totalValue, 'UGX')}
+            {formatCurrency(totalValue)}
           </p>
           
           {/* Label */}
