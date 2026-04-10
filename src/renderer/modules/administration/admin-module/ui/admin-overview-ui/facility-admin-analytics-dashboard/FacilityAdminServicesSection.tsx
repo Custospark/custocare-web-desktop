@@ -32,6 +32,7 @@ import {
   getPanelClass,
   getSubtlePanelClass,
 } from './facilityAdminDashboard.utils';
+import { formatText } from '../../../../../medical-records/ui/revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 
 interface FacilityAdminServicesSectionProps {
   isDark: boolean;
@@ -134,6 +135,7 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
                     tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
                     axisLine={false}
                     tickLine={false}
+                    tickFormatter={(value) => formatCurrency(value)}
                   />
                   <YAxis
                     type="category"
@@ -142,18 +144,20 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
                     tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
                     axisLine={false}
                     tickLine={false}
+                    tickFormatter={(value) => formatText(value)}
                   />
                   <Tooltip
                     content={
                       <EnterpriseTooltip
                         isDark={isDark}
+                        labelFormatter={(label) => formatText(label)}
                         valueFormatter={(value) => formatCurrency(value)}
                       />
                     }
                   />
                   <Bar dataKey="price" name="Price" radius={[0, 10, 10, 0]}>
                     {services.map((item, index) => (
-                      <Cell key={item.service_name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      <Cell key={formatText(item.service_name)} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -171,7 +175,7 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
             <div className="mt-4 space-y-3">
               {services.slice(0, 3).map((service) => (
                 <div
-                  key={service.service_name}
+                  key={formatText(service.service_name)}
                   className={cn(
                     'rounded-2xl border p-4',
                     isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white'
@@ -185,7 +189,7 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
                           isDark ? 'text-white' : 'text-slate-900'
                         )}
                       >
-                        {service.service_name}
+                        {formatText(service.service_name)}
                       </p>
                       <p
                         className={cn(
@@ -193,7 +197,7 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
                           isDark ? 'text-slate-400' : 'text-slate-500'
                         )}
                       >
-                        {service.category}
+                        {formatText(service.category)}
                         {service.duration_minutes ? ` • ${service.duration_minutes} min` : ''}
                       </p>
                     </div>
@@ -246,7 +250,7 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
                           isDark ? 'text-white' : 'text-slate-900'
                         )}
                       >
-                        {category.category}
+                        {formatText(category.category)}
                       </p>
                       <p
                         className={cn(

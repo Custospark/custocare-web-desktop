@@ -32,6 +32,7 @@ import {
   getPanelClass,
   getSubtlePanelClass,
 } from './facilityAdminDashboard.utils';
+import { formatText } from '../../../../../medical-records/ui/revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 
 interface FacilityAdminWorkforceSectionProps {
   isDark: boolean;
@@ -170,44 +171,47 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
           <div className="h-[280px]">
             {topRoles.length ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={topRoles}
-                  layout="vertical"
-                  margin={{ top: 8, right: 8, left: 8, bottom: 0 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={isDark ? 'rgba(148,163,184,0.12)' : '#E2E8F0'}
-                  />
-                  <XAxis
-                    type="number"
-                    tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="role"
-                    width={120}
-                    tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    content={
-                      <EnterpriseTooltip
-                        isDark={isDark}
-                        valueFormatter={(value) => formatNumber(value)}
-                      />
-                    }
-                  />
-                  <Bar dataKey="count" name="Staff Count" radius={[0, 10, 10, 0]}>
-                    {topRoles.map((item, index) => (
-                      <Cell key={item.role} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <BarChart
+                data={topRoles}
+                layout="vertical"
+                margin={{ top: 8, right: 8, left: 8, bottom: 0 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke={isDark ? 'rgba(148,163,184,0.12)' : '#E2E8F0'}
+                />
+                <XAxis
+                  type="number"
+                  tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(value) => formatText(formatNumber(value))}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="role"
+                  width={120}
+                  tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(value) => formatText(value)}
+                />
+                <Tooltip
+                  content={
+                    <EnterpriseTooltip
+                      isDark={isDark}
+                      labelFormatter={(label) => formatText(label)}
+                      valueFormatter={(value) => formatText(formatNumber(value))}
+                    />
+                  }
+                />
+                <Bar dataKey="count" name="Staff Count" radius={[0, 10, 10, 0]}>
+                  {topRoles.map((item, index) => (
+                    <Cell key={item.role} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
             ) : (
               <EmptyChartState
                 title="No role distribution data"
@@ -279,27 +283,6 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
                     tone={staff.workload_percentage >= 85 ? 'rose' : 'amber'}
                   />
 
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    <div>
-                      <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                        Patients Treated
-                      </p>
-                      <p className={cn('mt-1 text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-                        {formatNumber(staff.total_patients_treated)}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                        Satisfaction
-                      </p>
-                      <p className={cn('mt-1 text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-                        {staff.patient_satisfaction !== null
-                          ? `${staff.patient_satisfaction.toFixed(1)}/5`
-                          : '—'}
-                      </p>
-                    </div>
-                  </div>
                 </div>
               ))}
             </div>

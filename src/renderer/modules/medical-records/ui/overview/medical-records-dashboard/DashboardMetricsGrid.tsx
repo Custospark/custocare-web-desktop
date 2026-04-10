@@ -1,4 +1,3 @@
-//DashboardMetricsGrid.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -195,22 +194,25 @@ const DashboardMetricsGrid: React.FC<DashboardMetricsGridProps> = ({ isDark, met
                 )}
               </div>
 
-              {/* Value */}
+              {/* Value - removed truncate, added break-word and whitespace-normal */}
               <div className="mt-3 relative z-10">
                 <p className={cn(
-                  'text-3xl sm:text-4xl font-bold truncate tracking-tight',
+                  'text-3xl sm:text-4xl font-bold tracking-tight',
+                  'break-words whitespace-normal',
                   isDark ? 'text-white' : 'text-gray-900'
                 )}>
                   {metric.value}
                 </p>
                 <p className={cn(
                   'text-sm font-semibold mt-2',
+                  'break-words whitespace-normal',
                   isDark ? 'text-gray-300' : 'text-gray-700'
                 )}>
                   {metric.title}
                 </p>
                 <p className={cn(
                   'text-xs mt-1.5',
+                  'break-words whitespace-normal',
                   isDark ? 'text-gray-500' : 'text-gray-500'
                 )}>
                   {metric.subtitle}
