@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import type { RootState } from '../../app/store/store';
-import { ROUTES, MEDICAL_RECORDS_ROUTES, CLINICAL_ROUTES, ACCOUNT_ROUTES } from '../../app/routes/routeConstants';
+import { ROUTES, MEDICAL_RECORDS_ROUTES, CLINICAL_ROUTES } from '../../app/routes/routeConstants';
 import { PLATFORM_ADMIN_ROUTES } from '../../app/routes/constants/platform-administration.paths';
 import { 
   selectAccessibleModuleCodes,

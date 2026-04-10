@@ -14,10 +14,10 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
       </h1>
 
       <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-        Quick snapshot of your facility setup and administrative health.
+        Quick snapshot of your facility setup and administrative health is currently under development.Explore available options on the Workspace Actions.
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
           { label: 'Staff Members', value: 12 },
           { label: 'Departments', value: 5 },
@@ -35,7 +35,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
             <div className="text-2xl font-bold">{card.value}</div>
           </div>
         ))}
-      </div>
+      </div> */}
     </div>
   );
 };
