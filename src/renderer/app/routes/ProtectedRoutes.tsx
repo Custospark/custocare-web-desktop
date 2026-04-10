@@ -121,7 +121,14 @@ export const ProtectedRoutes = () => [
               </SuspenseWrapper>
             }
           >
-            {adminRoutes}
+            {/* Redirects base path to the admin overview page. */}
+          <Route 
+            path={ROUTES.ADMINISTRATION} 
+            element={<Navigate to={ADMIN_ROUTES.OVERVIEW} replace />} 
+          />    
+
+                {adminRoutes}
+          
           <Route
             path={ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.ROOT}
             element={
