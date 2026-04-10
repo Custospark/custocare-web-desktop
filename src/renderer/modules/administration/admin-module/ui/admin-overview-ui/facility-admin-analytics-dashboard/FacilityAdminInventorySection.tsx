@@ -6,8 +6,8 @@ import type {
   ControlledItem,
   InventoryItemNeedingReorder,
   InventoryRiskSummary,
-} from  '../../../api/admin-overview/FacilityAdminAnalyticsTypes';
-import { EmptyChartState }  from '../../../../../medical-records/ui/overview/medical-records-dashboard/dashboard.primitives';
+} from '../../../api/admin-overview/FacilityAdminAnalyticsTypes';
+import { EmptyChartState } from '../../../../../medical-records/ui/overview/medical-records-dashboard/dashboard.primitives';
 import {
   cn,
   formatCurrency,
@@ -54,7 +54,7 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="flex flex-col gap-3">
         <div className={cn(subtlePanelClass, 'p-4')}>
           <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
             Active Items
@@ -92,9 +92,9 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <div className="mt-6 flex flex-col gap-6">
         <div className={cn(subtlePanelClass, 'p-4')}>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-col items-start gap-3">
             <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
               Items Needing Reorder
             </h3>
@@ -120,12 +120,22 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
                     isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white'
                   )}
                 >
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex flex-col gap-3">
                     <div className="min-w-0">
-                      <p className={cn('truncate text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                      <p
+                        className={cn(
+                          'truncate text-sm font-semibold',
+                          isDark ? 'text-white' : 'text-slate-900'
+                        )}
+                      >
                         {item.item_name}
                       </p>
-                      <p className={cn('mt-1 text-xs', isDark ? 'text-slate-400' : 'text-slate-500')}>
+                      <p
+                        className={cn(
+                          'mt-1 text-xs',
+                          isDark ? 'text-slate-400' : 'text-slate-500'
+                        )}
+                      >
                         {item.category} • {item.item_code}
                       </p>
                     </div>
@@ -140,12 +150,17 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
                     </span>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="mt-4 flex flex-col gap-3">
                     <div>
                       <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
                         Current
                       </p>
-                      <p className={cn('mt-1 text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                      <p
+                        className={cn(
+                          'mt-1 text-sm font-semibold',
+                          isDark ? 'text-white' : 'text-slate-900'
+                        )}
+                      >
                         {formatNumber(item.current_stock)}
                       </p>
                     </div>
@@ -154,7 +169,12 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
                       <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
                         Reorder Point
                       </p>
-                      <p className={cn('mt-1 text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                      <p
+                        className={cn(
+                          'mt-1 text-sm font-semibold',
+                          isDark ? 'text-white' : 'text-slate-900'
+                        )}
+                      >
                         {formatNumber(item.reorder_point)}
                       </p>
                     </div>
@@ -163,7 +183,12 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
                       <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
                         Shortage
                       </p>
-                      <p className={cn('mt-1 text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                      <p
+                        className={cn(
+                          'mt-1 text-sm font-semibold',
+                          isDark ? 'text-white' : 'text-slate-900'
+                        )}
+                      >
                         {formatNumber(item.shortage_units)}
                       </p>
                     </div>
@@ -172,13 +197,18 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
                       <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
                         Reorder Qty
                       </p>
-                      <p className={cn('mt-1 text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                      <p
+                        className={cn(
+                          'mt-1 text-sm font-semibold',
+                          isDark ? 'text-white' : 'text-slate-900'
+                        )}
+                      >
                         {formatNumber(item.reorder_qty)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                  <div className="mt-4 flex flex-col gap-2 text-xs">
                     <span className={cn(isDark ? 'text-slate-400' : 'text-slate-600')}>
                       Safety Stock: <strong>{formatNumber(item.safety_stock)}</strong>
                     </span>
@@ -199,7 +229,7 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
         </div>
 
         <div className={cn(subtlePanelClass, 'p-4')}>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-col items-start gap-3">
             <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
               Controlled Items
             </h3>
@@ -221,35 +251,44 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
                 <div
                   key={`${item.item_name}-${index}`}
                   className={cn(
-                    'flex items-center justify-between rounded-2xl border px-4 py-3',
+                    'rounded-2xl border px-4 py-3',
                     isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white'
                   )}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
+                  <div className="flex flex-col items-start gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={cn(
+                          'flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl',
+                          isDark
+                            ? 'bg-violet-500/10 text-violet-300'
+                            : 'bg-violet-100 text-violet-700'
+                        )}
+                      >
+                        <Pill className="h-4 w-4" />
+                      </div>
+
+                      <div className="min-w-0">
+                        <p
+                          className={cn(
+                            'truncate text-sm font-semibold',
+                            isDark ? 'text-white' : 'text-slate-900'
+                          )}
+                        >
+                          {item.item_name}
+                        </p>
+                      </div>
+                    </div>
+
+                    <span
                       className={cn(
-                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl',
-                        isDark ? 'bg-violet-500/10 text-violet-300' : 'bg-violet-100 text-violet-700'
+                        'rounded-full px-3 py-1 text-xs font-semibold',
+                        isDark ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-700'
                       )}
                     >
-                      <Pill className="h-4 w-4" />
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className={cn('truncate text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-                        {item.item_name}
-                      </p>
-                    </div>
+                      {item.schedule}
+                    </span>
                   </div>
-
-                  <span
-                    className={cn(
-                      'rounded-full px-3 py-1 text-xs font-semibold',
-                      isDark ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-700'
-                    )}
-                  >
-                    {item.schedule}
-                  </span>
                 </div>
               ))}
             </div>

@@ -2,7 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CalendarRange, RefreshCw, X } from 'lucide-react';
 
-import type { AnalyticsGroupBy } from '../../../api/admin-overview/FacilityAdminAnalyticsTypes';
+import { AnalyticsGroupBy } from '../../../api/admin-overview/FacilityAdminAnalyticsTypes';
 import {
   ANALYTICS_GROUP_OPTIONS,
   cn,
@@ -76,7 +76,7 @@ const FacilityAdminDashboardHeader: React.FC<FacilityAdminDashboardHeaderProps> 
               isDark ? 'text-white' : 'text-slate-950'
             )}
           >
-            Facility Admin Analytics Dashboard
+            Facility  Analytics Dashboard
           </h1>
 
           <p

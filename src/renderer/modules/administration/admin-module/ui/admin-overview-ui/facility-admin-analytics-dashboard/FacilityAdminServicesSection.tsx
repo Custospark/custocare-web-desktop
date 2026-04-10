@@ -21,7 +21,7 @@ import {
   EmptyChartState,
   EnterpriseTooltip,
   ProgressRow,
-} from  '../../../../../medical-records/ui/overview/medical-records-dashboard/dashboard.primitives';
+} from '../../../../../medical-records/ui/overview/medical-records-dashboard/dashboard.primitives';
 import {
   PIE_COLORS,
   cn,
@@ -70,7 +70,7 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="flex flex-col gap-3">
         <div className={cn(subtlePanelClass, 'p-4')}>
           <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
             Active Services
@@ -99,9 +99,9 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <div className="mt-6 flex flex-col gap-6">
         <div className={cn(subtlePanelClass, 'p-4')}>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-col items-start gap-3">
             <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
               Highest Priced Services
             </h3>
@@ -177,12 +177,22 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
                     isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white'
                   )}
                 >
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex flex-col gap-3">
                     <div className="min-w-0">
-                      <p className={cn('truncate text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                      <p
+                        className={cn(
+                          'truncate text-sm font-semibold',
+                          isDark ? 'text-white' : 'text-slate-900'
+                        )}
+                      >
                         {service.service_name}
                       </p>
-                      <p className={cn('mt-1 text-xs', isDark ? 'text-slate-400' : 'text-slate-500')}>
+                      <p
+                        className={cn(
+                          'mt-1 text-xs',
+                          isDark ? 'text-slate-400' : 'text-slate-500'
+                        )}
+                      >
                         {service.category}
                         {service.duration_minutes ? ` • ${service.duration_minutes} min` : ''}
                       </p>
@@ -208,7 +218,7 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
         </div>
 
         <div className={cn(subtlePanelClass, 'p-4')}>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-col items-start gap-3">
             <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
               Category Mix
             </h3>
@@ -228,17 +238,33 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
             <div className="space-y-4">
               {categories.map((category, index) => (
                 <div key={category.category} className="space-y-2">
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-col gap-2">
                     <div className="min-w-0">
-                      <p className={cn('truncate text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                      <p
+                        className={cn(
+                          'truncate text-sm font-semibold',
+                          isDark ? 'text-white' : 'text-slate-900'
+                        )}
+                      >
                         {category.category}
                       </p>
-                      <p className={cn('text-xs', isDark ? 'text-slate-400' : 'text-slate-500')}>
-                        {formatNumber(category.count)} services • {formatCompactCurrency(category.total_price_sum)}
+                      <p
+                        className={cn(
+                          'text-xs',
+                          isDark ? 'text-slate-400' : 'text-slate-500'
+                        )}
+                      >
+                        {formatNumber(category.count)} services •{' '}
+                        {formatCompactCurrency(category.total_price_sum)}
                       </p>
                     </div>
 
-                    <span className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                    <span
+                      className={cn(
+                        'text-sm font-semibold',
+                        isDark ? 'text-white' : 'text-slate-900'
+                      )}
+                    >
                       {category.share_percentage.toFixed(1)}%
                     </span>
                   </div>

@@ -11,7 +11,7 @@ import { BillingRevenueDashboardData } from '../../../../medical-records/api/bil
 // ---------------------------------------------------------------------------
 // Filter types (same as billing dashboard)
 // ---------------------------------------------------------------------------
-export type AnalyticsGroupBy = 'day' | 'week' | 'month';
+export type AnalyticsGroupBy = 'day' | 'week' | 'month' | 'custom';
 
 export interface FacilityAdminAnalyticsFilters {
   date_from?: string;
@@ -27,6 +27,14 @@ export interface FacilityAnalyticsFiltersNormalized {
   top: number;
 }
 
+export type FacilityAdminPeriod = 'day' | 'week' | 'month' | 'custom';
+
+export const PERIOD_OPTIONS: { value: FacilityAdminPeriod; label: string }[] = [
+  { value: 'day', label: 'Day' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+  { value: 'custom', label: 'Custom' },
+];
 // ---------------------------------------------------------------------------
 // Staff Availability & Workload
 // ---------------------------------------------------------------------------

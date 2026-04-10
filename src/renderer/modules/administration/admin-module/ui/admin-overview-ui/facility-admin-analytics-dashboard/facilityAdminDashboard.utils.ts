@@ -28,7 +28,14 @@ export const ANALYTICS_GROUP_OPTIONS: Array<{
   { label: 'Week', value: 'week' },
   { label: 'Month', value: 'month' },
 ];
+export type FacilityAdminPeriod = 'day' | 'week' | 'month' | 'custom';
 
+export const PERIOD_OPTIONS: { value: FacilityAdminPeriod; label: string }[] = [
+  { value: 'day', label: 'Day' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+  { value: 'custom', label: 'Custom' },
+];
 export const clampPercentage = (value?: number | null) =>
   Math.max(0, Math.min(100, Number(value ?? 0)));
 

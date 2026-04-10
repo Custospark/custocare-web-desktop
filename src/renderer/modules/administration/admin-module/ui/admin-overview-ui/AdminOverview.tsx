@@ -235,7 +235,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
     return (
       <LoadingSkeleton
         variant="dashboard"
-        message="Loading facility admin analytics dashboard..."
+        message="Loading facility  analytics dashboard data..."
         theme={isDark ? 'dark' : 'light'}
         className="min-h-screen"
       />
