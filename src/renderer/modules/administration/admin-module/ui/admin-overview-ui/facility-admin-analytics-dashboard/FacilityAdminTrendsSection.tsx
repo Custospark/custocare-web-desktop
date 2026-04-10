@@ -1,0 +1,366 @@
+import React, { useMemo } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+
+import {
+  EmptyChartState,
+  EnterpriseTooltip,
+}  from '../../../../../medical-records/ui/overview/medical-records-dashboard/dashboard.primitives';
+import {
+  cn,
+  formatCompactCurrency,
+  formatCurrency,
+  getPanelClass,
+  getSubtlePanelClass,
+} from './facilityAdminDashboard.utils';
+
+export interface PresenceWorkloadChartPoint {
+  label: string;
+  rawDate: string;
+  onDuty: number;
+  busy: number;
+  offDuty: number;
+  totalActivePatients: number;
+  uniqueStaffAssigned: number;
+  avgPatientsPerStaff: number;
+}
+
+export interface FinancialTrendChartPoint {
+  label: string;
+  periodKey: string;
+  netRevenue: number;
+  collections: number;
+  outstanding: number;
+  invoices: number;
+}
+
+interface FacilityAdminTrendsSectionProps {
+  isDark: boolean;
+  presenceWorkloadSeries: PresenceWorkloadChartPoint[];
+  financialTrend: FinancialTrendChartPoint[];
+  revenueGrowthPercentage?: number | null;
+}
+
+const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
+  isDark,
+  presenceWorkloadSeries,
+  financialTrend,
+  revenueGrowthPercentage,
+}) => {
+  const panelClass = getPanelClass(isDark);
+  const subtlePanelClass = getSubtlePanelClass(isDark);
+
+  const summary = useMemo(() => {
+    if (!presenceWorkloadSeries.length) {
+      return {
+        avgOnDuty: 0,
+        peakBusy: 0,
+        avgPatientsPerStaff: 0,
+      };
+    }
+
+    const avgOnDuty =
+      presenceWorkloadSeries.reduce((sum, item) => sum + item.onDuty, 0) /
+      presenceWorkloadSeries.length;
+
+    const peakBusy = Math.max(...presenceWorkloadSeries.map((item) => item.busy));
+
+    const avgPatientsPerStaff =
+      presenceWorkloadSeries.reduce(
+        (sum, item) => sum + Number(item.avgPatientsPerStaff ?? 0),
+        0
+      ) / presenceWorkloadSeries.length;
+
+    return {
+      avgOnDuty,
+      peakBusy,
+      avgPatientsPerStaff,
+    };
+  }, [presenceWorkloadSeries]);
+
+  const latestFinancialPoint = financialTrend[financialTrend.length - 1];
+
+  return (
+    <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.08 }}
+        className={cn(panelClass, 'xl:col-span-8 p-6')}
+      >
+        <div className="mb-4">
+          <h2 className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+            Staff Presence & Workload Trajectory
+          </h2>
+          <p className={cn('mt-1 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
+            Operational staffing movement and workload pressure across the selected reporting window.
+          </p>
+        </div>
+
+        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className={cn(subtlePanelClass, 'px-4 py-3')}>
+            <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
+              Avg On Duty
+            </p>
+            <p className={cn('mt-1 text-lg font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              {Math.round(summary.avgOnDuty)}
+            </p>
+          </div>
+
+          <div className={cn(subtlePanelClass, 'px-4 py-3')}>
+            <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
+              Peak Busy Staff
+            </p>
+            <p className={cn('mt-1 text-lg font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              {summary.peakBusy}
+            </p>
+          </div>
+
+          <div className={cn(subtlePanelClass, 'px-4 py-3')}>
+            <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
+              Avg Patients / Staff
+            </p>
+            <p className={cn('mt-1 text-lg font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              {summary.avgPatientsPerStaff.toFixed(1)}
+            </p>
+          </div>
+        </div>
+
+        <div className="h-[360px]">
+          {presenceWorkloadSeries.length ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={presenceWorkloadSeries}
+                margin={{ top: 10, right: 10, left: -12, bottom: 0 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke={isDark ? 'rgba(148,163,184,0.12)' : '#E2E8F0'}
+                />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  yAxisId="left"
+                  tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  content={
+                    <EnterpriseTooltip
+                      isDark={isDark}
+                      valueFormatter={(value, name) =>
+                        name === 'Avg Patients / Staff'
+                          ? Number(value).toFixed(1)
+                          : `${Number(value ?? 0)}`
+                      }
+                    />
+                  }
+                />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="onDuty"
+                  name="On Duty"
+                  stroke="#2563EB"
+                  strokeWidth={3}
+                  dot={false}
+                  activeDot={{ r: 5 }}
+                />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="busy"
+                  name="Busy"
+                  stroke="#F59E0B"
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="offDuty"
+                  name="Off Duty"
+                  stroke="#94A3B8"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="avgPatientsPerStaff"
+                  name="Avg Patients / Staff"
+                  stroke="#10B981"
+                  strokeWidth={2.5}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChartState
+              title="No staff trend data"
+              subtitle="Staff presence and workload movement will appear here when available."
+              isDark={isDark}
+            />
+          )}
+        </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.12 }}
+        className={cn(panelClass, 'xl:col-span-4 p-6')}
+      >
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div>
+            <h2 className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              Revenue Signal
+            </h2>
+            <p className={cn('mt-1 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
+              Minimal financial visibility with just the most important trend signal.
+            </p>
+          </div>
+
+          {typeof revenueGrowthPercentage === 'number' && (
+            <div
+              className={cn(
+                'rounded-full px-3 py-1.5 text-xs font-semibold',
+                revenueGrowthPercentage >= 0
+                  ? isDark
+                    ? 'bg-emerald-500/10 text-emerald-300'
+                    : 'bg-emerald-50 text-emerald-700'
+                  : isDark
+                  ? 'bg-rose-500/10 text-rose-300'
+                  : 'bg-rose-50 text-rose-700'
+              )}
+            >
+              {revenueGrowthPercentage > 0 ? '+' : ''}
+              {revenueGrowthPercentage.toFixed(1)}%
+            </div>
+          )}
+        </div>
+
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+          <div className={cn(subtlePanelClass, 'p-4')}>
+            <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
+              Latest Net Revenue
+            </p>
+            <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              {latestFinancialPoint
+                ? formatCompactCurrency(latestFinancialPoint.netRevenue)
+                : '—'}
+            </p>
+          </div>
+
+          <div className={cn(subtlePanelClass, 'p-4')}>
+            <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
+              Latest Collections
+            </p>
+            <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              {latestFinancialPoint
+                ? formatCompactCurrency(latestFinancialPoint.collections)
+                : '—'}
+            </p>
+          </div>
+        </div>
+
+        <div className="h-[360px]">
+          {financialTrend.length ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={financialTrend}
+                margin={{ top: 10, right: 10, left: -14, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="facilityRevenueGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.03} />
+                  </linearGradient>
+                </defs>
+
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke={isDark ? 'rgba(148,163,184,0.12)' : '#E2E8F0'}
+                />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  content={
+                    <EnterpriseTooltip
+                      isDark={isDark}
+                      valueFormatter={(value, name) =>
+                        name === 'Invoices'
+                          ? `${Number(value ?? 0)}`
+                          : formatCurrency(value)
+                      }
+                    />
+                  }
+                />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Area
+                  type="monotone"
+                  dataKey="netRevenue"
+                  name="Net Revenue"
+                  stroke="#10B981"
+                  fill="url(#facilityRevenueGradient)"
+                  strokeWidth={3}
+                  activeDot={{ r: 5 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="collections"
+                  name="Collections"
+                  stroke="#2563EB"
+                  strokeWidth={2.5}
+                  dot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChartState
+              title="No financial trend data"
+              subtitle="Net revenue trend will appear here when financial analytics are available."
+              isDark={isDark}
+            />
+          )}
+        </div>
+      </motion.div>
+    </section>
+  );
+};
+
+export default FacilityAdminTrendsSection;
