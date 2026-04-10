@@ -33,6 +33,7 @@ import Sent from "../../../modules/account/ui/message/Sent";
 import Draft from "../../../modules/account/ui/message/Draft";
 import Trash from "../../../modules/account/ui/message/Trash";
 import Compose from "../../../modules/account/ui/message/Compose";
+import StaffWithoutFacilityMessage from "../../../modules/account/ui/StaffWithoutFacilityMessage";
 
 // ============================================================================
 // LAZY IMPORTS
@@ -52,13 +53,25 @@ export const accountRoutes = [
     key="account-base" 
     element={<ProtectedThemeOutlet />}
   >
+
+  {/* Staff without facility */}
+
+     <Route
+      key="account-invitations"
+      path={ACCOUNT_ROUTES.STAFF_WITHOUT_FACILITY}
+      element={
+        <SuspenseWrapper variant="detail">
+        <WithThemeProp Component={StaffWithoutFacilityMessage} />
+        </SuspenseWrapper>
+      }
+      />
     {/* ========================================================================
         INVITATIONS SECTION
         Route: /account/invitations
         Purpose: Display user's pending and accepted invitations
         ======================================================================== */}
     <Route
-      key="account-invitations"
+      key="staff-without-facility"
       path="invitations"
       element={
         <SuspenseWrapper variant="detail">
@@ -66,6 +79,7 @@ export const accountRoutes = [
         </SuspenseWrapper>
       }
     />
+   
     
     {/* ========================================================================
         MESSAGES/INBOX SECTION

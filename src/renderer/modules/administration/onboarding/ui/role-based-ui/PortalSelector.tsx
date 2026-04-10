@@ -14,7 +14,7 @@
 
 import React, { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ROUTES } from '../../../../../app/routes/routeConstants';
+import { ACCOUNT_ROUTES, ROUTES } from '../../../../../app/routes/routeConstants';
 import { ROUTES as ONBOARDING_ROUTES } from '../../routes/onboardingRouteConstants';
 import { cn } from '../../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/useApp';
@@ -106,7 +106,7 @@ export const PortalSelector: React.FC = () => {
   const handleStaffWithoutFacilityDashboard = useCallback((): void => {
     dispatch(switchCapability('staff'));
 
-    navigate(ROUTES.DASHBOARD, {
+    navigate(ACCOUNT_ROUTES.STAFF_WITHOUT_FACILITY, {
       state: {
         user,
         staffWithoutFacility: true,

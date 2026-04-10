@@ -3,6 +3,7 @@ export const ACCOUNT_ROUTES = {
   ROOT: ROUTES.ACCOUNT,
   SECURITY: `${ROUTES.ACCOUNT}/security`,
   INVITATIONS: `${ROUTES.ACCOUNT}/invitations`,
+  STAFF_WITHOUT_FACILITY: `${ROUTES.ACCOUNT}/staff_without_facility_assignment`,
   MESSAGES: `${ROUTES.ACCOUNT}/messages`,
 
   // Messages nested actions

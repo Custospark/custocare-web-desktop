@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import type { RootState } from '../../app/store/store';
-import { ROUTES, MEDICAL_RECORDS_ROUTES, CLINICAL_ROUTES } from '../../app/routes/routeConstants';
+import { ROUTES, MEDICAL_RECORDS_ROUTES, CLINICAL_ROUTES, ACCOUNT_ROUTES } from '../../app/routes/routeConstants';
 import { PLATFORM_ADMIN_ROUTES } from '../../app/routes/constants/platform-administration.paths';
 import { 
   selectAccessibleModuleCodes,
@@ -26,14 +26,14 @@ const MODULE_PRIORITY = [
   'pharmacy',
   'billing',
   'administration',
-  'platform_administration', // Added for super_admin
+  'platform_administration',
   'patient_dashboard',
   'account' // Always last as fallback
 ] as const;
 
 // Module to route mapping
 const MODULE_ROUTES: Record<string, string> = {
-  medical_records: MEDICAL_RECORDS_ROUTES.OVERVIEW,//Formerly was routing to patient search
+  medical_records: MEDICAL_RECORDS_ROUTES.OVERVIEW,
   clinical: CLINICAL_ROUTES.OVERVIEW || ROUTES.CLINICAL,
   nursing: ROUTES.NURSING,
   laboratory: ROUTES.LABORATORY,
