@@ -61,18 +61,18 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
         <div className="max-w-3xl">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em]">
-            <span className={cn('h-2 w-2 rounded-full', isFetching ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500')} />
-            Facility patient intelligence
+          <span className={cn('h-2 w-2 rounded-full', isFetching ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500')} />
+            Patient Analytics
           </div>
 
           <h1 className={cn('text-3xl font-bold tracking-tight md:text-4xl', isDark ? 'text-white' : 'text-slate-950')}>
-            Medical Records & Patient Analytics Dashboard
+            Clinical Intelligence
           </h1>
 
-          {/* <p className={cn('mt-3 max-w-2xl text-sm md:text-base', isDark ? 'text-slate-400' : 'text-slate-600')}>
+          <p className={cn('mt-3 max-w-2xl text-sm md:text-base', isDark ? 'text-slate-400' : 'text-slate-600')}>
             Executive-grade visibility into patient volume, care flow, retention, demographics,
-            visit composition, and revenue performance — powered directly by the facility analytics API.
-          </p> */}
+            visit composition, and revenue performance.
+          </p>
 
           {/* <div className="mt-5 flex flex-wrap items-center gap-3">
             <div className={cn('inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm', subtlePanelClass)}>

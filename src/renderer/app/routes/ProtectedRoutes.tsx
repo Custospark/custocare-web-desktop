@@ -1,6 +1,5 @@
-// ProtectedRoutes.tsx
 import React from 'react';
-import { Navigate, Route } from 'react-router-dom';
+import { Route } from 'react-router-dom';
 import AuthMiddlewareRoute from './middleware/AuthMiddlwareRoute';
 import Layout from '../../shared/components/Navigation/Layout';
 import { ROUTES, ACCOUNT_ROUTES } from './routeConstants';
@@ -19,7 +18,10 @@ import PlansAndSubscriptions from '../../modules/administration/admin-module/ui/
 import FacilitySettings from '../../modules/administration/admin-module/ui/facility-settings/FacilitySettings';
 import ClinicalSpaceManagement from '../../modules/administration/admin-module/ui/clinical-space/ClinicalSpaceManagement';
 import { ADMIN_ROUTES, ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from './constants/administration.paths';
-
+import LoadingRedirect from '../../shared/components/Loading/LoadingRedirect';
+import { MEDICAL_RECORDS_ROUTES } from './routeConstants';
+import FacilityAdminBillingCycle from '../../modules/billling/ui/billling/FacilityAdminBillingCycle';
+import { facilityAdminBillingCycleRoutes } from './modules/adminstration/billing-cycle.routes';
 
 // Lazy load modules
 const MedicalRecordsModule = React.lazy(
@@ -36,9 +38,7 @@ const LaboratoryModule = React.lazy(() => import('../../modules/laboratory/ui/La
 const BillingModule = React.lazy(() => import('../../modules/billling/ui/BillingModule'));
 const ModuleAccessMiddleware = React.lazy(() => import('./middleware/ModuleAccessMiddleware'));
 const PlatformAdministrationModule = React.lazy(() => import('../../modules/platform-administration/PlatformAdministrationModule'));
-import { MEDICAL_RECORDS_ROUTES } from './routeConstants';
-import FacilityAdminBillingCycle from '../../modules/billling/ui/billling/FacilityAdminBillingCycle';
-import { facilityAdminBillingCycleRoutes } from './modules/adminstration/billing-cycle.routes';
+
 export const ProtectedRoutes = () => [
   <Route key="protected-routes" element={<AuthMiddlewareRoute />}>
     <Route key="restricted-module-codes" element={<ModuleAccessMiddleware />}>
@@ -46,6 +46,7 @@ export const ProtectedRoutes = () => [
         <Route key="protected-theme" element={<ProtectedThemeOutlet />}>
           {onboardingAndDashboardRoutes}
 
+          {/* Medical Records Module */}
           <Route
             key="medical-records"
             path={ROUTES.MEDICAL_RECORDS}
@@ -55,11 +56,21 @@ export const ProtectedRoutes = () => [
               </SuspenseWrapper>
             }
           >
-            {/* <Route index element={<Navigate to={ROUTES.MEDICAL_RECORDS} replace />} /> */}
-            <Route index element={<Navigate to={MEDICAL_RECORDS_ROUTES.OVERVIEW} replace />} />
+            <Route 
+              index 
+              element={
+                <LoadingRedirect 
+                  to={MEDICAL_RECORDS_ROUTES.OVERVIEW} 
+                  replace 
+                  variant="table" 
+                  message="Loading Clinical Intelligence..." 
+                />
+              } 
+            />
             {medicalRecordsRoutes}
           </Route>
 
+          {/* Nursing Module */}
           <Route
             key="nursing"
             path={ROUTES.NURSING}
@@ -70,6 +81,7 @@ export const ProtectedRoutes = () => [
             }
           />
 
+          {/* Clinical Module */}
           <Route
             key="clinical"
             path={ROUTES.CLINICAL}
@@ -80,6 +92,7 @@ export const ProtectedRoutes = () => [
             }
           />
 
+          {/* Laboratory Module */}
           <Route
             key="laboratory"
             path={ROUTES.LABORATORY}
@@ -90,6 +103,7 @@ export const ProtectedRoutes = () => [
             }
           />
 
+          {/* Pharmacy Module */}
           <Route
             key="pharmacy"
             path={ROUTES.PHARMACY}
@@ -102,6 +116,7 @@ export const ProtectedRoutes = () => [
             {pharmacyRoutes}
           </Route>
 
+          {/* Billing Module */}
           <Route
             key="billing-module"
             path={ROUTES.BILLING}
@@ -112,6 +127,7 @@ export const ProtectedRoutes = () => [
             }
           />
 
+          {/* Administration Module */}
           <Route
             key="administration-module"
             path={ROUTES.ADMINISTRATION}
@@ -121,57 +137,71 @@ export const ProtectedRoutes = () => [
               </SuspenseWrapper>
             }
           >
-            {/* Redirects base path to the admin overview page. */}
-          <Route 
-            path={ROUTES.ADMINISTRATION} 
-            element={<Navigate to={ADMIN_ROUTES.OVERVIEW} replace />} 
-          />    
+            {/* Redirect base path to admin overview */}
+            <Route 
+              path={ROUTES.ADMINISTRATION} 
+              element={
+                <LoadingRedirect 
+                  to={ADMIN_ROUTES.OVERVIEW} 
+                  replace 
+                  variant="dashboard" 
+                  message="Loading Facility Intelligence..." 
+                />
+              } 
+            />    
 
-                {adminRoutes}
+            {adminRoutes}
           
-          <Route
-            path={ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.ROOT}
-            element={
-              <SuspenseWrapper variant="detail">
-                <WithThemeProp Component={ClinicalSpaceManagement} />
-              </SuspenseWrapper>
-            }
-          >
+            {/* Clinical Space Management */}
+            <Route
+              path={ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.ROOT}
+              element={
+                <SuspenseWrapper variant="detail">
+                  <WithThemeProp Component={ClinicalSpaceManagement} />
+                </SuspenseWrapper>
+              }
+            >
               {clinicalSpaceManagementRoutes}
-          </Route>      
-          <Route
-            path={ADMIN_ROUTES.BILLING_CYCLE}
-            element={
-              <SuspenseWrapper variant="detail">
-                <WithThemeProp Component={FacilityAdminBillingCycle} />
-              </SuspenseWrapper>
-            }
-          >
+            </Route>      
+            
+            {/* Billing Cycle Management */}
+            <Route
+              path={ADMIN_ROUTES.BILLING_CYCLE}
+              element={
+                <SuspenseWrapper variant="detail">
+                  <WithThemeProp Component={FacilityAdminBillingCycle} />
+                </SuspenseWrapper>
+              }
+            >
               {facilityAdminBillingCycleRoutes}
-          </Route>      
-          <Route
-            path="settings"
-            element={
-              <SuspenseWrapper variant="detail">
-                <WithThemeProp Component={FacilitySettings} />
-              </SuspenseWrapper>
-            }
-          >
+            </Route>      
+            
+            {/* Facility Settings */}
+            <Route
+              path="settings"
+              element={
+                <SuspenseWrapper variant="detail">
+                  <WithThemeProp Component={FacilitySettings} />
+                </SuspenseWrapper>
+              }
+            >
               {facilitySettingsRoutes}
-          </Route>      
-          <Route
-            path="plans-subscriptions"
-            element={
-              <SuspenseWrapper variant="detail">
-                <WithThemeProp Component={PlansAndSubscriptions} />
-              </SuspenseWrapper>
-            }
-          >
-            {plansSubscriptionsRoutes}
-          </Route>      
-
+            </Route>      
+            
+            {/* Plans & Subscriptions */}
+            <Route
+              path="plans-subscriptions"
+              element={
+                <SuspenseWrapper variant="detail">
+                  <WithThemeProp Component={PlansAndSubscriptions} />
+                </SuspenseWrapper>
+              }
+            >
+              {plansSubscriptionsRoutes}
+            </Route>      
           </Route>
 
+          {/* Account Module */}
           <Route
             key="account"
             path={ROUTES.ACCOUNT}
@@ -181,10 +211,21 @@ export const ProtectedRoutes = () => [
               </SuspenseWrapper>
             }
           >
-            <Route index element={<Navigate to={ACCOUNT_ROUTES.SETTINGS_PROFILE} replace />} />
+            <Route 
+              index 
+              element={
+                <LoadingRedirect 
+                  to={ACCOUNT_ROUTES.SETTINGS_PROFILE} 
+                  replace 
+                  variant="form" 
+                  message="Loading Account Settings..." 
+                />
+              } 
+            />
             {accountRoutes}
           </Route>
 
+          {/* Platform Administration Module */}
           <Route
             key="platform-administration"
             path={ROUTES.PLATFORM_ADMINISTRATION}
@@ -194,7 +235,17 @@ export const ProtectedRoutes = () => [
               </SuspenseWrapper>
             }
           >
-            <Route index element={<Navigate to={PLATFORM_ADMIN_ROUTES.FACILITIES} replace />} />
+            <Route 
+              index 
+              element={
+                <LoadingRedirect 
+                  to={PLATFORM_ADMIN_ROUTES.FACILITIES} 
+                  replace 
+                  variant="table" 
+                  message="Loading Platform Administration..." 
+                />
+              } 
+            />
             {platformAdminRoutes}
           </Route>
         </Route>

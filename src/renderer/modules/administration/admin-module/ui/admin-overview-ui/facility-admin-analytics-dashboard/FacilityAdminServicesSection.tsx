@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   Bar,
   BarChart,
@@ -10,7 +11,15 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { BadgeDollarSign, Layers3 } from 'lucide-react';
+import { 
+  BadgeDollarSign, 
+  Layers3, 
+  Settings, 
+  ChevronRight, 
+  PlusCircle, 
+  Eye,
+  TrendingUp,
+} from 'lucide-react';
 
 import type {
   CategoryBreakdownItem,
@@ -33,7 +42,8 @@ import {
   getSubtlePanelClass,
 } from './facilityAdminDashboard.utils';
 import { formatText } from '../../../../../medical-records/ui/revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
-
+import { ADMIN_ROUTES } from '../../../../../../app/routes/constants/administration.paths';
+import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 interface FacilityAdminServicesSectionProps {
   isDark: boolean;
   summary: ServicePricingSummary;
@@ -47,6 +57,9 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
   topServicesByPrice,
   categoryBreakdown,
 }) => {
+  const navigate = useNavigate();
+  const [isNavigating, setIsNavigating] = useState<string | null>(null);
+
   const panelClass = getPanelClass(isDark);
   const subtlePanelClass = getSubtlePanelClass(isDark);
 
@@ -54,6 +67,23 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
   const categories = [...categoryBreakdown]
     .sort((a, b) => b.share_percentage - a.share_percentage)
     .slice(0, 6);
+
+  // Navigation handler with loading state
+  const handleNavigate = (url: string, sectionName: string) => {
+    setIsNavigating(sectionName);
+    navigate(url);
+  };
+
+  // Show loading skeleton if navigating
+  if (isNavigating) {
+    return (
+      <LoadingSkeleton 
+        variant="dashboard" 
+        theme={isDark ? 'dark' : 'light'}
+        message={`Loading ${isNavigating}...`}
+      />
+    );
+  }
 
   return (
     <motion.section
@@ -72,7 +102,7 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
       </div>
 
       <div className="flex flex-col gap-3">
-        <div className={cn(subtlePanelClass, 'p-4')}>
+        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
           <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
             Active Services
           </p>
@@ -81,7 +111,7 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
           </p>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4')}>
+        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
           <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
             Revenue Potential
           </p>
@@ -90,7 +120,7 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
           </p>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4')}>
+        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
           <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
             Avg Service Price
           </p>
@@ -101,20 +131,23 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
       </div>
 
       <div className="mt-6 flex flex-col gap-6">
+        {/* Highest Priced Services Section */}
         <div className={cn(subtlePanelClass, 'p-4')}>
-          <div className="mb-4 flex flex-col items-start gap-3">
-            <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-              Highest Priced Services
-            </h3>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex flex-col items-start gap-3">
+              <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                Highest Priced Services
+              </h3>
 
-            <div
-              className={cn(
-                'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold',
-                isDark ? 'bg-emerald-500/10 text-emerald-300' : 'bg-emerald-50 text-emerald-700'
-              )}
-            >
-              <BadgeDollarSign className="h-3.5 w-3.5" />
-              Top value
+              <div
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold cursor-default',
+                  isDark ? 'bg-emerald-500/10 text-emerald-300' : 'bg-emerald-50 text-emerald-700'
+                )}
+              >
+                <BadgeDollarSign className="h-3.5 w-3.5" />
+                Top value
+              </div>
             </div>
           </div>
 
@@ -172,12 +205,12 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
           </div>
 
           {services.length > 0 && (
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
               {services.slice(0, 3).map((service) => (
                 <div
                   key={formatText(service.service_name)}
                   className={cn(
-                    'rounded-2xl border p-4',
+                    'rounded-2xl border p-4 cursor-default',
                     isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white'
                   )}
                 >
@@ -204,7 +237,7 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
 
                     <span
                       className={cn(
-                        'w-fit rounded-full px-3 py-1 text-xs font-semibold',
+                        'w-fit rounded-full px-3 py-1 text-xs font-semibold cursor-default',
                         getRiskPillStyles(service.risk_level, isDark)
                       )}
                     >
@@ -219,27 +252,61 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
               ))}
             </div>
           )}
-        </div>
 
-        <div className={cn(subtlePanelClass, 'p-4')}>
-          <div className="mb-4 flex flex-col items-start gap-3">
-            <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-              Category Mix
-            </h3>
-
-            <div
+          {/* Action Buttons for Services */}
+          <div className={cn('mt-4 pt-4 border-t grid grid-cols-2 gap-3', isDark ? 'border-white/10' : 'border-slate-200')}>
+            <button
+              onClick={() => handleNavigate(ADMIN_ROUTES.SERVICE_CATALOG, 'Service Catalog')}
               className={cn(
-                'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold',
-                isDark ? 'bg-blue-500/10 text-blue-300' : 'bg-blue-50 text-blue-700'
+                'rounded-xl px-4 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                isDark
+                  ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30'
+                  : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
               )}
             >
-              <Layers3 className="h-3.5 w-3.5" />
-              Breakdown
+              <Eye className="h-4 w-4" />
+              <span>Browse Catalog</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            
+            <button
+              onClick={() => handleNavigate(ADMIN_ROUTES.SERVICE_CATALOG, 'Add New Service')}
+              className={cn(
+                'rounded-xl px-4 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                isDark
+                  ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30'
+                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+              )}
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>Add Service</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Category Mix Section */}
+        <div className={cn(subtlePanelClass, 'p-4')}>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex flex-col items-start gap-3">
+              <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                Category Mix
+              </h3>
+
+              <div
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold cursor-default',
+                  isDark ? 'bg-blue-500/10 text-blue-300' : 'bg-blue-50 text-blue-700'
+                )}
+              >
+                <Layers3 className="h-3.5 w-3.5" />
+                Breakdown
+              </div>
             </div>
           </div>
 
           {categories.length ? (
-            <div className="space-y-4">
+            <div className="max-h-[400px] overflow-y-auto pr-2 space-y-4 custom-scrollbar">
               {categories.map((category, index) => (
                 <div key={category.category} className="space-y-2">
                   <div className="flex flex-col gap-2">
@@ -299,8 +366,57 @@ const FacilityAdminServicesSection: React.FC<FacilityAdminServicesSectionProps> 
               isDark={isDark}
             />
           )}
+
+          {/* Action Buttons for Categories */}
+          <div className={cn('mt-4 pt-4 border-t grid grid-cols-2 gap-3', isDark ? 'border-white/10' : 'border-slate-200')}>
+            <button
+              onClick={() => handleNavigate(ADMIN_ROUTES.BILLING_CYCLE_REVENUE_STATS, 'Revenue Analysis')}
+              className={cn(
+                'rounded-xl px-4 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                isDark
+                  ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 border border-violet-500/30'
+                  : 'bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200'
+              )}
+            >
+              <TrendingUp className="h-4 w-4" />
+              <span>Revenue Insights</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            
+            <button
+              onClick={() => handleNavigate(ADMIN_ROUTES.SERVICE_CATALOG, 'Pricing Configuration')}
+              className={cn(
+                'rounded-xl px-4 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                isDark
+                  ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30'
+                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
+              )}
+            >
+              <Settings className="h-4 w-4" />
+              <span>Configure Pricing</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Custom scrollbar styles */}
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: ${isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f1f1'};
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: ${isDark ? 'rgba(255, 255, 255, 0.2)' : '#cbd5e1'};
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: ${isDark ? 'rgba(255, 255, 255, 0.3)' : '#94a3b8'};
+        }
+      `}</style>
     </motion.section>
   );
 };

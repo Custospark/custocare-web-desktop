@@ -258,7 +258,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
               </div>
 
               <h2 className={cn('text-2xl font-bold', ui.text)}>
-                Unable to load facility admin analytics
+                Unable to load facility dashboard analytics
               </h2>
 
               <p className={cn('mt-2 text-sm', ui.textSecondary)}>

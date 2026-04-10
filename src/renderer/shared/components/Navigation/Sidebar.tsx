@@ -19,6 +19,8 @@ import { type SidebarProps } from '../../types/index';
 import { cn } from '../../types/cn';
 import { ROUTES } from '../../../app/routes/routeConstants';
 import { PLATFORM_ADMIN_ROUTES } from '../../../app/routes/constants/platform-administration.paths';
+import { ADMIN_ROUTES } from '../../../app/routes/constants/administration.paths';
+import { MEDICAL_RECORDS_ROUTES } from '../../../app/routes/routeConstants';
 import { useAppSelector } from '../../../app/store/hooks/useApp';
 import {
   selectAccessibleModuleCodes,
@@ -158,8 +160,8 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         id: 'front-desk',
         label: 'Medical Records',
         icon: <FileText className="w-5 h-5" />,
-        href: ROUTES.MEDICAL_RECORDS,
-        route: ROUTES.MEDICAL_RECORDS,
+        href: MEDICAL_RECORDS_ROUTES.OVERVIEW,
+        route: MEDICAL_RECORDS_ROUTES.OVERVIEW,
         description: 'Medical Records, Patient Registration & workflows',
         stats: 'Patients in Care',
         glowColor: 'from-purple-500 to-pink-400',
@@ -240,8 +242,8 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         id: 'administration',
         label: 'Facility Governance',
         icon: <MonitorCheckIcon className="w-5 h-5" />,
-        href: ROUTES.ADMINISTRATION,
-        route: ROUTES.ADMINISTRATION,
+        href: ADMIN_ROUTES.OVERVIEW,
+        route: ADMIN_ROUTES.OVERVIEW,
         description: 'Configure facilities, manage workforce access, services, and operational controls',
         stats: 'Governance',
         glowColor: 'from-slate-600 to-slate-500',

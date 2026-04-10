@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Pill, ShieldAlert } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { AlertTriangle, Pill, ShieldAlert, Boxes, ChevronRight, Package } from 'lucide-react';
 
 import type {
   ControlledItem,
@@ -17,7 +18,8 @@ import {
   getSubtlePanelClass,
   sortInventoryByRisk,
 } from './facilityAdminDashboard.utils';
-
+import { ADMIN_ROUTES } from '../../../../../../app/routes/constants/administration.paths';
+import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 interface FacilityAdminInventorySectionProps {
   isDark: boolean;
   summary: InventoryRiskSummary;
@@ -33,10 +35,30 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
   controlledItems,
   controlledSubstancesCount,
 }) => {
+  const navigate = useNavigate();
+  const [isNavigating, setIsNavigating] = useState<string | null>(null);
+
   const panelClass = getPanelClass(isDark);
   const subtlePanelClass = getSubtlePanelClass(isDark);
 
   const prioritizedItems = sortInventoryByRisk(itemsNeedingReorder).slice(0, 6);
+
+  // Navigation handler with loading state
+  const handleNavigate = (url: string, sectionName: string) => {
+    setIsNavigating(sectionName);
+    navigate(url);
+  };
+
+  // Show loading skeleton if navigating
+  if (isNavigating) {
+    return (
+      <LoadingSkeleton 
+        variant="dashboard" 
+        theme={isDark ? 'dark' : 'light'}
+        message={`Loading ${isNavigating}...`}
+      />
+    );
+  }
 
   return (
     <motion.section
@@ -55,7 +77,7 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
       </div>
 
       <div className="flex flex-col gap-3">
-        <div className={cn(subtlePanelClass, 'p-4')}>
+        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
           <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
             Active Items
           </p>
@@ -64,7 +86,7 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
           </p>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4')}>
+        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
           <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
             Below Reorder Point
           </p>
@@ -73,7 +95,7 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
           </p>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4')}>
+        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
           <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
             High Risk Items
           </p>
@@ -82,7 +104,7 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
           </p>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4')}>
+        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
           <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
             Controlled Substances
           </p>
@@ -93,30 +115,33 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
       </div>
 
       <div className="mt-6 flex flex-col gap-6">
+        {/* Items Needing Reorder Section */}
         <div className={cn(subtlePanelClass, 'p-4')}>
-          <div className="mb-4 flex flex-col items-start gap-3">
-            <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-              Items Needing Reorder
-            </h3>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex flex-col items-start gap-3">
+              <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                Items Needing Reorder
+              </h3>
 
-            <div
-              className={cn(
-                'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold',
-                isDark ? 'bg-rose-500/10 text-rose-300' : 'bg-rose-50 text-rose-700'
-              )}
-            >
-              <AlertTriangle className="h-3.5 w-3.5" />
-              Priority queue
+              <div
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold cursor-default',
+                  isDark ? 'bg-rose-500/10 text-rose-300' : 'bg-rose-50 text-rose-700'
+                )}
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Priority queue
+              </div>
             </div>
           </div>
 
           {prioritizedItems.length ? (
-            <div className="space-y-3">
+            <div className="max-h-[600px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
               {prioritizedItems.map((item) => (
                 <div
                   key={item.item_code}
                   className={cn(
-                    'rounded-2xl border p-4',
+                    'rounded-2xl border p-4 cursor-default',
                     isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white'
                   )}
                 >
@@ -142,7 +167,7 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
 
                     <span
                       className={cn(
-                        'w-fit rounded-full px-3 py-1 text-xs font-semibold',
+                        'w-fit rounded-full px-3 py-1 text-xs font-semibold cursor-default',
                         getRiskPillStyles(item.risk_level, isDark)
                       )}
                     >
@@ -150,7 +175,7 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
                     </span>
                   </div>
 
-                  <div className="mt-4 flex flex-col gap-3">
+                  <div className="mt-4 grid grid-cols-2 gap-4">
                     <div>
                       <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
                         Current
@@ -226,37 +251,57 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
               isDark={isDark}
             />
           )}
-        </div>
 
-        <div className={cn(subtlePanelClass, 'p-4')}>
-          <div className="mb-4 flex flex-col items-start gap-3">
-            <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-              Controlled Items
-            </h3>
-
-            <div
+          {/* Manage Inventory Button */}
+          <div className={cn('mt-4 pt-4 border-t', isDark ? 'border-white/10' : 'border-slate-200')}>
+            <button
+              onClick={() => handleNavigate(ADMIN_ROUTES.INVENTORY, 'Inventory Management')}
               className={cn(
-                'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold',
-                isDark ? 'bg-violet-500/10 text-violet-300' : 'bg-violet-50 text-violet-700'
+                'w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                isDark
+                  ? 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30'
+                  : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
               )}
             >
-              <ShieldAlert className="h-3.5 w-3.5" />
-              Monitored
+              <Boxes className="h-4 w-4" />
+              <span>Manage Inventory</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Controlled Items Section */}
+        <div className={cn(subtlePanelClass, 'p-4')}>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex flex-col items-start gap-3">
+              <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                Controlled Items
+              </h3>
+
+              <div
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold cursor-default',
+                  isDark ? 'bg-violet-500/10 text-violet-300' : 'bg-violet-50 text-violet-700'
+                )}
+              >
+                <ShieldAlert className="h-3.5 w-3.5" />
+                Monitored
+              </div>
             </div>
           </div>
 
           {controlledItems.length ? (
-            <div className="space-y-3">
+            <div className="max-h-[400px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
               {controlledItems.slice(0, 10).map((item, index) => (
                 <div
                   key={`${item.item_name}-${index}`}
                   className={cn(
-                    'rounded-2xl border px-4 py-3',
+                    'rounded-2xl border px-4 py-3 cursor-default',
                     isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white'
                   )}
                 >
-                  <div className="flex flex-col items-start gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div
                         className={cn(
                           'flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl',
@@ -268,7 +313,7 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
                         <Pill className="h-4 w-4" />
                       </div>
 
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p
                           className={cn(
                             'truncate text-sm font-semibold',
@@ -282,7 +327,7 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
 
                     <span
                       className={cn(
-                        'rounded-full px-3 py-1 text-xs font-semibold',
+                        'rounded-full px-3 py-1 text-xs font-semibold cursor-default shrink-0',
                         isDark ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-700'
                       )}
                     >
@@ -299,8 +344,43 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
               isDark={isDark}
             />
           )}
+
+          {/* Manage Stock Items Button */}
+          <div className={cn('mt-4 pt-4 border-t', isDark ? 'border-white/10' : 'border-slate-200')}>
+            <button
+              onClick={() => handleNavigate(ADMIN_ROUTES.INVENTORY, 'Stock Items')}
+              className={cn(
+                'w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                isDark
+                  ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 border border-violet-500/30'
+                  : 'bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200'
+              )}
+            >
+              <Package className="h-4 w-4" />
+              <span>Browse Stock Items</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Custom scrollbar styles */}
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: ${isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f1f1'};
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: ${isDark ? 'rgba(255, 255, 255, 0.2)' : '#cbd5e1'};
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: ${isDark ? 'rgba(255, 255, 255, 0.3)' : '#94a3b8'};
+        }
+      `}</style>
     </motion.section>
   );
 };

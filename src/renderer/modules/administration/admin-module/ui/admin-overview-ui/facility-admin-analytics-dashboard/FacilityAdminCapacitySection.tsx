@@ -1,6 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { BedDouble, Building2, DoorOpen, Timer, ExternalLink, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  BedDouble, 
+  Building2, 
+  DoorOpen, 
+  Timer, 
+  ChevronRight,
+  LayoutDashboard,
+  MapIcon,
+  Settings,
+  PlusCircle
+} from 'lucide-react';
 
 import type {
   CapacitySummary,
@@ -19,6 +30,8 @@ import {
   getSubtlePanelClass,
 } from './facilityAdminDashboard.utils';
 import { ADMIN_ROUTES } from '../../../../../../app/routes/constants/administration.paths';
+import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
+import { ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from '../../../../../../app/routes/constants/administration.paths';
 
 interface FacilityAdminCapacitySectionProps {
   isDark: boolean;
@@ -35,6 +48,9 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
   wards,
   spaceTypes,
 }) => {
+  const navigate = useNavigate();
+  const [isNavigating, setIsNavigating] = useState<string | null>(null);
+
   const panelClass = getPanelClass(isDark);
   const subtlePanelClass = getSubtlePanelClass(isDark);
 
@@ -48,16 +64,22 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
 
   const topDepartments = [...departments].slice(0, 2);
 
-  // Placeholder URLs - replace with actual paths
-  const viewAllDepartmentsUrl = ADMIN_ROUTES.FACILITY_SETUP;
-  const viewAllWardsUrl = ADMIN_ROUTES.WARD_MANAGEMENT;
-  const viewAllSpacesUrl = ADMIN_ROUTES.SPACE_ALLOCATION;
-
-  const handleViewAll = (url: string) => {
-    // You can use react-router's useNavigate or window.location
-    // Example: navigate(url);
-    window.location.href = url;
+  // Navigation handler with loading state
+  const handleNavigate = (url: string, sectionName: string) => {
+    setIsNavigating(sectionName);
+    navigate(url);
   };
+
+  // Show loading skeleton if navigating
+  if (isNavigating) {
+    return (
+      <LoadingSkeleton 
+        variant="dashboard" 
+        theme={isDark ? 'dark' : 'light'}
+        message={`Loading ${isNavigating}...`}
+      />
+    );
+  }
 
   return (
     <motion.section
@@ -76,7 +98,7 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className={cn(subtlePanelClass, 'p-4')}>
+        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
           <div className="flex items-center gap-3">
             <BedDouble
               className={cn('h-5 w-5', isDark ? 'text-blue-300' : 'text-blue-700')}
@@ -92,7 +114,7 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
           </div>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4')}>
+        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
           <div className="flex items-center gap-3">
             <DoorOpen
               className={cn('h-5 w-5', isDark ? 'text-violet-300' : 'text-violet-700')}
@@ -108,7 +130,7 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
           </div>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4')}>
+        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
           <div className="flex items-center gap-3">
             <Building2
               className={cn('h-5 w-5', isDark ? 'text-emerald-300' : 'text-emerald-700')}
@@ -124,7 +146,7 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
           </div>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4')}>
+        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
           <div className="flex items-center gap-3">
             <Timer
               className={cn('h-5 w-5', isDark ? 'text-amber-300' : 'text-amber-700')}
@@ -142,7 +164,7 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
-        {/* Department Readiness Section with scroll */}
+        {/* Department Readiness Section */}
         <div className={cn(subtlePanelClass, 'p-4')}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
@@ -151,36 +173,23 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
             <div className="flex items-center gap-2">
               <span
                 className={cn(
-                  'rounded-full px-3 py-1 text-xs font-semibold',
+                  'rounded-full px-3 py-1 text-xs font-semibold cursor-default',
                   isDark ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-700'
                 )}
               >
                 {formatNumber(departments.length)} departments
               </span>
-              {departments.length > 6 && (
-                <button
-                  onClick={() => handleViewAll(viewAllDepartmentsUrl)}
-                  className={cn(
-                    'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition-all',
-                    isDark
-                      ? 'bg-blue-500/10 text-blue-300 hover:bg-blue-500/20'
-                      : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                  )}
-                >
-                  <span>View all</span>
-                  <ExternalLink className="h-3 w-3" />
-                </button>
-              )}
             </div>
           </div>
 
-          {topDepartments.length ? (
-            <div className="max-h-[600px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
-              {topDepartments.map((department) => (
+          {/* Content area with scroll */}
+          <div className="max-h-[600px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+            {topDepartments.length ? (
+              topDepartments.map((department) => (
                 <div
                   key={`${department.department_name}-${department.department_type}`}
                   className={cn(
-                    'rounded-2xl border p-4',
+                    'rounded-2xl border p-4 cursor-default',
                     isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white'
                   )}
                 >
@@ -196,7 +205,7 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
 
                     <div
                       className={cn(
-                        'rounded-full px-3 py-1 text-xs font-semibold',
+                        'rounded-full px-3 py-1 text-xs font-semibold cursor-default',
                         isDark ? 'bg-blue-500/10 text-blue-300' : 'bg-blue-50 text-blue-700'
                       )}
                     >
@@ -246,57 +255,54 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
                     {department.capacity_utilization_hint}
                   </p>
                 </div>
-              ))}
-              
-              {departments.length > 6 && (
-                <button
-                  onClick={() => handleViewAll(viewAllDepartmentsUrl)}
-                  className={cn(
-                    'w-full mt-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all flex items-center justify-center gap-2',
-                    isDark
-                      ? 'bg-white/5 text-slate-300 hover:bg-white/10'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  )}
-                >
-                  <span>View all {departments.length} departments</span>
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+              ))
+            ) : (
+              <EmptyChartState
+                title="No department capacity data"
+                subtitle="Departmental capacity insights will appear here when available."
+                isDark={isDark}
+              />
+            )}
+          </div>
+
+          {/* CTA Button - Always Visible */}
+          <div className={cn('mt-4 pt-4 border-t', isDark ? 'border-white/10' : 'border-slate-200')}>
+            <button
+              onClick={() => handleNavigate(ADMIN_ROUTES.FACILITY_SETUP, 'Departments')}
+              className={cn(
+                'w-full rounded-xl px-4 py-3 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                isDark
+                  ? departments.length === 0
+                    ? 'bg-blue-600/30 text-blue-200 hover:bg-blue-600/40 border border-blue-500/40'
+                    : 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30'
+                  : departments.length === 0
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-600'
+                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
               )}
-            </div>
-          ) : (
-            <EmptyChartState
-              title="No department capacity data"
-              subtitle="Departmental capacity insights will appear here when available."
-              isDark={isDark}
-            />
-          )}
+            >
+              {departments.length === 0 ? (
+                <PlusCircle className="h-4 w-4" />
+              ) : (
+                <Settings className="h-4 w-4" />
+              )}
+              <span>{departments.length === 0 ? 'Configure Departments' : 'Manage Departments'}</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
-        {/* Ward Utilization Hotspots Section with scroll */}
+        {/* Ward Utilization Hotspots Section */}
         <div className={cn(subtlePanelClass, 'p-4')}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
               Ward Utilization Hotspots
             </h3>
-            {wards.length > 5 && (
-              <button
-                onClick={() => handleViewAll(viewAllWardsUrl)}
-                className={cn(
-                  'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition-all',
-                  isDark
-                    ? 'bg-blue-500/10 text-blue-300 hover:bg-blue-500/20'
-                    : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                )}
-              >
-                <span>View all</span>
-                <ExternalLink className="h-3 w-3" />
-              </button>
-            )}
           </div>
 
-          {topWards.length ? (
-            <div className="max-h-[500px] overflow-y-auto pr-2 space-y-4 custom-scrollbar">
-              {topWards.map((ward) => (
+          {/* Content area with scroll */}
+          <div className="max-h-[500px] overflow-y-auto pr-2 space-y-4 custom-scrollbar">
+            {topWards.length ? (
+              topWards.map((ward) => (
                 <div key={ward.id} className="space-y-2">
                   <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0 flex-1">
@@ -330,61 +336,57 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
                     }
                   />
                 </div>
-              ))}
+              ))
+            ) : (
+              <EmptyChartState
+                title="No ward utilization data"
+                subtitle="Ward occupancy pressure indicators will appear here."
+                isDark={isDark}
+              />
+            )}
+          </div>
 
-              {wards.length > 5 && (
-                <button
-                  onClick={() => handleViewAll(viewAllWardsUrl)}
-                  className={cn(
-                    'w-full mt-4 rounded-xl px-4 py-2 text-sm font-semibold transition-all flex items-center justify-center gap-2',
-                    isDark
-                      ? 'bg-white/5 text-slate-300 hover:bg-white/10'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  )}
-                >
-                  <span>View all {wards.length} wards</span>
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+          {/* CTA Button - Always Visible */}
+          <div className={cn('mt-4 pt-4 border-t', isDark ? 'border-white/10' : 'border-slate-200')}>
+            <button
+              onClick={() => handleNavigate(ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.WARD_MANAGEMENT, 'Wards')}
+              className={cn(
+                'w-full rounded-xl px-4 py-3 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                isDark
+                  ? wards.length === 0
+                    ? 'bg-violet-600/30 text-violet-200 hover:bg-violet-600/40 border border-violet-500/40'
+                    : 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 border border-violet-500/30'
+                  : wards.length === 0
+                  ? 'bg-violet-600 text-white hover:bg-violet-700 border border-violet-600'
+                  : 'bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200'
               )}
-            </div>
-          ) : (
-            <EmptyChartState
-              title="No ward utilization data"
-              subtitle="Ward occupancy pressure indicators will appear here."
-              isDark={isDark}
-            />
-          )}
+            >
+              {wards.length === 0 ? (
+                <PlusCircle className="h-4 w-4" />
+              ) : (
+                <MapIcon className="h-4 w-4" />
+              )}
+              <span>{wards.length === 0 ? 'Configure Wards' : 'Manage Wards'}</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
 
-          {/* Space Types Section with view all */}
+          {/* Space Types Section */}
           <div className="mt-6">
             <div className="mb-3 flex items-center justify-between">
               <h4 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
                 Space Types
               </h4>
-              {spaceTypes.length > 10 && (
-                <button
-                  onClick={() => handleViewAll(viewAllSpacesUrl)}
-                  className={cn(
-                    'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition-all',
-                    isDark
-                      ? 'bg-blue-500/10 text-blue-300 hover:bg-blue-500/20'
-                      : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                  )}
-                >
-                  <span>View all</span>
-                  <ExternalLink className="h-3 w-3" />
-                </button>
-              )}
             </div>
 
-            {spaceTypes.length ? (
-              <div className="max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+              {spaceTypes.length ? (
                 <div className="flex flex-wrap gap-2">
                   {spaceTypes.slice(0, 10).map((item) => (
                     <div
                       key={item.space_type}
                       className={cn(
-                        'rounded-full border px-3 py-1.5 text-xs font-medium',
+                        'rounded-full border px-3 py-1.5 text-xs font-medium cursor-default',
                         isDark
                           ? 'border-white/10 bg-white/[0.03] text-slate-300'
                           : 'border-slate-200 bg-white text-slate-700'
@@ -394,25 +396,49 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
                     </div>
                   ))}
                   {spaceTypes.length > 10 && (
-                    <button
-                      onClick={() => handleViewAll(viewAllSpacesUrl)}
+                    <div
                       className={cn(
-                        'rounded-full border px-3 py-1.5 text-xs font-medium transition-all',
+                        'rounded-full border px-3 py-1.5 text-xs font-medium cursor-default',
                         isDark
-                          ? 'border-blue-500/30 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20'
-                          : 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                          ? 'border-white/10 bg-white/[0.03] text-slate-300'
+                          : 'border-slate-200 bg-white text-slate-700'
                       )}
                     >
                       +{spaceTypes.length - 10} more
-                    </button>
+                    </div>
                   )}
                 </div>
-              </div>
-            ) : (
-              <p className={cn('text-sm', isDark ? 'text-slate-400' : 'text-slate-500')}>
-                No space type summary available.
-              </p>
-            )}
+              ) : (
+                <p className={cn('text-sm', isDark ? 'text-slate-400' : 'text-slate-500')}>
+                  No space type summary available.
+                </p>
+              )}
+            </div>
+
+            {/* CTA Button - Always Visible */}
+            <div className={cn('mt-4 pt-4 border-t', isDark ? 'border-white/10' : 'border-slate-200')}>
+              <button
+                onClick={() => handleNavigate(ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.CLINICAL_ROOMS, 'Spaces')}
+                className={cn(
+                  'w-full rounded-xl px-4 py-3 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                  isDark
+                    ? spaceTypes.length === 0
+                      ? 'bg-emerald-600/30 text-emerald-200 hover:bg-emerald-600/40 border border-emerald-500/40'
+                      : 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30'
+                    : spaceTypes.length === 0
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 border border-emerald-600'
+                    : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                )}
+              >
+                {spaceTypes.length === 0 ? (
+                  <PlusCircle className="h-4 w-4" />
+                ) : (
+                  <LayoutDashboard className="h-4 w-4" />
+                )}
+                <span>{spaceTypes.length === 0 ? 'Configure Spaces' : 'Manage Spaces'}</span>
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

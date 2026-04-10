@@ -50,15 +50,33 @@ export const allModules: SearchableModule[] = [
     keywords: ['front desk', 'reception', 'records', 'medical', 'registration', 'patient intake'],
     category: 'Clinical',
   },
-    {
-    id: 'medical-records-dashboard',
-    label: 'Medical Records Dashboard',
-    route: MEDICAL_RECORDS_ROUTES.OVERVIEW,
-    description: 'Overview dashboard for Medical Records - View patient statistics, recent registrations, queue status, billing summary and visit analytics',
-    moduleCode: 'medical_records',
-    keywords: ['dashboard', 'overview', 'medical records', 'analytics', 'statistics', 'summary', 'patient overview', 'queue overview', 'billing overview', 'visits'],
-    category: 'Clinical',
-  },
+ {
+  id: 'medical-records-dashboard',
+  label: 'Clinical Intelligence',
+  route: MEDICAL_RECORDS_ROUTES.OVERVIEW,
+  description: 'Executive-grade visibility into patient volume, care flow, retention, demographics, visit composition, and revenue performance.',
+  moduleCode: 'medical_records',
+  keywords: [
+    // Core
+    'patient analytics',
+    'clinical intelligence',
+    
+    // Metrics
+    'patient volume',
+    'care flow', 
+    'patient retention',
+    'demographics',
+    'visit composition',
+    'revenue performance',
+    
+    // Search terms
+    'medical records dashboard',
+    'patient statistics',
+    'healthcare analytics',
+    'clinical dashboard'
+  ],
+  category: 'Clinical',
+},
   {
     id: 'patient-search',
     label: 'Search Patient',
@@ -203,14 +221,14 @@ export const allModules: SearchableModule[] = [
     category: 'Administration',
   },
   {
-    id: 'admin-overview',
-    label: 'Command Center',
-    route: ADMIN_ROUTES.OVERVIEW,
-    description: 'Administrative overview and setup status dashboard',
-    moduleCode: 'administration',
-    keywords: ['overview', 'dashboard', 'command center', 'stats', 'metrics', 'setup'],
-    category: 'Administration',
-  },
+  id: 'admin-overview',
+  label: 'Facility Intelligence',
+  route: ADMIN_ROUTES.OVERVIEW,
+  description: 'Administrative analytics dashboard for workforce, capacity, inventory, and revenue insights',
+  moduleCode: 'administration',
+  keywords: ['analytics', 'dashboard', 'intelligence', 'insights', 'metrics', 'workforce', 'capacity', 'inventory', 'revenue'],
+  category: 'Administration',
+},
   {
     id: 'admin-team',
     label: 'Workforce Administration',

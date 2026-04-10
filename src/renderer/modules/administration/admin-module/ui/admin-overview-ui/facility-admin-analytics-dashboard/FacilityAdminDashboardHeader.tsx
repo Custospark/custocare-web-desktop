@@ -67,7 +67,7 @@ const FacilityAdminDashboardHeader: React.FC<FacilityAdminDashboardHeaderProps> 
                 isFetching ? 'animate-pulse bg-amber-500' : 'bg-emerald-500'
               )}
             />
-            Facility administrative intelligence
+            Facility Analytics
           </div>
 
           <h1
@@ -76,7 +76,7 @@ const FacilityAdminDashboardHeader: React.FC<FacilityAdminDashboardHeaderProps> 
               isDark ? 'text-white' : 'text-slate-950'
             )}
           >
-            Facility  Analytics Dashboard
+            Facility  Intelligence
           </h1>
 
           <p
@@ -85,8 +85,7 @@ const FacilityAdminDashboardHeader: React.FC<FacilityAdminDashboardHeaderProps> 
               isDark ? 'text-slate-400' : 'text-slate-600'
             )}
           >
-            Executive visibility into staffing, capacity, inventory risk, and service pricing —
-            with only the essential financial trend signal surfaced here.
+            Executive insights into workforce, capacity, inventory, and pricing—with key financial trends at a glance.
           </p>
 
           <AnimatePresence>
@@ -142,7 +141,7 @@ const FacilityAdminDashboardHeader: React.FC<FacilityAdminDashboardHeaderProps> 
                   isDark ? 'text-slate-400' : 'text-slate-500'
                 )}
               >
-                Grouping
+                Period
               </span>
 
               <button

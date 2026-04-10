@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   Area,
   AreaChart,
@@ -12,11 +13,18 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Receipt,
+  ChevronRight,
+  Eye,
+} from 'lucide-react';
 
 import {
   EmptyChartState,
   EnterpriseTooltip,
-}  from '../../../../../medical-records/ui/overview/medical-records-dashboard/dashboard.primitives';
+} from '../../../../../medical-records/ui/overview/medical-records-dashboard/dashboard.primitives';
 import {
   cn,
   formatCompactCurrency,
@@ -24,6 +32,8 @@ import {
   getPanelClass,
   getSubtlePanelClass,
 } from './facilityAdminDashboard.utils';
+import { ADMIN_ROUTES } from '../../../../../../app/routes/constants/administration.paths';
+import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 
 export interface PresenceWorkloadChartPoint {
   label: string;
@@ -58,6 +68,9 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
   financialTrend,
   revenueGrowthPercentage,
 }) => {
+  const navigate = useNavigate();
+  const [isNavigating, setIsNavigating] = useState<string | null>(null);
+
   const panelClass = getPanelClass(isDark);
   const subtlePanelClass = getSubtlePanelClass(isDark);
 
@@ -91,25 +104,45 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
 
   const latestFinancialPoint = financialTrend[financialTrend.length - 1];
 
+  // Navigation handler with loading state
+  const handleNavigate = (url: string, sectionName: string) => {
+    setIsNavigating(sectionName);
+    navigate(url);
+  };
+
+  // Show loading skeleton if navigating
+  if (isNavigating) {
+    return (
+      <LoadingSkeleton 
+        variant="dashboard" 
+        theme={isDark ? 'dark' : 'light'}
+        message={`Loading ${isNavigating}...`}
+      />
+    );
+  }
+
   return (
     <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+      {/* Staff Presence & Workload Trajectory Section */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, delay: 0.08 }}
         className={cn(panelClass, 'xl:col-span-8 p-6')}
       >
-        <div className="mb-4">
-          <h2 className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-            Staff Presence & Workload Trajectory
-          </h2>
-          <p className={cn('mt-1 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
-            Operational staffing movement and workload pressure across the selected reporting window.
-          </p>
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <h2 className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              Staff Presence & Workload Trajectory
+            </h2>
+            <p className={cn('mt-1 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
+              Operational staffing movement and workload pressure across the selected reporting window.
+            </p>
+          </div>
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className={cn(subtlePanelClass, 'px-4 py-3')}>
+          <div className={cn(subtlePanelClass, 'px-4 py-3', 'cursor-default')}>
             <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
               Avg On Duty
             </p>
@@ -118,7 +151,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
             </p>
           </div>
 
-          <div className={cn(subtlePanelClass, 'px-4 py-3')}>
+          <div className={cn(subtlePanelClass, 'px-4 py-3', 'cursor-default')}>
             <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
               Peak Busy Staff
             </p>
@@ -127,7 +160,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
             </p>
           </div>
 
-          <div className={cn(subtlePanelClass, 'px-4 py-3')}>
+          <div className={cn(subtlePanelClass, 'px-4 py-3', 'cursor-default')}>
             <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
               Avg Patients / Staff
             </p>
@@ -227,9 +260,10 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
               isDark={isDark}
             />
           )}
-        </div>
+        </div>       
       </motion.div>
 
+      {/* Revenue Signal Section */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
@@ -242,14 +276,14 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
               Revenue Signal
             </h2>
             <p className={cn('mt-1 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
-              Minimal financial visibility with just the most important trend signal.
+              Minimal financial visibility with the most important trend signal.
             </p>
           </div>
 
           {typeof revenueGrowthPercentage === 'number' && (
             <div
               className={cn(
-                'rounded-full px-3 py-1.5 text-xs font-semibold',
+                'rounded-full px-3 py-1.5 text-xs font-semibold cursor-default',
                 revenueGrowthPercentage >= 0
                   ? isDark
                     ? 'bg-emerald-500/10 text-emerald-300'
@@ -259,6 +293,11 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
                   : 'bg-rose-50 text-rose-700'
               )}
             >
+              {revenueGrowthPercentage > 0 ? (
+                <TrendingUp className="inline h-3 w-3 mr-1" />
+              ) : revenueGrowthPercentage < 0 ? (
+                <TrendingDown className="inline h-3 w-3 mr-1" />
+              ) : null}
               {revenueGrowthPercentage > 0 ? '+' : ''}
               {revenueGrowthPercentage.toFixed(1)}%
             </div>
@@ -266,7 +305,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
         </div>
 
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
-          <div className={cn(subtlePanelClass, 'p-4')}>
+          <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
             <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
               Latest Net Revenue
             </p>
@@ -277,7 +316,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
             </p>
           </div>
 
-          <div className={cn(subtlePanelClass, 'p-4')}>
+          <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
             <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
               Latest Collections
             </p>
@@ -317,6 +356,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
                   tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
                   axisLine={false}
                   tickLine={false}
+                  tickFormatter={(value) => formatCompactCurrency(value)}
                 />
                 <Tooltip
                   content={
@@ -357,6 +397,37 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
               isDark={isDark}
             />
           )}
+        </div>
+
+        {/* Action Buttons for Revenue */}
+        <div className={cn('mt-4 pt-4 border-t grid grid-cols-2 gap-3', isDark ? 'border-white/10' : 'border-slate-200')}>
+          <button
+            onClick={() => handleNavigate(ADMIN_ROUTES.BILLING_CYCLE_REVENUE_STATS, 'Revenue Details')}
+            className={cn(
+              'rounded-xl px-4 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+              isDark
+                ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 border border-violet-500/30'
+                : 'bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200'
+            )}
+          >
+            <Receipt className="h-4 w-4" />
+            <span>Revenue Details</span>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          
+          <button
+            onClick={() => handleNavigate(ADMIN_ROUTES.BILLING_CYCLE_BILLING_REVIEW, 'Revenue Review')}
+            className={cn(
+              'rounded-xl px-4 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+              isDark
+                ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30'
+                : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
+            )}
+          >
+            <Eye className="h-4 w-4" />
+            <span>Revenue Review</span>
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
       </motion.div>
     </section>

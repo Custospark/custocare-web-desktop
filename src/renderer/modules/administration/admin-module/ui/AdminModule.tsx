@@ -7,13 +7,14 @@ import { ROUTES } from '../../../../app/routes/routeConstants';
 import type { PlanTier } from '../../../../shared/entitlements/entitlements';
 
 const ADMIN_OPERATIONS = [
-  {
-    id: 'overview',
-    label: 'Command Center',
-    icon: <LayoutDashboard className="w-4 h-4" />,
-    description: 'Administrative overview and setup status',
-    // status: 'new' as const,
-  },
+ {
+  id: 'overview',
+  label: 'Facility Intelligence',
+  icon: <LayoutDashboard className="w-4 h-4" />,
+  description: 'Comprehensive analytics dashboard with workforce, capacity, inventory, and revenue insights',
+  // Uncomment below to show a "new" badge on this menu item
+  // status: 'new' as const,
+},
   {
     id: 'facility-setup',
     label: 'Clinical Departments',
