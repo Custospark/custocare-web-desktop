@@ -2,7 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CalendarRange, RefreshCw, X } from 'lucide-react';
 
-import { AnalyticsGroupBy } from '../../../api/admin-overview/FacilityAdminAnalyticsTypes';
+import {type  AnalyticsGroupBy } from '../../../api/admin-overview/FacilityAdminAnalyticsTypes';
 import {
   ANALYTICS_GROUP_OPTIONS,
   cn,

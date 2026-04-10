@@ -6,7 +6,7 @@
  * ============================================================================
  */
 
-import { BillingRevenueDashboardData } from '../../../../medical-records/api/billing-revenue-stats/BillingRevenueDashboardTypes';
+import {type  BillingRevenueDashboardData } from '../../../../medical-records/api/billing-revenue-stats/BillingRevenueDashboardTypes';
 
 // ---------------------------------------------------------------------------
 // Filter types (same as billing dashboard)
