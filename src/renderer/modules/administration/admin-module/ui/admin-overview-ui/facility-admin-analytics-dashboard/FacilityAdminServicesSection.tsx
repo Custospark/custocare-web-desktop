@@ -280,7 +280,7 @@ function FacilityAdminServicesSection({
             <button
               onClick={() => handleNavigate(ADMIN_ROUTES.SERVICE_CATALOG, 'Service Catalog')}
               className={cn(
-                'flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
+                'flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
                 isDark
                   ? 'border border-emerald-500/30 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
                   : 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
@@ -294,7 +294,7 @@ function FacilityAdminServicesSection({
             <button
               onClick={() => handleNavigate(ADMIN_ROUTES.SERVICE_CATALOG, 'Add New Service')}
               className={cn(
-                'flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
+                'flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
                 isDark
                   ? 'border border-blue-500/30 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
                   : 'border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
@@ -388,42 +388,42 @@ function FacilityAdminServicesSection({
             />
           )}
 
-          <div
+       <div
+          className={cn(
+            'mt-4 grid grid-cols-2 gap-3 border-t pt-4',
+            isDark ? 'border-white/10' : 'border-slate-200'
+          )}
+        >
+          <button
+            onClick={() =>
+              handleNavigate(ADMIN_ROUTES.BILLING_CYCLE_REVENUE_STATS, 'Revenue Analysis')
+            }
             className={cn(
-              'mt-4 grid grid-cols-2 gap-3 border-t pt-4',
-              isDark ? 'border-white/10' : 'border-slate-200'
+              'flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
+              isDark
+                ? 'border border-violet-500/30 bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
+                : 'border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100'
             )}
           >
-            <button
-              onClick={() =>
-                handleNavigate(ADMIN_ROUTES.BILLING_CYCLE_REVENUE_STATS, 'Revenue Analysis')
-              }
-              className={cn(
-                'flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
-                isDark
-                  ? 'border border-violet-500/30 bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
-                  : 'border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100'
-              )}
-            >
-              <TrendingUp className="h-4 w-4" />
-              <span>Revenue Insights</span>
-              <ChevronRight className="h-4 w-4" />
-            </button>
+            <TrendingUp className="h-4 w-4" />
+            <span>Revenue Insights</span>
+            <ChevronRight className="h-4 w-4" />
+          </button>
 
-            <button
-              onClick={() => handleNavigate(ADMIN_ROUTES.SERVICE_CATALOG, 'Pricing Configuration')}
-              className={cn(
-                'flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
-                isDark
-                  ? 'border border-amber-500/30 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30'
-                  : 'border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
-              )}
-            >
-              <Settings className="h-4 w-4" />
-              <span>Configure Pricing</span>
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
+          <button
+            onClick={() => handleNavigate(ADMIN_ROUTES.SERVICE_CATALOG, 'Pricing Configuration')}
+            className={cn(
+              'flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
+              isDark
+                ? 'border border-amber-500/30 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30'
+                : 'border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+            )}
+          >
+            <Settings className="h-4 w-4" />
+            <span>Configure Pricing</span>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
         </div>
       </div>
     </motion.section>

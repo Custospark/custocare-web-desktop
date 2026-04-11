@@ -35,6 +35,7 @@ import {
 import { ADMIN_ROUTES } from '../../../../../../app/routes/constants/administration.paths';
 import { ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from '../../../../../../app/routes/constants/administration.paths';
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
+import { formatText } from '../../../../../medical-records/ui/revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 
 interface FacilityAdminCapacitySectionProps {
   isDark: boolean;
@@ -263,34 +264,34 @@ function FacilityAdminCapacitySection({
             )}
           </div>
 
-          <div
-            className={cn(
-              'mt-4 border-t pt-4',
-              isDark ? 'border-white/10' : 'border-slate-200'
-            )}
-          >
-            <button
-              onClick={() => handleNavigate(ADMIN_ROUTES.FACILITY_SETUP, 'Departments')}
+        <div
               className={cn(
-                'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all',
-                isDark
-                  ? safeDepartments.length === 0
-                    ? 'border border-blue-500/40 bg-blue-600/30 text-blue-200 hover:bg-blue-600/40'
-                    : 'border border-blue-500/30 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
-                  : safeDepartments.length === 0
-                  ? 'border border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
-                  : 'border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                'mt-4 border-t pt-4',
+                isDark ? 'border-white/10' : 'border-slate-200'
               )}
             >
-              {safeDepartments.length === 0 ? (
-                <PlusCircle className="h-4 w-4" />
-              ) : (
-                <Settings className="h-4 w-4" />
-              )}
-              <span>{safeDepartments.length === 0 ? 'Configure Departments' : 'Manage Departments'}</span>
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
+              <button
+                onClick={() => handleNavigate(ADMIN_ROUTES.FACILITY_SETUP, 'Departments')}
+                className={cn(
+                  'flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all',
+                  isDark
+                    ? safeDepartments.length === 0
+                      ? 'border border-blue-500/40 bg-blue-600/30 text-blue-200 hover:bg-blue-600/40'
+                      : 'border border-blue-500/30 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
+                    : safeDepartments.length === 0
+                    ? 'border border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                    : 'border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                )}
+              >
+                {safeDepartments.length === 0 ? (
+                  <PlusCircle className="h-4 w-4" />
+                ) : (
+                  <Settings className="h-4 w-4" />
+                )}
+                <span>{safeDepartments.length === 0 ? 'Configure Departments' : 'Manage Departments'}</span>
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
         </div>
 
         <div className={cn(subtlePanelClass, 'p-4')}>
@@ -346,7 +347,7 @@ function FacilityAdminCapacitySection({
             )}
           </div>
 
-          <div
+         <div
             className={cn(
               'mt-4 border-t pt-4',
               isDark ? 'border-white/10' : 'border-slate-200'
@@ -360,7 +361,7 @@ function FacilityAdminCapacitySection({
                 )
               }
               className={cn(
-                'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all',
+                'flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all',
                 isDark
                   ? safeWards.length === 0
                     ? 'border border-violet-500/40 bg-violet-600/30 text-violet-200 hover:bg-violet-600/40'
@@ -396,7 +397,7 @@ function FacilityAdminCapacitySection({
                           : 'border-slate-200 bg-white text-slate-700'
                       )}
                     >
-                      {item.space_type} • {formatNumber(item.total)}
+                      {formatText(item.space_type)} • {formatNumber(item.total)}
                     </div>
                   ))}
                   {safeSpaceTypes.length > 10 && (
@@ -419,39 +420,39 @@ function FacilityAdminCapacitySection({
               )}
             </div>
 
-            <div
+         <div
+            className={cn(
+              'mt-4 border-t pt-4',
+              isDark ? 'border-white/10' : 'border-slate-200'
+            )}
+          >
+            <button
+              onClick={() =>
+                handleNavigate(
+                  ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.CLINICAL_ROOMS,
+                  'Spaces'
+                )
+              }
               className={cn(
-                'mt-4 border-t pt-4',
-                isDark ? 'border-white/10' : 'border-slate-200'
+                'flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all',
+                isDark
+                  ? safeSpaceTypes.length === 0
+                    ? 'border border-emerald-500/40 bg-emerald-600/30 text-emerald-200 hover:bg-emerald-600/40'
+                    : 'border border-emerald-500/30 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
+                  : safeSpaceTypes.length === 0
+                  ? 'border border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700'
+                  : 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
               )}
             >
-              <button
-                onClick={() =>
-                  handleNavigate(
-                    ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.CLINICAL_ROOMS,
-                    'Spaces'
-                  )
-                }
-                className={cn(
-                  'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all',
-                  isDark
-                    ? safeSpaceTypes.length === 0
-                      ? 'border border-emerald-500/40 bg-emerald-600/30 text-emerald-200 hover:bg-emerald-600/40'
-                      : 'border border-emerald-500/30 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
-                    : safeSpaceTypes.length === 0
-                    ? 'border border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700'
-                    : 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                )}
-              >
-                {safeSpaceTypes.length === 0 ? (
-                  <PlusCircle className="h-4 w-4" />
-                ) : (
-                  <LayoutDashboard className="h-4 w-4" />
-                )}
-                <span>{safeSpaceTypes.length === 0 ? 'Configure Spaces' : 'Manage Spaces'}</span>
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+              {safeSpaceTypes.length === 0 ? (
+                <PlusCircle className="h-4 w-4" />
+              ) : (
+                <LayoutDashboard className="h-4 w-4" />
+              )}
+              <span>{safeSpaceTypes.length === 0 ? 'Configure Spaces' : 'Manage Spaces'}</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
           </div>
         </div>
       </div>

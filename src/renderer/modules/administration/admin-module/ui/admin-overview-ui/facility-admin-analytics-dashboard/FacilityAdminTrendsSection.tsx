@@ -309,7 +309,6 @@ function FacilityAdminTrendsSection({
             </div>
           )}
         </div>
-
         <div
           className={cn(
             'mt-6 grid grid-cols-2 gap-3 border-t pt-4',
@@ -321,7 +320,7 @@ function FacilityAdminTrendsSection({
               handleNavigate(ADMIN_ROUTES.BILLING_CYCLE_REVENUE_STATS, 'Revenue Details')
             }
             className={cn(
-              'flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
+              'flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
               isDark
                 ? 'border border-violet-500/30 bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
                 : 'border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100'
@@ -337,7 +336,7 @@ function FacilityAdminTrendsSection({
               handleNavigate(ADMIN_ROUTES.BILLING_CYCLE_BILLING_REVIEW, 'Revenue Review')
             }
             className={cn(
-              'flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
+              'flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
               isDark
                 ? 'border border-amber-500/30 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30'
                 : 'border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'

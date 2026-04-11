@@ -235,26 +235,26 @@ function FacilityAdminInventorySection({
             />
           )}
 
-          <div
-            className={cn(
-              'mt-4 border-t pt-4',
-              isDark ? 'border-white/10' : 'border-slate-200'
-            )}
-          >
-            <button
-              onClick={() => handleNavigate(ADMIN_ROUTES.INVENTORY, 'Inventory Management')}
+<div
               className={cn(
-                'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
-                isDark
-                  ? 'border border-rose-500/30 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30'
-                  : 'border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
+                'mt-4 border-t pt-4',
+                isDark ? 'border-white/10' : 'border-slate-200'
               )}
             >
-              <Boxes className="h-4 w-4" />
-              <span>Manage Inventory</span>
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
+              <button
+                onClick={() => handleNavigate(ADMIN_ROUTES.INVENTORY, 'Inventory Management')}
+                className={cn(
+                  'flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
+                  isDark
+                    ? 'border border-rose-500/30 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30'
+                    : 'border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
+                )}
+              >
+                <Boxes className="h-4 w-4" />
+                <span>Manage Inventory</span>
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
         </div>
 
         <div className={cn(subtlePanelClass, 'p-4')}>
