@@ -19,7 +19,6 @@ import { type SidebarProps } from '../../types/index';
 import { cn } from '../../types/cn';
 import { ROUTES } from '../../../app/routes/routeConstants';
 import { PLATFORM_ADMIN_ROUTES } from '../../../app/routes/constants/platform-administration.paths';
-import { ADMIN_ROUTES } from '../../../app/routes/constants/administration.paths';
 import { useAppSelector } from '../../../app/store/hooks/useApp';
 import {
   selectAccessibleModuleCodes,
@@ -241,8 +240,8 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         id: 'administration',
         label: 'Facility Governance',
         icon: <MonitorCheckIcon className="w-5 h-5" />,
-        href: ADMIN_ROUTES.OVERVIEW,
-        route: ADMIN_ROUTES.OVERVIEW,
+        href: ROUTES.ADMINISTRATION,
+        route: ROUTES.ADMINISTRATION,
         description: 'Configure facilities, manage workforce access, services, and operational controls',
         stats: 'Governance',
         glowColor: 'from-slate-600 to-slate-500',
