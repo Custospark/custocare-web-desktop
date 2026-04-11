@@ -20,7 +20,6 @@ import { cn } from '../../types/cn';
 import { ROUTES } from '../../../app/routes/routeConstants';
 import { PLATFORM_ADMIN_ROUTES } from '../../../app/routes/constants/platform-administration.paths';
 import { ADMIN_ROUTES } from '../../../app/routes/constants/administration.paths';
-import { MEDICAL_RECORDS_ROUTES } from '../../../app/routes/routeConstants';
 import { useAppSelector } from '../../../app/store/hooks/useApp';
 import {
   selectAccessibleModuleCodes,
