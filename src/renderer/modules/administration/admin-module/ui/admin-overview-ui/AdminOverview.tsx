@@ -14,7 +14,7 @@ import { useFacilityAdminAnalyticsQuery } from '../../api/admin-overview/Facilit
 import type {
   AnalyticsGroupBy,
   FacilityAdminAnalyticsFilters,
-} from  '../../api/admin-overview/FacilityAdminAnalyticsTypes';
+} from '../../api/admin-overview/FacilityAdminAnalyticsTypes';
 
 import DashboardMetricsGrid from '../../../../medical-records/ui/overview/medical-records-dashboard/DashboardMetricsGrid';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
@@ -202,6 +202,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
 
   const handleSelectGroupBy = (value: AnalyticsGroupBy) => {
     setSelectedGroupBy(value);
+
     setAppliedFilters((prev) => ({
       ...prev,
       group_by: value,
@@ -209,13 +210,14 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
     }));
   };
 
-  const handleApplyDateRange = () => {
-    if (!customFrom || !customTo) return;
+  const handleApplyDateRange = (from: string, to: string) => {
+    setCustomFrom(from);
+    setCustomTo(to);
 
     setAppliedFilters((prev) => ({
       ...prev,
-      date_from: customFrom,
-      date_to: customTo,
+      date_from: from,
+      date_to: to,
       group_by: selectedGroupBy,
       top: prev.top ?? 6,
     }));
@@ -226,7 +228,10 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
     setCustomTo('');
 
     setAppliedFilters((prev) => ({
-      group_by: prev.group_by ?? selectedGroupBy,
+      ...prev,
+      date_from: undefined,
+      date_to: undefined,
+      group_by: selectedGroupBy,
       top: prev.top ?? 6,
     }));
   };
@@ -235,7 +240,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
     return (
       <LoadingSkeleton
         variant="dashboard"
-        message="Loading facility  analytics dashboard data..."
+        message="Loading facility analytics dashboard data..."
         theme={isDark ? 'dark' : 'light'}
         className="min-h-screen"
       />

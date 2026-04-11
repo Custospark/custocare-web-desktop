@@ -11,6 +11,7 @@ import { useSelector } from 'react-redux';
 import { axiosInstance } from '../../../../../app/api/axiosConfig';
 import type { RootState } from '../../../../../app/store/store';
 import { getActiveFacilityId } from '../../../../../app/store/utils/contextSelectors';
+import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import type {
   ApiErrorResponse,
   FacilityAdminAnalyticsFilters,
@@ -79,6 +80,7 @@ export type UseFacilityAdminAnalyticsQueryOptions = Omit<
   'queryKey' | 'queryFn'
 > & {
   facilityId?: number;
+  showErrorToast?: boolean;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -89,12 +91,14 @@ export const useFacilityAdminAnalyticsQuery = (
   filters: FacilityAdminAnalyticsFilters = {},
   options?: UseFacilityAdminAnalyticsQueryOptions
 ) => {
+  const { showToast } = useToast();
   const activeFacilityId = useSelector((state: RootState) =>
     getActiveFacilityId(state)
   );
 
   const facilityId = options?.facilityId ?? activeFacilityId;
   const cleanedFilters = cleanAnalyticsFilters(filters);
+  const showErrorToast = options?.showErrorToast ?? true;
 
   return useQuery<
     FacilityAdminAnalyticsResponse,
@@ -108,13 +112,33 @@ export const useFacilityAdminAnalyticsQuery = (
     ),
     queryFn: () => {
       if (!facilityId) {
-        throw new Error('Active facility ID is required to fetch facility analytics.');
+        const errorMessage = 'Active facility ID is required to fetch facility analytics.';
+        if (showErrorToast) {
+          showToast('error', errorMessage, 8000);
+        }
+        throw new Error(errorMessage);
       }
       return getFacilityAdminAnalytics(Number(facilityId), cleanedFilters);
     },
     enabled: Boolean(facilityId) && (options?.enabled ?? true),
     staleTime: 60_000,
     refetchOnWindowFocus: false,
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      if (!showErrorToast) return;
+
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to fetch facility analytics.';
+      
+      // Extract validation errors if present
+      let errorDetails = '';
+      if (error.response?.data?.errors) {
+        errorDetails = Object.entries(error.response.data.errors)
+          .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
+          .join(' | ');
+      }
+
+      const displayMessage = errorDetails ? `${apiMessage} (${errorDetails})` : apiMessage;
+      showToast('error', displayMessage, 8000);
+    },
     ...options,
   });
 };
@@ -124,3 +148,42 @@ export const useFacilityAdminAnalyticsQuery = (
 /* -------------------------------------------------------------------------- */
 
 export { getFacilityAdminAnalytics };
+
+/* -------------------------------------------------------------------------- */
+/*                           UTILITY FUNCTIONS                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Helper function to extract error message from Axios error.
+ * Prioritizes API message, falls back to generic error message.
+ * 
+ * @param error - Axios error from failed request
+ * @param fallbackMessage - Default message if API message unavailable
+ * @returns Human-readable error message
+ */
+export const extractErrorMessage = (
+  error: AxiosError<ApiErrorResponse>,
+  fallbackMessage = 'An unexpected error occurred.'
+): string => {
+  return error.response?.data?.message || error.message || fallbackMessage;
+};
+
+/**
+ * Helper function to format validation errors into readable string.
+ * Converts Laravel validation error format to user-friendly display.
+ * 
+ * @param errors - Validation errors object from API
+ * @returns Formatted error string or empty string if no errors
+ */
+export const formatValidationErrors = (errors?: Record<string, string[]>): string => {
+  if (!errors || Object.keys(errors).length === 0) {
+    return '';
+  }
+
+  return Object.entries(errors)
+    .map(([field, messages]) => {
+      const fieldName = field.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+      return `${fieldName}: ${messages.join(', ')}`;
+    })
+    .join(' | ');
+};
