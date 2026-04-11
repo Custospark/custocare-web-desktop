@@ -130,7 +130,7 @@ const FacilityAdminDashboardHeader: React.FC<FacilityAdminDashboardHeaderProps> 
       />
 
       <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-        <div className="max-w-3xl">
+        <div className="max-w-3xl flex-1">
           <div className="mb-4 inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em]">
             <span
               className={cn(
@@ -203,7 +203,7 @@ const FacilityAdminDashboardHeader: React.FC<FacilityAdminDashboardHeaderProps> 
           </AnimatePresence>
         </div>
 
-        <div className="flex w-full flex-col gap-4 xl:w-auto xl:min-w-[380px]">
+        <div className="flex flex-col gap-4">
           <div className={cn(subtlePanelClass, 'p-4')}>
             <div className="mb-3 flex items-center justify-between">
               <span
@@ -229,7 +229,7 @@ const FacilityAdminDashboardHeader: React.FC<FacilityAdminDashboardHeaderProps> 
               </button>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               {ANALYTICS_GROUP_OPTIONS.map((option) => {
                 const active = selectedGroupBy === option.value;
 
@@ -238,7 +238,7 @@ const FacilityAdminDashboardHeader: React.FC<FacilityAdminDashboardHeaderProps> 
                     key={option.value}
                     onClick={() => onSelectGroupBy(option.value)}
                     className={cn(
-                      'cursor-pointer rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all',
+                      'cursor-pointer rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all whitespace-nowrap',
                       active
                         ? isDark
                           ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -256,7 +256,7 @@ const FacilityAdminDashboardHeader: React.FC<FacilityAdminDashboardHeaderProps> 
               <button
                 onClick={() => setShowCustomPicker(!showCustomPicker)}
                 className={cn(
-                  'cursor-pointer rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all',
+                  'cursor-pointer rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all whitespace-nowrap',
                   showCustomPicker
                     ? isDark
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -278,14 +278,14 @@ const FacilityAdminDashboardHeader: React.FC<FacilityAdminDashboardHeaderProps> 
                   exit={{ opacity: 0, height: 0, y: -8 }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                     <input
                       type="date"
                       value={customFrom}
                       max={todayLocalDate}
                       onChange={(e) => onCustomFromChange(e.target.value)}
                       className={cn(
-                        'cursor-pointer rounded-2xl border px-4 py-3 text-sm outline-none transition-all',
+                        'cursor-pointer rounded-2xl border px-4 py-3 text-sm outline-none transition-all flex-1',
                         isDark
                           ? 'border-white/10 bg-white/5 text-white'
                           : 'border-slate-200 bg-white text-slate-900'
@@ -298,7 +298,7 @@ const FacilityAdminDashboardHeader: React.FC<FacilityAdminDashboardHeaderProps> 
                       max={todayLocalDate}
                       onChange={(e) => onCustomToChange(e.target.value)}
                       className={cn(
-                        'cursor-pointer rounded-2xl border px-4 py-3 text-sm outline-none transition-all',
+                        'cursor-pointer rounded-2xl border px-4 py-3 text-sm outline-none transition-all flex-1',
                         isDark
                           ? 'border-white/10 bg-white/5 text-white'
                           : 'border-slate-200 bg-white text-slate-900'
@@ -309,7 +309,7 @@ const FacilityAdminDashboardHeader: React.FC<FacilityAdminDashboardHeaderProps> 
                       onClick={handleApplyRangeClick}
                       disabled={!customFrom || !customTo}
                       className={cn(
-                        'cursor-pointer rounded-2xl px-4 py-3 text-sm font-semibold transition-all',
+                        'cursor-pointer rounded-2xl px-4 py-3 text-sm font-semibold transition-all whitespace-nowrap',
                         !customFrom || !customTo
                           ? isDark
                             ? 'cursor-not-allowed bg-white/5 text-slate-500'

@@ -19,6 +19,9 @@ import {
   Receipt,
   ChevronRight,
   Eye,
+  Users,
+  Activity,
+  Gauge,
 } from 'lucide-react';
 
 import {
@@ -78,6 +81,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
     if (!presenceWorkloadSeries.length) {
       return {
         avgOnDuty: 0,
+        avgOffDuty: 0,
         peakBusy: 0,
         avgPatientsPerStaff: 0,
       };
@@ -85,6 +89,10 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
 
     const avgOnDuty =
       presenceWorkloadSeries.reduce((sum, item) => sum + item.onDuty, 0) /
+      presenceWorkloadSeries.length;
+
+    const avgOffDuty =
+      presenceWorkloadSeries.reduce((sum, item) => sum + item.offDuty, 0) /
       presenceWorkloadSeries.length;
 
     const peakBusy = Math.max(...presenceWorkloadSeries.map((item) => item.busy));
@@ -97,6 +105,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
 
     return {
       avgOnDuty,
+      avgOffDuty,
       peakBusy,
       avgPatientsPerStaff,
     };
@@ -122,153 +131,13 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
   }
 
   return (
-    <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-      {/* Staff Presence & Workload Trajectory Section */}
+    <div className="space-y-6">
+      {/* Revenue Signal Section - FULL WIDTH */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.08 }}
-        className={cn(panelClass, 'xl:col-span-8 p-6')}
-      >
-        <div className="mb-4 flex items-start justify-between">
-          <div>
-            <h2 className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-              Staff Presence & Workload Trajectory
-            </h2>
-            <p className={cn('mt-1 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
-              Operational staffing movement and workload pressure across the selected reporting window.
-            </p>
-          </div>
-        </div>
-
-        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className={cn(subtlePanelClass, 'px-4 py-3', 'cursor-default')}>
-            <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-              Avg On Duty
-            </p>
-            <p className={cn('mt-1 text-lg font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-              {Math.round(summary.avgOnDuty)}
-            </p>
-          </div>
-
-          <div className={cn(subtlePanelClass, 'px-4 py-3', 'cursor-default')}>
-            <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-              Peak Busy Staff
-            </p>
-            <p className={cn('mt-1 text-lg font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-              {summary.peakBusy}
-            </p>
-          </div>
-
-          <div className={cn(subtlePanelClass, 'px-4 py-3', 'cursor-default')}>
-            <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-              Avg Patients / Staff
-            </p>
-            <p className={cn('mt-1 text-lg font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-              {summary.avgPatientsPerStaff.toFixed(1)}
-            </p>
-          </div>
-        </div>
-
-        <div className="h-[360px]">
-          {presenceWorkloadSeries.length ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={presenceWorkloadSeries}
-                margin={{ top: 10, right: 10, left: -12, bottom: 0 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke={isDark ? 'rgba(148,163,184,0.12)' : '#E2E8F0'}
-                />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  yAxisId="left"
-                  tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  content={
-                    <EnterpriseTooltip
-                      isDark={isDark}
-                      valueFormatter={(value, name) =>
-                        name === 'Avg Patients / Staff'
-                          ? Number(value).toFixed(1)
-                          : `${Number(value ?? 0)}`
-                      }
-                    />
-                  }
-                />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="onDuty"
-                  name="On Duty"
-                  stroke="#2563EB"
-                  strokeWidth={3}
-                  dot={false}
-                  activeDot={{ r: 5 }}
-                />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="busy"
-                  name="Busy"
-                  stroke="#F59E0B"
-                  strokeWidth={2.5}
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="offDuty"
-                  name="Off Duty"
-                  stroke="#94A3B8"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="avgPatientsPerStaff"
-                  name="Avg Patients / Staff"
-                  stroke="#10B981"
-                  strokeWidth={2.5}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyChartState
-              title="No staff trend data"
-              subtitle="Staff presence and workload movement will appear here when available."
-              isDark={isDark}
-            />
-          )}
-        </div>       
-      </motion.div>
-
-      {/* Revenue Signal Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.12 }}
-        className={cn(panelClass, 'xl:col-span-4 p-6')}
+        transition={{ duration: 0.35, delay: 0.04 }}
+        className={cn(panelClass, 'p-6')}
       >
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>
@@ -276,7 +145,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
               Revenue Signal
             </h2>
             <p className={cn('mt-1 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
-              Minimal financial visibility with the most important trend signal.
+              Financial performance and collection trends.
             </p>
           </div>
 
@@ -304,7 +173,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
           )}
         </div>
 
-        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
             <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
               Latest Net Revenue
@@ -326,19 +195,45 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
                 : '—'}
             </p>
           </div>
+
+          <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
+            <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
+              Outstanding
+            </p>
+            <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              {latestFinancialPoint
+                ? formatCompactCurrency(latestFinancialPoint.outstanding)
+                : '—'}
+            </p>
+          </div>
+
+          <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
+            <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
+              Invoices
+            </p>
+            <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              {latestFinancialPoint
+                ? latestFinancialPoint.invoices.toLocaleString()
+                : '—'}
+            </p>
+          </div>
         </div>
 
-        <div className="h-[360px]">
+        <div className="h-[400px]">
           {financialTrend.length ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
                 data={financialTrend}
-                margin={{ top: 10, right: 10, left: -14, bottom: 0 }}
+                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
               >
                 <defs>
                   <linearGradient id="facilityRevenueGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10B981" stopOpacity={0.35} />
                     <stop offset="95%" stopColor="#10B981" stopOpacity={0.03} />
+                  </linearGradient>
+                  <linearGradient id="facilityCollectionsGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2563EB" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#2563EB" stopOpacity={0.03} />
                   </linearGradient>
                 </defs>
 
@@ -380,13 +275,23 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
                   strokeWidth={3}
                   activeDot={{ r: 5 }}
                 />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="collections"
                   name="Collections"
                   stroke="#2563EB"
+                  fill="url(#facilityCollectionsGradient)"
                   strokeWidth={2.5}
+                  activeDot={{ r: 5 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="outstanding"
+                  name="Outstanding"
+                  stroke="#F59E0B"
+                  strokeWidth={2}
                   dot={false}
+                  strokeDasharray="5 5"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -400,7 +305,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
         </div>
 
         {/* Action Buttons for Revenue */}
-        <div className={cn('mt-4 pt-4 border-t grid grid-cols-2 gap-3', isDark ? 'border-white/10' : 'border-slate-200')}>
+        <div className={cn('mt-6 pt-4 border-t grid grid-cols-2 gap-3', isDark ? 'border-white/10' : 'border-slate-200')}>
           <button
             onClick={() => handleNavigate(ADMIN_ROUTES.BILLING_CYCLE_REVENUE_STATS, 'Revenue Details')}
             className={cn(
@@ -430,7 +335,270 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
           </button>
         </div>
       </motion.div>
-    </section>
+
+      {/* Staff Presence & Workload Trajectory Section - FULL WIDTH */}
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.08 }}
+        className={cn(panelClass, 'p-6')}
+      >
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <h2 className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              Staff Presence & Workload Trajectory
+            </h2>
+            <p className={cn('mt-1 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
+              Operational staffing movement and workload pressure across the selected reporting window.
+            </p>
+          </div>
+        </div>
+
+        {/* KPI Summary Cards */}
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className={cn(subtlePanelClass, 'px-4 py-3', 'cursor-default')}>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-blue-500" />
+              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
+                Avg On Duty
+              </p>
+            </div>
+            <p className={cn('mt-1 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              {Math.round(summary.avgOnDuty)}
+            </p>
+          </div>
+
+          <div className={cn(subtlePanelClass, 'px-4 py-3', 'cursor-default')}>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-gray-500" />
+              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
+                Avg Off Duty
+              </p>
+            </div>
+            <p className={cn('mt-1 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              {Math.round(summary.avgOffDuty)}
+            </p>
+          </div>
+
+          <div className={cn(subtlePanelClass, 'px-4 py-3', 'cursor-default')}>
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-amber-500" />
+              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
+                Peak Busy Staff
+              </p>
+            </div>
+            <p className={cn('mt-1 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              {summary.peakBusy}
+            </p>
+          </div>
+
+          <div className={cn(subtlePanelClass, 'px-4 py-3', 'cursor-default')}>
+            <div className="flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-emerald-500" />
+              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
+                Avg Patients / Staff
+              </p>
+            </div>
+            <p className={cn('mt-1 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+              {summary.avgPatientsPerStaff.toFixed(1)}
+            </p>
+          </div>
+        </div>
+
+        {/* Stacked Charts */}
+        <div className="space-y-8">
+          {/* Chart 1: Staff Availability */}
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-500" />
+              <h3 className={cn('text-base font-semibold', isDark ? 'text-slate-300' : 'text-slate-700')}>
+                Staff Availability
+              </h3>
+            </div>
+            <div className="h-[320px]">
+              {presenceWorkloadSeries.length ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={presenceWorkloadSeries}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={isDark ? 'rgba(148,163,184,0.12)' : '#E2E8F0'}
+                    />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      content={
+                        <EnterpriseTooltip
+                          isDark={isDark}
+                          valueFormatter={(value) => `${Number(value ?? 0)}`}
+                        />
+                      }
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Line
+                      type="monotone"
+                      dataKey="onDuty"
+                      name="On Duty"
+                      stroke="#2563EB"
+                      strokeWidth={3}
+                      dot={false}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="offDuty"
+                      name="Off Duty"
+                      stroke="#94A3B8"
+                      strokeWidth={2}
+                      dot={false}
+                      strokeDasharray="5 5"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <EmptyChartState
+                  title="No staff availability data"
+                  subtitle="Staff presence data will appear here when available."
+                  isDark={isDark}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Chart 2: Active Workload */}
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <Activity className="h-5 w-5 text-amber-500" />
+              <h3 className={cn('text-base font-semibold', isDark ? 'text-slate-300' : 'text-slate-700')}>
+                Active Workload
+              </h3>
+            </div>
+            <div className="h-[320px]">
+              {presenceWorkloadSeries.length ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={presenceWorkloadSeries}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={isDark ? 'rgba(148,163,184,0.12)' : '#E2E8F0'}
+                    />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      content={
+                        <EnterpriseTooltip
+                          isDark={isDark}
+                          valueFormatter={(value) => `${Number(value ?? 0)}`}
+                        />
+                      }
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Line
+                      type="monotone"
+                      dataKey="busy"
+                      name="Busy Staff"
+                      stroke="#F59E0B"
+                      strokeWidth={3}
+                      dot={false}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <EmptyChartState
+                  title="No workload data"
+                  subtitle="Staff workload trends will appear here when available."
+                  isDark={isDark}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Chart 3: Staff Efficiency */}
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <Gauge className="h-5 w-5 text-emerald-500" />
+              <h3 className={cn('text-base font-semibold', isDark ? 'text-slate-300' : 'text-slate-700')}>
+                Patients Per Staff Member
+              </h3>
+            </div>
+            <div className="h-[320px]">
+              {presenceWorkloadSeries.length ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={presenceWorkloadSeries}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={isDark ? 'rgba(148,163,184,0.12)' : '#E2E8F0'}
+                    />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                      domain={[0, 'auto']}
+                    />
+                    <Tooltip
+                      content={
+                        <EnterpriseTooltip
+                          isDark={isDark}
+                          valueFormatter={(value) => Number(value).toFixed(1)}
+                        />
+                      }
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Line
+                      type="monotone"
+                      dataKey="avgPatientsPerStaff"
+                      name="Avg Patients Per Staff"
+                      stroke="#10B981"
+                      strokeWidth={3}
+                      dot={false}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <EmptyChartState
+                  title="No efficiency data"
+                  subtitle="Staff efficiency metrics will appear here when available."
+                  isDark={isDark}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </div>
   );
 };
 

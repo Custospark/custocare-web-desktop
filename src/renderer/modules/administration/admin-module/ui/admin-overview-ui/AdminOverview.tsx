@@ -70,12 +70,12 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
     };
   }, [isDark]);
 
-  const [selectedGroupBy, setSelectedGroupBy] = useState<AnalyticsGroupBy>('week');
+  const [selectedGroupBy, setSelectedGroupBy] = useState<AnalyticsGroupBy>('day');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
 
   const [appliedFilters, setAppliedFilters] = useState<FacilityAdminAnalyticsFilters>({
-    group_by: 'week',
+    group_by: 'day',
     top: 6,
   });
 

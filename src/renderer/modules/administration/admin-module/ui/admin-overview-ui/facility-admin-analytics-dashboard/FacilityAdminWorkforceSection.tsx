@@ -354,7 +354,7 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
                   />
 
                   {/* Additional metrics */}
-                  <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                  {/* <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
                     <div>
                       <span className={cn(isDark ? 'text-slate-400' : 'text-slate-500')}>
                         Patients Treated:
@@ -373,7 +373,7 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
                         </span>
                       </div>
                     )}
-                  </div>
+                  </div> */}
                 </div>
               ))}
             </div>
