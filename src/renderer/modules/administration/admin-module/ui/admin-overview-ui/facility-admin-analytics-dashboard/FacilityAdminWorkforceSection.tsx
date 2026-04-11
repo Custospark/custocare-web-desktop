@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -11,15 +11,15 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { 
-  Activity, 
-  ShieldCheck, 
-  UserCheck, 
-  UserX, 
-  Users, 
+import {
+  Activity,
   Award,
   ChevronRight,
-  UserPlus
+  ShieldCheck,
+  UserCheck,
+  UserPlus,
+  UserX,
+  Users,
 } from 'lucide-react';
 
 import type {
@@ -45,44 +45,66 @@ import {
 import { formatText } from '../../../../../medical-records/ui/revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 import { ADMIN_ROUTES } from '../../../../../../app/routes/constants/administration.paths';
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
+
 interface FacilityAdminWorkforceSectionProps {
   isDark: boolean;
-  currentSnapshot: StaffCurrentSnapshot;
-  roleDistribution: RoleDistributionItem[];
-  highWorkloadStaff: HighWorkloadStaffItem[];
+  currentSnapshot?: StaffCurrentSnapshot | null;
+  roleDistribution?: RoleDistributionItem[] | null;
+  highWorkloadStaff?: HighWorkloadStaffItem[] | null;
 }
 
-const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps> = ({
+const EMPTY_CURRENT_SNAPSHOT: StaffCurrentSnapshot = {
+  total_active: 0,
+  staff_on_duty: 0,
+  staff_busy: 0,
+  staff_off_duty: 0,
+  occupancy_rate: 0,
+};
+
+function FacilityAdminWorkforceSection({
   isDark,
   currentSnapshot,
   roleDistribution,
   highWorkloadStaff,
-}) => {
+}: FacilityAdminWorkforceSectionProps) {
   const navigate = useNavigate();
   const [isNavigating, setIsNavigating] = useState<string | null>(null);
 
   const panelClass = getPanelClass(isDark);
   const subtlePanelClass = getSubtlePanelClass(isDark);
 
-  const topRoles = [...roleDistribution]
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 2);
+  const safeCurrentSnapshot = currentSnapshot ?? EMPTY_CURRENT_SNAPSHOT;
+  const safeRoleDistribution = Array.isArray(roleDistribution) ? roleDistribution : [];
+  const safeHighWorkloadStaff = Array.isArray(highWorkloadStaff) ? highWorkloadStaff : [];
 
-  const topWorkload = [...highWorkloadStaff]
-    .sort((a, b) => b.workload_percentage - a.workload_percentage)
-    .slice(0, 2);
+  const topRoles = useMemo(
+    () =>
+      [...safeRoleDistribution]
+        .sort((a, b) => Number(b.count ?? 0) - Number(a.count ?? 0))
+        .slice(0, 6),
+    [safeRoleDistribution]
+  );
 
-  // Navigation handler with loading state
+  const topWorkload = useMemo(
+    () =>
+      [...safeHighWorkloadStaff]
+        .sort(
+          (a, b) =>
+            Number(b.workload_percentage ?? 0) - Number(a.workload_percentage ?? 0)
+        )
+        .slice(0, 6),
+    [safeHighWorkloadStaff]
+  );
+
   const handleNavigate = (url: string, sectionName: string) => {
     setIsNavigating(sectionName);
     navigate(url);
   };
 
-  // Show loading skeleton if navigating
   if (isNavigating) {
     return (
-      <LoadingSkeleton 
-        variant="dashboard" 
+      <LoadingSkeleton
+        variant="dashboard"
         theme={isDark ? 'dark' : 'light'}
         message={`Loading ${isNavigating}...`}
       />
@@ -106,7 +128,7 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
+        <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
           <div className="flex items-center gap-3">
             <div
               className={cn(
@@ -117,17 +139,15 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
               <UserCheck className="h-5 w-5" />
             </div>
             <div>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                On Duty
-              </p>
+              <p className="text-xs text-slate-500">On Duty</p>
               <p className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-                {formatNumber(currentSnapshot.staff_on_duty)}
+                {formatNumber(safeCurrentSnapshot.staff_on_duty)}
               </p>
             </div>
           </div>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
+        <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
           <div className="flex items-center gap-3">
             <div
               className={cn(
@@ -138,17 +158,15 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
               <Activity className="h-5 w-5" />
             </div>
             <div>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                Busy
-              </p>
+              <p className="text-xs text-slate-500">Busy</p>
               <p className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-                {formatNumber(currentSnapshot.staff_busy)}
+                {formatNumber(safeCurrentSnapshot.staff_busy)}
               </p>
             </div>
           </div>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
+        <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
           <div className="flex items-center gap-3">
             <div
               className={cn(
@@ -159,17 +177,15 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
               <UserX className="h-5 w-5" />
             </div>
             <div>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                Off Duty
-              </p>
+              <p className="text-xs text-slate-500">Off Duty</p>
               <p className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-                {formatNumber(currentSnapshot.staff_off_duty)}
+                {formatNumber(safeCurrentSnapshot.staff_off_duty)}
               </p>
             </div>
           </div>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
+        <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
           <div className="flex items-center gap-3">
             <div
               className={cn(
@@ -180,11 +196,9 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                Occupancy
-              </p>
+              <p className="text-xs text-slate-500">Occupancy</p>
               <p className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-                {formatPercent(currentSnapshot.occupancy_rate)}
+                {formatPercent(safeCurrentSnapshot.occupancy_rate)}
               </p>
             </div>
           </div>
@@ -192,25 +206,22 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
-        {/* Role Distribution Section */}
         <div className={cn(subtlePanelClass, 'p-4')}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
               Role Distribution
             </h3>
-            <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  'rounded-full px-3 py-1 text-xs font-semibold cursor-default',
-                  isDark ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-700'
-                )}
-              >
-                {formatNumber(roleDistribution.length)} roles
-              </span>
-            </div>
+            <span
+              className={cn(
+                'rounded-full px-3 py-1 text-xs font-semibold',
+                isDark ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-700'
+              )}
+            >
+              {formatNumber(safeRoleDistribution.length)} roles
+            </span>
           </div>
 
-          <div className="h-[280px]">
+          <div className="h-[280px] w-full">
             {topRoles.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
@@ -227,7 +238,7 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
                     tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(value) => formatText(formatNumber(value))}
+                    tickFormatter={(value) => formatNumber(Number(value ?? 0))}
                   />
                   <YAxis
                     type="category"
@@ -236,53 +247,57 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
                     tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(value) => formatText(value)}
+                    tickFormatter={(value) => formatText(String(value ?? '—'))}
                   />
                   <Tooltip
                     content={
                       <EnterpriseTooltip
                         isDark={isDark}
-                        labelFormatter={(label) => formatText(label)}
-                        valueFormatter={(value) => formatText(formatNumber(value))}
+                        labelFormatter={(label) => formatText(String(label ?? '—'))}
+                        valueFormatter={(value) => formatNumber(Number(value ?? 0))}
                       />
                     }
                   />
                   <Bar dataKey="count" name="Staff Count" radius={[0, 10, 10, 0]}>
                     {topRoles.map((item, index) => (
-                      <Cell key={item.role} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      <Cell key={`${item.role}-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyChartState
-                title="No role distribution data"
-                subtitle="Role composition will render here when available."
-                isDark={isDark}
-              />
+              <div className="flex h-full items-center justify-center">
+                <EmptyChartState
+                  title="No role distribution data"
+                  subtitle="Role composition will render here when available."
+                  isDark={isDark}
+                />
+              </div>
             )}
           </div>
 
-          {/* Action Buttons for Role Distribution */}
-          <div className={cn('mt-4 pt-4 border-t grid grid-cols-1 gap-3', isDark ? 'border-white/10' : 'border-slate-200')}>
+          <div
+            className={cn(
+              'mt-4 grid grid-cols-1 gap-3 border-t pt-4',
+              isDark ? 'border-white/10' : 'border-slate-200'
+            )}
+          >
             <button
               onClick={() => handleNavigate(ADMIN_ROUTES.TEAM, 'Team Directory')}
               className={cn(
-                'rounded-xl px-4 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                'flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
                 isDark
-                  ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30'
-                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+                  ? 'border border-blue-500/30 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
+                  : 'border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
               )}
             >
               <Users className="h-4 w-4" />
               <span>Team Directory</span>
               <ChevronRight className="h-4 w-4" />
             </button>
-           
           </div>
         </div>
 
-        {/* High Workload Staff Section */}
         <div className={cn(subtlePanelClass, 'p-4')}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
@@ -290,7 +305,7 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
             </h3>
             <div
               className={cn(
-                'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold cursor-default',
+                'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold',
                 isDark ? 'bg-rose-500/10 text-rose-300' : 'bg-rose-50 text-rose-700'
               )}
             >
@@ -300,12 +315,12 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
           </div>
 
           {topWorkload.length ? (
-            <div className="max-h-[400px] overflow-y-auto pr-2 space-y-4 custom-scrollbar">
+            <div className="max-h-[400px] space-y-4 overflow-y-auto pr-2">
               {topWorkload.map((staff) => (
                 <div
                   key={staff.staff_uuid}
                   className={cn(
-                    'rounded-2xl border p-4 cursor-default',
+                    'rounded-2xl border p-4',
                     isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white'
                   )}
                 >
@@ -332,8 +347,8 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
 
                     <div
                       className={cn(
-                        'rounded-full px-3 py-1 text-xs font-semibold cursor-default',
-                        staff.workload_percentage >= 85
+                        'rounded-full px-3 py-1 text-xs font-semibold',
+                        Number(staff.workload_percentage ?? 0) >= 85
                           ? isDark
                             ? 'bg-rose-500/10 text-rose-300'
                             : 'bg-rose-50 text-rose-700'
@@ -350,30 +365,8 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
                     label="Utilization"
                     value={clampPercentage(staff.workload_percentage)}
                     isDark={isDark}
-                    tone={staff.workload_percentage >= 85 ? 'rose' : 'amber'}
+                    tone={Number(staff.workload_percentage ?? 0) >= 85 ? 'rose' : 'amber'}
                   />
-
-                  {/* Additional metrics */}
-                  {/* <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <span className={cn(isDark ? 'text-slate-400' : 'text-slate-500')}>
-                        Patients Treated:
-                      </span>
-                      <span className={cn('ml-2 font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-                        {formatNumber(staff.total_patients_treated)}
-                      </span>
-                    </div>
-                    {staff.patient_satisfaction && (
-                      <div>
-                        <span className={cn(isDark ? 'text-slate-400' : 'text-slate-500')}>
-                          Satisfaction:
-                        </span>
-                        <span className={cn('ml-2 font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-                          {staff.patient_satisfaction.toFixed(1)}%
-                        </span>
-                      </div>
-                    )}
-                  </div> */}
                 </div>
               ))}
             </div>
@@ -385,17 +378,19 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
             />
           )}
 
-          {/* Action Buttons for Workforce */}
-          <div className={cn('mt-4 pt-4 border-t grid grid-cols-1 gap-3', isDark ? 'border-white/10' : 'border-slate-200')}>
-           
-            
+          <div
+            className={cn(
+              'mt-4 grid grid-cols-1 gap-3 border-t pt-4',
+              isDark ? 'border-white/10' : 'border-slate-200'
+            )}
+          >
             <button
               onClick={() => handleNavigate(ADMIN_ROUTES.TEAM, 'Performance Review')}
               className={cn(
-                'rounded-xl px-4 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                'flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
                 isDark
-                  ? 'bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-500/30'
-                  : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
+                  ? 'border border-green-500/30 bg-green-500/20 text-green-300 hover:bg-green-500/30'
+                  : 'border border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
               )}
             >
               <UserPlus className="h-4 w-4" />
@@ -405,26 +400,8 @@ const FacilityAdminWorkforceSection: React.FC<FacilityAdminWorkforceSectionProps
           </div>
         </div>
       </div>
-
-      {/* Custom scrollbar styles */}
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: ${isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f1f1'};
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: ${isDark ? 'rgba(255, 255, 255, 0.2)' : '#cbd5e1'};
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: ${isDark ? 'rgba(255, 255, 255, 0.3)' : '#94a3b8'};
-        }
-      `}</style>
     </motion.section>
   );
-};
+}
 
 export default FacilityAdminWorkforceSection;

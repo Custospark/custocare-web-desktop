@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -13,15 +13,15 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Receipt,
+import {
+  Activity,
   ChevronRight,
   Eye,
-  Users,
-  Activity,
   Gauge,
+  Receipt,
+  TrendingDown,
+  TrendingUp,
+  Users,
 } from 'lucide-react';
 
 import {
@@ -32,6 +32,7 @@ import {
   cn,
   formatCompactCurrency,
   formatCurrency,
+  formatNumber,
   getPanelClass,
   getSubtlePanelClass,
 } from './facilityAdminDashboard.utils';
@@ -60,25 +61,31 @@ export interface FinancialTrendChartPoint {
 
 interface FacilityAdminTrendsSectionProps {
   isDark: boolean;
-  presenceWorkloadSeries: PresenceWorkloadChartPoint[];
-  financialTrend: FinancialTrendChartPoint[];
+  presenceWorkloadSeries?: PresenceWorkloadChartPoint[] | null;
+  financialTrend?: FinancialTrendChartPoint[] | null;
   revenueGrowthPercentage?: number | null;
 }
 
-const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
+function FacilityAdminTrendsSection({
   isDark,
   presenceWorkloadSeries,
   financialTrend,
   revenueGrowthPercentage,
-}) => {
+}: FacilityAdminTrendsSectionProps) {
   const navigate = useNavigate();
   const [isNavigating, setIsNavigating] = useState<string | null>(null);
 
   const panelClass = getPanelClass(isDark);
   const subtlePanelClass = getSubtlePanelClass(isDark);
 
+  const safePresenceWorkloadSeries = Array.isArray(presenceWorkloadSeries)
+    ? presenceWorkloadSeries
+    : [];
+
+  const safeFinancialTrend = Array.isArray(financialTrend) ? financialTrend : [];
+
   const summary = useMemo(() => {
-    if (!presenceWorkloadSeries.length) {
+    if (!safePresenceWorkloadSeries.length) {
       return {
         avgOnDuty: 0,
         avgOffDuty: 0,
@@ -88,20 +95,22 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
     }
 
     const avgOnDuty =
-      presenceWorkloadSeries.reduce((sum, item) => sum + item.onDuty, 0) /
-      presenceWorkloadSeries.length;
+      safePresenceWorkloadSeries.reduce((sum, item) => sum + Number(item.onDuty ?? 0), 0) /
+      safePresenceWorkloadSeries.length;
 
     const avgOffDuty =
-      presenceWorkloadSeries.reduce((sum, item) => sum + item.offDuty, 0) /
-      presenceWorkloadSeries.length;
+      safePresenceWorkloadSeries.reduce((sum, item) => sum + Number(item.offDuty ?? 0), 0) /
+      safePresenceWorkloadSeries.length;
 
-    const peakBusy = Math.max(...presenceWorkloadSeries.map((item) => item.busy));
+    const peakBusy = Math.max(
+      ...safePresenceWorkloadSeries.map((item) => Number(item.busy ?? 0))
+    );
 
     const avgPatientsPerStaff =
-      presenceWorkloadSeries.reduce(
+      safePresenceWorkloadSeries.reduce(
         (sum, item) => sum + Number(item.avgPatientsPerStaff ?? 0),
         0
-      ) / presenceWorkloadSeries.length;
+      ) / safePresenceWorkloadSeries.length;
 
     return {
       avgOnDuty,
@@ -109,21 +118,19 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
       peakBusy,
       avgPatientsPerStaff,
     };
-  }, [presenceWorkloadSeries]);
+  }, [safePresenceWorkloadSeries]);
 
-  const latestFinancialPoint = financialTrend[financialTrend.length - 1];
+  const latestFinancialPoint = safeFinancialTrend[safeFinancialTrend.length - 1];
 
-  // Navigation handler with loading state
   const handleNavigate = (url: string, sectionName: string) => {
     setIsNavigating(sectionName);
     navigate(url);
   };
 
-  // Show loading skeleton if navigating
   if (isNavigating) {
     return (
-      <LoadingSkeleton 
-        variant="dashboard" 
+      <LoadingSkeleton
+        variant="dashboard"
         theme={isDark ? 'dark' : 'light'}
         message={`Loading ${isNavigating}...`}
       />
@@ -132,7 +139,6 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Revenue Signal Section - FULL WIDTH */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
@@ -152,7 +158,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
           {typeof revenueGrowthPercentage === 'number' && (
             <div
               className={cn(
-                'rounded-full px-3 py-1.5 text-xs font-semibold cursor-default',
+                'rounded-full px-3 py-1.5 text-xs font-semibold',
                 revenueGrowthPercentage >= 0
                   ? isDark
                     ? 'bg-emerald-500/10 text-emerald-300'
@@ -163,9 +169,9 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
               )}
             >
               {revenueGrowthPercentage > 0 ? (
-                <TrendingUp className="inline h-3 w-3 mr-1" />
+                <TrendingUp className="mr-1 inline h-3 w-3" />
               ) : revenueGrowthPercentage < 0 ? (
-                <TrendingDown className="inline h-3 w-3 mr-1" />
+                <TrendingDown className="mr-1 inline h-3 w-3" />
               ) : null}
               {revenueGrowthPercentage > 0 ? '+' : ''}
               {revenueGrowthPercentage.toFixed(1)}%
@@ -174,7 +180,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
+          <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
             <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
               Latest Net Revenue
             </p>
@@ -185,7 +191,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
             </p>
           </div>
 
-          <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
+          <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
             <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
               Latest Collections
             </p>
@@ -196,7 +202,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
             </p>
           </div>
 
-          <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
+          <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
             <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
               Outstanding
             </p>
@@ -207,23 +213,21 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
             </p>
           </div>
 
-          <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
+          <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
             <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
               Invoices
             </p>
             <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-              {latestFinancialPoint
-                ? latestFinancialPoint.invoices.toLocaleString()
-                : '—'}
+              {latestFinancialPoint ? formatNumber(latestFinancialPoint.invoices) : '—'}
             </p>
           </div>
         </div>
 
-        <div className="h-[400px]">
-          {financialTrend.length ? (
+        <div className="h-[400px] w-full">
+          {safeFinancialTrend.length ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
-                data={financialTrend}
+                data={safeFinancialTrend}
                 margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
               >
                 <defs>
@@ -251,7 +255,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
                   tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }}
                   axisLine={false}
                   tickLine={false}
-                  tickFormatter={(value) => formatCompactCurrency(value)}
+                  tickFormatter={(value) => formatCompactCurrency(Number(value ?? 0))}
                 />
                 <Tooltip
                   content={
@@ -259,8 +263,8 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
                       isDark={isDark}
                       valueFormatter={(value, name) =>
                         name === 'Invoices'
-                          ? `${Number(value ?? 0)}`
-                          : formatCurrency(value)
+                          ? formatNumber(Number(value ?? 0))
+                          : formatCurrency(Number(value ?? 0))
                       }
                     />
                   }
@@ -296,37 +300,47 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyChartState
-              title="No financial trend data"
-              subtitle="Net revenue trend will appear here when financial analytics are available."
-              isDark={isDark}
-            />
+            <div className="flex h-full items-center justify-center">
+              <EmptyChartState
+                title="No financial trend data"
+                subtitle="Net revenue trend will appear here when financial analytics are available."
+                isDark={isDark}
+              />
+            </div>
           )}
         </div>
 
-        {/* Action Buttons for Revenue */}
-        <div className={cn('mt-6 pt-4 border-t grid grid-cols-2 gap-3', isDark ? 'border-white/10' : 'border-slate-200')}>
+        <div
+          className={cn(
+            'mt-6 grid grid-cols-2 gap-3 border-t pt-4',
+            isDark ? 'border-white/10' : 'border-slate-200'
+          )}
+        >
           <button
-            onClick={() => handleNavigate(ADMIN_ROUTES.BILLING_CYCLE_REVENUE_STATS, 'Revenue Details')}
+            onClick={() =>
+              handleNavigate(ADMIN_ROUTES.BILLING_CYCLE_REVENUE_STATS, 'Revenue Details')
+            }
             className={cn(
-              'rounded-xl px-4 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+              'flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
               isDark
-                ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 border border-violet-500/30'
-                : 'bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200'
+                ? 'border border-violet-500/30 bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
+                : 'border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100'
             )}
           >
             <Receipt className="h-4 w-4" />
             <span>Revenue Details</span>
             <ChevronRight className="h-4 w-4" />
           </button>
-          
+
           <button
-            onClick={() => handleNavigate(ADMIN_ROUTES.BILLING_CYCLE_BILLING_REVIEW, 'Revenue Review')}
+            onClick={() =>
+              handleNavigate(ADMIN_ROUTES.BILLING_CYCLE_BILLING_REVIEW, 'Revenue Review')
+            }
             className={cn(
-              'rounded-xl px-4 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+              'flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
               isDark
-                ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30'
-                : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
+                ? 'border border-amber-500/30 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30'
+                : 'border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
             )}
           >
             <Eye className="h-4 w-4" />
@@ -336,7 +350,6 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
         </div>
       </motion.div>
 
-      {/* Staff Presence & Workload Trajectory Section - FULL WIDTH */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
@@ -349,14 +362,14 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
               Staff Presence & Workload Trajectory
             </h2>
             <p className={cn('mt-1 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
-              Operational staffing movement and workload pressure across the selected reporting window.
+              Operational staffing movement and workload pressure across the selected reporting
+              window.
             </p>
           </div>
         </div>
 
-        {/* KPI Summary Cards */}
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className={cn(subtlePanelClass, 'px-4 py-3', 'cursor-default')}>
+          <div className={cn(subtlePanelClass, 'cursor-default px-4 py-3')}>
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-blue-500" />
               <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
@@ -364,11 +377,11 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
               </p>
             </div>
             <p className={cn('mt-1 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-              {Math.round(summary.avgOnDuty)}
+              {formatNumber(Math.round(summary.avgOnDuty))}
             </p>
           </div>
 
-          <div className={cn(subtlePanelClass, 'px-4 py-3', 'cursor-default')}>
+          <div className={cn(subtlePanelClass, 'cursor-default px-4 py-3')}>
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-gray-500" />
               <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
@@ -376,11 +389,11 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
               </p>
             </div>
             <p className={cn('mt-1 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-              {Math.round(summary.avgOffDuty)}
+              {formatNumber(Math.round(summary.avgOffDuty))}
             </p>
           </div>
 
-          <div className={cn(subtlePanelClass, 'px-4 py-3', 'cursor-default')}>
+          <div className={cn(subtlePanelClass, 'cursor-default px-4 py-3')}>
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-amber-500" />
               <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
@@ -388,11 +401,11 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
               </p>
             </div>
             <p className={cn('mt-1 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-              {summary.peakBusy}
+              {formatNumber(summary.peakBusy)}
             </p>
           </div>
 
-          <div className={cn(subtlePanelClass, 'px-4 py-3', 'cursor-default')}>
+          <div className={cn(subtlePanelClass, 'cursor-default px-4 py-3')}>
             <div className="flex items-center gap-2">
               <Gauge className="h-4 w-4 text-emerald-500" />
               <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
@@ -405,9 +418,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
           </div>
         </div>
 
-        {/* Stacked Charts */}
         <div className="space-y-8">
-          {/* Chart 1: Staff Availability */}
           <div>
             <div className="mb-3 flex items-center gap-2">
               <Users className="h-5 w-5 text-blue-500" />
@@ -415,11 +426,12 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
                 Staff Availability
               </h3>
             </div>
-            <div className="h-[320px]">
-              {presenceWorkloadSeries.length ? (
+
+            <div className="h-[320px] w-full">
+              {safePresenceWorkloadSeries.length ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
-                    data={presenceWorkloadSeries}
+                    data={safePresenceWorkloadSeries}
                     margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                   >
                     <CartesianGrid
@@ -441,7 +453,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
                       content={
                         <EnterpriseTooltip
                           isDark={isDark}
-                          valueFormatter={(value) => `${Number(value ?? 0)}`}
+                          valueFormatter={(value) => formatNumber(Number(value ?? 0))}
                         />
                       }
                     />
@@ -467,16 +479,17 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <EmptyChartState
-                  title="No staff availability data"
-                  subtitle="Staff presence data will appear here when available."
-                  isDark={isDark}
-                />
+                <div className="flex h-full items-center justify-center">
+                  <EmptyChartState
+                    title="No staff availability data"
+                    subtitle="Staff presence data will appear here when available."
+                    isDark={isDark}
+                  />
+                </div>
               )}
             </div>
           </div>
 
-          {/* Chart 2: Active Workload */}
           <div>
             <div className="mb-3 flex items-center gap-2">
               <Activity className="h-5 w-5 text-amber-500" />
@@ -484,11 +497,12 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
                 Active Workload
               </h3>
             </div>
-            <div className="h-[320px]">
-              {presenceWorkloadSeries.length ? (
+
+            <div className="h-[320px] w-full">
+              {safePresenceWorkloadSeries.length ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
-                    data={presenceWorkloadSeries}
+                    data={safePresenceWorkloadSeries}
                     margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                   >
                     <CartesianGrid
@@ -510,7 +524,7 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
                       content={
                         <EnterpriseTooltip
                           isDark={isDark}
-                          valueFormatter={(value) => `${Number(value ?? 0)}`}
+                          valueFormatter={(value) => formatNumber(Number(value ?? 0))}
                         />
                       }
                     />
@@ -527,16 +541,17 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <EmptyChartState
-                  title="No workload data"
-                  subtitle="Staff workload trends will appear here when available."
-                  isDark={isDark}
-                />
+                <div className="flex h-full items-center justify-center">
+                  <EmptyChartState
+                    title="No workload data"
+                    subtitle="Staff workload trends will appear here when available."
+                    isDark={isDark}
+                  />
+                </div>
               )}
             </div>
           </div>
 
-          {/* Chart 3: Staff Efficiency */}
           <div>
             <div className="mb-3 flex items-center gap-2">
               <Gauge className="h-5 w-5 text-emerald-500" />
@@ -544,11 +559,12 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
                 Patients Per Staff Member
               </h3>
             </div>
-            <div className="h-[320px]">
-              {presenceWorkloadSeries.length ? (
+
+            <div className="h-[320px] w-full">
+              {safePresenceWorkloadSeries.length ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
-                    data={presenceWorkloadSeries}
+                    data={safePresenceWorkloadSeries}
                     margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                   >
                     <CartesianGrid
@@ -571,7 +587,9 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
                       content={
                         <EnterpriseTooltip
                           isDark={isDark}
-                          valueFormatter={(value) => Number(value).toFixed(1)}
+                          valueFormatter={(value) =>
+                            Number(Number(value ?? 0).toFixed(1)).toFixed(1)
+                          }
                         />
                       }
                     />
@@ -588,11 +606,13 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <EmptyChartState
-                  title="No efficiency data"
-                  subtitle="Staff efficiency metrics will appear here when available."
-                  isDark={isDark}
-                />
+                <div className="flex h-full items-center justify-center">
+                  <EmptyChartState
+                    title="No efficiency data"
+                    subtitle="Staff efficiency metrics will appear here when available."
+                    isDark={isDark}
+                  />
+                </div>
               )}
             </div>
           </div>
@@ -600,6 +620,6 @@ const FacilityAdminTrendsSection: React.FC<FacilityAdminTrendsSectionProps> = ({
       </motion.div>
     </div>
   );
-};
+}
 
 export default FacilityAdminTrendsSection;

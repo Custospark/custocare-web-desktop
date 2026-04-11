@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, Pill, ShieldAlert, Boxes, ChevronRight, Package } from 'lucide-react';
+import {
+  AlertTriangle,
+  Boxes,
+  ChevronRight,
+  Package,
+  Pill,
+  ShieldAlert,
+} from 'lucide-react';
 
 import type {
   ControlledItem,
@@ -20,40 +27,53 @@ import {
 } from './facilityAdminDashboard.utils';
 import { ADMIN_ROUTES } from '../../../../../../app/routes/constants/administration.paths';
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
+
 interface FacilityAdminInventorySectionProps {
   isDark: boolean;
-  summary: InventoryRiskSummary;
-  itemsNeedingReorder: InventoryItemNeedingReorder[];
-  controlledItems: ControlledItem[];
-  controlledSubstancesCount: number;
+  summary?: InventoryRiskSummary | null;
+  itemsNeedingReorder?: InventoryItemNeedingReorder[] | null;
+  controlledItems?: ControlledItem[] | null;
+  controlledSubstancesCount?: number | null;
 }
 
-const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps> = ({
+const EMPTY_SUMMARY: InventoryRiskSummary = {
+  total_active_items: 0,
+  items_below_reorder_point: 0,
+  high_risk_inventory_count: 0,
+};
+
+function FacilityAdminInventorySection({
   isDark,
   summary,
   itemsNeedingReorder,
   controlledItems,
   controlledSubstancesCount,
-}) => {
+}: FacilityAdminInventorySectionProps) {
   const navigate = useNavigate();
   const [isNavigating, setIsNavigating] = useState<string | null>(null);
 
   const panelClass = getPanelClass(isDark);
   const subtlePanelClass = getSubtlePanelClass(isDark);
 
-  const prioritizedItems = sortInventoryByRisk(itemsNeedingReorder).slice(0, 6);
+  const safeSummary = summary ?? EMPTY_SUMMARY;
+  const safeItemsNeedingReorder = Array.isArray(itemsNeedingReorder) ? itemsNeedingReorder : [];
+  const safeControlledItems = Array.isArray(controlledItems) ? controlledItems : [];
+  const safeControlledSubstancesCount = Number(controlledSubstancesCount ?? 0);
 
-  // Navigation handler with loading state
+  const prioritizedItems = useMemo(
+    () => sortInventoryByRisk(safeItemsNeedingReorder).slice(0, 6),
+    [safeItemsNeedingReorder]
+  );
+
   const handleNavigate = (url: string, sectionName: string) => {
     setIsNavigating(sectionName);
     navigate(url);
   };
 
-  // Show loading skeleton if navigating
   if (isNavigating) {
     return (
-      <LoadingSkeleton 
-        variant="dashboard" 
+      <LoadingSkeleton
+        variant="dashboard"
         theme={isDark ? 'dark' : 'light'}
         message={`Loading ${isNavigating}...`}
       />
@@ -77,45 +97,36 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
       </div>
 
       <div className="flex flex-col gap-3">
-        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
-          <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-            Active Items
-          </p>
+        <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
+          <p className="text-xs text-slate-500">Active Items</p>
           <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-            {formatNumber(summary.total_active_items)}
+            {formatNumber(safeSummary.total_active_items)}
           </p>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
-          <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-            Below Reorder Point
-          </p>
+        <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
+          <p className="text-xs text-slate-500">Below Reorder Point</p>
           <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-            {formatNumber(summary.items_below_reorder_point)}
+            {formatNumber(safeSummary.items_below_reorder_point)}
           </p>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
-          <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-            High Risk Items
-          </p>
+        <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
+          <p className="text-xs text-slate-500">High Risk Items</p>
           <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-            {formatNumber(summary.high_risk_inventory_count)}
+            {formatNumber(safeSummary.high_risk_inventory_count)}
           </p>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
-          <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-            Controlled Substances
-          </p>
+        <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
+          <p className="text-xs text-slate-500">Controlled Substances</p>
           <p className={cn('mt-2 text-2xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-            {formatNumber(controlledSubstancesCount)}
+            {formatNumber(safeControlledSubstancesCount)}
           </p>
         </div>
       </div>
 
       <div className="mt-6 flex flex-col gap-6">
-        {/* Items Needing Reorder Section */}
         <div className={cn(subtlePanelClass, 'p-4')}>
           <div className="mb-4 flex items-center justify-between">
             <div className="flex flex-col items-start gap-3">
@@ -125,7 +136,7 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
 
               <div
                 className={cn(
-                  'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold cursor-default',
+                  'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold',
                   isDark ? 'bg-rose-500/10 text-rose-300' : 'bg-rose-50 text-rose-700'
                 )}
               >
@@ -136,12 +147,12 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
           </div>
 
           {prioritizedItems.length ? (
-            <div className="max-h-[600px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+            <div className="max-h-[600px] space-y-3 overflow-y-auto pr-2">
               {prioritizedItems.map((item) => (
                 <div
                   key={item.item_code}
                   className={cn(
-                    'rounded-2xl border p-4 cursor-default',
+                    'rounded-2xl border p-4',
                     isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white'
                   )}
                 >
@@ -167,7 +178,7 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
 
                     <span
                       className={cn(
-                        'w-fit rounded-full px-3 py-1 text-xs font-semibold cursor-default',
+                        'w-fit rounded-full px-3 py-1 text-xs font-semibold',
                         getRiskPillStyles(item.risk_level, isDark)
                       )}
                     >
@@ -177,57 +188,29 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
 
                   <div className="mt-4 grid grid-cols-2 gap-4">
                     <div>
-                      <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                        Current
-                      </p>
-                      <p
-                        className={cn(
-                          'mt-1 text-sm font-semibold',
-                          isDark ? 'text-white' : 'text-slate-900'
-                        )}
-                      >
+                      <p className="text-xs text-slate-500">Current</p>
+                      <p className={cn('mt-1 text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
                         {formatNumber(item.current_stock)}
                       </p>
                     </div>
 
                     <div>
-                      <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                        Reorder Point
-                      </p>
-                      <p
-                        className={cn(
-                          'mt-1 text-sm font-semibold',
-                          isDark ? 'text-white' : 'text-slate-900'
-                        )}
-                      >
+                      <p className="text-xs text-slate-500">Reorder Point</p>
+                      <p className={cn('mt-1 text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
                         {formatNumber(item.reorder_point)}
                       </p>
                     </div>
 
                     <div>
-                      <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                        Shortage
-                      </p>
-                      <p
-                        className={cn(
-                          'mt-1 text-sm font-semibold',
-                          isDark ? 'text-white' : 'text-slate-900'
-                        )}
-                      >
+                      <p className="text-xs text-slate-500">Shortage</p>
+                      <p className={cn('mt-1 text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
                         {formatNumber(item.shortage_units)}
                       </p>
                     </div>
 
                     <div>
-                      <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                        Reorder Qty
-                      </p>
-                      <p
-                        className={cn(
-                          'mt-1 text-sm font-semibold',
-                          isDark ? 'text-white' : 'text-slate-900'
-                        )}
-                      >
+                      <p className="text-xs text-slate-500">Reorder Qty</p>
+                      <p className={cn('mt-1 text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
                         {formatNumber(item.reorder_qty)}
                       </p>
                     </div>
@@ -252,15 +235,19 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
             />
           )}
 
-          {/* Manage Inventory Button */}
-          <div className={cn('mt-4 pt-4 border-t', isDark ? 'border-white/10' : 'border-slate-200')}>
+          <div
+            className={cn(
+              'mt-4 border-t pt-4',
+              isDark ? 'border-white/10' : 'border-slate-200'
+            )}
+          >
             <button
               onClick={() => handleNavigate(ADMIN_ROUTES.INVENTORY, 'Inventory Management')}
               className={cn(
-                'w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
                 isDark
-                  ? 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30'
-                  : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                  ? 'border border-rose-500/30 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30'
+                  : 'border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
               )}
             >
               <Boxes className="h-4 w-4" />
@@ -270,7 +257,6 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
           </div>
         </div>
 
-        {/* Controlled Items Section */}
         <div className={cn(subtlePanelClass, 'p-4')}>
           <div className="mb-4 flex items-center justify-between">
             <div className="flex flex-col items-start gap-3">
@@ -280,7 +266,7 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
 
               <div
                 className={cn(
-                  'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold cursor-default',
+                  'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold',
                   isDark ? 'bg-violet-500/10 text-violet-300' : 'bg-violet-50 text-violet-700'
                 )}
               >
@@ -290,18 +276,18 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
             </div>
           </div>
 
-          {controlledItems.length ? (
-            <div className="max-h-[400px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
-              {controlledItems.slice(0, 10).map((item, index) => (
+          {safeControlledItems.length ? (
+            <div className="max-h-[400px] space-y-3 overflow-y-auto pr-2">
+              {safeControlledItems.slice(0, 10).map((item, index) => (
                 <div
                   key={`${item.item_name}-${index}`}
                   className={cn(
-                    'rounded-2xl border px-4 py-3 cursor-default',
+                    'rounded-2xl border px-4 py-3',
                     isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white'
                   )}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
                       <div
                         className={cn(
                           'flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl',
@@ -327,7 +313,7 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
 
                     <span
                       className={cn(
-                        'rounded-full px-3 py-1 text-xs font-semibold cursor-default shrink-0',
+                        'shrink-0 rounded-full px-3 py-1 text-xs font-semibold',
                         isDark ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-700'
                       )}
                     >
@@ -345,15 +331,19 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
             />
           )}
 
-          {/* Manage Stock Items Button */}
-          <div className={cn('mt-4 pt-4 border-t', isDark ? 'border-white/10' : 'border-slate-200')}>
+          <div
+            className={cn(
+              'mt-4 border-t pt-4',
+              isDark ? 'border-white/10' : 'border-slate-200'
+            )}
+          >
             <button
               onClick={() => handleNavigate(ADMIN_ROUTES.INVENTORY, 'Stock Items')}
               className={cn(
-                'w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
                 isDark
-                  ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 border border-violet-500/30'
-                  : 'bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200'
+                  ? 'border border-violet-500/30 bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
+                  : 'border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100'
               )}
             >
               <Package className="h-4 w-4" />
@@ -363,26 +353,8 @@ const FacilityAdminInventorySection: React.FC<FacilityAdminInventorySectionProps
           </div>
         </div>
       </div>
-
-      {/* Custom scrollbar styles */}
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: ${isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f1f1'};
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: ${isDark ? 'rgba(255, 255, 255, 0.2)' : '#cbd5e1'};
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: ${isDark ? 'rgba(255, 255, 255, 0.3)' : '#94a3b8'};
-        }
-      `}</style>
     </motion.section>
   );
-};
+}
 
 export default FacilityAdminInventorySection;

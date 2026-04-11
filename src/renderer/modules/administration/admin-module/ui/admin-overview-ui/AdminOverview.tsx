@@ -45,14 +45,9 @@ interface DashboardUi {
   border: string;
   text: string;
   textSecondary: string;
-  textMuted: string;
-  grid: string;
-  tooltipBg: string;
-  tooltipBorder: string;
-  tooltipText: string;
 }
 
-export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
+function AdminOverview({ theme }: AdminOverviewProps) {
   const isDark = theme === 'dark';
 
   const ui = useMemo<DashboardUi>(() => {
@@ -62,11 +57,6 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
       border: isDark ? 'border-gray-700' : 'border-gray-200',
       text: isDark ? 'text-gray-100' : 'text-gray-900',
       textSecondary: isDark ? 'text-gray-300' : 'text-gray-600',
-      textMuted: isDark ? 'text-gray-400' : 'text-gray-500',
-      grid: isDark ? '#334155' : '#E5E7EB',
-      tooltipBg: isDark ? '#0B1220' : '#FFFFFF',
-      tooltipBorder: isDark ? '#334155' : '#E5E7EB',
-      tooltipText: isDark ? '#E5E7EB' : '#0F172A',
     };
   }, [isDark]);
 
@@ -90,60 +80,67 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
 
   const dashboard = response?.data;
 
-  const presenceWorkloadSeries = useMemo(() => {
-    const presence = dashboard?.staff_availability.presence_trend ?? [];
-    const workload = dashboard?.staff_availability.workload_trend ?? [];
+  const presenceTrend = useMemo(() => {
+    const value = dashboard?.staff_availability?.presence_trend;
+    return Array.isArray(value) ? value : [];
+  }, [dashboard?.staff_availability?.presence_trend]);
 
+  const workloadTrend = useMemo(() => {
+    const value = dashboard?.staff_availability?.workload_trend;
+    return Array.isArray(value) ? value : [];
+  }, [dashboard?.staff_availability?.workload_trend]);
+
+  const presenceWorkloadSeries = useMemo(() => {
     const workloadMap = new Map(
-      workload.map((item) => [
+      workloadTrend.map((item) => [
         item.date,
         {
-          totalActivePatients: item.total_active_patients,
-          uniqueStaffAssigned: item.unique_staff_assigned,
-          avgPatientsPerStaff: item.avg_patients_per_staff,
+          totalActivePatients: Number(item.total_active_patients ?? 0),
+          uniqueStaffAssigned: Number(item.unique_staff_assigned ?? 0),
+          avgPatientsPerStaff: Number(item.avg_patients_per_staff ?? 0),
         },
       ])
     );
 
-    return presence.map((item) => {
+    return presenceTrend.map((item) => {
       const matchingWorkload = workloadMap.get(item.date);
 
       return {
         label: formatDateLabel(item.date),
         rawDate: item.date,
-        onDuty: item.on_duty,
-        busy: item.busy,
-        offDuty: item.off_duty,
+        onDuty: Number(item.on_duty ?? 0),
+        busy: Number(item.busy ?? 0),
+        offDuty: Number(item.off_duty ?? 0),
         totalActivePatients: matchingWorkload?.totalActivePatients ?? 0,
         uniqueStaffAssigned: matchingWorkload?.uniqueStaffAssigned ?? 0,
         avgPatientsPerStaff: matchingWorkload?.avgPatientsPerStaff ?? 0,
       };
     });
-  }, [
-    dashboard?.staff_availability.presence_trend,
-    dashboard?.staff_availability.workload_trend,
-  ]);
+  }, [presenceTrend, workloadTrend]);
 
-  const financialTrend = useMemo(() => {
-    const trend = dashboard?.financial?.revenue_trend ?? [];
-
-    return trend.map((item) => ({
-      label: item.period_label,
-      periodKey: item.period_key,
-      netRevenue: item.net_revenue,
-      collections: item.total_collections,
-      outstanding: item.outstanding_balance,
-      invoices: item.invoice_count,
-    }));
+  const revenueTrend = useMemo(() => {
+    const value = dashboard?.financial?.revenue_trend;
+    return Array.isArray(value) ? value : [];
   }, [dashboard?.financial?.revenue_trend]);
 
-  const metrics = useMemo(() => {
-    const currentSnapshot = dashboard?.staff_availability.current_snapshot;
-    const capacitySummary = dashboard?.capacity_utilization.summary;
-    const inventorySummary = dashboard?.inventory_risk.summary;
-    const serviceSummary = dashboard?.service_pricing.summary;
-    const financialSnapshot = dashboard?.financial?.snapshot;
+  const financialTrend = useMemo(() => {
+    return revenueTrend.map((item) => ({
+      label: item.period_label,
+      periodKey: item.period_key,
+      netRevenue: Number(item.net_revenue ?? 0),
+      collections: Number(item.total_collections ?? 0),
+      outstanding: Number(item.outstanding_balance ?? 0),
+      invoices: Number(item.invoice_count ?? 0),
+    }));
+  }, [revenueTrend]);
 
+  const currentSnapshot = dashboard?.staff_availability?.current_snapshot;
+  const capacitySummary = dashboard?.capacity_utilization?.summary;
+  const inventorySummary = dashboard?.inventory_risk?.summary;
+  const serviceSummary = dashboard?.service_pricing?.summary;
+  const financialSnapshot = dashboard?.financial?.snapshot;
+
+  const metrics = useMemo(() => {
     return [
       {
         title: 'Active Staff',
@@ -179,9 +176,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
       },
       {
         title: 'Net Revenue',
-        value: financialSnapshot
-          ? formatCompactCurrency(financialSnapshot.net_revenue)
-          : '—',
+        value: financialSnapshot ? formatCompactCurrency(financialSnapshot.net_revenue) : '—',
         subtitle: financialSnapshot
           ? `Previous: ${formatCompactCurrency(
               financialSnapshot.previous_period_net_revenue
@@ -198,7 +193,19 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
         delta: financialSnapshot?.revenue_growth_percentage,
       },
     ];
-  }, [dashboard]);
+  }, [
+    capacitySummary?.occupied_spaces,
+    capacitySummary?.space_utilization_rate,
+    capacitySummary?.total_active_spaces,
+    currentSnapshot?.staff_busy,
+    currentSnapshot?.staff_on_duty,
+    currentSnapshot?.total_active,
+    financialSnapshot,
+    inventorySummary?.high_risk_inventory_count,
+    inventorySummary?.items_below_reorder_point,
+    serviceSummary?.total_active_services,
+    serviceSummary?.total_revenue_potential,
+  ]);
 
   const handleSelectGroupBy = (value: AnalyticsGroupBy) => {
     setSelectedGroupBy(value);
@@ -249,7 +256,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
 
   if (isError) {
     return (
-      <div className={cn('p-4 sm:p-6 min-h-screen', ui.pageBg)}>
+      <div className={cn('min-h-screen p-4 sm:p-6', ui.pageBg)}>
         <div className="mx-auto max-w-[1600px]">
           <div className={cn('rounded-2xl border p-10', ui.surface, ui.border)}>
             <div className="mx-auto max-w-lg text-center">
@@ -274,8 +281,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
               <button
                 onClick={() => refetch()}
                 className={cn(
-                  'mt-6 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition-all',
-                  'bg-blue-600 text-white hover:bg-blue-500'
+                  'mt-6 inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-blue-500'
                 )}
               >
                 <CircleAlert className="h-4 w-4" />
@@ -290,7 +296,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
 
   if (!dashboard || response?.success === false) {
     return (
-      <div className={cn('p-4 sm:p-6 min-h-screen', ui.pageBg)}>
+      <div className={cn('min-h-screen p-4 sm:p-6', ui.pageBg)}>
         <div className="mx-auto max-w-[1600px]">
           <div className={cn('rounded-2xl border p-10', ui.surface, ui.border)}>
             <div className="mx-auto max-w-lg text-center">
@@ -319,7 +325,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
   }
 
   return (
-    <div className={cn('p-4 sm:p-6 space-y-6 min-h-screen', ui.pageBg)}>
+    <div className={cn('min-h-screen space-y-6 p-4 sm:p-6', ui.pageBg)}>
       <div className="mx-auto max-w-[1600px] space-y-6">
         <FacilityAdminDashboardHeader
           isDark={isDark}
@@ -341,48 +347,46 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
           isDark={isDark}
           presenceWorkloadSeries={presenceWorkloadSeries}
           financialTrend={financialTrend}
-          revenueGrowthPercentage={dashboard.financial?.snapshot?.revenue_growth_percentage}
+          revenueGrowthPercentage={dashboard?.financial?.snapshot?.revenue_growth_percentage}
         />
 
         <FacilityAdminWorkforceSection
           isDark={isDark}
-          currentSnapshot={dashboard.staff_availability.current_snapshot}
-          roleDistribution={dashboard.staff_availability.role_distribution}
-          highWorkloadStaff={dashboard.staff_availability.high_workload_staff}
+          currentSnapshot={dashboard?.staff_availability?.current_snapshot}
+          roleDistribution={dashboard?.staff_availability?.role_distribution}
+          highWorkloadStaff={dashboard?.staff_availability?.high_workload_staff}
         />
 
         <FacilityAdminCapacitySection
           isDark={isDark}
-          summary={dashboard.capacity_utilization.summary}
-          departments={dashboard.capacity_utilization.departments}
-          wards={dashboard.capacity_utilization.wards}
-          spaceTypes={dashboard.capacity_utilization.space_types}
+          summary={dashboard?.capacity_utilization?.summary}
+          departments={dashboard?.capacity_utilization?.departments}
+          wards={dashboard?.capacity_utilization?.wards}
+          spaceTypes={dashboard?.capacity_utilization?.space_types}
         />
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <FacilityAdminInventorySection
             isDark={isDark}
-            summary={dashboard.inventory_risk.summary}
-            itemsNeedingReorder={dashboard.inventory_risk.items_needing_reorder}
-            controlledItems={dashboard.inventory_risk.controlled_items}
-            controlledSubstancesCount={dashboard.inventory_risk.controlled_substances_count}
+            summary={dashboard?.inventory_risk?.summary}
+            itemsNeedingReorder={dashboard?.inventory_risk?.items_needing_reorder}
+            controlledItems={dashboard?.inventory_risk?.controlled_items}
+            controlledSubstancesCount={dashboard?.inventory_risk?.controlled_substances_count}
           />
 
           <FacilityAdminServicesSection
             isDark={isDark}
-            summary={dashboard.service_pricing.summary}
-            topServicesByPrice={dashboard.service_pricing.top_services_by_price}
-            categoryBreakdown={dashboard.service_pricing.category_breakdown}
+            summary={dashboard?.service_pricing?.summary}
+            topServicesByPrice={dashboard?.service_pricing?.top_services_by_price}
+            categoryBreakdown={dashboard?.service_pricing?.category_breakdown}
           />
         </div>
 
-        {!dashboard.financial && (
+        {!dashboard?.financial && (
           <div
             className={cn(
               'rounded-2xl border p-5',
-              isDark
-                ? 'border-amber-500/20 bg-amber-500/5'
-                : 'border-amber-200 bg-amber-50'
+              isDark ? 'border-amber-500/20 bg-amber-500/5' : 'border-amber-200 bg-amber-50'
             )}
           >
             <div className="flex items-start gap-3">
@@ -410,6 +414,6 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ theme }) => {
       </div>
     </div>
   );
-};
+}
 
 export default AdminOverview;

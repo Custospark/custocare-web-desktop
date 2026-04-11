@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-  BedDouble, 
-  Building2, 
-  DoorOpen, 
-  Timer, 
+import {
+  BedDouble,
+  Building2,
   ChevronRight,
+  DoorOpen,
   LayoutDashboard,
   MapIcon,
+  PlusCircle,
   Settings,
-  PlusCircle
+  Timer,
 } from 'lucide-react';
 
 import type {
@@ -19,7 +19,10 @@ import type {
   SpaceTypeSummary,
   WardDetail,
 } from '../../../api/admin-overview/FacilityAdminAnalyticsTypes';
-import { EmptyChartState, ProgressRow } from '../../../../../medical-records/ui/overview/medical-records-dashboard/dashboard.primitives';
+import {
+  EmptyChartState,
+  ProgressRow,
+} from '../../../../../medical-records/ui/overview/medical-records-dashboard/dashboard.primitives';
 import {
   clampPercentage,
   cn,
@@ -30,51 +33,73 @@ import {
   getSubtlePanelClass,
 } from './facilityAdminDashboard.utils';
 import { ADMIN_ROUTES } from '../../../../../../app/routes/constants/administration.paths';
-import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 import { ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from '../../../../../../app/routes/constants/administration.paths';
+import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 
 interface FacilityAdminCapacitySectionProps {
   isDark: boolean;
-  summary: CapacitySummary;
-  departments: DepartmentCapacityItem[];
-  wards: WardDetail[];
-  spaceTypes: SpaceTypeSummary[];
+  summary?: CapacitySummary | null;
+  departments?: DepartmentCapacityItem[] | null;
+  wards?: WardDetail[] | null;
+  spaceTypes?: SpaceTypeSummary[] | null;
 }
 
-const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> = ({
+const EMPTY_SUMMARY: CapacitySummary = {
+  total_beds: 0,
+  total_treatment_rooms: 0,
+  total_concurrent_capacity: 0, 
+  occupied_spaces: 0,
+  total_active_spaces: 0,
+  space_utilization_rate: 0,
+  wards: { 
+    total_wards: 0,
+    total_declared_capacity: 0,
+    total_operational_capacity: 0,
+    wards_by_type: [],
+  },
+};
+
+function FacilityAdminCapacitySection({
   isDark,
   summary,
   departments,
   wards,
   spaceTypes,
-}) => {
+}: FacilityAdminCapacitySectionProps) {
   const navigate = useNavigate();
   const [isNavigating, setIsNavigating] = useState<string | null>(null);
 
   const panelClass = getPanelClass(isDark);
   const subtlePanelClass = getSubtlePanelClass(isDark);
 
-  const topWards = [...wards]
-    .filter((ward) => ward.utilization_percentage !== null)
-    .sort(
-      (a, b) =>
-        Number(b.utilization_percentage ?? 0) - Number(a.utilization_percentage ?? 0)
-    )
-    .slice(0, 5);
+  const safeSummary = summary ?? EMPTY_SUMMARY;
+  const safeDepartments = Array.isArray(departments) ? departments : [];
+  const safeWards = Array.isArray(wards) ? wards : [];
+  const safeSpaceTypes = Array.isArray(spaceTypes) ? spaceTypes : [];
 
-  const topDepartments = [...departments].slice(0, 2);
+  const topDepartments = useMemo(() => safeDepartments.slice(0, 6), [safeDepartments]);
 
-  // Navigation handler with loading state
+  const topWards = useMemo(
+    () =>
+      [...safeWards]
+        .filter((ward) => ward.utilization_percentage !== null && ward.utilization_percentage !== undefined)
+        .sort(
+          (a, b) =>
+            Number(b.utilization_percentage ?? 0) - Number(a.utilization_percentage ?? 0)
+        )
+        .slice(0, 5),
+    [safeWards]
+  );
+
   const handleNavigate = (url: string, sectionName: string) => {
     setIsNavigating(sectionName);
     navigate(url);
   };
 
-  // Show loading skeleton if navigating
   if (isNavigating) {
     return (
-      <LoadingSkeleton 
-        variant="dashboard" 
+      <LoadingSkeleton
+        variant="dashboard"
         theme={isDark ? 'dark' : 'light'}
         message={`Loading ${isNavigating}...`}
       />
@@ -98,65 +123,49 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
+        <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
           <div className="flex items-center gap-3">
-            <BedDouble
-              className={cn('h-5 w-5', isDark ? 'text-blue-300' : 'text-blue-700')}
-            />
+            <BedDouble className={cn('h-5 w-5', isDark ? 'text-blue-300' : 'text-blue-700')} />
             <div>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                Total Beds
-              </p>
+              <p className="text-xs text-slate-500">Total Beds</p>
               <p className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-                {formatNumber(summary.total_beds)}
+                {formatNumber(safeSummary.total_beds)}
               </p>
             </div>
           </div>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
+        <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
           <div className="flex items-center gap-3">
-            <DoorOpen
-              className={cn('h-5 w-5', isDark ? 'text-violet-300' : 'text-violet-700')}
-            />
+            <DoorOpen className={cn('h-5 w-5', isDark ? 'text-violet-300' : 'text-violet-700')} />
             <div>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                Treatment Rooms
-              </p>
+              <p className="text-xs text-slate-500">Treatment Rooms</p>
               <p className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-                {formatNumber(summary.total_treatment_rooms)}
+                {formatNumber(safeSummary.total_treatment_rooms)}
               </p>
             </div>
           </div>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
+        <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
           <div className="flex items-center gap-3">
-            <Building2
-              className={cn('h-5 w-5', isDark ? 'text-emerald-300' : 'text-emerald-700')}
-            />
+            <Building2 className={cn('h-5 w-5', isDark ? 'text-emerald-300' : 'text-emerald-700')} />
             <div>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                Active Spaces
-              </p>
+              <p className="text-xs text-slate-500">Active Spaces</p>
               <p className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-                {formatNumber(summary.occupied_spaces)} / {formatNumber(summary.total_active_spaces)}
+                {formatNumber(safeSummary.occupied_spaces)} / {formatNumber(safeSummary.total_active_spaces)}
               </p>
             </div>
           </div>
         </div>
 
-        <div className={cn(subtlePanelClass, 'p-4', 'cursor-default')}>
+        <div className={cn(subtlePanelClass, 'cursor-default p-4')}>
           <div className="flex items-center gap-3">
-            <Timer
-              className={cn('h-5 w-5', isDark ? 'text-amber-300' : 'text-amber-700')}
-            />
+            <Timer className={cn('h-5 w-5', isDark ? 'text-amber-300' : 'text-amber-700')} />
             <div>
-              <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                Space Utilization
-              </p>
+              <p className="text-xs text-slate-500">Space Utilization</p>
               <p className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
-                {formatPercent(summary.space_utilization_rate)}
+                {formatPercent(safeSummary.space_utilization_rate)}
               </p>
             </div>
           </div>
@@ -164,32 +173,29 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
-        {/* Department Readiness Section */}
         <div className={cn(subtlePanelClass, 'p-4')}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
               Department Readiness
             </h3>
-            <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  'rounded-full px-3 py-1 text-xs font-semibold cursor-default',
-                  isDark ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-700'
-                )}
-              >
-                {formatNumber(departments.length)} departments
-              </span>
-            </div>
+
+            <span
+              className={cn(
+                'rounded-full px-3 py-1 text-xs font-semibold',
+                isDark ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-700'
+              )}
+            >
+              {formatNumber(safeDepartments.length)} departments
+            </span>
           </div>
 
-          {/* Content area with scroll */}
-          <div className="max-h-[600px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+          <div className="max-h-[600px] space-y-3 overflow-y-auto pr-2">
             {topDepartments.length ? (
               topDepartments.map((department) => (
                 <div
                   key={`${department.department_name}-${department.department_type}`}
                   className={cn(
-                    'rounded-2xl border p-4 cursor-default',
+                    'rounded-2xl border p-4',
                     isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white'
                   )}
                 >
@@ -205,7 +211,7 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
 
                     <div
                       className={cn(
-                        'rounded-full px-3 py-1 text-xs font-semibold cursor-default',
+                        'rounded-full px-3 py-1 text-xs font-semibold',
                         isDark ? 'bg-blue-500/10 text-blue-300' : 'bg-blue-50 text-blue-700'
                       )}
                     >
@@ -215,36 +221,28 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
 
                   <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div>
-                      <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                        Beds
-                      </p>
+                      <p className="text-xs text-slate-500">Beds</p>
                       <p className={cn('mt-1 text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
                         {formatNumber(department.bed_count)}
                       </p>
                     </div>
 
                     <div>
-                      <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                        Rooms
-                      </p>
+                      <p className="text-xs text-slate-500">Rooms</p>
                       <p className={cn('mt-1 text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
                         {formatNumber(department.treatment_rooms)}
                       </p>
                     </div>
 
                     <div>
-                      <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                        Staff
-                      </p>
+                      <p className="text-xs text-slate-500">Staff</p>
                       <p className={cn('mt-1 text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
                         {formatNumber(department.assigned_staff_count)}
                       </p>
                     </div>
 
                     <div>
-                      <p className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                        Wait Time
-                      </p>
+                      <p className="text-xs text-slate-500">Wait Time</p>
                       <p className={cn('mt-1 text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
                         {formatMinutes(department.avg_wait_time_minutes)}
                       </p>
@@ -252,7 +250,7 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
                   </div>
 
                   <p className={cn('mt-3 text-xs leading-5', isDark ? 'text-slate-400' : 'text-slate-600')}>
-                    {department.capacity_utilization_hint}
+                    {department.capacity_utilization_hint || 'No department readiness note available.'}
                   </p>
                 </div>
               ))
@@ -265,33 +263,36 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
             )}
           </div>
 
-          {/* CTA Button - Always Visible */}
-          <div className={cn('mt-4 pt-4 border-t', isDark ? 'border-white/10' : 'border-slate-200')}>
+          <div
+            className={cn(
+              'mt-4 border-t pt-4',
+              isDark ? 'border-white/10' : 'border-slate-200'
+            )}
+          >
             <button
               onClick={() => handleNavigate(ADMIN_ROUTES.FACILITY_SETUP, 'Departments')}
               className={cn(
-                'w-full rounded-xl px-4 py-3 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all',
                 isDark
-                  ? departments.length === 0
-                    ? 'bg-blue-600/30 text-blue-200 hover:bg-blue-600/40 border border-blue-500/40'
-                    : 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30'
-                  : departments.length === 0
-                  ? 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-600'
-                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+                  ? safeDepartments.length === 0
+                    ? 'border border-blue-500/40 bg-blue-600/30 text-blue-200 hover:bg-blue-600/40'
+                    : 'border border-blue-500/30 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
+                  : safeDepartments.length === 0
+                  ? 'border border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                  : 'border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
               )}
             >
-              {departments.length === 0 ? (
+              {safeDepartments.length === 0 ? (
                 <PlusCircle className="h-4 w-4" />
               ) : (
                 <Settings className="h-4 w-4" />
               )}
-              <span>{departments.length === 0 ? 'Configure Departments' : 'Manage Departments'}</span>
+              <span>{safeDepartments.length === 0 ? 'Configure Departments' : 'Manage Departments'}</span>
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>
 
-        {/* Ward Utilization Hotspots Section */}
         <div className={cn(subtlePanelClass, 'p-4')}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
@@ -299,8 +300,7 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
             </h3>
           </div>
 
-          {/* Content area with scroll */}
-          <div className="max-h-[500px] overflow-y-auto pr-2 space-y-4 custom-scrollbar">
+          <div className="max-h-[500px] space-y-4 overflow-y-auto pr-2">
             {topWards.length ? (
               topWards.map((ward) => (
                 <div key={ward.id} className="space-y-2">
@@ -346,32 +346,36 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
             )}
           </div>
 
-          {/* CTA Button - Always Visible */}
-          <div className={cn('mt-4 pt-4 border-t', isDark ? 'border-white/10' : 'border-slate-200')}>
+          <div
+            className={cn(
+              'mt-4 border-t pt-4',
+              isDark ? 'border-white/10' : 'border-slate-200'
+            )}
+          >
             <button
-              onClick={() => handleNavigate(ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.WARD_MANAGEMENT, 'Wards')}
+              onClick={() =>
+                handleNavigate(
+                  ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.WARD_MANAGEMENT,
+                  'Wards'
+                )
+              }
               className={cn(
-                'w-full rounded-xl px-4 py-3 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all',
                 isDark
-                  ? wards.length === 0
-                    ? 'bg-violet-600/30 text-violet-200 hover:bg-violet-600/40 border border-violet-500/40'
-                    : 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 border border-violet-500/30'
-                  : wards.length === 0
-                  ? 'bg-violet-600 text-white hover:bg-violet-700 border border-violet-600'
-                  : 'bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200'
+                  ? safeWards.length === 0
+                    ? 'border border-violet-500/40 bg-violet-600/30 text-violet-200 hover:bg-violet-600/40'
+                    : 'border border-violet-500/30 bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
+                  : safeWards.length === 0
+                  ? 'border border-violet-600 bg-violet-600 text-white hover:bg-violet-700'
+                  : 'border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100'
               )}
             >
-              {wards.length === 0 ? (
-                <PlusCircle className="h-4 w-4" />
-              ) : (
-                <MapIcon className="h-4 w-4" />
-              )}
-              <span>{wards.length === 0 ? 'Configure Wards' : 'Manage Wards'}</span>
+              {safeWards.length === 0 ? <PlusCircle className="h-4 w-4" /> : <MapIcon className="h-4 w-4" />}
+              <span>{safeWards.length === 0 ? 'Configure Wards' : 'Manage Wards'}</span>
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
 
-          {/* Space Types Section */}
           <div className="mt-6">
             <div className="mb-3 flex items-center justify-between">
               <h4 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
@@ -379,14 +383,14 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
               </h4>
             </div>
 
-            <div className="max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
-              {spaceTypes.length ? (
+            <div className="max-h-[200px] overflow-y-auto pr-2">
+              {safeSpaceTypes.length ? (
                 <div className="flex flex-wrap gap-2">
-                  {spaceTypes.slice(0, 10).map((item) => (
+                  {safeSpaceTypes.slice(0, 10).map((item) => (
                     <div
                       key={item.space_type}
                       className={cn(
-                        'rounded-full border px-3 py-1.5 text-xs font-medium cursor-default',
+                        'rounded-full border px-3 py-1.5 text-xs font-medium',
                         isDark
                           ? 'border-white/10 bg-white/[0.03] text-slate-300'
                           : 'border-slate-200 bg-white text-slate-700'
@@ -395,16 +399,16 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
                       {item.space_type} • {formatNumber(item.total)}
                     </div>
                   ))}
-                  {spaceTypes.length > 10 && (
+                  {safeSpaceTypes.length > 10 && (
                     <div
                       className={cn(
-                        'rounded-full border px-3 py-1.5 text-xs font-medium cursor-default',
+                        'rounded-full border px-3 py-1.5 text-xs font-medium',
                         isDark
                           ? 'border-white/10 bg-white/[0.03] text-slate-300'
                           : 'border-slate-200 bg-white text-slate-700'
                       )}
                     >
-                      +{spaceTypes.length - 10} more
+                      +{safeSpaceTypes.length - 10} more
                     </div>
                   )}
                 </div>
@@ -415,53 +419,44 @@ const FacilityAdminCapacitySection: React.FC<FacilityAdminCapacitySectionProps> 
               )}
             </div>
 
-            {/* CTA Button - Always Visible */}
-            <div className={cn('mt-4 pt-4 border-t', isDark ? 'border-white/10' : 'border-slate-200')}>
+            <div
+              className={cn(
+                'mt-4 border-t pt-4',
+                isDark ? 'border-white/10' : 'border-slate-200'
+              )}
+            >
               <button
-                onClick={() => handleNavigate(ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.CLINICAL_ROOMS, 'Spaces')}
+                onClick={() =>
+                  handleNavigate(
+                    ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES.CLINICAL_ROOMS,
+                    'Spaces'
+                  )
+                }
                 className={cn(
-                  'w-full rounded-xl px-4 py-3 text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+                  'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all',
                   isDark
-                    ? spaceTypes.length === 0
-                      ? 'bg-emerald-600/30 text-emerald-200 hover:bg-emerald-600/40 border border-emerald-500/40'
-                      : 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30'
-                    : spaceTypes.length === 0
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 border border-emerald-600'
-                    : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                    ? safeSpaceTypes.length === 0
+                      ? 'border border-emerald-500/40 bg-emerald-600/30 text-emerald-200 hover:bg-emerald-600/40'
+                      : 'border border-emerald-500/30 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
+                    : safeSpaceTypes.length === 0
+                    ? 'border border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700'
+                    : 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                 )}
               >
-                {spaceTypes.length === 0 ? (
+                {safeSpaceTypes.length === 0 ? (
                   <PlusCircle className="h-4 w-4" />
                 ) : (
                   <LayoutDashboard className="h-4 w-4" />
                 )}
-                <span>{spaceTypes.length === 0 ? 'Configure Spaces' : 'Manage Spaces'}</span>
+                <span>{safeSpaceTypes.length === 0 ? 'Configure Spaces' : 'Manage Spaces'}</span>
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Custom scrollbar styles */}
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: ${isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f1f1'};
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: ${isDark ? 'rgba(255, 255, 255, 0.2)' : '#cbd5e1'};
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: ${isDark ? 'rgba(255, 255, 255, 0.3)' : '#94a3b8'};
-        }
-      `}</style>
     </motion.section>
   );
-};
+}
 
 export default FacilityAdminCapacitySection;

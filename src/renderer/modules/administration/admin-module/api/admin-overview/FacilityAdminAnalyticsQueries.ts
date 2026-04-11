@@ -123,22 +123,6 @@ export const useFacilityAdminAnalyticsQuery = (
     enabled: Boolean(facilityId) && (options?.enabled ?? true),
     staleTime: 60_000,
     refetchOnWindowFocus: false,
-    onError: (error: AxiosError<ApiErrorResponse>) => {
-      if (!showErrorToast) return;
-
-      const apiMessage = error.response?.data?.message || error.message || 'Failed to fetch facility analytics.';
-      
-      // Extract validation errors if present
-      let errorDetails = '';
-      if (error.response?.data?.errors) {
-        errorDetails = Object.entries(error.response.data.errors)
-          .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
-          .join(' | ');
-      }
-
-      const displayMessage = errorDetails ? `${apiMessage} (${errorDetails})` : apiMessage;
-      showToast('error', displayMessage, 8000);
-    },
     ...options,
   });
 };
