@@ -7,6 +7,8 @@ import {
   RefreshCw,
   Thermometer,
   X,
+  Shield,
+  Settings,
 } from 'lucide-react';
 import type {
   ControlledSubstanceSchedule,
@@ -14,8 +16,10 @@ import type {
   ItemCategory,
   ItemStatus,
   RouteOfAdministration,
-} from  '../../../api/admin-inventory/inventoryItemTypes';
-import { generateItemCodeFromName } from '../utils/inventoryItemUiUtils';
+} from '../../../api/admin-inventory/inventoryItemTypes';
+import { useAppSelector } from '../../../../../../app/store/hooks/useApp';
+import { selectActiveFacilityCurrency } from '../../../../../../app/store/slices/activeContextSlice';
+import { generateItemCode } from '../utils/inventoryItemUiUtils';
 
 export interface InventoryItemFormData {
   item_code: string;
@@ -100,6 +104,8 @@ interface Props {
   canSubmit: boolean;
 }
 
+
+
 export const InventoryItemFormDrawer: React.FC<Props> = ({
   theme,
   mode,
@@ -122,6 +128,10 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
   const isDark = theme === 'dark';
   const title = mode === 'edit' ? 'Edit Inventory Item' : 'Create New Inventory Item';
 
+  // Get facility currency from Redux slice
+  const facilityCurrency = useAppSelector(selectActiveFacilityCurrency);
+  const currentCurrency = facilityCurrency || 'USD';
+
   const helperText = useMemo(() => {
     return mode === 'edit'
       ? 'Update item details, pricing, and storage requirements.'
@@ -134,22 +144,48 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
   const [awpText, setAwpText] = useState<string>('');
   const [awpFocused, setAwpFocused] = useState(false);
 
-  // Track whether the user has explicitly provided a code
-  const userProvidedCodeRef = useRef(false);
-
   // Focus management
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   const didAutoFocusRef = useRef(false);
+  const hasInitializedRef = useRef(false);
 
-  // Reset autofocus flag when drawer closes
+  // Reset flags when drawer closes
   useEffect(() => {
     if (!open) {
       didAutoFocusRef.current = false;
-      userProvidedCodeRef.current = false;
+      hasInitializedRef.current = false;
     }
   }, [open]);
 
-  // Early return after all hooks
+  // Initialize default values when drawer opens in create mode
+  useEffect(() => {
+    if (mode === 'create' && open && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      
+      const updates: Partial<InventoryItemFormData> = {};
+      
+      // Set default currency from facility
+      if (!formData.currency_code && currentCurrency) {
+        updates.currency_code = currentCurrency;
+      }
+      
+      // Generate item code if not already set
+      if (!formData.item_code) {
+        updates.item_code = generateItemCode();
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        onChange({ ...formData, ...updates });
+      }
+    }
+  }, [mode, open, formData, onChange, currentCurrency]);
+
+  // Get currency display label
+  const currencyDisplayLabel = useMemo(() => {
+    const found = currencyOptions.find(opt => opt.value === currentCurrency);
+    return found?.label || `${currentCurrency} (Facility Default)`;
+  }, [currencyOptions, currentCurrency]);
+
   if (!open) {
     return null;
   }
@@ -185,34 +221,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
   };
 
   const handleNameChange = (name: string) => {
-    const nextName = name;
-
-    // Auto-generate code ONLY when user has not provided a code
-    if (!userProvidedCodeRef.current) {
-      set({
-        item_name: nextName,
-        item_code: generateItemCodeFromName(nextName),
-      });
-      return;
-    }
-
-    set({ item_name: nextName });
-  };
-
-  const handleCodeChange = (raw: string) => {
-    const next = raw.toUpperCase();
-    // Mark as user-provided if they type anything
-    if (next.trim().length > 0) {
-      userProvidedCodeRef.current = true;
-    }
-    set({ item_code: next });
-  };
-
-  const handleCodeBlur = () => {
-    // If code is empty after blur, allow auto-generation again
-    if (!formData.item_code.trim()) {
-      userProvidedCodeRef.current = false;
-    }
+    set({ item_name: name });
   };
 
   const normalizeMoney = (raw: string) => {
@@ -237,8 +246,6 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
     }
   };
 
- 
-
   // Helper to determine if medication-specific fields should be shown
   const isMedication = [
     'medication',
@@ -252,7 +259,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
       <button
         aria-label="Close"
         onClick={onClose}
-        className="absolute inset-0 bg-black/50 cursor-default"
+        className="absolute inset-0 bg-black/50 cursor-pointer"
       />
 
       {/* Panel */}
@@ -301,18 +308,23 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                   <label className={`block text-sm font-medium mb-1 ${labelTheme}`}>
                     Item Code <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={formData.item_code}
-                    onChange={(e) => handleCodeChange(e.target.value)}
-                    onBlur={handleCodeBlur}
-                    className={`${inputBase} ${inputTheme}`}
-                    placeholder="e.g., MED001"
-                    autoCapitalize="characters"
-                    inputMode="text"
-                  />
+                  
+                  {/* Non-editable item code display */}
+                  <div className={`relative rounded-lg border ${isDark ? 'border-gray-800 bg-gray-900' : 'border-gray-300 bg-gray-50'}`}>
+                    <Shield
+                      className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
+                        isDark ? 'text-gray-500' : 'text-gray-400'
+                      }`}
+                    />
+                    <div className="w-full pl-10 pr-3 py-2 rounded-lg">
+                      <span className={`font-mono font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                        {formData.item_code || 'Generating...'}
+                      </span>
+                    </div>
+                  </div>
+                  
                   <p className={`mt-1 text-xs ${hintTheme}`}>
-                    Unique identifier for inventory tracking.
+                    System-generated unique identifier for this item.
                   </p>
                 </div>
 
@@ -553,20 +565,17 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                         onChange={(e) => {
                             const value = e.target.value;
 
-                            // Allow empty while typing
                             if (value === '') {
                             set({ package_quantity: undefined });
                             return;
                             }
 
-                            // Allow only valid numbers
                             const numericValue = Number(value);
                             if (!isNaN(numericValue)) {
                             set({ package_quantity: numericValue });
                             }
                         }}
                         onBlur={() => {
-                            // Enforce minimum when user leaves the field
                             if (!formData.package_quantity || formData.package_quantity < 1) {
                             set({ package_quantity: 1 });
                             }
@@ -592,19 +601,31 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
                   />
                 </div>
 
+                {/* Currency - Read Only with helper text */}
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${labelTheme}`}>
                     Currency <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={formData.currency_code}
-                    onChange={(e) => set({ currency_code: e.target.value })}
-                    className={`${inputBase} ${selectTheme}`}
-                  >
-                    {currencyOptions.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                  
+                  <div className={`relative rounded-lg border ${isDark ? 'border-gray-800 bg-gray-900' : 'border-gray-300 bg-gray-50'}`}>
+                    <DollarSign
+                      className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
+                        isDark ? 'text-gray-500' : 'text-gray-400'
+                      }`}
+                    />
+                    <div className="w-full pl-10 pr-3 py-2 rounded-lg">
+                      <span className={`font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                        {currencyDisplayLabel}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-2 text-xs flex items-center gap-1.5">
+                    <Settings className="w-3 h-3" />
+                    <span className={hintTheme}>
+                      Go to Facility Settings to change currency
+                    </span>
+                  </div>
                 </div>
               </div>
 

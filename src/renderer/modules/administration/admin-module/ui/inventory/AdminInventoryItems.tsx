@@ -41,6 +41,7 @@ import { InventoryItemHeader } from './components/InventoryItemHeader';
 import { InventoryItemFiltersBar } from './components/InventoryItemFiltersBar';
 import { InventoryItemFormDrawer, type InventoryItemFormData } from './components/InventoryItemFormDrawer';
 import { InventoryCatalogList } from './components/InventoryCatalogList';
+import { generateItemCode } from './utils/inventoryItemUiUtils';
 
 interface AdminInventoryItemProps {
   theme: 'light' | 'dark';
@@ -60,7 +61,7 @@ interface FilterState {
 }
 
 const emptyForm = (): InventoryItemFormData => ({
-  item_code: '',
+  item_code: generateItemCode(),
   item_name: '',
   item_description: '',
   item_category: ItemCategory.MEDICATION,
@@ -72,7 +73,7 @@ const emptyForm = (): InventoryItemFormData => ({
   ndc_code: '',
   drug_class: '',
   controlled_substance_schedule: '',
-  dosage_form: '',
+  dosage_form: DosageForm.TABLET,
   strength: '',
   route_of_administration: '',
   
@@ -478,7 +479,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
 
     setFormData({
       // Basic Info
-      item_code: item.item_code || '',
+      item_code: item.item_code || generateItemCode(),
       item_name: item.item_name,
       item_description: item.item_description || '',
       item_category: item.item_category,
@@ -490,7 +491,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       ndc_code: item.ndc_code || '',
       drug_class: item.drug_class || '',
       controlled_substance_schedule: item.controlled_substance_schedule || '',
-      dosage_form: item.dosage_form as DosageForm,
+      dosage_form: item.dosage_form as DosageForm || DosageForm.TABLET,
       strength: item.strength || '',
       route_of_administration: item.route_of_administration as RouteOfAdministration,
       
@@ -551,7 +552,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
 
     setFormData({
       // Basic Info - modified for duplicate
-      item_code: item.item_code ? `${item.item_code}-COPY` : '',
+      item_code: generateItemCode(),
       item_name: `${item.item_name} (Copy)`,
       item_description: item.item_description || '',
       item_category: item.item_category,
@@ -563,7 +564,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
       ndc_code: '', // Clear NDC for duplicate
       drug_class: item.drug_class || '',
       controlled_substance_schedule: item.controlled_substance_schedule || '',
-      dosage_form: item.dosage_form as DosageForm,
+      dosage_form: item.dosage_form as DosageForm || DosageForm.TABLET,
       strength: item.strength || '',
       route_of_administration: item.route_of_administration as RouteOfAdministration,
       

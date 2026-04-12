@@ -174,6 +174,16 @@ export const getSafetyIndicators = (item: InventoryItem): Array<{ icon: string; 
   
   return indicators;
 };
+/**
+ * Generate a unique inventory item code
+ * Format: INVT-XXXX where XXXX is a random 4-digit number
+ * Example: INVT-1234, INVT-5678
+ */
+export const generateItemCode = (): string => {
+  const randomNum = Math.floor(Math.random() * 9999) + 1;
+  const paddedNum = randomNum.toString().padStart(4, '0');
+  return `INVT-${paddedNum}`;
+};
 
 /**
  * Validate item form data before submission

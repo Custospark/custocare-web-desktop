@@ -22,11 +22,12 @@ import type {
   ItemCategory,
 } from '../../../api/admin-inventory/inventoryItemTypes';
 import {
-  formatPrice,
   getStatusBgColor,
   getStatusColor,
 } from '../utils/inventoryItemUiUtils';
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
+import { formatPrice } from '../../service-catalog-ui/utils/serviceCatalogUiUtils';
+import { formatText } from '../../../../../medical-records/ui/revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 
 // ─── cn helper ──────────────────────────────────────────────────────────────
 const cn = (...classes: (string | false | null | undefined)[]): string =>
@@ -727,7 +728,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
 
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className="font-semibold text-sm">
-                        {formatPrice(item.unit_cost ?? 0, item.currency_code)}
+                        {formatPrice(item.unit_cost)}
                       </span>
                       <span
                         className={cn(
@@ -736,7 +737,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                           getStatusColor(item.status, isDark)
                         )}
                       >
-                        {item.status}
+                        {formatText(item.status)}
                       </span>
                     </div>
                   </div>
@@ -823,13 +824,13 @@ export const InventoryCatalogList: React.FC<Props> = ({
                           : 'bg-blue-100 text-blue-800'
                       )}
                     >
-                      {item.item_category.replace(/_/g, ' ')}
+                      {formatText(item.item_category)}
                     </span>
                   </div>
 
                   <div className="col-span-2">
                     <p className="font-semibold text-sm">
-                      {formatPrice(item.unit_cost ?? 0, item.currency_code)}
+                      {formatPrice(item.unit_cost)}
                     </p>
                     <p
                       className={cn(
@@ -846,7 +847,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                         getStatusColor(item.status, isDark)
                       )}
                     >
-                      {item.status}
+                      {formatText(item.status)}
                     </span>
                   </div>
 
@@ -937,7 +938,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                         getStatusColor(item.status, isDark)
                       )}
                     >
-                      {item.status}
+                      {formatText(item.status)}
                     </span>
                   </div>
 
@@ -950,7 +951,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                           isDark ? 'text-gray-100' : 'text-gray-900'
                         )}
                       >
-                        {formatPrice(item.unit_cost ?? 0, item.currency_code)}
+                        {formatPrice(item.unit_cost)}
                       </span>
                       <span
                         className={cn(
@@ -982,7 +983,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                             : 'bg-gray-100 text-gray-600'
                         )}
                       >
-                        {item.item_category.replace(/_/g, ' ')}
+                        {formatText(item.item_category)}
                       </span>
                       {item.requires_refrigeration && (
                         <span
