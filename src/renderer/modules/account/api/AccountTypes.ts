@@ -20,7 +20,7 @@
  * - Routing is handled in query hooks (React Router navigate).
  */
 import type { StaffFacilityAssignment } from "../../../app/store/slices/activeContextSlice";
-export {StaffFacilityAssignment}
+export type {StaffFacilityAssignment}
 
 /* -------------------------------------------------------------------------- */
 /*                                   ENUMS                                    */

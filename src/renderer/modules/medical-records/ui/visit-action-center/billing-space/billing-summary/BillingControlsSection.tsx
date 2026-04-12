@@ -3,6 +3,7 @@ import { AlertCircle } from 'lucide-react';
 import { PaymentMethodItem } from './PaymentMethodItem';
 import { ActionButtons } from './ActionButtons';
 import { DiscountControl } from './DiscountControl';
+import { formatCurrency } from '../../../revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 interface BillingControlsSectionProps {
   colors: any;
   isReadOnly: boolean;
@@ -36,13 +37,6 @@ interface BillingControlsSectionProps {
   onPrintReceipt: () => void;
 }
 
-const toCurrency = (value: number) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'UGX',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Number.isFinite(value) ? value : 0);
 
 export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
   colors,
@@ -148,7 +142,7 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
                Total
               </div>
               <div className={`mt-1 text-base font-bold ${colors.text.primary}`}>
-                {toCurrency(financialSnapshot.grandTotal)}
+                {formatCurrency(financialSnapshot.grandTotal)}
               </div>
             </div>
 
@@ -157,7 +151,7 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
                 Amount Received
               </div>
               <div className={`mt-1 text-base font-bold ${colors.text.primary}`}>
-                {toCurrency(financialSnapshot.totalPaid)}
+                {formatCurrency(financialSnapshot.totalPaid)}
               </div>
             </div>
 
@@ -172,7 +166,7 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
                     : 'text-emerald-600 dark:text-emerald-400'
                 }`}
               >
-                {toCurrency(financialSnapshot.balance)}
+                {formatCurrency(financialSnapshot.balance)}
               </div>
             </div>
           </div>
@@ -180,7 +174,7 @@ export const BillingControlsSection: React.FC<BillingControlsSectionProps> = ({
           {financialSnapshot.discountAmount > 0 && (
             <div className={`mt-3 text-xs ${colors.text.secondary}`}>
               Applied discount: <span className={`font-semibold ${colors.text.primary}`}>
-                {toCurrency(financialSnapshot.discountAmount)}
+                {formatCurrency(financialSnapshot.discountAmount)}
               </span>
             </div>
           )}

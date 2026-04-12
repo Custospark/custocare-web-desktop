@@ -174,8 +174,8 @@ export const SpaceAllocationListView: React.FC<SpaceAllocationListViewProps> = (
                   )}
 
                   {/* Row 5: Actions */}
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t" className={cn('pt-2', colors.border.primary)}>
-                    {isOccupied ? (
+                <div className={cn('flex items-center justify-end gap-2 pt-2 border-t', colors.border.primary)}>
+                      {isOccupied ? (
                       <>
                         <button
                           onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
