@@ -1,5 +1,6 @@
 // store/slices/activeContextSlice.ts
 import { createSlice, createSelector, type PayloadAction } from '@reduxjs/toolkit';
+import { FacilityType, OperationalStatus } from '../../../modules/medical-records/api/facility/FacilityTypes';
 
 // ============================================================================
 // TYPES
@@ -27,6 +28,7 @@ export interface PatientCapability {
 export interface StaffFacilityAssignment {
   facility_id: number;
   facility_name: string;
+  facility_code: string;
   role_code: string;
   modules: BackendModule[];
   
@@ -36,7 +38,7 @@ export interface StaffFacilityAssignment {
   
   // Classification
   nature_of_facility?: string | null;
-  facility_type?: string | null;
+  facility_type?: FacilityType | null;
   facility_tier?: string | null;
   
   // Capacity
@@ -66,7 +68,7 @@ export interface StaffFacilityAssignment {
   operating_hours?: any;
   emergency_services_hours?: any;
   is_24_7?: boolean | null;
-  operational_status?: string | null;
+  operational_status?: OperationalStatus | null;
   average_wait_time_minutes?: number | null;
   monthly_patient_volume?: number | null;
   

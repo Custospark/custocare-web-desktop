@@ -10,7 +10,7 @@ import { BillingTray } from './BillingTray';
 import { loadDraft } from './billingSlice';
 import { setPatientInfo } from './billingSlice';
 import { BillingSpace } from './BillingSpace';
-import {BillingBottomDisplay} from './BillingBottomDisplay'
+// import {BillingBottomDisplay} from './BillingBottomDisplay'
 
 interface MRBillingProps {
   theme?: 'light' | 'dark';
@@ -71,9 +71,9 @@ const MRBilling: React.FC<MRBillingProps> = ({
         <BillingSpace 
           theme={theme}
         />
-        <BillingBottomDisplay 
+        {/* <BillingBottomDisplay 
           theme={theme}
-        />
+        /> */}
 
       {/* Billing Tray Overlay */}
       <BillingTray />

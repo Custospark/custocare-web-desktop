@@ -4,7 +4,6 @@ import { Route } from 'react-router-dom';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons'; 
 import LoadingScreen from '../../../../shared/components/Loading/LoadingScreen';
 import { ROUTES } from './onboardingRouteConstants';
-import { PublicRoute } from '../../../../app/routes/PublicRoute';
 
 // Lazy load auth pages
 const LoginPage = React.lazy(() => import('../ui/auth/Login'));
@@ -28,39 +27,39 @@ import PasswordResetSuccess from '../ui/auth/PasswordResetSuccess';
  * Returns an array of Route components
  */
 export const OnboardingRoutes = () => [
-  // Wrap ALL routes that should redirect authenticated users
-  <Route key="public-wrapper" element={<PublicRoute />}>
-    <Route 
-      key="home"
-      path={ROUTES.HOME}
-      element={
-        <Suspense fallback={<LoadingScreen />}>
-          <Landing />
-        </Suspense>
-      } 
-    />
-    
-    <Route 
-      key="landing"
-      path={ROUTES.LANDING} 
-      element={
-        <Suspense fallback={<LoadingScreen />}>
-          <Landing />
-        </Suspense>
-      } 
-    />
-    
-    <Route 
-      key="signup"
-      path={ROUTES.SIGNUP} 
-      element={
-        <Suspense fallback={<LoadingSkeleton />}>
-          <SignUpPage />
-        </Suspense>
-      } 
-    />
-    
-    <Route 
+  // Home/Landing routes
+  <Route 
+    key="home"
+    path={ROUTES.HOME}
+    element={
+      <Suspense fallback={<LoadingScreen />}>
+        <Landing />
+      </Suspense>
+    } 
+  />,
+  
+  <Route 
+    key="landing"
+    path={ROUTES.LANDING} 
+    element={
+      <Suspense fallback={<LoadingScreen />}>
+        <Landing />
+      </Suspense>
+    } 
+  />,
+  
+  // Auth routes
+  <Route 
+    key="signup"
+    path={ROUTES.SIGNUP} 
+    element={
+      <Suspense fallback={<LoadingSkeleton />}>
+        <SignUpPage />
+      </Suspense>
+    } 
+  />,
+  
+  <Route 
     key="login"
     path={ROUTES.LOGIN} 
     element={
@@ -68,11 +67,8 @@ export const OnboardingRoutes = () => [
         <LoginPage />
       </Suspense>
     } 
-  />
-  </Route>,
+  />,
   
-  
-  // Forgot password
   <Route 
     key="forgot-password"
     path={ROUTES.FORGOT_PASSWORD} 
@@ -83,7 +79,6 @@ export const OnboardingRoutes = () => [
     } 
   />,
   
-  // Reset password
   <Route 
     key="reset-password"
     path={ROUTES.RESET_PASSWORD} 
@@ -94,7 +89,6 @@ export const OnboardingRoutes = () => [
     } 
   />,
   
-  // Two factor auth
   <Route 
     key="two-factor-auth"
     path={ROUTES.TWO_FACTOR_AUTH} 
@@ -105,7 +99,6 @@ export const OnboardingRoutes = () => [
     } 
   />,
   
-  // Password reset success
   <Route 
     key="password-reset-success"
     path={ROUTES.RESET_PASSWORD_SUCCESS} 
@@ -116,7 +109,7 @@ export const OnboardingRoutes = () => [
     } 
   />,
   
-  // Portal selector
+  // Protected routes (these will be handled by ProtectedRoute in main router)
   <Route 
     key="portal-selector"
     path={ROUTES.PORTAL_SELECTOR} 
@@ -127,7 +120,6 @@ export const OnboardingRoutes = () => [
     } 
   />,
   
-  // Role selection
   <Route 
     key="role-selection"
     path={ROUTES.ROLE_SELECTION} 
@@ -138,7 +130,6 @@ export const OnboardingRoutes = () => [
     } 
   />,
   
-  // Patient onboarding
   <Route 
     key="patient-onboarding"
     path={ROUTES.PATIENT_ONBOARDING} 
@@ -149,7 +140,6 @@ export const OnboardingRoutes = () => [
     } 
   />,
   
-  // Medical professional onboarding
   <Route 
     key="medical-professional-onboarding"
     path={ROUTES.STAFF_ONBOARDING} 
@@ -160,7 +150,6 @@ export const OnboardingRoutes = () => [
     } 
   />,
   
-  // Healthcare facility onboarding
   <Route 
     key="healthcare-onboarding"
     path={ROUTES.HEALTHCARE_ONBOARDING} 
@@ -171,7 +160,7 @@ export const OnboardingRoutes = () => [
     } 
   />,
   
-  // Dashboard routes - protected by ProtectedRoutes
+  // Dashboard routes
   <Route key="dashboard-layout" element={<Layout />}>
     <Route
       key="patient-dashboard"

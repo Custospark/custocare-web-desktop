@@ -8,6 +8,7 @@ import type { FacilitySettingsFormState } from './FacilitySettingsHelpers';
 import { Label, FieldError, InfoRow } from './FacilitySettingsSharedUI';
 import { inputBase } from './styleHelpers';
 import { countryCodes } from '../../../../onboarding/ui/auth/countryCodes';
+
 /* ── Country select for address ───────────────────────────────────── */
 const CountrySelect: React.FC<{
   isDark: boolean;
@@ -215,6 +216,7 @@ const FacilityLocationContactCard: React.FC<FacilityLocationContactCardProps> = 
 }) => {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [phoneCountryCode, setPhoneCountryCode] = useState('+256'); // Default to Uganda
+  const [userEnteredPhone, setUserEnteredPhone] = useState('');
 
   const divider = `border-t ${isDark ? 'border-gray-800' : 'border-gray-100'}`;
   const selectedCountry = countryCodes.find((c) => c.code === form.country_code);
@@ -225,7 +227,17 @@ const FacilityLocationContactCard: React.FC<FacilityLocationContactCardProps> = 
     selectedCountry ? selectedCountry.name : form.country_code,
   ].filter(Boolean).join(', ') || '—';
 
-  // Phone validation
+  // Initialize userEnteredPhone from form.main_phone when component mounts or form changes
+  useEffect(() => {
+    if (form.main_phone && phoneCountryCode && form.main_phone.startsWith(phoneCountryCode)) {
+      const withoutDialCode = form.main_phone.replace(phoneCountryCode, '');
+      setUserEnteredPhone(withoutDialCode);
+    } else if (!form.main_phone) {
+      setUserEnteredPhone('');
+    }
+  }, [form.main_phone, phoneCountryCode]);
+
+  // Phone validation (validates the user-entered number without dial code)
   const validatePhone = (phone: string) => {
     if (!phone) return { isValid: true, error: '' }; // Phone is optional
     const digitsOnly = phone.replace(/\D/g, '');
@@ -234,12 +246,25 @@ const FacilityLocationContactCard: React.FC<FacilityLocationContactCardProps> = 
     return { isValid: true, error: '' };
   };
 
-  const phoneValidation = validatePhone(form.main_phone);
+  const phoneValidation = validatePhone(userEnteredPhone);
 
   // Handlers
+  const handlePhoneCountrySelect = (dial_code: string) => {
+    setPhoneCountryCode(dial_code);
+    // Update the main_phone field with new dial code + existing user number (no space)
+    if (userEnteredPhone) {
+      const digitsOnly = userEnteredPhone.replace(/\D/g, '');
+      const fullNumber = `${dial_code}${digitsOnly}`;
+      onField('main_phone', fullNumber);
+    }
+  };
+
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^\d\s\-()]/g, '');
-    onField('main_phone', value);
+    const value = e.target.value.replace(/[^\d]/g, '');
+    setUserEnteredPhone(value);
+    // Concatenate dial code with user-entered number (no space, digits only)
+    const fullNumber = `${phoneCountryCode}${value}`;
+    onField('main_phone', fullNumber);
     if (touched.phone) {
       setTouched(prev => ({ ...prev, phone: false }));
     }
@@ -247,6 +272,13 @@ const FacilityLocationContactCard: React.FC<FacilityLocationContactCardProps> = 
 
   const handleBlur = (field: string) => () => {
     setTouched(prev => ({ ...prev, [field]: true }));
+  };
+
+  // Format display number for preview (with spaces for readability)
+  const formatDisplayNumber = (digits: string) => {
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+    return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
   };
 
   return (
@@ -351,7 +383,7 @@ const FacilityLocationContactCard: React.FC<FacilityLocationContactCardProps> = 
                   <PhoneCountrySelect 
                     isDark={isDark} 
                     value={phoneCountryCode}
-                    onChange={setPhoneCountryCode}
+                    onChange={handlePhoneCountrySelect}
                   />
                 </div>
 
@@ -360,35 +392,35 @@ const FacilityLocationContactCard: React.FC<FacilityLocationContactCardProps> = 
                   <Phone className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
                   <input
                     type="tel"
-                    value={form.main_phone}
+                    value={userEnteredPhone}
                     onChange={handlePhoneChange}
                     onBlur={handleBlur('phone')}
-                    placeholder="e.g., 712 345 678"
+                    placeholder="e.g., 712345678"
                     className={`${inputBase(isDark, 'pl-9')} ${
-                      touched.phone && !phoneValidation.isValid && form.main_phone
+                      touched.phone && !phoneValidation.isValid && userEnteredPhone
                         ? isDark ? 'border-red-500' : 'border-red-400'
-                        : phoneValidation.isValid && form.main_phone
+                        : phoneValidation.isValid && userEnteredPhone
                           ? isDark ? 'border-emerald-500' : 'border-emerald-400'
                           : ''
                     }`}
                   />
-                  {phoneValidation.isValid && form.main_phone && (
+                  {phoneValidation.isValid && userEnteredPhone && (
                     <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
                   )}
                 </div>
               </div>
 
-              {/* Show full number with country code */}
-              {form.main_phone && (
+              {/* Show full number with country code (formatted for display only) */}
+              {userEnteredPhone && (
                 <p className={`text-xs mt-1.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   Full number: <span className="font-mono text-cyan-600 dark:text-cyan-400">
-                    {phoneCountryCode}{form.main_phone}
+                    {phoneCountryCode} {formatDisplayNumber(userEnteredPhone)}
                   </span>
                 </p>
               )}
 
               {/* Validation Error */}
-              {touched.phone && !phoneValidation.isValid && form.main_phone && (
+              {touched.phone && !phoneValidation.isValid && userEnteredPhone && (
                 <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   {phoneValidation.error}
@@ -402,7 +434,7 @@ const FacilityLocationContactCard: React.FC<FacilityLocationContactCardProps> = 
               <div className="relative">
                 <Phone className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
                 <input className={inputBase(isDark, 'pl-9')} value={form.emergency_phone} maxLength={50}
-                  onChange={(e) => onField('emergency_phone', e.target.value)} placeholder="+256 800 000 000" />
+                  onChange={(e) => onField('emergency_phone', e.target.value)} placeholder="+256800000000" />
               </div>
               {fieldErrors.emergency_phone && <FieldError msg={fieldErrors.emergency_phone} />}
             </div>
@@ -446,7 +478,7 @@ const FacilityLocationContactCard: React.FC<FacilityLocationContactCardProps> = 
             <div className={`border-t pt-3 mt-3 ${isDark ? 'border-gray-800' : 'border-gray-100'}`}>
               {form.main_phone && (
                 <InfoRow isDark={isDark} label="Main Phone"
-                  value={<a href={`tel:${phoneCountryCode}${form.main_phone}`} className="hover:underline">{phoneCountryCode} {form.main_phone}</a>} />
+                  value={<a href={`tel:${form.main_phone}`} className="hover:underline">{form.main_phone}</a>} />
               )}
               {form.emergency_phone && (
                 <InfoRow isDark={isDark} label="Emergency"

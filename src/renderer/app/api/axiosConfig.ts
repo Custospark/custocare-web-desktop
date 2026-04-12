@@ -18,6 +18,7 @@ const axiosInstance: AxiosInstance = axios.create({
   timeout: API_TIMEOUT,
   headers: {
     Accept: 'application/json',
+    // IMPORTANT: do NOT set Content-Type globally
   },
 });
 
@@ -25,11 +26,13 @@ axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const state = store.getState();
 
+    // ---------------- Authorization ----------------
     const token = state.auth.token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
+    // ---------------- Context Headers ----------------
     const { activeFacilityId, isPatient, isStaffWithFacility, capabilities } =
       state.activeContext;
 
@@ -46,13 +49,18 @@ axiosInstance.interceptors.request.use(
     const staffId = capabilities.staff?.staff_id;
     if (staffId) config.headers['X-Staff-Id'] = String(staffId);
 
+    // ---------------- Content-Type Strategy ----------------
     const isFormData =
       typeof FormData !== 'undefined' && config.data instanceof FormData;
 
     if (isFormData) {
+      // Let the browser set: multipart/form-data; boundary=....
+      // Remove any forced JSON content-type if present.
+      // Axios v1 headers can be AxiosHeaders, so support both delete styles.
       (config.headers as any)?.delete?.('Content-Type');
       delete (config.headers as any)['Content-Type'];
     } else {
+      // For JSON requests, set application/json when there's a body.
       const method = (config.method || 'get').toLowerCase();
       const hasBody = ['post', 'put', 'patch', 'delete'].includes(method);
 
@@ -69,8 +77,11 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
+/**
+ * Prevents multiple in-flight 401 responses (e.g. several parallel queries
+ * all expiring at once) from each triggering a logout + toast + redirect.
+ */
 let _isHandling401 = false;
-let _redirectPathOnLogin: string | null = null;
 
 axiosInstance.interceptors.response.use(
   (response) => response,
@@ -78,23 +89,22 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 401 && !_isHandling401) {
       _isHandling401 = true;
 
-      const currentPath = window.location.pathname;
-      const isLoginPage = currentPath === '/login';
-      
-      if (!isLoginPage && !_redirectPathOnLogin) {
-        _redirectPathOnLogin = currentPath;
-      }
-
+      // 1️⃣  Wipe Redux auth state + clear localStorage (token, user, verification)
       store.dispatch(logout());
 
+      // 2️⃣  Tell the user what happened
       imperativeToast.show(
         'error',
         'Your session has expired. Please log in again.',
         8000,
       );
 
+      // 3️⃣  Redirect to login page
       imperativeNavigate.to('/login');
 
+      console.warn('[API] 401 Unauthorized — session expired, user logged out.');
+
+      // Reset flag after a short window so future logins work normally
       setTimeout(() => {
         _isHandling401 = false;
       }, 3000);
@@ -103,14 +113,6 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-
-export const getRedirectPath = (): string | null => {
-  return _redirectPathOnLogin;
-};
-
-export const resetRedirectPath = (): void => {
-  _redirectPathOnLogin = null;
-};
 
 export const queryClient = new QueryClient({
   defaultOptions: {
