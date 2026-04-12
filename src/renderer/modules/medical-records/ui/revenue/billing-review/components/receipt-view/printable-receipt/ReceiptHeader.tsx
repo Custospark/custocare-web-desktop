@@ -12,6 +12,7 @@ import {
 import LoadingSkeleton from '../../../../../../../../shared/components/Loading/LoadingSkeletons';
 import { cx } from './ReceiptTypes';
 import type { RootState } from  '../../../../../../../../app/store/rootReducer';
+import { formatText } from '../../../../stats/billing-revenue-stats-component/revenueDashboardUtils';
 
 export const ReceiptHeader: React.FC = () => {
   // First, try to get facility data from Redux slice
@@ -34,10 +35,10 @@ export const ReceiptHeader: React.FC = () => {
     
     const getAddressString = (): string => {
       const parts = [
+        activeFacility.state_province,
+        activeFacility.city,
         activeFacility.address_line1,
         activeFacility.address_line2,
-        activeFacility.city,
-        activeFacility.state_province,
       ].filter(Boolean);
       
       return parts.length > 0 ? parts.join(', ') : 'Address not available';
@@ -63,7 +64,7 @@ export const ReceiptHeader: React.FC = () => {
             statusColors.bg,
             statusColors.text
           )}>
-            {(activeFacility.operational_status || 'fully_operational').replace(/_/g, ' ')}
+            {formatText(activeFacility.operational_status || 'fully_operational')}
           </span>
         </div>
         

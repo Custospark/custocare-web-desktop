@@ -93,9 +93,9 @@ axiosInstance.interceptors.response.use(
       store.dispatch(logout());
 
       // 2️⃣  Tell the user what happened
-      imperativeToast.show(
+    imperativeToast.show(
         'error',
-        'Your session has expired. Please log in again.',
+        'Session expired. Please log in again to continue — your work has been saved.',
         8000,
       );
 
