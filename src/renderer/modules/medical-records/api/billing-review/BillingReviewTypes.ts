@@ -11,6 +11,8 @@
  * @module billingReviewTypes
  */
 
+import { store } from '../../../../app/store/store'; // Adjust path as needed
+import { selectActiveFacilityCurrency } from '../../../../app/store/slices/activeContextSlice'; // Adjust path as needed
 
 /* -------------------------------------------------------------------------- */
 /*                                   ENUMS                                    */
@@ -461,6 +463,46 @@ export function isOverdue(item: BillingReviewItem, daysThreshold: number = 30): 
   return diffDays > daysThreshold;
 }
 
+/**
+ * Get the current facility currency from Redux store
+ * Falls back to 'USD' if not available
+ */
+const getCurrentFacilityCurrency = (): string => {
+  try {
+    const state = store.getState();
+    const currency = selectActiveFacilityCurrency(state);
+    return currency && typeof currency === 'string' ? currency : 'USD';
+  } catch (error) {
+    console.warn('Failed to get facility currency, falling back to USD:', error);
+    return 'USD';
+  }
+};
+
+/**
+ * Format currency amount using facility's configured currency
+ * Falls back to USD if no facility currency is set
+ */
+export function formatCurrency(amount: number, currency?: string): string {
+  const finalCurrency = currency || getCurrentFacilityCurrency();
+  return new Intl.NumberFormat('en-UG', {
+    style: 'currency',
+    currency: finalCurrency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+/**
+ * Format currency with custom currency parameter (overrides facility config)
+ */
+export function formatCurrencyWithCustomCurrency(amount: number, currencyCode: string): string {
+  return new Intl.NumberFormat('en-UG', {
+    style: 'currency',
+    currency: currencyCode,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
 
 /**
  * Type guard to check if a charge item is a refunded item

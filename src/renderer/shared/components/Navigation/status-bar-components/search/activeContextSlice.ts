@@ -24,11 +24,38 @@ export interface PatientCapability {
 }
 
 /** Facility assignment for staff */
+
 export interface StaffFacilityAssignment {
   facility_id: number;
+  facility_code: string;
   facility_name: string;
   role_code: string;
   modules: BackendModule[];
+  facility_currency?: string | null;
+  facility_logo_path?: string | null;
+  tax_enabled?: number | boolean | null;
+  primary_brand_color?: string | null;
+  secondary_brand_color?: string | null;
+  legal_entity_name?: string | null;
+  health_system_name?: string | null;
+  nature_of_facility?: string | null;
+  facility_type?: string | null;
+  facility_tier?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  state_province?: string | null;
+  postal_code?: string | null;
+  country_code?: string | null;
+  main_phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  tax_name?: string | null;
+  tax_rate?: number | null;
+  operational_status?: string | null;
+  is_24_7?: boolean | null;
+  timezone?: string | null;
+  data_residency_region?: string | null;
 }
 
 /** Staff capability from backend */

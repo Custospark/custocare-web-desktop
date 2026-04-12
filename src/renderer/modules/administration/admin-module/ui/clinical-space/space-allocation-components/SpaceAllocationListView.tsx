@@ -127,8 +127,8 @@ export const SpaceAllocationListView: React.FC<SpaceAllocationListViewProps> = (
                   </div>
 
                   {/* Row 3: Assignment Info */}
-                  <div className="border-t pt-2" className={cn('pt-2', colors.border.primary)}>
-                    {isOccupied && assignment ? (
+                <div className={cn('border-t pt-2', colors.border.primary)}>
+                      {isOccupied && assignment ? (
                       <div className="flex items-start gap-2">
                         <User className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
                         <div className="flex-1">

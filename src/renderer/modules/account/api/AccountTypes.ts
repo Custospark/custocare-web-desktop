@@ -19,6 +19,8 @@
  * - Persist flow-critical data in Redux slices so screens can pick it up.
  * - Routing is handled in query hooks (React Router navigate).
  */
+import type { StaffFacilityAssignment } from "../../../app/store/slices/activeContextSlice";
+export {StaffFacilityAssignment}
 
 /* -------------------------------------------------------------------------- */
 /*                                   ENUMS                                    */
@@ -151,12 +153,6 @@ export interface PatientCapability {
   modules: BackendModule[];
 }
 
-export interface StaffFacilityAssignment {
-  facility_id: number;
-  facility_name: string;
-  role_code: string;
-  modules: BackendModule[];
-}
 
 export interface StaffCapability {
   staff_id: number;
