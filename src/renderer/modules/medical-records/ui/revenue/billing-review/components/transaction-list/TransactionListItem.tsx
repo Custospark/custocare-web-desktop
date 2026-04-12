@@ -14,11 +14,11 @@ import {
 import { motion } from 'framer-motion';
 import { 
   BILLING_CYCLE_STATUS_LABELS,
-  formatCurrency,
   type BillingReviewItem,
   BillingCycleStatus,
   PaymentMethodType,
 } from '../../../../../api/billing-review/BillingReviewTypes';
+import { formatCurrency } from '../../../stats/billing-revenue-stats-component/revenueDashboardUtils';
 
 interface ThemeColors {
   bg: {

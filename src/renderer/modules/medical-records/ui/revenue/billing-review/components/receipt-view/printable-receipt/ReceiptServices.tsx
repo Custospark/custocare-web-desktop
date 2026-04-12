@@ -1,8 +1,7 @@
 import React from 'react';
 import { Package, X } from 'lucide-react';
 import type { ReceiptTransactionShape } from './ReceiptTypes';
-import { formatCurrency } from '../../../../../visit-action-center/billing-space';
-
+import { formatCurrency } from '../../../../stats/billing-revenue-stats-component/revenueDashboardUtils';
 interface ReceiptServicesProps {
   selectedTransaction: ReceiptTransactionShape;
 }

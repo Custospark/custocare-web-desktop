@@ -11,6 +11,7 @@
  * @module billingReviewTypes
  */
 
+
 /* -------------------------------------------------------------------------- */
 /*                                   ENUMS                                    */
 /* -------------------------------------------------------------------------- */
@@ -460,17 +461,6 @@ export function isOverdue(item: BillingReviewItem, daysThreshold: number = 30): 
   return diffDays > daysThreshold;
 }
 
-/**
- * Format currency amount
- */
-export function formatCurrency(amount: number, currency: string = DEFAULT_CURRENCY): string {
-  return new Intl.NumberFormat('en-UG', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 /**
  * Type guard to check if a charge item is a refunded item
@@ -492,11 +482,37 @@ export function isRefundedQuantity(quantity: number | { original: number; refund
 
 export const DEFAULT_PAGE_SIZE = 15;
 export const MAX_PAGE_SIZE = 100;
-export const DEFAULT_CURRENCY = 'UGX';
+
+// Dynamic DEFAULT_CURRENCY that reads from facility config
+// For static imports, we use a getter function instead
+let _cachedCurrency: string | null = null;
+
+export const getDefaultCurrency = (): string => {
+  if (_cachedCurrency) return _cachedCurrency;
+  try {
+    const currency = getCurrentFacilityCurrency();
+    _cachedCurrency = currency;
+    return currency;
+  } catch {
+    return 'UGX';
+  }
+};
+
+// For backward compatibility - this will be dynamically resolved
+// Note: This is a getter, not a static value
+export const DEFAULT_CURRENCY = (() => {
+  try {
+    return getCurrentFacilityCurrency();
+  } catch {
+    return 'UGX';
+  }
+})();
+
+// Static fallback for when the dynamic value is needed as a constant
+export const STATIC_DEFAULT_CURRENCY = 'UGX';
 
 // Define a type that excludes ALL
 type PaymentStatusWithoutAll = Exclude<PaymentStatus, typeof PaymentStatus.ALL>;
-
 
 export const PAYMENT_STATUS_COLORS: Record<PaymentStatusWithoutAll, string> = {
   [PaymentStatus.NOT_BILLED]: 'error',

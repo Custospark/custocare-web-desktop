@@ -22,20 +22,84 @@ export interface PatientCapability {
   medical_record_number?: string;
   modules: BackendModule[];
 }
+// In activeContextSlice.ts, update the StaffFacilityAssignment interface:
 
-/** Facility assignment for staff */
 export interface StaffFacilityAssignment {
   facility_id: number;
   facility_name: string;
   role_code: string;
   modules: BackendModule[];
   
-  // Optional facility configuration fields
-  facility_currency?: string | null;      // e.g., 'USD', 'UGX'
-  facility_logo_path?: string | null;     // Path to facility logo image
-  tax_enabled?: number | boolean | null;  // 0/1 or true/false
-  primary_brand_color?: string | null;    // Hex color code e.g., '#0047AB'
-  secondary_brand_color?: string | null;  // Optional secondary brand color
+  // Core Identity
+  legal_entity_name?: string | null;
+  health_system_name?: string | null;
+  
+  // Classification
+  nature_of_facility?: string | null;
+  facility_type?: string | null;
+  facility_tier?: string | null;
+  
+  // Capacity
+  bed_capacity?: number | null;
+  available_services?: string[];
+  specialty_services?: string[];
+  equipment_inventory_summary?: string[];
+  
+  // Location
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  state_province?: string | null;
+  postal_code?: string | null;
+  country_code?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  
+  // Contact
+  main_phone?: string | null;
+  emergency_phone?: string | null;
+  fax?: string | null;
+  email?: string | null;
+  website?: string | null;
+  
+  // Operations
+  operating_hours?: any;
+  emergency_services_hours?: any;
+  is_24_7?: boolean | null;
+  operational_status?: string | null;
+  average_wait_time_minutes?: number | null;
+  monthly_patient_volume?: number | null;
+  
+  // Licensing
+  license_number?: string | null;
+  license_issuing_authority?: string | null;
+  license_expiry_date?: string | null;
+  regulatory_identifiers?: any[];
+  participates_in_medicare?: boolean | null;
+  participates_in_medicaid?: boolean | null;
+  
+  // Clinical Capabilities
+  has_emergency_department?: boolean | null;
+  has_trauma_center?: boolean | null;
+  trauma_center_level?: number | null;
+  has_intensive_care?: boolean | null;
+  has_neonatal_icu?: boolean | null;
+  has_cardiac_cath_lab?: boolean | null;
+  
+  // Financial Configuration
+  facility_currency?: string | null;
+  tax_enabled?: boolean | number | null;
+  tax_name?: string | null;
+  tax_rate?: number | null;
+  
+  // Branding
+  facility_logo_path?: string | null;
+  primary_brand_color?: string | null;
+  secondary_brand_color?: string | null;
+  
+  // System Configuration
+  timezone?: string | null;
+  data_residency_region?: string | null;
 }
 
 /** Staff capability from backend */

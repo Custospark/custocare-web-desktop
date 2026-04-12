@@ -2,9 +2,8 @@
 import React from 'react';
 import { Percent } from 'lucide-react';
 import type { Tax } from '../../../../../../api/billing-review/BillingReviewTypes';
-import { formatCurrency } from '../../../../../../api/billing-review/BillingReviewTypes';
 import { shouldShowDiscountPercentage } from './ReceiptTypes';
-
+import { formatCurrency } from '../../../../stats/billing-revenue-stats-component/revenueDashboardUtils';
 interface TotalsSectionProps {
   subtotal: number;
   discountAmount: number;

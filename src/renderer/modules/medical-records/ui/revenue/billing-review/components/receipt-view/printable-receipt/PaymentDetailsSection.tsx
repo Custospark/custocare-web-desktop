@@ -3,9 +3,8 @@ import { Banknote, ArrowLeftRight, RefreshCw } from 'lucide-react';
 import PaymentIcon from './PaymentIcon';
 import type { PaymentMethod } from '../../../../../../api/billing-review/BillingReviewTypes';
 import { type CashBreakdown } from './ReceiptTypes';
-import { formatCurrency } from '../../../../../../api/billing-review/BillingReviewTypes';
 import { cx } from './ReceiptTypes';
-
+import { formatCurrency } from '../../../../stats/billing-revenue-stats-component/revenueDashboardUtils';
 interface PaymentDetailsSectionProps {
   paymentMethods: PaymentMethod[];
   cashBreakdown: CashBreakdown | null;

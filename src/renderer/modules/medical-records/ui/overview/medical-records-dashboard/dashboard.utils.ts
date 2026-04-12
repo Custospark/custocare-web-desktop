@@ -1,4 +1,4 @@
-//dashboard.utils.ts
+// dashboard.utils.ts
 import {
   AlertTriangle,
   CircleAlert,
@@ -12,8 +12,8 @@ import type {
   DashboardAlert,
   DashboardPeriod,
 } from '../../../api/facility-patient-analytics/FacilityPatientAnalyticsTypes';
-// import { formatCurrency,formatCompactCurrency } from '../../revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
-// export {formatCompactCurrency,formatCurrency}
+import { store } from '../../../../../app/store/store'; 
+import { selectActiveFacilityCurrency } from '../../../../../app/store/slices/activeContextSlice'; 
 
 export const cn = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(' ');
@@ -24,7 +24,6 @@ export const PERIOD_OPTIONS: Array<{ label: string; value: DashboardPeriod }> = 
   { label: 'Month', value: 'month' },
   { label: 'Custom', value: 'custom' },
 ];
-
 
 export const PIE_COLORS = [
   '#2563EB',
@@ -53,20 +52,72 @@ export const formatNumber = (value?: number | null) =>
 export const formatPercent = (value?: number | null, digits = 1) =>
   `${Number(value ?? 0).toFixed(digits)}%`;
 
-export const formatCurrency = (value?: number | null) =>
-  new Intl.NumberFormat('en-US', {
+/**
+ * Get the current facility currency from Redux store
+ * Falls back to 'USD' if not available
+ */
+const getCurrentFacilityCurrency = (): string => {
+  try {
+    const state = store.getState();
+    const currency = selectActiveFacilityCurrency(state);
+    return currency && typeof currency === 'string' ? currency : 'USD';
+  } catch (error) {
+    console.warn('Failed to get facility currency, falling back to USD:', error);
+    return 'USD';
+  }
+};
+
+/**
+ * Format currency using facility's configured currency
+ * Falls back to USD if no facility currency is set
+ */
+export const formatCurrency = (value?: number | null) => {
+  const currency = getCurrentFacilityCurrency();
+  return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'UGX',
+    currency: currency,
     maximumFractionDigits: 0,
   }).format(Number(value ?? 0));
+};
 
-export const formatCompactCurrency = (value?: number | null) =>
-  new Intl.NumberFormat('en-US', {
+/**
+ * Format compact currency using facility's configured currency
+ * Falls back to USD if no facility currency is set
+ */
+export const formatCompactCurrency = (value?: number | null) => {
+  const currency = getCurrentFacilityCurrency();
+  return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'UGX',
+    currency: currency,
     notation: 'compact',
     maximumFractionDigits: 1,
   }).format(Number(value ?? 0));
+};
+
+/**
+ * Format currency with custom currency parameter (overrides facility config)
+ */
+export const formatCurrencyWithCustomCurrency = (value?: number | null, currencyCode?: string) => {
+  const currency = currencyCode || getCurrentFacilityCurrency();
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency,
+    maximumFractionDigits: 0,
+  }).format(Number(value ?? 0));
+};
+
+/**
+ * Format compact currency with custom currency parameter (overrides facility config)
+ */
+export const formatCompactCurrencyWithCustomCurrency = (value?: number | null, currencyCode?: string) => {
+  const currency = currencyCode || getCurrentFacilityCurrency();
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency,
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(Number(value ?? 0));
+};
 
 export const formatDateLabel = (value: string) => {
   const date = new Date(value);

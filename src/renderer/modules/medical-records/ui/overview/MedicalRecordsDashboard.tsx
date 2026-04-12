@@ -281,7 +281,7 @@ function MedicalRecordsDashboard() {
                 <Workflow className="h-8 w-8" />
               </div>
               <h2 className={cn('text-2xl font-bold', ui.text)}>
-                No dashboard data available
+                No Clinical Intelligence Insights available.
               </h2>
               <p className={cn('mt-2 text-sm', ui.textSecondary)}>
                 {response?.message || 'No analytics payload was returned for the selected period.'}

@@ -2,7 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2 } from 'lucide-react';
-import { formatCurrency } from '../../../../../api/billing-review/BillingReviewTypes';
+import { formatCurrency } from '../../../stats/billing-revenue-stats-component/revenueDashboardUtils';
 interface ThemeColors {
   text: {
     primary: string;

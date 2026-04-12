@@ -13,6 +13,8 @@ import type {
 } from '../../../api/billable-items/BillingItemsTypes';
 import { DEFAULT_CURRENCY as API_DEFAULT_CURRENCY } from '../../../api/billable-items/BillingItemsTypes';
 import type { AuditLogEntry, AuditLogSummary } from '../../../api/billing-review/BillingReviewTypes';
+import { store } from '../../../../../app/store/store'; // Adjust path as needed
+import { selectActiveFacilityCurrency } from '../../../../../app/store/slices/activeContextSlice'; // Adjust path as needed
 
 /* -------------------------------------------------------------------------- */
 /*                         BILLABLE SERVICE TYPES (API)                        */
@@ -476,10 +478,41 @@ export const calculateBillingSnapshot = ({
   };
 };
 
-export const formatCurrency = (amount: number, currency: string = API_DEFAULT_CURRENCY): string => {
+/**
+ * Get the current facility currency from Redux store
+ * Falls back to 'USD' if not available
+ */
+const getCurrentFacilityCurrency = (): string => {
+  try {
+    const state = store.getState();
+    const currency = selectActiveFacilityCurrency(state);
+    return currency && typeof currency === 'string' ? currency : 'USD';
+  } catch (error) {
+    console.warn('Failed to get facility currency, falling back to USD:', error);
+    return 'USD';
+  }
+};
+
+/**
+ * Format currency using facility's configured currency
+ * Falls back to USD if no facility currency is set
+ */
+export const formatCurrency = (amount: number, currency?: string): string => {
+  const finalCurrency = currency || getCurrentFacilityCurrency();
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency,
+    currency: finalCurrency,
+    minimumFractionDigits: 0,
+  }).format(amount);
+};
+
+/**
+ * Format currency with custom currency parameter (overrides facility config)
+ */
+export const formatCurrencyWithCustomCurrency = (amount: number, currencyCode: string): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currencyCode,
     minimumFractionDigits: 0,
   }).format(amount);
 };
@@ -698,4 +731,15 @@ export const mapRetrievedBillingToBackendState = (data: BillingRetrievalData) =>
 // Storage key for drafts
 export const getDraftStorageKey = (visitId?: string) => `billing_draft_${visitId || 'global'}`;
 
-export const DEFAULT_CURRENCY = API_DEFAULT_CURRENCY;
+// Re-export DEFAULT_CURRENCY for backward compatibility
+// This now dynamically gets the facility currency
+export const DEFAULT_CURRENCY = (() => {
+  try {
+    return getCurrentFacilityCurrency();
+  } catch {
+    return API_DEFAULT_CURRENCY;
+  }
+})();
+
+// For static imports that need a constant, also export the original API default
+export { API_DEFAULT_CURRENCY };
