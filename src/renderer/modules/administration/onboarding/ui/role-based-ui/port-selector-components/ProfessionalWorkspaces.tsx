@@ -7,6 +7,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useAppSelector } from '../../../../../../app/store/hooks/useApp';
 import {
   Briefcase,
   UserCog,
@@ -18,8 +19,11 @@ import {
 import { cn } from '../../../../../../shared/types/cn';
 import { WorkspaceCard } from './WorkspaceCard';
 import { containerVariants } from '../../../../../../shared/components/animations/motionVariants';
-import  type{ FacilityRole } from '../../../../../../app/store/slices/activeContextSlice';
-import { getRoleDisplayName } from '../../../../../../app/store/slices/activeContextSlice';
+import type { FacilityRole } from '../../../../../../app/store/slices/activeContextSlice';
+import { 
+  getRoleDisplayName,
+  selectStaffFacilities,
+} from '../../../../../../app/store/slices/activeContextSlice';
 
 interface ProfessionalWorkspacesProps {
   isStaff: boolean;
@@ -42,6 +46,15 @@ export const ProfessionalWorkspaces: React.FC<ProfessionalWorkspacesProps> = ({
   onWorkspaceSelect,
   onStaffDashboard,
 }) => {
+  // Get staff facilities with full details including logo path
+  const staffFacilities = useAppSelector(selectStaffFacilities);
+  
+  // Helper function to get facility logo URL by facility ID
+  const getFacilityLogoUrl = (facilityId: number): string => {
+    const facility = staffFacilities.find(f => f.facility_id === facilityId);
+    return facility?.facility_logo_path || DEFAULT_WORKSPACE_IMAGE;
+  };
+
   if (!isStaff) return null;
 
   return (
@@ -104,6 +117,9 @@ export const ProfessionalWorkspaces: React.FC<ProfessionalWorkspacesProps> = ({
               badges.push({ label: 'Primary', variant: 'success' ,animated:true});
             }
 
+            // Get the facility logo URL from the staff facilities array
+            const facilityLogoUrl = getFacilityLogoUrl(facilityRole.facility_id);
+
             return (
               <WorkspaceCard
                 key={`${facilityRole.facility_id}-${facilityRole.role_code}`}
@@ -116,7 +132,7 @@ export const ProfessionalWorkspaces: React.FC<ProfessionalWorkspacesProps> = ({
                 buttonText="Open Dashboard"
                 buttonGradient="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                 badges={badges}
-                imageUrl={DEFAULT_WORKSPACE_IMAGE}
+                imageUrl={facilityLogoUrl}
                 theme={theme}
                 onClick={() => onWorkspaceSelect(facilityRole)}
               />
