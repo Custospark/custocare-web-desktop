@@ -29,6 +29,13 @@ export interface StaffFacilityAssignment {
   facility_name: string;
   role_code: string;
   modules: BackendModule[];
+  
+  // Optional facility configuration fields
+  facility_currency?: string | null;      // e.g., 'USD', 'UGX'
+  facility_logo_path?: string | null;     // Path to facility logo image
+  tax_enabled?: number | boolean | null;  // 0/1 or true/false
+  primary_brand_color?: string | null;    // Hex color code e.g., '#0047AB'
+  secondary_brand_color?: string | null;  // Optional secondary brand color
 }
 
 /** Staff capability from backend */
@@ -380,9 +387,192 @@ const activeContextSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+
+    // ============================================================================
+    // NEW FACILITY CONFIGURATION SETTERS
+    // ============================================================================
+
+    /** Update facility currency for the active facility */
+    updateActiveFacilityCurrency: (state, action: PayloadAction<string | null>) => {
+      if (state.activeCapability !== 'staff' || !state.activeFacilityId) {
+        state.error = 'Not in staff mode or no active facility';
+        return;
+      }
+
+      const staffCapability = state.capabilities.staff;
+      if (!staffCapability) {
+        state.error = 'Staff capability not found';
+        return;
+      }
+
+      const facility = staffCapability.facilities.find(
+        f => f.facility_id === state.activeFacilityId
+      );
+      
+      if (facility) {
+        facility.facility_currency = action.payload;
+        // Persist to localStorage
+        localStorage.setItem('userContext', JSON.stringify({
+          user: state.user,
+          capabilities: state.capabilities,
+          facility_roles: state.facilityRoles,
+        }));
+      }
+    },
+
+    /** Update facility logo path for the active facility */
+    updateActiveFacilityLogoPath: (state, action: PayloadAction<string | null>) => {
+      if (state.activeCapability !== 'staff' || !state.activeFacilityId) {
+        state.error = 'Not in staff mode or no active facility';
+        return;
+      }
+
+      const staffCapability = state.capabilities.staff;
+      if (!staffCapability) return;
+
+      const facility = staffCapability.facilities.find(
+        f => f.facility_id === state.activeFacilityId
+      );
+      
+      if (facility) {
+        facility.facility_logo_path = action.payload;
+        localStorage.setItem('userContext', JSON.stringify({
+          user: state.user,
+          capabilities: state.capabilities,
+          facility_roles: state.facilityRoles,
+        }));
+      }
+    },
+
+    /** Update tax enabled status for the active facility */
+    updateActiveFacilityTaxEnabled: (state, action: PayloadAction<boolean | number | null>) => {
+      if (state.activeCapability !== 'staff' || !state.activeFacilityId) {
+        state.error = 'Not in staff mode or no active facility';
+        return;
+      }
+
+      const staffCapability = state.capabilities.staff;
+      if (!staffCapability) return;
+
+      const facility = staffCapability.facilities.find(
+        f => f.facility_id === state.activeFacilityId
+      );
+      
+      if (facility) {
+        facility.tax_enabled = action.payload;
+        localStorage.setItem('userContext', JSON.stringify({
+          user: state.user,
+          capabilities: state.capabilities,
+          facility_roles: state.facilityRoles,
+        }));
+      }
+    },
+
+    /** Update primary brand color for the active facility */
+    updateActiveFacilityPrimaryBrandColor: (state, action: PayloadAction<string | null>) => {
+      if (state.activeCapability !== 'staff' || !state.activeFacilityId) {
+        state.error = 'Not in staff mode or no active facility';
+        return;
+      }
+
+      const staffCapability = state.capabilities.staff;
+      if (!staffCapability) return;
+
+      const facility = staffCapability.facilities.find(
+        f => f.facility_id === state.activeFacilityId
+      );
+      
+      if (facility) {
+        facility.primary_brand_color = action.payload;
+        localStorage.setItem('userContext', JSON.stringify({
+          user: state.user,
+          capabilities: state.capabilities,
+          facility_roles: state.facilityRoles,
+        }));
+      }
+    },
+
+    /** Update secondary brand color for the active facility */
+    updateActiveFacilitySecondaryBrandColor: (state, action: PayloadAction<string | null>) => {
+      if (state.activeCapability !== 'staff' || !state.activeFacilityId) {
+        state.error = 'Not in staff mode or no active facility';
+        return;
+      }
+
+      const staffCapability = state.capabilities.staff;
+      if (!staffCapability) return;
+
+      const facility = staffCapability.facilities.find(
+        f => f.facility_id === state.activeFacilityId
+      );
+      
+      if (facility) {
+        facility.secondary_brand_color = action.payload;
+        localStorage.setItem('userContext', JSON.stringify({
+          user: state.user,
+          capabilities: state.capabilities,
+          facility_roles: state.facilityRoles,
+        }));
+      }
+    },
+
+    /** Update multiple facility config values at once for the active facility */
+    updateActiveFacilityConfig: (
+      state,
+      action: PayloadAction<Partial<Omit<StaffFacilityAssignment, 'facility_id' | 'facility_name' | 'role_code' | 'modules'>>>
+    ) => {
+      if (state.activeCapability !== 'staff' || !state.activeFacilityId) {
+        state.error = 'Not in staff mode or no active facility';
+        return;
+      }
+
+      const staffCapability = state.capabilities.staff;
+      if (!staffCapability) return;
+
+      const facility = staffCapability.facilities.find(
+        f => f.facility_id === state.activeFacilityId
+      );
+      
+      if (facility) {
+        Object.assign(facility, action.payload);
+        localStorage.setItem('userContext', JSON.stringify({
+          user: state.user,
+          capabilities: state.capabilities,
+          facility_roles: state.facilityRoles,
+        }));
+      }
+    },
+
+    /** Update a specific facility by ID (for bulk updates) */
+    updateFacilityById: (
+      state,
+      action: PayloadAction<{ facilityId: number; updates: Partial<StaffFacilityAssignment> }>
+    ) => {
+      const { facilityId, updates } = action.payload;
+      
+      const staffCapability = state.capabilities.staff;
+      if (!staffCapability) {
+        state.error = 'Staff capability not found';
+        return;
+      }
+
+      const facility = staffCapability.facilities.find(
+        f => f.facility_id === facilityId
+      );
+      
+      if (facility) {
+        Object.assign(facility, updates);
+        localStorage.setItem('userContext', JSON.stringify({
+          user: state.user,
+          capabilities: state.capabilities,
+          facility_roles: state.facilityRoles,
+        }));
+      }
+    },
   },
 });
 
+// Export all actions
 export const {
   setUserContext,
   switchCapability,
@@ -391,6 +581,13 @@ export const {
   setLoading,
   setError,
   clearError,
+  updateActiveFacilityCurrency,
+  updateActiveFacilityLogoPath,
+  updateActiveFacilityTaxEnabled,
+  updateActiveFacilityPrimaryBrandColor,
+  updateActiveFacilitySecondaryBrandColor,
+  updateActiveFacilityConfig,
+  updateFacilityById,
 } = activeContextSlice.actions;
 
 export default activeContextSlice.reducer;
@@ -615,6 +812,83 @@ export const selectStaffFacilities = createSelector(
   (activeCapability, capabilities): StaffFacilityAssignment[] => {
     if (activeCapability !== 'staff') return [];
     return capabilities.staff?.facilities ?? [];
+  },
+);
+
+/**
+ * Returns the currently selected facility assignment (staff only).
+ * Includes all facility configuration fields.
+ */
+export const selectActiveFacility = createSelector(
+  [selectActiveCapability, selectCapabilities, selectActiveFacilityId],
+  (activeCapability, capabilities, activeFacilityId): StaffFacilityAssignment | null => {
+    if (activeCapability !== 'staff' || !activeFacilityId) return null;
+    const staffCapability = capabilities.staff;
+    if (!staffCapability) return null;
+    return staffCapability.facilities.find(f => f.facility_id === activeFacilityId) ?? null;
+  },
+);
+
+/**
+ * Returns the facility_currency of the currently selected facility.
+ * Returns null if not in staff mode or no facility selected.
+ */
+export const selectActiveFacilityCurrency = createSelector(
+  [selectActiveFacility],
+  (activeFacility): string | null | undefined => activeFacility?.facility_currency,
+);
+
+/**
+ * Returns the facility_logo_path of the currently selected facility.
+ * Returns null if not in staff mode or no facility selected.
+ */
+export const selectActiveFacilityLogoPath = createSelector(
+  [selectActiveFacility],
+  (activeFacility): string | null | undefined => activeFacility?.facility_logo_path,
+);
+
+/**
+ * Returns the tax_enabled status of the currently selected facility.
+ * Returns null if not in staff mode or no facility selected.
+ */
+export const selectActiveFacilityTaxEnabled = createSelector(
+  [selectActiveFacility],
+  (activeFacility): boolean | number | null | undefined => activeFacility?.tax_enabled,
+);
+
+/**
+ * Returns the primary_brand_color of the currently selected facility.
+ * Returns null if not in staff mode or no facility selected.
+ */
+export const selectActiveFacilityPrimaryBrandColor = createSelector(
+  [selectActiveFacility],
+  (activeFacility): string | null | undefined => activeFacility?.primary_brand_color,
+);
+
+/**
+ * Returns the secondary_brand_color of the currently selected facility.
+ * Returns null if not in staff mode or no facility selected.
+ */
+export const selectActiveFacilitySecondaryBrandColor = createSelector(
+  [selectActiveFacility],
+  (activeFacility): string | null | undefined => activeFacility?.secondary_brand_color,
+);
+
+/**
+ * Returns the complete facility configuration object for the active facility.
+ * Useful for theme providers or facility context providers.
+ */
+export const selectActiveFacilityConfig = createSelector(
+  [selectActiveFacility],
+  (activeFacility): Partial<StaffFacilityAssignment> | null => {
+    if (!activeFacility) return null;
+    return {
+      facility_currency: activeFacility.facility_currency,
+      facility_logo_path: activeFacility.facility_logo_path,
+      tax_enabled: activeFacility.tax_enabled,
+      primary_brand_color: activeFacility.primary_brand_color,
+      secondary_brand_color: activeFacility.secondary_brand_color,
+    };
   },
 );
 
