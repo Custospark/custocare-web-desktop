@@ -3,311 +3,87 @@
  * SPACE ALLOCATION MANAGEMENT COMPONENT
  * ============================================================================
  *
- * Enterprise-grade space allocation management for staff workspace assignments.
- * Allows admins to assign and release spaces for staff members with:
- * - Real-time occupancy tracking
- * - Optimistic UI updates with proper type safety
- * - Client-side search and filtering
- * - Responsive grid/list view modes
- * - Type-safe operations with full TypeScript support
- * - Theme-aware styling (dark/light)
- *
- * @module SpaceAllocation
- * @description Admin interface for managing staff space assignments
+ * Container component for staff space allocation management.
+ * Keeps data fetching, optimistic mutations, state orchestration,
+ * and composes all presentational space-allocation-components.
  */
 
 import React, { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  Plus,
-  Search,
-  Filter,
-  RefreshCw,
-  Grid3x3,
-  List,
-  AlertCircle,
-  Building2,
-  Users,
-  User,
-  MapPin,
-  DoorOpen,
-  CheckCircle2,
-  XCircle,
-  ChevronDown,
-  ChevronUp,
-  Building,
-  Clock,
-  Calendar,
-  FileText,
-  MoreVertical,
-  Home,
-  Monitor,
-  Briefcase,
-  PillBottle,
-  Bed,
-  Activity,
-  FlaskConical,
-} from 'lucide-react';
-import { getRoleDisplayName as formatName } from '../../../../../shared/utils/facilityRoleFormator';
+import { AlertCircle, Building2, DoorOpen, Plus } from 'lucide-react';
 
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
+import { cn } from '../../../../../shared/types/cn';
 
 import {
   staffSpaceAssignmentKeys,
+  useAssignSpaceByAdmin,
   useGetAvailableSpaces,
   useGetCurrentOccupancy,
   useGetStaffForAssignment,
-  useAssignSpaceByAdmin,
   useReleaseSpaceByAdmin,
 } from '../../api/staff-space-assignment/StaffSpaceAssignmentQueries';
+
 import type {
-  SpaceWithAssignment,
-  AvailableSpace,
-  StaffForAssignment,
-  OccupancyFilters,
-  AvailableSpacesFilters,
   AssignSpaceRequest,
-  StaffSpaceAssignment,
-  StaffReference,
-  SpaceReference,
-  UserReference,
+  AvailableSpace,
+  AvailableSpacesFilters,
+  OccupancyFilters,
+  SpaceWithAssignment,
+  StaffForAssignment,
 } from '../../api/staff-space-assignment/StaffSpaceAssignmentTypes';
-import  {
-  StaffSpaceAssignmentStatus,
 
-} from '../../api/staff-space-assignment/StaffSpaceAssignmentTypes';
-import { getRoleDisplayName as formatDisplayName } from '../../../../../shared/utils/facilityRoleFormator';
-import { cn } from '../../../../../shared/types/cn';
+import {
+  AssignSpaceDrawer,
+  ReleaseSpaceDrawer,
+  SpaceAllocationFiltersBar,
+  SpaceAllocationGridView,
+  SpaceAllocationHeader,
+  SpaceAllocationListView,
+  SpaceAllocationStatsCards,
+} from './space-allocation-components';
 
-/* -------------------------------------------------------------------------- */
-/*                                COMPONENT PROPS                             */
-/* -------------------------------------------------------------------------- */
+import {
+  createSpaceAllocationColors,
+  getEmptyAssignFormData,
+  getEmptyReleaseFormData,
+} from './space-allocation-components/space-allocation.constants';
 
-interface SpaceAllocationProps {
-  theme: 'light' | 'dark';
-}
+import {
+  createOptimisticAssignment,
+  getErrorMessage,
+  safeLower,
+} from './space-allocation-components/space-allocation.utils';
 
-/* -------------------------------------------------------------------------- */
-/*                               FORM DATA TYPES                              */
-/* -------------------------------------------------------------------------- */
-
-interface AssignSpaceFormData {
-  facility_id: number | null;
-  space_id: number | null;
-  staff_id: number | null;
-  note: string;
-}
-
-interface ReleaseSpaceFormData {
-  facility_id: number | null;
-  staff_id: number | null;
-  assignment_id: number | null;
-  note: string;
-}
-
-/* -------------------------------------------------------------------------- */
-/*                               SPACE TYPE ICONS                             */
-/* -------------------------------------------------------------------------- */
-
-const SPACE_TYPE_ICONS: Record<string, React.ElementType> = {
-  consultation: Monitor,
-  triage: AlertCircle,
-  lab: FlaskConical,
-  theatre: Activity,
-  ward: Bed,
-  pharmacy: PillBottle,
-  office: Briefcase,
-  meeting: Users,
-  cubicle: Home,
-  default: DoorOpen,
-};
-
-const SPACE_TYPE_COLORS: Record<string, string> = {
-  consultation: 'text-blue-500',
-  triage: 'text-orange-500',
-  lab: 'text-purple-500',
-  theatre: 'text-red-500',
-  ward: 'text-green-500',
-  pharmacy: 'text-yellow-500',
-  office: 'text-indigo-500',
-  meeting: 'text-cyan-500',
-  cubicle: 'text-gray-500',
-  default: 'text-gray-400',
-};
-
-/* -------------------------------------------------------------------------- */
-/*                            UTILITY FUNCTIONS                               */
-/* -------------------------------------------------------------------------- */
-
-const getEmptyAssignFormData = (facilityId: number | null): AssignSpaceFormData => ({
-  facility_id: facilityId,
-  space_id: null,
-  staff_id: null,
-  note: '',
-});
-
-const getEmptyReleaseFormData = (facilityId: number | null): ReleaseSpaceFormData => ({
-  facility_id: facilityId,
-  staff_id: null,
-  assignment_id: null,
-  note: '',
-});
-
-const getSpaceTypeIcon = (type: string | null | undefined): React.ElementType => {
-  return SPACE_TYPE_ICONS[type?.toLowerCase() ?? ''] || SPACE_TYPE_ICONS.default;
-};
-
-const getSpaceTypeColor = (type: string | null | undefined): string => {
-  return SPACE_TYPE_COLORS[type?.toLowerCase() ?? ''] || SPACE_TYPE_COLORS.default;
-};
-const formatDate = (dateString: string | null | undefined): string => {
-  if (!dateString) return 'N/A';
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return 'N/A';
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
-
-const formatDateTime = (dateString: string | null | undefined): string => {
-  if (!dateString) return 'N/A';
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return 'N/A';
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-const safeLower = (value: string | null | undefined): string => {
-  if (value === null || value === undefined) {
-    return '';
-  }
-  return value.toLowerCase();
-};
-const getErrorMessage = (err: unknown): string => {
-  if (err instanceof Error) return err.message;
-  if (typeof err === 'string') return err;
-  return 'Unknown error';
-};
-
-const buildSafeUserReference = (
-  id: number,
-  firstName: string,
-  lastName: string
-): UserReference => ({
-  id,
-  first_name: firstName,
-  last_name: lastName,
-  full_name: `${firstName} ${lastName}`.trim(),
-});
-
-const buildSafeStaffReference = (
-  staff: StaffForAssignment,
-  userId: number = 0
-): StaffReference => ({
-  staff_id: staff.staff_id,
-  staff_uuid: staff.staff_uuid,
-  employee_id: staff.employee_id,
-  user: buildSafeUserReference(userId, staff.first_name, staff.last_name),
-  role_code: staff.role_code,
-});
-
-const buildSafeSpaceReference = (space: SpaceWithAssignment | AvailableSpace): SpaceReference => ({
-  id: space.id,
-  name: space.name,
-  type: space.type,
-  floor: space.floor,
-  building: space.building,
-  is_active: space.is_active,
-  facility_id: space.facility_id,
-});
-
-/* -------------------------------------------------------------------------- */
-/*                            OPTIMISTIC UPDATE HELPERS                       */
-/* -------------------------------------------------------------------------- */
-
-const createOptimisticAssignment = (
-  tempId: number,
-  facilityId: number,
-  spaceId: number,
-  staffId: number,
-  note: string | null,
-  targetSpace: SpaceWithAssignment | AvailableSpace,
-  selectedStaff: StaffForAssignment
-): StaffSpaceAssignment => {
-  const now = new Date().toISOString();
-  
-  return {
-    id: tempId,
-    facility_id: facilityId,
-    space_id: spaceId,
-    staff_id: staffId,
-    assigned_by_user_id: null,
-    released_by_user_id: null,
-    assigned_at: now,
-    released_at: null,
-    note: note,
-    status: StaffSpaceAssignmentStatus.ACTIVE,
-    created_at: now,
-    updated_at: now,
-    space: buildSafeSpaceReference(targetSpace),
-    staff: buildSafeStaffReference(selectedStaff),
-    assigned_by_user: undefined, // Optional field - leave as undefined
-    released_by_user: undefined, // Optional field - leave as undefined
-  };
-};
-
-const createOptimisticReleasedAssignment = (
-  previousAssignment: StaffSpaceAssignment,
-  note: string | null
-): StaffSpaceAssignment => {
-  const now = new Date().toISOString();
-  
-  return {
-    ...previousAssignment,
-    released_at: now,
-    status: StaffSpaceAssignmentStatus.RELEASED,
-    updated_at: now,
-    note: note ?? previousAssignment.note,
-    released_by_user: undefined, // Optional field - leave as undefined
-  };
-};
-
-/* -------------------------------------------------------------------------- */
-/*                               MAIN COMPONENT                               */
-/* -------------------------------------------------------------------------- */
+import type {
+  AssignSpaceFormData,
+  OccupancyFilterValue,
+  ReleaseSpaceFormData,
+  SpaceAllocationProps,
+  SpaceAllocationViewMode,
+} from './space-allocation-components/space-allocation.types';
 
 export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
-  const isDark = theme === 'dark';
   const queryClient = useQueryClient();
   const { confirm } = useConfirm();
-
-  // Redux state
   const activeFacilityId = useAppSelector(state => state.activeContext.activeFacilityId);
 
-  /* ---------------------------- Local State ------------------------------- */
+  const colors = useMemo(() => createSpaceAllocationColors(theme), [theme]);
 
-  // View mode
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useState<SpaceAllocationViewMode>('list');
 
-  // Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [spaceTypeFilter, setSpaceTypeFilter] = useState<string>('all');
   const [buildingFilter, setBuildingFilter] = useState<string>('all');
   const [floorFilter, setFloorFilter] = useState<string>('all');
-  const [occupancyFilter, setOccupancyFilter] = useState<'all' | 'occupied' | 'available'>('all');
+  const [occupancyFilter, setOccupancyFilter] = useState<OccupancyFilterValue>('all');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Form state
   const [assignDrawerOpen, setAssignDrawerOpen] = useState(false);
   const [releaseDrawerOpen, setReleaseDrawerOpen] = useState(false);
+
   const [assignFormData, setAssignFormData] = useState<AssignSpaceFormData>(() =>
     getEmptyAssignFormData(activeFacilityId ?? null)
   );
@@ -315,15 +91,10 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
     getEmptyReleaseFormData(activeFacilityId ?? null)
   );
 
-  // Expanded rows (for list view details)
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
-
-  // Selected space for operations
   const [selectedSpace, setSelectedSpace] = useState<SpaceWithAssignment | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  /* ---------------------------- API Queries ------------------------------- */
-
-  // Occupancy query
   const occupancyFilters: OccupancyFilters = useMemo(
     () => ({
       facility_id: activeFacilityId || 0,
@@ -332,17 +103,16 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
     [activeFacilityId]
   );
 
-  const { 
-    data: occupancyData, 
-    isLoading: isLoadingOccupancy, 
-    error: occupancyError, 
-    refetch: refetchOccupancy 
+  const {
+    data: occupancyData,
+    isLoading: isLoadingOccupancy,
+    error: occupancyError,
+    refetch: refetchOccupancy,
   } = useGetCurrentOccupancy(occupancyFilters, {
     enabled: !!activeFacilityId && activeFacilityId > 0,
     staleTime: 1000 * 30,
   });
 
-  // Available spaces query
   const availableSpacesFilters: AvailableSpacesFilters = useMemo(
     () => ({
       facility_id: activeFacilityId || 0,
@@ -351,130 +121,115 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
     [activeFacilityId]
   );
 
-  const { 
-    data: availableSpacesData, 
-  } = useGetAvailableSpaces(availableSpacesFilters, {
+  const { data: availableSpacesData } = useGetAvailableSpaces(availableSpacesFilters, {
     enabled: !!activeFacilityId && activeFacilityId > 0,
   });
 
-  // Staff list query
-  const { 
-    data: staffData, 
-    isLoading: isLoadingStaff 
-  } = useGetStaffForAssignment(
-    activeFacilityId || 0, 
-    { per_page: 100 }, 
+  const { data: staffData, isLoading: isLoadingStaff } = useGetStaffForAssignment(
+    activeFacilityId || 0,
+    { per_page: 100 },
     { enabled: !!activeFacilityId && activeFacilityId > 0 }
   );
 
-  /* ------------------------ Normalize Data ------------------------- */
-
   const normalizedSpaces: SpaceWithAssignment[] = useMemo(() => {
     if (!occupancyData?.data || !Array.isArray(occupancyData.data)) return [];
-    return occupancyData.data.filter((space): space is SpaceWithAssignment => 
-      space && 
-      typeof space === 'object' && 
-      'id' in space && 
-      typeof space.id === 'number'
+
+    return occupancyData.data.filter(
+      (space): space is SpaceWithAssignment =>
+        !!space &&
+        typeof space === 'object' &&
+        'id' in space &&
+        typeof space.id === 'number'
     );
   }, [occupancyData]);
 
   const normalizedAvailableSpaces: AvailableSpace[] = useMemo(() => {
     if (!availableSpacesData?.data || !Array.isArray(availableSpacesData.data)) return [];
-    return availableSpacesData.data.filter((space): space is AvailableSpace => 
-      space && 
-      typeof space === 'object' && 
-      'id' in space && 
-      typeof space.id === 'number'
+
+    return availableSpacesData.data.filter(
+      (space): space is AvailableSpace =>
+        !!space &&
+        typeof space === 'object' &&
+        'id' in space &&
+        typeof space.id === 'number'
     );
   }, [availableSpacesData]);
 
   const normalizedStaff: StaffForAssignment[] = useMemo(() => {
     if (!staffData?.data || !Array.isArray(staffData.data)) return [];
-    return staffData.data.filter((staff): staff is StaffForAssignment => 
-      staff && 
-      typeof staff === 'object' && 
-      'staff_id' in staff && 
-      typeof staff.staff_id === 'number'
+
+    return staffData.data.filter(
+      (staff): staff is StaffForAssignment =>
+        !!staff &&
+        typeof staff === 'object' &&
+        'staff_id' in staff &&
+        typeof staff.staff_id === 'number'
     );
   }, [staffData]);
 
-  /* ------------------------ Client-Side Filtering ------------------------- */
-
   const filteredSpaces = useMemo(() => {
     const term = safeLower(searchTerm).trim();
-    
+
     return normalizedSpaces.filter(space => {
-      // Apply occupancy filter
       if (occupancyFilter === 'occupied' && !space.current_assignment) return false;
       if (occupancyFilter === 'available' && space.current_assignment) return false;
-      
-      // Apply space type filter
+
       if (spaceTypeFilter !== 'all' && space.type !== spaceTypeFilter) return false;
-      
-      // Apply building filter
       if (buildingFilter !== 'all' && space.building !== buildingFilter) return false;
-      
-      // Apply floor filter
       if (floorFilter !== 'all' && space.floor !== floorFilter) return false;
-      
-      // Apply search term
-      if (term) {
-        const name = safeLower(space.name);
-        const type = safeLower(space.type);
-        const building = safeLower(space.building);
-        const floor = safeLower(space.floor);
-        const staffName = space.current_assignment?.staff?.user?.full_name || '';
-        const staffId = space.current_assignment?.staff?.employee_id || '';
-        
-        return (
-          name.includes(term) ||
-          type.includes(term) ||
-          building.includes(term) ||
-          floor.includes(term) ||
-          safeLower(staffName).includes(term) ||
-          safeLower(staffId).includes(term)
-        );
-      }
-      
-      return true;
+
+      if (!term) return true;
+
+      const name = safeLower(space.name);
+      const type = safeLower(space.type);
+      const building = safeLower(space.building);
+      const floor = safeLower(space.floor);
+      const staffName = safeLower(space.current_assignment?.staff?.user?.full_name);
+      const employeeId = safeLower(space.current_assignment?.staff?.employee_id);
+      const staffUuid = safeLower(space.current_assignment?.staff?.staff_uuid);
+
+      return (
+        name.includes(term) ||
+        type.includes(term) ||
+        building.includes(term) ||
+        floor.includes(term) ||
+        staffName.includes(term) ||
+        employeeId.includes(term) ||
+        staffUuid.includes(term)
+      );
     });
   }, [
-    normalizedSpaces, 
-    searchTerm, 
-    occupancyFilter, 
-    spaceTypeFilter, 
-    buildingFilter, 
-    floorFilter
+    normalizedSpaces,
+    searchTerm,
+    occupancyFilter,
+    spaceTypeFilter,
+    buildingFilter,
+    floorFilter,
   ]);
 
-  /* ------------------------ Extract Filters Options ------------------------- */
-
   const spaceTypes = useMemo(() => {
-    const types = new Set<string>();
+    const set = new Set<string>();
     normalizedSpaces.forEach(space => {
-      if (space.type) types.add(space.type);
+      if (space.type) set.add(space.type);
     });
-    return Array.from(types).sort();
+    return Array.from(set).sort();
   }, [normalizedSpaces]);
 
   const buildings = useMemo(() => {
-    const buildingsSet = new Set<string>();
+    const set = new Set<string>();
     normalizedSpaces.forEach(space => {
-      if (space.building) buildingsSet.add(space.building);
+      if (space.building) set.add(space.building);
     });
-    return Array.from(buildingsSet).sort();
+    return Array.from(set).sort();
   }, [normalizedSpaces]);
 
   const floors = useMemo(() => {
-    const floorsSet = new Set<string>();
+    const set = new Set<string>();
     normalizedSpaces.forEach(space => {
-      if (space.floor) floorsSet.add(space.floor);
+      if (space.floor) set.add(space.floor);
     });
-    return Array.from(floorsSet).sort();
+    return Array.from(set).sort();
   }, [normalizedSpaces]);
-
-  /* ---------------------------- Mutations --------------------------------- */
 
   const assignMutation = useAssignSpaceByAdmin({
     onSuccess: () => {
@@ -492,46 +247,58 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
     },
   });
 
-  /* ------------------------ Cache Update Helpers -------------------------- */
-
-  const updateSpaceInCache = (spaceId: number, updateFn: (space: SpaceWithAssignment) => SpaceWithAssignment) => {
+  const updateOccupancyCache = (
+    spaceId: number,
+    updater: (space: SpaceWithAssignment) => SpaceWithAssignment
+  ) => {
     queryClient.setQueriesData(
       { queryKey: staffSpaceAssignmentKeys.occupancy(occupancyFilters) },
       (oldData: unknown) => {
         if (!oldData || typeof oldData !== 'object') return oldData;
+
         const data = oldData as { data?: SpaceWithAssignment[] };
-        
-        if (!data.data || !Array.isArray(data.data)) return oldData;
-        
+
+        if (!Array.isArray(data.data)) return oldData;
+
         return {
           ...data,
-          data: data.data.map(space => 
-            space.id === spaceId ? updateFn(space) : space
-          ),
+          data: data.data.map(space => (space.id === spaceId ? updater(space) : space)),
         };
       }
     );
   };
 
-  /* -------------------------- Drawer Handlers ----------------------------- */
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetchOccupancy();
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 300);
+    }
+  };
 
   const openAssignDrawer = (space?: SpaceWithAssignment) => {
     if (space) {
       setSelectedSpace(space);
-      setAssignFormData(prev => ({
-        ...prev,
-        space_id: space.id
-      }));
+      setAssignFormData({
+        facility_id: activeFacilityId ?? null,
+        space_id: space.id,
+        staff_id: null,
+        note: '',
+      });
     } else {
       setSelectedSpace(null);
       setAssignFormData(getEmptyAssignFormData(activeFacilityId ?? null));
     }
+
     setAssignDrawerOpen(true);
   };
 
   const openReleaseDrawer = (space: SpaceWithAssignment) => {
     if (!space.current_assignment) return;
-    
+
     setSelectedSpace(space);
     setReleaseFormData({
       facility_id: activeFacilityId ?? null,
@@ -554,15 +321,10 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
     setReleaseFormData(getEmptyReleaseFormData(activeFacilityId ?? null));
   };
 
-  /* -------------------------- Form Submission ----------------------------- */
-
   const handleAssignSubmit = () => {
     const { facility_id, space_id, staff_id } = assignFormData;
-    
-    if (!facility_id || !space_id || !staff_id) {
-      console.error('Missing required fields for assignment');
-      return;
-    }
+
+    if (!facility_id || !space_id || !staff_id) return;
 
     const payload: AssignSpaceRequest = {
       facility_id,
@@ -571,24 +333,24 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
       note: assignFormData.note.trim() || undefined,
     };
 
-    // Optimistic update
-    const targetSpace = normalizedSpaces.find(s => s.id === space_id) || normalizedAvailableSpaces.find(s => s.id === space_id);
-    const selectedStaff = normalizedStaff.find(s => s.staff_id === staff_id);
-    
-    if (targetSpace && selectedStaff) {
-      const tempId = Date.now();
-      
+    const targetSpace =
+      normalizedSpaces.find(space => space.id === space_id) ||
+      normalizedAvailableSpaces.find(space => space.id === space_id);
+
+    const targetStaff = normalizedStaff.find(staff => staff.staff_id === staff_id);
+
+    if (targetSpace && targetStaff) {
       const optimisticAssignment = createOptimisticAssignment(
-        tempId,
+        Date.now(),
         facility_id,
         space_id,
         staff_id,
         assignFormData.note.trim() || null,
         targetSpace,
-        selectedStaff
+        targetStaff
       );
 
-      updateSpaceInCache(space_id, (space) => ({
+      updateOccupancyCache(space_id, space => ({
         ...space,
         current_assignment: optimisticAssignment,
       }));
@@ -596,55 +358,42 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
 
     assignMutation.mutate(payload, {
       onError: () => {
-        // Revert optimistic update on error
-        queryClient.invalidateQueries({ queryKey: staffSpaceAssignmentKeys.occupancy(occupancyFilters) });
+        queryClient.invalidateQueries({
+          queryKey: staffSpaceAssignmentKeys.occupancy(occupancyFilters),
+        });
       },
     });
   };
 
   const handleReleaseSubmit = () => {
     const { facility_id, staff_id, assignment_id } = releaseFormData;
-    
-    if (!facility_id || !staff_id || !assignment_id || !selectedSpace) {
-      console.error('Missing required fields for release');
-      return;
-    }
+
+    if (!facility_id || !staff_id || !assignment_id || !selectedSpace) return;
 
     const payload = {
       facility_id,
       staff_id,
     };
 
-    // Optimistic update
-    const previousAssignment = selectedSpace.current_assignment;
-    
-    if (previousAssignment) {
-      const optimisticAssignment = createOptimisticReleasedAssignment(
-        previousAssignment,
-        releaseFormData.note.trim() || null
-      );
-
-      updateSpaceInCache(selectedSpace.id, (space) => ({
-        ...space,
-        current_assignment: optimisticAssignment,
-      }));
-    }
+    updateOccupancyCache(selectedSpace.id, space => ({
+      ...space,
+      current_assignment: null,
+    }));
 
     releaseMutation.mutate(payload, {
       onError: () => {
-        // Revert optimistic update on error
-        queryClient.invalidateQueries({ queryKey: staffSpaceAssignmentKeys.occupancy(occupancyFilters) });
+        queryClient.invalidateQueries({
+          queryKey: staffSpaceAssignmentKeys.occupancy(occupancyFilters),
+        });
       },
     });
   };
-
-  /* -------------------------- Delete Handler ------------------------------ */
 
   const handleRelease = async (space: SpaceWithAssignment) => {
     if (!space.current_assignment) return;
 
     const staffName = space.current_assignment.staff?.user?.full_name || 'this staff member';
-    
+
     const confirmed = await confirm({
       title: 'Release Space',
       message: `Are you sure you want to release "${space.name}" from ${staffName}?`,
@@ -659,66 +408,49 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
     openReleaseDrawer(space);
   };
 
-  /* ------------------------- Toggle Handlers ------------------------------ */
-
   const toggleExpand = (id: number) => {
     setExpandedRows(prev => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
 
-  /* --------------------------- Validation --------------------------------- */
-
-  const canAssign = !!assignFormData.facility_id && !!assignFormData.space_id && !!assignFormData.staff_id;
-  const canRelease = !!releaseFormData.facility_id && !!releaseFormData.staff_id && !!releaseFormData.assignment_id;
-  const isAssigning = assignMutation.isPending;
-  const isReleasing = releaseMutation.isPending;
-
-  /* ---------------------------- Color Tokens ------------------------------ */
-
-  const colors = {
-    bg: {
-      primary: isDark ? 'bg-gray-900' : 'bg-white',
-      secondary: isDark ? 'bg-gray-800' : 'bg-gray-50',
-      elevated: isDark ? 'bg-gray-800' : 'bg-white',
-      hover: isDark ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50',
-    },
-    border: {
-      primary: isDark ? 'border-gray-800' : 'border-gray-200',
-      secondary: isDark ? 'border-gray-700' : 'border-gray-300',
-    },
-    text: {
-      primary: isDark ? 'text-gray-100' : 'text-gray-900',
-      secondary: isDark ? 'text-gray-400' : 'text-gray-600',
-      tertiary: isDark ? 'text-gray-500' : 'text-gray-500',
-    },
-    accent: {
-      primary: isDark ? 'bg-blue-600' : 'bg-blue-600',
-      hover: isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-700',
-      text: 'text-white',
-    },
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSpaceTypeFilter('all');
+    setBuildingFilter('all');
+    setFloorFilter('all');
+    setOccupancyFilter('all');
   };
 
-  /* --------------------------- Statistics Calculations -------------------- */
-
-  const occupiedCount = normalizedSpaces.filter(s => s.current_assignment).length;
-  const availableCount = normalizedSpaces.filter(s => !s.current_assignment).length;
+  const occupiedCount = normalizedSpaces.filter(space => !!space.current_assignment).length;
+  const availableCount = normalizedSpaces.filter(space => !space.current_assignment).length;
   const totalCapacity = normalizedSpaces.length;
-  const occupancyRate = totalCapacity > 0 ? Math.round((occupiedCount / totalCapacity) * 100) : 0;
+  const occupancyRate =
+    totalCapacity > 0 ? Math.round((occupiedCount / totalCapacity) * 100) : 0;
 
-  /* --------------------------- Guard Clauses ------------------------------ */
+  const canAssign =
+    !!assignFormData.facility_id &&
+    !!assignFormData.space_id &&
+    !!assignFormData.staff_id;
+
+  const canRelease =
+    !!releaseFormData.facility_id &&
+    !!releaseFormData.staff_id &&
+    !!releaseFormData.assignment_id;
+
+  const isAssigning = assignMutation.isPending;
+  const isReleasing = releaseMutation.isPending;
 
   if (!activeFacilityId) {
     return (
       <div className={cn('rounded-xl p-8 text-center', colors.bg.secondary)}>
         <Building2 className={cn('w-12 h-12 mx-auto mb-4', colors.text.tertiary)} />
-        <h3 className={cn('text-lg font-medium mb-2', colors.text.primary)}>No Facility Selected</h3>
+        <h3 className={cn('text-lg font-medium mb-2', colors.text.primary)}>
+          No Facility Selected
+        </h3>
         <p className={colors.text.secondary}>
           Please select a facility from the sidebar to manage room allocations.
         </p>
@@ -727,880 +459,69 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
   }
 
   if (isLoadingOccupancy && !occupancyData) {
-    return <LoadingSkeleton variant="table" theme={theme} message="Loading space allocations..." />;
+    return (
+      <LoadingSkeleton
+        variant="dashboard"
+        theme={theme}
+        message="Loading space allocations..."
+      />
+    );
   }
-
-  /* ---------------------------- Render Functions -------------------------- */
-
-  const renderSpaceRow = (space: SpaceWithAssignment) => {
-    const isExpanded = expandedRows.has(space.id);
-    const SpaceIcon = getSpaceTypeIcon(space.type);
-    const assignment = space.current_assignment;
-    const isOccupied = !!assignment;
-
-    return (
-      <div key={space.id} className={cn('border-b last:border-b-0', colors.border.primary)}>
-        {/* Main Row */}
-        <div
-          className={cn(
-            'grid grid-cols-12 gap-4 p-4 items-center transition-colors',
-            colors.bg.hover,
-            !isOccupied && 'cursor-pointer'
-          )}
-          onClick={() => !isOccupied && toggleExpand(space.id)}
-        >
-          {/* Name */}
-          <div className="col-span-3">
-            <div className="flex items-center gap-2">
-              {isOccupied && (isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}
-              <SpaceIcon className={cn('w-4 h-4', getSpaceTypeColor(space.type))} />
-              <span className={cn('font-medium', colors.text.primary)}>{space.name}</span>
-              {!space.is_active && (
-                <span className="text-xs px-2 py-1 rounded bg-red-500/10 text-red-500">
-                  Occupied
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Type & Location */}
-          <div className="col-span-2">
-          <div className="space-y-1">
-            <span className={cn('text-sm', colors.text.secondary)}>
-              {(space.type?.charAt(0)?.toUpperCase() ?? '') + (space.type?.slice(1) ?? '')}
-            </span>
-            <div className="flex items-center gap-1 text-xs">
-              <Building className="w-3 h-3" />
-              <span className={colors.text.tertiary}>
-                {space.building || 'N/A'}{space.floor ? `, ${space.floor}` : ''}
-              </span>
-            </div>
-          </div>
-        </div>
-
-          {/* Assigned To */}
-          <div className="col-span-3">
-            {isOccupied ? (
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-blue-500" />
-                <div>
-                  <p className={cn('font-medium', colors.text.primary)}>
-                    {assignment?.staff?.user?.full_name || 'Unknown Staff'}
-                  </p>
-                  <p className={cn('text-sm', colors.text.secondary)}>
-                    {assignment?.staff?.staff_uuid || ''} • {formatName(assignment?.staff?.role_code) || ''}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <DoorOpen className="w-4 h-4 text-green-500" />
-                <span className={cn('font-medium text-green-500')}>Available</span>
-              </div>
-            )}
-          </div>
-
-          {/* Assignment Details */}
-          <div className="col-span-2">
-            {isOccupied && assignment ? (
-              <div className="space-y-1">
-                <div className="flex items-center gap-1 text-sm">
-                  <Calendar className="w-3 h-3" />
-                  <span className={colors.text.secondary}>
-                    {formatDate(assignment.assigned_at)}
-                  </span>
-                </div>
-                {assignment.note && (
-                  <div className="flex items-center gap-1 text-sm">
-                    <FileText className="w-3 h-3" />
-                    <span className={cn('truncate', colors.text.tertiary)} title={assignment.note}>
-                      {assignment.note}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <span className={cn('text-sm italic', colors.text.tertiary)}>Unassigned</span>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="col-span-2 flex items-center justify-end gap-2">
-            {isOccupied ? (
-              <>
-                <button
-                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                    e.stopPropagation();
-                    handleRelease(space);
-                  }}
-                  className={cn(
-                    'flex items-center gap-1 px-3 py-1.5 rounded-lg border transition-colors cursor-pointer',
-                    'border-orange-500/30 bg-orange-500/10 text-orange-500 hover:bg-orange-500/20'
-                  )}
-                >
-                  <DoorOpen className="w-4 h-4" />
-                  <span>Release</span>
-                </button>
-                <button
-                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                    e.stopPropagation();
-                    toggleExpand(space.id);
-                  }}
-                  className={cn(
-                    'p-2 rounded-lg border transition-colors cursor-pointer',
-                    colors.border.primary,
-                    colors.bg.hover
-                  )}
-                  title="Details"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                  e.stopPropagation();
-                  openAssignDrawer(space);
-                }}
-                className={cn(
-                  'flex items-center gap-1 px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer',
-                  colors.accent.primary,
-                  colors.accent.hover,
-                  colors.accent.text
-                )}
-              >
-                <User className="w-4 h-4" />
-                <span>Assign</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Expanded Details */}
-        {isExpanded && isOccupied && assignment && (
-          <div className={cn('p-4 border-t', colors.bg.secondary, colors.border.primary)}>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className={cn('text-sm font-medium mb-1', colors.text.secondary)}>Assigned On</p>
-                <p className={colors.text.primary}>{formatDateTime(assignment.assigned_at)}</p>
-              </div>
-              <div>
-                <p className={cn('text-sm font-medium mb-1', colors.text.secondary)}>Staff Details</p>
-                <p className={colors.text.primary}>
-                  Staff Number: {assignment.staff?.staff_uuid || 'N/A'}<br/>
-                  Role: {formatName(assignment.staff?.role_code) || 'N/A'}
-                </p>
-              </div>
-              <div>
-                <p className={cn('text-sm font-medium mb-1', colors.text.secondary)}>Space Status</p>
-                <p className={colors.text.primary}>
-                  {space.is_active ? (
-                    <span className="inline-flex items-center gap-1 text-green-500">
-                      <CheckCircle2 className="w-3 h-3" />
-                      Active
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-red-500">
-                      <XCircle className="w-3 h-3" />
-                      Inactive
-                    </span>
-                  )}
-                </p>
-              </div>
-              {assignment.note && (
-                <div className="col-span-2 md:col-span-4">
-                  <p className={cn('text-sm font-medium mb-1', colors.text.secondary)}>Assignment Notes</p>
-                  <p className={cn('text-sm italic p-2 rounded bg-black/5', colors.text.primary)}>
-                    {assignment.note}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderSpaceCard = (space: SpaceWithAssignment) => {
-    const SpaceIcon = getSpaceTypeIcon(space.type);
-    const assignment = space.current_assignment;
-    const isOccupied = !!assignment;
-
-    return (
-      <div
-        key={space.id}
-        className={cn(
-          'rounded-xl p-6 border transition-all',
-          colors.border.primary,
-          colors.bg.elevated,
-          'hover:shadow-lg',
-          isOccupied ? 'cursor-default' : 'cursor-pointer hover:scale-105'
-        )}
-        onClick={() => !isOccupied && openAssignDrawer(space)}
-      >
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className={cn('p-2 rounded-lg', colors.bg.secondary)}>
-              <SpaceIcon className={cn('w-6 h-6', getSpaceTypeColor(space.type))} />
-            </div>
-            <div>
-              <h3 className={cn('font-semibold', colors.text.primary)}>{space.name}</h3>
-              <p className={cn('text-sm', colors.text.secondary)}>
-                {space.type.charAt(0).toUpperCase() + space.type.slice(1)}
-              </p>
-            </div>
-          </div>
-
-          {isOccupied ? (
-            <div className="flex flex-col items-end">
-              <CheckCircle2 className="w-5 h-5 text-blue-500" />
-              <span className="text-xs text-blue-500 mt-1">Occupied</span>
-            </div>
-          ) : (
-            <DoorOpen className="w-5 h-5 text-green-500" />
-          )}
-        </div>
-
-        {/* Location */}
-        <div className={cn('mb-4 p-3 rounded-lg', colors.bg.secondary)}>
-          <div className="flex items-center gap-2 mb-2">
-            <MapPin className={cn('w-4 h-4', colors.text.tertiary)} />
-            <span className={cn('text-sm', colors.text.secondary)}>
-              {space.building || 'No building'} {space.floor ? `· ${space.floor}` : ''}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-          </div>
-          {!space.is_active && (
-            <div className="mt-2">
-              <span className="text-xs px-2 py-1 rounded bg-red-500/10 text-red-500">
-                Space Inactive
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Assignment Details */}
-        {isOccupied && assignment && (
-          <div className={cn('mb-4 p-3 rounded-lg border', colors.border.primary)}>
-            <div className="flex items-center gap-2 mb-2">
-              <User className="w-4 h-4 text-blue-500" />
-              <span className={cn('font-medium', colors.text.primary)}>
-                {assignment.staff?.user?.full_name || 'Unknown Staff'}
-              </span>
-            </div>
-            <div className="space-y-1 text-sm">
-              <div className="flex items-center gap-2">
-                <span className={cn('px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 text-xs')}>
-                  {assignment.staff?.employee_id || 'N/A'}
-                </span>
-                <span className={cn('px-2 py-0.5 rounded bg-gray-500/10 text-gray-500 text-xs')}>
-                  {assignment.staff?.role_code || 'N/A'}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 mt-2">
-                <Clock className="w-3 h-3" />
-                <span className={colors.text.secondary}>
-                  Assigned: {formatDate(assignment.assigned_at)}
-                </span>
-              </div>
-              {assignment.note && (
-                <div className="mt-2 p-2 rounded bg-black/5">
-                  <p className={cn('text-xs italic', colors.text.secondary)}>
-                    "{assignment.note}"
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          {isOccupied ? (
-            <button
-              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.stopPropagation();
-                handleRelease(space);
-              }}
-              className={cn(
-                'flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer',
-                'border border-orange-500/30 bg-orange-500/10 text-orange-500 hover:bg-orange-500/20'
-              )}
-            >
-              <DoorOpen className="w-4 h-4" />
-              <span>Release Space</span>
-            </button>
-          ) : (
-            <button
-              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.stopPropagation();
-                openAssignDrawer(space);
-              }}
-              className={cn(
-                'flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer',
-                colors.accent.primary,
-                colors.accent.hover,
-                colors.accent.text
-              )}
-            >
-              <User className="w-4 h-4" />
-              <span>Assign Room</span>
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  /* ---------------------------- Render JSX -------------------------------- */
 
   return (
     <div className="space-y-6">
-      {/* Header Section */}
       <div className={cn('rounded-xl p-6 border', colors.border.primary, colors.bg.elevated)}>
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex-1 min-w-0">
-            <h1 className={cn('text-2xl font-bold mb-2', colors.text.primary)}>Room Allocation</h1>
-            <p className={colors.text.secondary}>
-              Manage workspace assignments for staff members across the facility
-            </p>
-          </div>
+        <SpaceAllocationHeader
+          colors={colors}
+          isRefreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          onAssign={() => openAssignDrawer()}
+        />
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => refetchOccupancy()}
-              className={cn(
-                'p-2 rounded-lg border transition-colors cursor-pointer',
-                colors.border.primary,
-                colors.bg.primary,
-                colors.bg.hover
-              )}
-              title="Refresh"
-              type="button"
-            >
-              <RefreshCw className={cn('w-5 h-5', colors.text.secondary)} />
-            </button>
-
-            <button
-              onClick={() => openAssignDrawer()}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer',
-                colors.accent.primary,
-                colors.accent.hover,
-                colors.accent.text
-              )}
-              type="button"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Assign Room</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-            {/* Total Spaces Card */}
-            <div className={cn(
-              'relative overflow-hidden rounded-xl p-5 transition-all duration-300',
-              'border-2', // Thicker border
-              isDark 
-                ? 'bg-linear-to-br from-gray-800 to-gray-900 border-blue-500/30 hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-500/20' 
-                : 'bg-linear-to-br from-white to-blue-50/50 border-blue-200 hover:border-blue-400 hover:shadow-2xl hover:shadow-blue-500/20',
-              'group cursor-pointer transform hover:-translate-y-1'
-            )}>
-              {/* Background decoration */}
-              <div className={cn(
-                'absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl transition-opacity',
-                isDark ? 'bg-blue-500/10 group-hover:opacity-100' : 'bg-blue-500/5 group-hover:opacity-100',
-                'opacity-0'
-              )} />
-              
-              {/* Icon */}
-              <div className="flex items-center justify-between mb-3">
-                <div className={cn(
-                  'p-3 rounded-xl transition-all duration-300',
-                  isDark 
-                    ? 'bg-blue-500/20 group-hover:bg-blue-500/30 group-hover:scale-110' 
-                    : 'bg-blue-100 group-hover:bg-blue-200 group-hover:scale-110'
-                )}>
-                  <Building2 className={cn(
-                    'w-6 h-6',
-                    isDark ? 'text-blue-400' : 'text-blue-600'
-                  )} />
-                </div>
-                <span className={cn(
-                  'text-xs font-medium px-2 py-1 rounded-full',
-                  isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
-                )}>
-                  Total
-                </span>
-              </div>
-              
-              {/* Value */}
-              <p className={cn(
-                'text-3xl font-bold mb-1',
-                isDark ? 'text-white' : 'text-gray-900'
-              )}>
-                {totalCapacity}
-              </p>
-              
-              {/* Label */}
-              <p className={cn(
-                'text-sm font-medium',
-                isDark ? 'text-gray-400' : 'text-gray-600'
-              )}>
-                Total Spaces
-              </p>
-              
-              {/* Trend indicator */}
-              <div className="absolute bottom-3 right-3">
-                <div className={cn(
-                  'flex items-center gap-1 text-xs',
-                  isDark ? 'text-blue-400' : 'text-blue-600'
-                )}>
-                  <span>+{totalCapacity > 0 ? Math.floor(totalCapacity * 0.1) : 0}%</span>
-                  <ChevronUp className="w-3 h-3" />
-                </div>
-              </div>
-            </div>
-
-            {/* Occupied Spaces Card */}
-            <div className={cn(
-              'relative overflow-hidden rounded-xl p-5 transition-all duration-300',
-              'border-2',
-              isDark 
-                ? 'bg-linear-to-br from-gray-800 to-gray-900 border-purple-500/30 hover:border-purple-500/50 hover:shadow-2xl hover:shadow-purple-500/20' 
-                : 'bg-linear-to-br from-white to-purple-50/50 border-purple-200 hover:border-purple-400 hover:shadow-2xl hover:shadow-purple-500/20',
-              'group cursor-pointer transform hover:-translate-y-1'
-            )}>
-              {/* Background decoration */}
-              <div className={cn(
-                'absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl transition-opacity',
-                isDark ? 'bg-purple-500/10 group-hover:opacity-100' : 'bg-purple-500/5 group-hover:opacity-100',
-                'opacity-0'
-              )} />
-              
-              {/* Icon */}
-              <div className="flex items-center justify-between mb-3">
-                <div className={cn(
-                  'p-3 rounded-xl transition-all duration-300',
-                  isDark 
-                    ? 'bg-purple-500/20 group-hover:bg-purple-500/30 group-hover:scale-110' 
-                    : 'bg-purple-100 group-hover:bg-purple-200 group-hover:scale-110'
-                )}>
-                  <Users className={cn(
-                    'w-6 h-6',
-                    isDark ? 'text-purple-400' : 'text-purple-600'
-                  )} />
-                </div>
-                <span className={cn(
-                  'text-xs font-medium px-2 py-1 rounded-full bg-purple-500/20 text-purple-500 border border-purple-500/30'
-                )}>
-                  Occupied
-                </span>
-              </div>
-              
-              {/* Value */}
-              <p className={cn(
-                'text-3xl font-bold mb-1',
-                isDark ? 'text-white' : 'text-gray-900'
-              )}>
-                {occupiedCount}
-              </p>
-              
-              {/* Label */}
-              <p className={cn(
-                'text-sm font-medium',
-                isDark ? 'text-gray-400' : 'text-gray-600'
-              )}>
-                Occupied Spaces
-              </p>
-              
-              {/* Progress bar showing occupied percentage */}
-              <div className="absolute bottom-3 right-3 w-16">
-                <div className="h-1.5 bg-gray-700/30 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-purple-500 rounded-full transition-all duration-500"
-                    style={{ 
-                      width: `${totalCapacity > 0 ? (occupiedCount / totalCapacity) * 100 : 0}%` 
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Available Spaces Card */}
-            <div className={cn(
-              'relative overflow-hidden rounded-xl p-5 transition-all duration-300',
-              'border-2',
-              isDark 
-                ? 'bg-linear-to-br from-gray-800 to-gray-900 border-green-500/30 hover:border-green-500/50 hover:shadow-2xl hover:shadow-green-500/20' 
-                : 'bg-linear-to-br from-white to-green-50/50 border-green-200 hover:border-green-400 hover:shadow-2xl hover:shadow-green-500/20',
-              'group cursor-pointer transform hover:-translate-y-1'
-            )}>
-              {/* Background decoration */}
-              <div className={cn(
-                'absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl transition-opacity',
-                isDark ? 'bg-green-500/10 group-hover:opacity-100' : 'bg-green-500/5 group-hover:opacity-100',
-                'opacity-0'
-              )} />
-              
-              {/* Icon */}
-              <div className="flex items-center justify-between mb-3">
-                <div className={cn(
-                  'p-3 rounded-xl transition-all duration-300',
-                  isDark 
-                    ? 'bg-green-500/20 group-hover:bg-green-500/30 group-hover:scale-110' 
-                    : 'bg-green-100 group-hover:bg-green-200 group-hover:scale-110'
-                )}>
-                  <DoorOpen className={cn(
-                    'w-6 h-6',
-                    isDark ? 'text-green-400' : 'text-green-600'
-                  )} />
-                </div>
-                <span className={cn(
-                  'text-xs font-medium px-2 py-1 rounded-full bg-green-500/20 text-green-500 border border-green-500/30'
-                )}>
-                  Available
-                </span>
-              </div>
-              
-              {/* Value */}
-              <p className={cn(
-                'text-3xl font-bold mb-1',
-                isDark ? 'text-white' : 'text-gray-900'
-              )}>
-                {availableCount}
-              </p>
-              
-              {/* Label */}
-              <p className={cn(
-                'text-sm font-medium',
-                isDark ? 'text-gray-400' : 'text-gray-600'
-              )}>
-                Available Spaces
-              </p>
-              
-              {/* Available badge if high availability */}
-              {availableCount > 5 && (
-                <div className="absolute top-3 right-3">
-                  <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-500 border border-green-500/30">
-                    Ready to assign
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Occupancy Rate Card */}
-            <div className={cn(
-              'relative overflow-hidden rounded-xl p-5 transition-all duration-300',
-              'border-2',
-              isDark 
-                ? 'bg-linear-to-br from-gray-800 to-gray-900 border-amber-500/30 hover:border-amber-500/50 hover:shadow-2xl hover:shadow-amber-500/20' 
-                : 'bg-linear-to-br from-white to-amber-50/50 border-amber-200 hover:border-amber-400 hover:shadow-2xl hover:shadow-amber-500/20',
-              'group cursor-pointer transform hover:-translate-y-1'
-            )}>
-              {/* Background decoration */}
-              <div className={cn(
-                'absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl transition-opacity',
-                isDark ? 'bg-amber-500/10 group-hover:opacity-100' : 'bg-amber-500/5 group-hover:opacity-100',
-                'opacity-0'
-              )} />
-              
-              {/* Icon */}
-              <div className="flex items-center justify-between mb-3">
-                <div className={cn(
-                  'p-3 rounded-xl transition-all duration-300',
-                  isDark 
-                    ? 'bg-amber-500/20 group-hover:bg-amber-500/30 group-hover:scale-110' 
-                    : 'bg-amber-100 group-hover:bg-amber-200 group-hover:scale-110'
-                )}>
-                  <Activity className={cn(
-                    'w-6 h-6',
-                    isDark ? 'text-amber-400' : 'text-amber-600'
-                  )} />
-                </div>
-                <span className={cn(
-                  'text-xs font-medium px-2 py-1 rounded-full',
-                  isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
-                )}>
-                  Rate
-                </span>
-              </div>
-              
-              {/* Value with percentage */}
-              <div className="flex items-end gap-1 mb-1">
-                <p className={cn(
-                  'text-3xl font-bold',
-                  isDark ? 'text-white' : 'text-gray-900'
-                )}>
-                  {occupancyRate}
-                </p>
-                <span className={cn(
-                  'text-lg font-semibold mb-0.5',
-                  isDark ? 'text-gray-500' : 'text-gray-400'
-                )}>%</span>
-              </div>
-              
-              {/* Label */}
-              <p className={cn(
-                'text-sm font-medium',
-                isDark ? 'text-gray-400' : 'text-gray-600'
-              )}>
-                Occupancy Rate
-              </p>
-              
-              {/* Circular progress indicator */}
-              <div className="absolute bottom-3 right-3">
-                <div className="relative w-12 h-12">
-                  <svg className="w-12 h-12 transform -rotate-90">
-                    <circle
-                      cx="24"
-                      cy="24"
-                      r="20"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                      className={isDark ? 'text-gray-700' : 'text-gray-200'}
-                    />
-                    <circle
-                      cx="24"
-                      cy="24"
-                      r="20"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                      strokeDasharray={`${2 * Math.PI * 20}`}
-                      strokeDashoffset={`${2 * Math.PI * 20 * (1 - occupancyRate / 100)}`}
-                      className={cn(
-                        'transition-all duration-500',
-                        occupancyRate > 80 
-                          ? 'text-red-500' 
-                          : occupancyRate > 50 
-                            ? 'text-amber-500' 
-                            : 'text-green-500'
-                      )}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className={cn(
-                      'text-xs font-bold',
-                      occupancyRate > 80 
-                        ? 'text-red-500' 
-                        : occupancyRate > 50 
-                          ? 'text-amber-500' 
-                          : 'text-green-500'
-                    )}>
-                      {occupancyRate}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <SpaceAllocationStatsCards
+          theme={theme}
+          totalCapacity={totalCapacity}
+          occupiedCount={occupiedCount}
+          availableCount={availableCount}
+          occupancyRate={occupancyRate}
+        />
       </div>
 
-      {/* Filters Bar */}
-      <div className={cn('rounded-xl p-4 border', colors.border.primary, colors.bg.elevated)}>
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Search */}
-          <div className="flex-1 min-w-[200px]">
-            <div className="relative">
-              <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5', colors.text.tertiary)} />
-              <input
-                type="text"
-                placeholder="Search spaces by name, type, building, floor, or assigned staff..."
-                value={searchTerm}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                className={cn(
-                  'w-full pl-10 pr-4 py-2 rounded-lg border transition-colors cursor-text',
-                  colors.border.primary,
-                  colors.bg.primary,
-                  colors.text.primary,
-                  'focus:outline-none focus:ring-2 focus:ring-blue-500'
-                )}
-              />
-            </div>
-          </div>
+      <SpaceAllocationFiltersBar
+        theme={theme}
+        colors={colors}
+        searchTerm={searchTerm}
+        onSearchTermChange={setSearchTerm}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters(prev => !prev)}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        spaceTypeFilter={spaceTypeFilter}
+        onSpaceTypeFilterChange={setSpaceTypeFilter}
+        buildingFilter={buildingFilter}
+        onBuildingFilterChange={setBuildingFilter}
+        floorFilter={floorFilter}
+        onFloorFilterChange={setFloorFilter}
+        occupancyFilter={occupancyFilter}
+        onOccupancyFilterChange={setOccupancyFilter}
+        spaceTypes={spaceTypes}
+        buildings={buildings}
+        floors={floors}
+        onClearFilters={clearFilters}
+      />
 
-          {/* Toggle Filters */}
-          <button
-            onClick={() => setShowFilters(prev => !prev)}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors cursor-pointer',
-              colors.border.primary,
-              colors.bg.primary,
-              colors.bg.hover
-            )}
-            type="button"
-          >
-            <Filter className="w-5 h-5" />
-            <span>Filters</span>
-            {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
-
-          {/* View Mode Toggle */}
-          <div className={cn('flex items-center gap-1 p-1 rounded-lg border', colors.border.primary, colors.bg.secondary)}>
-            <button
-              onClick={() => setViewMode('list')}
-              className={cn(
-                'p-2 rounded transition-colors cursor-pointer',
-                viewMode === 'list' ? colors.accent.primary + ' text-white' : colors.bg.hover
-              )}
-              type="button"
-            >
-              <List className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setViewMode('grid')}
-              className={cn(
-                'p-2 rounded transition-colors cursor-pointer',
-                viewMode === 'grid' ? colors.accent.primary + ' text-white' : colors.bg.hover
-              )}
-              type="button"
-            >
-              <Grid3x3 className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Expanded Filters */}
-        {showFilters && (
-          <div
-            className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-4 pt-4 border-t"
-            style={{ borderColor: colors.border.primary.split(' ')[0].replace('border-', '') }}
-          >
-            {/* Space Type Filter */}
-            <div>
-              <label className={cn('block text-sm font-medium mb-2', colors.text.secondary)}>
-                Space Type
-              </label>
-              <select
-                value={spaceTypeFilter}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSpaceTypeFilter(e.target.value)}
-                className={cn(
-                  'w-full px-3 py-2 rounded-lg border transition-colors cursor-pointer',
-                  colors.border.primary,
-                  colors.bg.primary,
-                  colors.text.primary
-                )}
-              >
-                <option value="all">All Types</option>
-                {spaceTypes.map(type => (
-                  <option key={type} value={type}>
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Building Filter */}
-            <div>
-              <label className={cn('block text-sm font-medium mb-2', colors.text.secondary)}>
-                Building
-              </label>
-              <select
-                value={buildingFilter}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setBuildingFilter(e.target.value)}
-                className={cn(
-                  'w-full px-3 py-2 rounded-lg border transition-colors cursor-pointer',
-                  colors.border.primary,
-                  colors.bg.primary,
-                  colors.text.primary
-                )}
-              >
-                <option value="all">All Buildings</option>
-                {buildings.map(building => (
-                  <option key={building} value={building}>
-                    {building}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Floor Filter */}
-            <div>
-              <label className={cn('block text-sm font-medium mb-2', colors.text.secondary)}>
-                Floor
-              </label>
-              <select
-                value={floorFilter}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFloorFilter(e.target.value)}
-                className={cn(
-                  'w-full px-3 py-2 rounded-lg border transition-colors cursor-pointer',
-                  colors.border.primary,
-                  colors.bg.primary,
-                  colors.text.primary
-                )}
-              >
-                <option value="all">All Floors</option>
-                {floors.map(floor => (
-                  <option key={floor} value={floor}>
-                    {floor}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Occupancy Filter */}
-            <div>
-              <label className={cn('block text-sm font-medium mb-2', colors.text.secondary)}>
-                Occupancy
-              </label>
-              <select
-                value={occupancyFilter}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setOccupancyFilter(e.target.value as any)}
-                className={cn(
-                  'w-full px-3 py-2 rounded-lg border transition-colors cursor-pointer',
-                  colors.border.primary,
-                  colors.bg.primary,
-                  colors.text.primary
-                )}
-              >
-                <option value="all">All Spaces</option>
-                <option value="occupied">Occupied</option>
-                <option value="available">Available</option>
-              </select>
-            </div>
-
-            {/* Clear Filters */}
-            <div className="flex items-end">
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setSpaceTypeFilter('all');
-                  setBuildingFilter('all');
-                  setFloorFilter('all');
-                  setOccupancyFilter('all');
-                }}
-                className={cn(
-                  'w-full px-4 py-2 rounded-lg border transition-colors cursor-pointer',
-                  colors.border.primary,
-                  colors.bg.hover
-                )}
-                type="button"
-              >
-                Clear Filters
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Error State */}
       {occupancyError && (
         <div className="rounded-xl p-4 bg-red-500/10 border border-red-500/30">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
             <div>
               <p className="font-medium text-red-500">Error Loading Room Allocations</p>
-              <p className={cn('text-sm', colors.text.secondary)}>{getErrorMessage(occupancyError)}</p>
+              <p className={cn('text-sm', colors.text.secondary)}>
+                {getErrorMessage(occupancyError)}
+              </p>
             </div>
             <button
-              onClick={() => refetchOccupancy()}
+              onClick={() => void refetchOccupancy()}
               className="ml-auto px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors cursor-pointer"
               type="button"
             >
@@ -1610,613 +531,99 @@ export const SpaceAllocation: React.FC<SpaceAllocationProps> = ({ theme }) => {
         </div>
       )}
 
-      {/* Empty State */}
       {!isLoadingOccupancy && filteredSpaces.length === 0 && (
         <div className={cn('rounded-xl p-12 text-center', colors.bg.secondary)}>
           <DoorOpen className={cn('w-16 h-16 mx-auto mb-4', colors.text.tertiary)} />
           <h3 className={cn('text-lg font-medium mb-2', colors.text.primary)}>
-            {searchTerm || spaceTypeFilter !== 'all' || occupancyFilter !== 'all' ? 'No Spaces Found' : 'No Spaces Available'}
+            {searchTerm ||
+            spaceTypeFilter !== 'all' ||
+            buildingFilter !== 'all' ||
+            floorFilter !== 'all' ||
+            occupancyFilter !== 'all'
+              ? 'No Spaces Found'
+              : 'No Spaces Available'}
           </h3>
+
           <p className={cn('mb-6', colors.text.secondary)}>
-            {searchTerm || spaceTypeFilter !== 'all' || occupancyFilter !== 'all'
+            {searchTerm ||
+            spaceTypeFilter !== 'all' ||
+            buildingFilter !== 'all' ||
+            floorFilter !== 'all' ||
+            occupancyFilter !== 'all'
               ? 'Try adjusting your filters or search criteria'
               : 'All spaces are currently unallocated or no spaces are configured'}
           </p>
-          {!searchTerm && spaceTypeFilter === 'all' && occupancyFilter === 'all' && (
-            <button
-              onClick={() => openAssignDrawer()}
-              className={cn(
-                'inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer',
-                colors.accent.primary,
-                colors.accent.hover,
-                colors.accent.text
-              )}
-              type="button"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Assign First Room</span>
-            </button>
-          )}
-        </div>
-      )}
 
-      {/* List View */}
-      {!isLoadingOccupancy && filteredSpaces.length > 0 && viewMode === 'list' && (
-        <div className={cn('rounded-xl overflow-hidden border', colors.border.primary)}>
-          {/* Table Header */}
-          <div className={cn('grid grid-cols-12 gap-4 p-4 font-medium border-b', colors.bg.secondary, colors.border.primary)}>
-            <div className="col-span-3">Space Name</div>
-            <div className="col-span-2">Type & Location</div>
-            <div className="col-span-3">Assigned To</div>
-            <div className="col-span-2">Assignment Details</div>
-            <div className="col-span-2 text-right">Actions</div>
-          </div>
-
-          {/* Table Rows */}
-          <div className={colors.bg.elevated}>
-            {filteredSpaces.map(renderSpaceRow)}
-          </div>
-        </div>
-      )}
-
-      {/* Grid View */}
-      {!isLoadingOccupancy && filteredSpaces.length > 0 && viewMode === 'grid' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSpaces.map(renderSpaceCard)}
-        </div>
-      )}
-
-      {/* Assign Space Drawer */}
-      {assignDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div
-            className={cn(
-              'w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl',
-              colors.bg.elevated
-            )}
-          >
-            {/* Drawer Header */}
-            <div className={cn('sticky top-0 p-6 border-b z-10', colors.bg.elevated, colors.border.primary)}>
-              <h2 className={cn('text-xl font-bold', colors.text.primary)}>
-                Assign Room to Staff
-              </h2>
-              <p className={colors.text.secondary}>
-                Select a space and staff member to create an assignment
-              </p>
-            </div>
-
-            {/* Drawer Body */}
-            <div className="p-6 space-y-6">
-              {/* Space Selection */}
-             <div>
-              <label className={cn('block text-sm font-medium mb-2', colors.text.secondary)}>
-                Select room <span className="text-red-500">*</span>
-              </label>
-              
-              {normalizedAvailableSpaces.length === 0 ? (
-                // No rooms available state
-                <div className={cn(
-                  'w-full px-4 py-3 rounded-lg border transition-colors',
-                  'bg-blue-50 border-blue-200',
-                  'dark:bg-amber-900/20 dark:border-amber-700/30'
-                )}>
-                  <div className="flex items-center gap-2">
-                    <svg 
-                      className="w-5 h-5 text-blue-500" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z" 
-                      />
-                    </svg>
-                    <span className={cn('text-sm font-medium', colors.text.secondary)}>
-                      No rooms available for assignment
-                    </span>
-                  </div>
-                  <p className="text-xs mt-2 text-blue-600 dark:text-blue-400">
-                    All rooms are currently occupied. Please check back later or release a room first.
-                  </p>
-                </div>
-              ) : (
-                // Rooms available state
-                <>
-                  <div className="relative">
-                    <select
-                      value={assignFormData.space_id || ''}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                        setAssignFormData(prev => ({ 
-                          ...prev, 
-                          space_id: e.target.value ? parseInt(e.target.value) : null 
-                        }))
-                      }
-                      className={cn(
-                        'w-full px-4 py-3 pl-10 rounded-lg border transition-colors cursor-pointer',
-                        'appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent',
-                        colors.border.primary,
-                        colors.bg.primary,
-                        colors.text.primary,
-                        assignFormData.space_id ? 'border-primary-400' : 'border-gray-300 dark:border-gray-600'
-                      )}
-                    >
-                      <option value="">Select a room...</option>
-                      {normalizedAvailableSpaces.map(space => (
-                        <option key={space.id} value={space.id}>
-                          {space.name} - {formatName(space.type)} 
-                          {space.building && ` • ${space.building}`}
-                          {space.floor && ` • Floor ${space.floor}`}
-                        </option>
-                      ))}
-                    </select>
-                    {/* Dropdown icon */}
-                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                      <svg 
-                        className="w-5 h-5 text-gray-400" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth={2} 
-                          d="M19 9l-7 7-7-7" 
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                  
-                  {/* Room counter with visual indicator */}
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-2">
-                      <div className={cn(
-                        'w-2 h-2 rounded-full',
-                        normalizedAvailableSpaces.length > 5 
-                          ? 'bg-green-500' 
-                          : normalizedAvailableSpaces.length > 0
-                            ? 'bg-amber-500'
-                            : 'bg-red-500'
-                      )} />
-                      <p className={cn('text-xs', colors.text.tertiary)}>
-                        {normalizedAvailableSpaces.length} {normalizedAvailableSpaces.length === 1 ? 'room' : 'rooms'} available
-                      </p>
-                    </div>
-                    
-                    {/* Selected room info */}
-                    {assignFormData.space_id && (
-                      <div className="flex items-center gap-1">
-                        <svg 
-                          className="w-4 h-4 text-green-500" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                        >
-                          <path 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round" 
-                            strokeWidth={2} 
-                            d="M5 13l4 4L19 7" 
-                          />
-                        </svg>
-                        <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                          Ready to assign
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-
-              {/* Staff Selection */}
-              <div>
-                <label className={cn('block text-sm font-medium mb-2', colors.text.secondary)}>
-                  Select Staff <span className="text-red-500">*</span>
-                </label>
-                
-                {isLoadingStaff ? (
-                  // Loading state
-                  <div className={cn(
-                    'w-full px-4 py-3 rounded-lg border transition-colors',
-                    'bg-gray-50 border-gray-200 animate-pulse',
-                    'dark:bg-gray-800/50 dark:border-gray-700'
-                  )}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700" />
-                        <div className="space-y-1">
-                          <div className="h-3 w-32 bg-gray-300 dark:bg-gray-700 rounded" />
-                          <div className="h-2 w-24 bg-gray-200 dark:bg-gray-800 rounded" />
-                        </div>
-                      </div>
-                      <div className="h-6 w-16 bg-gray-300 dark:bg-gray-700 rounded-full" />
-                    </div>
-                  </div>
-                ) : normalizedStaff.length === 0 ? (
-                  // No staff available state
-                  <div className={cn(
-                    'w-full px-4 py-4 rounded-lg border transition-colors text-center',
-                    'bg-blue-50 border-blue-200',
-                    'dark:bg-blue-900/20 dark:border-blue-700/30'
-                  )}>
-                    <svg 
-                      className="w-10 h-10 mx-auto text-blue-500 mb-2" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={1.5} 
-                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" 
-                      />
-                    </svg>
-                    <p className={cn('font-medium mb-1', colors.text.secondary)}>
-                      No staff available
-                    </p>
-                    <p className="text-xs text-blue-600 dark:text-blue-400">
-                      All staff members already have room assignments
-                    </p>
-                  </div>
-                ) : (
-                  // Staff available state
-                  <>
-                    <div className="relative group">
-                      <select
-                        value={assignFormData.staff_id || ''}
-                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                          setAssignFormData(prev => ({ 
-                            ...prev, 
-                            staff_id: e.target.value ? parseInt(e.target.value) : null 
-                          }))
-                        }
-                        className={cn(
-                          'w-full px-4 py-3 pr-10 rounded-lg border transition-all cursor-pointer',
-                          'appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400',
-                          colors.border.primary,
-                          colors.bg.primary,
-                          colors.text.primary,
-                          'group-hover:border-primary-300',
-                          assignFormData.staff_id && 'border-primary-400 bg-primary-50/50 dark:bg-primary-900/10',
-                          'disabled:opacity-50 disabled:cursor-not-allowed'
-                        )}
-                        disabled={isLoadingStaff}
-                      >
-                       <option value="">Choose a staff member...</option>
-                          {normalizedStaff.map(staff => (
-                            <option 
-                              key={staff.staff_id} 
-                              value={staff.staff_id} 
-                              className="py-3 px-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                            >
-                              <div className="space-y-2">
-                                {/* Main row: Name and Role */}
-                                <div className="flex items-center justify-between gap-4">
-                                  <div>
-                                    <div className="font-semibold text-gray-900 dark:text-gray-100">
-                                      {staff.full_name.concat("  ")}
-                                    </div>
-                                    
-                                  </div>
-                                  
-                                  <div className="text-right">
-                                    <div className="text-xs font-medium text-primary-600 dark:text-primary-400">
-                                      ({formatDisplayName(staff.role_code)})
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                {/* Bottom row: UUID */}
-                                <div className="flex items-center gap-2">
-                                  <svg 
-                                    className="w-3 h-3 text-gray-400" 
-                                    fill="none" 
-                                    stroke="currentColor" 
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path 
-                                      strokeLinecap="round" 
-                                      strokeLinejoin="round" 
-                                      strokeWidth={2} 
-                                      d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" 
-                                    />
-                                  </svg>
-                                  
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                                    ({staff.staff_uuid})
-                                  </span>
-                                </div>
-                              </div>
-                            </option>
-                          ))}
-                      </select>
-                      
-                      {/* Custom dropdown arrow */}
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                        <svg 
-                          className={cn(
-                            "w-5 h-5 transition-transform group-hover:rotate-180",
-                            isLoadingStaff ? "text-gray-400" : "text-gray-500"
-                          )} 
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                        >
-                          <path 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round" 
-                            strokeWidth={2} 
-                            d="M19 9l-7 7-7-7" 
-                          />
-                        </svg>
-                      </div>
-                    </div>
-                    
-                    {/* Staff information and stats */}
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center gap-2">
-                        <div className={cn(
-                          'w-2 h-2 rounded-full',
-                          normalizedStaff.length > 10 
-                            ? 'bg-green-500' 
-                            : normalizedStaff.length > 3
-                              ? 'bg-blue-500'
-                              : 'bg-amber-500'
-                        )} />
-                        <p className={cn('text-xs', colors.text.tertiary)}>
-                          {normalizedStaff.length} {normalizedStaff.length === 1 ? 'staff member' : 'staff members'} available
-                        </p>
-                      </div>
-                      
-                      {/* Selected staff info */}
-                      {assignFormData.staff_id && (
-                        <div className="flex items-center gap-1">
-                          <svg 
-                            className="w-4 h-4 text-green-500" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24"
-                          >
-                            <path 
-                              strokeLinecap="round" 
-                              strokeLinejoin="round" 
-                              strokeWidth={2} 
-                              d="M5 13l4 4L19 7" 
-                            />
-                          </svg>
-                          <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                            Ready to assign
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                
-                  </>
-                )}
-                
-                {/* Loading indicator text */}
-                {isLoadingStaff && (
-                  <p className={cn('text-xs mt-2 flex items-center gap-2', colors.text.tertiary)}>
-                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Loading staff members...
-                  </p>
-                )}
-              </div>
-              {/* Notes */}
-              <div>
-                <label className={cn('block text-sm font-medium mb-2', colors.text.secondary)}>
-                  Assignment Notes (Optional)
-                </label>
-                <textarea
-                  value={assignFormData.note}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                    setAssignFormData(prev => ({ ...prev, note: e.target.value }))
-                  }
-                  placeholder="Add notes about this assignment (e.g., reason, duration, special requirements)..."
-                  rows={3}
-                  className={cn(
-                    'w-full px-4 py-2 rounded-lg border transition-colors cursor-text',
-                    colors.border.primary,
-                    colors.bg.primary,
-                    colors.text.primary,
-                    'focus:outline-none focus:ring-2 focus:ring-blue-500'
-                  )}
-                />
-              </div>
-
-              {/* Selected Space Preview */}
-              {assignFormData.space_id && (() => {
-                const selectedSpace = normalizedAvailableSpaces.find(s => s.id === assignFormData.space_id);
-                if (!selectedSpace) return null;
-                
-                return (
-                  <div className={cn('p-4 rounded-lg border', colors.border.primary, colors.bg.secondary)}>
-                    <h4 className={cn('text-sm font-medium mb-2', colors.text.secondary)}>Selected Space Preview</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className={cn('text-xs', colors.text.tertiary)}>Space Name</p>
-                        <p className={cn('font-medium', colors.text.primary)}>{selectedSpace.name}</p>
-                      </div>
-                      <div>
-                        <p className={cn('text-xs', colors.text.tertiary)}>Type</p>
-                        <p className={cn('font-medium', colors.text.primary)}>
-                          {selectedSpace.type.charAt(0).toUpperCase() + selectedSpace.type.slice(1)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className={cn('text-xs', colors.text.tertiary)}>Building</p>
-                        <p className={cn('font-medium', colors.text.primary)}>{selectedSpace.building || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className={cn('text-xs', colors.text.tertiary)}>Floor</p>
-                        <p className={cn('font-medium', colors.text.primary)}>{selectedSpace.floor || 'N/A'}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Drawer Footer */}
-            <div className={cn('sticky bottom-0 p-6 border-t flex items-center justify-end gap-3', colors.bg.elevated, colors.border.primary)}>
+          {!searchTerm &&
+            spaceTypeFilter === 'all' &&
+            buildingFilter === 'all' &&
+            floorFilter === 'all' &&
+            occupancyFilter === 'all' && (
               <button
-                onClick={closeAssignDrawer}
-                disabled={isAssigning}
+                onClick={() => openAssignDrawer()}
                 className={cn(
-                  'px-6 py-2 rounded-lg border transition-colors cursor-pointer',
-                  colors.border.primary,
-                  colors.bg.hover,
-                  isAssigning && 'opacity-50 cursor-not-allowed'
-                )}
-                type="button"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAssignSubmit}
-                disabled={!canAssign || isAssigning}
-                className={cn(
-                  'px-6 py-2 rounded-lg font-medium transition-colors cursor-pointer',
+                  'inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer',
                   colors.accent.primary,
                   colors.accent.hover,
-                  colors.accent.text,
-                  (!canAssign || isAssigning) && 'opacity-50 cursor-not-allowed'
+                  colors.accent.text
                 )}
                 type="button"
               >
-                {isAssigning ? 'Assigning...' : 'Assign Space'}
+                <Plus className="w-5 h-5" />
+                <span>Assign First Room</span>
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Release Space Drawer */}
-      {releaseDrawerOpen && selectedSpace && selectedSpace.current_assignment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div
-            className={cn(
-              'w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl',
-              colors.bg.elevated
             )}
-          >
-            {/* Drawer Header */}
-            <div className={cn('sticky top-0 p-6 border-b z-10', colors.bg.elevated, colors.border.primary)}>
-              <h2 className={cn('text-xl font-bold', colors.text.primary)}>
-                Release Space
-              </h2>
-              <p className={colors.text.secondary}>
-                Confirm release of space from staff member
-              </p>
-            </div>
-
-            {/* Drawer Body */}
-            <div className="p-6 space-y-6">
-              {/* Current Assignment Summary */}
-              <div className={cn('p-4 rounded-lg border', 'border-orange-500/30 bg-orange-500/10')}>
-                <h4 className={cn('text-sm font-medium mb-3 text-orange-500')}>Current Assignment</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className={cn('text-xs', colors.text.tertiary)}>Space</p>
-                    <p className={cn('font-medium', colors.text.primary)}>{selectedSpace.name}</p>
-                  </div>
-                  <div>
-                    <p className={cn('text-xs', colors.text.tertiary)}>Type</p>
-                    <p className={cn('font-medium', colors.text.primary)}>
-                      {selectedSpace.type.charAt(0).toUpperCase() + selectedSpace.type.slice(1)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className={cn('text-xs', colors.text.tertiary)}>Assigned To</p>
-                    <p className={cn('font-medium', colors.text.primary)}>
-                      {selectedSpace.current_assignment.staff?.user?.full_name || 'Unknown Staff'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className={cn('text-xs', colors.text.tertiary)}>Assigned On</p>
-                    <p className={cn('font-medium', colors.text.primary)}>
-                      {formatDateTime(selectedSpace.current_assignment.assigned_at)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Release Notes */}
-              <div>
-                <label className={cn('block text-sm font-medium mb-2', colors.text.secondary)}>
-                  Release Notes (Optional)
-                </label>
-                <textarea
-                  value={releaseFormData.note}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                    setReleaseFormData(prev => ({ ...prev, note: e.target.value }))
-                  }
-                  placeholder="Add notes about why this space is being released..."
-                  rows={3}
-                  className={cn(
-                    'w-full px-4 py-2 rounded-lg border transition-colors cursor-text',
-                    colors.border.primary,
-                    colors.bg.primary,
-                    colors.text.primary,
-                    'focus:outline-none focus:ring-2 focus:ring-orange-500'
-                  )}
-                />
-              </div>
-
-              {/* Warning */}
-              <div className={cn('p-4 rounded-lg border', 'border-orange-500/30 bg-orange-500/5')}>
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className={cn('font-medium text-orange-500')}>Important Note</p>
-                    <p className={cn('text-sm mt-1', colors.text.secondary)}>
-                      Releasing this space will make it available for other staff assignments. 
-                      The staff member will no longer have access to this workspace.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Drawer Footer */}
-            <div className={cn('sticky bottom-0 p-6 border-t flex items-center justify-end gap-3', colors.bg.elevated, colors.border.primary)}>
-              <button
-                onClick={closeReleaseDrawer}
-                disabled={isReleasing}
-                className={cn(
-                  'px-6 py-2 rounded-lg border transition-colors cursor-pointer',
-                  colors.border.primary,
-                  colors.bg.hover,
-                  isReleasing && 'opacity-50 cursor-not-allowed'
-                )}
-                type="button"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleReleaseSubmit}
-                disabled={!canRelease || isReleasing}
-                className={cn(
-                  'px-6 py-2 rounded-lg font-medium transition-colors cursor-pointer',
-                  'bg-orange-500 hover:bg-orange-600 text-white',
-                  (!canRelease || isReleasing) && 'opacity-50 cursor-not-allowed'
-                )}
-                type="button"
-              >
-                {isReleasing ? 'Releasing...' : 'Confirm Release'}
-              </button>
-            </div>
-          </div>
         </div>
       )}
+
+      {!isLoadingOccupancy && filteredSpaces.length > 0 && viewMode === 'list' && (
+        <SpaceAllocationListView
+          colors={colors}
+          spaces={filteredSpaces}
+          expandedRows={expandedRows}
+          onToggleExpand={toggleExpand}
+          onAssign={openAssignDrawer}
+          onRelease={handleRelease}
+        />
+      )}
+
+      {!isLoadingOccupancy && filteredSpaces.length > 0 && viewMode === 'grid' && (
+        <SpaceAllocationGridView
+          colors={colors}
+          spaces={filteredSpaces}
+          onAssign={openAssignDrawer}
+          onRelease={handleRelease}
+        />
+      )}
+
+      <AssignSpaceDrawer
+        theme={theme}
+        open={assignDrawerOpen}
+        formData={assignFormData}
+        availableSpaces={normalizedAvailableSpaces}
+        staff={normalizedStaff}
+        preselectedSpace={selectedSpace}
+        onChange={setAssignFormData}
+        onClose={closeAssignDrawer}
+        onSubmit={handleAssignSubmit}
+        isSubmitting={isAssigning}
+        isLoadingStaff={isLoadingStaff}
+        canSubmit={canAssign}
+      />
+
+      <ReleaseSpaceDrawer
+        theme={theme}
+        open={releaseDrawerOpen}
+        formData={releaseFormData}
+        selectedSpace={selectedSpace}
+        onChange={setReleaseFormData}
+        onClose={closeReleaseDrawer}
+        onSubmit={handleReleaseSubmit}
+        isSubmitting={isReleasing}
+        canSubmit={canRelease}
+      />
     </div>
   );
 };
+
+export default SpaceAllocation;
