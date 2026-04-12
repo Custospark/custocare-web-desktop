@@ -2,8 +2,9 @@
 import React from 'react';
 import { Box, ChevronUp, Package, Plus, Shield, TrendingUp } from 'lucide-react';
 import { type InventoryItem, ItemStatus } from '../../../api/admin-inventory/inventoryItemTypes';
-import { formatPrice, normalizeAmount } from '../utils/inventoryItemUiUtils';
+import { normalizeAmount } from '../utils/inventoryItemUiUtils';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
+import { formatCurrency } from '../../../../../medical-records/ui/revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 
 interface Props {
   theme: 'light' | 'dark';
@@ -246,7 +247,7 @@ export const InventoryItemHeader: React.FC<Props> = ({
           'font-bold mb-0.5 sm:mb-1 wrap-break-word',
           isDark ? 'text-white' : 'text-gray-900'
         )}>
-          {formatPrice(totalValue, 'UGX')}
+          {formatCurrency(totalValue)}
         </p>
         
         {/* Label */}
@@ -311,7 +312,7 @@ export const InventoryItemHeader: React.FC<Props> = ({
           'font-bold mb-0.5 sm:mb-1 wrap-break-word',
           isDark ? 'text-white' : 'text-gray-900'
         )}>
-          {formatPrice(avgUnitCost, 'UGX')}
+          {formatCurrency(avgUnitCost)}
         </p>
         
         {/* Label */}

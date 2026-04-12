@@ -30,6 +30,7 @@ import {
   getStatusColor,
 } from '../../service-catalog-ui/utils/serviceCatalogUiUtils';
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
+import { formatText } from '../../../../../medical-records/ui/revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 
 // ─── cn helper ──────────────────────────────────────────────────────────────
 const cn = (...classes: (string | false | null | undefined)[]): string =>
@@ -733,14 +734,14 @@ export const ServiceCatalogList: React.FC<Props> = ({
                             isDark ? 'text-gray-400' : 'text-gray-500'
                           )}
                         >
-                          {service.service_code} • {service.code_system}
+                          {formatText(service.service_code)} • {formatText(service.code_system)}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className="font-semibold text-sm">
-                        {formatPrice(service.price_amount, service.currency_code)}
+                        {formatPrice(service.price_amount)}
                       </span>
                       <span
                         className={cn(
@@ -833,13 +834,13 @@ export const ServiceCatalogList: React.FC<Props> = ({
                           : 'bg-blue-100 text-blue-800'
                       )}
                     >
-                      {service.service_category.replace(/_/g, ' ')}
+                      {formatText(service.service_category)}
                     </span>
                   </div>
 
                   <div className="col-span-2">
                     <p className="font-semibold text-sm">
-                      {formatPrice(service.price_amount, service.currency_code)}
+                      {formatPrice(service.price_amount)}
                     </p>
                     {service.default_duration_minutes ? (
                       <p
@@ -960,7 +961,7 @@ export const ServiceCatalogList: React.FC<Props> = ({
                           isDark ? 'text-gray-100' : 'text-gray-900'
                         )}
                       >
-                        {formatPrice(service.price_amount, service.currency_code)}
+                        {formatPrice(service.price_amount)}
                       </span>
                       {service.default_duration_minutes && (
                         <span

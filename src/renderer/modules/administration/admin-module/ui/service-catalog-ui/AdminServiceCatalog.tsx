@@ -60,7 +60,7 @@ const emptyForm = (): ServiceFormData => ({
   code_system: CodeSystem.LOCAL_CUSTOM,
   currency_code: 'UGX',
   price_amount: 0,
-  effective_from: todayISO(),
+  effective_from: todayISO(), // Returns "YYYY-MM-DD" format, e.g., "2024-01-15"
   effective_to: '',
   default_duration_minutes: 30,
   department_specialty: '',
@@ -247,29 +247,32 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
     setDrawerOpen(true);
   };
 
-  const openEdit = (service: ServiceCatalog) => {
-    setDrawerMode('edit');
-    setSelectedService(service);
+ const openEdit = (service: ServiceCatalog) => {
+  setDrawerMode('edit');
+  setSelectedService(service);
 
-    setFormData({
-      service_code: service.service_code,
-      service_name: service.service_name,
-      service_description: service.service_description ?? '',
-      service_category: service.service_category,
-      code_system: service.code_system,
-      currency_code: service.currency_code,
-      price_amount: Number(service.price_amount) || 0,
-      effective_from: service.effective_from,
-      effective_to: service.effective_to ?? '',
-      default_duration_minutes: service.default_duration_minutes ?? null,
-      department_specialty: service.department_specialty ?? '',
-      risk_level: service.risk_level,
-      requires_informed_consent: service.requires_informed_consent,
-      status: service.status,
-    });
+  // Helper function to get today's date in YYYY-MM-DD format
+  const todayISO = (): string => new Date().toISOString().split('T')[0];
 
-    setDrawerOpen(true);
-  };
+  setFormData({
+    service_code: service.service_code,
+    service_name: service.service_name,
+    service_description: service.service_description ?? '',
+    service_category: service.service_category,
+    code_system: service.code_system,
+    currency_code: service.currency_code,
+    price_amount: Number(service.price_amount) || 0,
+    effective_from:  todayISO(), 
+    effective_to: service.effective_to ?? '',
+    default_duration_minutes: service.default_duration_minutes ?? null,
+    department_specialty: service.department_specialty ?? '',
+    risk_level: service.risk_level,
+    requires_informed_consent: service.requires_informed_consent,
+    status: service.status,
+  });
+
+  setDrawerOpen(true);
+};
 
   const closeDrawer = () => {
     setDrawerOpen(false);
@@ -277,29 +280,51 @@ export const AdminServiceCatalog: React.FC<AdminServiceCatalogProps> = ({ theme 
     setFormData(emptyForm());
   };
 
-  const handleDuplicate = (service: ServiceCatalog) => {
-    setDrawerMode('create');
-    setSelectedService(null);
+  /**
+ * Generate a unique service code similar to PHP backend approach
+ * Format: SVC-XXXX where XXXX is a random 4-digit number
+ * Example: SVC-1234, SVC-5678
+ */
+const generateServiceCode = (): string => {
+  const randomNum = Math.floor(Math.random() * 9999) + 1;
+  const paddedNum = randomNum.toString().padStart(4, '0');
+  return `SVC-${paddedNum}`;
+};
 
-    setFormData({
-      service_code: `${service.service_code}-COPY`,
-      service_name: `${service.service_name} (Copy)`,
-      service_description: service.service_description ?? '',
-      service_category: service.service_category,
-      code_system: service.code_system,
-      currency_code: service.currency_code,
-      price_amount: Number(service.price_amount) || 0,
-      effective_from: todayISO(),
-      effective_to: '',
-      default_duration_minutes: service.default_duration_minutes ?? null,
-      department_specialty: service.department_specialty ?? '',
-      risk_level: service.risk_level,
-      requires_informed_consent: service.requires_informed_consent,
-      status: ServiceStatus.ACTIVE,
-    });
+/**
+ * Get today's date in YYYY-MM-DD format
+ */
+const getTodayDate = (): string => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
-    setDrawerOpen(true);
-  };
+const handleDuplicate = (service: ServiceCatalog) => {
+  setDrawerMode('create');
+  setSelectedService(null);
+
+  setFormData({
+    service_code: generateServiceCode(),
+    service_name: `${service.service_name} (Copy)`,
+    service_description: service.service_description ?? '',
+    service_category: service.service_category,
+    code_system: service.code_system,
+    currency_code: service.currency_code,
+    price_amount: Number(service.price_amount) || 0,
+    effective_from: getTodayDate(), // Set to today's date
+    effective_to: '',
+    default_duration_minutes: service.default_duration_minutes ?? null,
+    department_specialty: service.department_specialty ?? '',
+    risk_level: service.risk_level,
+    requires_informed_consent: service.requires_informed_consent,
+    status: ServiceStatus.ACTIVE,
+  });
+
+  setDrawerOpen(true);
+};
 
   const toggleExpand = (uuid: string) => {
     setExpandedServices(prev => {

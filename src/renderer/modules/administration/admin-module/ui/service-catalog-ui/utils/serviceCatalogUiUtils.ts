@@ -1,15 +1,49 @@
-import  { RiskLevel, ServiceStatus } from '../../../api/service-catalog/serviceCatalogTypes';
+import { RiskLevel, ServiceStatus } from '../../../api/service-catalog/serviceCatalogTypes';
+import { store } from '../../../../../../app/store/store';
+import { selectActiveFacilityCurrency } from '../../../../../../app/store/slices/activeContextSlice';
 
 export const normalizeAmount = (value: unknown): number => {
   const num = Number(value);
   return Number.isFinite(num) ? num : 0;
 };
 
-export const formatPrice = (amount: unknown, currency: string) => {
+/**
+ * Get the current facility currency from Redux store
+ * Falls back to 'USD' if not available
+ */
+const getCurrentFacilityCurrency = (): string => {
+  try {
+    const state = store.getState();
+    const currency = selectActiveFacilityCurrency(state);
+    return currency && typeof currency === 'string' ? currency : 'USD';
+  } catch (error) {
+    console.warn('Failed to get facility currency, falling back to USD:', error);
+    return 'USD';
+  }
+};
+
+/**
+ * Format price using facility's configured currency
+ * Falls back to USD if no facility currency is set
+ */
+export const formatPrice = (amount: unknown, currency?: string) => {
+  const safeAmount = normalizeAmount(amount);
+  const finalCurrency = currency || getCurrentFacilityCurrency();
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: finalCurrency,
+    minimumFractionDigits: 2,
+  }).format(safeAmount);
+};
+
+/**
+ * Format price with explicit currency (overrides facility config)
+ */
+export const formatPriceWithCurrency = (amount: unknown, currencyCode: string) => {
   const safeAmount = normalizeAmount(amount);
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency,
+    currency: currencyCode,
     minimumFractionDigits: 2,
   }).format(safeAmount);
 };

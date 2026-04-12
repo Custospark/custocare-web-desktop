@@ -241,7 +241,7 @@ export const ServiceCatalogHeader: React.FC<Props> = ({
               'flex items-center gap-1 text-xs',
               isDark ? 'text-yellow-400' : 'text-yellow-600'
             )}>
-              <span>per service</span>
+              <span>Per service</span>
             </div>
           </div>
         </div>
@@ -299,17 +299,7 @@ export const ServiceCatalogHeader: React.FC<Props> = ({
             Total Portfolio Value
           </p>
           
-          {/* Portfolio indicator */}
-          {totalValue > 0 && (
-            <div className="absolute bottom-3 right-3">
-              <div className={cn(
-                'text-xs px-2 py-1 rounded-full',
-                isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-700'
-              )}>
-                {services.length} {services.length === 1 ? 'service' : 'services'}
-              </div>
-            </div>
-          )}
+        
         </div>
       </div>
 
