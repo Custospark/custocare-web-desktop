@@ -26,6 +26,9 @@ export const Step2Location: React.FC<Step2LocationProps> = ({
   const [filterPhoneCountry, setFilterPhoneCountry] = useState('');
   const [isPhoneCountryDropdownOpen, setIsPhoneCountryDropdownOpen] = useState(false);
   
+  // User-entered phone number (without dial code)
+  const [userEnteredPhone, setUserEnteredPhone] = useState('');
+  
   // Validation states
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -104,7 +107,7 @@ export const Step2Location: React.FC<Step2LocationProps> = ({
     return countryCodes.find(c => c.dial_code === phoneCountryCode) || countryCodes.find(c => c.code === 'UG');
   }, [phoneCountryCode]);
 
-  // Phone validation
+  // Phone validation (validates the user-entered number without dial code)
   const validatePhone = (phone: string) => {
     if (!phone) return { isValid: false, error: 'Phone number is required' };
     const digitsOnly = phone.replace(/\D/g, '');
@@ -113,7 +116,7 @@ export const Step2Location: React.FC<Step2LocationProps> = ({
     return { isValid: true, error: '' };
   };
 
-  const phoneValidation = validatePhone(formData.main_phone);
+  const phoneValidation = validatePhone(userEnteredPhone);
 
   // Handlers
   const handleCountrySelect = (country: typeof countryCodes[0]) => {
@@ -134,11 +137,20 @@ export const Step2Location: React.FC<Step2LocationProps> = ({
     setPhoneCountryCode(dial_code);
     setIsPhoneCountryDropdownOpen(false);
     setFilterPhoneCountry('');
+    // Update the main_phone field with new dial code + existing user number (no space)
+    if (userEnteredPhone) {
+      const digitsOnly = userEnteredPhone.replace(/\D/g, '');
+      const fullNumber = `${dial_code}${digitsOnly}`;
+      updateField('main_phone', fullNumber);
+    }
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^\d\s\-()]/g, '');
-    updateField('main_phone', value);
+    const value = e.target.value.replace(/[^\d]/g, '');
+    setUserEnteredPhone(value);
+    // Concatenate dial code with user-entered number (no space, digits only)
+    const fullNumber = `${phoneCountryCode}${value}`;
+    updateField('main_phone', fullNumber);
     if (touched.phone) {
       setTouched(prev => ({ ...prev, phone: false }));
     }
@@ -182,10 +194,17 @@ export const Step2Location: React.FC<Step2LocationProps> = ({
         : 'bg-white text-slate-900 placeholder-slate-400',
       hasError
         ? theme === 'dark' ? 'border-red-500/60 focus:ring-red-500/30' : 'border-red-400 focus:ring-red-200'
-        : isValid && formData.main_phone
+        : isValid && userEnteredPhone
           ? theme === 'dark' ? 'border-emerald-500/60 focus:ring-emerald-500/30' : 'border-emerald-400 focus:ring-emerald-200'
           : theme === 'dark' ? 'border-slate-700 focus:border-blue-500 focus:ring-blue-500/30' : 'border-slate-200 focus:border-blue-500 focus:ring-blue-200'
     );
+  };
+
+  // Format display number for preview (with spaces for readability)
+  const formatDisplayNumber = (digits: string) => {
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+    return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
   };
 
   return (
@@ -399,19 +418,6 @@ export const Step2Location: React.FC<Step2LocationProps> = ({
                           )}>
                             {country.name}
                           </span>
-                          
-                          {/* <span className={cn(
-                            "text-xs",
-                            theme === 'dark'
-                              ? formData.country_code === country.code
-                                ? "text-blue-300"
-                                : "text-slate-400"
-                              : formData.country_code === country.code
-                                ? "text-blue-700"
-                                : "text-slate-500"
-                          )}>
-                            {country.code}
-                          </span> */}
                         </div>
                         
                         {formData.country_code === country.code && (
@@ -455,7 +461,7 @@ export const Step2Location: React.FC<Step2LocationProps> = ({
             "block text-sm font-semibold mb-1.5",
             theme === 'dark' ? "text-slate-200" : "text-slate-800"
           )}>
-            Facility Phone Number
+            Facility Phone Number <span className="text-red-500">*</span>
           </label>
 
           <div className="flex gap-2">
@@ -557,27 +563,27 @@ export const Step2Location: React.FC<Step2LocationProps> = ({
               )} />
               <input
                 type="tel"
-                value={formData.main_phone}
+                value={userEnteredPhone}
                 onChange={handlePhoneChange}
                 onBlur={handleBlur('phone')}
-                placeholder="e.g., 712 345 678"
+                placeholder="e.g., 712345678"
                 className={cn(
                   inputClass(touched.phone && !phoneValidation.isValid, phoneValidation.isValid),
                   'pl-9'
                 )}
               />
-              {phoneValidation.isValid && formData.main_phone && (
+              {phoneValidation.isValid && userEnteredPhone && (
                 <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
               )}
             </div>
           </div>
 
-          {/* Show full number with country code */}
-          {formData.main_phone && (
+          {/* Show full number with country code (formatted for display only) */}
+          {userEnteredPhone && (
             <p className={cn('text-xs mt-1.5', theme === 'dark' ? 'text-slate-400' : 'text-slate-600')}>
-              {formData.main_phone.length < 3 ? 'Typing...: ' : 'Full number: '}
-              <span className="font-mono text-blue-600 dark:text-blue-400">
-                {selectedPhoneCountry?.dial_code} {formData.main_phone}
+              Full number: 
+              <span className="font-mono text-blue-600 dark:text-blue-400 ml-1">
+                {selectedPhoneCountry?.dial_code} {formatDisplayNumber(userEnteredPhone)}
               </span>
             </p>
           )}
@@ -595,7 +601,7 @@ export const Step2Location: React.FC<Step2LocationProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormInput
             field="email"
-            label="Email Address(Optional)"
+            label="Email Address (Optional)"
             placeholder="e.g., info@facility.co.ug"
             icon={<Mail className="w-4 h-4" />}
             type="email"
