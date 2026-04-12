@@ -26,6 +26,7 @@ interface ContextOption {
   capability: string;
   facilityId?: number;
   facilityName?: string;
+  facilityLogo?: string | null;
   roleCode?: string;
   title: string;
   subtitle: string;
@@ -51,6 +52,7 @@ interface ContextSwitcherProps {
   isMobile: boolean;
   onContextSwitch: (option: ContextOption) => void;
 }
+
 
 export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
   isOpen,
@@ -148,6 +150,8 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
 
   const renderContextOption = (option: ContextOption) => {
     const colors = getContextColors(option.color);
+    const hasFacilityLogo = option.type === 'professional' && option.facilityLogo;
+    const facilityLogoUrl = hasFacilityLogo ? option.facilityLogo : null;
     
     return (
       <button
@@ -170,16 +174,36 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
         aria-label={`Switch to ${option.title}`}
         aria-current={option.isActive ? 'true' : 'false'}
       >
+        {/* Icon or Logo */}
         <div className={cn(
-          'p-2 rounded-lg',
+          'p-2 rounded-lg flex items-center justify-center shrink-0',
           option.isActive
             ? colors.bg
             : (isDark ? 'bg-gray-800' : 'bg-gray-100')
         )}>
-          <div className={option.isActive ? colors.text : ''}>
-            {option.icon}
-          </div>
+          {option.type === 'professional' && facilityLogoUrl ? (
+            <img 
+              src={facilityLogoUrl} 
+              alt={option.facilityName || 'Facility'} 
+              className="w-5 h-5 rounded object-cover"
+              onError={(e) => {
+                // Fallback to icon if image fails to load
+                e.currentTarget.style.display = 'none';
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  const iconElement = document.createElement('div');
+                  iconElement.innerHTML = `<svg class="w-4 h-4 ${colors.text}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0h-4m4 0h4m-8 0v-4m0 4h4m-4 0H7m0 0H3m4 0v-4m0 4h4"/></svg>`;
+                  parent.appendChild(iconElement);
+                }
+              }}
+            />
+          ) : (
+            <div className={option.isActive ? colors.text : ''}>
+              {option.icon}
+            </div>
+          )}
         </div>
+        
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold truncate">{option.title}</p>
           <p className={cn(
@@ -201,6 +225,10 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
   // Blue-green ring colors matching subscription component
   const ringColor = isDark ? 'ring-blue-500/60' : 'ring-blue-600/70';
   const hoverBg = isDark ? 'hover:bg-gray-800/70' : 'hover:bg-gray-50';
+
+  // Get active facility logo for the button
+  const activeHasLogo = activeContextOption.type === 'professional' && activeContextOption.facilityLogo;
+  const activeLogoUrl = activeHasLogo ? activeContextOption.facilityLogo : null;
 
   return (
     <div ref={contextSwitcherRef} className="relative">
@@ -224,12 +252,24 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
         aria-expanded={isOpen}
       >
         <div className={cn(
-          'p-1.5 rounded-md transition-colors',
+          'p-1.5 rounded-md transition-colors flex items-center justify-center',
           getContextColors(activeContextOption.color).bg
         )}>
-          <div className={getContextColors(activeContextOption.color).text}>
-            {activeContextOption.icon}
-          </div>
+          {activeContextOption.type === 'professional' && activeLogoUrl ? (
+            <img 
+              src={activeLogoUrl} 
+              alt={activeContextOption.facilityName || 'Facility'} 
+              className="w-5 h-5 rounded object-cover"
+              onError={(e) => {
+                // Fallback to icon if image fails to load
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          ) : (
+            <div className={getContextColors(activeContextOption.color).text}>
+              {activeContextOption.icon}
+            </div>
+          )}
         </div>
         <div className="hidden lg:block text-left max-w-30">
           <p className={cn(

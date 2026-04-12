@@ -62,6 +62,7 @@ interface ContextOption {
   capability: string;
   facilityId?: number;
   facilityName?: string;
+  facilityLogo?: string | null;
   roleCode?: string;
   title: string;
   subtitle: string;
@@ -138,6 +139,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           capability: 'staff',
           facilityId: facility.facility_id,
           facilityName: facility.facility_name,
+          facilityLogo: facility.facility_logo_path,
           roleCode: facility.role_code,
           title: getRoleDisplayName(facility.role_code),
           subtitle: facility.facility_name,
