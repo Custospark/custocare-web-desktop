@@ -311,7 +311,7 @@ export const useCreatePatientByAdmin = (
         }
 
         if (response.meta.onboarding_link_required) {
-          showToast('info', 'Patient onboarding is required.', 6000);
+          // showToast('info', 'Patient onboarding is required.', 6000);
         }
       }
 

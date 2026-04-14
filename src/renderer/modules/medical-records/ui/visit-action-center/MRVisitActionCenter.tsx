@@ -1,6 +1,6 @@
 // components/medical-records/MRVisitActionCenter.tsx
-import React from 'react';
-import { useSelector } from 'react-redux';
+import React, { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { 
   FileText, 
@@ -26,8 +26,12 @@ import {
   selectVisitContext,
   selectActiveVisitPhase,
   selectActiveVisitUuid,
-  selectHasActiveVisit
+  selectHasActiveVisit,
+  emergencyClearVisit
 } from '../../../../app/store/slices/visitSlice';
+import { clearAll } from '../visit-action-center/billing-space';
+import { useToast } from '../../../../app/store/contexts/toast/useToast';
+import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 
 interface MRVisitActionCenterProps {
   theme: 'light' | 'dark';
@@ -35,6 +39,9 @@ interface MRVisitActionCenterProps {
 
 const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { showToast } = useToast();
+  const [isNavigating, setIsNavigating] = useState(false);
   
   // Get data from Redux store
   const patient = useSelector((state: RootState) => selectActivePatient(state));
@@ -78,58 +85,106 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
   const getPhaseDisplayName = (phase: string): string => 
     phase.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
+  /**
+   * Handle "Work on Another Patient" action
+   * Clears both visit and billing slices before navigating to patient queue
+   */
+  const handleWorkOnAnotherPatient = async () => {
+    try {
+      setIsNavigating(true);
+      
+      // Clear any existing billing draft from session storage for current visit
+      const currentVisitId = visitInfo?.uuid;
+      if (currentVisitId) {
+        const billingDraftKey = `billing_draft_${currentVisitId}`;
+        sessionStorage.removeItem(billingDraftKey);
+      }
+      
+      // Clear billing slice state
+      dispatch(clearAll());
+      
+      // Clear visit slice state (force clear without storing as previous)
+      dispatch(emergencyClearVisit());
+      
+      // Simulate minimum loading time for better UX (optional)
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Navigate to patient queue
+      navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE);
+    } catch (error) {
+      console.error('Error clearing patient data:', error);
+      showToast('error', 'Failed to clear patient data. Please try again.', 4000);
+      setIsNavigating(false);
+      // Fallback navigation
+      navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE);
+    }
+  };
+
+  // Show loading skeleton while navigating
+  if (isNavigating) {
+    return (
+    <LoadingSkeleton 
+        variant="default"
+        theme={theme}
+        message="✨ Getting the queue ready for your next patient..."
+      />
+    );
+  }
+
   // Show empty state if no active visit
   if (!hasActiveVisit) {
     return (
-      <div className={`min-h-screen flex items-center justify-center p-8 ${
+      <div className={`flex items-center justify-center p-8 ${
         theme === 'dark' ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-900'
       }`}>
         <div className="text-center max-w-2xl">
-          <div className={`inline-flex p-6 rounded-full mb-6 ${
-            theme === 'dark' ? 'bg-gray-800' : 'bg-white shadow-lg'
+          <div className={`inline-flex p-4 rounded-full mb-4 ${
+            theme === 'dark' ? 'bg-gray-800' : 'bg-white shadow-sm'
           }`}>
-            <Users className={`w-16 h-16 ${
+            <Users className={`w-12 h-12 ${
               theme === 'dark' ? 'text-blue-400' : 'text-blue-500'
             }`} />
           </div>
           
-          <h2 className="text-3xl font-bold mb-3">No Active Patient Visit</h2>
-          <p className={`text-lg mb-8 ${
+          <h2 className="text-2xl font-bold mb-3">
+            Ready to Help Someone Today? 👋
+          </h2>
+          <p className={`text-base mb-6 ${
             theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
           }`}>
-            Select a patient from the queue to begin or create a new patient record
+            Select a patient from the queue, create a new record, or search for an existing patient to start their care journey.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
               onClick={() => navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE)}
-              className="cursor-pointer inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all bg-blue-600 hover:bg-blue-700 text-white"
+              className="cursor-pointer inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all bg-blue-600 hover:bg-blue-700 text-white"
             >
-              <Users className="w-5 h-5" />
+              <Users className="w-4 h-4" />
               Go to Patient Queue
             </button>
 
             <button
               onClick={() => navigate(MEDICAL_RECORDS_ROUTES.PATIENTS_REGISTER)}
-              className={`cursor-pointer inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+              className={`cursor-pointer inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all ${
                 theme === 'dark'
                   ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-700'
                   : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'
               }`}
             >
-              <UserPlus className="w-5 h-5" />
+              <UserPlus className="w-4 h-4" />
               Create New Patient
             </button>
 
             <button
               onClick={() => navigate(MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH)}
-              className={`cursor-pointer inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+              className={`cursor-pointer inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all ${
                 theme === 'dark'
                   ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-700'
                   : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300'
               }`}
             >
-              <Search className="w-5 h-5" />
+              <Search className="w-4 h-4" />
               Search Patient
             </button>
           </div>
@@ -154,7 +209,8 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
               formatTime={formatTime}
               calculateWaitTime={calculateWaitTime}
               getPhaseDisplayName={getPhaseDisplayName}
-              navigate={navigate}
+              onWorkOnAnotherPatient={handleWorkOnAnotherPatient}
+              isNavigating={isNavigating}
             />
           </div>
 
@@ -165,33 +221,33 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
               icon={<FileText className="w-6 h-6" />}
               theme={theme}
               defaultActionTo={MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS}
-            actions={[
-                    { 
-                      key: 'get-complaints', 
-                      label: 'Get Complaints', 
-                      icon: <MessageSquare className="w-4 h-4" />, 
-                      to: MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS 
-                    },
-                    { 
-                      key: 'forward-patient', 
-                      label: 'Forward Patient', 
-                      icon: <ArrowRight className="w-4 h-4" />, 
-                      to: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT 
-                    },
-                    { 
-                      key: 'billing-space', 
-                      label: 'Billing Space', 
-                      icon: <Receipt className="w-4 h-4" />, 
-                      to: MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SPACE
-                    },
-                    { 
-                      key: 'visit-status', 
-                      label: 'Visit Status', 
-                      icon: <Activity className="w-4 h-4" />, 
-                      to: MEDICAL_RECORDS_ROUTES.VISIT_STATUS 
-                    },
-                  ]}
-                  />
+              actions={[
+                { 
+                  key: 'get-complaints', 
+                  label: 'Get Complaints', 
+                  icon: <MessageSquare className="w-4 h-4" />, 
+                  to: MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS 
+                },
+                { 
+                  key: 'forward-patient', 
+                  label: 'Forward Patient', 
+                  icon: <ArrowRight className="w-4 h-4" />, 
+                  to: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT 
+                },
+                { 
+                  key: 'billing-space', 
+                  label: 'Billing Space', 
+                  icon: <Receipt className="w-4 h-4" />, 
+                  to: MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SPACE
+                },
+                { 
+                  key: 'visit-status', 
+                  label: 'Visit Status', 
+                  icon: <Activity className="w-4 h-4" />, 
+                  to: MEDICAL_RECORDS_ROUTES.VISIT_STATUS 
+                },
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -210,7 +266,8 @@ interface PatientInfoCardProps {
   formatTime: (dateString: string | null) => string;
   calculateWaitTime: (arrivedAt: string | null) => string;
   getPhaseDisplayName: (phase: string) => string;
-  navigate: (path: string) => void;
+  onWorkOnAnotherPatient: () => void;
+  isNavigating?: boolean;
 }
 
 const PatientInfoCard: React.FC<PatientInfoCardProps> = ({
@@ -220,7 +277,8 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({
   visitPhase,
   calculateWaitTime,
   getPhaseDisplayName,
-  navigate
+  onWorkOnAnotherPatient,
+  isNavigating = false
 }) => {
   const isDark = theme === 'dark';
   
@@ -298,7 +356,7 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({
             </div>
           </div>
           <div>
-        
+            {/* Empty for spacing */}
           </div>
         </div>
 
@@ -398,16 +456,28 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({
         isDark ? 'border-gray-800 bg-gray-800/30' : 'border-gray-200 bg-gray-50'
       }`}>
         <button
-          onClick={() => navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE)}
-          className={`cursor-pointer w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${
-            isDark
-              ? 'bg-blue-600 hover:bg-blue-700 text-white'
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
+          onClick={onWorkOnAnotherPatient}
+          disabled={isNavigating}
+          className={`w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${
+            isNavigating
+              ? 'bg-gray-400 cursor-not-allowed opacity-50'
+              : isDark
+                ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
+                : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
           }`}
-          title="Switch to work on another patient"
+          title={isNavigating ? 'Navigating to patient queue...' : 'Switch to work on another patient'}
         >
-          <ArrowLeftRight className="w-4 h-4" />
-          Work on Another Patient
+          {isNavigating ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Navigating...
+            </>
+          ) : (
+            <>
+              <ArrowLeftRight className="w-4 h-4" />
+              Work on Another Patient
+            </>
+          )}
         </button>
       </div>
     </div>

@@ -130,7 +130,7 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 "
       role="dialog"
       aria-modal="true"
       aria-labelledby="patient-success-modal-title"
@@ -155,21 +155,21 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
         />
 
         {onClose && (
-          <motion.button
-            whileHover={{ scale: 1.06 }}
-            whileTap={{ scale: 0.96 }}
-            type="button"
-            onClick={onClose}
-            className={cn(
-              'absolute right-4 top-4 z-10 rounded-full p-2 transition-colors',
-              isDark
-                ? 'text-gray-400 hover:bg-gray-700 hover:text-white'
-                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-            )}
-            aria-label="Close modal"
-          >
-            <X className="h-5 w-5" />
-          </motion.button>
+         <motion.button
+          whileHover={{ scale: 1.06 }}
+          whileTap={{ scale: 0.96 }}
+          type="button"
+          onClick={onClose}
+          className={cn(
+            'absolute right-4 top-4 z-10 rounded-full p-2 transition-colors cursor-pointer',
+            isDark
+              ? 'text-gray-400 hover:bg-gray-700 hover:text-white'
+              : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+          )}
+          aria-label="Close modal"
+        >
+          <X className="h-5 w-5" />
+        </motion.button>
         )}
 
         <div className="relative p-5 sm:p-8">
@@ -206,7 +206,7 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
                 isDark ? 'text-white' : 'text-gray-900'
               )}
             >
-              {isNewPatient ? 'Patient saved successfully' : 'Existing patient record found'}
+            {isNewPatient ? '🎉 Patient registered successfully!' : '✓ Existing patient record found'}
             </motion.h2>
 
             <motion.p
@@ -218,9 +218,9 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
                 isDark ? 'text-gray-400' : 'text-gray-600'
               )}
             >
-              {isNewPatient
-                ? 'The patient record has been saved.'
-                : 'A matching patient record was found and selected.'}
+                        {isNewPatient
+            ? 'Great! The patient record has been saved and is ready for care.'
+            : 'Perfect! A matching patient record was found and selected.'}
             </motion.p>
 
             <motion.div
@@ -294,71 +294,73 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
               transition={{ delay: 0.28 }}
               className="w-full space-y-3"
             >
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <motion.button
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  type="button"
-                  onClick={handleCopy}
-                  disabled={!patientNumber}
-                  className={cn(
-                    'flex w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50',
-                    copied
-                      ? isDark
-                        ? 'border-green-500/30 bg-gradient-to-br from-green-600/20 to-green-700/20 text-green-300'
-                        : 'border-green-300 bg-gradient-to-br from-green-50 to-green-100 text-green-700'
-                      : isDark
-                        ? 'border-gray-600 bg-gradient-to-br from-gray-700 to-gray-800 text-gray-200 hover:border-gray-500'
-                        : 'border-gray-300 bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700 hover:border-gray-400'
-                  )}
-                >
-                  {copied ? (
-                    <>
-                      <CheckCircle className="h-5 w-5" />
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-5 w-5" />
-                      Copy
-                    </>
-                  )}
-                </motion.button>
+             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            type="button"
+            onClick={handleCopy}
+            disabled={!patientNumber}
+            style={{ cursor: patientNumber ? 'pointer' : 'not-allowed' }}
+            className={cn(
+              'flex w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50',
+              copied
+                ? isDark
+                  ? 'border-green-500/30 bg-gradient-to-br from-green-600/20 to-green-700/20 text-green-300'
+                  : 'border-green-300 bg-gradient-to-br from-green-50 to-green-100 text-green-700'
+                : isDark
+                  ? 'border-gray-600 bg-gradient-to-br from-gray-700 to-gray-800 text-gray-200 hover:border-gray-500 hover:cursor-pointer'
+                  : 'border-gray-300 bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700 hover:border-gray-400 hover:cursor-pointer'
+            )}
+          >
+            {copied ? (
+              <>
+                <CheckCircle className="h-5 w-5" />
+                Copied
+              </>
+            ) : (
+              <>
+                <Copy className="h-5 w-5" />
+                Copy
+              </>
+            )}
+          </motion.button>
 
-                <motion.button
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  type="button"
-                  onClick={handleDownload}
-                  disabled={!patientNumber}
-                  className={cn(
-                    'flex w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50',
-                    isDark
-                      ? 'border-gray-600 bg-gradient-to-br from-gray-700 to-gray-800 text-gray-200 hover:border-gray-500'
-                      : 'border-gray-300 bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700 hover:border-gray-400'
-                  )}
-                >
-                  <Download className="h-5 w-5" />
-                  Download
-                </motion.button>
-              </div>
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              type="button"
+              onClick={handleDownload}
+              disabled={!patientNumber}
+              style={{ cursor: patientNumber ? 'pointer' : 'not-allowed' }}
+              className={cn(
+                'flex w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50',
+                isDark
+                  ? 'border-gray-600 bg-gradient-to-br from-gray-700 to-gray-800 text-gray-200 hover:border-gray-500 hover:cursor-pointer'
+                  : 'border-gray-300 bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700 hover:border-gray-400 hover:cursor-pointer'
+              )}
+            >
+              <Download className="h-5 w-5" />
+              Download
+            </motion.button>
+          </div>
 
               {onProceed && (
                 <motion.button
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  type="button"
-                  onClick={onProceed}
-                  className={cn(
-                    'flex w-full items-center justify-center gap-2 rounded-xl border-2 py-3 font-medium transition-all',
-                    isDark
-                      ? 'border-blue-500/50 bg-gradient-to-br from-blue-600 to-blue-700 text-white hover:shadow-lg hover:shadow-blue-500/20'
-                      : 'border-blue-300 bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:shadow-lg hover:shadow-blue-500/20'
-                  )}
-                >
-                  Continue
-                  <ChevronRight className="h-4 w-4" />
-                </motion.button>
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                type="button"
+                onClick={onProceed}
+                className={cn(
+                  'flex w-full items-center justify-center gap-2 rounded-xl border-2 py-3 font-medium transition-all cursor-pointer',
+                  isDark
+                    ? 'border-blue-500/50 bg-gradient-to-br from-blue-600 to-blue-700 text-white hover:shadow-lg hover:shadow-blue-500/20'
+                    : 'border-blue-300 bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:shadow-lg hover:shadow-blue-500/20'
+                )}
+              >
+                Continue
+                <ChevronRight className="h-4 w-4" />
+              </motion.button>
               )}
             </motion.div>
 
@@ -367,7 +369,7 @@ const PatientSuccessModal: React.FC<PatientSuccessModalProps> = ({
               animate={{ opacity: 1 }}
               transition={{ delay: 0.34 }}
               className={cn(
-                'mt-4 flex items-center gap-1 text-center text-xs',
+                'mt-4 flex items-center gap-1 text-center text-xs text-bold',
                 isDark ? 'text-gray-500' : 'text-gray-500'
               )}
             >

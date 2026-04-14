@@ -256,7 +256,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
     }
   };
 
-  // Render loading state (keep existing implementation)
+  // Render loading state
   if (isLoading && !showSuccess) {
     return (
       <motion.div
@@ -282,7 +282,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
     );
   }
 
-  // Render success state (keep existing implementation)
+  // Render success state
   if (showSuccess) {
     return (
       <motion.div
@@ -403,7 +403,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
                     whileTap={{ scale: 0.98 }}
                     onClick={handleReset}
                     className={cn(
-                      'flex-1 px-6 py-3 rounded-xl font-medium transition-all cursor-pointer',
+                      'flex-1 px-6 py-3 rounded-xl font-medium transition-all',
                       'border-2 flex items-center justify-center gap-2',
                       isDark
                         ? 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500'
@@ -428,7 +428,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
     );
   }
 
-  // Render error state (keep existing implementation)
+  // Render error state
   if (hasError && !showSuccess) {
     return (
       <motion.div
@@ -498,7 +498,8 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
                         isDark
                           ? 'bg-linear-to-br from-red-600 to-red-700 border-red-500/50 text-white hover:shadow-xl hover:shadow-red-500/30'
                           : 'bg-linear-to-br from-red-500 to-red-600 border-red-300 text-white hover:shadow-xl hover:shadow-red-500/30',
-                        'disabled:opacity-50 cursor-pointer'
+                        'disabled:opacity-50',
+                        !isCreating ? 'cursor-pointer' : 'cursor-not-allowed'
                       )}
                     >
                       <RefreshCw className={cn('w-4 h-4', isCreating && 'animate-spin')} />
@@ -511,11 +512,10 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
                       onClick={handleErrorDialogClose}
                       className={cn(
                         'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                        'border-2',
+                        'border-2 cursor-pointer',
                         isDark
                           ? 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500'
-                          : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200 hover:border-gray-400',
-                        'cursor-pointer'
+                          : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200 hover:border-gray-400'
                       )}
                     >
                       <div className="flex items-center gap-2">
@@ -557,23 +557,23 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
               </div>
               
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={!isCreating && (hasValidFacility || customFacilityId) ? { scale: 1.02 } : {}}
+                whileTap={!isCreating && (hasValidFacility || customFacilityId) ? { scale: 0.98 } : {}}
                 onClick={handleCreateWalkIn}
                 disabled={isCreating || (!hasValidFacility && !customFacilityId)}
                 className={cn(
-                'px-4 py-2 rounded-xl font-medium transition-all',
-                'border-2 flex items-center justify-center gap-2',
-                'text-sm',
-                isCreating || (!hasValidFacility && !customFacilityId)
-                  ? isDark
-                    ? 'bg-blue-600/50 border-blue-500/30 text-white/70 cursor-not-allowed'  // ✅ disabled state
-                    : 'bg-blue-500/50 border-blue-300 text-white/70 cursor-not-allowed'      // ✅ disabled state
-                  : isDark
-                    ? 'bg-linear-to-br from-blue-600 to-blue-700 border-blue-500/50 text-white hover:shadow-xl hover:shadow-blue-500/30 cursor-pointer'  // ✅ enabled state
-                    : 'bg-linear-to-br from-blue-500 to-blue-600 border-blue-300 text-white hover:shadow-xl hover:shadow-blue-500/30 cursor-pointer',      // ✅ enabled state
-                'transform hover:-translate-y-0.5'
-              )}
+                  'w-full px-4 py-2 rounded-xl font-medium transition-all',
+                  'border-2 flex items-center justify-center gap-2',
+                  'text-sm',
+                  'transform hover:-translate-y-0.5',
+                  isCreating || (!hasValidFacility && !customFacilityId)
+                    ? isDark
+                      ? 'bg-blue-600/50 border-blue-500/30 text-white/70 cursor-not-allowed'
+                      : 'bg-blue-500/50 border-blue-300 text-white/70 cursor-not-allowed'
+                    : isDark
+                      ? 'bg-linear-to-br from-blue-600 to-blue-700 border-blue-500/50 text-white hover:shadow-xl hover:shadow-blue-500/30 cursor-pointer'
+                      : 'bg-linear-to-br from-blue-500 to-blue-600 border-blue-300 text-white hover:shadow-xl hover:shadow-blue-500/30 cursor-pointer'
+                )}
               >
                 {isCreating ? (
                   <>
@@ -593,7 +593,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className={cn(
-                    'text-sm text-center mt-3 flex items-center justify-center gap-1',
+                    'text-sm text-center mt-3 flex items-center justify-center gap-1 cursor-help',
                     isDark ? 'text-gray-400' : 'text-gray-600'
                   )}
                 >
@@ -608,7 +608,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
     );
   }
 
-  // Render normal state (pre-creation) - keep existing implementation
+  // Render normal state (pre-creation)
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -627,7 +627,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
             isDark 
               ? 'bg-linear-to-br from-gray-800 to-gray-900 border-blue-500/30 hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-500/20' 
               : 'bg-linear-to-br from-white to-blue-50/50 border-blue-200 hover:border-blue-400 hover:shadow-2xl hover:shadow-blue-500/20',
-            'group'
+            'group cursor-default'
           )}>
             <div className={cn(
               'absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl transition-opacity',
@@ -699,21 +699,21 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
 
             {/* Action Buttons */}
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={!isCreating && (hasValidFacility || customFacilityId) ? { scale: 1.02 } : {}}
+              whileTap={!isCreating && (hasValidFacility || customFacilityId) ? { scale: 0.98 } : {}}
               onClick={handleCreateWalkIn}
               disabled={isCreating || (!hasValidFacility && !customFacilityId)}
               className={cn(
                 'w-full px-6 py-4 rounded-xl font-medium transition-all',
                 'border-2 flex items-center justify-center gap-3 text-lg',
+                'transform hover:-translate-y-0.5',
                 isCreating || (!hasValidFacility && !customFacilityId)
                   ? isDark
                     ? 'bg-blue-600/50 border-blue-500/30 text-white cursor-not-allowed'
                     : 'bg-blue-500/50 border-blue-300 text-white cursor-not-allowed'
                   : isDark
-                    ? 'bg-linear-to-br from-blue-600 to-blue-700 border-blue-500/50 text-white hover:shadow-xl hover:shadow-blue-500/30'
-                    : 'bg-linear-to-br from-blue-500 to-blue-600 border-blue-300 text-white hover:shadow-xl hover:shadow-blue-500/30',
-                'transform hover:-translate-y-0.5'
+                    ? 'bg-linear-to-br from-blue-600 to-blue-700 border-blue-500/50 text-white hover:shadow-xl hover:shadow-blue-500/30 cursor-pointer'
+                    : 'bg-linear-to-br from-blue-500 to-blue-600 border-blue-300 text-white hover:shadow-xl hover:shadow-blue-500/30 cursor-pointer'
               )}
             >
               {isCreating ? (
@@ -738,7 +738,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
                   className={cn(
-                    'mt-4 p-3 rounded-lg text-sm flex items-center gap-2',
+                    'mt-4 p-3 rounded-lg text-sm flex items-center gap-2 cursor-help',
                     isDark ? 'bg-yellow-900/20 text-yellow-300' : 'bg-yellow-50 text-yellow-700'
                   )}
                 >
@@ -753,7 +753,7 @@ export const WalkInSessionCreator: React.FC<WalkInSessionCreatorProps> = ({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
                   className={cn(
-                    'mt-4 p-3 rounded-lg text-sm flex items-center gap-2',
+                    'mt-4 p-3 rounded-lg text-sm flex items-center gap-2 cursor-default',
                     isDark ? 'bg-blue-900/20 text-blue-300' : 'bg-blue-50 text-blue-700'
                   )}
                 >

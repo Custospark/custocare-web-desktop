@@ -19,7 +19,8 @@ import {
   getActiveRoleCode,
   hasCompleteStaffContext
 } from '../../../../../app/store/utils/contextSelectors';
-import { setActiveVisit } from '../../../../../app/store/slices/visitSlice';
+import { setActiveVisit, emergencyClearVisit } from '../../../../../app/store/slices/visitSlice';
+import { clearAll } from '../../visit-action-center/billing-space';
 import { VisitPhase, VisitType } from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 
@@ -155,9 +156,6 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({ theme, className }) =
   // Get all necessary context data
   const facilityId = useAppSelector(getActiveFacilityId);
   const staffId = useAppSelector(getStaffId);
-  const userId = useAppSelector(getUserId);
-  const userFullName = useAppSelector(getUserFullName);
-  const roleCode = useAppSelector(getActiveRoleCode);
   const hasCompleteStaff = useAppSelector(hasCompleteStaffContext);
   
   const createVisitMutation = useCreateVisit();
@@ -193,6 +191,20 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({ theme, className }) =
         navigate(MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER, { replace: true });
         return;
       }
+
+      // ✅ CLEAR EXISTING DATA FIRST - Clear visit then billing
+      // Clear visit slice state
+      dispatch(emergencyClearVisit());
+      
+      // Clear billing slice state
+      dispatch(clearAll());
+      
+      // Clear any existing billing draft from session storage
+      const billingDraftKey = `billing_draft_${patient.id}`;
+      sessionStorage.removeItem(billingDraftKey);
+      
+      // Small delay to ensure state updates are processed
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // Show processing overlay
       setCurrentPatient(patient);
@@ -268,8 +280,6 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({ theme, className }) =
           // Update to redirecting stage
           setProcessingStage('redirecting');
           await new Promise(resolve => setTimeout(resolve, 500));
-
-          showToast('success', `Visit created successfully for ${patient.name || 'patient'}`, 3000);
           
           // Navigate to action center
           navigate(MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER, { replace: true });
@@ -310,7 +320,7 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({ theme, className }) =
         });
       }
     },
-    [navigate, dispatch, facilityId, staffId, userId, roleCode, userFullName, hasCompleteStaff, createVisitMutation, showToast]
+    [navigate, dispatch, facilityId, staffId, hasCompleteStaff, createVisitMutation, showToast]
   );
 
   const handleCancel = useCallback(() => {
@@ -322,7 +332,7 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({ theme, className }) =
       <div className={cn(className)}>
         <PatientCreate 
           theme={theme} 
-          title="Register New Patient (Medical Records)" 
+          title="Register New Patient" 
           subtitle="Create a new patient record for medical documentation and history tracking" 
           onSuccess={handleSuccess} 
           onProceed={handleProceed}
@@ -378,6 +388,7 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({ theme, className }) =
           <VisitProcessingOverlay 
             theme={theme}
             stage={processingStage}
+            patientName={currentPatient.name || undefined}
           />
         )}
       </AnimatePresence>

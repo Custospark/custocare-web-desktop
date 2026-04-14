@@ -12,12 +12,13 @@ import { PatientStatus } from '../../../../pharmacy/api/dispensing/patient-searc
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
 import { useCreateVisit } from '../../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
+import { clearAll } from '../../visit-action-center/billing-space';
 import { 
   getActiveFacilityId, 
   getStaffId,
   hasCompleteStaffContext
 } from '../../../../../app/store/utils/contextSelectors';
-import { setActiveVisit } from '../../../../../app/store/slices/visitSlice';
+import { setActiveVisit,emergencyClearVisit } from '../../../../../app/store/slices/visitSlice';
 import { VisitPhase, VisitType } from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 
@@ -167,147 +168,158 @@ const MRPatientSearch: React.FC<MRPatientSearchProps> = ({ theme, className }) =
     [navigate]
   );
 
-  const handleTakeAction = useCallback(
-    async (patient: PatientSearchResult) => {
-      // Validate staff context
-      if (!hasCompleteStaff) {
-        showToast('error', 'Complete staff context required. Please ensure you are logged in as staff with an active facility.', 5000);
-        return;
-      }
+const handleTakeAction = useCallback(
+  async (patient: PatientSearchResult) => {
+    // Validate staff context
+    if (!hasCompleteStaff) {
+      showToast('error', 'Complete staff context required. Please ensure you are logged in as staff with an active facility.', 5000);
+      return;
+    }
 
-      if (!facilityId) {
-        showToast('error', 'No active facility selected. Please select a facility first.', 4000);
-        return;
-      }
+    if (!facilityId) {
+      showToast('error', 'No active facility selected. Please select a facility first.', 4000);
+      return;
+    }
 
-      if (!staffId) {
-        showToast('error', 'Staff ID not found. Please ensure you are logged in as staff.', 4000);
-        return;
-      }
+    if (!staffId) {
+      showToast('error', 'Staff ID not found. Please ensure you are logged in as staff.', 4000);
+      return;
+    }
 
-      if (!patient.id) {
-        console.error('Patient ID is missing:', patient);
-        showToast('error', 'Invalid patient data. Patient ID is missing.', 4000);
-        navigate(`${MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}?patientId=${patient.patient_number}`, { replace: true });
-        return;
-      }
+    if (!patient.id) {
+      console.error('Patient ID is missing:', patient);
+      showToast('error', 'Invalid patient data. Patient ID is missing.', 4000);
+      navigate(`${MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}?patientId=${patient.patient_number}`, { replace: true });
+      return;
+    }
 
-      // Show processing overlay
-      setCurrentPatient(patient);
-      setProcessingStage('creating');
+   
+    // Clear visit slice state
+    dispatch(emergencyClearVisit());
+    
+    // Clear billing slice state (preserve only what's needed)
+    dispatch(clearAll());
+    
+    
+    // Small delay to ensure state updates are processed
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // Show processing overlay
+    setCurrentPatient(patient);
+    setProcessingStage('creating');
+    
+    // Add a small delay to show the creating stage
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    try {
+      // Format the current timestamp for MySQL DATETIME format
+      const now = new Date();
+      const formattedDateTime = now.toISOString().slice(0, 19).replace('T', ' ');
       
-      // Add a small delay to show the creating stage
+      // Create a visit for the selected patient
+      const visitData = {
+        facility_id: facilityId,
+        patient_id: patient.id,
+        visit_type: VisitType.OUTPATIENT,
+        chief_complaints: ['Medical records consultation'],
+        arrived_at: formattedDateTime,
+        registered_at: formattedDateTime,
+        current_phase: VisitPhase.REGISTRATION,
+        is_walk_in: true,
+        status: 'active' as any,
+        acuity_score: 3,
+      };
+      
+      // Update to saving stage
+      setProcessingStage('saving');
       await new Promise(resolve => setTimeout(resolve, 300));
-
-      try {
-        // Format the current timestamp for MySQL DATETIME format
-        const now = new Date();
-        const formattedDateTime = now.toISOString().slice(0, 19).replace('T', ' ');
-        
-        // Create a visit for the selected patient
-        const visitData = {
-          facility_id: facilityId,
-          patient_id: patient.id,
-          visit_type: VisitType.OUTPATIENT,
-          chief_complaints: ['Medical records consultation'],
-          arrived_at: formattedDateTime,
-          registered_at: formattedDateTime,
-          current_phase: VisitPhase.REGISTRATION,
-          is_walk_in: true,
-          status: 'active' as any,
-          acuity_score: 3,
+      
+      const response = await createVisitMutation.mutateAsync(visitData);
+      
+      if (response.success && response.data) {
+        // Convert the visit to QueueVisitItem format for Redux
+        const queueVisitItem = {
+          visit_id: response.data.id,
+          visit_uuid: response.data.visit_uuid,
+          facility_id: response.data.facility_id,
+          patient_id: response.data.patient_id,
+          patient: {
+            id: patient.id,
+            patient_number: patient.patient_number,
+            global_user_uuid: patient.global_user_uuid || undefined,
+            name: patient.name,
+            date_of_birth: patient.date_of_birth,
+            biological_sex: patient.biological_sex,
+            blood_type: patient.blood_type,
+            status: patient.status,
+            requires_isolation: patient.requires_isolation,
+            created_at: patient.created_at,
+          },
+          current_phase: response.data.current_phase,
+          current_department_id: response.data.current_department_id,
+          assigned_staff_id: response.data.assigned_staff_id,
+          assigned_at: response.data.assigned_at,
+          waiting_since: response.data.waiting_since,
+          acuity_score: response.data.acuity_score,
+          arrived_at: response.data.arrived_at,
+          visit_type: response.data.visit_type,
+          status: response.data.status,
+          is_walk_in: response.data.is_walk_in,
         };
-        
-        // Update to saving stage
-        setProcessingStage('saving');
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        const response = await createVisitMutation.mutateAsync(visitData);
-        
-        if (response.success && response.data) {
-          // Convert the visit to QueueVisitItem format for Redux
-          const queueVisitItem = {
-            visit_id: response.data.id,
-            visit_uuid: response.data.visit_uuid,
-            facility_id: response.data.facility_id,
-            patient_id: response.data.patient_id,
-            patient: {
-              id: patient.id,
-              patient_number: patient.patient_number,
-              global_user_uuid: patient.global_user_uuid || undefined,
-              name: patient.name,
-              date_of_birth: patient.date_of_birth,
-              biological_sex: patient.biological_sex,
-              blood_type: patient.blood_type,
-              status: patient.status,
-              requires_isolation: patient.requires_isolation,
-              created_at: patient.created_at,
-            },
-            current_phase: response.data.current_phase,
-            current_department_id: response.data.current_department_id,
-            assigned_staff_id: response.data.assigned_staff_id,
-            assigned_at: response.data.assigned_at,
-            waiting_since: response.data.waiting_since,
-            acuity_score: response.data.acuity_score,
-            arrived_at: response.data.arrived_at,
-            visit_type: response.data.visit_type,
-            status: response.data.status,
-            is_walk_in: response.data.is_walk_in,
-          };
 
+        // Set active visit in Redux (this will replace any existing)
+        dispatch(setActiveVisit({
+          visit: queueVisitItem,
+          staffId: staffId,
+          departmentId: response.data.current_department_id || undefined,
+          facilityId: response.data.facility_id,
+        }));
 
-          // Set active visit in Redux
-          dispatch(setActiveVisit({
-            visit: queueVisitItem,
-            staffId: staffId,
-            departmentId: response.data.current_department_id || undefined,
-            facilityId: response.data.facility_id,
-          }));
-
-          // Update to redirecting stage
-          setProcessingStage('redirecting');
-          await new Promise(resolve => setTimeout(resolve, 500));          
-          // Navigate to action center
-          navigate(MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER, { replace: true });
-        } else {
-          throw new Error('Visit creation failed: Invalid response from server');
-        }
-      } catch (error: any) {
-        console.error('Failed to create visit:', error);
+        // Update to redirecting stage
+        setProcessingStage('redirecting');
+        await new Promise(resolve => setTimeout(resolve, 500));          
         
-        // Clear processing overlay
-        setProcessingStage(null);
-        
-        // Extract detailed error message
-        let errorMessage = 'Failed to create visit. ';
-        
-        if (error.response?.data?.message) {
-          errorMessage = error.response.data.message;
-        } else if (error.response?.data?.errors) {
-          const errors = error.response.data.errors;
-          const errorDetails = Object.values(errors).flat().join(', ');
-          errorMessage = `${errorMessage} ${errorDetails}`;
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-        
-        // Check for specific foreign key errors
-        if (errorMessage.includes('foreign key') || errorMessage.includes('staff_id')) {
-          errorMessage = 'Staff verification failed. Please ensure your staff account is properly configured.';
-        } else if (errorMessage.includes('facility')) {
-          errorMessage = 'Facility validation failed. Please ensure the facility is active and you have access.';
-        }
-        
-        showToast('error', errorMessage, 5000);
-        
-        // Fallback: navigate with patient ID only
-        navigate(`${MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}?patientId=${patient.patient_number}`, {
-          replace: true,
-        });
+        // Navigate to action center
+        navigate(MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER, { replace: true });
+      } else {
+        throw new Error('Visit creation failed: Invalid response from server');
       }
-    },
-    [navigate, dispatch, facilityId, staffId, hasCompleteStaff, createVisitMutation, showToast]
-  );
+    } catch (error: any) {
+      console.error('Failed to create visit:', error);
+      
+      // Clear processing overlay
+      setProcessingStage(null);
+      
+      // Extract detailed error message
+      let errorMessage = 'Failed to create visit. ';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        const errorDetails = Object.values(errors).flat().join(', ');
+        errorMessage = `${errorMessage} ${errorDetails}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Check for specific foreign key errors
+      if (errorMessage.includes('foreign key') || errorMessage.includes('staff_id')) {
+        errorMessage = 'Staff verification failed. Please ensure your staff account is properly configured.';
+      } else if (errorMessage.includes('facility')) {
+        errorMessage = 'Facility validation failed. Please ensure the facility is active and you have access.';
+      }
+      
+      showToast('error', errorMessage, 5000);
+      
+      // Fallback: navigate with patient ID only
+      navigate(`${MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}?patientId=${patient.patient_number}`, {
+        replace: true,
+      });
+    }
+  },
+  [navigate, dispatch, facilityId, staffId, hasCompleteStaff, createVisitMutation, showToast]
+);
 
   const renderQuickActions = () => {
     if (!selectedPatient) return null;

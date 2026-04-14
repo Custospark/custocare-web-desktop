@@ -466,7 +466,9 @@ const billingSlice = createSlice({
         state.additionalNotes =
           typeof parsed?.additionalNotes === 'string' ? parsed.additionalNotes : '';
         state.status = parsed?.status || (normalizedChargeItems.length > 0 ? 'ready' : 'draft');
-         typeof parsed?.receiptNumber === 'string' ? parsed.receiptNumber : undefined;
+        
+        state.receiptNumber = typeof parsed?.receiptNumber === 'string' ? parsed.receiptNumber : undefined;
+        
         state.visitId =
           typeof parsed?.visitId === 'string' ? parsed.visitId : state.visitId;
         state.patientId =
