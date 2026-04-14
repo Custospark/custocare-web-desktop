@@ -6,7 +6,7 @@ export const PLATFORM_ADMIN_ROUTES = {
   // Facilities routes
   FACILITIES: '/platform-admin/facilities',
   FACILITIES_STATS: '/platform-admin/facilities/stats',
-  FACILITIES_FIN_STATS: '/platform-admin/facilities/fin-stats',
+  PLATFORM_FACILITY_GOVERNANCE: '/platform-admin/facilities/platform-facility-governance',
   FACILITIES_PLANS: '/platform-admin/facilities/plans',
   FACILITIES_SUBSCRIPTIONS: '/platform-admin/facilities/subscriptions',
   

@@ -40,7 +40,7 @@ const MODULE_ROUTES: Record<string, string> = {
   pharmacy: ROUTES.PHARMACY,
   billing: ROUTES.BILLING,
   administration: ROUTES.ADMINISTRATION,
-  platform_administration: PLATFORM_ADMIN_ROUTES.FACILITIES_FIN_STATS,
+  platform_administration: PLATFORM_ADMIN_ROUTES.PLATFORM_FACILITY_GOVERNANCE,
   patient_dashboard: ROUTES.PATIENT_DASHBOARD,
   account: ROUTES.ACCOUNT,
 };

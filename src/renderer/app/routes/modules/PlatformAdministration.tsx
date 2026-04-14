@@ -29,7 +29,7 @@ import FacilityStats from "../../../modules/platform-administration/facility-man
 
 // Facility Management
 const FacilityManagement = React.lazy(() => import("../../../modules/platform-administration/facility-managment/FacilityManagement"));
-const FacilityFinStats = React.lazy(() => import("../../../modules/platform-administration/facility-managment/FacilityFinStats"));
+const FacilityGovernance = React.lazy(() => import("../../../modules/platform-administration/facility-managment/FacilityGovernance"));
 const FacilityPlans = React.lazy(() => import("../../../modules/platform-administration/facility-managment/FacilityPlans"));
 const FacilitySubscriptions = React.lazy(() => import("../../../modules/platform-administration/facility-managment/FacilitySubscriptions"));
 
@@ -75,10 +75,10 @@ export const platformAdminRoutes = [
       />
       {/* Financial Statistics */}
       <Route 
-        path={PLATFORM_ADMIN_ROUTES.FACILITIES_FIN_STATS}
+        path={PLATFORM_ADMIN_ROUTES.PLATFORM_FACILITY_GOVERNANCE}
         element={
           <SuspenseWrapper variant="detail">
-            <WithAuthProp Component={FacilityFinStats} />
+            <WithAuthProp Component={FacilityGovernance} />
           </SuspenseWrapper>
         }
       />
