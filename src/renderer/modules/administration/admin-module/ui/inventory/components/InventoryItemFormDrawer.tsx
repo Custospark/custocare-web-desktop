@@ -556,7 +556,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
 
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${labelTheme}`}>
-                    Quantity <span className="text-red-500">*</span>
+                    Quantity in Stock <span className="text-red-500">*</span>
                   </label>
                    <input
                         type="number"
