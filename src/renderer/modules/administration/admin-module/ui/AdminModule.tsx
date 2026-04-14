@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
-import { LayoutDashboard, Users, Building2, Layers, Boxes, MapIcon, Settings2, Receipt } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, Layers, Boxes, MapIcon, Receipt } from 'lucide-react';
+import { FaBuilding } from 'react-icons/fa';
 
 import { BaseModuleWorkspace } from '../../../../shared/components/workspace/BaseModuleWorkspace';
 import { ADMIN_ROUTES } from '../../../../app/routes/constants/administration.paths';
@@ -65,7 +66,7 @@ const ADMIN_OPERATIONS = [
   {
     id: 'settings',
     label: 'Enterprise Facility Settings',
-    icon: <Settings2 className="w-4 h-4" />,
+    icon: <FaBuilding className="w-4 h-4" />,
     description: 'Manage facility identity, regulatory parameters, and operational policies',
     requiredTier: 'essential' as const,
   },

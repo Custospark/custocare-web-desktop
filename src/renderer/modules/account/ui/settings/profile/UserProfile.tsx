@@ -256,12 +256,13 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
   };
 
   /* ── UI states ── */
-
+  // ✅ FIX: Check loading FIRST, then check error only if not loading
   if (isLoading) {
     return <LoadingSkeleton variant="detail" theme={theme} message="Loading your profile…" />;
   }
 
-  if (isError || !profile || !form) {
+  // ✅ Only show error if we're NOT loading AND there's an error and there's no profile data
+  if (isError && !profile && !form) {
     return (
       <div
         className={`flex flex-col items-center justify-center min-h-[400px] gap-4 p-8 ${
