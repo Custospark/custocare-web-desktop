@@ -65,6 +65,8 @@ import {
   StaffSelectionSection,
 } from './billing-space/forward-patient-components/sections';
 
+const STAFF_PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
+
 // ============================================
 // TRANSFORMER FUNCTION
 // ============================================
@@ -91,7 +93,6 @@ const transformPendingForwardingForUtils = (
     assignedStaffName: forwarding.assignedStaffName,
     note: forwarding.note,
     hasProvidedServices: forwarding.hasProvidedServices,
-    // Convert null to undefined by only including if not null
     ...(forwarding.visitId !== null && { visitId: forwarding.visitId }),
     ...(forwarding.patientId !== null && { patientId: forwarding.patientId }),
     ...(forwarding.assignedStaffId !== null && { assignedStaffId: forwarding.assignedStaffId }),
@@ -115,7 +116,6 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   const activeVisit = useSelector(selectActiveVisit);
   const pendingForwarding = useSelector(selectPendingForwarding);
 
-  // Transform pendingForwarding for use in utils
   const normalizedPendingForwarding = useMemo(
     () => transformPendingForwardingForUtils(pendingForwarding),
     [pendingForwarding]
@@ -126,6 +126,8 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   const [filterStatus, setFilterStatus] =
     useState<StaffFilterStatus>('available');
   const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   const initialFilters: StaffForwardingFilters = useMemo(
     () => ({
@@ -138,6 +140,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   const {
     data: staffData,
     isLoading: isLoadingStaff,
+    isFetching: isFetchingStaff,
     isError: isStaffError,
     refetch: refetchStaff,
   } = useGetStaffForForwarding(initialFilters);
@@ -208,25 +211,21 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     sameVisitPending && pendingForwarding?.hasProvidedServices
   );
 
-  // Use normalized version for getDisplayVisitId
   const displayVisitId = useMemo(
     () => getDisplayVisitId(visitId, normalizedPendingForwarding),
     [visitId, normalizedPendingForwarding]
   );
 
-  // Use normalized version for getDisplayPatientId
   const displayPatientId = useMemo(
     () => getDisplayPatientId(derivedPatientId, normalizedPendingForwarding),
     [derivedPatientId, normalizedPendingForwarding]
   );
 
-  // Use normalized version for getDisplayPatientName
   const displayPatientName = useMemo(
     () => getDisplayPatientName(derivedPatientName, normalizedPendingForwarding),
     [derivedPatientName, normalizedPendingForwarding]
   );
 
-  // FIXED: Use normalizedPendingForwarding here instead of pendingForwarding
   const buildPayload = useCallback(
     (formData: ForwardPatientFormData, effectiveHasProvidedServices: boolean) =>
       buildForwardingPayload({
@@ -234,7 +233,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
         derivedPatientId,
         derivedPatientName,
         selectedStaff,
-        pendingForwarding: normalizedPendingForwarding, // ✅ Use normalized version
+        pendingForwarding: normalizedPendingForwarding,
         formData,
         effectiveHasProvidedServices,
       }),
@@ -243,7 +242,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
       derivedPatientId,
       derivedPatientName,
       selectedStaff,
-      normalizedPendingForwarding, // ✅ Update dependency
+      normalizedPendingForwarding,
     ]
   );
 
@@ -305,11 +304,13 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   const clearSearch = useCallback(() => {
     setSearchTerm('');
     setClientSideSearchTerm('');
+    setCurrentPage(1);
   }, []);
 
   const handleFilterChange = useCallback(
     (status: StaffFilterStatus) => {
       setFilterStatus(status);
+      setCurrentPage(1);
       setValue('assigned_staff_id', 0, { shouldValidate: true });
     },
     [setValue]
@@ -323,6 +324,20 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     [setValue]
   );
 
+  const handleRefreshStaff = useCallback(async () => {
+    setCurrentPage(1);
+    await refetchStaff();
+  }, [refetchStaff]);
+
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page);
+  }, []);
+
+  const handlePageSizeChange = useCallback((size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  }, []);
+
   const filteredStaff = useMemo(
     () =>
       filterAndSortStaff({
@@ -332,6 +347,27 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
       }),
     [staffMembers, clientSideSearchTerm, filterStatus]
   );
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredStaff.length / pageSize)),
+    [filteredStaff.length, pageSize]
+  );
+
+  const paginatedStaff = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredStaff.slice(startIndex, endIndex);
+  }, [filteredStaff, currentPage, pageSize]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [clientSideSearchTerm, filterStatus, pageSize]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const summaryData = useMemo(() => buildStaffSummary(staffMembers), [staffMembers]);
 
@@ -391,16 +427,19 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
             clearSearch={clearSearch}
             hasLoadedInitialData={hasLoadedInitialData}
             isDark={isDark}
+            onRefresh={handleRefreshStaff}
+            isRefreshing={Boolean(isFetchingStaff && hasLoadedInitialData)}
           />
 
           <StaffSelectionSection
             isLoadingStaff={isLoadingStaff}
             isStaffError={isStaffError}
             filteredStaff={filteredStaff}
+            paginatedStaff={paginatedStaff}
             searchTerm={searchTerm}
             hasLoadedInitialData={hasLoadedInitialData}
             clearSearch={clearSearch}
-            refetchStaff={refetchStaff}
+            onRefresh={handleRefreshStaff}
             selectedStaffId={selectedStaffId}
             handleStaffSelect={handleStaffSelect}
             colors={colors}
@@ -409,6 +448,12 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
             errors={errors}
             summaryData={summaryData}
             clientSideSearchTerm={clientSideSearchTerm}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            pageSizeOptions={STAFF_PAGE_SIZE_OPTIONS}
           />
 
           {selectedStaff && (
