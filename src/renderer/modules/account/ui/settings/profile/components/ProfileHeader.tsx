@@ -8,7 +8,7 @@ import { resolveStorageUrl } from '../../../../api/settings/profile/profileUtils
 /*                               Sub-components                               */
 /* -------------------------------------------------------------------------- */
 
-const PhotoHeader: React.FC<{
+interface PhotoHeaderProps {
   profile: UserProfile;
   previewUrl: string | null;
   isUploading: boolean;
@@ -16,7 +16,17 @@ const PhotoHeader: React.FC<{
   isDark: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}> = ({ profile, previewUrl, isUploading, isEditing, isDark, fileInputRef, onFileChange }) => {
+}
+
+const PhotoHeader: React.FC<PhotoHeaderProps> = ({ 
+  profile, 
+  previewUrl, 
+  isUploading, 
+  isEditing, 
+  isDark, 
+  fileInputRef, 
+  onFileChange 
+}) => {
   const initials = `${profile.first_name?.[0] ?? ''}${profile.last_name?.[0] ?? ''}`.toUpperCase();
   const photoUrl = previewUrl ?? resolveStorageUrl(profile.profile_photo_path);
 
@@ -93,12 +103,19 @@ const PhotoHeader: React.FC<{
   );
 };
 
-const EditModeFields: React.FC<{
+interface EditModeFieldsProps {
   form: ProfileFormState;
   fieldErrors: Record<string, string>;
   isDark: boolean;
   handleField: (key: keyof ProfileFormState, value: string) => void;
-}> = ({ form, fieldErrors, isDark, handleField }) => {
+}
+
+const EditModeFields: React.FC<EditModeFieldsProps> = ({ 
+  form, 
+  fieldErrors, 
+  isDark, 
+  handleField 
+}) => {
   const inputBase = `w-full px-3 py-2 rounded-lg text-sm border outline-none transition-colors
     focus:ring-2 ${
       isDark
@@ -143,7 +160,12 @@ const EditModeFields: React.FC<{
   );
 };
 
-const ViewModeFields: React.FC<{ profile: UserProfile; isDark: boolean }> = ({ profile, isDark }) => (
+interface ViewModeFieldsProps {
+  profile: UserProfile;
+  isDark: boolean;
+}
+
+const ViewModeFields: React.FC<ViewModeFieldsProps> = ({ profile, isDark }) => (
   <>
     <h2 className="text-2xl font-bold truncate">{profile.display_name}</h2>
 
@@ -241,12 +263,12 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           )}
         </div>
 
-    {!editMode && (
-      <CheckCircle
-        className={`w-6 h-6 shrink-0 ${isDark ? 'text-cyan-500' : 'text-blue-500'}`}
-        aria-label="Profile complete"
-      />
-)}
+        {!editMode && (
+          <CheckCircle
+            className={`w-6 h-6 shrink-0 ${isDark ? 'text-cyan-500' : 'text-blue-500'}`}
+            aria-label="Profile complete"
+          />
+        )}
       </div>
     </div>
   );

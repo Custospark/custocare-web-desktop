@@ -106,7 +106,7 @@ interface UserProfileProps {
 
 const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
   const dispatch   = useAppDispatch();
-  const authUser   = useSelector(selectUser);                           // ← auth slice
+  const authUser   = useSelector(selectUser);
   const theme      = useSelector((state: RootState) => state.ui.theme);
   const isDark     = theme === 'dark';
 
@@ -256,12 +256,13 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
   };
 
   /* ── UI states ── */
-  // ✅ FIX: Check loading FIRST, then check error only if not loading
+  
+  // Check loading state
   if (isLoading) {
     return <LoadingSkeleton variant="detail" theme={theme} message="Loading your profile…" />;
   }
 
-  // ✅ Only show error if we're NOT loading AND there's an error and there's no profile data
+  // Check error state
   if (isError && !profile && !form) {
     return (
       <div
@@ -278,6 +279,24 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
     );
   }
 
+  // ✅ CRITICAL FIX: Add null check for profile
+  if (!profile) {
+    return (
+      <div
+        className={`flex flex-col items-center justify-center min-h-[400px] gap-4 p-8 ${
+          isDark ? 'text-gray-100' : 'text-gray-900'
+        }`}
+      >
+        <XCircle className={`w-16 h-16 ${isDark ? 'text-red-400' : 'text-red-500'}`} />
+        <h2 className="text-xl font-bold">Profile not found</h2>
+        <p className={`text-sm text-center max-w-md ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          Unable to load profile data. Please try again later.
+        </p>
+      </div>
+    );
+  }
+
+  // ✅ Profile is guaranteed to be non-null from here on
   return (
     <div
       className={`min-h-screen transition-colors ${
@@ -293,7 +312,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
               Manage your personal information and settings.
             </p>
           </div>
-       
 
           <div className="flex items-center gap-3">
             {editMode ? (
@@ -349,6 +367,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
           </div>
         </div>
 
+        {/* ✅ profile is guaranteed non-null here */}
         <ProfileHeader
           profile={profile}
           form={form}

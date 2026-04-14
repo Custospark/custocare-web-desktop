@@ -15,7 +15,6 @@ import {
   AlertCircle,
   AlertTriangle,
   ArrowRight,
-  Calendar,
   Check,
   CheckCircle2,
   ClipboardList,
@@ -24,8 +23,6 @@ import {
   PlayCircle,
   ShieldAlert,
   Trash2,
-  UserRound,
-  UserX,
   X,
   XCircle,
 } from 'lucide-react';
@@ -45,7 +42,7 @@ import {
 } from '../../../../app/store/slices/visitSlice';
 
 import {
-  getStatusColor,
+  // getStatusColor,
   useCancelVisit,
   useDeleteVisit,
   useGetVisitByUUID,
@@ -285,6 +282,9 @@ const StatusCard: React.FC<StatusCardProps> = React.memo(
                   : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md',
                 tone.hover
               ),
+          // ✅ Add cursor pointer styles
+          !isDisabled && !selected && 'cursor-pointer',
+          !isDisabled && selected && 'cursor-default',
           isDisabled && 'cursor-not-allowed opacity-60'
         )}
       >
@@ -903,10 +903,6 @@ const VisitStatus: React.FC<VisitStatusProps> = ({
     );
   }
 
-  const currentStatusOption = STATUS_OPTIONS.find((s) => s.value === currentStatus);
-  const displayName = activePatient?.name || visitInfo?.patientName || 'Patient';
-  const displayNumber = visitInfo?.patientNumber || 'N/A';
-
   return (
     <div className={cn('space-y-6', className)}>
       <motion.div
@@ -917,95 +913,6 @@ const VisitStatus: React.FC<VisitStatusProps> = ({
           isDark ? 'border-gray-800 bg-gray-950' : 'border-slate-200 bg-white'
         )}
       >
-        {/* Header Section */}
-        <div className={cn('border-b p-6', isDark ? 'border-gray-800' : 'border-slate-200')}>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex gap-4">
-              <div
-                className={cn(
-                  'flex h-14 w-14 shrink-0 items-center justify-center rounded-xl',
-                  currentStatusOption
-                    ? getToneClasses(currentStatusOption.tone, isDark).icon
-                    : isDark
-                    ? 'bg-gray-800 text-gray-500'
-                    : 'bg-slate-100 text-slate-500'
-                )}
-              >
-                {currentStatusOption?.icon || <Activity className="h-6 w-6" />}
-              </div>
-
-              <div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <h2 className={cn('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>
-                    Visit Status
-                  </h2>
-
-                  {currentStatus && (
-                    <span
-                      className={cn(
-                        'rounded-full px-3 py-1 text-xs font-semibold',
-                        getStatusColor(currentStatus)
-                      )}
-                    >
-                      {currentStatusOption?.label || currentStatus}
-                    </span>
-                  )}
-
-                  {readOnly && (
-                    <span
-                      className={cn(
-                        'rounded-full px-3 py-1 text-xs font-medium',
-                        isDark ? 'bg-gray-800 text-gray-300' : 'bg-slate-100 text-slate-700'
-                      )}
-                    >
-                      Read Only
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
-                  <div className="flex items-center gap-2">
-                    <UserRound className={cn('h-4 w-4', isDark ? 'text-gray-500' : 'text-slate-400')} />
-                    <span className={cn('text-sm', isDark ? 'text-gray-300' : 'text-slate-700')}>
-                      {displayName}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <ClipboardList className={cn('h-4 w-4', isDark ? 'text-gray-500' : 'text-slate-400')} />
-                    <span className={cn('text-sm', isDark ? 'text-gray-300' : 'text-slate-700')}>
-                      Visit: {displayNumber}
-                    </span>
-                  </div>
-
-                  {visitInfo?.arrivedAt && (
-                    <div className="flex items-center gap-2">
-                      <Calendar className={cn('h-4 w-4', isDark ? 'text-gray-500' : 'text-slate-400')} />
-                      <span className={cn('text-sm', isDark ? 'text-gray-300' : 'text-slate-700')}>
-                        Started: {new Date(visitInfo.arrivedAt).toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleBackToQueue}
-              className={cn(
-                'inline-flex items-center justify-center gap-2 rounded-lg border px-5 py-2.5 text-sm font-semibold transition-all',
-                isDark
-                  ? 'border-gray-800 bg-gray-950 text-gray-200 hover:bg-gray-900'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-                'cursor-pointer'
-              )}
-            >
-              Back to Queue
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
 
         {/* Content Section */}
         <div className="p-6">

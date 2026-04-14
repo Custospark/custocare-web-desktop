@@ -147,7 +147,7 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
           </div>
           
           <h2 className="text-2xl font-bold mb-3">
-            Ready to Help Someone Today? 👋
+          Ready to Save Lives Today? 👋
           </h2>
           <p className={`text-base mb-6 ${
             theme === 'dark' ? 'text-gray-400' : 'text-gray-600'

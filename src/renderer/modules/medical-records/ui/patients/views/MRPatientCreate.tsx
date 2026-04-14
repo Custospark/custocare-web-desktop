@@ -14,9 +14,6 @@ import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { 
   getActiveFacilityId, 
   getStaffId,
-  getUserId,
-  getUserFullName,
-  getActiveRoleCode,
   hasCompleteStaffContext
 } from '../../../../../app/store/utils/contextSelectors';
 import { setActiveVisit, emergencyClearVisit } from '../../../../../app/store/slices/visitSlice';

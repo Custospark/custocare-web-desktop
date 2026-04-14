@@ -1398,9 +1398,9 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                   isDark ? 'text-gray-400' : 'text-gray-600'
                 )}
               >
-                {hasActiveFilters
+               {hasActiveFilters
                   ? 'Try adjusting your search or filter criteria'
-                  : 'No patients are currently in the queue'}
+                  : 'Start by registering a new patient or searching for records.'}
               </p>
 
               {hasActiveFilters ? (
