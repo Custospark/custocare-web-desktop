@@ -483,8 +483,8 @@ export const useCreateVisit = (
       return { previousVisits };
     },
     onSuccess: (data) => {
-      const successMessage = data.message || 'Visit created successfully!';
-      showToast('success', successMessage, 8000);
+      // const successMessage = data.message || 'Visit created successfully!';
+      // showToast('success', successMessage, 8000);
       
       queryClient.invalidateQueries({ queryKey: visitKeys.lists() });
       queryClient.invalidateQueries({ queryKey: visitKeys.queue({}) });
