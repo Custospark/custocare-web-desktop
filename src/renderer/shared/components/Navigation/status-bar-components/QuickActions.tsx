@@ -1,5 +1,5 @@
 // components/statusbar/QuickActions.tsx
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useRef } from 'react';
 import { Settings, Sun, Moon, PanelRight, Mail } from 'lucide-react';
 import { cn } from '../../../utils/classNameUtils';
 import { useNavigate } from 'react-router-dom';
@@ -23,6 +23,41 @@ interface QuickActionsProps {
   onNotificationClick?: () => void;
 }
 
+// Debounce utility function - Fixed version without type casting
+function useDebouncedCallback<T extends (...args: any[]) => void>(
+  callback: T,
+  delay: number = 300
+): T {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastCallTimeRef = useRef<number>(0);
+
+  const debouncedFunction = useCallback((...args: any[]) => {
+    const now = Date.now();
+    
+    // Clear any pending timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // If we're within the delay window, schedule a new call
+    const timeSinceLastCall = now - lastCallTimeRef.current;
+    
+    if (timeSinceLastCall >= delay) {
+      // Call immediately if enough time has passed
+      lastCallTimeRef.current = now;
+      callback(...args);
+    } else {
+      // Otherwise debounce
+      timeoutRef.current = setTimeout(() => {
+        lastCallTimeRef.current = Date.now();
+        callback(...args);
+      }, delay - timeSinceLastCall);
+    }
+  }, [callback, delay]);
+
+  return debouncedFunction as T;
+}
+
 export const QuickActions: React.FC<QuickActionsProps> = ({
   sidebarPosition,
   onToggleSidebarPosition,
@@ -34,19 +69,61 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const { theme } = useAppSelector((state) => state.ui);
   const { updateTheme } = useUpdateSinglePreference();
 
+  // Refs to track navigation state
+  const isNavigatingRef = useRef(false);
+  const lastClickTimeRef = useRef(0);
+
   // Get real-time unread count from message stats
   const { data: statsData } = useGetMessageStats();
   const unreadCount = statsData?.inbox?.unread ?? 0;
 
+  // Debounced navigation function
+  const debouncedNavigate = useDebouncedCallback((path: string) => {
+    // Prevent navigation if already navigating
+    if (isNavigatingRef.current) {
+      console.debug('Navigation already in progress, skipping...');
+      return;
+    }
+
+    try {
+      isNavigatingRef.current = true;
+      navigate(path);
+    } catch (error) {
+      console.error('Navigation error:', error);
+    } finally {
+      // Reset navigation flag after a short delay
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 500);
+    }
+  }, 300);
+
   const handleNotificationClick = useCallback(() => {
+    // Rate limiting: prevent clicks within 500ms of each other
+    const now = Date.now();
+    if (now - lastClickTimeRef.current < 500) {
+      console.debug('Rate limited: notification click too frequent');
+      return;
+    }
+    lastClickTimeRef.current = now;
+
     if (onNotificationClick) {
+      // Call directly since onNotificationClick might already be stable
       onNotificationClick();
     } else {
-      navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
+      debouncedNavigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
     }
-  }, [onNotificationClick, navigate]);
+  }, [onNotificationClick, debouncedNavigate]);
 
   const handleThemeToggle = useCallback(() => {
+    // Rate limit theme toggles
+    const now = Date.now();
+    if (now - lastClickTimeRef.current < 300) {
+      console.debug('Rate limited: theme toggle too frequent');
+      return;
+    }
+    lastClickTimeRef.current = now;
+
     // Toggle theme in Redux (immediate UI feedback)
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     dispatch(toggleTheme());
@@ -56,9 +133,17 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   }, [theme, dispatch, updateTheme]);
 
   const handleSettingsClick = useCallback(() => {
+    // Rate limit settings navigation
+    const now = Date.now();
+    if (now - lastClickTimeRef.current < 500) {
+      console.debug('Rate limited: settings click too frequent');
+      return;
+    }
+    lastClickTimeRef.current = now;
+
     // Navigate to settings section
-    navigate(ACCOUNT_ROUTES.SETTINGS_PROFILE);
-  }, [navigate]);
+    debouncedNavigate(ACCOUNT_ROUTES.SETTINGS_PROFILE);
+  }, [debouncedNavigate]);
 
   const positionToggleIcon = useMemo(() => {
     const isLeft = sidebarPosition === 'left';
@@ -102,10 +187,13 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           'hover:scale-105 active:scale-95',
           'focus:outline-none focus:ring-2 focus:ring-offset-1',
           'cursor-pointer',
+          // Disable button styling while navigating
+          isNavigatingRef.current && 'opacity-50 cursor-not-allowed',
           theme === 'dark'
             ? 'text-gray-400 hover:text-cyan-400 hover:bg-gray-800/60 focus:ring-cyan-500/50'
             : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100/80 focus:ring-blue-500/50'
         )}
+        disabled={isNavigatingRef.current}
       >
         <Mail className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         {unreadCount > 0 && (
