@@ -25,6 +25,7 @@ import {
   Trash2,
   X,
   XCircle,
+  UserX,
 } from 'lucide-react';
 
 import { cn } from '../../../../shared/utils/classNameUtils';
