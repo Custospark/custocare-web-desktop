@@ -18,7 +18,6 @@ import {
 import { type SidebarProps } from '../../types/index';
 import { cn } from '../../types/cn';
 import { ROUTES } from '../../../app/routes/routeConstants';
-import { PLATFORM_ADMIN_ROUTES } from '../../../app/routes/constants/platform-administration.paths';
 import { useAppSelector } from '../../../app/store/hooks/useApp';
 import {
   selectAccessibleModuleCodes,
@@ -175,8 +174,8 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
         id: 'platform-admin',
         label: 'Platform Administration',
         icon: <Globe className="w-5 h-5" />,
-        href: PLATFORM_ADMIN_ROUTES.FACILITIES,
-        route: PLATFORM_ADMIN_ROUTES.FACILITIES,
+        href: ROUTES.PLATFORM_ADMINISTRATION,
+        route: ROUTES.PLATFORM_ADMINISTRATION,
         description:
           'Global platform settings, system configuration, user management across all facilities',
         stats: 'Platform',

@@ -1,0 +1,1534 @@
+now this what I want us to achieve,create controller class and service class for PlatformAdmin facility control.
+We should be able to retrieve the list of all facilities with the following information:
+1.Facility identity(name,location,phone number,email and the owner of this facility with his name,email,contact).
+2.The total number of staff members this facility has with the name,email,phone number,role(use the facility_staff_roles table-column:-role_code) of each of the staff member.
+3.How much this facility makes use billing cycles(columns:total_paid_amount and balance_amount for outstanding)
+4.I should be able to update the status of the facility(These fields: 
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('facilities', function (Blueprint $table) {
+            // Add status fields to facilities table
+            $table->enum('status', ['active', 'suspended', 'banned'])
+                  ->default('active')
+                  ->after('operational_status')
+                  ->comment('Facility account status');
+            
+            $table->text('status_reason')
+                  ->nullable()
+                  ->after('status')
+                  ->comment('Reason for current status (especially for suspended/banned)');
+            
+            $table->timestamp('status_set_at')
+                  ->nullable()
+                  ->after('status_reason')
+                  ->comment('When the current status was set');
+            
+            $table->unsignedBigInteger('status_set_by')
+                  ->nullable()
+                  ->after('status_set_at')
+                  ->comment('Platform administrator who set the current status');
+            
+            // Add foreign key constraint for status_set_by
+            $table->foreign('status_set_by')
+                  ->references('id')
+                  ->on('users')
+                  ->nullOnDelete();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('facilities', function (Blueprint $table) {
+            // Drop foreign key first
+            $table->dropForeign(['status_set_by']);
+            
+            // Drop the columns
+            $table->dropColumn([
+                'status',
+                'status_reason',
+                'status_set_at',
+                'status_set_by'
+            ]);
+        });
+    }
+};
+)
+
+Also i should be able to filter the facilities based on creation date and date ranges and know their count eg today,this week,this month,any date range and specified date.
+
+
+//Let these tables guide you:
+//billing_cycles Schema
+Field,Type,Null,Key,Default,Extra
+id,"bigint unsigned",NO,PRI,NULL,auto_increment
+billing_cycle_uuid,char(36),NO,UNI,NULL,
+facility_id,"bigint unsigned",NO,MUL,NULL,
+visit_id,"bigint unsigned",NO,MUL,NULL,
+patient_id,"bigint unsigned",NO,MUL,NULL,
+cycle_type,"enum('visit_based','admission_discharge','daily_inpatient','weekly_inpatient','procedure_based','bundled_payment','subscription')",NO,MUL,NULL,
+period_start,timestamp,NO,MUL,NULL,
+period_end,timestamp,YES,MUL,NULL,
+days_in_cycle,"smallint unsigned",YES,,NULL,
+subtotal_amount,"decimal(12,2)",NO,,0.00,
+total_amount_charged,"decimal(12,2)",NO,,0.00,
+total_adjustments,"decimal(10,2)",NO,,0.00,
+net_amount,"decimal(12,2)",NO,,0.00,
+grand_total_amount,"decimal(12,2)",NO,,0.00,
+primary_insurance_claim_number,varchar(100),YES,,NULL,
+insurance_covered_amount,"decimal(10,2)",NO,,0.00,
+insurance_adjustment_amount,"decimal(10,2)",NO,,0.00,
+insurance_payment_received,"decimal(10,2)",NO,,0.00,
+insurance_claim_submitted_at,timestamp,YES,,NULL,
+insurance_payment_received_at,timestamp,YES,,NULL,
+patient_responsibility_amount,"decimal(10,2)",NO,,0.00,
+patient_copay_amount,"decimal(10,2)",NO,,0.00,
+patient_deductible_amount,"decimal(10,2)",NO,,0.00,
+patient_coinsurance_amount,"decimal(10,2)",NO,,0.00,
+patient_payment_received,"decimal(10,2)",NO,,0.00,
+total_paid_amount,"decimal(12,2)",NO,,0.00,
+balance_amount,"decimal(12,2)",NO,,0.00,
+discount_applied,"decimal(10,2)",NO,,0.00,
+taxable_amount,"decimal(12,2)",NO,,0.00,
+discount_reason,varchar(200),YES,,NULL,
+contractual_adjustment,"decimal(10,2)",NO,,0.00,
+charity_care_adjustment,"decimal(10,2)",NO,,0.00,
+bad_debt_adjustment,"decimal(10,2)",NO,,0.00,
+tax_details,json,YES,,NULL,
+total_tax_amount,"decimal(10,2)",NO,,0.00,
+billing_status,"enum('draft','pending','pending_review','pending_submission','submitted_to_insurance','partially_paid','paid_in_full','payment_plan','collections','disputed','written_off','charity_care','partially_refunded','fully_refunded')",NO,MUL,draft,
+billed_at,timestamp,YES,,NULL,
+payment_due_date,timestamp,YES,,NULL,
+days_outstanding,"smallint unsigned",YES,,NULL,
+statement_count,"tinyint unsigned",NO,,0,
+last_statement_sent_at,timestamp,YES,,NULL,
+sent_to_collections_at,timestamp,YES,,NULL,
+collections_agency,varchar(200),YES,,NULL,
+is_disputed,tinyint(1),NO,,0,
+dispute_reason,text,YES,,NULL,
+dispute_opened_at,timestamp,YES,,NULL,
+dispute_resolved_at,timestamp,YES,,NULL,
+created_at,timestamp,YES,,NULL,
+updated_at,timestamp,YES,,NULL,
+deleted_at,timestamp,YES,,NULL,
+created_by_staff_id,"bigint unsigned",YES,,NULL,
+updated_by_staff_id,"bigint unsigned",YES,,NULL,
+metadata,json,YES,,NULL,
+
+//users Schema
+Field,Type,Null,Key,Default,Extra
+id,"bigint unsigned",NO,PRI,NULL,auto_increment
+global_user_uuid,char(36),NO,UNI,NULL,
+national_id_hash,varchar(128),YES,UNI,NULL,
+national_id_encrypted,varchar(512),YES,,NULL,
+national_id_country_code,varchar(3),YES,MUL,NULL,
+identity_state,"enum('pending','verified','suspended','archived')",NO,MUL,pending,
+status,"enum('active','suspended','banned')",NO,,active,
+status_reason,text,YES,,NULL,
+status_set_at,timestamp,YES,,NULL,
+status_set_by,"bigint unsigned",YES,,NULL,
+identity_verified_at,timestamp,YES,,NULL,
+identity_verification_method,varchar(50),YES,,NULL,
+identity_verified_by_staff_id,"bigint unsigned",YES,,NULL,
+data_residency_region,varchar(10),YES,MUL,NULL,
+allowed_processing_regions,json,YES,,NULL,
+created_from_facility_id,"bigint unsigned",YES,MUL,NULL,
+email_encrypted,varchar(512),YES,,NULL,
+email_hash,varchar(128),YES,MUL,NULL,
+email_verified_at,timestamp,YES,,NULL,
+phone_encrypted,varchar(512),YES,,NULL,
+phone_hash,varchar(128),YES,MUL,NULL,
+first_name,varchar(255),YES,,NULL,
+last_name,varchar(255),YES,,NULL,
+title,varchar(255),YES,,NULL,
+display_name,varchar(255),YES,,NULL,
+dob,date,YES,,NULL,
+gender,"enum('male','female','other')",YES,,NULL,
+address_line1,varchar(255),YES,,NULL,
+address_line2,varchar(255),YES,,NULL,
+city,varchar(255),YES,,NULL,
+state,varchar(255),YES,,NULL,
+country,varchar(255),YES,,NULL,
+postal_code,varchar(255),YES,,NULL,
+password_hash,varchar(255),YES,,NULL,
+password_changed_at,timestamp,YES,,NULL,
+requires_password_change,tinyint(1),NO,,0,
+mfa_enabled,tinyint(1),NO,,1,
+mfa_secret_encrypted,varchar(512),YES,,NULL,
+last_login_at,timestamp,YES,,NULL,
+last_login_ip,varchar(45),YES,,NULL,
+last_login_user_agent,varchar(512),YES,,NULL,
+failed_login_attempts,"int unsigned",NO,,0,
+account_locked_until,timestamp,YES,,NULL,
+created_at,timestamp,YES,MUL,NULL,
+updated_at,timestamp,YES,,NULL,
+deleted_at,timestamp,YES,,NULL,
+created_by_staff_id,"bigint unsigned",YES,,NULL,
+updated_by_staff_id,"bigint unsigned",YES,,NULL,
+created_ip,varchar(45),YES,,NULL,
+metadata,json,YES,,NULL,
+theme_mode,"enum('light','dark','system')",NO,,system,
+ui_density,"enum('compact','comfortable','spacious')",YES,,comfortable,
+timezone,varchar(50),YES,,NULL,
+locale,varchar(10),YES,,NULL,
+profile_photo_path,varchar(512),YES,,NULL,
+profile_photo_disk,varchar(50),YES,,NULL,
+profile_photo_updated_at,timestamp,YES,,NULL,
+
+
+//facilities schema.
+Field,Type,Null,Key,Default,Extra
+id,"bigint unsigned",NO,PRI,NULL,auto_increment
+facility_uuid,varchar(255),NO,UNI,NULL,
+facility_code,varchar(50),NO,UNI,NULL,
+facility_name,varchar(200),NO,,NULL,
+legal_entity_name,varchar(200),NO,,NULL,
+tax_id_encrypted,varchar(512),YES,,NULL,
+nature_of_facility,"enum('government','private','faith_based','ngo','military','academic','public_private_partnership')",NO,MUL,NULL,
+facility_type,"enum('hospital','clinic','urgent_care','emergency_department','ambulatory_surgery_center','diagnostic_center','rehabilitation_center','long_term_care','hospice','community_health_center','specialty_center','telehealth_hub','laboratory','pharmacy')",NO,MUL,NULL,
+facility_tier,"enum('tertiary','secondary','primary','specialized')",NO,MUL,NULL,
+bed_capacity,"smallint unsigned",YES,,NULL,
+accreditations,json,YES,,NULL,
+address_line1,varchar(200),NO,,NULL,
+address_line2,varchar(200),YES,,NULL,
+city,varchar(100),NO,MUL,NULL,
+state_province,varchar(100),NO,MUL,NULL,
+postal_code,varchar(20),NO,MUL,NULL,
+country_code,varchar(2),NO,MUL,NULL,
+latitude,"decimal(10,8)",YES,,NULL,
+longitude,"decimal(11,8)",YES,,NULL,
+timezone,varchar(50),NO,,UTC,
+currency,varchar(3),NO,,USD,
+tax_enabled,tinyint(1),NO,,0,
+tax_name,varchar(255),YES,,NULL,
+tax_rate,"decimal(8,4)",YES,,NULL,
+facility_logo_path,varchar(512),YES,,NULL,
+primary_brand_color,varchar(20),YES,,NULL,
+secondary_brand_color,varchar(20),YES,,NULL,
+main_phone,varchar(50),NO,,NULL,
+emergency_phone,varchar(50),YES,,NULL,
+fax,varchar(50),YES,,NULL,
+email,varchar(200),YES,,NULL,
+website,varchar(255),YES,,NULL,
+operating_hours,json,NO,,NULL,
+emergency_services_hours,json,YES,,NULL,
+is_24_7,tinyint(1),NO,,0,
+parent_organization_id,"bigint unsigned",YES,MUL,NULL,
+affiliated_facility_ids,json,YES,,NULL,
+referral_network_facility_ids,json,YES,,NULL,
+health_system_name,varchar(200),YES,,NULL,
+license_number,varchar(100),YES,,NULL,
+license_issuing_authority,varchar(200),YES,,NULL,
+license_expiry_date,date,YES,,NULL,
+regulatory_identifiers,json,YES,,NULL,
+participates_in_medicare,tinyint(1),NO,,0,
+participates_in_medicaid,tinyint(1),NO,,0,
+available_services,json,NO,,NULL,
+specialty_services,json,YES,,NULL,
+equipment_inventory_summary,json,YES,,NULL,
+has_emergency_department,tinyint(1),NO,,0,
+has_trauma_center,tinyint(1),NO,,0,
+trauma_center_level,"tinyint unsigned",YES,,NULL,
+has_intensive_care,tinyint(1),NO,,0,
+has_neonatal_icu,tinyint(1),NO,,0,
+has_cardiac_cath_lab,tinyint(1),NO,,0,
+data_residency_region,varchar(10),YES,MUL,NULL,
+primary_database_shard,varchar(50),YES,MUL,NULL,
+replica_shard_locations,json,YES,,NULL,
+average_wait_time_minutes,"decimal(5,2)",YES,,NULL,
+patient_satisfaction_score,"decimal(3,2)",YES,,NULL,
+monthly_patient_volume,"int unsigned",YES,,NULL,
+operational_status,"enum('fully_operational','limited_services','emergency_only','temporarily_closed','permanently_closed','under_construction')",NO,MUL,fully_operational,
+status,"enum('active','suspended','banned')",NO,,active,
+status_reason,text,YES,,NULL,
+status_set_at,timestamp,YES,,NULL,
+status_set_by,"bigint unsigned",YES,MUL,NULL,
+created_at,timestamp,YES,,NULL,
+updated_at,timestamp,YES,,NULL,
+deleted_at,timestamp,YES,,NULL,
+created_by_staff_id,"bigint unsigned",YES,MUL,NULL,
+updated_by_staff_id,"bigint unsigned",YES,MUL,NULL,
+metadata,json,YES,,NULL,
+
+//facility_owners schema.
+Field,Type,Null,Key,Default,Extra
+id,"bigint unsigned",NO,PRI,NULL,auto_increment
+facility_id,"bigint unsigned",NO,MUL,NULL,
+staff_id,"bigint unsigned",NO,MUL,NULL,
+is_primary_owner,tinyint(1),NO,MUL,0,
+created_at,timestamp,YES,,NULL,
+updated_at,timestamp,YES,,NULL,
+
+//facility_staff_roles
+Field,Type,Null,Key,Default,Extra
+id,"bigint unsigned",NO,PRI,NULL,auto_increment
+assignment_uuid,char(36),NO,UNI,NULL,
+facility_id,"bigint unsigned",NO,MUL,NULL,
+staff_id,"bigint unsigned",NO,MUL,NULL,
+employee_number,varchar(50),YES,,NULL,
+role_code,varchar(255),NO,MUL,NULL,
+department_ids,json,YES,,NULL,
+is_primary_facility,tinyint(1),NO,,0,
+module_code,json,YES,,NULL,
+privileges_bitmask,json,YES,,NULL,
+accessible_patient_populations,json,YES,,NULL,
+prescribing_authority_at_facility,json,YES,,NULL,
+shift_schedule,json,YES,,NULL,
+shift_type,"enum('day','night','rotating','on_call','flexible')",YES,,NULL,
+hours_per_week,"smallint unsigned",YES,,NULL,
+employment_status,"enum('employed','suspended','unemployed','terminated','retired','credentialing_pending')",NO,MUL,employed,
+employment_type,"enum('full_time','part_time','contract','locum_tenens','volunteer')",NO,,full_time,
+hire_date,date,YES,,NULL,
+termination_date,date,YES,,NULL,
+termination_reason,text,YES,,NULL,
+effective_from,date,NO,MUL,NULL,
+effective_to,date,YES,MUL,NULL,
+assignment_status,"enum('active','on_leave','suspended','terminated')",NO,MUL,active,
+credentialing_completed_at,timestamp,YES,,NULL,
+credentialed_by_staff_id,"bigint unsigned",YES,,NULL,
+privileging_approved_at,timestamp,YES,,NULL,
+next_reappointment_date,timestamp,YES,,NULL,
+staff_invitation_id,"bigint unsigned",YES,MUL,NULL,
+patients_treated_at_facility,"int unsigned",NO,,0,
+facility_satisfaction_score,"decimal(3,2)",YES,,NULL,
+created_at,timestamp,YES,,NULL,
+updated_at,timestamp,YES,,NULL,
+deleted_at,timestamp,YES,,NULL,
+created_by_staff_id,"bigint unsigned",YES,,NULL,
+metadata,json,YES,,NULL,
+
+
+//staff schema.
+Field,Type,Null,Key,Default,Extra
+id,"bigint unsigned",NO,PRI,NULL,auto_increment
+staff_uuid,char(36),NO,UNI,NULL,
+user_id,"bigint unsigned",NO,UNI,NULL,
+employee_id,varchar(50),NO,UNI,NULL,
+professional_title,varchar(100),YES,,NULL,
+professional_license_number_encrypted,varchar(512),YES,,NULL,
+professional_license_number_hash,varchar(128),YES,UNI,NULL,
+license_issuing_state,varchar(50),YES,,NULL,
+license_issuing_country,varchar(3),NO,,USA,
+license_expiry_date,date,YES,MUL,NULL,
+specialization_codes,json,YES,,NULL,
+board_certifications,json,YES,,NULL,
+additional_certifications,json,YES,,NULL,
+npi_number,varchar(20),YES,UNI,NULL,
+dea_number_encrypted,varchar(512),YES,,NULL,
+dea_expiry_date,date,YES,MUL,NULL,
+employment_status,"enum('employed','suspended','unemployed','terminated','retired','credentialing_pending')",NO,MUL,credentialing_pending,
+employment_type,"enum('full_time','part_time','contract','locum_tenens','volunteer')",NO,,full_time,
+hire_date,date,YES,,NULL,
+termination_date,date,YES,,NULL,
+termination_reason,text,YES,,NULL,
+clinical_privileges,json,YES,,NULL,
+prescribing_authority,json,YES,,NULL,
+can_supervise_trainees,tinyint(1),NO,,0,
+can_order_controlled_substances,tinyint(1),NO,,0,
+can_sign_death_certificates,tinyint(1),NO,,0,
+global_role_level,"enum('super_admin','facility_admin','department_head','attending_physician','fellow','resident','nurse_practitioner','physician_assistant','registered_nurse','licensed_practical_nurse','pharmacist','therapist','technician','support_staff')",NO,MUL,NULL,
+reports_to_staff_id,"bigint unsigned",YES,MUL,NULL,
+default_schedule,json,YES,,NULL,
+max_concurrent_patients,"smallint unsigned",NO,,50,
+average_appointment_duration_minutes,"smallint unsigned",NO,,30,
+accepts_new_patients,tinyint(1),NO,,1,
+patient_satisfaction_score,"decimal(3,2)",YES,,NULL,
+total_patients_treated,"int unsigned",NO,,0,
+quality_metrics,json,YES,,NULL,
+last_peer_review_date,timestamp,YES,,NULL,
+last_competency_assessment_date,timestamp,YES,,NULL,
+background_check_completed,tinyint(1),NO,,0,
+background_check_date,date,YES,,NULL,
+drug_screening_completed,tinyint(1),NO,,0,
+drug_screening_date,date,YES,,NULL,
+immunization_records,json,YES,,NULL,
+tb_test_records,json,YES,,NULL,
+hipaa_training_completed,tinyint(1),NO,,0,
+hipaa_training_date,date,YES,,NULL,
+hipaa_training_expiry,date,YES,,NULL,
+work_phone_encrypted,varchar(512),YES,,NULL,
+work_email_encrypted,varchar(512),YES,,NULL,
+emergency_contact_encrypted,json,YES,,NULL,
+system_permissions,json,YES,,NULL,
+accessible_facility_ids,json,YES,,NULL,
+accessible_department_ids,json,YES,,NULL,
+created_at,timestamp,YES,,NULL,
+updated_at,timestamp,YES,,NULL,
+deleted_at,timestamp,YES,,NULL,
+created_by_user_id,"bigint unsigned",YES,,NULL,
+updated_by_user_id,"bigint unsigned",YES,,NULL,
+metadata,json,YES,,NULL,
+
+//example of controller and service.
+Note: Keep in mind this is platform admin analytics not scoped to a given facility(We want to understand entire platform.)
+
+<?php
+
+namespace App\Http\Controllers\Api\Statistics;
+
+use App\Http\Controllers\Controller;
+use App\Services\Statistics\FacilityOwnerAnalyticsService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+
+class FacilityOwnerAnalyticsController extends Controller
+{
+    protected FacilityOwnerAnalyticsService $dashboardService;
+
+    public function __construct(FacilityOwnerAnalyticsService $dashboardService)
+    {
+        $this->dashboardService = $dashboardService;
+    }
+
+    protected function resolveFacilityId(Request $request): int
+    {
+        return (int) $request->header('X-Facility-Id');
+    }
+
+    public function index(Request $request): JsonResponse
+    {
+        try {
+            $facilityId = $this->resolveFacilityId($request);
+
+            if ($facilityId <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Missing X-Facility-Id header.',
+                    'errors' => [
+                        'facility_id' => ['Facility context is required for facility owner analytics.'],
+                    ],
+                ], 422);
+            }
+
+            $filters = $request->validate([
+                'date_from' => ['nullable', 'date'],
+                'date_to'   => ['nullable', 'date', 'after_or_equal:date_from'],
+                'group_by'  => ['nullable', 'in:day,week,month'],
+                'top'       => ['nullable', 'integer', 'min:1', 'max:25'],
+            ]);
+
+            Log::info('Facility owner analytics request received.', [
+                'facility_id' => $facilityId,
+                'filters' => $filters,
+                'user_id' => optional($request->user())->id,
+            ]);
+
+            $result = $this->dashboardService->getDashboard($facilityId, $filters);
+
+            return response()->json($result, !empty($result['success']) ? 200 : 500);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dashboard filter validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            Log::error('Facility owner analytics controller failed.', [
+                'error_message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve facility owner analytics data.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+}
+
+
+<?php
+
+namespace App\Services\Statistics;
+
+use App\Services\Billing\Analytics\BillingRevenueDashboardService;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
+
+class FacilityOwnerAnalyticsService
+{
+    protected BillingRevenueDashboardService $billingService;
+
+    public function __construct(BillingRevenueDashboardService $billingService)
+    {
+        $this->billingService = $billingService;
+    }
+
+    public function getDashboard(int $facilityId, array $filters = []): array
+    {
+        try {
+            $normalized = $this->normalizeFilters($filters);
+
+            $data = [
+                'staff_availability'   => $this->buildStaffMetrics($facilityId, $normalized),
+                'capacity_utilization' => $this->buildCapacityMetrics($facilityId),
+                'inventory_risk'       => $this->buildInventoryMetrics($facilityId),
+                'service_pricing'      => $this->buildServiceMetrics($facilityId, $normalized['top']),
+                'financial'            => $this->buildFinancialMetrics($facilityId, $normalized),
+            ];
+
+            return [
+                'success' => true,
+                'message' => 'Operational decisions dashboard generated successfully.',
+                'data' => $data,
+                'filters' => [
+                    'facility_id' => $facilityId,
+                    'date_from' => $normalized['date_from']->toDateString(),
+                    'date_to' => $normalized['date_to']->toDateString(),
+                    'group_by' => $normalized['group_by'],
+                    'top' => $normalized['top'],
+                ],
+            ];
+        } catch (Throwable $e) {
+            Log::error('Facility owner analytics generation failed.', [
+                'facility_id' => $facilityId,
+                'filters' => $filters,
+                'error_message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to generate operational dashboard.',
+                'errors' => [
+                    'system' => ['An unexpected error occurred while generating the dashboard.'],
+                ],
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ];
+        }
+    }
+
+    /**
+     * ---------------------------------------------------------------------
+     * STAFF AVAILABILITY / WORKLOAD
+     * ---------------------------------------------------------------------
+     *
+     * Rules used consistently:
+     * - current snapshot = point-in-time snapshot at date_to
+     * - workload trend bucket = point-in-time snapshot at bucket end
+     * - avg_patients_per_staff = total active visits / unique assigned staff
+     * - active visit at time T means:
+     *      arrived_at <= T
+     *      and (discharged_at is null or discharged_at > T)
+     */
+    protected function buildStaffMetrics(int $facilityId, array $normalized): array
+    {
+        $dateFrom = $normalized['date_from'];
+        $dateTo   = $normalized['date_to'];
+        $groupBy  = $normalized['group_by'];
+        $top      = $normalized['top'];
+
+        $assignments = $this->getFacilityStaffAssignments($facilityId, $dateFrom, $dateTo);
+
+        $allStaffIds = $assignments
+            ->pluck('staff_id')
+            ->unique()
+            ->values();
+
+        if ($allStaffIds->isEmpty()) {
+            return [
+                'current_snapshot' => [
+                    'staff_on_duty' => 0,
+                    'staff_busy' => 0,
+                    'staff_off_duty' => 0,
+                    'total_active' => 0,
+                    'occupancy_rate' => 0.0,
+                    'total_active_patients' => 0,
+                    'unique_staff_assigned' => 0,
+                    'avg_patients_per_staff' => 0.0,
+                ],
+                'role_distribution' => [],
+                'high_workload_staff' => [],
+                'presence_trend' => $this->emptyPresenceTrend($dateFrom, $dateTo, $groupBy),
+                'workload_trend' => $this->emptyWorkloadTrend($dateFrom, $dateTo, $groupBy),
+            ];
+        }
+
+        $staffDirectory = $this->getStaffDirectory($allStaffIds->all());
+
+        $presenceEvents = $this->getStaffPresenceEvents(
+            $facilityId,
+            $allStaffIds->all(),
+            $dateTo
+        );
+
+        $presenceByStaff = $presenceEvents
+            ->groupBy('staff_id')
+            ->map(fn (Collection $rows) => $rows->sortBy('event_at')->values());
+
+        $staffIdsAtDateTo = $this->getStaffIdsActiveAtPoint($assignments, $dateTo);
+
+        $snapshotCounts = [
+            'on_duty' => 0,
+            'busy' => 0,
+            'off_duty' => 0,
+        ];
+
+        foreach ($staffIdsAtDateTo as $staffId) {
+            $status = $this->resolvePresenceStatusAt(
+                $presenceByStaff->get($staffId, collect()),
+                $dateTo
+            );
+
+            $snapshotCounts[$status]++;
+        }
+
+        /**
+         * Preload visits once for snapshot computations across the range.
+         * This fixes the graph inconsistency because every bucket now uses
+         * the exact same point-in-time definition as the standalone snapshot.
+         */
+        $workloadVisitsForSnapshots = $this->getWorkloadVisitsForSnapshotRange(
+            $facilityId,
+            $dateFrom,
+            $dateTo
+        );
+
+        $currentWorkloadSnapshot = $this->getWorkloadSnapshotFromVisits(
+            $workloadVisitsForSnapshots,
+            $dateTo
+        );
+
+        $currentSnapshot = [
+            'staff_on_duty' => $snapshotCounts['on_duty'],
+            'staff_busy' => $snapshotCounts['busy'],
+            'staff_off_duty' => $snapshotCounts['off_duty'],
+            'total_active' => $snapshotCounts['on_duty'] + $snapshotCounts['busy'],
+            'occupancy_rate' => ($snapshotCounts['on_duty'] + $snapshotCounts['busy']) > 0
+                ? round(($snapshotCounts['busy'] / ($snapshotCounts['on_duty'] + $snapshotCounts['busy'])) * 100, 2)
+                : 0.0,
+            'total_active_patients' => $currentWorkloadSnapshot['total_active_patients'],
+            'unique_staff_assigned' => $currentWorkloadSnapshot['unique_staff_assigned'],
+            'avg_patients_per_staff' => $currentWorkloadSnapshot['avg_patients_per_staff'],
+        ];
+
+        $roleDistribution = $assignments
+            ->groupBy('role_code')
+            ->map(function (Collection $rows, string $roleCode) {
+                return [
+                    'role' => $roleCode,
+                    'count' => $rows->pluck('staff_id')->unique()->count(),
+                ];
+            })
+            ->sortByDesc('count')
+            ->values()
+            ->toArray();
+
+        /**
+         * High workload list still measures visits active during the selected range.
+         * That is separate from workload trend snapshots and is kept intentionally.
+         */
+        $workloadVisits = $this->getWorkloadVisits($facilityId, $dateFrom, $dateTo);
+
+        $visitsPerStaff = $workloadVisits
+            ->groupBy('assigned_staff_id')
+            ->map(fn (Collection $rows) => $rows->pluck('id')->unique()->count());
+
+        $highWorkloadStaff = $allStaffIds
+            ->map(function (int $staffId) use ($staffDirectory, $visitsPerStaff) {
+                $staff = $staffDirectory->get($staffId, [
+                    'staff_id' => $staffId,
+                    'staff_uuid' => null,
+                    'first_name' => null,
+                    'last_name' => null,
+                    'display_name' => null,
+                    'full_name' => 'Unknown Staff',
+                    'max_concurrent_patients' => 0,
+                    'total_patients_treated' => 0,
+                    'patient_satisfaction' => null,
+                ]);
+
+                $currentLoad = (int) ($visitsPerStaff->get($staffId, 0));
+                $maxConcurrentPatients = (int) ($staff['max_concurrent_patients'] ?? 0);
+                $workloadPercentage = $maxConcurrentPatients > 0
+                    ? round(($currentLoad / $maxConcurrentPatients) * 100, 2)
+                    : 0.0;
+
+                return [
+                    'staff_uuid' => $staff['staff_uuid'],
+                    'first_name' => $staff['first_name'],
+                    'last_name' => $staff['last_name'],
+                    'display_name' => $staff['display_name'],
+                    'full_name' => $staff['full_name'],
+                    'max_concurrent_patients' => $maxConcurrentPatients,
+                    'current_patient_load' => $currentLoad,
+                    'workload_percentage' => $workloadPercentage,
+                    'total_patients_treated' => (int) ($staff['total_patients_treated'] ?? 0),
+                    'patient_satisfaction' => $staff['patient_satisfaction'],
+                ];
+            })
+            ->sortByDesc('workload_percentage')
+            ->take($top)
+            ->values()
+            ->toArray();
+
+        $buckets = $this->buildTrendBuckets($dateFrom, $dateTo, $groupBy);
+
+        $presenceTrend = collect($buckets)
+            ->map(function (array $bucket) use ($assignments, $presenceByStaff) {
+                $staffIdsAtBucketEnd = $this->getStaffIdsActiveAtPoint($assignments, $bucket['end']);
+
+                $counts = [
+                    'date' => $bucket['key'],
+                    'on_duty' => 0,
+                    'busy' => 0,
+                    'off_duty' => 0,
+                ];
+
+                foreach ($staffIdsAtBucketEnd as $staffId) {
+                    $status = $this->resolvePresenceStatusAt(
+                        $presenceByStaff->get($staffId, collect()),
+                        $bucket['end']
+                    );
+
+                    $counts[$status]++;
+                }
+
+                return $counts;
+            })
+            ->values()
+            ->toArray();
+
+        $workloadTrend = collect($buckets)
+            ->map(function (array $bucket) use ($workloadVisitsForSnapshots) {
+                $snapshot = $this->getWorkloadSnapshotFromVisits(
+                    $workloadVisitsForSnapshots,
+                    $bucket['end']
+                );
+
+                return [
+                    'date' => $bucket['key'],
+                    'total_active_patients' => $snapshot['total_active_patients'],
+                    'unique_staff_assigned' => $snapshot['unique_staff_assigned'],
+                    'avg_patients_per_staff' => $snapshot['avg_patients_per_staff'],
+                ];
+            })
+            ->values()
+            ->toArray();
+
+        return [
+            'current_snapshot' => $currentSnapshot,
+            'role_distribution' => $roleDistribution,
+            'high_workload_staff' => $highWorkloadStaff,
+            'presence_trend' => $presenceTrend,
+            'workload_trend' => $workloadTrend,
+        ];
+    }
+
+    /**
+     * Point-in-time active patient count.
+     * Active patients are represented by visits with status active/in_progress.
+     */
+    protected function getActivePatientsCount(int $facilityId, CarbonInterface $pointInTime): int
+    {
+        return DB::table('visits')
+            ->where('facility_id', $facilityId)
+            ->whereIn('status', ['active', 'in_progress'])
+            ->where('arrived_at', '<=', $pointInTime)
+            ->where(function ($query) use ($pointInTime) {
+                $query->whereNull('discharged_at')
+                    ->orWhere('discharged_at', '>', $pointInTime);
+            })
+            ->count();
+    }
+
+    /**
+     * Point-in-time unique assigned staff count for active visits.
+     */
+    protected function getUniqueStaffAssignedToActivePatients(int $facilityId, CarbonInterface $pointInTime): int
+    {
+        return DB::table('visits')
+            ->where('facility_id', $facilityId)
+            ->whereIn('status', ['active', 'in_progress'])
+            ->where('arrived_at', '<=', $pointInTime)
+            ->where(function ($query) use ($pointInTime) {
+                $query->whereNull('discharged_at')
+                    ->orWhere('discharged_at', '>', $pointInTime);
+            })
+            ->whereNotNull('assigned_staff_id')
+            ->distinct()
+            ->count('assigned_staff_id');
+    }
+
+    /**
+     * Direct DB snapshot helper. Safe to use anywhere a single snapshot is needed.
+     */
+    protected function getWorkloadSnapshotAt(int $facilityId, CarbonInterface $pointInTime): array
+    {
+        $totalActivePatients = $this->getActivePatientsCount($facilityId, $pointInTime);
+        $uniqueStaffAssigned = $this->getUniqueStaffAssignedToActivePatients($facilityId, $pointInTime);
+
+        return [
+            'total_active_patients' => $totalActivePatients,
+            'unique_staff_assigned' => $uniqueStaffAssigned,
+            'avg_patients_per_staff' => $uniqueStaffAssigned > 0
+                ? round($totalActivePatients / $uniqueStaffAssigned, 2)
+                : 0.0,
+        ];
+    }
+
+    /**
+     * Preload all candidate visits needed to evaluate snapshots inside the range.
+     * Returned timestamps are normalized to Carbon to avoid unsafe string/date comparisons.
+     */
+    protected function getWorkloadVisitsForSnapshotRange(
+        int $facilityId,
+        CarbonInterface $dateFrom,
+        CarbonInterface $dateTo
+    ): Collection {
+        return DB::table('visits')
+            ->where('facility_id', $facilityId)
+            ->whereIn('status', ['active', 'in_progress'])
+            ->where('arrived_at', '<=', $dateTo)
+            ->where(function ($query) use ($dateFrom) {
+                $query->whereNull('discharged_at')
+                    ->orWhere('discharged_at', '>', $dateFrom);
+            })
+            ->select([
+                'id',
+                'assigned_staff_id',
+                'arrived_at',
+                'discharged_at',
+            ])
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'id' => (int) $row->id,
+                    'assigned_staff_id' => $row->assigned_staff_id !== null
+                        ? (int) $row->assigned_staff_id
+                        : null,
+                    'arrived_at' => Carbon::parse($row->arrived_at),
+                    'discharged_at' => !empty($row->discharged_at)
+                        ? Carbon::parse($row->discharged_at)
+                        : null,
+                ];
+            });
+    }
+
+    /**
+     * Compute a snapshot from a preloaded visit collection using the exact same
+     * point-in-time definition as the standalone snapshot methods.
+     */
+    protected function getWorkloadSnapshotFromVisits(
+        Collection $visits,
+        CarbonInterface $pointInTime
+    ): array {
+        $activeVisits = $visits->filter(function (array $visit) use ($pointInTime) {
+            return $visit['arrived_at']->lte($pointInTime)
+                && (is_null($visit['discharged_at']) || $visit['discharged_at']->gt($pointInTime));
+        });
+
+        $totalActivePatients = $activeVisits->count();
+
+        $uniqueStaffAssigned = $activeVisits
+            ->pluck('assigned_staff_id')
+            ->filter(fn ($staffId) => !is_null($staffId))
+            ->unique()
+            ->count();
+
+        return [
+            'total_active_patients' => $totalActivePatients,
+            'unique_staff_assigned' => $uniqueStaffAssigned,
+            'avg_patients_per_staff' => $uniqueStaffAssigned > 0
+                ? round($totalActivePatients / $uniqueStaffAssigned, 2)
+                : 0.0,
+        ];
+    }
+
+    /**
+     * Visits active at any point during the selected range, used for high-workload ranking.
+     */
+    protected function getWorkloadVisits(int $facilityId, CarbonInterface $dateFrom, CarbonInterface $dateTo): Collection
+    {
+        return DB::table('visits')
+            ->where('facility_id', $facilityId)
+            ->whereIn('status', ['active', 'in_progress'])
+            ->whereNotNull('assigned_staff_id')
+            ->where('arrived_at', '<=', $dateTo)
+            ->where(function ($query) use ($dateFrom) {
+                $query->whereNull('discharged_at')
+                    ->orWhere('discharged_at', '>=', $dateFrom);
+            })
+            ->select('id', 'assigned_staff_id', 'arrived_at', 'discharged_at')
+            ->get();
+    }
+
+    /**
+     * ---------------------------------------------------------------------
+     * CAPACITY UTILIZATION
+     * ---------------------------------------------------------------------
+     */
+    protected function buildCapacityMetrics(int $facilityId): array
+    {
+        $departments = DB::table('departments')
+            ->where('facility_id', $facilityId)
+            ->where('status', 'active')
+            ->select([
+                'id',
+                'department_name',
+                'department_type',
+                'bed_count',
+                'treatment_room_count',
+                'max_concurrent_capacity',
+                'average_wait_time_minutes',
+            ])
+            ->get();
+
+        $staffPerDepartment = $this->getStaffPerDepartment($facilityId);
+
+        $departmentRows = $departments
+            ->map(function ($department) use ($staffPerDepartment) {
+                $assignedStaffCount = (int) ($staffPerDepartment->get($department->id, 0));
+                $maxCapacity = (int) ($department->max_concurrent_capacity ?? 0);
+
+                return [
+                    'department_name' => $department->department_name,
+                    'department_type' => $department->department_type,
+                    'bed_count' => (int) ($department->bed_count ?? 0),
+                    'treatment_rooms' => (int) ($department->treatment_room_count ?? 0),
+                    'max_capacity' => $maxCapacity,
+                    'assigned_staff_count' => $assignedStaffCount,
+                    'avg_wait_time_minutes' => $department->average_wait_time_minutes,
+                    'capacity_utilization_hint' => $maxCapacity > 0
+                        ? round(($assignedStaffCount / $maxCapacity) * 100, 2) . '% (staff vs capacity)'
+                        : 'N/A',
+                ];
+            })
+            ->values()
+            ->toArray();
+
+        $spaceTypes = $this->getSpaceTypes($facilityId);
+        $spaceUtilization = $this->getSpaceUtilization($facilityId);
+        $wards = $this->getWards($facilityId);
+        $wardsByType = $this->getWardsByType($wards);
+
+        return [
+            'departments' => $departmentRows,
+            'summary' => [
+                'total_beds' => (int) $departments->sum('bed_count'),
+                'total_treatment_rooms' => (int) $departments->sum('treatment_room_count'),
+                'total_concurrent_capacity' => (int) $departments->sum('max_concurrent_capacity'),
+                'space_utilization_rate' => $spaceUtilization['rate'],
+                'occupied_spaces' => $spaceUtilization['occupied'],
+                'total_active_spaces' => $spaceUtilization['total'],
+                'wards' => [
+                    'total_wards' => $wards->count(),
+                    'total_declared_capacity' => (int) $wards->sum('capacity_declared'),
+                    'total_operational_capacity' => (int) $wards->sum('capacity_operational'),
+                    'wards_by_type' => $wardsByType,
+                ],
+            ],
+            'space_types' => $spaceTypes,
+            'wards' => $this->formatWards($wards),
+        ];
+    }
+
+    protected function getStaffPerDepartment(int $facilityId): Collection
+    {
+        return DB::table('facility_staff_roles')
+            ->where('facility_id', $facilityId)
+            ->where('assignment_status', 'active')
+            ->get()
+            ->flatMap(function ($role) {
+                $departmentIds = json_decode($role->department_ids, true) ?? [];
+
+                return collect($departmentIds)->map(fn ($departmentId) => [
+                    'department_id' => $departmentId,
+                    'staff_id' => $role->staff_id,
+                ]);
+            })
+            ->groupBy('department_id')
+            ->map(fn (Collection $rows) => $rows->pluck('staff_id')->unique()->count());
+    }
+
+    protected function getSpaceTypes(int $facilityId): array
+    {
+        return DB::table('facility_spaces')
+            ->where('facility_id', $facilityId)
+            ->where('is_active', 1)
+            ->select('type', DB::raw('COUNT(*) as total'))
+            ->groupBy('type')
+            ->get()
+            ->map(fn ($row) => [
+                'space_type' => $row->type,
+                'total' => (int) $row->total,
+            ])
+            ->values()
+            ->toArray();
+    }
+
+    protected function getSpaceUtilization(int $facilityId): array
+    {
+        $occupiedSpaces = DB::table('staff_space_assignments')
+            ->where('facility_id', $facilityId)
+            ->whereNull('released_at')
+            ->distinct()
+            ->count('space_id');
+
+        $totalActiveSpaces = DB::table('facility_spaces')
+            ->where('facility_id', $facilityId)
+            ->where('is_active', 1)
+            ->count();
+
+        $utilizationRate = $totalActiveSpaces > 0
+            ? round(($occupiedSpaces / $totalActiveSpaces) * 100, 2)
+            : 0.0;
+
+        return [
+            'occupied' => (int) $occupiedSpaces,
+            'total' => (int) $totalActiveSpaces,
+            'rate' => $utilizationRate,
+        ];
+    }
+
+    protected function getWards(int $facilityId): Collection
+    {
+        return DB::table('wards')
+            ->where('facility_id', $facilityId)
+            ->where('status', 'active')
+            ->select([
+                'id',
+                'code',
+                'name',
+                'ward_type',
+                'building',
+                'floor',
+                'capacity_declared',
+                'capacity_operational',
+                'sex_restriction',
+                'age_group',
+            ])
+            ->get();
+    }
+
+    protected function getWardsByType(Collection $wards): array
+    {
+        return $wards
+            ->groupBy('ward_type')
+            ->map(function (Collection $rows, string $wardType) {
+                return [
+                    'ward_type' => $wardType,
+                    'count' => $rows->count(),
+                    'total_declared_capacity' => (int) $rows->sum('capacity_declared'),
+                    'total_operational_capacity' => (int) $rows->sum('capacity_operational'),
+                ];
+            })
+            ->values()
+            ->toArray();
+    }
+
+    protected function formatWards(Collection $wards): array
+    {
+        return $wards
+            ->map(fn ($ward) => [
+                'id' => $ward->id,
+                'code' => $ward->code,
+                'name' => $ward->name,
+                'ward_type' => $ward->ward_type,
+                'building' => $ward->building,
+                'floor' => $ward->floor,
+                'capacity_declared' => (int) ($ward->capacity_declared ?? 0),
+                'capacity_operational' => (int) ($ward->capacity_operational ?? 0),
+                'sex_restriction' => $ward->sex_restriction,
+                'age_group' => $ward->age_group,
+                'status' => 'active',
+                'estimated_occupied_beds' => null,
+                'utilization_percentage' => null,
+            ])
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * ---------------------------------------------------------------------
+     * INVENTORY RISK
+     * ---------------------------------------------------------------------
+     */
+    protected function buildInventoryMetrics(int $facilityId): array
+    {
+        $items = DB::table('inventory_items')
+            ->where('facility_id', $facilityId)
+            ->where('status', 'active')
+            ->select([
+                'item_code',
+                'item_name',
+                'item_category',
+                'unit_of_measure',
+                'package_quantity',
+                'reorder_point',
+                'reorder_quantity',
+                'safety_stock_level',
+                'max_stock_level',
+                'unit_cost',
+                'requires_prescription',
+                'controlled_substance_schedule',
+            ])
+            ->get();
+
+        $itemsNeedingReorder = $this->getItemsNeedingReorder($items);
+        $controlledItems = $this->getControlledItems($items);
+
+        return [
+            'items_needing_reorder' => $itemsNeedingReorder->toArray(),
+            'controlled_substances_count' => $controlledItems->count(),
+            'controlled_items' => $controlledItems
+                ->map(fn ($item) => [
+                    'item_name' => $item->item_name,
+                    'schedule' => $item->controlled_substance_schedule,
+                ])
+                ->values()
+                ->toArray(),
+            'summary' => [
+                'total_active_items' => $items->count(),
+                'items_below_reorder_point' => $itemsNeedingReorder->count(),
+                'high_risk_inventory_count' => $controlledItems->count(),
+            ],
+        ];
+    }
+
+    protected function getItemsNeedingReorder(Collection $items): Collection
+    {
+        return $items
+            ->filter(fn ($item) => !is_null($item->reorder_point) && (float) $item->package_quantity <= (float) $item->reorder_point)
+            ->map(function ($item) {
+                $shortageUnits = max(0, (float) $item->reorder_point - (float) $item->package_quantity);
+
+                return [
+                    'item_code' => $item->item_code,
+                    'item_name' => $item->item_name,
+                    'category' => $item->item_category,
+                    'current_stock' => (int) ($item->package_quantity ?? 0),
+                    'reorder_point' => (int) ($item->reorder_point ?? 0),
+                    'shortage_units' => (int) $shortageUnits,
+                    'reorder_qty' => (int) ($item->reorder_quantity ?? 0),
+                    'safety_stock' => (int) ($item->safety_stock_level ?? 0),
+                    'unit_cost' => (float) ($item->unit_cost ?? 0),
+                    'risk_level' => $this->assessInventoryRisk($item),
+                ];
+            });
+    }
+
+    protected function getControlledItems(Collection $items): Collection
+    {
+        return $items->filter(fn ($item) => in_array($item->controlled_substance_schedule, ['II', 'III', 'IV'], true));
+    }
+
+    /**
+     * ---------------------------------------------------------------------
+     * SERVICE PRICING
+     * ---------------------------------------------------------------------
+     */
+    protected function buildServiceMetrics(int $facilityId, int $top): array
+    {
+        $services = DB::table('service_catalogs')
+            ->where('facility_id', $facilityId)
+            ->where('status', 'active')
+            ->select([
+                'service_code',
+                'service_name',
+                'service_category',
+                'price_amount',
+                'currency_code',
+                'risk_level',
+                'default_duration_minutes',
+            ])
+            ->get();
+
+        $totalRevenuePotential = round((float) $services->sum('price_amount'), 2);
+
+        $topByPrice = $this->getTopServicesByPrice($services, $top);
+        $categoryBreakdown = $this->getCategoryBreakdown($services, $totalRevenuePotential);
+
+        return [
+            'top_services_by_price' => $topByPrice,
+            'category_breakdown' => $categoryBreakdown,
+            'summary' => [
+                'total_active_services' => $services->count(),
+                'total_revenue_potential' => $totalRevenuePotential,
+                'average_service_price' => round((float) ($services->avg('price_amount') ?? 0), 2),
+                'highest_price_service' => round((float) ($services->max('price_amount') ?? 0), 2),
+            ],
+        ];
+    }
+
+    protected function getTopServicesByPrice(Collection $services, int $top): array
+    {
+        return $services
+            ->sortByDesc('price_amount')
+            ->take($top)
+            ->map(fn ($service) => [
+                'service_name' => $service->service_name,
+                'category' => $service->service_category,
+                'price' => round((float) ($service->price_amount ?? 0), 2),
+                'currency' => $service->currency_code,
+                'risk_level' => $service->risk_level,
+                'duration_minutes' => $service->default_duration_minutes,
+            ])
+            ->values()
+            ->toArray();
+    }
+
+    protected function getCategoryBreakdown(Collection $services, float $totalRevenuePotential): array
+    {
+        return $services
+            ->groupBy('service_category')
+            ->map(function (Collection $rows, string $category) use ($totalRevenuePotential) {
+                $totalPrice = round((float) $rows->sum('price_amount'), 2);
+
+                return [
+                    'category' => $category,
+                    'count' => $rows->count(),
+                    'total_price_sum' => $totalPrice,
+                    'avg_price' => round((float) ($rows->avg('price_amount') ?? 0), 2),
+                    'share_percentage' => $totalRevenuePotential > 0
+                        ? round(($totalPrice / $totalRevenuePotential) * 100, 2)
+                        : 0.0,
+                ];
+            })
+            ->sortByDesc('total_price_sum')
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * ---------------------------------------------------------------------
+     * FINANCIAL METRICS
+     * ---------------------------------------------------------------------
+     */
+    protected function buildFinancialMetrics(int $facilityId, array $normalized): ?array
+    {
+        $billingDashboard = $this->billingService->getDashboard($facilityId, [
+            'date_from' => $normalized['date_from']->toDateString(),
+            'date_to' => $normalized['date_to']->toDateString(),
+            'group_by' => $normalized['group_by'],
+            'top' => $normalized['top'],
+        ]);
+
+        return $billingDashboard['data'] ?? null;
+    }
+
+    /**
+     * ---------------------------------------------------------------------
+     * STAFF HELPERS
+     * ---------------------------------------------------------------------
+     */
+    protected function getFacilityStaffAssignments(
+        int $facilityId,
+        CarbonInterface $dateFrom,
+        CarbonInterface $dateTo
+    ): Collection {
+        return DB::table('facility_staff_roles')
+            ->where('facility_id', $facilityId)
+            ->where('assignment_status', 'active')
+            ->where(function ($query) use ($dateTo) {
+                $query->whereNull('effective_from')
+                    ->orWhereDate('effective_from', '<=', $dateTo->toDateString());
+            })
+            ->where(function ($query) use ($dateFrom) {
+                $query->whereNull('effective_to')
+                    ->orWhereDate('effective_to', '>=', $dateFrom->toDateString());
+            })
+            ->select([
+                'staff_id',
+                'role_code',
+                'effective_from',
+                'effective_to',
+            ])
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'staff_id' => (int) $row->staff_id,
+                    'role_code' => $row->role_code ?: 'unknown',
+                    'effective_from' => !empty($row->effective_from)
+                        ? Carbon::parse($row->effective_from)->startOfDay()
+                        : null,
+                    'effective_to' => !empty($row->effective_to)
+                        ? Carbon::parse($row->effective_to)->endOfDay()
+                        : null,
+                ];
+            });
+    }
+
+    protected function getStaffIdsActiveAtPoint(Collection $assignments, CarbonInterface $point): Collection
+    {
+        return $assignments
+            ->filter(function (array $assignment) use ($point) {
+                $startsOk = empty($assignment['effective_from']) || $assignment['effective_from']->lte($point);
+                $endsOk = empty($assignment['effective_to']) || $assignment['effective_to']->gte($point);
+
+                return $startsOk && $endsOk;
+            })
+            ->pluck('staff_id')
+            ->unique()
+            ->values();
+    }
+
+    protected function getStaffDirectory(array $staffIds): Collection
+    {
+        if (empty($staffIds)) {
+            return collect();
+        }
+
+        return DB::table('staff')
+            ->leftJoin('users', 'users.id', '=', 'staff.user_id')
+            ->whereIn('staff.id', $staffIds)
+            ->select([
+                'staff.id',
+                'staff.staff_uuid',
+                'staff.max_concurrent_patients',
+                'staff.total_patients_treated',
+                'staff.patient_satisfaction_score',
+                'users.display_name',
+                'users.first_name',
+                'users.last_name',
+            ])
+            ->get()
+            ->mapWithKeys(function ($row) {
+                $fullName = trim((string) (
+                    $row->display_name
+                    ?: trim(($row->first_name ?? '') . ' ' . ($row->last_name ?? ''))
+                ));
+
+                return [
+                    (int) $row->id => [
+                        'staff_id' => (int) $row->id,
+                        'staff_uuid' => $row->staff_uuid,
+                        'first_name' => $row->first_name,
+                        'last_name' => $row->last_name,
+                        'display_name' => $row->display_name,
+                        'full_name' => $fullName !== '' ? $fullName : 'Unknown Staff',
+                        'max_concurrent_patients' => (int) ($row->max_concurrent_patients ?? 0),
+                        'total_patients_treated' => (int) ($row->total_patients_treated ?? 0),
+                        'patient_satisfaction' => $row->patient_satisfaction_score !== null
+                            ? (float) $row->patient_satisfaction_score
+                            : null,
+                    ],
+                ];
+            });
+    }
+
+    protected function getStaffPresenceEvents(
+        int $facilityId,
+        array $staffIds,
+        CarbonInterface $dateTo
+    ): Collection {
+        if (empty($staffIds)) {
+            return collect();
+        }
+
+        return DB::table('staff_presences')
+            ->where('facility_id', $facilityId)
+            ->whereIn('staff_id', $staffIds)
+            ->where(function ($query) {
+                $query->whereNotNull('updated_at')
+                    ->orWhereNotNull('created_at');
+            })
+            ->whereRaw('COALESCE(updated_at, created_at) <= ?', [$dateTo->toDateTimeString()])
+            ->select([
+                'staff_id',
+                'status',
+                DB::raw('COALESCE(updated_at, created_at) as event_at'),
+            ])
+            ->orderBy('staff_id')
+            ->orderBy('event_at')
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'staff_id' => (int) $row->staff_id,
+                    'status' => $this->normalizePresenceStatus($row->status),
+                    'event_at' => Carbon::parse($row->event_at),
+                ];
+            });
+    }
+
+    protected function resolvePresenceStatusAt(Collection $events, CarbonInterface $point): string
+    {
+        $event = $events
+            ->filter(fn (array $row) => $row['event_at']->lte($point))
+            ->sortByDesc('event_at')
+            ->first();
+
+        if (!$event) {
+            return 'off_duty';
+        }
+
+        return $this->normalizePresenceStatus($event['status'] ?? null);
+    }
+
+    /**
+     * ---------------------------------------------------------------------
+     * GENERIC HELPERS
+     * ---------------------------------------------------------------------
+     */
+    protected function normalizeFilters(array $filters): array
+    {
+        $groupBy = in_array($filters['group_by'] ?? 'day', ['day', 'week', 'month'], true)
+            ? ($filters['group_by'] ?? 'day')
+            : 'day';
+
+        $dateFrom = !empty($filters['date_from'])
+            ? Carbon::parse($filters['date_from'])->startOfDay()
+            : now()->subDays(30)->startOfDay();
+
+        $dateTo = !empty($filters['date_to'])
+            ? Carbon::parse($filters['date_to'])->endOfDay()
+            : now()->endOfDay();
+
+        if ($dateTo->lt($dateFrom)) {
+            [$dateFrom, $dateTo] = [$dateTo->copy()->startOfDay(), $dateFrom->copy()->endOfDay()];
+        }
+
+        return [
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'group_by' => $groupBy,
+            'top' => max(1, min((int) ($filters['top'] ?? 10), 25)),
+        ];
+    }
+
+    protected function normalizePresenceStatus(?string $status): string
+    {
+        return match ((string) $status) {
+            'on_duty' => 'on_duty',
+            'busy' => 'busy',
+            'off_duty', 'on_break', 'unavailable' => 'off_duty',
+            default => 'off_duty',
+        };
+    }
+
+    protected function buildTrendBuckets(
+        CarbonInterface $dateFrom,
+        CarbonInterface $dateTo,
+        string $groupBy
+    ): array {
+        $buckets = [];
+
+        $cursor = $this->getBucketStart($dateFrom, $groupBy);
+        $endBoundary = $this->getBucketStart($dateTo, $groupBy);
+
+        while ($cursor->lte($endBoundary)) {
+            $bucketStart = $cursor->copy();
+
+            $bucketEnd = match ($groupBy) {
+                'week' => $bucketStart->copy()->endOfWeek(),
+                'month' => $bucketStart->copy()->endOfMonth(),
+                default => $bucketStart->copy()->endOfDay(),
+            };
+
+            if ($bucketEnd->gt($dateTo)) {
+                $bucketEnd = $dateTo->copy();
+            }
+
+            $key = $bucketStart->toDateString();
+
+            $buckets[$key] = [
+                'key' => $key,
+                'start' => $bucketStart,
+                'end' => $bucketEnd,
+            ];
+
+            $cursor = $this->incrementBucket($cursor, $groupBy);
+        }
+
+        return $buckets;
+    }
+
+    protected function getBucketStart(CarbonInterface $date, string $groupBy): Carbon
+    {
+        $date = Carbon::parse($date);
+
+        return match ($groupBy) {
+            'week' => $date->startOfWeek(),
+            'month' => $date->startOfMonth(),
+            default => $date->startOfDay(),
+        };
+    }
+
+    protected function incrementBucket(CarbonInterface $date, string $groupBy): Carbon
+    {
+        $date = Carbon::parse($date);
+
+        return match ($groupBy) {
+            'week' => $date->addWeek(),
+            'month' => $date->addMonth(),
+            default => $date->addDay(),
+        };
+    }
+
+    protected function emptyPresenceTrend(
+        CarbonInterface $dateFrom,
+        CarbonInterface $dateTo,
+        string $groupBy
+    ): array {
+        return collect($this->buildTrendBuckets($dateFrom, $dateTo, $groupBy))
+            ->map(fn (array $bucket) => [
+                'date' => $bucket['key'],
+                'on_duty' => 0,
+                'busy' => 0,
+                'off_duty' => 0,
+            ])
+            ->values()
+            ->toArray();
+    }
+
+    protected function emptyWorkloadTrend(
+        CarbonInterface $dateFrom,
+        CarbonInterface $dateTo,
+        string $groupBy
+    ): array {
+        return collect($this->buildTrendBuckets($dateFrom, $dateTo, $groupBy))
+            ->map(fn (array $bucket) => [
+                'date' => $bucket['key'],
+                'total_active_patients' => 0,
+                'unique_staff_assigned' => 0,
+                'avg_patients_per_staff' => 0.0,
+            ])
+            ->values()
+            ->toArray();
+    }
+
+    protected function assessInventoryRisk(object $item): string
+    {
+        if (
+            !empty($item->controlled_substance_schedule)
+            && in_array($item->controlled_substance_schedule, ['II', 'III'], true)
+        ) {
+            return 'high (controlled substance)';
+        }
+
+        if ((float) ($item->package_quantity ?? 0) <= (float) ($item->safety_stock_level ?? 0)) {
+            return 'high (below safety stock)';
+        }
+
+        if (
+            !is_null($item->reorder_point)
+            && (float) ($item->package_quantity ?? 0) <= (float) $item->reorder_point
+        ) {
+            return 'medium (below reorder point)';
+        }
+
+        return 'low';
+    }
+}

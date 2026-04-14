@@ -8,7 +8,7 @@
  * All routes are protected and accessible only to users with super_admin capability.
  */
 
-import { Route } from "react-router-dom";
+import { Route, Navigate } from "react-router-dom"; // ← Added Navigate
 import { 
   SuspenseWrapper, 
   WithAuthProp,
@@ -16,6 +16,7 @@ import {
   WithThemeProp
 } from "./shared/routeUtils";
 import { PLATFORM_ADMIN_ROUTES } from "../constants/platform-administration.paths";
+import { ROUTES } from "../routeConstants";
 
 // Lazy load components for better performance
 import React from 'react';
@@ -46,6 +47,9 @@ export const platformAdminRoutes = [
     key="platform-admin-base" 
     element={<ProtectedThemeOutlet />}
   >
+    {/* Redirect from /platform-admin to /platform-admin/facilities */}
+    <Route index element={<Navigate to={ROUTES.PLATFORM_ADMINISTRATION} replace />} />
+
     {/* ========================================================================
         FACILITIES SECTION
         Base Route: /platform-admin/facilities
@@ -159,5 +163,5 @@ export const platformAdminRoutes = [
 // 6. Structure mirrors accountRoutes pattern with:
 //    - Main sections (FACILITIES, USERS) as parent routes
 //    - Nested routes for specific functionality
-//    - No index redirects needed as parent route handles the main view
+//    - Index redirect ensures /platform-admin automatically navigates to facilities
 // ============================================================================
