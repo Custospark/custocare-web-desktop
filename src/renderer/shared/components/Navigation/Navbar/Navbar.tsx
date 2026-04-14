@@ -8,6 +8,7 @@
  * - Slight wrapping/spacing improvements for small screens
  * - ✅ Enforces navigation to /dashboard after ANY account/context switch
  * - ✅ Mobile menu icon is now among the right-side items (first item on mobile)
+ * - ✅ Menu option is now visible on iPads and tablets (breakpoint adjusted to lg)
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -276,14 +277,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   className={cn(
     // Mobile: tighter padding, items start at left
     // Desktop: normal padding, spread out
-    'flex items-center gap-2 px-2 sm:px-4 py-1.2 md:justify-between',
+    'flex items-center gap-2 px-2 sm:px-4 py-1.2 lg:justify-between',
     className
   )}
 >
   {/* LEFT: BRAND (desktop only) */}
-  <div className="hidden md:flex items-center gap-2 sm:gap-3 shrink-0">
+  <div className="hidden lg:flex items-center gap-2 sm:gap-3 shrink-0">
   <LogoImage/>
-    <div className="hidden md:block">
+    <div className="hidden lg:block">
       <div className="flex items-center gap-2">
       <BrandName></BrandName>
         <span
@@ -306,14 +307,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   </div>
 
   {/* RIGHT: ACTIONS */}
-<div className="flex items-center justify-between w-full md:flex-1 md:justify-end md:gap-3">
-  {/* Mobile menu (mobile only) */}
+<div className="flex items-center justify-between w-full lg:flex-1 lg:justify-end lg:gap-3">
+  {/* Mobile menu (visible on tablets and below) */}
   <button
     onClick={onMenuClick}
     className={cn(
-      'md:hidden flex items-center justify-center shrink-0 cursor-pointer',
+      'lg:hidden flex items-center justify-center shrink-0 cursor-pointer',
       'w-10 h-10 rounded-lg',
-      '-ml-2 sm:-ml-1 md:ml-0',
+      '-ml-2 sm:-ml-1 lg:ml-0',
       'transition-all duration-300 hover:scale-105',
       'focus:outline-none focus:ring-2 focus:ring-offset-2',
       isDark
