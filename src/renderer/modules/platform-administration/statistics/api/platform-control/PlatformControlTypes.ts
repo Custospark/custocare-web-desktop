@@ -136,7 +136,7 @@ export interface UserCounts {
 }
 
 export interface UsersResponse {
-  data: User[];
+  data: User[];  
   meta: PaginationMeta & {
     user_counts: UserCounts;
   };
