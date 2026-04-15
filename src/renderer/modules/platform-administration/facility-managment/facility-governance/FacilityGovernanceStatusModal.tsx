@@ -50,7 +50,10 @@ const FacilityGovernanceStatusModal: React.FC<FacilityGovernanceStatusModalProps
       {open && facility && (
         <>
           <motion.div
-            className="fixed inset-0 z-50 bg-slate-950/55 backdrop-blur-sm"
+            className={cn(
+              'fixed inset-0 z-50 cursor-pointer bg-slate-950/55 backdrop-blur-sm',
+              !isSubmitting && 'cursor-pointer'
+            )}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -84,7 +87,7 @@ const FacilityGovernanceStatusModal: React.FC<FacilityGovernanceStatusModalProps
                     Status Governance
                   </div>
 
-                  <h3 className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-slate-950')}>
+                  <h3 className={cn('text-xl font-bold', isDark ? 'text-white' : 'text-blue-950')}>
                     Update Facility Status
                   </h3>
                   <p className={cn('mt-1 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
@@ -97,10 +100,11 @@ const FacilityGovernanceStatusModal: React.FC<FacilityGovernanceStatusModalProps
                   onClick={onClose}
                   disabled={isSubmitting}
                   className={cn(
-                    'inline-flex h-11 w-11 items-center justify-center rounded-2xl transition-all',
+                    'cursor-pointer inline-flex h-11 w-11 items-center justify-center rounded-2xl transition-all',
                     isDark
                       ? 'bg-white/5 text-slate-200 hover:bg-white/10'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
+                    isSubmitting && 'cursor-not-allowed opacity-60'
                   )}
                 >
                   <X className="h-5 w-5" />
@@ -142,7 +146,7 @@ const FacilityGovernanceStatusModal: React.FC<FacilityGovernanceStatusModalProps
                           type="button"
                           onClick={() => setStatus(option.value)}
                           className={cn(
-                            'rounded-2xl px-4 py-3 text-sm font-semibold transition-all',
+                            'cursor-pointer rounded-2xl px-4 py-3 text-sm font-semibold transition-all',
                             active
                               ? isDark
                                 ? 'bg-blue-600 text-white'
@@ -189,10 +193,11 @@ const FacilityGovernanceStatusModal: React.FC<FacilityGovernanceStatusModalProps
                   onClick={onClose}
                   disabled={isSubmitting}
                   className={cn(
-                    'rounded-2xl px-5 py-3 text-sm font-semibold transition-all',
+                    'cursor-pointer rounded-2xl px-5 py-3 text-sm font-semibold transition-all',
                     isDark
                       ? 'bg-white/5 text-slate-200 hover:bg-white/10'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
+                    isSubmitting && 'cursor-not-allowed opacity-60'
                   )}
                 >
                   Cancel
@@ -203,14 +208,14 @@ const FacilityGovernanceStatusModal: React.FC<FacilityGovernanceStatusModalProps
                   onClick={handleSubmit}
                   disabled={isSubmitting}
                   className={cn(
-                    'rounded-2xl px-5 py-3 text-sm font-semibold transition-all',
+                    'cursor-pointer rounded-2xl px-5 py-3 text-sm font-semibold transition-all',
                     isSubmitting
                       ? isDark
                         ? 'cursor-not-allowed bg-blue-600/60 text-white'
                         : 'cursor-not-allowed bg-slate-800/70 text-white'
                       : isDark
                       ? 'bg-blue-600 text-white hover:bg-blue-500'
-                      : 'bg-slate-900 text-white hover:bg-slate-800'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
                   )}
                 >
                   {isSubmitting ? 'Updating Status...' : 'Confirm Status Update'}

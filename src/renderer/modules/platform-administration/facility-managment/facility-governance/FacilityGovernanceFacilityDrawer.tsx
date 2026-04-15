@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Mail, MapPin, Phone, Shield, User2, Users, X } from 'lucide-react';
+import { Globe, Mail, MapPin, Phone, Shield, User2, Users, X } from 'lucide-react';
 import type { Facility } from '../../statistics/api/platform-control/PlatformControlTypes';
 import {
   cn,
@@ -14,6 +14,7 @@ import {
   getOperationalStatusStyles,
   safeText,
 } from './facilityGovernance.utils';
+import { formatText ,formatCurrency} from '../../../medical-records/ui/revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 
 interface FacilityGovernanceFacilityDrawerProps {
   isDark: boolean;
@@ -66,7 +67,7 @@ const FacilityGovernanceFacilityDrawer: React.FC<FacilityGovernanceFacilityDrawe
       {open && facility && (
         <>
           <motion.div
-            className="fixed inset-0 z-40 bg-slate-950/55 backdrop-blur-sm"
+            className="fixed inset-0 z-40 bg-slate-950/55"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -130,12 +131,12 @@ const FacilityGovernanceFacilityDrawer: React.FC<FacilityGovernanceFacilityDrawe
                 type="button"
                 onClick={onClose}
                 className={cn(
-                  'inline-flex h-11 w-11 items-center justify-center rounded-2xl transition-all',
-                  isDark ? 'bg-white/5 text-slate-200 hover:bg-white/10' : 'bg-white text-slate-700 hover:bg-slate-100'
+                    'cursor-pointer inline-flex h-11 w-11 items-center justify-center rounded-2xl transition-all',
+                    isDark ? 'bg-white/5 text-slate-200 hover:bg-white/10' : 'bg-white text-slate-700 hover:bg-slate-100'
                 )}
-              >
+                >
                 <X className="h-5 w-5" />
-              </button>
+                </button>
             </div>
 
             <div className="mb-6 flex flex-wrap gap-3">
@@ -143,61 +144,85 @@ const FacilityGovernanceFacilityDrawer: React.FC<FacilityGovernanceFacilityDrawe
                 type="button"
                 onClick={() => onOpenStatus(facility)}
                 className={cn(
-                  'inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition-all',
-                  isDark ? 'bg-blue-600 text-white hover:bg-blue-500' : 'bg-slate-900 text-white hover:bg-slate-800'
+                    'cursor-pointer inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition-all',
+                    isDark ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-600 text-white hover:bg-blue-700'
                 )}
-              >
+                >
                 <Shield className="h-4 w-4" />
                 Update Facility Status
-              </button>
+                </button>
             </div>
 
             <div className="space-y-5">
               <SectionBlock title="Identity & Governance" isDark={isDark}>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <KeyValue label="Facility UUID" value={safeText(facility.facility_uuid)} isDark={isDark} />
-                  <KeyValue label="Facility Code" value={safeText(facility.facility_code)} isDark={isDark} />
+                  <KeyValue label="Facility Number" value={safeText(facility.facility_code)} isDark={isDark} />
+                  <KeyValue label="Registered On" value={formatDate(facility.created_at)} isDark={isDark} />
+                  <KeyValue label="Clinical Status" value={formatStatusLabel(facility.operational_status)} isDark={isDark} />
                   <KeyValue label="Status Reason" value={safeText(facility.status_reason)} isDark={isDark} />
+                  <KeyValue label="Platform Status" value={formatText(facility.status)} isDark={isDark} />
                   <KeyValue label="Status Set At" value={formatDateTime(facility.status_set_at)} isDark={isDark} />
-                  <KeyValue label="Created At" value={formatDate(facility.created_at)} isDark={isDark} />
-                  <KeyValue label="Operational Status" value={formatStatusLabel(facility.operational_status)} isDark={isDark} />
                 </div>
               </SectionBlock>
 
               <SectionBlock title="Facility Contact & Location" isDark={isDark}>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <KeyValue
+               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <KeyValue
                     label="Phone"
                     value={
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4" />
                         {safeText(facility.phone)}
-                      </div>
+                    </div>
                     }
                     isDark={isDark}
-                  />
-                  <KeyValue
+                />
+                <KeyValue
                     label="Email"
                     value={
-                      <div className="flex items-center gap-2 break-all">
+                    <div className="flex items-center gap-2 break-all">
                         <Mail className="h-4 w-4" />
                         {safeText(facility.email)}
-                      </div>
+                    </div>
                     }
                     isDark={isDark}
-                  />
-                  <div className="sm:col-span-2">
+                />
+                <KeyValue
+                    label="Website"
+                    value={
+                    <div className="flex items-center gap-2 break-all">
+                        <Globe className="h-4 w-4 shrink-0" />
+                        {facility.facility_website ? (
+                        <a
+                            href={facility.facility_website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={cn(
+                            'transition-all hover:underline',
+                            isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
+                            )}
+                        >
+                            {facility.facility_website}
+                        </a>
+                        ) : (
+                        <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>—</span>
+                        )}
+                    </div>
+                    }
+                    isDark={isDark}
+                />
+                <div className="sm:col-span-2">
                     <KeyValue
-                      label="Address"
-                      value={
+                    label="Address"
+                    value={
                         <div className="flex items-start gap-2">
-                          <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-                          <span>{formatAddress(facility.location)}</span>
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>{formatAddress(facility.location)}</span>
                         </div>
-                      }
-                      isDark={isDark}
+                    }
+                    isDark={isDark}
                     />
-                  </div>
+                </div>
                 </div>
               </SectionBlock>
 
@@ -222,12 +247,12 @@ const FacilityGovernanceFacilityDrawer: React.FC<FacilityGovernanceFacilityDrawe
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <KeyValue
                     label="Total Paid"
-                    value={<span className="font-semibold">{formatAmount(facility.billing?.total_paid)}</span>}
+                    value={<span className="font-semibold">{formatCurrency(facility.billing?.total_paid,facility.facility_currency)}</span>}
                     isDark={isDark}
                   />
                   <KeyValue
                     label="Outstanding Balance"
-                    value={<span className="font-semibold">{formatAmount(facility.billing?.balance)}</span>}
+                    value={<span className="font-semibold">{formatCurrency(facility.billing?.balance,facility.facility_currency)}</span>}
                     isDark={isDark}
                   />
                 </div>
@@ -250,7 +275,7 @@ const FacilityGovernanceFacilityDrawer: React.FC<FacilityGovernanceFacilityDrawe
                               {member.name}
                             </p>
                             <p className={cn('mt-1 text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                              Role: {safeText(member.role)}
+                              Role: {formatText(member.role)}
                             </p>
                           </div>
 

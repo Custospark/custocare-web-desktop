@@ -1,9 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Building2, RefreshCw, ShieldCheck, Users } from 'lucide-react';
+import { Building2, RefreshCw, Users } from 'lucide-react';
 import {
   cn,
-  formatNumber,
   getPanelClass,
   getSubtlePanelClass,
 } from './facilityGovernance.utils';
@@ -24,8 +23,6 @@ const FacilityGovernanceHeader: React.FC<FacilityGovernanceHeaderProps> = ({
   onTabChange,
   onRefresh,
   isFetching,
-  facilityTotal,
-  patientTotal,
 }) => {
   const panelClass = getPanelClass(isDark);
   const subtlePanelClass = getSubtlePanelClass(isDark);
@@ -77,28 +74,7 @@ const FacilityGovernanceHeader: React.FC<FacilityGovernanceHeaderProps> = ({
             billing exposure, patient registry breadth, and status governance actions.
           </p>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <div className={cn('inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm', subtlePanelClass)}>
-              <Building2 className="h-4 w-4" />
-              <span className={cn(isDark ? 'text-slate-300' : 'text-slate-700')}>
-                {formatNumber(facilityTotal)} facilities
-              </span>
-            </div>
 
-            <div className={cn('inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm', subtlePanelClass)}>
-              <Users className="h-4 w-4" />
-              <span className={cn(isDark ? 'text-slate-300' : 'text-slate-700')}>
-                {formatNumber(patientTotal)} patients
-              </span>
-            </div>
-
-            <div className={cn('inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm', subtlePanelClass)}>
-              <ShieldCheck className="h-4 w-4" />
-              <span className={cn(isDark ? 'text-slate-300' : 'text-slate-700')}>
-                Enterprise administration
-              </span>
-            </div>
-          </div>
         </div>
 
         <div className="flex w-full flex-col gap-4 xl:w-auto xl:min-w-[420px]">

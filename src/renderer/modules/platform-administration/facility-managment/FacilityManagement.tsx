@@ -20,17 +20,17 @@ const FacilityManagement: React.FC<FacilityManagementProps> = ({ theme }) => {
       theme={theme}
       defaultActionTo={PLATFORM_ADMIN_ROUTES.FACILITIES}
       actions={[
+          { 
+          key: 'platform-facility-governance', 
+          label: 'Facility Governance', 
+          icon: <ShieldCheck className="w-4 h-4" />, 
+          to: PLATFORM_ADMIN_ROUTES.PLATFORM_FACILITY_GOVERNANCE 
+        },
         { 
           key: 'stats', 
           label: 'Facility Statistics', 
           icon: <BarChart2 className="w-4 h-4" />, 
           to: PLATFORM_ADMIN_ROUTES.FACILITIES_STATS 
-        },
-        { 
-          key: 'platform-facility-governance', 
-          label: 'Facility Governance', 
-          icon: <ShieldCheck className="w-4 h-4" />, 
-          to: PLATFORM_ADMIN_ROUTES.PLATFORM_FACILITY_GOVERNANCE 
         },
         { 
           key: 'plans', 

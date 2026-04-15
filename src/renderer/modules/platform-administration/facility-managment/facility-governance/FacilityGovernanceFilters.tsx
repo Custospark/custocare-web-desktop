@@ -138,7 +138,7 @@ const FacilityGovernanceFiltersPanel: React.FC<FacilityGovernanceFiltersPanelPro
 
           <div>
             <label className={cn('mb-2 block text-xs font-semibold uppercase tracking-[0.14em]', isDark ? 'text-slate-400' : 'text-slate-500')}>
-              Period
+              Reg. Date or Period
             </label>
             <select
               value={facilityFilters.period ?? ''}

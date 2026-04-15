@@ -64,6 +64,8 @@ export interface FacilityLocation {
 export interface Facility {
   id: number;
   facility_uuid: string;
+  facility_currency: string;
+  facility_website: string;
   facility_code: string;
   name: string;
   location: FacilityLocation;
@@ -188,7 +190,20 @@ export interface BaseFilters {
   page?: number;
   search?: string;
 }
+export interface PatientsResponse {
+  data: Patient[];
+  meta: PaginationMeta & {
+    counts: PatientCounts;
+  };
+}
 
+export interface FacilitiesResponse {
+  data: Facility[];
+  meta: PaginationMeta & {
+    staff_counts: StaffCounts;
+    facility_counts: FacilityCounts;
+  };
+}
 export interface FacilityFilters extends BaseFilters {
   status?: Facility['status'];
   operational_status?: Facility['operational_status'];

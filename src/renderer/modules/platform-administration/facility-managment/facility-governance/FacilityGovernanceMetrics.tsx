@@ -69,7 +69,7 @@ const FacilityGovernanceMetrics: React.FC<FacilityGovernanceMetricsProps> = ({
     {
       title: 'Total Patients',
       value: formatNumber(patientCounts.total),
-      subtitle: `${formatNumber(patientCounts.this_month)} created this month`,
+      subtitle: `${formatNumber(patientCounts.this_month)} registered this month`,
       icon: Users,
       tone: 'blue' as const,
     },

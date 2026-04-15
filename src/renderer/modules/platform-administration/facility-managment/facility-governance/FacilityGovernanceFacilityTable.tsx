@@ -6,6 +6,8 @@ import type {
   FacilitiesResponse,
 } from  '../../statistics/api/platform-control/PlatformControlTypes';
 import { InfoPill, PaginationControls } from './facilityGovernance.primitives';
+import { formatCurrency } from '../../../medical-records/ui/visit-action-center/billing-space';
+import { formatText } from '../../../medical-records/ui/revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 import {
   cn,
   formatAddress,
@@ -103,7 +105,7 @@ const FacilityGovernanceFacilityTable: React.FC<FacilityGovernanceFacilityTableP
                   'Statuses',
                   'Staff',
                   'Billing',
-                  'Created',
+                  'Registered On',
                   'Actions',
                 ].map((header) => (
                   <th
@@ -136,11 +138,9 @@ const FacilityGovernanceFacilityTable: React.FC<FacilityGovernanceFacilityTableP
                         {facility.name}
                       </p>
                       <p className={cn('mt-1 text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                        Code: {safeText(facility.facility_code)}
+                        Facility No: {safeText(facility.facility_code)}
                       </p>
-                      <p className={cn('mt-1 text-xs break-all', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                        UUID: {safeText(facility.facility_uuid)}
-                      </p>
+                    
                     </div>
                   </td>
 
@@ -174,34 +174,45 @@ const FacilityGovernanceFacilityTable: React.FC<FacilityGovernanceFacilityTableP
                     </div>
                   </td>
 
-                  <td className="px-5 py-4">
-                    <div className="min-w-[220px] space-y-2">
-                      <span
+              <td className="px-5 py-4">
+                <div className="min-w-[220px] space-y-3">
+                    {/* Platform Status */}
+                    <div className="flex items-center justify-between">
+                    <span className={cn('text-xs font-medium', isDark ? 'text-slate-400' : 'text-slate-500')}>
+                        Platform Status:
+                    </span>
+                    <span
                         className={cn(
-                          'inline-flex rounded-full border px-3 py-1 text-xs font-semibold',
-                          getFacilityStatusStyles(facility.status, isDark)
+                        'inline-flex rounded-full border px-3 py-1 text-xs font-semibold',
+                        getFacilityStatusStyles(facility.status, isDark)
                         )}
-                      >
+                    >
                         {formatStatusLabel(facility.status)}
-                      </span>
-
-                      <div>
-                        <span
-                          className={cn(
-                            'inline-flex rounded-full border px-3 py-1 text-xs font-semibold',
-                            getOperationalStatusStyles(facility.operational_status, isDark)
-                          )}
-                        >
-                          {formatStatusLabel(facility.operational_status)}
-                        </span>
-                      </div>
-
-                      <div className={cn('text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
-                        <p>Reason: {safeText(facility.status_reason)}</p>
-                        <p className="mt-1">Set: {formatDate(facility.status_set_at)}</p>
-                      </div>
+                    </span>
                     </div>
-                  </td>
+
+                    {/* Clinical Status */}
+                    <div className="flex items-center justify-between">
+                    <span className={cn('text-xs font-medium', isDark ? 'text-slate-400' : 'text-slate-500')}>
+                        Clinical Status:
+                    </span>
+                    <span
+                        className={cn(
+                        'inline-flex rounded-full border px-3 py-1 text-xs font-semibold',
+                        getOperationalStatusStyles(facility.operational_status, isDark)
+                        )}
+                    >
+                        {formatStatusLabel(facility.operational_status)}
+                    </span>
+                                </div>
+
+                                {/* Reason & Set Date */}
+                                <div className={cn('mt-2 space-y-1 text-xs', isDark ? 'text-slate-500' : 'text-slate-500')}>
+                                <p>Reason: {safeText(facility.status_reason)}</p>
+                                <p>Set: {formatDate(facility.status_set_at)}</p>
+                                </div>
+                            </div>
+            </td>
 
                   <td className="px-5 py-4">
                     <div className="min-w-[180px]">
@@ -224,7 +235,7 @@ const FacilityGovernanceFacilityTable: React.FC<FacilityGovernanceFacilityTableP
                                   : 'bg-slate-100 text-slate-700'
                               )}
                             >
-                              {staffMember.role}
+                              {formatText(staffMember.role)}
                             </span>
                           ))}
                           {facility.staff.length > 3 && (
@@ -251,7 +262,7 @@ const FacilityGovernanceFacilityTable: React.FC<FacilityGovernanceFacilityTableP
                           Total Paid
                         </p>
                         <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-                          {formatAmount(facility.billing?.total_paid)}
+                          {formatCurrency(facility.billing?.total_paid,facility.facility_currency)}
                         </p>
                       </div>
 
@@ -260,7 +271,7 @@ const FacilityGovernanceFacilityTable: React.FC<FacilityGovernanceFacilityTableP
                           Balance
                         </p>
                         <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-                          {formatAmount(facility.billing?.balance)}
+                          {formatCurrency(facility.billing?.balance,facility.facility_currency)}
                         </p>
                       </div>
                     </div>
@@ -275,36 +286,36 @@ const FacilityGovernanceFacilityTable: React.FC<FacilityGovernanceFacilityTableP
                   </td>
 
                   <td className="px-5 py-4">
-                    <div className="flex min-w-[180px] flex-col gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onViewDetails(facility)}
-                        className={cn(
-                          'inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all',
-                          isDark
-                            ? 'bg-white/5 text-slate-200 hover:bg-white/10'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        )}
-                      >
-                        <Eye className="h-4 w-4" />
-                        View Details
-                      </button>
+                <div className="flex min-w-[180px] flex-col gap-2">
+                    <button
+                    type="button"
+                    onClick={() => onViewDetails(facility)}
+                    className={cn(
+                        'cursor-pointer inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all',
+                        isDark
+                        ? 'bg-white/5 text-slate-200 hover:bg-white/10'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    )}
+                    >
+                    <Eye className="h-4 w-4" />
+                    View Details
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() => onOpenStatus(facility)}
-                        className={cn(
-                          'inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all',
-                          isDark
-                            ? 'bg-blue-600 text-white hover:bg-blue-500'
-                            : 'bg-slate-900 text-white hover:bg-slate-800'
-                        )}
-                      >
-                        <Shield className="h-4 w-4" />
-                        Update Status
-                      </button>
-                    </div>
-                  </td>
+                    <button
+                    type="button"
+                    onClick={() => onOpenStatus(facility)}
+                    className={cn(
+                        'cursor-pointer inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all',
+                        isDark
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                    )}
+                    >
+                    <Shield className="h-4 w-4" />
+                    Update Status
+                    </button>
+                </div>
+                </td>
                 </tr>
               ))}
             </tbody>
