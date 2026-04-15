@@ -14,8 +14,8 @@ import {
   Building,
   UserCheck,
   Activity,
-  Download,
-  Monitor,
+  // Download,
+  // Monitor,
   ArrowRight,
   TrendingUp,
   Sparkles,
@@ -31,6 +31,7 @@ import { floatingVariants} from '../../../../../shared/components/animations/mot
 import TrustBadges from '../shared/TrustBadges'
 import LogoImage from '../../../../../shared/assets/LogoImage';
 import { BRAND_NAME_LCASE, BrandName } from '../../../../../shared/utils/BrandName';
+// import { useToast } from '../../../../medical-records/ui/revenue/billing-review/hooks';
 
 /* ==========================================================================
    PROFESSIONAL HEALTHCARE IMAGES
@@ -55,6 +56,7 @@ export const Landing: React.FC = () => {
   const { scrollYProgress } = useScroll();
   const headerOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0.96]);
   const headerBlur = useTransform(scrollYProgress, [0, 0.15], [8, 12]);
+  // const { showToast } = useToast(); 
 
   const handleAction = async (action: 'login' | 'signup') => {
     setIsLoading(action);
@@ -73,10 +75,19 @@ export const Landing: React.FC = () => {
     }
   };
 
-  const handleDownloadWindows = () => {
-    console.log('Initiating Windows download...');
-    // window.location.href = '/downloads/custocare-windows-installer.exe';
-  };
+  // const handleDownloadWindows = () => {
+  //   // // Direct link to GitHub release
+  //   // const downloadUrl = 'https://github.com/Custospark/custocare-web-desktop/releases/download/v2.13.9/Custocare-Setup-2.13.9.exe';
+    
+  //   // // Open in new tab or trigger download
+  //   // window.open(downloadUrl, '_blank');
+    
+  //   // // Optional: Track download analytics
+  //   // console.log('Windows download initiated from GitHub releases');
+    
+  //   // // Optional: Show a toast notification
+  //   // showToast("Download started...","info");
+  // };
 
 
 
@@ -170,7 +181,7 @@ export const Landing: React.FC = () => {
                 className="flex items-center gap-2 sm:gap-3"
               >
                 {/* Windows Download Button */}
-                <motion.button
+                {/* <motion.button
                   whileHover={{ scale: 1.04, y: -1 }}
                   whileTap={{ scale: 0.96 }}
                   onClick={handleDownloadWindows}
@@ -186,7 +197,7 @@ export const Landing: React.FC = () => {
                   <Monitor className="w-4 h-4" aria-hidden="true" />
                   <span className="hidden sm:inline">Windows</span>
                   <Download className="w-4 h-4" aria-hidden="true" />
-                </motion.button>
+                </motion.button> */}
 
                 {/* Theme Toggle */}
                 <motion.button
