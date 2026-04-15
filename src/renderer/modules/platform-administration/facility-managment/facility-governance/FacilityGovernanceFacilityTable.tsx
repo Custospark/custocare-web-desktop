@@ -11,7 +11,6 @@ import { formatText } from '../../../medical-records/ui/revenue/stats/billing-re
 import {
   cn,
   formatAddress,
-  formatAmount,
   formatDate,
   formatNumber,
   formatStatusLabel,
