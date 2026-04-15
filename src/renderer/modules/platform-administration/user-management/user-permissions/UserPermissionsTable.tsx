@@ -102,7 +102,6 @@ const UserPermissionsTable: React.FC<UserPermissionsTableProps> = ({
                 {[
                   'User',
                   'Contact',
-                  'User UUID',
                   'Verification / Activity',
                   'Status',
                   'Registered On',
@@ -152,17 +151,10 @@ const UserPermissionsTable: React.FC<UserPermissionsTableProps> = ({
                             isDark ? 'text-slate-400' : 'text-slate-600'
                           )}
                         >
-                          Legal name: {getUserFullName(user)}
+                           Legal Name: {getUserFullName(user)}
                         </p>
 
-                        <p
-                          className={cn(
-                            'mt-1 text-xs',
-                            isDark ? 'text-slate-500' : 'text-slate-500'
-                          )}
-                        >
-                          User ID: {user.id}
-                        </p>
+                      
                       </div>
                     </td>
 
@@ -186,20 +178,6 @@ const UserPermissionsTable: React.FC<UserPermissionsTableProps> = ({
                         </p>
                       </div>
                     </td>
-
-                    <td className="px-5 py-4">
-                      <div className="min-w-[220px]">
-                        <p
-                          className={cn(
-                            'break-all font-mono text-xs',
-                            isDark ? 'text-slate-300' : 'text-slate-700'
-                          )}
-                        >
-                          {safeText(user.global_user_uuid)}
-                        </p>
-                      </div>
-                    </td>
-
                     <td className="px-5 py-4">
                       <div className="min-w-[220px] space-y-3">
                         <span
