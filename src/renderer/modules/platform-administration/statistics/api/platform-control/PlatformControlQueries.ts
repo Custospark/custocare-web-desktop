@@ -13,9 +13,9 @@ import { axiosInstance } from '../../../../../app/api/axiosConfig';
 import type {
   ApiResponse,
   ApiErrorResponse,
-  FacilitiesResponse,
+  Facility,
+  Patient,
   UsersResponse,
-  PatientsResponse,
   FacilityFilters,
   UserFilters,
   PatientFilters,
@@ -43,12 +43,13 @@ export const platformControlKeys = {
 
 /**
  * Fetch paginated list of all facilities with optional filters.
+ * Backend returns: { success, data: Facility[], meta: { ... } }
  */
 export const usePlatformFacilities = (
   filters: FacilityFilters = {},
-  options?: Omit<UseQueryOptions<ApiResponse<FacilitiesResponse>, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<ApiResponse<Facility[]>, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
 ) => {
-  return useQuery<ApiResponse<FacilitiesResponse>, AxiosError<ApiErrorResponse>>({
+  return useQuery<ApiResponse<Facility[]>, AxiosError<ApiErrorResponse>>({
     queryKey: platformControlKeys.facilities(filters),
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -57,9 +58,10 @@ export const usePlatformFacilities = (
           params.append(key, String(value));
         }
       });
-      const response = await axiosInstance.get<ApiResponse<FacilitiesResponse>>(
+      const response = await axiosInstance.get<ApiResponse<Facility[]>>(
         `/platform-admin/list-all-platform-facilities?${params.toString()}`
       );
+      // ✅ Return the actual ApiResponse (contains data and meta)
       return response.data;
     },
     staleTime: 0,
@@ -89,7 +91,6 @@ export const useUpdateFacilityStatus = () => {
       return response.data;
     },
     onSuccess: () => {
-      // Invalidate all facility queries to refresh the list
       queryClient.invalidateQueries({ queryKey: platformControlKeys.all });
     },
   });
@@ -99,9 +100,7 @@ export const useUpdateFacilityStatus = () => {
 /*                               USERS QUERIES                                */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Fetch paginated list of all users with optional filters.
- */
+// ✅ These stay exactly as they were (unchanged)
 export const usePlatformUsers = (
   filters: UserFilters = {},
   options?: Omit<UseQueryOptions<ApiResponse<UsersResponse>, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
@@ -128,9 +127,6 @@ export const usePlatformUsers = (
   });
 };
 
-/**
- * Update a user's status.
- */
 export const useUpdateUserStatus = () => {
   const queryClient = useQueryClient();
 
@@ -158,12 +154,13 @@ export const useUpdateUserStatus = () => {
 
 /**
  * Fetch paginated list of all patients with optional filters.
+ * Backend returns: { success, data: Patient[], meta: { ... } }
  */
 export const usePlatformPatients = (
   filters: PatientFilters = {},
-  options?: Omit<UseQueryOptions<ApiResponse<PatientsResponse>, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<ApiResponse<Patient[]>, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
 ) => {
-  return useQuery<ApiResponse<PatientsResponse>, AxiosError<ApiErrorResponse>>({
+  return useQuery<ApiResponse<Patient[]>, AxiosError<ApiErrorResponse>>({
     queryKey: platformControlKeys.patients(filters),
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -172,9 +169,10 @@ export const usePlatformPatients = (
           params.append(key, String(value));
         }
       });
-      const response = await axiosInstance.get<ApiResponse<PatientsResponse>>(
+      const response = await axiosInstance.get<ApiResponse<Patient[]>>(
         `/platform-admin/list-all-platform-patients?${params.toString()}`
       );
+      // ✅ Return the actual ApiResponse
       return response.data;
     },
     staleTime: 0,
@@ -189,9 +187,6 @@ export const usePlatformPatients = (
 /*                            UTILITY FUNCTIONS                               */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Extract error message from API error.
- */
 export const extractPlatformErrorMessage = (
   error: AxiosError<ApiErrorResponse>,
   fallback = 'An unexpected error occurred'
@@ -199,7 +194,6 @@ export const extractPlatformErrorMessage = (
   return error.response?.data?.message || error.message || fallback;
 };
 
-// Export all hooks as a namespace for convenience
 export const PlatformControlQueries = {
   usePlatformFacilities,
   useUpdateFacilityStatus,

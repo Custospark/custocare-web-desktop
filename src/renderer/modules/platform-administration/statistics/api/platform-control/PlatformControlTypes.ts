@@ -102,13 +102,6 @@ export interface StaffCounts {
   unassigned: number;
 }
 
-export interface FacilitiesResponse {
-  data: Facility[];
-  meta: PaginationMeta & {
-    staff_counts: StaffCounts;
-    facility_counts: FacilityCounts;
-  };
-}
 
 // ==================== USER TYPES ====================
 
@@ -180,12 +173,7 @@ export interface PatientCounts {
   deceased: number;
 }
 
-export interface PatientsResponse {
-  data: Patient[];
-  meta: PaginationMeta & {
-    counts: PatientCounts;
-  };
-}
+// ✅ Backend returns ApiResponse<Patient[]> directly
 
 // ==================== REQUEST PARAMS / FILTERS ====================
 
