@@ -5,7 +5,6 @@ import type { Facility } from '../../statistics/api/platform-control/PlatformCon
 import {
   cn,
   formatAddress,
-  formatAmount,
   formatDate,
   formatDateTime,
   formatStatusLabel,

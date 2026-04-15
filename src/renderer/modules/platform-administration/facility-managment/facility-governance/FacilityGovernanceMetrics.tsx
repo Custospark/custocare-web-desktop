@@ -13,9 +13,9 @@ import type {
   FacilityCounts,
   PatientCounts,
   StaffCounts,
-} from '../../../api/facility-control/FacilityControlTypes';
+} from  '../../statistics/api/platform-control/PlatformControlTypes';
 import { GovernanceStatCard } from './facilityGovernance.primitives';
-import { formatAmount, formatNumber } from './facilityGovernance.utils';
+import { formatNumber } from './facilityGovernance.utils';
 
 interface FacilityGovernanceMetricsProps {
   isDark: boolean;

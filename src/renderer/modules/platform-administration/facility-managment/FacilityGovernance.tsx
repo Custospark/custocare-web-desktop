@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { AlertTriangle, CircleAlert, RefreshCw } from 'lucide-react';
 
@@ -12,6 +12,8 @@ import type {
   Facility,
   FacilityFilters,
   PatientFilters,
+  PatientsResponse,
+  FacilitiesResponse,
 } from '../statistics/api/platform-control/PlatformControlTypes';
 
 import FacilityGovernanceHeader from './facility-governance/FacilityGovernanceHeader';
@@ -88,13 +90,14 @@ function FacilityGovernance() {
 
   const updateFacilityStatusMutation = useUpdateFacilityStatus();
 
-  // ✅ Memoize facilities and patients to prevent unnecessary re-renders
+  // ✅ Memoize facilities and patients with proper typing
   const facilities = useMemo(
     () => facilitiesResponse?.data ?? [],
     [facilitiesResponse?.data]
   );
+
   const facilitiesMeta = useMemo(
-    () => facilitiesResponse?.meta,
+    () => facilitiesResponse?.meta as FacilitiesResponse['meta'] | undefined,
     [facilitiesResponse?.meta]
   );
 
@@ -102,12 +105,14 @@ function FacilityGovernance() {
     () => patientsResponse?.data ?? [],
     [patientsResponse?.data]
   );
+
   const patientsMeta = useMemo(
-    () => patientsResponse?.meta,
+    () => patientsResponse?.meta as PatientsResponse['meta'] | undefined,
     [patientsResponse?.meta]
   );
 
-  const facilityCounts = (facilitiesMeta as any)?.facility_counts ?? {
+  // Facility counts with proper fallback
+  const facilityCounts = facilitiesMeta?.facility_counts ?? {
     total: 0,
     today: 0,
     this_week: 0,
@@ -117,13 +122,14 @@ function FacilityGovernance() {
     banned: 0,
   };
 
-  const staffCounts = (facilitiesMeta as any)?.staff_counts ?? {
+  const staffCounts = facilitiesMeta?.staff_counts ?? {
     total: 0,
     assigned: 0,
     unassigned: 0,
   };
 
-  const patientCounts = (patientsMeta as any)?.counts ?? {
+  // Patient counts with proper fallback
+  const patientCounts = patientsMeta?.counts ?? {
     total: 0,
     today: 0,
     this_week: 0,
@@ -158,12 +164,24 @@ function FacilityGovernance() {
     setFacilityFilters((prev) => {
       const nextValue = value === '' ? undefined : value;
       if (key === 'period') {
-        return { ...prev, period: nextValue as FacilityFilters['period'], date_from: undefined, date_to: undefined };
+        return {
+          ...prev,
+          period: nextValue as FacilityFilters['period'],
+          date_from: undefined,
+          date_to: undefined,
+        };
       }
       if (key === 'date_from' || key === 'date_to') {
-        return { ...prev, [key]: nextValue, period: undefined };
+        return {
+          ...prev,
+          [key]: nextValue,
+          period: undefined,
+        };
       }
-      return { ...prev, [key]: nextValue };
+      return {
+        ...prev,
+        [key]: nextValue,
+      };
     });
   };
 
@@ -175,12 +193,24 @@ function FacilityGovernance() {
     setPatientFilters((prev) => {
       const nextValue = value === '' ? undefined : value;
       if (key === 'period') {
-        return { ...prev, period: nextValue as PatientFilters['period'], date_from: undefined, date_to: undefined };
+        return {
+          ...prev,
+          period: nextValue as PatientFilters['period'],
+          date_from: undefined,
+          date_to: undefined,
+        };
       }
       if (key === 'date_from' || key === 'date_to') {
-        return { ...prev, [key]: nextValue, period: undefined };
+        return {
+          ...prev,
+          [key]: nextValue,
+          period: undefined,
+        };
       }
-      return { ...prev, [key]: nextValue };
+      return {
+        ...prev,
+        [key]: nextValue,
+      };
     });
   };
 
@@ -201,7 +231,10 @@ function FacilityGovernance() {
     if (!statusTarget) return;
     await updateFacilityStatusMutation.mutateAsync({
       facilityId: statusTarget.id,
-      data: { status: payload.status, status_reason: payload.reason },
+      data: {
+        status: payload.status,
+        status_reason: payload.reason,
+      },
     });
     setStatusTarget(null);
   };
@@ -254,14 +287,29 @@ function FacilityGovernance() {
           <div className={cn(getPanelClass(isDark), 'border-rose-500/20 p-5')}>
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-start gap-3">
-                <div className={cn('flex h-11 w-11 items-center justify-center rounded-2xl', isDark ? 'bg-rose-500/10 text-rose-300' : 'bg-rose-50 text-rose-700')}>
+                <div
+                  className={cn(
+                    'flex h-11 w-11 items-center justify-center rounded-2xl',
+                    isDark ? 'bg-rose-500/10 text-rose-300' : 'bg-rose-50 text-rose-700'
+                  )}
+                >
                   <AlertTriangle className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-950')}>
+                  <p
+                    className={cn(
+                      'text-sm font-semibold',
+                      isDark ? 'text-white' : 'text-slate-950'
+                    )}
+                  >
                     Unable to load {activeTab}
                   </p>
-                  <p className={cn('mt-1 text-sm', isDark ? 'text-slate-400' : 'text-slate-600')}>
+                  <p
+                    className={cn(
+                      'mt-1 text-sm',
+                      isDark ? 'text-slate-400' : 'text-slate-600'
+                    )}
+                  >
                     {activeError}
                   </p>
                 </div>
@@ -269,9 +317,16 @@ function FacilityGovernance() {
               <button
                 type="button"
                 onClick={handleRefresh}
-                className={cn('inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition-all', isDark ? 'bg-white/5 text-slate-200 hover:bg-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')}
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition-all',
+                  isDark
+                    ? 'bg-white/5 text-slate-200 hover:bg-white/10'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                )}
               >
-                <RefreshCw className={cn('h-4 w-4', activeIsFetching && 'animate-spin')} />
+                <RefreshCw
+                  className={cn('h-4 w-4', activeIsFetching && 'animate-spin')}
+                />
                 Retry
               </button>
             </div>
@@ -299,7 +354,12 @@ function FacilityGovernance() {
               }}
             />
           ) : (
-            <EmptyState isDark={isDark} title="No facilities found" subtitle="No facility records match the current governance filters." icon={CircleAlert} />
+            <EmptyState
+              isDark={isDark}
+              title="No facilities found"
+              subtitle="No facility records match the current governance filters."
+              icon={CircleAlert}
+            />
           )
         ) : patients.length ? (
           <FacilityGovernancePatientTable
@@ -314,7 +374,12 @@ function FacilityGovernance() {
             onPageChange={setPatientPage}
           />
         ) : (
-          <EmptyState isDark={isDark} title="No patients found" subtitle="No patient registry records match the current governance filters." icon={CircleAlert} />
+          <EmptyState
+            isDark={isDark}
+            title="No patients found"
+            subtitle="No patient registry records match the current governance filters."
+            icon={CircleAlert}
+          />
         )}
       </div>
 
@@ -334,7 +399,10 @@ function FacilityGovernance() {
         open={Boolean(statusTarget)}
         facility={statusTarget}
         isSubmitting={updateFacilityStatusMutation.isPending}
-        errorMessage={updateFacilityStatusMutation.error?.response?.data?.message || updateFacilityStatusMutation.error?.message}
+        errorMessage={
+          updateFacilityStatusMutation.error?.response?.data?.message ||
+          updateFacilityStatusMutation.error?.message
+        }
         onClose={() => {
           updateFacilityStatusMutation.reset();
           setStatusTarget(null);
