@@ -109,7 +109,7 @@ class ErrorBoundary extends Component<Props, State> {
                 Problem persists?
               </p>
               <a
-                href="mailto:support@example.com"
+                href="mailto:custocare@custospark.com"
                 className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
               >
                 Contact our support team

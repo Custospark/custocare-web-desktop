@@ -41,12 +41,12 @@ export const ROUTES = {
 
   // Role-Based Clinical Modules
   MEDICAL_RECORDS: '/medical-records',
+  
   NURSING: '/nursing',
   CLINICAL: '/clinical',
   LABORATORY: '/laboratory',
-
-  // Top-level Modules
   PHARMACY: '/pharmacy',
+
   BILLING: '/billing',
   ADMINISTRATION: '/administration',
   ACCOUNT: '/account',

@@ -117,7 +117,7 @@ const NotFound: React.FC<NotFoundProps> = ({
             </button>
             <span className="hidden sm:inline text-gray-400">•</span>
             <a
-              href="mailto:support@example.com"
+              href="mailto:custocare@custospark.com"
               className="text-blue-600 dark:text-blue-400 hover:underline"
             >
               Contact Support
