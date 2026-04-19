@@ -12,7 +12,9 @@ import {
   Stethoscope,
   Search,
   X,
-  ChevronRight
+  ChevronRight,
+  Plus,
+  Eye
 } from 'lucide-react';
 import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/focusModeRouteConstants';
 
@@ -29,6 +31,7 @@ interface ActionItem {
   handler: () => void;
   description?: string;
   category?: string;
+  actionPrefix?: string;
 }
 
 export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' }) => {
@@ -67,7 +70,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
     },
   };
 
-  // Record Care Form Options (expandable - can have 20+)
+  // Record Care Form Options with "Add:" prefix
   const formOptions: ActionItem[] = useMemo(() => [
     { 
       key: 'clinical-notes', 
@@ -75,6 +78,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <FileText className="w-5 h-5" />, 
       description: 'Record symptoms, observations, and examination findings',
       category: 'Documentation',
+      actionPrefix: 'Add',
       handler: () => navigate(FOCUS_MODE_ROUTES.CLINICAL_NOTES_FOCUS)
     },
     { 
@@ -83,6 +87,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <Activity className="w-5 h-5" />, 
       description: 'Record primary and secondary diagnoses',
       category: 'Clinical',
+      actionPrefix: 'Add',
       handler: () => navigate(FOCUS_MODE_ROUTES.DIAGNOSIS_FOCUS)
     },
     { 
@@ -91,6 +96,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <Pill className="w-5 h-5" />, 
       description: 'Prescribe medications with dosage and frequency',
       category: 'Treatment',
+      actionPrefix: 'Add',
       handler: () => navigate(FOCUS_MODE_ROUTES.PRESCRIPTION_FOCUS)
     },
     { 
@@ -99,6 +105,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <Microscope className="w-5 h-5" />, 
       description: 'Request laboratory tests and investigations',
       category: 'Diagnostics',
+      actionPrefix: 'Add',
       handler: () => navigate(FOCUS_MODE_ROUTES.LAB_REQUEST_FOCUS)
     },
     { 
@@ -107,12 +114,12 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <ClipboardList className="w-5 h-5" />, 
       description: 'Enter and review laboratory results',
       category: 'Diagnostics',
+      actionPrefix: 'Add',
       handler: () => navigate(FOCUS_MODE_ROUTES.LAB_RESULT_FOCUS)
     },
-    // You can add 20+ more here
   ], [navigate]);
 
-  // Report Options (expandable - can have 20+)
+  // Report Options with "View" prefix
   const reportOptions: ActionItem[] = useMemo(() => [
     { 
       key: 'visit-summary', 
@@ -120,6 +127,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <FileOutput className="w-5 h-5" />, 
       description: 'Complete summary of the patient visit',
       category: 'Clinical',
+      actionPrefix: 'View',
       handler: () => navigate(FOCUS_MODE_ROUTES.VISIT_SUMMARY_FOCUS)
     },
     { 
@@ -128,6 +136,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <FileOutput className="w-5 h-5" />, 
       description: 'Printable prescription document',
       category: 'Treatment',
+      actionPrefix: 'View',
       handler: () => navigate(FOCUS_MODE_ROUTES.PRESCRIPTION_REPORT_FOCUS)
     },
     { 
@@ -136,6 +145,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <FileOutput className="w-5 h-5" />, 
       description: 'Laboratory test results report',
       category: 'Diagnostics',
+      actionPrefix: 'View',
       handler: () => navigate(FOCUS_MODE_ROUTES.LAB_REPORT_FOCUS)
     },
     { 
@@ -144,9 +154,9 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <FileOutput className="w-5 h-5" />, 
       description: 'Complete medical history document',
       category: 'Clinical',
+      actionPrefix: 'View',
       handler: () => navigate(FOCUS_MODE_ROUTES.FULL_MEDICAL_REPORT_FOCUS)
     },
-    // You can add 20+ more here
   ], [navigate]);
 
   const currentItems = activeTab === 'record-care' ? formOptions : reportOptions;
@@ -165,12 +175,20 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
 
   const handleTabChange = useCallback((tab: ActiveTab) => {
     setActiveTab(tab);
-    setSearchQuery(''); // Reset search when switching tabs
+    setSearchQuery('');
   }, []);
 
   const clearSearch = useCallback(() => {
     setSearchQuery('');
   }, []);
+
+  // Helper to get action color based on type
+  const getActionColor = (actionPrefix?: string) => {
+    if (actionPrefix === 'Add') {
+      return isDark ? 'text-green-400 bg-green-900/20' : 'text-green-600 bg-green-50';
+    }
+    return isDark ? 'text-blue-400 bg-blue-900/20' : 'text-blue-600 bg-blue-50';
+  };
 
   return (
     <div className={`h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6 ${colors.bg.primary}`}>
@@ -186,7 +204,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
                 : `${colors.inactive.bg} ${colors.inactive.text} cursor-pointer`
             }`}
           >
-            <Stethoscope className="h-4 w-4" />
+            <Plus className="h-4 w-4" />
             Record Care ({formOptions.length})
           </motion.button>
 
@@ -199,7 +217,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
                 : `${colors.inactive.bg} ${colors.inactive.text} cursor-pointer`
             }`}
           >
-            <FileOutput className="h-4 w-4" />
+            <Eye className="h-4 w-4" />
             Reports ({reportOptions.length})
           </motion.button>
         </div>
@@ -244,9 +262,13 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
               exit={{ opacity: 0 }}
               className={`flex flex-col items-center justify-center rounded-xl border p-12 text-center ${colors.border.primary} ${colors.bg.card}`}
             >
-              <Search className={`mb-3 h-12 w-12 ${colors.text.tertiary}`} />
+              {activeTab === 'record-care' ? (
+                <Plus className={`mb-3 h-12 w-12 ${colors.text.tertiary}`} />
+              ) : (
+                <Eye className={`mb-3 h-12 w-12 ${colors.text.tertiary}`} />
+              )}
               <h3 className={`mb-1 font-medium ${colors.text.primary}`}>
-                No results found
+                No {activeTab === 'record-care' ? 'forms' : 'reports'} found
               </h3>
               <p className={`text-sm ${colors.text.tertiary}`}>
                 Try adjusting your search term
@@ -273,9 +295,16 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
                       {option.icon}
                     </div>
                     <div>
-                      <h3 className={`font-semibold ${colors.text.primary}`}>
-                        {option.label}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        {option.actionPrefix && (
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getActionColor(option.actionPrefix)}`}>
+                            {option.actionPrefix}:
+                          </span>
+                        )}
+                        <h3 className={`font-semibold ${colors.text.primary}`}>
+                          {option.label}
+                        </h3>
+                      </div>
                       {option.description && (
                         <p className={`text-sm ${colors.text.secondary}`}>
                           {option.description}
