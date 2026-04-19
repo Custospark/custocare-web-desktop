@@ -19,11 +19,13 @@ export const MEDICAL_RECORDS_ROUTES = {
   WALKIN_PATIENT: `${ROUTES.MEDICAL_RECORDS}/patients/walk-in`,
   PATIENT_QUEUE: `${ROUTES.MEDICAL_RECORDS}/patients/queue`,
   PATIENT_STATS: `${ROUTES.MEDICAL_RECORDS}/patients/statistics`,
-
+  
   // Visit Action Center nested routes
   FORWARD_PATIENT: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/forward-patient`,
   GET_COMPLAINTS: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/get-complaints`,
   VISIT_STATUS: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/visit-status`,
   PATIENT_HISTORY: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/patient-history`,
   PATIENT_BILLING_SPACE: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/billing-space`,
+  CLINICAL_CARE: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/clinical-care`,
+  PATIENT_RECORDS: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/patient-records`,
 } as const;

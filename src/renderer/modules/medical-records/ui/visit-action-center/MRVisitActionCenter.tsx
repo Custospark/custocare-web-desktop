@@ -16,6 +16,7 @@ import {
   Search,
   ArrowLeftRight,
   Receipt,
+  Stethoscope,
 } from 'lucide-react';
 import { type RootState } from '../../../../app/store/rootReducer';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
@@ -220,33 +221,47 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
               title="Clinical Encounter Workflow"
               icon={<FileText className="w-6 h-6" />}
               theme={theme}
-              defaultActionTo={MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS}
+              defaultActionTo={MEDICAL_RECORDS_ROUTES.PATIENT_RECORDS}
               actions={[
-                { 
-                  key: 'get-complaints', 
-                  label: 'Get Complaints', 
-                  icon: <MessageSquare className="w-4 h-4" />, 
-                  to: MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS 
-                },
-                { 
-                  key: 'forward-patient', 
-                  label: 'Forward Patient', 
-                  icon: <ArrowRight className="w-4 h-4" />, 
-                  to: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT 
-                },
-                { 
-                  key: 'billing-space', 
-                  label: 'Billing Space', 
-                  icon: <Receipt className="w-4 h-4" />, 
-                  to: MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SPACE
-                },
-                { 
-                  key: 'visit-status', 
-                  label: 'Visit Status', 
-                  icon: <Activity className="w-4 h-4" />, 
-                  to: MEDICAL_RECORDS_ROUTES.VISIT_STATUS 
-                },
-              ]}
+          // EXISTING ACTIONS
+            { 
+              key: 'patient-records', 
+              label: 'Patient Records', 
+              icon: <User className="w-4 h-4" />, 
+              to: MEDICAL_RECORDS_ROUTES.PATIENT_RECORDS 
+            },
+              { 
+                key: 'clinical-care', 
+                label: 'Clinical Care', 
+                icon: <Stethoscope className="w-4 h-4" />, 
+                to: MEDICAL_RECORDS_ROUTES.CLINICAL_CARE 
+              },
+
+              { 
+                key: 'get-complaints', 
+                label: 'Get Complaints', 
+                icon: <MessageSquare className="w-4 h-4" />, 
+                to: MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS 
+              },
+              { 
+                key: 'forward-patient', 
+                label: 'Forward Patient', 
+                icon: <ArrowRight className="w-4 h-4" />, 
+                to: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT 
+              },
+              { 
+                key: 'billing-space', 
+                label: 'Billing Space', 
+                icon: <Receipt className="w-4 h-4" />, 
+                to: MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SPACE
+              },
+              { 
+                key: 'visit-status', 
+                label: 'Visit Status', 
+                icon: <Activity className="w-4 h-4" />, 
+                to: MEDICAL_RECORDS_ROUTES.VISIT_STATUS 
+              },
+            ]}
             />
           </div>
         </div>

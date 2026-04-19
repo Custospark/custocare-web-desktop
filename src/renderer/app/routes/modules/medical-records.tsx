@@ -17,6 +17,8 @@ import MRBillingCycle from "../../../modules/medical-records/ui/revenue/MRBillin
 import { MRBillingReview } from "../../../modules/medical-records/ui/revenue/MRBillingReview";
 import RevenueStats from "../../../modules/medical-records/ui/revenue/stats/RevenueStats";
 import MedicalRecordsDashboard from "../../../modules/medical-records/ui/overview/MedicalRecordsDashboard";
+import MRPatientRecords from "../../../modules/medical-records/ui/patients/views/MRPatientRecords";
+import MRClinicalCare from "../../../modules/medical-records/ui/patients/views/MRClinicalCare";
 export const medicalRecordsRoutes = [
   <Route
     key="overview"
@@ -66,7 +68,18 @@ export const medicalRecordsRoutes = [
       <WithThemeProp Component={MRVisitActionCenter} />
       </SuspenseWrapper>
     }>
-       <Route index element={<Navigate to={MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT} replace />} />
+    <Route index element={<Navigate to={MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT} replace />} />
+
+    <Route path={MEDICAL_RECORDS_ROUTES.PATIENT_RECORDS} element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={MRPatientRecords} />
+        </SuspenseWrapper>
+      } />
+    <Route path={MEDICAL_RECORDS_ROUTES.CLINICAL_CARE} element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={MRClinicalCare} />
+        </SuspenseWrapper>
+      } />
     <Route path={MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT} element={
         <SuspenseWrapper variant="table">
           <WithThemeProp Component={ForwardPatient} />
