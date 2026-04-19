@@ -1,3 +1,4 @@
+//shared.paths.ts
 export const ROUTES = {
   // Home & Dashboard
   HOME: '/',

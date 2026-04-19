@@ -1,43 +1,40 @@
 // MRPatientRecords.tsx
 import React, { useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, History, } from 'lucide-react';
+import { Clock, History } from 'lucide-react';
+import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/focusModeRouteConstants';
 
 interface MRPatientRecordsProps {
   theme?: 'light' | 'dark';
 }
 
 export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({ theme = 'light' }) => {
+  const navigate = useNavigate();
   const isDark = theme === 'dark';
 
   const colors = {
     bg: {
       primary: isDark ? 'bg-gray-900' : 'bg-gray-50',
       secondary: isDark ? 'bg-gray-800' : 'bg-white',
-      elevated: isDark ? 'bg-gray-800' : 'bg-white',
       hover: isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50',
-      selected: isDark ? 'bg-gray-700' : 'bg-blue-50',
     },
     text: {
       primary: isDark ? 'text-gray-100' : 'text-gray-900',
       secondary: isDark ? 'text-gray-400' : 'text-gray-600',
-      tertiary: isDark ? 'text-gray-500' : 'text-gray-400',
     },
     border: {
       primary: isDark ? 'border-gray-700' : 'border-gray-200',
     },
   };
 
-  // Handlers for navigation (do nothing for now)
   const handleLatestVisit = useCallback(() => {
-    // TODO: Navigate to Latest Visit
-    console.log('Navigate to Latest Visit');
-  }, []);
+    navigate(FOCUS_MODE_ROUTES.LATEST_VISIT_FOCUS);
+  }, [navigate]);
 
   const handleMedicalHistory = useCallback(() => {
-    // TODO: Navigate to Medical History
-    console.log('Navigate to Medical History');
-  }, []);
+    navigate(FOCUS_MODE_ROUTES.MEDICAL_HISTORY_FOCUS);
+  }, [navigate]);
 
   return (
     <div className={`h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6 ${colors.bg.primary}`}>

@@ -1,5 +1,6 @@
 // MRClinicalCare.tsx
 import React, { useState, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, 
@@ -13,6 +14,7 @@ import {
   X,
   ChevronRight
 } from 'lucide-react';
+import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/focusModeRouteConstants';
 
 interface MRClinicalCareProps {
   theme?: 'light' | 'dark';
@@ -30,6 +32,7 @@ interface ActionItem {
 }
 
 export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' }) => {
+  const navigate = useNavigate();
   const isDark = theme === 'dark';
   const [activeTab, setActiveTab] = useState<ActiveTab>('record-care');
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,7 +75,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <FileText className="w-5 h-5" />, 
       description: 'Record symptoms, observations, and examination findings',
       category: 'Documentation',
-      handler: () => console.log('Navigate to Clinical Notes')
+      handler: () => navigate(FOCUS_MODE_ROUTES.CLINICAL_NOTES_FOCUS)
     },
     { 
       key: 'diagnosis', 
@@ -80,7 +83,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <Activity className="w-5 h-5" />, 
       description: 'Record primary and secondary diagnoses',
       category: 'Clinical',
-      handler: () => console.log('Navigate to Diagnosis')
+      handler: () => navigate(FOCUS_MODE_ROUTES.DIAGNOSIS_FOCUS)
     },
     { 
       key: 'prescription', 
@@ -88,7 +91,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <Pill className="w-5 h-5" />, 
       description: 'Prescribe medications with dosage and frequency',
       category: 'Treatment',
-      handler: () => console.log('Navigate to Prescription')
+      handler: () => navigate(FOCUS_MODE_ROUTES.PRESCRIPTION_FOCUS)
     },
     { 
       key: 'lab-request', 
@@ -96,7 +99,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <Microscope className="w-5 h-5" />, 
       description: 'Request laboratory tests and investigations',
       category: 'Diagnostics',
-      handler: () => console.log('Navigate to Lab Request')
+      handler: () => navigate(FOCUS_MODE_ROUTES.LAB_REQUEST_FOCUS)
     },
     { 
       key: 'lab-result', 
@@ -104,10 +107,10 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <ClipboardList className="w-5 h-5" />, 
       description: 'Enter and review laboratory results',
       category: 'Diagnostics',
-      handler: () => console.log('Navigate to Lab Result')
+      handler: () => navigate(FOCUS_MODE_ROUTES.LAB_RESULT_FOCUS)
     },
     // You can add 20+ more here
-  ], []);
+  ], [navigate]);
 
   // Report Options (expandable - can have 20+)
   const reportOptions: ActionItem[] = useMemo(() => [
@@ -117,7 +120,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <FileOutput className="w-5 h-5" />, 
       description: 'Complete summary of the patient visit',
       category: 'Clinical',
-      handler: () => console.log('Navigate to Visit Summary Report')
+      handler: () => navigate(FOCUS_MODE_ROUTES.VISIT_SUMMARY_FOCUS)
     },
     { 
       key: 'prescription-report', 
@@ -125,7 +128,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <FileOutput className="w-5 h-5" />, 
       description: 'Printable prescription document',
       category: 'Treatment',
-      handler: () => console.log('Navigate to Prescription Report')
+      handler: () => navigate(FOCUS_MODE_ROUTES.PRESCRIPTION_REPORT_FOCUS)
     },
     { 
       key: 'lab-report', 
@@ -133,7 +136,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <FileOutput className="w-5 h-5" />, 
       description: 'Laboratory test results report',
       category: 'Diagnostics',
-      handler: () => console.log('Navigate to Lab Report')
+      handler: () => navigate(FOCUS_MODE_ROUTES.LAB_REPORT_FOCUS)
     },
     { 
       key: 'full-medical-report', 
@@ -141,10 +144,10 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       icon: <FileOutput className="w-5 h-5" />, 
       description: 'Complete medical history document',
       category: 'Clinical',
-      handler: () => console.log('Navigate to Full Medical Report')
+      handler: () => navigate(FOCUS_MODE_ROUTES.FULL_MEDICAL_REPORT_FOCUS)
     },
     // You can add 20+ more here
-  ], []);
+  ], [navigate]);
 
   const currentItems = activeTab === 'record-care' ? formOptions : reportOptions;
 
