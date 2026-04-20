@@ -1,7 +1,7 @@
 // ClinicalNotesFocus.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClinicalNotesForm, ClinicalNotesFormData } from '../ClinicalNotesForm';
+import { ClinicalNotesForm, type ClinicalNotesFormData } from '../ClinicalNotesForm';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../../app/routes/routeConstants';
 
 interface ClinicalNotesFocusProps {

@@ -1,7 +1,7 @@
 // PrescriptionFocus.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PrescriptionForm, PrescriptionFormData } from '../PrescriptionForm';
+import { PrescriptionForm, type PrescriptionFormData } from '../PrescriptionForm';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../../app/routes/routeConstants';
 
 interface PrescriptionFocusProps {

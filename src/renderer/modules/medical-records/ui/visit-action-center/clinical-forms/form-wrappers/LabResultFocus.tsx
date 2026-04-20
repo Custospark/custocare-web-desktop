@@ -1,7 +1,7 @@
 // LabResultFocus.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LabResultForm, LabResultFormData } from '../LabResultForm';
+import { LabResultForm, type LabResultFormData } from '../LabResultForm';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../../app/routes/routeConstants';
 
 interface LabResultFocusProps {

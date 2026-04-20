@@ -1,7 +1,7 @@
 // DiagnosisFocus.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DiagnosisForm, DiagnosisFormData } from '../DiagnosisForm';
+import { DiagnosisForm, type DiagnosisFormData } from '../DiagnosisForm';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../../app/routes/routeConstants';
 
 interface DiagnosisFocusProps {
