@@ -55,6 +55,8 @@ export interface VisitReference {
   id: number;
   visit_uuid?: string;
   visit_date: string | null;
+  facility_name: string | null;
+  facility_main_phone: string | null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -104,7 +106,7 @@ export interface Allergy {
  */
 export interface CreateAllergyRequest {
   // Required fields
-  allergen: string;
+  allergen?: string;
   severity: AllergySeverity;
 
   // Optional fields
