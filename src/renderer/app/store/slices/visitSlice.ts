@@ -4,6 +4,65 @@ import type { RootState } from '../store';
 import { type QueueVisitItem, VisitPhase, VisitStatus } from '../../../modules/pharmacy/api/dispensing/visit-queue/visitTypes';
 
 /* -------------------------------------------------------------------------- */
+/*                       LOCAL STORAGE KEYS                                   */
+/* -------------------------------------------------------------------------- */
+
+const STORAGE_KEYS = {
+  ACTIVE_VISIT: 'custocare_active_visit',
+  PREVIOUS_VISIT: 'custocare_previous_visit',
+  VISIT_CONTEXT: 'custocare_visit_context',
+  VISIT_UI_STATE: 'custocare_visit_ui_state',
+} as const;
+
+/* -------------------------------------------------------------------------- */
+/*                       HELPER: LOAD FROM LOCAL STORAGE                      */
+/* -------------------------------------------------------------------------- */
+
+const loadFromStorage = <T>(key: string, defaultValue: T): T => {
+  if (typeof window === 'undefined') return defaultValue;
+  
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error(`Failed to load ${key} from localStorage:`, error);
+  }
+  return defaultValue;
+};
+
+/* -------------------------------------------------------------------------- */
+/*                       HELPER: SAVE TO LOCAL STORAGE                        */
+/* -------------------------------------------------------------------------- */
+
+const saveToStorage = <T>(key: string, value: T): void => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    if (value === null || value === undefined) {
+      localStorage.removeItem(key);
+    } else {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+  } catch (error) {
+    console.error(`Failed to save ${key} to localStorage:`, error);
+  }
+};
+
+/* -------------------------------------------------------------------------- */
+/*                       HELPER: CLEAR ALL VISIT DATA                         */
+/* -------------------------------------------------------------------------- */
+
+const clearAllVisitStorage = (): void => {
+  if (typeof window === 'undefined') return;
+  
+  Object.values(STORAGE_KEYS).forEach(key => {
+    localStorage.removeItem(key);
+  });
+};
+
+/* -------------------------------------------------------------------------- */
 /*                       VISIT STATE - SINGLE ITEM STORAGE                    */
 /* -------------------------------------------------------------------------- */
 
@@ -34,22 +93,23 @@ export interface VisitsState {
 /*                           INITIAL STATE                                    */
 /* -------------------------------------------------------------------------- */
 
+// Load from localStorage to survive page refreshes
 const initialState: VisitsState = {
-  activeVisit: null,
-  previousVisit: null,
+  activeVisit: loadFromStorage<QueueVisitItem | null>(STORAGE_KEYS.ACTIVE_VISIT, null),
+  previousVisit: loadFromStorage<QueueVisitItem | null>(STORAGE_KEYS.PREVIOUS_VISIT, null),
   
-  context: {
+  context: loadFromStorage(STORAGE_KEYS.VISIT_CONTEXT, {
     facilityId: null,
     departmentId: null,
     staffId: null,
     enteredAt: null,
-  },
+  }),
   
-  ui: {
+  ui: loadFromStorage(STORAGE_KEYS.VISIT_UI_STATE, {
     isTakingAction: false,
     hasVisitLoaded: false,
     error: null,
-  },
+  }),
 };
 
 /* -------------------------------------------------------------------------- */
@@ -75,10 +135,14 @@ const visitsSlice = createSlice({
       // Store current as previous if exists
       if (state.activeVisit) {
         state.previousVisit = state.activeVisit;
+        // Save previous visit to localStorage
+        saveToStorage(STORAGE_KEYS.PREVIOUS_VISIT, state.previousVisit);
       }
       
       // Set new active visit
       state.activeVisit = visit;
+      // Save active visit to localStorage
+      saveToStorage(STORAGE_KEYS.ACTIVE_VISIT, state.activeVisit);
       
       // Update context
       state.context = {
@@ -87,9 +151,13 @@ const visitsSlice = createSlice({
         facilityId: facilityId ?? visit.facility_id,
         enteredAt: new Date().toISOString(),
       };
+      // Save context to localStorage
+      saveToStorage(STORAGE_KEYS.VISIT_CONTEXT, state.context);
       
       state.ui.hasVisitLoaded = true;
       state.ui.error = null;
+      // Save UI state to localStorage
+      saveToStorage(STORAGE_KEYS.VISIT_UI_STATE, state.ui);
     },
     
     /**
@@ -98,6 +166,8 @@ const visitsSlice = createSlice({
     startTakingAction: (state) => {
       state.ui.isTakingAction = true;
       state.ui.error = null;
+      // CHANGE: Save UI state to localStorage
+      saveToStorage(STORAGE_KEYS.VISIT_UI_STATE, state.ui);
     },
     
     /**
@@ -106,16 +176,26 @@ const visitsSlice = createSlice({
     clearActiveVisit: (state) => {
       if (state.activeVisit) {
         state.previousVisit = state.activeVisit;
+        // CHANGE: Save previous visit to localStorage
+        saveToStorage(STORAGE_KEYS.PREVIOUS_VISIT, state.previousVisit);
       }
       
       state.activeVisit = null;
+      // CHANGE: Remove active visit from localStorage
+      saveToStorage(STORAGE_KEYS.ACTIVE_VISIT, null);
+      
       state.context = {
         facilityId: null,
         departmentId: null,
         staffId: null,
         enteredAt: null,
       };
+      // CHANGE: Save cleared context to localStorage
+      saveToStorage(STORAGE_KEYS.VISIT_CONTEXT, state.context);
+      
       state.ui.hasVisitLoaded = false;
+      // CHANGE: Save UI state to localStorage
+      saveToStorage(STORAGE_KEYS.VISIT_UI_STATE, state.ui);
     },
     
     /**
@@ -130,6 +210,8 @@ const visitsSlice = createSlice({
         if (action.payload.departmentId !== undefined) {
           state.activeVisit.current_department_id = action.payload.departmentId;
         }
+        // CHANGE: Save updated active visit to localStorage
+        saveToStorage(STORAGE_KEYS.ACTIVE_VISIT, state.activeVisit);
       }
     },
     
@@ -139,6 +221,8 @@ const visitsSlice = createSlice({
     updateActiveVisitStatus: (state, action: PayloadAction<VisitStatus>) => {
       if (state.activeVisit) {
         state.activeVisit.status = action.payload;
+        // CHANGE: Save updated active visit to localStorage
+        saveToStorage(STORAGE_KEYS.ACTIVE_VISIT, state.activeVisit);
       }
     },
     
@@ -150,6 +234,9 @@ const visitsSlice = createSlice({
         const temp = state.activeVisit;
         state.activeVisit = state.previousVisit;
         state.previousVisit = temp;
+        // CHANGE: Save swapped visits to localStorage
+        saveToStorage(STORAGE_KEYS.ACTIVE_VISIT, state.activeVisit);
+        saveToStorage(STORAGE_KEYS.PREVIOUS_VISIT, state.previousVisit);
       }
     },
     
@@ -162,6 +249,8 @@ const visitsSlice = createSlice({
           ...state.activeVisit.patient,
           ...action.payload,
         };
+        // CHANGE: Save updated active visit to localStorage
+        saveToStorage(STORAGE_KEYS.ACTIVE_VISIT, state.activeVisit);
       }
     },
     
@@ -170,12 +259,18 @@ const visitsSlice = createSlice({
      */
     setVisitError: (state, action: PayloadAction<string | null>) => {
       state.ui.error = action.payload;
+      // CHANGE: Save UI state to localStorage
+      saveToStorage(STORAGE_KEYS.VISIT_UI_STATE, state.ui);
     },
     
     /**
      * RESET VISIT STATE - On logout or cleanup
      */
-    resetVisitsState: () => initialState,
+    resetVisitsState: () => {
+      // Clear localStorage when resetting state
+      clearAllVisitStorage();
+      return initialState;
+    },
     
     /**
      * EMERGENCY CLEAR - Force clear without storing as previous
@@ -185,6 +280,8 @@ const visitsSlice = createSlice({
       state.previousVisit = null;
       state.context = initialState.context;
       state.ui.hasVisitLoaded = false;
+      // Clear localStorage on emergency clear
+      clearAllVisitStorage();
     },
   },
 });

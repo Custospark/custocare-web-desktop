@@ -9,7 +9,6 @@ import {
   Microscope, 
   ClipboardList,
   FileOutput,
-  Stethoscope,
   Search,
   X,
   ChevronRight,
