@@ -4,6 +4,7 @@ import { Route } from 'react-router-dom';
 import { FOCUS_MODE_ROUTES } from './focusModeRouteConstants';
 import FocusedModeLayout from '../../../../shared/components/Navigation/FocusedModeLayout';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
+import ClinicalTemplateFocus from '../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/ClinicalTemplateFocus';
 
 // Lazy load focus mode components - Clinical Care
 const AllergyFocus = React.lazy(() => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/AllergyFocus'));
@@ -41,6 +42,18 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
       </FocusedModeLayout>
     }
   />,
+  <Route
+    key="clinical-templates"
+    path={FOCUS_MODE_ROUTES.CLINICAL_TEMPLATE_FOCUS}
+    element={
+      <FocusedModeLayout title="Clinical Templates">
+        <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+          <ClinicalTemplateFocus theme={theme} />
+        </Suspense>
+      </FocusedModeLayout>
+    }
+  />,
+
   
   <Route
     key="clinical-notes-focus"

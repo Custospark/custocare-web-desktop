@@ -3,6 +3,7 @@ import type { UnifiedUserProfile } from '../../../shared/types/userTypes';
 import type { VerificationFlow, VerificationType } from '../../../modules/account/api/AccountTypes';
 
 /**
+ * authSlice.ts
  * Pending login credentials used ONLY to complete a verification step (email or MFA).
  * Security note:
  * - This is stored only in Redux memory (NOT persisted to localStorage).

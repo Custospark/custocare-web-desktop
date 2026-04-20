@@ -15,6 +15,9 @@
  * @requires axios
  */
 
+/**
+ * AllergyQueries.ts
+ */
 import { useMutation, useQuery, type UseQueryOptions } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { axiosInstance } from '../../../../app/api/axiosConfig';

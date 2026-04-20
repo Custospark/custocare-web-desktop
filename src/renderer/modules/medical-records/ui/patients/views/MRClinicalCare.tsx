@@ -90,6 +90,15 @@ const formOptions: ActionItem[] = useMemo(() => [
     actionPrefix: 'Add',
     handler: () => navigate(FOCUS_MODE_ROUTES.CLINICAL_NOTES_FOCUS)
   },
+    { 
+    key: 'clinical-templates', 
+    label: 'Clinical Template', 
+    icon: <FileText className="w-5 h-5" />, 
+    description: 'Subjective, Objective, Assessment, and Plan documentation',
+    category: 'Documentation',
+    actionPrefix: 'Add',
+    handler: () => navigate(FOCUS_MODE_ROUTES.CLINICAL_TEMPLATE_FOCUS)
+  },
   { 
     key: 'diagnosis', 
     label: 'Diagnosis', 
