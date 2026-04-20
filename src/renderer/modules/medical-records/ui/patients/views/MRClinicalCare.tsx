@@ -13,7 +13,8 @@ import {
   X,
   ChevronRight,
   Plus,
-  Eye
+  Eye,
+  AlertTriangle
 } from 'lucide-react';
 import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/focusModeRouteConstants';
 
@@ -70,53 +71,62 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
   };
 
   // Record Care Form Options with "Add:" prefix
-  const formOptions: ActionItem[] = useMemo(() => [
+const formOptions: ActionItem[] = useMemo(() => [
     { 
-      key: 'clinical-notes', 
-      label: 'Clinical Notes', 
-      icon: <FileText className="w-5 h-5" />, 
-      description: 'Record symptoms, observations, and examination findings',
-      category: 'Documentation',
-      actionPrefix: 'Add',
-      handler: () => navigate(FOCUS_MODE_ROUTES.CLINICAL_NOTES_FOCUS)
-    },
-    { 
-      key: 'diagnosis', 
-      label: 'Diagnosis', 
-      icon: <Activity className="w-5 h-5" />, 
-      description: 'Record primary and secondary diagnoses',
-      category: 'Clinical',
-      actionPrefix: 'Add',
-      handler: () => navigate(FOCUS_MODE_ROUTES.DIAGNOSIS_FOCUS)
-    },
-    { 
-      key: 'prescription', 
-      label: 'Prescription', 
-      icon: <Pill className="w-5 h-5" />, 
-      description: 'Prescribe medications with dosage and frequency',
-      category: 'Treatment',
-      actionPrefix: 'Add',
-      handler: () => navigate(FOCUS_MODE_ROUTES.PRESCRIPTION_FOCUS)
-    },
-    { 
-      key: 'lab-request', 
-      label: 'Lab Request', 
-      icon: <Microscope className="w-5 h-5" />, 
-      description: 'Request laboratory tests and investigations',
-      category: 'Diagnostics',
-      actionPrefix: 'Add',
-      handler: () => navigate(FOCUS_MODE_ROUTES.LAB_REQUEST_FOCUS)
-    },
-    { 
-      key: 'lab-result', 
-      label: 'Lab Result', 
-      icon: <ClipboardList className="w-5 h-5" />, 
-      description: 'Enter and review laboratory results',
-      category: 'Diagnostics',
-      actionPrefix: 'Add',
-      handler: () => navigate(FOCUS_MODE_ROUTES.LAB_RESULT_FOCUS)
-    },
-  ], [navigate]);
+    key: 'allergy', 
+    label: 'Allergy', 
+    icon: <AlertTriangle className="w-5 h-5" />, 
+    description: 'Record patient allergies, reactions, and severity levels',
+    category: 'Clinical',
+    actionPrefix: 'Add',
+    handler: () => navigate(FOCUS_MODE_ROUTES.ALLERGY_FOCUS)
+  },
+  { 
+    key: 'clinical-notes', 
+    label: 'Clinical Notes', 
+    icon: <FileText className="w-5 h-5" />, 
+    description: 'Record symptoms, observations, and examination findings',
+    category: 'Documentation',
+    actionPrefix: 'Add',
+    handler: () => navigate(FOCUS_MODE_ROUTES.CLINICAL_NOTES_FOCUS)
+  },
+  { 
+    key: 'diagnosis', 
+    label: 'Diagnosis', 
+    icon: <Activity className="w-5 h-5" />, 
+    description: 'Record primary and secondary diagnoses',
+    category: 'Clinical',
+    actionPrefix: 'Add',
+    handler: () => navigate(FOCUS_MODE_ROUTES.DIAGNOSIS_FOCUS)
+  },
+  { 
+    key: 'prescription', 
+    label: 'Prescription', 
+    icon: <Pill className="w-5 h-5" />, 
+    description: 'Prescribe medications with dosage and frequency',
+    category: 'Treatment',
+    actionPrefix: 'Add',
+    handler: () => navigate(FOCUS_MODE_ROUTES.PRESCRIPTION_FOCUS)
+  },
+  { 
+    key: 'lab-request', 
+    label: 'Lab Request', 
+    icon: <Microscope className="w-5 h-5" />, 
+    description: 'Request laboratory tests and investigations',
+    category: 'Diagnostics',
+    actionPrefix: 'Add',
+    handler: () => navigate(FOCUS_MODE_ROUTES.LAB_REQUEST_FOCUS)
+  },
+  { 
+    key: 'lab-result', 
+    label: 'Lab Result', 
+    icon: <ClipboardList className="w-5 h-5" />, 
+    description: 'Enter and review laboratory results',
+    category: 'Diagnostics',
+    actionPrefix: 'Add',
+    handler: () => navigate(FOCUS_MODE_ROUTES.LAB_RESULT_FOCUS)
+  },
+], [navigate]);
 
   // Report Options with "View" prefix
   const reportOptions: ActionItem[] = useMemo(() => [

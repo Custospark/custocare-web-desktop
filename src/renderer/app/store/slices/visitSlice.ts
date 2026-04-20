@@ -328,6 +328,9 @@ export const selectActiveVisitId = (state: RootState) =>
 export const selectActivePatient = (state: RootState) => 
   state.visits.activeVisit?.patient || null;
 
+export const selectActiveVisitPatientId = (state: RootState) => 
+  state.visits.activeVisit?.patient_id || null;
+
 export const selectActiveVisitPhase = (state: RootState) => 
   state.visits.activeVisit?.current_phase || null;
 

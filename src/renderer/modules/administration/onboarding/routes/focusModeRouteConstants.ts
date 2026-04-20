@@ -7,6 +7,8 @@ export const FOCUS_MODE_ROUTES = {
   PRESCRIPTION_FOCUS: '/clinical-care-focus/prescription',
   LAB_REQUEST_FOCUS: '/clinical-care-focus/lab-request',
   LAB_RESULT_FOCUS: '/clinical-care-focus/lab-result',
+  ALLERGY_FOCUS: '/clinical-care-focus/allergy',  
+
   
   // Patient Record Focus Routes
   PATIENT_RECORD_FOCUS: '/patient-record-focus',
