@@ -14,6 +14,8 @@ import {
   Substitution,
 } from '../../../../api/prescription-items/PrescriptionItemsTypes';
 import type { ColorTokens, MedicationFormData } from './prescriptionForm.types';
+import { MedicationAutocomplete } from './MedicationAutocomplete';
+import type { BillableItem } from '../../../../api/billable-items/BillingItemsTypes';
 
 interface MedicationEditorModalProps {
   open: boolean;
@@ -63,6 +65,28 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
   onChange,
   onSubmit,
 }) => {
+  // Handle medication selection from autocomplete
+  const handleMedicationSelect = (medication: BillableItem) => {
+    // Auto-fill dosage form if available
+    if ('dosage_form' in medication && medication.dosage_form) {
+      // Find matching DosageForm enum value
+      const matchingForm = Object.values(DosageForm).find(
+        f => f.toLowerCase() === medication.dosage_form?.toLowerCase()
+      );
+      if (matchingForm) {
+        onChange('dosage_form', matchingForm);
+      }
+    }
+    
+    // Auto-fill strength if available
+    if ('strength' in medication && medication.strength) {
+      onChange('strength', medication.strength);
+    }
+    
+    // You can add more auto-fill logic here
+    // e.g., default dosage unit based on form type
+  };
+
   return (
     <AnimatePresence>
       {open && (
@@ -110,17 +134,19 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                     </RequiredLabel>
 
                     <div className="relative">
-                      <input
-                        type="text"
-                        required
+                      <MedicationAutocomplete
                         value={medicationForm.medication_name}
-                        onChange={(e) => onChange('medication_name', e.target.value)}
-                        className={cn('w-full rounded-lg border p-2 pr-8 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
-                        placeholder="e.g., Amoxicillin"
-                        autoFocus
+                        onChange={(value) => onChange('medication_name', value)}
+                        onSelect={handleMedicationSelect}
+                        placeholder="e.g., Amoxicillin, Paracetamol, Insulin..."
+                        required={true}
+                        isDark={isDark}
+                        colors={colors}
+                        autoFocus={true}
+                        hasAllergyWarning={!!allergyAlertVisible}
                       />
                       {allergyAlertVisible && (
-                        <AlertTriangle className="absolute right-2 top-2.5 h-4 w-4 text-red-500" />
+                        <AlertTriangle className="absolute right-2 top-2.5 h-4 w-4 text-red-500 pointer-events-none" />
                       )}
                     </div>
                   </div>
@@ -132,6 +158,7 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                       value={medicationForm.brand_name}
                       onChange={(e) => onChange('brand_name', e.target.value)}
                       className={cn('w-full rounded-lg border p-2 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
+                      placeholder="e.g., Amoxil"
                     />
                   </div>
                 </div>

@@ -84,7 +84,7 @@ export const PrescriptionHeader: React.FC<PrescriptionHeaderProps> = ({
             onClick={onRefresh}
             disabled={isRefreshing}
             className={cn(
-              'inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+              'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
               colors.border.primary,
               colors.bg.hover,
               colors.text.secondary,
@@ -101,7 +101,7 @@ export const PrescriptionHeader: React.FC<PrescriptionHeaderProps> = ({
           type="button"
           onClick={onOpenTemplateSelector}
           className={cn(
-            'inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
             colors.border.primary,
             colors.bg.hover,
             colors.text.brand
@@ -114,7 +114,7 @@ export const PrescriptionHeader: React.FC<PrescriptionHeaderProps> = ({
         <button
           type="button"
           onClick={onAddMedication}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-blue-700"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-blue-700"
         >
           <Plus className="h-4 w-4" />
           Add Medication
