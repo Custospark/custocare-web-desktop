@@ -12,7 +12,7 @@
  * including dosage forms, frequencies, routes, and all clinical parameters.
  */
 
-import { ApiSuccessResponse ,ApiErrorResponse} from "../prescription/PrescriptionTypes";
+import type{  ApiSuccessResponse ,ApiErrorResponse} from "../prescription/PrescriptionTypes";
 export type {ApiErrorResponse};
 /* -------------------------------------------------------------------------- */
 /*                                   ENUMS                                    */

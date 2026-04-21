@@ -87,8 +87,8 @@ export const ClinicalTemplateForm: React.FC<ClinicalTemplateFormProps> = ({
   
   // Search and filter state (passed to list component)
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
-  const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'private' | 'public'>('all');
+  const [statusFilter, ] = useState<'all' | 'active' | 'inactive'>('all');
+  const [visibilityFilter, ] = useState<'all' | 'private' | 'public'>('all');
 
   const [formData, setFormData] = useState<TemplateFormData>(EMPTY_FORM);
   const [medications, setMedications] = useState<TemplateMedicationItem[]>([]);
@@ -176,7 +176,6 @@ export const ClinicalTemplateForm: React.FC<ClinicalTemplateFormProps> = ({
   }, [filteredTemplates, currentPage, pageSize]);
 
   const totalCount = filteredTemplates.length;
-  const totalPages = Math.ceil(totalCount / pageSize);
 
   // Reset to first page when filters change
   useEffect(() => {

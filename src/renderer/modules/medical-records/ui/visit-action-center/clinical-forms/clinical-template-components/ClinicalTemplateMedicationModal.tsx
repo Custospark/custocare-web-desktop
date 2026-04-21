@@ -13,7 +13,7 @@ import {
   Substitution,
 } from '../../../../api/prescription-items/PrescriptionItemsTypes';
 import type { BillableItem } from '../../../../api/billable-items/BillingItemsTypes';
-import { ColorTokens } from '../prescription-form-components/prescriptionForm.types';
+import { type ColorTokens } from '../prescription-form-components/prescriptionForm.types';
 import MedicationAutocomplete from '../prescription-form-components/MedicationAutocomplete';
 
 export interface MedicationFormData {
