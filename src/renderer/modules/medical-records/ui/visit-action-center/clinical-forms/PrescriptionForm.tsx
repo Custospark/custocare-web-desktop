@@ -688,7 +688,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
           // Update existing prescription
           const updateData: UpdatePrescriptionRequest = {
             visit_id: visitId || null,
-            status: PrescriptionStatus.DRAFT,
+            status: PrescriptionStatus.ACTIVE,
             diagnosis: formData.diagnosis || null,
             clinical_notes: formData.clinical_notes || null,
             special_instructions: formData.special_instructions || null,
@@ -720,7 +720,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
             prescribed_by: userId || 0,
             prescriber_type: PrescriberType.MEDICAL_DOCTOR,
             prescription_format: PrescriptionFormat.ELECTRONIC,
-            status: PrescriptionStatus.DRAFT,
+            status: PrescriptionStatus.ACTIVE,
             prescription_type: formData.prescription_type,
             priority: formData.priority,
             valid_until: formData.valid_until || null,
