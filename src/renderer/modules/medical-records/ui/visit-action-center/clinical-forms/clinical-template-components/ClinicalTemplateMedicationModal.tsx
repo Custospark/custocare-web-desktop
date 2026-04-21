@@ -171,7 +171,7 @@ export const ClinicalTemplateMedicationModal: React.FC<
                       value={medicationForm.medication_name}
                       onChange={(value) => onChange('medication_name', value)}
                       onSelect={handleMedicationSelect}
-                      placeholder="Search for medication..."
+                      placeholder="e.g., Amoxicillin, Paracetamol, Insulin..."
                       required
                       isDark={isDark}
                       colors={colors}
