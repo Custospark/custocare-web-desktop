@@ -15,13 +15,13 @@
   },
   "scripts": {
     "dev": "npm-run-all --parallel dev:react dev:electron",
-    "dev:react": "vite",
+    "dev:react": "node --max-old-space-size=8192 --stack-size=16384 ./node_modules/vite/bin/vite.js",
     "clean": "rimraf dist",
     "dev:electron": "npm run transpile:electron && cross-env NODE_ENV=development electron .",
     "react:build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "transpile:electron": "tsc --project src/tsconfig.json",
+    "transpile:electron": "node --max-old-space-size=8192 --stack-size=16384 ./node_modules/typescript/bin/tsc --project src/tsconfig.json",
     "build:mac": "npm run transpile:electron && npm run react:build && npx electron-builder --mac --arm64",
     "build:win": "npm run transpile:electron && npm run react:build && npx electron-builder --win --x64",
     "build:linux": "npm run transpile:electron && npm run react:build && npx electron-builder --linux --x64",
@@ -73,7 +73,7 @@
     "vite": "^7.2.4"
   },
   "build": {
-    "appId": "com.custospark.custocare-ai",
+    "appId": "com.custospark.custocare",
     "productName": "Custocare",
     "directories": {
       "output": "dist/releases/",
