@@ -62,7 +62,7 @@ import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/
 import PrescriptionHeader from './prescription-form-components/PrescriptionHeader';
 import PrescriptionAllergyBanner from './prescription-form-components/PrescriptionAllergyBanner';
 import PrescriptionDetailsCard from './prescription-form-components/PrescriptionDetailsCard';
-import PrescriptionMedicationsCard from './prescription-form-components/PrescriptionMedicationsCard';
+import PrescriptionMedicationsCard from './prescription-form-components/PrescriptionMedicationsTable';
 import MedicationEditorModal from './prescription-form-components/MedicationEditorModal';
 import TemplateSelectorModal from './prescription-form-components/TemplateSelectorModal';
 import type {
@@ -418,7 +418,6 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
           },
         });
 
-        showToast('success', 'Medication updated', 3000);
         await refreshItems();
       } else if (editingMedication && !effectivePrescriptionId) {
         const localUpdated = buildLocalPrescriptionItem(itemData, editingMedication.id);
@@ -426,7 +425,6 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
         showToast('success', 'Medication updated', 3000);
       } else if (effectivePrescriptionId) {
         await createItem.mutateAsync(itemData);
-        showToast('success', 'Medication added', 3000);
         await refreshItems();
       } else {
         const tempItem = buildLocalPrescriptionItem(itemData, Date.now());
@@ -472,7 +470,6 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
             id: item.id,
             prescriptionId: effectivePrescriptionId,
           });
-          showToast('success', 'Medication removed', 3000);
           await refreshItems();
         } else {
           setMedications((prev) => prev.filter((m) => m.id !== item.id));
@@ -774,61 +771,57 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
       />
 
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
-          <div className="xl:col-span-2">
-            <PrescriptionDetailsCard
-              isDark={isDark}
-              colors={colors}
-              prescription={currentPrescription}
-              formData={formData}
-              isEditorOpen={isDetailsEditorOpen}
-              onOpenEditor={() => setIsDetailsEditorOpen(true)}
-              onCloseEditor={() => setIsDetailsEditorOpen(false)}
-              onChange={handleFormChange}
-            />
-          </div>
+    <div className="space-y-6">
+      <PrescriptionDetailsCard
+        isDark={isDark}
+        colors={colors}
+        prescription={currentPrescription}
+        formData={formData}
+        isEditorOpen={isDetailsEditorOpen}
+        onOpenEditor={() => setIsDetailsEditorOpen(true)}
+        onCloseEditor={() => setIsDetailsEditorOpen(false)}
+        onChange={handleFormChange}
+      />
 
-          <div className="xl:col-span-3">
-            <PrescriptionMedicationsCard
-              isDark={isDark}
-              colors={colors}
-              prescription={currentPrescription}
-              formData={formData}
-              medications={medications}
-              onAddMedication={openAddMedicationModal}
-              onEditMedication={editMedicationHandler}
-              onDeleteMedication={deleteMedicationHandler}
-            />
-          </div>
-        </div>
+      <PrescriptionMedicationsCard
+        isDark={isDark}
+        colors={colors}
+        prescription={currentPrescription}
+        formData={formData}
+        medications={medications}
+        onAddMedication={openAddMedicationModal}
+        onEditMedication={editMedicationHandler}
+        onDeleteMedication={deleteMedicationHandler}
+      />
+    </div>
 
-        <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-          {onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className={cn('inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all', colors.bg.hover, colors.text.secondary)}
-            >
-              <X className="h-4 w-4" />
-              Cancel
-            </button>
-          )}
+  <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+    {onCancel && (
+      <button
+        type="button"
+        onClick={onCancel}
+        className={cn('inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all', colors.bg.hover, colors.text.secondary)}
+      >
+        <X className="h-4 w-4" />
+        Cancel
+      </button>
+    )}
 
-          <button
-            type="submit"
-            disabled={isMutating || isSubmitting || medications.length === 0}
-            className={cn(
-              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
-              isMutating || isSubmitting || medications.length === 0
-                ? 'cursor-not-allowed bg-gray-400'
-                : 'cursor-pointer bg-blue-600 hover:bg-blue-700'
-            )}
-          >
-            {isSubmitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {currentPrescription ? 'Save Prescription Updates' : 'Create Prescription'}
-          </button>
-        </div>
-      </form>
+    <button
+      type="submit"
+      disabled={isMutating || isSubmitting || medications.length === 0}
+      className={cn(
+        'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
+        isMutating || isSubmitting || medications.length === 0
+          ? 'cursor-not-allowed bg-gray-400'
+          : 'cursor-pointer bg-blue-600 hover:bg-blue-700'
+      )}
+    >
+      {isSubmitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+      {currentPrescription ? 'Save Prescription Updates' : 'Create Prescription'}
+    </button>
+  </div>
+</form>
 
       <MedicationEditorModal
         open={showMedicationModal}
