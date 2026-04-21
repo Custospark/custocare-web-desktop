@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Printer, X } from 'lucide-react';
+import { Printer, X, User } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import type { Prescription } from '../../../../api/prescription/PrescriptionTypes';
 import {
@@ -28,6 +28,27 @@ function buildPrintHtml(params: {
   const prescriptionDate = prescription?.prescription_date
     ? new Date(prescription.prescription_date).toLocaleDateString()
     : new Date().toLocaleDateString();
+
+  // Helper to get prescriber name safely
+  const getPrescriberName = (): string => {
+    if (!prescription) return 'Not specified';
+    if (typeof prescription.prescribed_by === 'object' && prescription.prescribed_by !== null) {
+      return prescription.prescribed_by.name;
+    }
+    return prescription.prescribed_by_user?.name || 'Not specified';
+  };
+
+  // Helper to get prescriber type safely
+  const getPrescriberType = (): string => {
+    if (!prescription) return '';
+    if (typeof prescription.prescribed_by === 'object' && prescription.prescribed_by !== null) {
+      return prescription.prescribed_by.type;
+    }
+    return prescription.prescriber_type || '';
+  };
+
+  const prescriberName = getPrescriberName();
+  const prescriberType = getPrescriberType();
 
   return `
     <!DOCTYPE html>
@@ -136,6 +157,23 @@ function buildPrintHtml(params: {
             color: #0f172a;
           }
 
+          .prescriber-box {
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background: #f8fafc;
+            padding: 14px 16px;
+            margin-bottom: 24px;
+          }
+
+          .prescriber-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e3a8a;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+          }
+
           .medications-table {
             width: 100%;
             border-collapse: collapse;
@@ -210,6 +248,15 @@ function buildPrintHtml(params: {
             color: #0f172a;
           }
 
+          .footer {
+            margin-top: 32px;
+            padding-top: 16px;
+            border-top: 1px solid #cbd5e1;
+            font-size: 11px;
+            color: #64748b;
+            text-align: center;
+          }
+
           @media print {
             body {
               padding: 18px;
@@ -235,6 +282,14 @@ function buildPrintHtml(params: {
             <div class="header-meta">
               <div><strong>Prescription #:</strong> ${prescription?.prescription_number || 'Pending after save'}</div>
               <div><strong>Date:</strong> ${prescriptionDate}</div>
+            </div>
+          </div>
+
+          <!-- Prescriber Information -->
+          <div class="prescriber-box">
+            <div class="prescriber-label">Prescriber Information</div>
+            <div class="detail-value">
+              <strong>${prescriberName}</strong>${prescriberType ? ` (${prescriberType})` : ''}
             </div>
           </div>
 
@@ -334,8 +389,8 @@ function buildPrintHtml(params: {
                     </td>
                     <td>
                       ${
-                        med.patientInstruction
-                          ? `<div>${med.patientInstruction}</div>`
+                        med.organizedInstructions
+                          ? `<div>${med.organizedInstructions}</div>`
                           : '<div>—</div>'
                       }
                      
@@ -396,6 +451,10 @@ function buildPrintHtml(params: {
           `
               : ''
           }
+          
+          <div class="footer">
+            This is a computer-generated prescription. No signature is required for electronic prescriptions.
+          </div>
         </div>
       </body>
     </html>
@@ -411,6 +470,24 @@ export function PrescriptionMedicationsPreview({
   onClose,
 }: PrescriptionMedicationsPreviewProps) {
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Helper to get prescriber name safely
+  const getPrescriberName = (): string => {
+    if (!prescription) return 'Not specified';
+    if (typeof prescription.prescribed_by === 'object' && prescription.prescribed_by !== null) {
+      return prescription.prescribed_by.name;
+    }
+    return prescription.prescribed_by_user?.name || 'Not specified';
+  };
+
+  // Helper to get prescriber type safely
+  const getPrescriberType = (): string => {
+    if (!prescription) return '';
+    if (typeof prescription.prescribed_by === 'object' && prescription.prescribed_by !== null) {
+      return prescription.prescribed_by.type;
+    }
+    return prescription.prescriber_type || '';
+  };
 
   const previewSurfaceClass = cn(
     'rounded-2xl border',
@@ -523,6 +600,20 @@ export function PrescriptionMedicationsPreview({
                 ? new Date(prescription.prescription_date).toLocaleDateString()
                 : new Date().toLocaleDateString()}
             </div>
+          </div>
+        </div>
+
+        {/* Prescriber Information */}
+        <div className={previewMutedPanelClass}>
+          <div className="flex items-center gap-2 mb-2">
+            <User className={cn('h-4 w-4', colors.text.secondary)} />
+            <h5 className={cn('text-sm font-semibold uppercase tracking-wide', colors.text.secondary)}>
+              Prescriber Information
+            </h5>
+          </div>
+          <div className={cn('text-sm', colors.text.primary)}>
+            <strong>{getPrescriberName()}</strong>
+            {getPrescriberType() && ` (${getPrescriberType()})`}
           </div>
         </div>
 
@@ -658,13 +749,9 @@ export function PrescriptionMedicationsPreview({
                   </td>
 
                   <td className="px-4 py-4 text-sm">
-                    {/* <div className={cn('leading-5', colors.text.primary)}>
-                      {med.patientInstruction || '—'}
-                    </div> */}
-
                     {med.organizedInstructions && (
                       <div className={cn('leading-5', colors.text.primary)}>
-                         {med.organizedInstructions}
+                        {med.organizedInstructions}
                       </div>
                     )}
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FolderOpen, Pill, Plus } from 'lucide-react';
+import { FolderOpen, Pill, Plus, RefreshCw } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import type { ColorTokens } from './prescriptionForm.types';
 import type { Prescription } from '../../../../api/prescription/PrescriptionTypes';
@@ -10,6 +10,8 @@ interface PrescriptionHeaderProps {
   prescription: Prescription | null;
   onOpenTemplateSelector: () => void;
   onAddMedication: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 export const PrescriptionHeader: React.FC<PrescriptionHeaderProps> = ({
@@ -18,6 +20,8 @@ export const PrescriptionHeader: React.FC<PrescriptionHeaderProps> = ({
   prescription,
   onOpenTemplateSelector,
   onAddMedication,
+  onRefresh,
+  isRefreshing = false,
 }) => {
   const hasExistingPrescription = !!prescription;
 
@@ -44,6 +48,19 @@ export const PrescriptionHeader: React.FC<PrescriptionHeaderProps> = ({
                 #{prescription.prescription_number}
               </span>
             )}
+
+            {prescription?.status && (
+              <span
+                className={cn(
+                  'rounded-full px-2.5 py-1 text-xs font-medium',
+                  isDark 
+                    ? 'bg-yellow-900/30 text-yellow-300' 
+                    : 'bg-yellow-50 text-yellow-700'
+                )}
+              >
+                {prescription.status}
+              </span>
+            )}
           </div>
 
           <p className={cn('mt-1 text-sm', colors.text.secondary)}>
@@ -51,10 +68,35 @@ export const PrescriptionHeader: React.FC<PrescriptionHeaderProps> = ({
               ? 'Review the current prescription first, then edit only what is needed.'
               : 'No existing prescription found. Start with details or add medications when ready.'}
           </p>
+          
+          {hasExistingPrescription && prescription?.updated_at && (
+            <p className={cn('mt-1 text-xs', colors.text.tertiary)}>
+              Last updated: {new Date(prescription.updated_at).toLocaleString()}
+            </p>
+          )}
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        {onRefresh && (
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+              colors.border.primary,
+              colors.bg.hover,
+              colors.text.secondary,
+              isRefreshing && 'cursor-not-allowed opacity-50'
+            )}
+            title="Refresh prescription data"
+          >
+            <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+        )}
+
         <button
           type="button"
           onClick={onOpenTemplateSelector}

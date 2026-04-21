@@ -219,7 +219,7 @@ export interface Prescription {
   allergy_notes: string | null;
 
   // Prescriber information
-  prescribed_by: number;
+  prescribed_by: PrescribedByReference;
   prescriber_type: PrescriberType;
   prescriber_license: string | null;
   prescriber_contact: string | null;
@@ -257,6 +257,11 @@ export interface Prescription {
   // Computed properties (from backend)
   total_items?: number;
   total_quantity?: number;
+}
+export interface PrescribedByReference {
+  id: number;
+  name: string;
+  type: PrescriberType;
 }
 
 /* -------------------------------------------------------------------------- */

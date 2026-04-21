@@ -14,7 +14,7 @@ import { cn } from '../../../../../shared/utils/classNameUtils';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
-import { getActiveFacilityId ,getUserId} from '../../../../../app/store/utils/contextSelectors';
+import { getActiveFacilityId, getUserId } from '../../../../../app/store/utils/contextSelectors';
 import { selectActiveVisitPatientId, selectActiveVisitId } from '../../../../../app/store/slices/visitSlice';
 import type { RootState } from '../../../../../app/store/rootReducer';
 import {
@@ -30,7 +30,9 @@ import {
   prescriptionKeys,
   useCreatePrescription,
   useGetPatientPrescriptions,
+  useGetPrescriptionById,
   useUpdatePrescription,
+  useDeletePrescription,
 } from '../../../api/prescription/PrescriptionQueries';
 import {
   prescriptionItemKeys,
@@ -114,9 +116,9 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
   const visitId = useSelector((state: RootState) => selectActiveVisitId(state));
   const userId = useSelector((state: RootState) => getUserId(state));
 
-
   const patientNumericId = patientId ? Number(patientId) : 0;
 
+  // Query for patient's prescriptions to find the latest draft
   const patientPrescriptionsQuery = useGetPatientPrescriptions(
     patientNumericId,
     [],
@@ -125,13 +127,18 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
     }
   );
 
+  // Resolve the existing prescription (either passed in or latest draft)
   const resolvedExistingPrescription = useMemo<Prescription | null>(() => {
     if (existingPrescription) return existingPrescription;
 
     const prescriptions = patientPrescriptionsQuery.data?.data || [];
     if (!prescriptions.length) return null;
 
-    const sorted = [...prescriptions].sort((a, b) => {
+    // Find draft prescriptions first, then sort by date
+    const drafts = prescriptions.filter(p => p.status === PrescriptionStatus.DRAFT);
+    const activePrescriptions = drafts.length ? drafts : prescriptions;
+    
+    const sorted = [...activePrescriptions].sort((a, b) => {
       const aTime = new Date(a.updated_at || a.created_at).getTime();
       const bTime = new Date(b.updated_at || b.created_at).getTime();
       return bTime - aTime;
@@ -141,12 +148,23 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
   }, [existingPrescription, patientPrescriptionsQuery.data]);
 
   const [createdPrescriptionId, setCreatedPrescriptionId] = useState<number | null>(null);
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
 
-  const currentPrescription = createdPrescriptionId
-    ? null
-    : resolvedExistingPrescription;
+  // Determine the current prescription ID (created or existing)
+  const currentPrescriptionId = createdPrescriptionId || resolvedExistingPrescription?.id || null;
 
-  const effectivePrescriptionId = createdPrescriptionId || currentPrescription?.id || null;
+  // Fetch the latest prescription data when ID changes or after mutations
+  const currentPrescriptionQuery = useGetPrescriptionById(
+    currentPrescriptionId ?? 0,
+    {
+      enabled: !!currentPrescriptionId,
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+      staleTime: 0, // Always fetch fresh data
+    }
+  );
+
+  const currentPrescription = currentPrescriptionQuery.data?.data || resolvedExistingPrescription;
 
   const [formData, setFormData] = useState<PrescriptionFormData>(EMPTY_PRESCRIPTION);
   const [medications, setMedications] = useState<PrescriptionItem[]>([]);
@@ -165,30 +183,36 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Queries
   const allergiesQuery = useGetAllergies(patientId ?? '', {}, { enabled: !!patientId });
-
   const templatesQuery = useGetFacilityTemplates(
     { facility_id: facilityId || 0, include_system: true },
     { enabled: !!facilityId && showTemplateSelector }
   );
-
-  const itemsQuery = useGetPrescriptionItems(effectivePrescriptionId ?? 0, {
-    enabled: !!effectivePrescriptionId && !isSubmitting,
+  const itemsQuery = useGetPrescriptionItems(currentPrescriptionId ?? 0, {
+    enabled: !!currentPrescriptionId && !isSubmitting,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 
+  // Mutations
   const createPrescription = useCreatePrescription();
   const updatePrescription = useUpdatePrescription();
-  const createItem = useCreatePrescriptionItem(effectivePrescriptionId ?? 0);
+  const deletePrescription = useDeletePrescription();
+  const createItem = useCreatePrescriptionItem(currentPrescriptionId ?? 0);
   const updateItem = useUpdatePrescriptionItem();
   const deleteItem = useDeletePrescriptionItem();
 
   const isMutating =
     createPrescription.isPending ||
     updatePrescription.isPending ||
+    deletePrescription.isPending ||
     createItem.isPending ||
     updateItem.isPending ||
     deleteItem.isPending;
 
+  // Colors based on theme
   const colors = useMemo(
     () => ({
       bg: {
@@ -214,29 +238,79 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
     [isDark]
   );
 
+  // Refresh all prescription data
+  const refreshAllData = useCallback(async () => {
+    if (!currentPrescriptionId) return;
+    
+    setIsManualRefreshing(true);
+    try {
+      // Invalidate and refetch prescription details
+      await queryClient.invalidateQueries({
+        queryKey: prescriptionKeys.detail(currentPrescriptionId),
+      });
+      await queryClient.refetchQueries({
+        queryKey: prescriptionKeys.detail(currentPrescriptionId),
+      });
+
+      // Invalidate and refetch items
+      await queryClient.invalidateQueries({
+        queryKey: prescriptionItemKeys.list(currentPrescriptionId),
+      });
+      await queryClient.refetchQueries({
+        queryKey: prescriptionItemKeys.list(currentPrescriptionId),
+      });
+
+      showToast('success', 'Prescription data refreshed', 2000);
+    } catch (error) {
+      console.error('Failed to refresh data:', error);
+      showToast('error', 'Failed to refresh data', 3000);
+    } finally {
+      setIsManualRefreshing(false);
+    }
+  }, [currentPrescriptionId, queryClient, showToast]);
+
+  // Update form data when prescription changes
   useEffect(() => {
-    setFormData(toPrescriptionFormData(currentPrescription));
+    if (currentPrescription) {
+      setFormData(toPrescriptionFormData(currentPrescription));
+    }
   }, [currentPrescription]);
 
+  // Update medications when items query returns data
   useEffect(() => {
-    if (itemsQuery.data?.data && effectivePrescriptionId) {
+    if (itemsQuery.data?.data && currentPrescriptionId) {
       setMedications(itemsQuery.data.data);
-    } else if (!effectivePrescriptionId) {
+    } else if (!currentPrescriptionId) {
+      // Keep existing medications for unsaved prescriptions
       setMedications((prev) => prev);
     }
-  }, [itemsQuery.data, effectivePrescriptionId]);
+  }, [itemsQuery.data, currentPrescriptionId]);
 
+  // Refresh items helper
   const refreshItems = useCallback(async () => {
-    if (!effectivePrescriptionId) return;
+    if (!currentPrescriptionId) return;
 
     await queryClient.invalidateQueries({
-      queryKey: prescriptionItemKeys.list(effectivePrescriptionId),
+      queryKey: prescriptionItemKeys.list(currentPrescriptionId),
     });
     await queryClient.refetchQueries({
-      queryKey: prescriptionItemKeys.list(effectivePrescriptionId),
+      queryKey: prescriptionItemKeys.list(currentPrescriptionId),
     });
-  }, [effectivePrescriptionId, queryClient]);
+  }, [currentPrescriptionId, queryClient]);
 
+  // Refresh prescription helper
+  const refreshPrescription = useCallback(async () => {
+    if (!currentPrescriptionId) return;
+
+    await queryClient.invalidateQueries({
+      queryKey: prescriptionKeys.detail(currentPrescriptionId),
+    });
+    await queryClient.refetchQueries({
+      queryKey: prescriptionKeys.detail(currentPrescriptionId),
+    });
+  }, [currentPrescriptionId, queryClient]);
+
+  // Normalize allergy response
   const normalizeAllergyResponse = useCallback((response: unknown): AllergyLike[] => {
     const payload = response as
       | {
@@ -263,6 +337,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
     [allergiesQuery.data, normalizeAllergyResponse]
   );
 
+  // Check for allergies
   const checkAllergy = useCallback(
     (medicationName: string): { isAllergic: boolean; allergen: string; severity: string } | null => {
       if (!patientAllergies.length) return null;
@@ -286,6 +361,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
     [patientAllergies]
   );
 
+  // Debounced allergy check
   const debouncedMedName = useDebounce(medicationForm.medication_name, 300);
 
   useEffect(() => {
@@ -307,6 +383,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
     }
   }, [debouncedMedName, checkAllergy]);
 
+  // Filter templates
   const filteredTemplates = useMemo(() => {
     const templates = templatesQuery.data?.data || [];
     const search = templateSearch.trim().toLowerCase();
@@ -320,6 +397,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
     );
   }, [templateSearch, templatesQuery.data]);
 
+  // Form change handlers
   const handleFormChange = useCallback(
     (
       field: keyof PrescriptionFormData,
@@ -371,6 +449,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
     setShowMedicationModal(true);
   }, []);
 
+  // Add or update medication
   const addOrUpdateMedication = useCallback(async () => {
     if (!medicationForm.medication_name.trim()) {
       showToast('error', 'Medication name is required', 3000);
@@ -409,7 +488,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
     const itemData: CreatePrescriptionItemRequest = toPrescriptionItemRequest(medicationForm);
 
     try {
-      if (editingMedication && effectivePrescriptionId) {
+      if (editingMedication && currentPrescriptionId) {
         await updateItem.mutateAsync({
           id: editingMedication.id,
           data: {
@@ -417,15 +496,16 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
             ...itemData,
           },
         });
-
         await refreshItems();
-      } else if (editingMedication && !effectivePrescriptionId) {
+        await refreshPrescription();
+      } else if (editingMedication && !currentPrescriptionId) {
         const localUpdated = buildLocalPrescriptionItem(itemData, editingMedication.id);
         setMedications((prev) => prev.map((m) => (m.id === editingMedication.id ? localUpdated : m)));
         showToast('success', 'Medication updated', 3000);
-      } else if (effectivePrescriptionId) {
+      } else if (currentPrescriptionId) {
         await createItem.mutateAsync(itemData);
         await refreshItems();
+        await refreshPrescription();
       } else {
         const tempItem = buildLocalPrescriptionItem(itemData, Date.now());
         setMedications((prev) => [...prev, tempItem]);
@@ -443,14 +523,16 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
     confirm,
     theme,
     editingMedication,
-    effectivePrescriptionId,
+    currentPrescriptionId,
     updateItem,
     refreshItems,
+    refreshPrescription,
     createItem,
     resetMedicationEditor,
     showToast,
   ]);
 
+  // Delete medication
   const deleteMedicationHandler = useCallback(
     async (item: PrescriptionItem) => {
       const confirmed = await confirm({
@@ -465,24 +547,26 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
       if (!confirmed) return;
 
       try {
-        if (effectivePrescriptionId && item.id > 0) {
+        if (currentPrescriptionId && item.id > 0) {
           await deleteItem.mutateAsync({
             id: item.id,
-            prescriptionId: effectivePrescriptionId,
+            prescriptionId: currentPrescriptionId,
           });
           await refreshItems();
+          await refreshPrescription();
         } else {
           setMedications((prev) => prev.filter((m) => m.id !== item.id));
-          showToast('success', 'Medication removed', 3000);
+          // showToast('success', 'Medication removed', 3000);
         }
       } catch (error) {
         console.error('Failed to delete medication:', error);
         showToast('error', 'Failed to remove medication', 5000);
       }
     },
-    [confirm, theme, effectivePrescriptionId, deleteItem, refreshItems, showToast]
+    [confirm, theme, currentPrescriptionId, deleteItem, refreshItems, refreshPrescription, showToast]
   );
 
+  // Apply template
   const applyTemplate = useCallback(
     async (template: ClinicalTemplate) => {
       setShowTemplateSelector(false);
@@ -500,13 +584,13 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
           return;
         }
 
-        if (effectivePrescriptionId) {
+        if (currentPrescriptionId) {
           for (const med of template.default_medications) {
             const itemData = templateToPrescriptionItem(med);
             await createItem.mutateAsync(itemData);
           }
-
           await refreshItems();
+          await refreshPrescription();
         } else {
           const newMeds = template.default_medications.map((med, idx) =>
             buildLocalPrescriptionItem(templateToPrescriptionItem(med), Date.now() + idx)
@@ -524,8 +608,41 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
         showToast('error', 'Failed to apply template', 5000);
       }
     },
-    [effectivePrescriptionId, createItem, refreshItems, showToast]
+    [currentPrescriptionId, createItem, refreshItems, refreshPrescription, showToast]
   );
+
+  // Delete prescription handler
+  const handleDeletePrescription = useCallback(async () => {
+    if (!currentPrescriptionId) return;
+
+    const confirmed = await confirm({
+      title: 'Delete Prescription',
+      message: 'Are you sure you want to delete this prescription? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      theme,
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await deletePrescription.mutateAsync({ id: currentPrescriptionId });
+      
+      // Invalidate patient prescriptions list
+      await queryClient.invalidateQueries({
+        queryKey: prescriptionKeys.patient(patientNumericId),
+      });
+      
+      showToast('success', 'Prescription deleted successfully', 5000);
+      
+      // Call onCancel to close the form
+      onCancel?.();
+    } catch (error) {
+      console.error('Failed to delete prescription:', error);
+      showToast('error', 'Failed to delete prescription', 5000);
+    }
+  }, [currentPrescriptionId, deletePrescription, confirm, theme, queryClient, patientNumericId, onCancel, showToast]);
 
   const handleNavigateToCreateTemplate = useCallback(() => {
     setIsNavigatingToTemplateCreate(true);
@@ -534,6 +651,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
     }, 150);
   }, [navigate]);
 
+  // Handle form submission
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -567,6 +685,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
 
       try {
         if (currentPrescription?.id) {
+          // Update existing prescription
           const updateData: UpdatePrescriptionRequest = {
             visit_id: visitId || null,
             status: PrescriptionStatus.DRAFT,
@@ -587,10 +706,12 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
           });
 
           if (result.success) {
+            await refreshPrescription();
             showToast('success', 'Prescription updated successfully', 5000);
             onSuccess?.(result.data.id);
           }
         } else {
+          // Create new prescription
           const prescriptionData: CreatePrescriptionRequest = {
             facility_id: facilityId,
             patient_id: Number(patientId),
@@ -637,11 +758,9 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
           if (result.success && result.data?.id) {
             setCreatedPrescriptionId(result.data.id);
 
+            // Invalidate patient prescriptions
             await queryClient.invalidateQueries({
               queryKey: prescriptionKeys.patient(Number(patientId)),
-            });
-            await queryClient.invalidateQueries({
-              queryKey: prescriptionKeys.detail(result.data.id),
             });
 
             showToast('success', 'Prescription created successfully', 5000);
@@ -667,13 +786,33 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
       visitId,
       patientAllergies.length,
       updatePrescription,
-      onSuccess,
       createPrescription,
+      refreshPrescription,
+      onSuccess,
       queryClient,
       showToast,
     ]
   );
 
+  // Loading state
+  const isLoadingInitial =
+    patientPrescriptionsQuery.isLoading ||
+    allergiesQuery.isLoading ||
+    (!!currentPrescriptionId && itemsQuery.isLoading);
+
+  if (isLoadingInitial) {
+    return (
+      <div className="p-6">
+        <LoadingSkeleton
+          variant="dashboard"
+          theme={isDark ? 'dark' : 'light'}
+          message="Loading prescription data..."
+        />
+      </div>
+    );
+  }
+
+  // No patient selected
   if (!patientId) {
     return (
       <div className="p-6">
@@ -703,6 +842,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
     );
   }
 
+  // No facility selected
   if (!facilityId) {
     return (
       <div className="p-6">
@@ -732,23 +872,6 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
     );
   }
 
-  const isLoadingInitial =
-    patientPrescriptionsQuery.isLoading ||
-    allergiesQuery.isLoading ||
-    (!!effectivePrescriptionId && itemsQuery.isLoading);
-
-  if (isLoadingInitial) {
-    return (
-      <div className="p-6">
-        <LoadingSkeleton
-          variant="dashboard"
-          theme={isDark ? 'dark' : 'light'}
-          message="Loading prescription data..."
-        />
-      </div>
-    );
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }}
@@ -762,6 +885,8 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
         prescription={currentPrescription}
         onOpenTemplateSelector={() => setShowTemplateSelector(true)}
         onAddMedication={openAddMedicationModal}
+        onRefresh={refreshAllData}
+        isRefreshing={isManualRefreshing}
       />
 
       <PrescriptionAllergyBanner
@@ -771,57 +896,60 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
       />
 
       <form onSubmit={handleSubmit}>
-    <div className="space-y-6">
-      <PrescriptionDetailsCard
-        isDark={isDark}
-        colors={colors}
-        prescription={currentPrescription}
-        formData={formData}
-        isEditorOpen={isDetailsEditorOpen}
-        onOpenEditor={() => setIsDetailsEditorOpen(true)}
-        onCloseEditor={() => setIsDetailsEditorOpen(false)}
-        onChange={handleFormChange}
-      />
+        <div className="space-y-6">
+          <PrescriptionDetailsCard
+            isDark={isDark}
+            colors={colors}
+            prescription={currentPrescription}
+            formData={formData}
+            isEditorOpen={isDetailsEditorOpen}
+            onOpenEditor={() => setIsDetailsEditorOpen(true)}
+            onCloseEditor={() => setIsDetailsEditorOpen(false)}
+            onChange={handleFormChange}
+            onDelete={handleDeletePrescription}
+            currentUserId={userId}
+            isDeleting={deletePrescription.isPending}
+          />
 
-      <PrescriptionMedicationsCard
-        isDark={isDark}
-        colors={colors}
-        prescription={currentPrescription}
-        formData={formData}
-        medications={medications}
-        onAddMedication={openAddMedicationModal}
-        onEditMedication={editMedicationHandler}
-        onDeleteMedication={deleteMedicationHandler}
-      />
-    </div>
+          <PrescriptionMedicationsCard
+            isDark={isDark}
+            colors={colors}
+            prescription={currentPrescription}
+            formData={formData}
+            medications={medications}
+            onAddMedication={openAddMedicationModal}
+            onEditMedication={editMedicationHandler}
+            onDeleteMedication={deleteMedicationHandler}
+          />
+        </div>
 
-  <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-    {onCancel && (
-      <button
-        type="button"
-        onClick={onCancel}
-        className={cn('inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all', colors.bg.hover, colors.text.secondary)}
-      >
-        <X className="h-4 w-4" />
-        Cancel
-      </button>
-    )}
+        <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className={cn('inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all', colors.bg.hover, colors.text.secondary)}
+            >
+              <X className="h-4 w-4" />
+              Cancel
+            </button>
+          )}
 
-    <button
-      type="submit"
-      disabled={isMutating || isSubmitting || medications.length === 0}
-      className={cn(
-        'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
-        isMutating || isSubmitting || medications.length === 0
-          ? 'cursor-not-allowed bg-gray-400'
-          : 'cursor-pointer bg-blue-600 hover:bg-blue-700'
-      )}
-    >
-      {isSubmitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-      {currentPrescription ? 'Save Prescription Updates' : 'Create Prescription'}
-    </button>
-  </div>
-</form>
+          <button
+            type="submit"
+            disabled={isMutating || isSubmitting || medications.length === 0}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
+              isMutating || isSubmitting || medications.length === 0
+                ? 'cursor-not-allowed bg-gray-400'
+                : 'cursor-pointer bg-blue-600 hover:bg-blue-700'
+            )}
+          >
+            {isSubmitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {currentPrescription ? 'Save Prescription Updates' : 'Create Prescription'}
+          </button>
+        </div>
+      </form>
 
       <MedicationEditorModal
         open={showMedicationModal}
