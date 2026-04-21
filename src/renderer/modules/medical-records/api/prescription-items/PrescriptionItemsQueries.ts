@@ -115,7 +115,7 @@ export const useCreatePrescriptionItem = (
     },
     onSuccess: (data) => {
       const successMessage = data.message || 'Medication added successfully!';
-      showToast('success', successMessage, 8000);
+      showToast('success', successMessage, 2000);
       
       queryClient.invalidateQueries({ queryKey: prescriptionItemKeys.list(prescriptionId) });
       queryClient.invalidateQueries({ queryKey: ['prescriptions', prescriptionId] });
@@ -124,7 +124,7 @@ export const useCreatePrescriptionItem = (
     },
     onError: (error: AxiosError<ApiErrorResponse>) => {
       const apiMessage = error.response?.data?.message || error.message || 'Failed to add medication.';
-      showToast('error', apiMessage, 8000);
+      showToast('error', apiMessage, 5000);
       callbacks.onError?.(error);
     },
   });
@@ -152,7 +152,7 @@ export const useUpdatePrescriptionItem = (
     },
     onSuccess: (data, variables) => {
       const successMessage = data.message || 'Medication updated successfully!';
-      showToast('success', successMessage, 8000);
+      showToast('success', successMessage, 2000);
       
       queryClient.invalidateQueries({ queryKey: prescriptionItemKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: prescriptionItemKeys.lists() });
@@ -161,7 +161,7 @@ export const useUpdatePrescriptionItem = (
     },
     onError: (error: AxiosError<ApiErrorResponse>) => {
       const apiMessage = error.response?.data?.message || error.message || 'Failed to update medication.';
-      showToast('error', apiMessage, 8000);
+      showToast('error', apiMessage, 5000);
       callbacks.onError?.(error);
     },
   });
@@ -188,7 +188,7 @@ export const useDeletePrescriptionItem = (
     },
     onSuccess: (data, variables) => {
       const successMessage = data.message || 'Medication removed successfully!';
-      showToast('success', successMessage, 8000);
+      showToast('success', successMessage, 2000);
       
       queryClient.invalidateQueries({ queryKey: prescriptionItemKeys.list(variables.prescriptionId) });
       queryClient.invalidateQueries({ queryKey: ['prescriptions', variables.prescriptionId] });
@@ -197,7 +197,7 @@ export const useDeletePrescriptionItem = (
     },
     onError: (error: AxiosError<ApiErrorResponse>) => {
       const apiMessage = error.response?.data?.message || error.message || 'Failed to remove medication.';
-      showToast('error', apiMessage, 8000);
+      showToast('error', apiMessage, 5000);
       callbacks.onError?.(error);
     },
   });
@@ -227,7 +227,7 @@ export const useBulkUpdatePrescriptionItems = (
     },
     onSuccess: (data) => {
       const successMessage = data.message || 'Medications updated successfully!';
-      showToast('success', successMessage, 8000);
+      showToast('success', successMessage, 2000);
       
       queryClient.invalidateQueries({ queryKey: prescriptionItemKeys.list(prescriptionId) });
       queryClient.invalidateQueries({ queryKey: ['prescriptions', prescriptionId] });
@@ -236,7 +236,7 @@ export const useBulkUpdatePrescriptionItems = (
     },
     onError: (error: AxiosError<ApiErrorResponse>) => {
       const apiMessage = error.response?.data?.message || error.message || 'Failed to update medications.';
-      showToast('error', apiMessage, 8000);
+      showToast('error', apiMessage, 5000);
       callbacks.onError?.(error);
     },
   });
