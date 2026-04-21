@@ -12,6 +12,9 @@ import {
   Route,
   Substitution,
 } from '../../../../api/prescription-items/PrescriptionItemsTypes';
+import type { BillableItem } from '../../../../api/billable-items/BillingItemsTypes';
+import { ColorTokens } from '../prescription-form-components/prescriptionForm.types';
+import MedicationAutocomplete from '../prescription-form-components/MedicationAutocomplete';
 
 export interface MedicationFormData {
   medication_name: string;
@@ -32,8 +35,6 @@ export interface MedicationFormData {
   substitution: Substitution;
 }
 
-
-
 const RequiredLabel: React.FC<{ children: React.ReactNode; className?: string }> = ({
   children,
   className,
@@ -46,20 +47,7 @@ const RequiredLabel: React.FC<{ children: React.ReactNode; className?: string }>
 interface ClinicalTemplateMedicationModalProps {
   isOpen: boolean;
   isDark: boolean;
-  colors: {
-    bg: {
-      card: string;
-      input: string;
-      hover: string;
-    };
-    text: {
-      primary: string;
-      secondary: string;
-    };
-    border: {
-      primary: string;
-    };
-  };
+  colors: ColorTokens;
   medicationForm: MedicationFormData;
   editingMedicationIndex: number | null;
   isMutating: boolean;
@@ -80,12 +68,14 @@ interface ClinicalTemplateMedicationModalProps {
       | Substitution
   ) => void;
   onSubmit: () => void;
+  onMedicationSelect?: (medication: BillableItem) => void;
 }
 
 export const ClinicalTemplateMedicationModal: React.FC<
   ClinicalTemplateMedicationModalProps
 > = ({
   isOpen,
+  isDark,
   colors,
   medicationForm,
   editingMedicationIndex,
@@ -93,12 +83,47 @@ export const ClinicalTemplateMedicationModal: React.FC<
   onClose,
   onChange,
   onSubmit,
+  onMedicationSelect,
 }) => {
   const isInvalid =
     !medicationForm.medication_name.trim() ||
     medicationForm.dosage_quantity <= 0 ||
     medicationForm.duration_value <= 0 ||
     (medicationForm.as_needed && !medicationForm.as_needed_reason.trim());
+
+  // Consistent focus ring style matching MedicationAutocomplete
+  const focusRingClass = "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent";
+
+  // Handle medication selection from autocomplete
+  const handleMedicationSelect = (medication: BillableItem) => {
+    // Auto-fill strength if available from inventory item
+    if (isDark) {
+      // Type guard for inventory items
+      if ('strength' in medication && medication.strength) {
+        onChange('strength', medication.strength);
+      }
+    } else {
+      if ('strength' in medication && medication.strength) {
+        onChange('strength', medication.strength);
+      }
+    }
+
+    // Auto-fill dosage form if available
+    if ('dosage_form' in medication && medication.dosage_form) {
+      // Map the dosage form to the enum value
+      const matchedForm = Object.values(DosageForm).find(
+        form => form.toLowerCase() === medication.dosage_form?.toLowerCase()
+      );
+      if (matchedForm) {
+        onChange('dosage_form', matchedForm);
+      }
+    }
+
+    // Call the optional callback
+    if (onMedicationSelect) {
+      onMedicationSelect(medication);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -125,7 +150,11 @@ export const ClinicalTemplateMedicationModal: React.FC<
               <button
                 type="button"
                 onClick={onClose}
-                className={cn('rounded p-1 transition-colors', colors.bg.hover, colors.text.secondary)}
+                className={cn(
+                  'cursor-pointer rounded p-1 transition-colors',
+                  colors.bg.hover,
+                  colors.text.secondary
+                )}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -138,18 +167,14 @@ export const ClinicalTemplateMedicationModal: React.FC<
                     <RequiredLabel className={cn('mb-1 block text-sm font-medium', colors.text.primary)}>
                       Medication Name
                     </RequiredLabel>
-                    <input
-                      type="text"
-                      required
+                    <MedicationAutocomplete
                       value={medicationForm.medication_name}
-                      onChange={(e) => onChange('medication_name', e.target.value)}
-                      className={cn(
-                        'w-full rounded-lg border p-2 text-sm',
-                        colors.bg.input,
-                        colors.text.primary,
-                        colors.border.primary
-                      )}
-                      placeholder="e.g., Amoxicillin"
+                      onChange={(value) => onChange('medication_name', value)}
+                      onSelect={handleMedicationSelect}
+                      placeholder="Search for medication..."
+                      required
+                      isDark={isDark}
+                      colors={colors}
                       autoFocus
                     />
                   </div>
@@ -163,10 +188,11 @@ export const ClinicalTemplateMedicationModal: React.FC<
                       value={medicationForm.brand_name}
                       onChange={(e) => onChange('brand_name', e.target.value)}
                       className={cn(
-                        'w-full rounded-lg border p-2 text-sm',
+                        'w-full rounded-lg border p-2.5 text-sm transition-all duration-200',
                         colors.bg.input,
                         colors.text.primary,
-                        colors.border.primary
+                        colors.border.primary,
+                        focusRingClass
                       )}
                       placeholder="e.g., Amoxil"
                     />
@@ -183,10 +209,11 @@ export const ClinicalTemplateMedicationModal: React.FC<
                       value={medicationForm.strength}
                       onChange={(e) => onChange('strength', e.target.value)}
                       className={cn(
-                        'w-full rounded-lg border p-2 text-sm',
+                        'w-full rounded-lg border p-2.5 text-sm transition-all duration-200',
                         colors.bg.input,
                         colors.text.primary,
-                        colors.border.primary
+                        colors.border.primary,
+                        focusRingClass
                       )}
                       placeholder="e.g., 500mg"
                     />
@@ -199,18 +226,18 @@ export const ClinicalTemplateMedicationModal: React.FC<
                     <select
                       required
                       value={medicationForm.dosage_form}
-                            onChange={(e) => {
-                            const value = e.target.value;
-                            // Validate it's a valid DosageForm
-                            if (Object.values(DosageForm).includes(value as DosageForm)) {
-                                onChange('dosage_form', value as DosageForm);
-                            }
-                            }}     
-                        className={cn(
-                        'w-full rounded-lg border p-2 text-sm',
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (Object.values(DosageForm).includes(value as DosageForm)) {
+                          onChange('dosage_form', value as DosageForm);
+                        }
+                      }}
+                      className={cn(
+                        'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
                         colors.bg.input,
                         colors.text.primary,
-                        colors.border.primary
+                        colors.border.primary,
+                        focusRingClass
                       )}
                     >
                       {Object.values(DosageForm).map((form) => (
@@ -235,10 +262,11 @@ export const ClinicalTemplateMedicationModal: React.FC<
                       value={medicationForm.dosage_quantity}
                       onChange={(e) => onChange('dosage_quantity', parseFloat(e.target.value))}
                       className={cn(
-                        'w-full rounded-lg border p-2 text-sm',
+                        'w-full rounded-lg border p-2.5 text-sm transition-all duration-200',
                         colors.bg.input,
                         colors.text.primary,
-                        colors.border.primary
+                        colors.border.primary,
+                        focusRingClass
                       )}
                     />
                   </div>
@@ -252,10 +280,11 @@ export const ClinicalTemplateMedicationModal: React.FC<
                       value={medicationForm.dosage_unit}
                       onChange={(e) => onChange('dosage_unit', e.target.value as DosageUnit)}
                       className={cn(
-                        'w-full rounded-lg border p-2 text-sm',
+                        'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
                         colors.bg.input,
                         colors.text.primary,
-                        colors.border.primary
+                        colors.border.primary,
+                        focusRingClass
                       )}
                     >
                       {Object.values(DosageUnit).map((unit) => (
@@ -275,10 +304,11 @@ export const ClinicalTemplateMedicationModal: React.FC<
                       value={medicationForm.route}
                       onChange={(e) => onChange('route', e.target.value as Route)}
                       className={cn(
-                        'w-full rounded-lg border p-2 text-sm',
+                        'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
                         colors.bg.input,
                         colors.text.primary,
-                        colors.border.primary
+                        colors.border.primary,
+                        focusRingClass
                       )}
                     >
                       {Object.values(Route).map((route) => (
@@ -300,10 +330,11 @@ export const ClinicalTemplateMedicationModal: React.FC<
                       value={medicationForm.frequency}
                       onChange={(e) => onChange('frequency', e.target.value as Frequency)}
                       className={cn(
-                        'w-full rounded-lg border p-2 text-sm',
+                        'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
                         colors.bg.input,
                         colors.text.primary,
-                        colors.border.primary
+                        colors.border.primary,
+                        focusRingClass
                       )}
                     >
                       {Object.values(Frequency).map((freq) => (
@@ -326,10 +357,11 @@ export const ClinicalTemplateMedicationModal: React.FC<
                         value={medicationForm.duration_value}
                         onChange={(e) => onChange('duration_value', parseInt(e.target.value, 10))}
                         className={cn(
-                          'w-full rounded-lg border p-2 text-sm',
+                          'w-full rounded-lg border p-2.5 text-sm transition-all duration-200',
                           colors.bg.input,
                           colors.text.primary,
-                          colors.border.primary
+                          colors.border.primary,
+                          focusRingClass
                         )}
                       />
                     </div>
@@ -343,10 +375,11 @@ export const ClinicalTemplateMedicationModal: React.FC<
                         value={medicationForm.duration_unit}
                         onChange={(e) => onChange('duration_unit', e.target.value as DurationUnit)}
                         className={cn(
-                          'w-full rounded-lg border p-2 text-sm',
+                          'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
                           colors.bg.input,
                           colors.text.primary,
-                          colors.border.primary
+                          colors.border.primary,
+                          focusRingClass
                         )}
                       >
                         {Object.values(DurationUnit).map((unit) => (
@@ -368,10 +401,11 @@ export const ClinicalTemplateMedicationModal: React.FC<
                     onChange={(e) => onChange('instructions', e.target.value)}
                     rows={2}
                     className={cn(
-                      'w-full rounded-lg border p-2 text-sm',
+                      'w-full rounded-lg border p-2.5 text-sm transition-all duration-200',
                       colors.bg.input,
                       colors.text.primary,
-                      colors.border.primary
+                      colors.border.primary,
+                      focusRingClass
                     )}
                     placeholder="e.g., Take with food"
                   />
@@ -383,7 +417,7 @@ export const ClinicalTemplateMedicationModal: React.FC<
                       type="checkbox"
                       checked={medicationForm.as_needed}
                       onChange={(e) => onChange('as_needed', e.target.checked)}
-                      className="rounded"
+                      className="rounded cursor-pointer"
                     />
                     <span className={cn('text-sm', colors.text.primary)}>As Needed (PRN)</span>
                   </label>
@@ -400,10 +434,11 @@ export const ClinicalTemplateMedicationModal: React.FC<
                         onChange={(e) => onChange('as_needed_reason', e.target.value)}
                         placeholder="Reason, e.g. pain, fever"
                         className={cn(
-                          'w-full rounded-lg border p-2 text-sm',
+                          'w-full rounded-lg border p-2.5 text-sm transition-all duration-200',
                           colors.bg.input,
                           colors.text.primary,
-                          colors.border.primary
+                          colors.border.primary,
+                          focusRingClass
                         )}
                       />
                     </div>
@@ -425,10 +460,11 @@ export const ClinicalTemplateMedicationModal: React.FC<
                         )
                       }
                       className={cn(
-                        'w-full rounded-lg border p-2 text-sm',
+                        'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
                         colors.bg.input,
                         colors.text.primary,
-                        colors.border.primary
+                        colors.border.primary,
+                        focusRingClass
                       )}
                     >
                       {Object.values(AdministrationInstructions).map((inst) => (
@@ -448,10 +484,11 @@ export const ClinicalTemplateMedicationModal: React.FC<
                       value={medicationForm.refills}
                       onChange={(e) => onChange('refills', e.target.value as Refills)}
                       className={cn(
-                        'w-full rounded-lg border p-2 text-sm',
+                        'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
                         colors.bg.input,
                         colors.text.primary,
-                        colors.border.primary
+                        colors.border.primary,
+                        focusRingClass
                       )}
                     >
                       {Object.values(Refills).map((ref) => (
@@ -472,10 +509,11 @@ export const ClinicalTemplateMedicationModal: React.FC<
                     value={medicationForm.substitution}
                     onChange={(e) => onChange('substitution', e.target.value as Substitution)}
                     className={cn(
-                      'w-full rounded-lg border p-2 text-sm',
+                      'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
                       colors.bg.input,
                       colors.text.primary,
-                      colors.border.primary
+                      colors.border.primary,
+                      focusRingClass
                     )}
                   >
                     {Object.values(Substitution).map((sub) => (
@@ -493,7 +531,7 @@ export const ClinicalTemplateMedicationModal: React.FC<
                 type="button"
                 onClick={onClose}
                 className={cn(
-                  'rounded-lg px-4 py-2 text-sm font-medium transition-all',
+                  'cursor-pointer rounded-lg px-4 py-2 text-sm font-medium transition-all',
                   colors.bg.hover,
                   colors.text.secondary
                 )}

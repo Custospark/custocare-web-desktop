@@ -65,6 +65,9 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
   onChange,
   onSubmit,
 }) => {
+  // Consistent focus ring style matching MedicationAutocomplete
+  const focusRingClass = "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent";
+
   // Handle medication selection from autocomplete
   const handleMedicationSelect = (medication: BillableItem) => {
     // Auto-fill dosage form if available
@@ -108,7 +111,7 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className={cn('rounded p-1 transition-colors', colors.bg.hover, colors.text.secondary)}
+                className={cn('cursor-pointer rounded p-1 transition-colors', colors.bg.hover, colors.text.secondary)}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -157,7 +160,13 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                       type="text"
                       value={medicationForm.brand_name}
                       onChange={(e) => onChange('brand_name', e.target.value)}
-                      className={cn('w-full rounded-lg border p-2 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
+                      className={cn(
+                        'w-full rounded-lg border p-2.5 text-sm transition-all duration-200',
+                        colors.bg.input,
+                        colors.text.primary,
+                        colors.border.primary,
+                        focusRingClass
+                      )}
                       placeholder="e.g., Amoxil"
                     />
                   </div>
@@ -170,7 +179,13 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                       type="text"
                       value={medicationForm.strength}
                       onChange={(e) => onChange('strength', e.target.value)}
-                      className={cn('w-full rounded-lg border p-2 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
+                      className={cn(
+                        'w-full rounded-lg border p-2.5 text-sm transition-all duration-200',
+                        colors.bg.input,
+                        colors.text.primary,
+                        colors.border.primary,
+                        focusRingClass
+                      )}
                       placeholder="e.g., 500mg"
                     />
                   </div>
@@ -183,7 +198,13 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                       required
                       value={medicationForm.dosage_form}
                       onChange={(e) => onChange('dosage_form', e.target.value as DosageForm)}
-                      className={cn('w-full rounded-lg border p-2 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
+                      className={cn(
+                        'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
+                        colors.bg.input,
+                        colors.text.primary,
+                        colors.border.primary,
+                        focusRingClass
+                      )}
                     >
                       {Object.values(DosageForm).map((form) => (
                         <option key={form} value={form}>
@@ -206,7 +227,13 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                       required
                       value={medicationForm.dosage_quantity}
                       onChange={(e) => onChange('dosage_quantity', Number(e.target.value))}
-                      className={cn('w-full rounded-lg border p-2 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
+                      className={cn(
+                        'w-full rounded-lg border p-2.5 text-sm transition-all duration-200',
+                        colors.bg.input,
+                        colors.text.primary,
+                        colors.border.primary,
+                        focusRingClass
+                      )}
                     />
                   </div>
 
@@ -218,7 +245,13 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                       required
                       value={medicationForm.dosage_unit}
                       onChange={(e) => onChange('dosage_unit', e.target.value as DosageUnit)}
-                      className={cn('w-full rounded-lg border p-2 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
+                      className={cn(
+                        'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
+                        colors.bg.input,
+                        colors.text.primary,
+                        colors.border.primary,
+                        focusRingClass
+                      )}
                     >
                       {Object.values(DosageUnit).map((unit) => (
                         <option key={unit} value={unit}>
@@ -236,7 +269,13 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                       required
                       value={medicationForm.route}
                       onChange={(e) => onChange('route', e.target.value as Route)}
-                      className={cn('w-full rounded-lg border p-2 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
+                      className={cn(
+                        'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
+                        colors.bg.input,
+                        colors.text.primary,
+                        colors.border.primary,
+                        focusRingClass
+                      )}
                     >
                       {Object.values(Route).map((route) => (
                         <option key={route} value={route}>
@@ -256,7 +295,13 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                       required
                       value={medicationForm.frequency}
                       onChange={(e) => onChange('frequency', e.target.value as Frequency)}
-                      className={cn('w-full rounded-lg border p-2 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
+                      className={cn(
+                        'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
+                        colors.bg.input,
+                        colors.text.primary,
+                        colors.border.primary,
+                        focusRingClass
+                      )}
                     >
                       {Object.values(Frequency).map((freq) => (
                         <option key={freq} value={freq}>
@@ -277,7 +322,13 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                         required
                         value={medicationForm.duration_value}
                         onChange={(e) => onChange('duration_value', Number(e.target.value))}
-                        className={cn('w-full rounded-lg border p-2 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
+                        className={cn(
+                          'w-full rounded-lg border p-2.5 text-sm transition-all duration-200',
+                          colors.bg.input,
+                          colors.text.primary,
+                          colors.border.primary,
+                          focusRingClass
+                        )}
                       />
                     </div>
 
@@ -289,7 +340,13 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                         required
                         value={medicationForm.duration_unit}
                         onChange={(e) => onChange('duration_unit', e.target.value as DurationUnit)}
-                        className={cn('w-full rounded-lg border p-2 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
+                        className={cn(
+                          'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
+                          colors.bg.input,
+                          colors.text.primary,
+                          colors.border.primary,
+                          focusRingClass
+                        )}
                       >
                         {Object.values(DurationUnit).map((unit) => (
                           <option key={unit} value={unit}>
@@ -309,7 +366,13 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                     value={medicationForm.instructions}
                     onChange={(e) => onChange('instructions', e.target.value)}
                     rows={2}
-                    className={cn('w-full rounded-lg border p-2 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
+                    className={cn(
+                      'w-full rounded-lg border p-2.5 text-sm transition-all duration-200',
+                      colors.bg.input,
+                      colors.text.primary,
+                      colors.border.primary,
+                      focusRingClass
+                    )}
                     placeholder="e.g., Take with food"
                   />
                 </div>
@@ -320,7 +383,7 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                       type="checkbox"
                       checked={medicationForm.as_needed}
                       onChange={(e) => onChange('as_needed', e.target.checked)}
-                      className="rounded"
+                      className="rounded cursor-pointer"
                     />
                     <span className={cn('text-sm', colors.text.primary)}>As Needed (PRN)</span>
                   </label>
@@ -336,7 +399,13 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                         value={medicationForm.as_needed_reason}
                         onChange={(e) => onChange('as_needed_reason', e.target.value)}
                         placeholder="Reason, e.g. pain, fever"
-                        className={cn('w-full rounded-lg border p-2 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
+                        className={cn(
+                          'w-full rounded-lg border p-2.5 text-sm transition-all duration-200',
+                          colors.bg.input,
+                          colors.text.primary,
+                          colors.border.primary,
+                          focusRingClass
+                        )}
                       />
                     </div>
                   )}
@@ -353,7 +422,13 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                       onChange={(e) =>
                         onChange('administration_instructions', e.target.value as AdministrationInstructions)
                       }
-                      className={cn('w-full rounded-lg border p-2 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
+                      className={cn(
+                        'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
+                        colors.bg.input,
+                        colors.text.primary,
+                        colors.border.primary,
+                        focusRingClass
+                      )}
                     >
                       {Object.values(AdministrationInstructions).map((inst) => (
                         <option key={inst} value={inst}>
@@ -371,7 +446,13 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                       required
                       value={medicationForm.refills}
                       onChange={(e) => onChange('refills', e.target.value as Refills)}
-                      className={cn('w-full rounded-lg border p-2 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
+                      className={cn(
+                        'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
+                        colors.bg.input,
+                        colors.text.primary,
+                        colors.border.primary,
+                        focusRingClass
+                      )}
                     >
                       {Object.values(Refills).map((ref) => (
                         <option key={ref} value={ref}>
@@ -390,7 +471,13 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
                     required
                     value={medicationForm.substitution}
                     onChange={(e) => onChange('substitution', e.target.value as Substitution)}
-                    className={cn('w-full rounded-lg border p-2 text-sm', colors.bg.input, colors.text.primary, colors.border.primary)}
+                    className={cn(
+                      'w-full cursor-pointer rounded-lg border p-2.5 text-sm transition-all duration-200',
+                      colors.bg.input,
+                      colors.text.primary,
+                      colors.border.primary,
+                      focusRingClass
+                    )}
                   >
                     {Object.values(Substitution).map((sub) => (
                       <option key={sub} value={sub}>
@@ -406,7 +493,11 @@ export const MedicationEditorModal: React.FC<MedicationEditorModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className={cn('rounded-lg px-4 py-2 text-sm font-medium transition-all', colors.bg.hover, colors.text.secondary)}
+                className={cn(
+                  'cursor-pointer rounded-lg px-4 py-2 text-sm font-medium transition-all',
+                  colors.bg.hover,
+                  colors.text.secondary
+                )}
               >
                 Cancel
               </button>

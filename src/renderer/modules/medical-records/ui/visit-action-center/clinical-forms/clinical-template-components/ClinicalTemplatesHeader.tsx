@@ -1,6 +1,8 @@
 import React from 'react';
-import { FolderOpen, Plus, RefreshCw } from 'lucide-react';
+import { FolderOpen, Plus, RefreshCw, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
+import { FOCUS_MODE_ROUTES } from '../../../../../administration/onboarding/routes/focusModeRouteConstants';
 
 interface ClinicalTemplatesHeaderProps {
   isDark: boolean;
@@ -32,6 +34,12 @@ export const ClinicalTemplatesHeader: React.FC<ClinicalTemplatesHeaderProps> = (
   onRefresh,
   onAddTemplate,
 }) => {
+  const navigate = useNavigate();
+
+  const handleStartPrescription = () => {
+    navigate(FOCUS_MODE_ROUTES.PRESCRIPTION_FOCUS);
+  };
+
   return (
     <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="flex items-start gap-3">
@@ -75,10 +83,10 @@ export const ClinicalTemplatesHeader: React.FC<ClinicalTemplatesHeaderProps> = (
           onClick={onRefresh}
           disabled={isRefreshing}
           className={cn(
-            'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all',
+            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all',
             colors.border.primary,
             colors.text.secondary,
-            isRefreshing ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
+            isRefreshing ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'
           )}
         >
           <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
@@ -87,9 +95,23 @@ export const ClinicalTemplatesHeader: React.FC<ClinicalTemplatesHeaderProps> = (
 
         <button
           type="button"
+          onClick={handleStartPrescription}
+          className={cn(
+            'inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all',
+            isDark
+              ? 'bg-green-900/20 text-green-300 hover:bg-green-900/30'
+              : 'bg-green-50 text-green-700 hover:bg-green-100'
+          )}
+        >
+          <FileText className="h-4 w-4" />
+          Start Prescription
+        </button>
+
+        <button
+          type="button"
           onClick={onAddTemplate}
           className={cn(
-            'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white transition-all',
+            'inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white transition-all',
             'bg-blue-600 hover:bg-blue-700'
           )}
         >

@@ -85,7 +85,7 @@ export const PrescriptionDetailsCard: React.FC<PrescriptionDetailsCardProps> = (
   const canDelete = isExistingPrescription
    && 
     prescription.prescribed_by.id === currentUserId &&
-    prescription?.status === PrescriptionStatus.DRAFT;
+    (prescription?.status === (PrescriptionStatus.ACTIVE) || PrescriptionStatus.DRAFT);
 
   const handleDeleteClick = () => {
     setShowDeleteConfirm(true);
@@ -108,9 +108,9 @@ export const PrescriptionDetailsCard: React.FC<PrescriptionDetailsCardProps> = (
             <h3 className={cn('text-base font-semibold', colors.text.primary)}>
               Prescription Details
             </h3>
-            {isExistingPrescription && prescription?.prescribed_by_user && (
+            {isExistingPrescription && prescription?.prescribed_by && (
               <p className={cn('mt-1 text-xs', colors.text.secondary)}>
-                Prescribed by: {prescription.prescribed_by_user.name}
+                Prescribed by: {prescription.prescribed_by.name}
               </p>
             )}
           </div>

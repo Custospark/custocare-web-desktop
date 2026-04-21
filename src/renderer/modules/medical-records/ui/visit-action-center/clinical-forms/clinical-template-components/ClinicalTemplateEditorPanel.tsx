@@ -82,6 +82,9 @@ export const ClinicalTemplateEditorPanel: React.FC<ClinicalTemplateEditorPanelPr
   onClose,
   onSubmit,
 }) => {
+  // Focus ring style for consistent focus states
+  const focusRingClass = "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent";
+
   return (
     <div className={cn('rounded-2xl border p-5', colors.border.primary, colors.bg.card)}>
       <div className="mb-5 flex items-center justify-between">
@@ -100,7 +103,8 @@ export const ClinicalTemplateEditorPanel: React.FC<ClinicalTemplateEditorPanelPr
           className={cn(
             'inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all',
             colors.bg.hover,
-            colors.text.secondary
+            colors.text.secondary,
+            focusRingClass
           )}
         >
           <X className="h-4 w-4" />
@@ -122,11 +126,11 @@ export const ClinicalTemplateEditorPanel: React.FC<ClinicalTemplateEditorPanelPr
             onChange={(e) => onFormChange('name', e.target.value)}
             placeholder="e.g., Hypertension Protocol, Diabetes Management"
             className={cn(
-              'w-full cursor-text rounded-lg border p-3 text-sm outline-none transition-all',
+              'w-full cursor-text rounded-lg border p-3 text-sm outline-none transition-all duration-200',
               colors.bg.input,
               colors.text.primary,
               colors.border.primary,
-              colors.border.focus
+              focusRingClass
             )}
             required
             autoFocus
@@ -144,11 +148,11 @@ export const ClinicalTemplateEditorPanel: React.FC<ClinicalTemplateEditorPanelPr
             placeholder="Brief description of when to use this template..."
             rows={2}
             className={cn(
-              'w-full cursor-text resize-y rounded-lg border p-3 text-sm outline-none transition-all',
+              'w-full cursor-text resize-y rounded-lg border p-3 text-sm outline-none transition-all duration-200',
               colors.bg.input,
               colors.text.primary,
               colors.border.primary,
-              colors.border.focus
+              focusRingClass
             )}
           />
         </div>
@@ -163,11 +167,11 @@ export const ClinicalTemplateEditorPanel: React.FC<ClinicalTemplateEditorPanelPr
               value={formData.category}
               onChange={(e) => onFormChange('category', e.target.value as TemplateCategory)}
               className={cn(
-                'w-full cursor-pointer rounded-lg border p-3 text-sm outline-none transition-all',
+                'w-full cursor-pointer rounded-lg border p-3 text-sm outline-none transition-all duration-200',
                 colors.bg.input,
                 colors.text.primary,
                 colors.border.primary,
-                colors.border.focus
+                focusRingClass
               )}
             >
               {Object.values(TemplateCategory).map((cat) => (
@@ -187,11 +191,11 @@ export const ClinicalTemplateEditorPanel: React.FC<ClinicalTemplateEditorPanelPr
               value={formData.visibility}
               onChange={(e) => onFormChange('visibility', e.target.value as TemplateVisibility)}
               className={cn(
-                'w-full cursor-pointer rounded-lg border p-3 text-sm outline-none transition-all',
+                'w-full cursor-pointer rounded-lg border p-3 text-sm outline-none transition-all duration-200',
                 colors.bg.input,
                 colors.text.primary,
                 colors.border.primary,
-                colors.border.focus
+                focusRingClass
               )}
             >
               {Object.values(TemplateVisibility).map((vis) => (
@@ -214,11 +218,11 @@ export const ClinicalTemplateEditorPanel: React.FC<ClinicalTemplateEditorPanelPr
             placeholder="e.g., Essential Hypertension, Type 2 Diabetes Mellitus"
             rows={2}
             className={cn(
-              'w-full cursor-text resize-y rounded-lg border p-3 text-sm outline-none transition-all',
+              'w-full cursor-text resize-y rounded-lg border p-3 text-sm outline-none transition-all duration-200',
               colors.bg.input,
               colors.text.primary,
               colors.border.primary,
-              colors.border.focus
+              focusRingClass
             )}
           />
         </div>
@@ -234,11 +238,11 @@ export const ClinicalTemplateEditorPanel: React.FC<ClinicalTemplateEditorPanelPr
             placeholder="Standard notes that will be added to the prescription..."
             rows={3}
             className={cn(
-              'w-full cursor-text resize-y rounded-lg border p-3 text-sm outline-none transition-all',
+              'w-full cursor-text resize-y rounded-lg border p-3 text-sm outline-none transition-all duration-200',
               colors.bg.input,
               colors.text.primary,
               colors.border.primary,
-              colors.border.focus
+              focusRingClass
             )}
           />
         </div>
@@ -254,11 +258,11 @@ export const ClinicalTemplateEditorPanel: React.FC<ClinicalTemplateEditorPanelPr
             placeholder="Instructions to be printed on prescription for the patient..."
             rows={2}
             className={cn(
-              'w-full cursor-text resize-y rounded-lg border p-3 text-sm outline-none transition-all',
+              'w-full cursor-text resize-y rounded-lg border p-3 text-sm outline-none transition-all duration-200',
               colors.bg.input,
               colors.text.primary,
               colors.border.primary,
-              colors.border.focus
+              focusRingClass
             )}
           />
         </div>
@@ -274,9 +278,9 @@ export const ClinicalTemplateEditorPanel: React.FC<ClinicalTemplateEditorPanelPr
               type="button"
               onClick={onOpenMedicationModal}
               className={cn(
-                'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
-                colors.bg.hover,
-                colors.text.brand
+                'inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
+                'bg-blue-600 text-white hover:bg-blue-700',
+                focusRingClass
               )}
             >
               <Plus className="h-4 w-4" />
@@ -284,27 +288,27 @@ export const ClinicalTemplateEditorPanel: React.FC<ClinicalTemplateEditorPanelPr
             </button>
           </div>
 
-         <ClinicalTemplateMedicationTable
+          <ClinicalTemplateMedicationTable
             isDark={isDark}
             colors={{
-                bg: {
-                subtle: colors.bg.subtle || 'bg-gray-50'  // use your existing subtle color
-                },
-                text: {
+              bg: {
+                subtle: colors.bg.subtle || 'bg-gray-50'
+              },
+              text: {
                 primary: colors.text.primary,
                 secondary: colors.text.secondary,
-                tertiary: colors.text.brand || colors.text.secondary  // provide a tertiary color
-                },
-                border: {
+                tertiary: colors.text.brand || colors.text.secondary
+              },
+              border: {
                 primary: colors.border.primary
-                }
+              }
             }}
             medications={medications}
             onEditMedication={onEditMedication}
             onDeleteMedication={onDeleteMedication}
             emptyTitle="No medications added"
             emptyDescription='Click "Add Medication" to include drugs in this template.'
-            />
+          />
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
@@ -314,7 +318,8 @@ export const ClinicalTemplateEditorPanel: React.FC<ClinicalTemplateEditorPanelPr
             className={cn(
               'inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
               colors.bg.hover,
-              colors.text.secondary
+              colors.text.secondary,
+              focusRingClass
             )}
           >
             <RefreshCw className="h-4 w-4" />
@@ -328,7 +333,8 @@ export const ClinicalTemplateEditorPanel: React.FC<ClinicalTemplateEditorPanelPr
               'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
               !formData.name.trim() || isMutating
                 ? 'cursor-not-allowed bg-gray-400'
-                : 'cursor-pointer bg-blue-600 hover:bg-blue-700'
+                : 'cursor-pointer bg-blue-600 hover:bg-blue-700',
+              focusRingClass
             )}
           >
             <Save className="h-4 w-4" />

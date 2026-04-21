@@ -81,6 +81,15 @@ export const ClinicalTemplateForm: React.FC<ClinicalTemplateFormProps> = ({
 
   const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  
+  // Search and filter state (passed to list component)
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'private' | 'public'>('all');
+
   const [formData, setFormData] = useState<TemplateFormData>(EMPTY_FORM);
   const [medications, setMedications] = useState<TemplateMedicationItem[]>([]);
   const [editingMedicationIndex, setEditingMedicationIndex] = useState<number | null>(null);
@@ -92,8 +101,12 @@ export const ClinicalTemplateForm: React.FC<ClinicalTemplateFormProps> = ({
 
   const isEditing = !!activeTemplateToEdit;
 
+  // Fetch all templates (client-side pagination)
   const templatesQuery = useGetFacilityTemplates(
-    { facility_id: facilityId || 0, include_system: true },
+    { 
+      facility_id: facilityId || 0, 
+      include_system: true,
+    },
     { enabled: !!facilityId }
   );
 
@@ -120,6 +133,55 @@ export const ClinicalTemplateForm: React.FC<ClinicalTemplateFormProps> = ({
     }),
     [isDark]
   );
+
+  // Filter templates based on search and filters
+  const filteredTemplates = useMemo(() => {
+    const allTemplates = templatesQuery.data?.data || [];
+    
+    let filtered = [...allTemplates];
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(template =>
+        template.name.toLowerCase().includes(term) ||
+        template.category.toLowerCase().includes(term) ||
+        (template.description && template.description.toLowerCase().includes(term)) ||
+        (template.default_diagnosis && template.default_diagnosis.toLowerCase().includes(term))
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(template =>
+        statusFilter === 'active' ? template.is_active : !template.is_active
+      );
+    }
+
+    // Apply visibility filter
+    if (visibilityFilter !== 'all') {
+      filtered = filtered.filter(template =>
+        template.visibility.toLowerCase() === visibilityFilter
+      );
+    }
+
+    return filtered;
+  }, [templatesQuery.data?.data, searchTerm, statusFilter, visibilityFilter]);
+
+  // Apply pagination to filtered templates
+  const paginatedTemplates = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredTemplates.slice(start, end);
+  }, [filteredTemplates, currentPage, pageSize]);
+
+  const totalCount = filteredTemplates.length;
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, visibilityFilter, pageSize]);
 
   const resetMedicationState = useCallback(() => {
     setEditingMedicationIndex(null);
@@ -155,8 +217,8 @@ export const ClinicalTemplateForm: React.FC<ClinicalTemplateFormProps> = ({
   const closeTemplateForm = useCallback(() => {
     resetEditorForm();
     setShowTemplateForm(false);
-    onCancel?.();
-  }, [onCancel, resetEditorForm]);
+    // onCancel?.();
+  }, [resetEditorForm]);
 
   useEffect(() => {
     if (templateToEdit) {
@@ -170,6 +232,7 @@ export const ClinicalTemplateForm: React.FC<ClinicalTemplateFormProps> = ({
       resetEditorForm();
       setShowTemplateForm(false);
       queryClient.invalidateQueries({ queryKey: ['clinicalTemplates'] });
+      setCurrentPage(1);
       onSuccess?.();
     },
   });
@@ -186,10 +249,15 @@ export const ClinicalTemplateForm: React.FC<ClinicalTemplateFormProps> = ({
   const deleteMutation = useDeleteTemplate({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinicalTemplates'] });
+      // If we're on a page that might now be empty, go to previous page
+      const remainingItems = totalCount - 1;
+      const maxPage = Math.ceil(remainingItems / pageSize);
+      if (currentPage > maxPage && maxPage > 0) {
+        setCurrentPage(maxPage);
+      }
     },
   });
 
-  
   const handleDeleteMedication = useCallback(
     async (index: number) => {
       const medication = medications[index];
@@ -214,7 +282,6 @@ export const ClinicalTemplateForm: React.FC<ClinicalTemplateFormProps> = ({
     },
     [confirm, editingMedicationIndex, medications, resetMedicationState, theme]
   );
-
 
   const toggleStatusMutation = useToggleTemplateStatus({
     onSuccess: () => {
@@ -270,89 +337,82 @@ export const ClinicalTemplateForm: React.FC<ClinicalTemplateFormProps> = ({
     setShowMedicationModal(true);
   }, []);
 
- const addOrUpdateMedication = useCallback(() => {
-  // Validation
-  if (!medicationForm.medication_name.trim()) {
-    // Show error: Medication name is required
-    return;
-  }
-  
-  if (medicationForm.dosage_quantity <= 0) {
-    // Show error: Dosage quantity must be greater than 0
-    return;
-  }
-  
-  if (medicationForm.duration_value <= 0) {
-    // Show error: Duration must be greater than 0
-    return;
-  }
-  
-  if (medicationForm.as_needed && !medicationForm.as_needed_reason?.trim()) {
-    // Show error: Reason is required for PRN medications
-    return;
-  }
+  const addOrUpdateMedication = useCallback(() => {
+    if (!medicationForm.medication_name.trim()) {
+      return;
+    }
+    
+    if (medicationForm.dosage_quantity <= 0) {
+      return;
+    }
+    
+    if (medicationForm.duration_value <= 0) {
+      return;
+    }
+    
+    if (medicationForm.as_needed && !medicationForm.as_needed_reason?.trim()) {
+      return;
+    }
 
-  // Create medication item - no 'as' casts needed since types already match
-  const newMedication: TemplateMedicationItem = {
-    medication_name: medicationForm.medication_name.trim(),
-    brand_name: medicationForm.brand_name || null,
-    strength: medicationForm.strength || null,
-    dosage_form: medicationForm.dosage_form || DosageForm.TABLET,
-    dosage_quantity: medicationForm.dosage_quantity || 1,
-    dosage_unit: medicationForm.dosage_unit || DosageUnit.TABLETS,
-    frequency: medicationForm.frequency || Frequency.ONCE_DAILY,
-    duration_value: medicationForm.duration_value || 1,
-    duration_unit: medicationForm.duration_unit || DurationUnit.DAYS,
-    route: medicationForm.route || Route.ORAL,
-    instructions: medicationForm.instructions || null,
-    as_needed: medicationForm.as_needed || false,
-    as_needed_reason: medicationForm.as_needed_reason || null,
-    administration_instructions: medicationForm.administration_instructions || AdministrationInstructions.NONE,
-    refills: medicationForm.refills || Refills.ZERO,
-    substitution: medicationForm.substitution || Substitution.GENERIC_ALLOWED,
-  };
+    const newMedication: TemplateMedicationItem = {
+      medication_name: medicationForm.medication_name.trim(),
+      brand_name: medicationForm.brand_name || null,
+      strength: medicationForm.strength || null,
+      dosage_form: medicationForm.dosage_form || DosageForm.TABLET,
+      dosage_quantity: medicationForm.dosage_quantity || 1,
+      dosage_unit: medicationForm.dosage_unit || DosageUnit.TABLETS,
+      frequency: medicationForm.frequency || Frequency.ONCE_DAILY,
+      duration_value: medicationForm.duration_value || 1,
+      duration_unit: medicationForm.duration_unit || DurationUnit.DAYS,
+      route: medicationForm.route || Route.ORAL,
+      instructions: medicationForm.instructions || null,
+      as_needed: medicationForm.as_needed || false,
+      as_needed_reason: medicationForm.as_needed_reason || null,
+      administration_instructions: medicationForm.administration_instructions || AdministrationInstructions.NONE,
+      refills: medicationForm.refills || Refills.ZERO,
+      substitution: medicationForm.substitution || Substitution.GENERIC_ALLOWED,
+    };
 
-  if (editingMedicationIndex !== null) {
-    setMedications((prev) =>
-      prev.map((item, index) => (index === editingMedicationIndex ? newMedication : item))
-    );
-  } else {
-    setMedications((prev) => [...prev, newMedication]);
-  }
+    if (editingMedicationIndex !== null) {
+      setMedications((prev) =>
+        prev.map((item, index) => (index === editingMedicationIndex ? newMedication : item))
+      );
+    } else {
+      setMedications((prev) => [...prev, newMedication]);
+    }
 
-  resetMedicationState();
-}, [editingMedicationIndex, medicationForm, resetMedicationState]);
+    resetMedicationState();
+  }, [editingMedicationIndex, medicationForm, resetMedicationState]);
 
-const handleEditMedication = useCallback(
-  (index: number) => {
-    const med = medications[index];
-    if (!med) return;
+  const handleEditMedication = useCallback(
+    (index: number) => {
+      const med = medications[index];
+      if (!med) return;
 
-    // No 'as' casts needed - the medication already has the correct types
-    setMedicationForm({
-      medication_name: med.medication_name,
-      brand_name: med.brand_name || '',
-      strength: med.strength || '',
-      dosage_form: med.dosage_form as DosageForm, // Safe cast - stored as string but matches enum
-      dosage_quantity: med.dosage_quantity,
-      dosage_unit: med.dosage_unit as DosageUnit, // Safe cast - stored as string but matches enum
-      frequency: med.frequency as Frequency, // Safe cast - stored as string but matches enum
-      duration_value: med.duration_value,
-      duration_unit: med.duration_unit as DurationUnit, // Safe cast - stored as string but matches enum
-      route: med.route as Route, // Safe cast - stored as string but matches enum
-      instructions: med.instructions || '',
-      as_needed: med.as_needed || false,
-      as_needed_reason: med.as_needed_reason || '',
-      administration_instructions: med.administration_instructions as AdministrationInstructions, // Safe cast
-      refills: med.refills as Refills, // Safe cast
-      substitution: med.substitution as Substitution, // Safe cast
-    });
+      setMedicationForm({
+        medication_name: med.medication_name,
+        brand_name: med.brand_name || '',
+        strength: med.strength || '',
+        dosage_form: med.dosage_form as DosageForm,
+        dosage_quantity: med.dosage_quantity,
+        dosage_unit: med.dosage_unit as DosageUnit,
+        frequency: med.frequency as Frequency,
+        duration_value: med.duration_value,
+        duration_unit: med.duration_unit as DurationUnit,
+        route: med.route as Route,
+        instructions: med.instructions || '',
+        as_needed: med.as_needed || false,
+        as_needed_reason: med.as_needed_reason || '',
+        administration_instructions: med.administration_instructions as AdministrationInstructions,
+        refills: med.refills as Refills,
+        substitution: med.substitution as Substitution,
+      });
 
-    setEditingMedicationIndex(index);
-    setShowMedicationModal(true);
-  },
-  [medications]
-);
+      setEditingMedicationIndex(index);
+      setShowMedicationModal(true);
+    },
+    [medications]
+  );
 
   const handleSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
@@ -454,6 +514,24 @@ const handleEditMedication = useCallback(
     [confirm, facilityId, theme, toggleStatusMutation]
   );
 
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page);
+  }, []);
+
+  const handlePageSizeChange = useCallback((size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    templatesQuery.refetch();
+  }, [templatesQuery]);
+
+  const handleSearchChange = useCallback((term: string) => {
+    setSearchTerm(term);
+  }, []);
+
+
   if (!facilityId) {
     return (
       <div className="p-6">
@@ -514,7 +592,7 @@ const handleEditMedication = useCallback(
     );
   }
 
-  const templates = templatesQuery.data?.data || [];
+  const activeCount = filteredTemplates.filter(t => t.is_active).length;
 
   return (
     <motion.div
@@ -526,10 +604,10 @@ const handleEditMedication = useCallback(
       <ClinicalTemplatesHeader
         isDark={isDark}
         colors={colors}
-        totalTemplates={templates.length}
-        activeTemplates={templates.filter((template) => template.is_active).length}
+        totalTemplates={totalCount}
+        activeTemplates={activeCount}
         isRefreshing={templatesQuery.isFetching}
-        onRefresh={() => templatesQuery.refetch()}
+        onRefresh={handleRefresh}
         onAddTemplate={handleAddTemplateClick}
       />
 
@@ -558,27 +636,41 @@ const handleEditMedication = useCallback(
           <ClinicalTemplatesList
             isDark={isDark}
             colors={colors}
-            templates={templates}
+            templates={paginatedTemplates}
             isFetching={templatesQuery.isFetching}
             isMutating={isMutating}
             onEditTemplate={handleEditTemplate}
             onDeleteTemplate={handleDeleteTemplate}
             onToggleStatus={handleToggleStatus}
+            onRefresh={handleRefresh}
+            totalCount={totalCount}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            searchTerm={searchTerm}
+            onSearchChange={handleSearchChange}
           />
         </div>
       </div>
 
       <ClinicalTemplateMedicationModal
-        isOpen={showMedicationModal}
-        isDark={isDark}
-        colors={colors}
-        medicationForm={medicationForm}
-        editingMedicationIndex={editingMedicationIndex}
-        isMutating={isMutating}
-        onClose={() => setShowMedicationModal(false)}
-        onChange={handleMedicationChange}
-        onSubmit={addOrUpdateMedication}
-      />
+            isOpen={showMedicationModal}
+            isDark={isDark}
+            colors={{
+              ...colors,
+              bg: {
+                ...colors.bg,
+                modal: colors.bg.card || colors.bg.subtle || 'bg-white dark:bg-gray-900'  // Add modal property
+              }
+            }}
+            medicationForm={medicationForm}
+            editingMedicationIndex={editingMedicationIndex}
+            isMutating={isMutating}
+            onClose={() => setShowMedicationModal(false)}
+            onChange={handleMedicationChange}
+            onSubmit={addOrUpdateMedication}
+          />
     </motion.div>
   );
 };

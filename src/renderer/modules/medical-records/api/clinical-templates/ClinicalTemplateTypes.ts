@@ -105,7 +105,13 @@ export interface FormattedTemplateMedicationItem extends TemplateMedicationItem 
 
 /**
  * Complete clinical template entity as returned by the API.
- */
+ */export interface CreatedByUser {
+  id: number;
+  name: string;
+  full_name: string;
+  display_name: string;
+}
+
 export interface ClinicalTemplate {
   // Primary identifiers
   id: number;
@@ -129,11 +135,10 @@ export interface ClinicalTemplate {
   visibility: TemplateVisibility;
 
   // Audit
-  created_by: string | null;
+  created_by: CreatedByUser | null;
   created_at: string;
   updated_at: string;
 }
-
 /* -------------------------------------------------------------------------- */
 /*                          REQUEST/RESPONSE TYPES                            */
 /* -------------------------------------------------------------------------- */
