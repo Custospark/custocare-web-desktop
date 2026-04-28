@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { useQueryClient } from '@tanstack/react-query';
+
 import { cn } from '../../../../../shared/utils/classNameUtils';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
@@ -42,8 +43,6 @@ import type { RootState } from '../../../../../app/store/rootReducer';
 
 import type {
   LabRequest,
-  LabTemplate,
-  LabTest,
   CreateLabRequestWithItemsRequest,
 } from '../../../api/lab/LabTypes';
 import {
@@ -117,7 +116,6 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
    * --------------------------------------------------------------------------
    * EXACT ACTIVE CONTEXT EXTRACTION
    * --------------------------------------------------------------------------
-   * This follows the same extraction pattern already used in PrescriptionForm.
    */
   const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
   const patientId = useSelector((state: RootState) => selectActiveVisitPatientId(state));
@@ -131,12 +129,12 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
    * --------------------------------------------------------------------------
    * ACTIVE REQUEST RESOLUTION
    * --------------------------------------------------------------------------
-   * Mirrors the prescription pattern:
-   * - use explicitly passed request if present
-   * - otherwise derive the most relevant request from the active visit
    */
   const visitRequestsQuery = useGetRequestsByVisit(visitNumericId, {
     enabled: !!visitNumericId && !existingRequest,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const resolvedExistingRequest = useMemo<LabRequest | null>(() => {
@@ -165,28 +163,52 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
     return sorted[0] ?? null;
   }, [existingRequest, visitRequestsQuery.data]);
 
+  /**
+   * --------------------------------------------------------------------------
+   * CANONICAL REQUEST UUID
+   * --------------------------------------------------------------------------
+   * Always prefer:
+   * 1. explicitly passed existing request
+   * 2. newly created request uuid
+   * 3. resolved request from visit
+   */
   const [createdRequestUuid, setCreatedRequestUuid] = useState<string | null>(null);
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
-  const currentRequestUuid = createdRequestUuid || resolvedExistingRequest?.request_uuid || '';
+
+  const currentRequestUuid = useMemo(() => {
+    return (
+      existingRequest?.request_uuid ||
+      createdRequestUuid ||
+      resolvedExistingRequest?.request_uuid ||
+      ''
+    );
+  }, [existingRequest?.request_uuid, createdRequestUuid, resolvedExistingRequest?.request_uuid]);
 
   const currentRequestQuery = useGetRequestWithItems(currentRequestUuid, {
     enabled: !!currentRequestUuid,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
     staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
-  const currentRequest = currentRequestQuery.data?.data || resolvedExistingRequest || null;
+  const currentRequest = useMemo<LabRequest | null>(() => {
+    return (
+      currentRequestQuery.data?.data ||
+      existingRequest ||
+      resolvedExistingRequest ||
+      null
+    );
+  }, [currentRequestQuery.data, existingRequest, resolvedExistingRequest]);
 
   /**
    * --------------------------------------------------------------------------
    * LOCAL FORM STATE
    * --------------------------------------------------------------------------
-   * All editors remain CLOSED by default.
-   * A form opens only after explicit user action, per your requirement.
+   * Only unsaved request data lives locally.
+   * Persisted request data should come from queries directly.
    */
   const [formData, setFormData] = useState<LabRequestFormData>(EMPTY_LAB_REQUEST);
-  const [draftItems, setDraftItems] = useState<LabRequestDraftItem[]>([]);
+  const [localDraftItems, setLocalDraftItems] = useState<LabRequestDraftItem[]>([]);
   const [editingItem, setEditingItem] = useState<LabRequestDraftItem | null>(null);
   const [itemEditorData, setItemEditorData] = useState<LabRequestItemEditorData>(EMPTY_LAB_REQUEST_ITEM);
 
@@ -197,8 +219,8 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
   const [showTemplateFieldManager, setShowTemplateFieldManager] = useState(false);
   const [showLabItemManager, setShowLabItemManager] = useState(false);
 
-  const [selectedTemplateForManagement, setSelectedTemplateForManagement] = useState<LabTemplate | null>(null);
-  const [selectedLabItemForManagement, setSelectedLabItemForManagement] = useState<LabTest | null>(null);
+  const [selectedTemplateUuid, setSelectedTemplateUuid] = useState<string | null>(null);
+  const [selectedLabItemUuid, setSelectedLabItemUuid] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -206,42 +228,83 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
    * --------------------------------------------------------------------------
    * SUPPORTING QUERIES
    * --------------------------------------------------------------------------
-   * These support:
-   * - template selection
-   * - lab item search
-   * - inventory-aware selection flow in child components
-   * - CRUD manager entry points
+   * IMPORTANT:
+   * These stay mounted whenever facility context exists.
+   * That ensures nested modal mutations trigger visible UI refreshes immediately.
    */
-  const shouldLoadReferenceData =
-    !!facilityId &&
-    (
-      showTemplateSelector ||
-      showTemplateManager ||
-      showTemplateFieldManager ||
-      showLabItemManager ||
-      showItemEditorModal
-    );
-
-  const templatesQuery = useGetActiveTemplates(facilityId || undefined, {
-    enabled: shouldLoadReferenceData,
-  });
-
-  const labItemsQuery = useGetLabTests(
-    {
+  const labTestFilters = useMemo(
+    () => ({
       facility_id: facilityId || undefined,
       is_active: true,
       per_page: 100,
       order_by: 'name',
-      order_direction: 'asc',
-    },
-    {
-      enabled: shouldLoadReferenceData,
-    }
+      order_direction: 'asc' as const,
+    }),
+    [facilityId]
   );
 
-  const popularLabItemsQuery = useGetPopularTests(facilityId || 0, 12, {
-    enabled: !!facilityId && (showItemEditorModal || showLabItemManager),
+  const templatesQuery = useGetActiveTemplates(facilityId || undefined, {
+    enabled: !!facilityId,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
+
+  const labItemsQuery = useGetLabTests(labTestFilters, {
+    enabled: !!facilityId,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+  });
+
+  const popularLabItemsQuery = useGetPopularTests(facilityId || 0, 12, {
+    enabled: !!facilityId,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+  });
+
+    const templates = useMemo(() =>
+      templatesQuery.data?.data?.templates ?? [],
+      [templatesQuery.data?.data?.templates]
+    );
+    const labItems = useMemo(() =>
+      labItemsQuery.data?.data?.data ?? [],
+      [labItemsQuery.data?.data?.data]
+    );
+
+  const popularLabItems = popularLabItemsQuery.data?.data || [];
+
+const selectedTemplateForManagement = useMemo(() => {
+  const safeTemplates = Array.isArray(templates) ? templates : [];
+
+  return (
+    safeTemplates.find(
+      (template) => template.template_uuid === selectedTemplateUuid
+    ) || null
+  );
+}, [templates, selectedTemplateUuid]);
+
+  const selectedLabItemForManagement = useMemo(
+    () =>
+      labItems.find((item) => item.test_uuid === selectedLabItemUuid) || null,
+    [labItems, selectedLabItemUuid]
+  );
+
+  /**
+   * --------------------------------------------------------------------------
+   * DISPLAY ITEMS
+   * --------------------------------------------------------------------------
+   * Persisted request => derive directly from currentRequest.items
+   * New unsaved request => use localDraftItems
+   */
+  const displayItems = useMemo<LabRequestDraftItem[]>(() => {
+    if (currentRequest) {
+      return toLabRequestDraftItems(currentRequest.items || []);
+    }
+
+    return localDraftItems;
+  }, [currentRequest, localDraftItems]);
 
   /**
    * --------------------------------------------------------------------------
@@ -297,72 +360,190 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
 
   /**
    * --------------------------------------------------------------------------
-   * SYNC CURRENT REQUEST INTO FORM
+   * STATE SYNC
    * --------------------------------------------------------------------------
    */
   useEffect(() => {
     if (currentRequest) {
       setFormData(toLabRequestFormData(currentRequest));
+      setLocalDraftItems([]);
     }
   }, [currentRequest]);
 
   useEffect(() => {
-    if (currentRequest?.items) {
-      setDraftItems(toLabRequestDraftItems(currentRequest.items));
+    if (selectedTemplateUuid && !templates.some((template) => template.template_uuid === selectedTemplateUuid)) {
+      setSelectedTemplateUuid(null);
     }
-  }, [currentRequest]);
+  }, [selectedTemplateUuid, templates]);
+
+  useEffect(() => {
+    if (selectedLabItemUuid && !labItems.some((item) => item.test_uuid === selectedLabItemUuid)) {
+      setSelectedLabItemUuid(null);
+    }
+  }, [selectedLabItemUuid, labItems]);
+
+  useEffect(() => {
+    if ((showTemplateManager || showTemplateFieldManager) && !selectedTemplateUuid && templates.length > 0) {
+      setSelectedTemplateUuid(templates[0].template_uuid);
+    }
+  }, [showTemplateManager, showTemplateFieldManager, selectedTemplateUuid, templates]);
+
+  useEffect(() => {
+    if (showLabItemManager && !selectedLabItemUuid && labItems.length > 0) {
+      setSelectedLabItemUuid(labItems[0].test_uuid);
+    }
+  }, [showLabItemManager, selectedLabItemUuid, labItems]);
 
   /**
    * --------------------------------------------------------------------------
-   * HELPERS
+   * REFRESH HELPERS
    * --------------------------------------------------------------------------
+   * Centralized refresh pipeline so every mutation can re-sync the same way.
    */
-  const refreshAllData = useCallback(async () => {
-    setIsManualRefreshing(true);
+  const refreshReferenceData = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: labKeys.templates() });
+    await queryClient.invalidateQueries({ queryKey: labKeys.tests() });
+    await queryClient.invalidateQueries({ queryKey: labKeys.fields() });
 
-    try {
+    await Promise.all([
+      facilityId ? templatesQuery.refetch() : Promise.resolve(),
+      facilityId ? labItemsQuery.refetch() : Promise.resolve(),
+      facilityId ? popularLabItemsQuery.refetch() : Promise.resolve(),
+    ]);
+  }, [
+    facilityId,
+    labItemsQuery,
+    popularLabItemsQuery,
+    queryClient,
+    templatesQuery,
+  ]);
+
+  const refreshRequestData = useCallback(
+    async (requestUuidOverride?: string | null) => {
+      const targetRequestUuid = requestUuidOverride ?? currentRequestUuid;
+
+      await queryClient.invalidateQueries({ queryKey: labKeys.requests() });
+      await queryClient.invalidateQueries({ queryKey: labKeys.items() });
+
       if (visitNumericId) {
         await queryClient.invalidateQueries({
           queryKey: labKeys.requestByVisit(visitNumericId),
         });
-        await queryClient.refetchQueries({
-          queryKey: labKeys.requestByVisit(visitNumericId),
-        });
       }
 
-      if (currentRequestUuid) {
-        await queryClient.invalidateQueries({
-          queryKey: labKeys.requestWithItems(currentRequestUuid),
-        });
-        await queryClient.refetchQueries({
-          queryKey: labKeys.requestWithItems(currentRequestUuid),
-        });
+      if (targetRequestUuid) {
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: labKeys.requestDetail(targetRequestUuid),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: labKeys.requestWithItems(targetRequestUuid),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: labKeys.requestWithFullDetails(targetRequestUuid),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: labKeys.itemByLabRequest(targetRequestUuid),
+          }),
+        ]);
       }
 
-      await queryClient.invalidateQueries({
-        queryKey: labKeys.requests(),
+      await Promise.all([
+        visitNumericId ? visitRequestsQuery.refetch() : Promise.resolve(),
+        targetRequestUuid
+          ? queryClient.refetchQueries({
+              queryKey: labKeys.requestWithItems(targetRequestUuid),
+              exact: true,
+              type: 'active',
+            })
+          : Promise.resolve(),
+        targetRequestUuid
+          ? queryClient.refetchQueries({
+              queryKey: labKeys.requestWithFullDetails(targetRequestUuid),
+              exact: true,
+              type: 'active',
+            })
+          : Promise.resolve(),
+        targetRequestUuid
+          ? queryClient.refetchQueries({
+              queryKey: labKeys.itemByLabRequest(targetRequestUuid),
+              exact: true,
+              type: 'active',
+            })
+          : Promise.resolve(),
+      ]);
+    },
+    [currentRequestUuid, queryClient, visitNumericId, visitRequestsQuery]
+  );
+
+  const syncAllVisibleLabData = useCallback(
+    async (options?: {
+      requestUuid?: string | null;
+      includeReferenceData?: boolean;
+      includeRequestData?: boolean;
+      toastMessage?: string;
+    }) => {
+      const {
+        requestUuid,
+        includeReferenceData = true,
+        includeRequestData = true,
+        toastMessage,
+      } = options || {};
+
+      await queryClient.invalidateQueries({ queryKey: labKeys.all() });
+
+      if (includeReferenceData) {
+        await refreshReferenceData();
+      }
+
+      if (includeRequestData) {
+        await refreshRequestData(requestUuid);
+      }
+
+      if (toastMessage) {
+        showToast('success', toastMessage, 2500);
+      }
+    },
+    [queryClient, refreshReferenceData, refreshRequestData, showToast]
+  );
+
+  const handleManualRefresh = useCallback(async () => {
+    setIsManualRefreshing(true);
+
+    try {
+      await syncAllVisibleLabData({
+        toastMessage: 'Lab request data refreshed',
       });
-
-      showToast('success', 'Lab request data refreshed', 2000);
     } catch (error) {
       console.error('Failed to refresh lab request data:', error);
       showToast('error', 'Failed to refresh lab request data', 3000);
     } finally {
       setIsManualRefreshing(false);
     }
-  }, [currentRequestUuid, queryClient, showToast, visitNumericId]);
+  }, [showToast, syncAllVisibleLabData]);
 
+  /**
+   * --------------------------------------------------------------------------
+   * LOCAL HELPERS
+   * --------------------------------------------------------------------------
+   */
   const resetItemEditor = useCallback(() => {
     setItemEditorData(EMPTY_LAB_REQUEST_ITEM);
     setEditingItem(null);
     setShowItemEditorModal(false);
   }, []);
 
-  const openAddItemModal = useCallback(() => {
+  const openAddItemModal = useCallback(async () => {
+    try {
+      await refreshReferenceData();
+    } catch (error) {
+      console.error('Failed to refresh reference data before opening item modal:', error);
+    }
+
     setItemEditorData(EMPTY_LAB_REQUEST_ITEM);
     setEditingItem(null);
     setShowItemEditorModal(true);
-  }, []);
+  }, [refreshReferenceData]);
 
   const handleFormChange = useCallback(
     (field: keyof LabRequestFormData, value: string | LabRequestPriority) => {
@@ -378,50 +559,43 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
     []
   );
 
-  const handleEditItem = useCallback((item: LabRequestDraftItem) => {
-    setEditingItem(item);
-    setItemEditorData({
-      id: item.id ?? null,
-      item_uuid: item.item_uuid ?? null,
-      display_name: item.display_name,
-      lab_test_id: item.lab_test_id ?? null,
-      source: item.source,
-      source_inventory_item_id: item.source_inventory_item_id ?? null,
-      sample_type: item.sample_type || '',
-      notes: item.notes || '',
-      template_id: item.template_id ?? null,
-      template_name: item.template_name || '',
-      code: item.code || '',
-      category: item.category || '',
-      turnaround_time_hours: item.turnaround_time_hours ?? null,
-      requires_fasting: !!item.requires_fasting,
-      is_from_inventory: !!item.is_from_inventory,
-      inventory_display_unit: item.inventory_display_unit || '',
-      inventory_available_quantity: item.inventory_available_quantity ?? null,
-    });
-    setShowItemEditorModal(true);
-  }, []);
+  const handleEditItem = useCallback(
+    async (item: LabRequestDraftItem) => {
+      try {
+        await refreshReferenceData();
+      } catch (error) {
+        console.error('Failed to refresh reference data before editing item:', error);
+      }
 
-  const refreshRequestWithItems = useCallback(async () => {
-    if (!currentRequestUuid) return;
-
-    await queryClient.invalidateQueries({
-      queryKey: labKeys.requestWithItems(currentRequestUuid),
-    });
-
-    await queryClient.refetchQueries({
-      queryKey: labKeys.requestWithItems(currentRequestUuid),
-    });
-  }, [currentRequestUuid, queryClient]);
+      setEditingItem(item);
+      setItemEditorData({
+        id: item.id ?? null,
+        item_uuid: item.item_uuid ?? null,
+        display_name: item.display_name,
+        lab_test_id: item.lab_test_id ?? null,
+        source: item.source,
+        source_inventory_item_id: item.source_inventory_item_id ?? null,
+        sample_type: item.sample_type || '',
+        notes: item.notes || '',
+        template_id: item.template_id ?? null,
+        template_name: item.template_name || '',
+        code: item.code || '',
+        category: item.category || '',
+        turnaround_time_hours: item.turnaround_time_hours ?? null,
+        requires_fasting: !!item.requires_fasting,
+        is_from_inventory: !!item.is_from_inventory,
+        inventory_display_unit: item.inventory_display_unit || '',
+        inventory_available_quantity: item.inventory_available_quantity ?? null,
+      });
+      setShowItemEditorModal(true);
+    },
+    [refreshReferenceData]
+  );
 
   /**
    * --------------------------------------------------------------------------
    * ITEM SAVE FLOW
    * --------------------------------------------------------------------------
-   * Production-safe rule:
-   * - if selected from inventory but not mapped to a real lab item/test,
-   *   do not persist to request yet
-   * - user should create/map a lab item first from the manager flow
    */
   const handleSaveItem = useCallback(async () => {
     if (!itemEditorData.display_name.trim()) {
@@ -445,21 +619,28 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
           data: toLabRequestItemUpdatePayload(itemEditorData, currentRequest.id),
         });
 
-        await refreshRequestWithItems();
-        showToast('success', 'Lab request item updated successfully', 3000);
+        await syncAllVisibleLabData({
+          requestUuid: currentRequest.request_uuid,
+          includeReferenceData: true,
+          includeRequestData: true,
+        });
+
         resetItemEditor();
         return;
       }
 
       if (editingItem && !currentRequest) {
-        const updatedLocalItem = buildLocalLabRequestDraftItem(itemEditorData, editingItem.id || Date.now());
+        const updatedLocalItem = buildLocalLabRequestDraftItem(
+          itemEditorData,
+          editingItem.id || Date.now()
+        );
 
-        setDraftItems((prev) =>
+        setLocalDraftItems((prev) =>
           prev.map((item) => (item.id === editingItem.id ? updatedLocalItem : item))
         );
 
-        showToast('success', 'Lab request item updated', 3000);
         resetItemEditor();
+        showToast('success', 'Lab request item updated', 3000);
         return;
       }
 
@@ -469,29 +650,33 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
           ...toLabRequestItemCreatePayload(itemEditorData),
         });
 
-        await refreshRequestWithItems();
-        showToast('success', 'Lab request item added successfully', 3000);
+        await syncAllVisibleLabData({
+          requestUuid: currentRequest.request_uuid,
+          includeReferenceData: true,
+          includeRequestData: true,
+        });
+
         resetItemEditor();
         return;
       }
 
       const localItem = buildLocalLabRequestDraftItem(itemEditorData, Date.now());
-      setDraftItems((prev) => [...prev, localItem]);
-      showToast('success', 'Lab request item added. It will be saved when you submit the request.', 4000);
+      setLocalDraftItems((prev) => [...prev, localItem]);
       resetItemEditor();
+      showToast('success', 'Lab request item added. It will be saved when you submit the request.', 4000);
     } catch (error) {
       console.error('Failed to save lab request item:', error);
       showToast('error', 'Failed to save lab request item', 5000);
     }
   }, [
-    createLabRequestItem,
     currentRequest,
     editingItem,
     itemEditorData,
-    refreshRequestWithItems,
     resetItemEditor,
     showToast,
+    createLabRequestItem,
     updateLabRequestItem,
+    syncAllVisibleLabData,
   ]);
 
   const handleDeleteItem = useCallback(
@@ -517,27 +702,29 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
             cancelledByStaffId: userId || undefined,
           });
 
-          await refreshRequestWithItems();
-          showToast('success', 'Lab request item cancelled successfully', 3000);
+          await syncAllVisibleLabData({
+            requestUuid: currentRequest.request_uuid,
+            includeReferenceData: true,
+            includeRequestData: true,
+          });
+
           return;
         }
 
-        setDraftItems((prev) => prev.filter((draft) => draft.id !== item.id));
+        setLocalDraftItems((prev) => prev.filter((draft) => draft.id !== item.id));
         showToast('success', 'Lab request item removed', 3000);
       } catch (error) {
         console.error('Failed to remove/cancel lab request item:', error);
         showToast('error', 'Failed to remove lab request item', 5000);
       }
     },
-    [cancelItem, confirm, currentRequest, refreshRequestWithItems, showToast, theme, userId]
+    [cancelItem, confirm, currentRequest, showToast, syncAllVisibleLabData, theme, userId]
   );
 
   /**
    * --------------------------------------------------------------------------
    * TEMPLATE APPLY FLOW
    * --------------------------------------------------------------------------
-   * Template selection can introduce multiple lab items.
-   * Only persistable items are allowed into the final payload.
    */
   const handleApplyTemplate = useCallback(
     async (selection: LabTemplateSelectionResult) => {
@@ -563,38 +750,29 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
             })),
           });
 
-          await refreshRequestWithItems();
-          showToast(
-            'success',
-            `Template "${selection.template.name}" applied successfully`,
-            4000
-          );
+          await syncAllVisibleLabData({
+            requestUuid: currentRequest.request_uuid,
+            includeReferenceData: true,
+            includeRequestData: true,
+          });
         } else {
-          setDraftItems((prev) => [...prev, ...persistableItems]);
-          showToast(
-            'success',
-            `Template "${selection.template.name}" applied. Items will be saved when you submit the request.`,
-            4000
-          );
+          setLocalDraftItems((prev) => [...prev, ...persistableItems]);
         }
 
-        setSelectedTemplateForManagement(selection.template);
+        setSelectedTemplateUuid(selection.template.template_uuid);
         setShowTemplateSelector(false);
       } catch (error) {
         console.error('Failed to apply lab template:', error);
         showToast('error', 'Failed to apply lab template', 5000);
       }
     },
-    [addItemsToRequest, currentRequest, refreshRequestWithItems, showToast]
+    [addItemsToRequest, currentRequest, showToast, syncAllVisibleLabData]
   );
 
   /**
    * --------------------------------------------------------------------------
    * REQUEST SAVE FLOW
    * --------------------------------------------------------------------------
-   * - New request: create request with items
-   * - Existing request: update details only
-   *   item CRUD already occurs from item-level actions
    */
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -625,12 +803,12 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
         return;
       }
 
-      if (draftItems.length === 0) {
+      if (displayItems.length === 0) {
         showToast('error', 'Please add at least one lab item to the request', 5000);
         return;
       }
 
-      const unresolvedItems = draftItems.filter((item) => !isLabRequestDraftItemPersistable(item));
+      const unresolvedItems = displayItems.filter((item) => !isLabRequestDraftItemPersistable(item));
       if (unresolvedItems.length > 0) {
         showToast(
           'error',
@@ -662,9 +840,13 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
           });
 
           if (result.success) {
-            await refreshRequestWithItems();
+            await syncAllVisibleLabData({
+              requestUuid: currentRequest.request_uuid,
+              includeReferenceData: true,
+              includeRequestData: true,
+            });
+
             setIsDetailsEditorOpen(false);
-            showToast('success', 'Lab request updated successfully', 5000);
             onSuccess?.(result.data.id);
           }
 
@@ -683,7 +865,7 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
             source: 'lab-request-form',
             context: 'active-visit',
           },
-          items: draftItems
+          items: displayItems
             .filter(isLabRequestDraftItemPersistable)
             .map((item) => ({
               lab_test_id: item.lab_test_id as number,
@@ -695,14 +877,18 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
         const result = await createLabRequestWithItems.mutateAsync(createPayload);
 
         if (result.success) {
-          setCreatedRequestUuid(result.data.request_uuid);
+          const newRequestUuid = result.data.request_uuid;
+
+          setCreatedRequestUuid(newRequestUuid);
+          setLocalDraftItems([]);
           setIsDetailsEditorOpen(false);
 
-          await queryClient.invalidateQueries({
-            queryKey: labKeys.requestByVisit(visitNumericId),
+          await syncAllVisibleLabData({
+            requestUuid: newRequestUuid,
+            includeReferenceData: true,
+            includeRequestData: true,
           });
 
-          showToast('success', 'Lab request created successfully', 5000);
           onSuccess?.(result.data.id);
         }
       } catch (error) {
@@ -715,15 +901,14 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
     [
       createLabRequestWithItems,
       currentRequest,
-      draftItems,
+      displayItems,
       facilityId,
       formData,
       onSuccess,
       patientId,
       patientNumericId,
-      queryClient,
-      refreshRequestWithItems,
       showToast,
+      syncAllVisibleLabData,
       updateLabRequest,
       userId,
       visitId,
@@ -752,14 +937,27 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
         cancelledByStaffId: userId || undefined,
       });
 
-      await refreshAllData();
-      showToast('success', 'Lab request cancelled successfully', 5000);
+      await syncAllVisibleLabData({
+        requestUuid: currentRequest.request_uuid,
+        includeReferenceData: true,
+        includeRequestData: true,
+      });
+
       onCancel?.();
     } catch (error) {
       console.error('Failed to cancel lab request:', error);
       showToast('error', 'Failed to cancel lab request', 5000);
     }
-  }, [cancelLabRequest, confirm, currentRequest, onCancel, refreshAllData, showToast, theme, userId]);
+  }, [
+    cancelLabRequest,
+    confirm,
+    currentRequest,
+    onCancel,
+    showToast,
+    syncAllVisibleLabData,
+    theme,
+    userId,
+  ]);
 
   /**
    * --------------------------------------------------------------------------
@@ -864,12 +1062,40 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
         isDark={isDark}
         colors={colors}
         request={currentRequest}
-        onOpenTemplateSelector={() => setShowTemplateSelector(true)}
-        onOpenTemplateManager={() => setShowTemplateManager(true)}
-        onOpenTemplateFieldManager={() => setShowTemplateFieldManager(true)}
-        onOpenLabItemManager={() => setShowLabItemManager(true)}
+        onOpenTemplateSelector={async () => {
+          try {
+            await refreshReferenceData();
+          } catch (error) {
+            console.error('Failed to refresh templates before opening selector:', error);
+          }
+          setShowTemplateSelector(true);
+        }}
+        onOpenTemplateManager={async () => {
+          try {
+            await refreshReferenceData();
+          } catch (error) {
+            console.error('Failed to refresh templates before opening manager:', error);
+          }
+          setShowTemplateManager(true);
+        }}
+        onOpenTemplateFieldManager={async () => {
+          try {
+            await refreshReferenceData();
+          } catch (error) {
+            console.error('Failed to refresh reference data before opening field manager:', error);
+          }
+          setShowTemplateFieldManager(true);
+        }}
+        onOpenLabItemManager={async () => {
+          try {
+            await refreshReferenceData();
+          } catch (error) {
+            console.error('Failed to refresh lab items before opening manager:', error);
+          }
+          setShowLabItemManager(true);
+        }}
         onAddItem={openAddItemModal}
-        onRefresh={refreshAllData}
+        onRefresh={handleManualRefresh}
         isRefreshing={isManualRefreshing}
       />
 
@@ -892,7 +1118,12 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
             formData={formData}
             isEditorOpen={isDetailsEditorOpen}
             onOpenEditor={() => setIsDetailsEditorOpen(true)}
-            onCloseEditor={() => setIsDetailsEditorOpen(false)}
+            onCloseEditor={() => {
+              if (currentRequest) {
+                setFormData(toLabRequestFormData(currentRequest));
+              }
+              setIsDetailsEditorOpen(false);
+            }}
             onChange={handleFormChange}
             onCancelRequest={handleCancelCurrentRequest}
             isCancellingRequest={cancelLabRequest.isPending}
@@ -902,11 +1133,18 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
             isDark={isDark}
             colors={colors}
             request={currentRequest}
-            items={draftItems}
+            items={displayItems}
             onAddItem={openAddItemModal}
             onEditItem={handleEditItem}
             onDeleteItem={handleDeleteItem}
-            onManageLabItems={() => setShowLabItemManager(true)}
+            onManageLabItems={async () => {
+              try {
+                await refreshReferenceData();
+              } catch (error) {
+                console.error('Failed to refresh lab items before opening manager:', error);
+              }
+              setShowLabItemManager(true);
+            }}
           />
         </div>
 
@@ -928,10 +1166,10 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
 
           <button
             type="submit"
-            disabled={isMutating || isSubmitting || draftItems.length === 0}
+            disabled={isMutating || isSubmitting || displayItems.length === 0}
             className={cn(
               'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
-              isMutating || isSubmitting || draftItems.length === 0
+              isMutating || isSubmitting || displayItems.length === 0
                 ? 'cursor-not-allowed bg-gray-400'
                 : 'cursor-pointer bg-blue-600 hover:bg-blue-700'
             )}
@@ -942,20 +1180,34 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
         </div>
       </form>
 
-           <LabRequestItemEditorModal
+      <LabRequestItemEditorModal
         open={showItemEditorModal}
         isDark={isDark}
         colors={colors}
         editingItem={editingItem}
         formData={itemEditorData}
         isMutating={isMutating}
-        templates={templatesQuery.data?.data || []}
-        labItems={labItemsQuery.data?.data?.data || []}
-        popularLabItems={popularLabItemsQuery.data?.data || []}
+        templates={templates}
+        labItems={labItems}
+        popularLabItems={popularLabItems}
         onClose={resetItemEditor}
         onChange={handleItemEditorChange}
-        onOpenTemplateManager={() => setShowTemplateManager(true)}
-        onOpenLabItemManager={() => setShowLabItemManager(true)}
+        onOpenTemplateManager={async () => {
+          try {
+            await refreshReferenceData();
+          } catch (error) {
+            console.error('Failed to refresh templates before opening manager:', error);
+          }
+          setShowTemplateManager(true);
+        }}
+        onOpenLabItemManager={async () => {
+          try {
+            await refreshReferenceData();
+          } catch (error) {
+            console.error('Failed to refresh lab items before opening manager:', error);
+          }
+          setShowLabItemManager(true);
+        }}
         onSubmit={handleSaveItem}
       />
 
@@ -963,16 +1215,30 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
         open={showTemplateSelector}
         isDark={isDark}
         colors={colors}
-        templates={templatesQuery.data?.data || []}
-        labItems={labItemsQuery.data?.data?.data || []}
+        templates={templates}
+        labItems={labItems}
         onClose={() => setShowTemplateSelector(false)}
         onApplyTemplate={handleApplyTemplate}
-        onManageTemplates={() => setShowTemplateManager(true)}
+        onManageTemplates={async () => {
+          try {
+            await refreshReferenceData();
+          } catch (error) {
+            console.error('Failed to refresh templates before opening manager:', error);
+          }
+          setShowTemplateManager(true);
+        }}
         onManageTemplateFields={(template) => {
-          setSelectedTemplateForManagement(template);
+          setSelectedTemplateUuid(template.template_uuid);
           setShowTemplateFieldManager(true);
         }}
-        onManageLabItems={() => setShowLabItemManager(true)}
+        onManageLabItems={async () => {
+          try {
+            await refreshReferenceData();
+          } catch (error) {
+            console.error('Failed to refresh lab items before opening manager:', error);
+          }
+          setShowLabItemManager(true);
+        }}
       />
 
       <LabTemplateManagerModal
@@ -980,11 +1246,18 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
         isDark={isDark}
         colors={colors}
         selectedTemplate={selectedTemplateForManagement}
-        templates={templatesQuery.data?.data || []}
-        onClose={() => setShowTemplateManager(false)}
-        onSelectTemplate={(template) => setSelectedTemplateForManagement(template)}
+        templates={templates}
+        onClose={async () => {
+          setShowTemplateManager(false);
+          try {
+            await refreshReferenceData();
+          } catch (error) {
+            console.error('Failed to refresh templates after closing manager:', error);
+          }
+        }}
+        onSelectTemplate={(template) => setSelectedTemplateUuid(template?.template_uuid ?? null)}
         onManageFields={(template) => {
-          setSelectedTemplateForManagement(template);
+          setSelectedTemplateUuid(template.template_uuid);
           setShowTemplateFieldManager(true);
         }}
       />
@@ -994,9 +1267,16 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
         isDark={isDark}
         colors={colors}
         selectedTemplate={selectedTemplateForManagement}
-        templates={templatesQuery.data?.data || []}
-        onClose={() => setShowTemplateFieldManager(false)}
-        onSelectTemplate={(template) => setSelectedTemplateForManagement(template)}
+        templates={templates}
+        onClose={async () => {
+          setShowTemplateFieldManager(false);
+          try {
+            await refreshReferenceData();
+          } catch (error) {
+            console.error('Failed to refresh template field data after closing manager:', error);
+          }
+        }}
+        onSelectTemplate={(template) => setSelectedTemplateUuid(template?.template_uuid ?? null)}
       />
 
       <LabItemManagerModal
@@ -1004,11 +1284,18 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
         isDark={isDark}
         colors={colors}
         selectedLabItem={selectedLabItemForManagement}
-        templates={templatesQuery.data?.data || []}
-        labItems={labItemsQuery.data?.data?.data || []}
-        popularLabItems={popularLabItemsQuery.data?.data || []}
-        onClose={() => setShowLabItemManager(false)}
-        onSelectLabItem={(item) => setSelectedLabItemForManagement(item)}
+        templates={templates}
+        labItems={labItems}
+        popularLabItems={popularLabItems}
+        onClose={async () => {
+          setShowLabItemManager(false);
+          try {
+            await refreshReferenceData();
+          } catch (error) {
+            console.error('Failed to refresh lab item data after closing manager:', error);
+          }
+        }}
+        onSelectLabItem={(item) => setSelectedLabItemUuid(item?.test_uuid ?? null)}
       />
     </motion.div>
   );

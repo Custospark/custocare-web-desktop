@@ -13,6 +13,9 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import type { LabTemplate, LabTest } from '../../../../api/lab/LabTypes';
+import { getActiveFacilityId } from '../../../../../../app/store/utils/contextSelectors';
+import type { RootState } from '../../../../../../app/store/rootReducer';
+import { useSelector } from 'react-redux';
 import {
   useCreateLabTest,
   useDeleteLabTest,
@@ -39,6 +42,7 @@ interface LabItemFormState {
   category: string;
   description: string;
   is_active: boolean;
+  facility_id?:number;
   requires_fasting: boolean;
   turnaround_time_hours: string;
   is_shared: boolean;
@@ -50,6 +54,7 @@ const EMPTY_LAB_ITEM_FORM: LabItemFormState = {
   template_id: '',
   category: '',
   description: '',
+  facility_id:undefined,
   is_active: true,
   requires_fasting: false,
   turnaround_time_hours: '',
@@ -69,6 +74,9 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
 }) => {
   const [search, setSearch] = useState('');
   const [form, setForm] = useState<LabItemFormState>(EMPTY_LAB_ITEM_FORM);
+  const facilityId = useSelector<RootState, number | undefined>(
+    (state) => getActiveFacilityId(state) ?? undefined
+  );
 
   const createLabTest = useCreateLabTest();
   const updateLabTest = useUpdateLabTest();
@@ -86,6 +94,7 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
         code: selectedLabItem.code || '',
         template_id: selectedLabItem.template_id?.toString() || '',
         category: selectedLabItem.category || '',
+        facility_id:facilityId || undefined,
         description: selectedLabItem.description || '',
         is_active: selectedLabItem.is_active,
         requires_fasting: selectedLabItem.requires_fasting,
@@ -95,7 +104,7 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
     } else {
       setForm(EMPTY_LAB_ITEM_FORM);
     }
-  }, [selectedLabItem]);
+  }, [selectedLabItem, facilityId]);
 
   const combinedItems = useMemo(() => {
         const safePopular = Array.isArray(popularLabItems) ? popularLabItems : [];
@@ -130,6 +139,7 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
       code: form.code.trim() || null,
       template_id: Number(form.template_id),
       category: form.category.trim() || null,
+      facility_id:facilityId || undefined,
       description: form.description.trim() || null,
       is_active: form.is_active,
       requires_fasting: form.requires_fasting,

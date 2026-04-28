@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import type { LabTemplate } from '../../../../api/lab/LabTypes';
+import { getActiveFacilityId } from '../../../../../../app/store/utils/contextSelectors';
 import { LabTemplateStructureType } from '../../../../api/lab/LabTypes';
 import {
   useActivateLabTemplate,
@@ -22,6 +23,8 @@ import {
   useUpdateLabTemplate,
 } from '../../../../api/lab/LabQueries';
 import type { ColorTokens } from './labRequestForm.types';
+import type { RootState } from '../../../../../../app/store/rootReducer';
+import { useSelector } from 'react-redux';
 
 interface LabTemplateManagerModalProps {
   open: boolean;
@@ -62,6 +65,8 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
 }) => {
   const [search, setSearch] = useState('');
   const [form, setForm] = useState<TemplateFormState>(EMPTY_TEMPLATE_FORM);
+  const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
+  
 
   const createTemplate = useCreateLabTemplate();
   const updateTemplate = useUpdateLabTemplate();
@@ -90,17 +95,24 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
     }
   }, [selectedTemplate]);
 
-  const filteredTemplates = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return templates;
+ const filteredTemplates = useMemo(() => {
+  const safeTemplates = Array.isArray(templates) ? templates : [];
+  const term = search.trim().toLowerCase();
 
-    return templates.filter((template) => {
-      const name = template.name.toLowerCase();
-      const description = (template.description || '').toLowerCase();
-      const structure = template.structure_type.toLowerCase();
-      return name.includes(term) || description.includes(term) || structure.includes(term);
-    });
-  }, [search, templates]);
+  if (!term) return safeTemplates;
+
+  return safeTemplates.filter((template) => {
+    const name = template.name.toLowerCase();
+    const description = (template.description || '').toLowerCase();
+    const structure = template.structure_type.toLowerCase();
+
+    return (
+      name.includes(term) ||
+      description.includes(term) ||
+      structure.includes(term)
+    );
+  });
+}, [search, templates]);
 
   const handleSave = async () => {
     if (!form.name.trim()) return;
@@ -113,6 +125,7 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
           description: form.description.trim() || null,
           structure_type: form.structure_type,
           is_shared: form.is_shared,
+          facility_id: facilityId,
           is_active: form.is_active,
         },
       });
@@ -125,6 +138,7 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
       structure_type: form.structure_type,
       is_shared: form.is_shared,
       is_active: form.is_active,
+      facility_id: facilityId,
       metadata: {
         source: 'lab-template-manager-modal',
       },

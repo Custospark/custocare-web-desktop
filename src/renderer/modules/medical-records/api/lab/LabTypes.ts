@@ -185,6 +185,9 @@ export interface LabTemplate {
   };
 }
 
+export type ActiveTemplatesResponse = {
+  templates: LabTemplate[];
+};
 /**
  * Lab Test Entity
  */

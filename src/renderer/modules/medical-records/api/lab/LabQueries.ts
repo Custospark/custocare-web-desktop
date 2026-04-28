@@ -14,7 +14,7 @@ import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@ta
 import type { AxiosError } from 'axios';
 import { axiosInstance } from '../../../../app/api/axiosConfig';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
-import type { ApiResponse, PaginatedResponse } from './LabTypes';
+import type { ActiveTemplatesResponse, ApiResponse, PaginatedResponse } from './LabTypes';
 import {
   // Types
   type LabTemplate,
@@ -176,12 +176,18 @@ export const useGetLabTemplate = (
  */
 export const useGetActiveTemplates = (
   facilityId?: number,
-  options?: Omit<UseQueryOptions<ApiResponse<LabTemplate[]>, AxiosError<ApiResponse<null>>>, 'queryKey' | 'queryFn'>
+  options?: Omit<
+    UseQueryOptions<ApiResponse<ActiveTemplatesResponse>, AxiosError<ApiResponse<null>>>,
+    'queryKey' | 'queryFn'
+  >
 ) => {
   return useQuery({
     queryKey: labKeys.templateActive(facilityId),
     queryFn: async () => {
-      const response = await axiosInstance.get('/lab/templates/active', { params: { facility_id: facilityId } });
+      const response = await axiosInstance.get('/lab/templates/active', {
+        params: { facility_id: facilityId },
+      });
+
       return response.data;
     },
     ...options,
