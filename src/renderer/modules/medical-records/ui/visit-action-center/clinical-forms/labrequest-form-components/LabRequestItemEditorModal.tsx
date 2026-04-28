@@ -144,7 +144,7 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                   {editingItem ? 'Edit Lab Request Item' : 'Add Lab Request Item'}
                 </h3>
                 <p className={cn('mt-1 text-sm', colors.text.secondary)}>
-                  Select a lab item directly, or start from inventory and map it to an approved lab item.
+                  Select a Lab Test directly, or start from inventory and map it to an approved Lab Test.
                 </p>
               </div>
 
@@ -176,7 +176,7 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                       )}
                     >
                       <TestTubeDiagonal className="h-4 w-4" />
-                      Use Lab Item
+                      Use Lab Test
                     </button>
 
                     <button
@@ -208,7 +208,7 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                       )}
                     >
                       <LibraryBig className="h-4 w-4" />
-                      Manage Lab Items
+                      Manage Lab Tests
                     </button>
 
                     <button
@@ -229,7 +229,7 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                   {pickerMode === 'lab_test' ? (
                     <div className={cn('rounded-xl border p-4', colors.border.primary, colors.bg.subtle)}>
                       <label className={cn('mb-2 block text-sm font-medium', colors.text.primary)}>
-                        Search Lab Items
+                        Search Lab Tests
                       </label>
                       <div className="relative mb-3">
                         <Search className={cn('absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2', colors.text.tertiary)} />
@@ -251,7 +251,7 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                       <div className="grid gap-2">
                         {filteredLabItems.length === 0 ? (
                           <div className={cn('rounded-lg border border-dashed p-4 text-sm', colors.border.primary, colors.text.secondary)}>
-                            No lab items matched your search.
+                            No Lab Tests matched your search.
                           </div>
                         ) : (
                           filteredLabItems.map((item) => (
@@ -301,7 +301,7 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                       <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
                         <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
                         <div className="text-sm">
-                          Inventory items can be used as selection starters, but the request still needs a valid mapped lab item before submission.
+                          Inventory items can be used as selection starters, but the request still needs a valid mapped Lab Test before submission.
                         </div>
                       </div>
 
@@ -321,7 +321,7 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
 
                       <div className="mt-4">
                         <RequiredLabel className={cn('mb-2 block text-sm font-medium', colors.text.primary)}>
-                          Map Inventory Selection To Lab Item
+                          Map Inventory Selection To Lab Test
                         </RequiredLabel>
 
                         <select
@@ -340,7 +340,7 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                             'focus:outline-none focus:ring-2 focus:ring-blue-500'
                           )}
                         >
-                          <option value="">Select linked lab item</option>
+                          <option value="">Select linked Lab Test</option>
                           {labItems.map((item) => (
                             <option key={item.id} value={item.id}>
                               {item.name} {item.code ? `(${item.code})` : ''}
@@ -375,7 +375,7 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                             colors.border.primary,
                             'focus:outline-none focus:ring-2 focus:ring-blue-500'
                           )}
-                          placeholder="Lab item display name"
+                          placeholder="Lab Test display name"
                         />
                       </div>
 
@@ -430,7 +430,7 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                         <span className="font-medium">Source:</span> {formData.source}
                       </div>
                       <div className={colors.text.primary}>
-                        <span className="font-medium">Mapped Lab Item ID:</span> {formData.lab_test_id || 'Not mapped'}
+                        <span className="font-medium">Mapped Lab Test ID:</span> {formData.lab_test_id || 'Not mapped'}
                       </div>
                       <div className={colors.text.primary}>
                         <span className="font-medium">Code:</span> {formData.code || '—'}
@@ -461,7 +461,7 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
 
                   {!formData.lab_test_id && (
                     <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/30 dark:bg-red-950/30 dark:text-red-300">
-                      This item cannot be saved to the request until it is mapped to a valid lab item.
+                      This item cannot be saved to the request until it is mapped to a valid Lab Test.
                     </div>
                   )}
                 </div>

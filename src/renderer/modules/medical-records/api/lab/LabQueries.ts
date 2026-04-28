@@ -1146,7 +1146,7 @@ export const useAddItemsToRequest = (callbacks?: { onSuccess?: (data: ApiRespons
 /* -------------------------------------------------------------------------- */
 
 /**
- * Get all lab request items with pagination
+ * Get all Lab Request Tests with pagination
  */
 export const useGetLabRequestItems = (
   filters?: LabRequestItemFilters,

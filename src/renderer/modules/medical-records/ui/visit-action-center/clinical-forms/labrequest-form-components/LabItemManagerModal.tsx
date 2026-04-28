@@ -191,10 +191,10 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
             <div className={cn('flex items-center justify-between border-b p-5', colors.border.primary)}>
               <div>
                 <h3 className={cn('text-lg font-semibold', colors.text.primary)}>
-                  Manage Lab Items
+                  Manage Lab Tests
                 </h3>
                 <p className={cn('mt-1 text-sm', colors.text.secondary)}>
-                  Create and maintain the lab items that are available for request entry.
+                  Create and maintain the Lab Tests that are available for request entry.
                 </p>
               </div>
 
@@ -216,7 +216,7 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
                       type="text"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search lab items"
+                      placeholder="Search Lab Tests"
                       className={cn(
                         'w-full rounded-lg border py-2.5 pl-9 pr-3 text-sm',
                         colors.bg.input,
@@ -281,7 +281,7 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
                     <div className="flex items-center gap-2">
                       <TestTubeDiagonal className={cn('h-4 w-4', colors.text.brand)} />
                       <h4 className={cn('text-sm font-semibold', colors.text.primary)}>
-                        {selectedLabItem ? 'Edit Lab Item' : 'Create Lab Item'}
+                        {selectedLabItem ? 'Edit Lab Test' : 'Create Lab Test'}
                       </h4>
                     </div>
 
@@ -305,7 +305,7 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
                   <div className="space-y-4">
                     <div>
                       <label className={cn('mb-1 block text-sm font-medium', colors.text.primary)}>
-                        Lab Item Name <span className="text-red-500">*</span>
+                        Lab Test Name <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -479,7 +479,7 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
                       )}
                     >
                       <Save className="h-4 w-4" />
-                      {selectedLabItem ? 'Save Lab Item' : 'Create Lab Item'}
+                      {selectedLabItem ? 'Save Lab Test' : 'Create Lab Test'}
                     </button>
                   </div>
 
@@ -491,7 +491,7 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
                       </p>
                     </div>
                     <p className={cn('text-sm', colors.text.secondary)}>
-                      Lab items are the actual requestable entities added to a lab request. Inventory references may assist with selection workflows, but request persistence must always resolve to a valid lab item.
+                      Lab Tests are the actual requestable entities added to a lab request. Inventory references may assist with selection workflows, but request persistence must always resolve to a valid Lab Test.
                     </p>
                   </div>
                 </div>

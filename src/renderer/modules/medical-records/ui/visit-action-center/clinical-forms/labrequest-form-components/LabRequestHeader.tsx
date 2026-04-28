@@ -79,7 +79,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
           <p className={cn('mt-1 text-sm', colors.text.secondary)}>
             {hasExistingRequest
               ? 'Review the active lab request, then add or update only what is needed.'
-              : 'Build a lab request from lab items, templates, and inventory-aware selections.'}
+              : 'Build a lab request from Lab Tests, templates, and inventory-aware selections.'}
           </p>
 
           {request?.updated_at && (
@@ -162,7 +162,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
           )}
         >
           <LibraryBig className="h-4 w-4" />
-          Manage Lab Items
+          Manage Lab Tests
         </button>
 
         <button

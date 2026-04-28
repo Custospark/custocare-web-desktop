@@ -169,7 +169,7 @@ export const toLabRequestDraftItems = (
   return items.map((item) => ({
     id: item.id,
     item_uuid: item.item_uuid,
-    display_name: item.lab_test?.name || `Lab item #${item.id}`,
+    display_name: item.lab_test?.name || `Lab Test #${item.id}`,
     lab_test_id: item.lab_test_id,
     source: 'lab_test',
     sample_type: item.sample_type || '',

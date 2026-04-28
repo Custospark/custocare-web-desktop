@@ -44,7 +44,7 @@ export const LabRequestItemsTable: React.FC<LabRequestItemsTableProps> = ({
       <div className={cn('flex flex-wrap items-center justify-between gap-3 border-b p-4', colors.border.primary)}>
         <div>
           <h3 className={cn('text-base font-semibold', colors.text.primary)}>
-            Lab Request Items
+            Lab Request Tests
           </h3>
           <p className={cn('text-sm', colors.text.secondary)}>
             {items.length} item{items.length === 1 ? '' : 's'} linked to this request
@@ -63,7 +63,7 @@ export const LabRequestItemsTable: React.FC<LabRequestItemsTableProps> = ({
             )}
           >
             <PackageSearch className="h-4 w-4" />
-            Manage Lab Items
+            Manage Lab Tests
           </button>
 
           <button
@@ -82,10 +82,10 @@ export const LabRequestItemsTable: React.FC<LabRequestItemsTableProps> = ({
           <div className={cn('rounded-xl border border-dashed p-8 text-center', colors.border.primary, colors.bg.subtle)}>
             <FlaskConical className={cn('mx-auto mb-3 h-10 w-10', colors.text.tertiary)} />
             <p className={cn('text-sm font-medium', colors.text.primary)}>
-              No lab items added yet
+              No Lab Tests added yet
             </p>
             <p className={cn('mt-1 text-sm', colors.text.secondary)}>
-              Add one or more lab items to prepare this request for submission.
+              Add one or more Lab Tests to prepare this request for submission.
             </p>
           </div>
         ) : (
@@ -94,7 +94,7 @@ export const LabRequestItemsTable: React.FC<LabRequestItemsTableProps> = ({
               <table className="w-full min-w-[980px] border-collapse">
                 <thead>
                   <tr className={cn('border-b', colors.border.primary)}>
-                    <th className={cn('px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>Lab Item</th>
+                    <th className={cn('px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>Lab Test</th>
                     <th className={cn('px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>Source</th>
                     <th className={cn('px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>Category / Code</th>
                     <th className={cn('px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>Sample / Fasting</th>

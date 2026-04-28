@@ -8,12 +8,12 @@
  *
  * Scope included:
  * - Create/edit lab requests
- * - Add/edit/remove lab request items
+ * - Add/edit/remove Lab Request Tests
  * - Use template flow
  * - Open management flows for:
  *   - Lab templates
  *   - Lab template fields
- *   - Lab items / lab tests
+ *   - Lab Tests / lab tests
  * - Inventory-aware item selection architecture
  *
  * Scope intentionally excluded:
@@ -272,7 +272,7 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
       labItemsQuery.data?.data ?? [],
       [labItemsQuery.data?.data ]
     );
-    console.log("Lab Items");
+    console.log("Lab Tests");
     console.log(labItems);
 
 
@@ -602,14 +602,14 @@ const selectedTemplateForManagement = useMemo(() => {
    */
   const handleSaveItem = useCallback(async () => {
     if (!itemEditorData.display_name.trim()) {
-      showToast('error', 'Lab item name is required', 3000);
+      showToast('error', 'Lab Test name is required', 3000);
       return;
     }
 
     if (!itemEditorData.lab_test_id) {
       showToast(
         'error',
-        'This selection is not yet mapped to a lab item. Create or map a lab item before adding it to the lab request.',
+        'This selection is not yet mapped to a Lab Test. Create or map a Lab Test before adding it to the lab request.',
         5000
       );
       return;
@@ -807,7 +807,7 @@ const selectedTemplateForManagement = useMemo(() => {
       }
 
       if (displayItems.length === 0) {
-        showToast('error', 'Please add at least one lab item to the request', 5000);
+        showToast('error', 'Please add at least one Lab Test to the request', 5000);
         return;
       }
 
@@ -815,7 +815,7 @@ const selectedTemplateForManagement = useMemo(() => {
       if (unresolvedItems.length > 0) {
         showToast(
           'error',
-          'Some selected items are not yet mapped to valid lab items. Resolve them before submitting the request.',
+          'Some selected items are not yet mapped to valid Lab Tests. Resolve them before submitting the request.',
           6000
         );
         return;
@@ -1093,7 +1093,7 @@ const selectedTemplateForManagement = useMemo(() => {
           try {
             await refreshReferenceData();
           } catch (error) {
-            console.error('Failed to refresh lab items before opening manager:', error);
+            console.error('Failed to refresh Lab Tests before opening manager:', error);
           }
           setShowLabItemManager(true);
         }}
@@ -1144,7 +1144,7 @@ const selectedTemplateForManagement = useMemo(() => {
               try {
                 await refreshReferenceData();
               } catch (error) {
-                console.error('Failed to refresh lab items before opening manager:', error);
+                console.error('Failed to refresh Lab Tests before opening manager:', error);
               }
               setShowLabItemManager(true);
             }}
@@ -1207,7 +1207,7 @@ const selectedTemplateForManagement = useMemo(() => {
           try {
             await refreshReferenceData();
           } catch (error) {
-            console.error('Failed to refresh lab items before opening manager:', error);
+            console.error('Failed to refresh Lab Tests before opening manager:', error);
           }
           setShowLabItemManager(true);
         }}
@@ -1238,7 +1238,7 @@ const selectedTemplateForManagement = useMemo(() => {
           try {
             await refreshReferenceData();
           } catch (error) {
-            console.error('Failed to refresh lab items before opening manager:', error);
+            console.error('Failed to refresh Lab Tests before opening manager:', error);
           }
           setShowLabItemManager(true);
         }}
@@ -1295,7 +1295,7 @@ const selectedTemplateForManagement = useMemo(() => {
           try {
             await refreshReferenceData();
           } catch (error) {
-            console.error('Failed to refresh lab item data after closing manager:', error);
+            console.error('Failed to refresh Lab Test data after closing manager:', error);
           }
         }}
         onSelectLabItem={(item) => setSelectedLabItemUuid(item?.test_uuid ?? null)}

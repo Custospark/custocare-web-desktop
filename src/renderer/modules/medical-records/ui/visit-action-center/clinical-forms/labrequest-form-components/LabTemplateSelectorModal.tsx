@@ -108,7 +108,7 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
               <div>
                 <h3 className={cn('text-lg font-semibold', colors.text.primary)}>Use Lab Template</h3>
                 <p className={cn('mt-1 text-sm', colors.text.secondary)}>
-                  Apply a template to quickly add predefined lab items to the request.
+                  Apply a template to quickly add predefined Lab Tests to the request.
                 </p>
               </div>
 
@@ -148,7 +148,7 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
                   )}
                 >
                   <LibraryBig className="h-4 w-4" />
-                  Manage Lab Items
+                  Manage Lab Tests
                 </button>
               </div>
 
@@ -201,7 +201,7 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
                                 {template.structure_type}
                               </span>
                               <span className={cn('rounded-full px-2 py-0.5 text-xs', isDark ? 'bg-cyan-900/30 text-cyan-300' : 'bg-cyan-100 text-cyan-700')}>
-                                {templateItems.length} lab item{templateItems.length === 1 ? '' : 's'}
+                                {templateItems.length} Lab Test{templateItems.length === 1 ? '' : 's'}
                               </span>
                             </div>
                           </div>
@@ -246,7 +246,7 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
                         {templateItems.length > 0 && (
                           <div className="mt-3 rounded-lg border p-3">
                             <p className={cn('mb-2 text-xs font-semibold uppercase tracking-wide', colors.text.tertiary)}>
-                              Included Lab Items
+                              Included Lab Tests
                             </p>
                             <div className="flex flex-wrap gap-2">
                               {templateItems.map((item) => (
