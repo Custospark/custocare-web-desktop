@@ -918,13 +918,16 @@ export const useGetRequestsByPatient = (
  */
 export const useGetRequestsByVisit = (
   visitId: number,
-  options?: Omit<UseQueryOptions<ApiResponse<LabRequest[]>, AxiosError<ApiResponse<null>>>, 'queryKey' | 'queryFn'>
+  options?: Omit<
+    UseQueryOptions<LabRequest[], AxiosError<ApiResponse<null>>>,
+    'queryKey' | 'queryFn'
+  >
 ) => {
   return useQuery({
     queryKey: labKeys.requestByVisit(visitId),
-    queryFn: async () => {
+    queryFn: async (): Promise<LabRequest[]> => {
       const response = await axiosInstance.get(`/lab/requests/visit/${visitId}`);
-      return response.data;
+      return response.data.data.requests;
     },
     enabled: !!visitId,
     ...options,
@@ -942,7 +945,9 @@ export const useGetRequestWithItems = (
     queryKey: labKeys.requestWithItems(uuid),
     queryFn: async () => {
       const response = await axiosInstance.get(`/lab/requests/${uuid}/with-items`);
-      return response.data;
+      console.log("Dump");
+      console.log(response.data);
+      return response.data.data.request;
     },
     enabled: !!uuid,
     ...options,

@@ -124,44 +124,45 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
 
   const patientNumericId = patientId ? Number(patientId) : 0;
   const visitNumericId = visitId ? Number(visitId) : 0;
+/**
+ * --------------------------------------------------------------------------
+ * ACTIVE REQUEST RESOLUTION
+ * --------------------------------------------------------------------------
+ */
+const visitRequestsQuery = useGetRequestsByVisit(visitNumericId, {
+  enabled: !!visitNumericId && !existingRequest,
+  staleTime: 0,
+  refetchOnMount: 'always',
+  refetchOnWindowFocus: true,
+});
 
-  /**
-   * --------------------------------------------------------------------------
-   * ACTIVE REQUEST RESOLUTION
-   * --------------------------------------------------------------------------
-   */
-  const visitRequestsQuery = useGetRequestsByVisit(visitNumericId, {
-    enabled: !!visitNumericId && !existingRequest,
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+const resolvedExistingRequest = useMemo<LabRequest | null>(() => {
+  if (existingRequest) return existingRequest;
+
+  const requests: LabRequest[] = visitRequestsQuery.data ?? [];
+
+  if (requests.length === 0) return null;
+
+  const activeStatuses = [
+    LabRequestStatus.PENDING,
+    LabRequestStatus.IN_PROGRESS,
+  ];
+
+  const activeRequests = requests.filter((request) =>
+    activeStatuses.includes(request.status)
+  );
+
+  const candidatePool =
+    activeRequests.length > 0 ? activeRequests : requests;
+
+  const sorted = [...candidatePool].sort((a, b) => {
+    const aTime = new Date(a.updated_at ?? a.created_at).getTime();
+    const bTime = new Date(b.updated_at ?? b.created_at).getTime();
+    return bTime - aTime;
   });
 
-  const resolvedExistingRequest = useMemo<LabRequest | null>(() => {
-    if (existingRequest) return existingRequest;
-
-    const requests = visitRequestsQuery.data?.data || [];
-    if (!requests.length) return null;
-
-    const activeStatuses = [
-      LabRequestStatus.PENDING,
-      LabRequestStatus.IN_PROGRESS,
-    ];
-
-    const activeRequests = requests.filter((request) =>
-      activeStatuses.includes(request.status)
-    );
-
-    const candidatePool = activeRequests.length ? activeRequests : requests;
-
-    const sorted = [...candidatePool].sort((a, b) => {
-      const aTime = new Date(a.updated_at || a.created_at).getTime();
-      const bTime = new Date(b.updated_at || b.created_at).getTime();
-      return bTime - aTime;
-    });
-
-    return sorted[0] ?? null;
-  }, [existingRequest, visitRequestsQuery.data]);
+  return sorted[0] ?? null;
+}, [existingRequest, visitRequestsQuery.data]);
 
   /**
    * --------------------------------------------------------------------------
@@ -198,7 +199,7 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
       resolvedExistingRequest ||
       null
     );
-  }, [currentRequestQuery.data, existingRequest, resolvedExistingRequest]);
+  }, [currentRequestQuery.data?.data, existingRequest, resolvedExistingRequest]);
 
   /**
    * --------------------------------------------------------------------------
