@@ -1,7 +1,8 @@
+// LabRequestFocus.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MEDICAL_RECORDS_ROUTES } from '../../../../../../app/routes/routeConstants';
 import { LabRequestForm } from '../LabRequestForm';
+import { MEDICAL_RECORDS_ROUTES } from '../../../../../../app/routes/routeConstants';
 
 interface LabRequestFocusProps {
   theme?: 'light' | 'dark';
@@ -15,11 +16,18 @@ export const LabRequestFocus: React.FC<LabRequestFocusProps> = ({ theme = 'light
   };
 
   const handleSuccess = () => {
-    // Intentionally keep the same pattern as PrescriptionFocus.
-    // You can later decide whether to stay here or navigate back to clinical care.
+    // Intentionally left passive for now, same pattern as PrescriptionFocus.
+    // We can later decide whether success should navigate, stay on page,
+    // or open a lab request details view.
   };
 
-  return <LabRequestForm theme={theme} onCancel={handleCancel} onSuccess={handleSuccess} />;
+  return (
+    <LabRequestForm
+      theme={theme}
+      onCancel={handleCancel}
+      onSuccess={handleSuccess}
+    />
+  );
 };
 
 export default LabRequestFocus;

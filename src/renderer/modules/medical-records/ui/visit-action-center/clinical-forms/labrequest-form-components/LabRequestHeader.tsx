@@ -1,5 +1,14 @@
+// labrequest-form-components/LabRequestHeader.tsx
 import React from 'react';
-import { ClipboardPlus, Plus, RefreshCw } from 'lucide-react';
+import {
+  ClipboardList,
+  FolderCog,
+  FolderOpen,
+  LibraryBig,
+  Plus,
+  RefreshCw,
+  Rows3,
+} from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import type { LabRequest } from '../../../../api/lab/LabTypes';
 import type { ColorTokens } from './labRequestForm.types';
@@ -8,8 +17,11 @@ interface LabRequestHeaderProps {
   isDark: boolean;
   colors: ColorTokens;
   request: LabRequest | null;
-  selectedTestsCount: number;
-  onAddTest: () => void;
+  onOpenTemplateSelector: () => void;
+  onOpenTemplateManager: () => void;
+  onOpenTemplateFieldManager: () => void;
+  onOpenLabItemManager: () => void;
+  onAddItem: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
 }
@@ -18,8 +30,11 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
   isDark,
   colors,
   request,
-  selectedTestsCount,
-  onAddTest,
+  onOpenTemplateSelector,
+  onOpenTemplateManager,
+  onOpenTemplateFieldManager,
+  onOpenLabItemManager,
+  onAddItem,
   onRefresh,
   isRefreshing = false,
 }) => {
@@ -29,7 +44,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
     <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="flex items-start gap-3">
         <div className={cn('rounded-xl p-2.5', isDark ? 'bg-cyan-900/20' : 'bg-cyan-50')}>
-          <ClipboardPlus className={cn('h-5 w-5', isDark ? 'text-cyan-300' : 'text-cyan-600')} />
+          <ClipboardList className={cn('h-5 w-5', isDark ? 'text-cyan-300' : 'text-cyan-600')} />
         </div>
 
         <div>
@@ -42,34 +57,36 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
               <span
                 className={cn(
                   'rounded-full px-2.5 py-1 text-xs font-medium',
-                  isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-50 text-blue-700',
+                  isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-50 text-blue-700'
                 )}
               >
                 {request.request_uuid}
               </span>
             )}
 
-            {request?.status_label && (
+            {request?.status && (
               <span
                 className={cn(
                   'rounded-full px-2.5 py-1 text-xs font-medium',
-                  isDark ? 'bg-emerald-900/30 text-emerald-300' : 'bg-emerald-50 text-emerald-700',
+                  isDark ? 'bg-emerald-900/30 text-emerald-300' : 'bg-emerald-50 text-emerald-700'
                 )}
               >
-                {request.status_label}
+                {request.status_label || request.status}
               </span>
             )}
           </div>
 
           <p className={cn('mt-1 text-sm', colors.text.secondary)}>
             {hasExistingRequest
-              ? 'Review the request summary, then open edit actions only when you need to change something.'
-              : 'Start with request details or add tests when needed. Nothing opens automatically until you click add or edit.'}
+              ? 'Review the active lab request, then add or update only what is needed.'
+              : 'Build a lab request from lab items, templates, and inventory-aware selections.'}
           </p>
 
-          <p className={cn('mt-1 text-xs', colors.text.tertiary)}>
-            {selectedTestsCount} selected test{selectedTestsCount === 1 ? '' : 's'} • lab results handled separately later
-          </p>
+          {request?.updated_at && (
+            <p className={cn('mt-1 text-xs', colors.text.tertiary)}>
+              Last updated: {new Date(request.updated_at).toLocaleString()}
+            </p>
+          )}
         </div>
       </div>
 
@@ -84,7 +101,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
               colors.border.primary,
               colors.bg.hover,
               colors.text.secondary,
-              isRefreshing && 'cursor-not-allowed opacity-50',
+              isRefreshing && 'cursor-not-allowed opacity-50'
             )}
           >
             <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
@@ -94,11 +111,67 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
 
         <button
           type="button"
-          onClick={onAddTest}
+          onClick={onOpenTemplateSelector}
+          className={cn(
+            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+            colors.border.primary,
+            colors.bg.hover,
+            colors.text.brand
+          )}
+        >
+          <FolderOpen className="h-4 w-4" />
+          Use Template
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenTemplateManager}
+          className={cn(
+            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+            colors.border.primary,
+            colors.bg.hover,
+            colors.text.primary
+          )}
+        >
+          <FolderCog className="h-4 w-4" />
+          Manage Templates
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenTemplateFieldManager}
+          className={cn(
+            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+            colors.border.primary,
+            colors.bg.hover,
+            colors.text.primary
+          )}
+        >
+          <Rows3 className="h-4 w-4" />
+          Manage Template Fields
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenLabItemManager}
+          className={cn(
+            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+            colors.border.primary,
+            colors.bg.hover,
+            colors.text.primary
+          )}
+        >
+          <LibraryBig className="h-4 w-4" />
+          Manage Lab Items
+        </button>
+
+        <button
+          type="button"
+          onClick={onAddItem}
           className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-blue-700"
         >
           <Plus className="h-4 w-4" />
-          Add Test
+          Add Lab Item
         </button>
       </div>
     </div>

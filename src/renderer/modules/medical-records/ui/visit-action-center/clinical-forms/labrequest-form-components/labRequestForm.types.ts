@@ -1,37 +1,18 @@
+// labrequest-form-components/labRequestForm.types.ts
 import type {
-  CreateLabRequestWithItemsRequest,
+  CreateLabRequestItemRequest,
   DiagnosisContext,
   LabRequest,
   LabRequestItem,
-  LabRequestPriority,
+  LabTemplate,
   LabTest,
+  UpdateLabRequestItemRequest,
 } from '../../../../api/lab/LabTypes';
-import { LabRequestItemStatus } from '../../../../api/lab/LabTypes';
-import { LabRequestPriority as LabRequestPriorityEnum }  from '../../../../api/lab/LabTypes';
-
-export interface LabRequestFormData {
-  priority: LabRequestPriority;
-  clinical_notes: string;
-  diagnosis_notes: string;
-  icd_codes_text: string;
-  suspected_conditions_text: string;
-}
-
-export interface LabRequestTestFormData {
-  local_id: number;
-  item_uuid?: string | null;
-  lab_test_id: number;
-  test_uuid?: string | null;
-  test_name: string;
-  code: string;
-  category: string;
-  sample_type: string;
-  notes: string;
-  requires_fasting: boolean;
-  turnaround_time_hours: number | null;
-  status: string;
-  is_existing: boolean;
-}
+import {
+  LabRequestItemStatus,
+  LabRequestPriority,
+  LabResultFlag,
+} from '../../../../api/lab/LabTypes';
 
 export interface ColorTokens {
   bg: {
@@ -55,118 +36,223 @@ export interface ColorTokens {
   };
 }
 
+export interface LabRequestFormData {
+  priority: LabRequestPriority;
+  clinical_notes: string;
+  diagnosis_notes: string;
+  suspected_conditions: string;
+  icd_codes: string;
+}
+
+export type LabRequestItemSource = 'lab_test' | 'inventory' | 'template';
+
+export interface LabRequestDraftItem {
+  id: number;
+  item_uuid?: string | null;
+  display_name: string;
+  lab_test_id: number | null;
+  source: LabRequestItemSource;
+  source_inventory_item_id?: number | null;
+  sample_type?: string | null;
+  notes?: string | null;
+  template_id?: number | null;
+  template_name?: string | null;
+  code?: string | null;
+  category?: string | null;
+  turnaround_time_hours?: number | null;
+  requires_fasting?: boolean;
+  is_from_inventory?: boolean;
+  inventory_display_unit?: string | null;
+  inventory_available_quantity?: number | null;
+  status?: LabRequestItemStatus;
+  result_flag?: LabResultFlag;
+  lab_test?: LabTest | null;
+}
+
+export interface LabRequestItemEditorData {
+  id: number | null;
+  item_uuid: string | null;
+  display_name: string;
+  lab_test_id: number | null;
+  source: LabRequestItemSource;
+  source_inventory_item_id: number | null;
+  sample_type: string;
+  notes: string;
+  template_id: number | null;
+  template_name: string;
+  code: string;
+  category: string;
+  turnaround_time_hours: number | null;
+  requires_fasting: boolean;
+  is_from_inventory: boolean;
+  inventory_display_unit: string;
+  inventory_available_quantity: number | null;
+}
+
+export interface LabTemplateSelectionResult {
+  template: LabTemplate;
+  items: LabRequestDraftItem[];
+}
+
 export const EMPTY_LAB_REQUEST: LabRequestFormData = {
-  priority: LabRequestPriorityEnum.ROUTINE,
+  priority: LabRequestPriority.ROUTINE,
   clinical_notes: '',
   diagnosis_notes: '',
-  icd_codes_text: '',
-  suspected_conditions_text: '',
+  suspected_conditions: '',
+  icd_codes: '',
 };
 
-export const EMPTY_LAB_REQUEST_TEST: LabRequestTestFormData = {
-  local_id: 0,
+export const EMPTY_LAB_REQUEST_ITEM: LabRequestItemEditorData = {
+  id: null,
   item_uuid: null,
-  lab_test_id: 0,
-  test_uuid: null,
-  test_name: '',
-  code: '',
-  category: '',
+  display_name: '',
+  lab_test_id: null,
+  source: 'lab_test',
+  source_inventory_item_id: null,
   sample_type: '',
   notes: '',
-  requires_fasting: false,
+  template_id: null,
+  template_name: '',
+  code: '',
+  category: '',
   turnaround_time_hours: null,
-  status: LabRequestItemStatus.PENDING,
-  is_existing: false,
+  requires_fasting: false,
+  is_from_inventory: false,
+  inventory_display_unit: '',
+  inventory_available_quantity: null,
 };
 
-const splitCsv = (value: string): string[] =>
-  value
+const splitCsvText = (value: string): string[] => {
+  return value
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean);
-
-export const toLabRequestFormData = (request?: LabRequest | null): LabRequestFormData => ({
-  priority: request?.priority ?? LabRequestPriorityEnum.ROUTINE,
-  clinical_notes: request?.clinical_notes ?? '',
-  diagnosis_notes: request?.diagnosis_context?.notes ?? '',
-  icd_codes_text: request?.diagnosis_context?.icd_codes?.join(', ') ?? '',
-  suspected_conditions_text: request?.diagnosis_context?.suspected_conditions?.join(', ') ?? '',
-});
-
-export const toLabRequestTestFormData = (item: LabRequestItem): LabRequestTestFormData => ({
-  local_id: item.id,
-  item_uuid: item.item_uuid,
-  lab_test_id: item.lab_test_id,
-  test_uuid: item.lab_test?.test_uuid ?? null,
-  test_name: item.lab_test?.name ?? 'Unknown Test',
-  code: item.lab_test?.code ?? '',
-  category: item.lab_test?.category ?? '',
-  sample_type: item.sample_type ?? '',
-  notes: item.notes ?? '',
-  requires_fasting: item.lab_test?.requires_fasting ?? false,
-  turnaround_time_hours: item.lab_test?.turnaround_time_hours ?? null,
-  status: item.status,
-  is_existing: true,
-});
-
-export const buildDiagnosisContext = (
-  form: LabRequestFormData,
-): DiagnosisContext | null => {
-  const diagnosisContext: DiagnosisContext = {
-    icd_codes: splitCsv(form.icd_codes_text),
-    suspected_conditions: splitCsv(form.suspected_conditions_text),
-    notes: form.diagnosis_notes.trim() || undefined,
-  };
-
-  const hasContent =
-    Boolean(diagnosisContext.icd_codes?.length) ||
-    Boolean(diagnosisContext.suspected_conditions?.length) ||
-    Boolean(diagnosisContext.notes);
-
-  return hasContent ? diagnosisContext : null;
 };
 
-export const applySelectedLabTest = (
-  current: LabRequestTestFormData,
-  labTest: LabTest,
-): LabRequestTestFormData => ({
-  ...current,
-  lab_test_id: labTest.id,
-  test_uuid: labTest.test_uuid,
-  test_name: labTest.name,
-  code: labTest.code ?? '',
-  category: labTest.category ?? '',
-  requires_fasting: labTest.requires_fasting,
-  turnaround_time_hours: labTest.turnaround_time_hours,
+export const buildDiagnosisContextPayload = (
+  formData: LabRequestFormData
+): DiagnosisContext | null => {
+  const icdCodes = splitCsvText(formData.icd_codes);
+  const suspectedConditions = splitCsvText(formData.suspected_conditions);
+  const notes = formData.diagnosis_notes.trim();
+
+  if (!icdCodes.length && !suspectedConditions.length && !notes) {
+    return null;
+  }
+
+  return {
+    icd_codes: icdCodes.length ? icdCodes : undefined,
+    suspected_conditions: suspectedConditions.length ? suspectedConditions : undefined,
+    notes: notes || undefined,
+  };
+};
+
+export const toLabRequestFormData = (
+  request?: LabRequest | null
+): LabRequestFormData => {
+  if (!request) return EMPTY_LAB_REQUEST;
+
+  return {
+    priority: request.priority,
+    clinical_notes: request.clinical_notes || '',
+    diagnosis_notes: request.diagnosis_context?.notes || '',
+    suspected_conditions: request.diagnosis_context?.suspected_conditions?.join(', ') || '',
+    icd_codes: request.diagnosis_context?.icd_codes?.join(', ') || '',
+  };
+};
+
+export const toLabRequestDraftItems = (
+  items?: LabRequestItem[] | null
+): LabRequestDraftItem[] => {
+  if (!items?.length) return [];
+
+  return items.map((item) => ({
+    id: item.id,
+    item_uuid: item.item_uuid,
+    display_name: item.lab_test?.name || `Lab item #${item.id}`,
+    lab_test_id: item.lab_test_id,
+    source: 'lab_test',
+    sample_type: item.sample_type || '',
+    notes: item.notes || '',
+    template_id: item.lab_test?.template_id || null,
+    template_name: item.lab_test?.template?.name || '',
+    code: item.lab_test?.code || '',
+    category: item.lab_test?.category || '',
+    turnaround_time_hours: item.lab_test?.turnaround_time_hours ?? null,
+    requires_fasting: !!item.lab_test?.requires_fasting,
+    is_from_inventory: false,
+    inventory_display_unit: '',
+    inventory_available_quantity: null,
+    status: item.status,
+    result_flag: item.result_flag,
+    lab_test: item.lab_test || null,
+  }));
+};
+
+export const buildLocalLabRequestDraftItem = (
+  data: LabRequestItemEditorData,
+  localId: number
+): LabRequestDraftItem => ({
+  id: localId,
+  item_uuid: data.item_uuid,
+  display_name: data.display_name.trim(),
+  lab_test_id: data.lab_test_id,
+  source: data.source,
+  source_inventory_item_id: data.source_inventory_item_id,
+  sample_type: data.sample_type.trim() || null,
+  notes: data.notes.trim() || null,
+  template_id: data.template_id,
+  template_name: data.template_name.trim() || null,
+  code: data.code.trim() || null,
+  category: data.category.trim() || null,
+  turnaround_time_hours: data.turnaround_time_hours,
+  requires_fasting: data.requires_fasting,
+  is_from_inventory: data.is_from_inventory,
+  inventory_display_unit: data.inventory_display_unit.trim() || null,
+  inventory_available_quantity: data.inventory_available_quantity,
+  status: LabRequestItemStatus.PENDING,
+  result_flag: LabResultFlag.PENDING,
+  lab_test: null,
 });
 
-export const buildLocalLabRequestTest = (
-  form: LabRequestTestFormData,
-): LabRequestTestFormData => ({
-  ...form,
-  local_id: form.local_id || Date.now(),
-  status: form.status || LabRequestItemStatus.PENDING,
-  is_existing: false,
+export const isLabRequestDraftItemPersistable = (
+  item: LabRequestDraftItem
+): boolean => !!item.lab_test_id;
+
+export const toLabRequestItemCreatePayload = (
+  data: LabRequestItemEditorData
+): Omit<CreateLabRequestItemRequest, 'lab_request_id'> => ({
+  lab_test_id: data.lab_test_id as number,
+  sample_type: data.sample_type.trim() || null,
+  notes: data.notes.trim() || null,
+  metadata: {
+    source: data.source,
+    source_inventory_item_id: data.source_inventory_item_id,
+    template_id: data.template_id,
+    template_name: data.template_name || null,
+    display_name: data.display_name || null,
+    is_from_inventory: data.is_from_inventory,
+    inventory_display_unit: data.inventory_display_unit || null,
+    inventory_available_quantity: data.inventory_available_quantity,
+  },
 });
 
-export const toCreateLabRequestPayload = (params: {
-  form: LabRequestFormData;
-  tests: LabRequestTestFormData[];
-  facilityId: number;
-  patientId: number;
-  visitId: number;
-  userId?: number | null;
-}): CreateLabRequestWithItemsRequest => ({
-  visit_id: params.visitId,
-  patient_id: params.patientId,
-  facility_id: params.facilityId,
-  requested_by_staff_id: params.userId ?? null,
-  priority: params.form.priority,
-  clinical_notes: params.form.clinical_notes.trim() || null,
-  diagnosis_context: buildDiagnosisContext(params.form),
-  items: params.tests.map((test) => ({
-    lab_test_id: test.lab_test_id,
-    sample_type: test.sample_type.trim() || null,
-    notes: test.notes.trim() || null,
-  })),
+export const toLabRequestItemUpdatePayload = (
+  data: LabRequestItemEditorData,
+  requestId: number
+): UpdateLabRequestItemRequest => ({
+  lab_request_id: requestId,
+  lab_test_id: data.lab_test_id as number,
+  sample_type: data.sample_type.trim() || null,
+  notes: data.notes.trim() || null,
+  metadata: {
+    source: data.source,
+    source_inventory_item_id: data.source_inventory_item_id,
+    template_id: data.template_id,
+    template_name: data.template_name || null,
+    display_name: data.display_name || null,
+    is_from_inventory: data.is_from_inventory,
+    inventory_display_unit: data.inventory_display_unit || null,
+    inventory_available_quantity: data.inventory_available_quantity,
+  },
 });
