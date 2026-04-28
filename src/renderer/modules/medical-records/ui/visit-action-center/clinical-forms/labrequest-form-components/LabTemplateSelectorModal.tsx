@@ -72,17 +72,24 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
 }) => {
   const [search, setSearch] = useState('');
 
-  const filteredTemplates = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return templates;
+ const filteredTemplates = useMemo(() => {
+  const safeTemplates = Array.isArray(templates) ? templates : [];
+  const term = search.trim().toLowerCase();
 
-    return templates.filter((template) => {
-      const name = template.name.toLowerCase();
-      const description = (template.description || '').toLowerCase();
-      const structure = template.structure_type.toLowerCase();
-      return name.includes(term) || description.includes(term) || structure.includes(term);
-    });
-  }, [search, templates]);
+  if (!term) return safeTemplates;
+
+  return safeTemplates.filter((template) => {
+    const name = template.name.toLowerCase();
+    const description = (template.description || '').toLowerCase();
+    const structure = template.structure_type.toLowerCase();
+
+    return (
+      name.includes(term) ||
+      description.includes(term) ||
+      structure.includes(term)
+    );
+  });
+}, [search, templates]);
 
   return (
     <AnimatePresence>
