@@ -72,7 +72,7 @@ export const LabRequestItemsTable: React.FC<LabRequestItemsTableProps> = ({
             className="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-3 py-2 text-sm font-medium text-white transition-all hover:bg-blue-800"
           >
             <Plus className="h-4 w-4" />
-            Add Lab Item
+            Add Lab Test
           </button>
         </div>
       </div>

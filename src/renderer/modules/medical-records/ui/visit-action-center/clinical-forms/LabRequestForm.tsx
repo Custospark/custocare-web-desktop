@@ -37,7 +37,7 @@ import { cn } from '../../../../../shared/utils/classNameUtils';
 import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
-import { getActiveFacilityId, getUserId } from '../../../../../app/store/utils/contextSelectors';
+import { getActiveFacilityId, getStaffId } from '../../../../../app/store/utils/contextSelectors';
 import { selectActiveVisitPatientId, selectActiveVisitId } from '../../../../../app/store/slices/visitSlice';
 import type { RootState } from '../../../../../app/store/rootReducer';
 
@@ -120,7 +120,7 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
   const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
   const patientId = useSelector((state: RootState) => selectActiveVisitPatientId(state));
   const visitId = useSelector((state: RootState) => selectActiveVisitId(state));
-  const userId = useSelector((state: RootState) => getUserId(state));
+  const staffId = useSelector((state: RootState) => getStaffId(state));
 
   const patientNumericId = patientId ? Number(patientId) : 0;
   const visitNumericId = visitId ? Number(visitId) : 0;
@@ -269,9 +269,12 @@ export const LabRequestForm: React.FC<LabRequestFormProps> = ({
       [templatesQuery.data?.data?.templates]
     );
     const labItems = useMemo(() =>
-      labItemsQuery.data?.data?.data ?? [],
-      [labItemsQuery.data?.data?.data]
+      labItemsQuery.data?.data ?? [],
+      [labItemsQuery.data?.data ]
     );
+    console.log("Lab Items");
+    console.log(labItems);
+
 
   const popularLabItems = popularLabItemsQuery.data?.data || [];
 
@@ -682,12 +685,12 @@ const selectedTemplateForManagement = useMemo(() => {
   const handleDeleteItem = useCallback(
     async (item: LabRequestDraftItem) => {
       const confirmed = await confirm({
-        title: currentRequest ? 'Cancel Lab Item' : 'Remove Lab Item',
+        title: currentRequest ? 'Cancel Lab Test' : 'Remove Lab Test.',
         message: currentRequest
           ? `Are you sure you want to cancel "${item.display_name}" from this lab request?`
           : `Are you sure you want to remove "${item.display_name}" from this unsaved lab request?`,
-        confirmText: currentRequest ? 'Cancel Item' : 'Remove Item',
-        cancelText: 'Keep Item',
+        confirmText: currentRequest ? 'Cancel Lab Test' : 'Remove Lab Test',
+        cancelText: 'Keep Lab Test',
         variant: 'danger',
         theme,
       });
@@ -699,7 +702,7 @@ const selectedTemplateForManagement = useMemo(() => {
           await cancelItem.mutateAsync({
             uuid: item.item_uuid,
             reason: 'Removed during lab request update',
-            cancelledByStaffId: userId || undefined,
+            cancelledByStaffId: staffId || undefined,
           });
 
           await syncAllVisibleLabData({
@@ -714,11 +717,11 @@ const selectedTemplateForManagement = useMemo(() => {
         setLocalDraftItems((prev) => prev.filter((draft) => draft.id !== item.id));
         showToast('success', 'Lab request item removed', 3000);
       } catch (error) {
-        console.error('Failed to remove/cancel lab request item:', error);
-        showToast('error', 'Failed to remove lab request item', 5000);
+        console.error('Failed to remove/cancel lab request test:', error);
+        showToast('error', 'Failed to remove lab request test', 5000);
       }
     },
-    [cancelItem, confirm, currentRequest, showToast, syncAllVisibleLabData, theme, userId]
+    [cancelItem, confirm, currentRequest, showToast, syncAllVisibleLabData, theme, staffId]
   );
 
   /**
@@ -733,7 +736,7 @@ const selectedTemplateForManagement = useMemo(() => {
       if (!persistableItems.length) {
         showToast(
           'error',
-          'The selected template did not produce any valid lab items that can be added to a request.',
+          'The selected template did not produce any valid lab tests that can be added to a request.',
           5000
         );
         return;
@@ -793,7 +796,7 @@ const selectedTemplateForManagement = useMemo(() => {
         return;
       }
 
-      if (!userId) {
+      if (!staffId) {
         showToast('error', 'Missing requesting staff information', 5000);
         return;
       }
@@ -828,7 +831,7 @@ const selectedTemplateForManagement = useMemo(() => {
               visit_id: visitNumericId,
               patient_id: patientNumericId,
               facility_id: facilityId,
-              requested_by_staff_id: userId,
+              requested_by_staff_id: staffId,
               priority: formData.priority,
               clinical_notes: formData.clinical_notes || null,
               diagnosis_context: buildDiagnosisContextPayload(formData),
@@ -857,7 +860,7 @@ const selectedTemplateForManagement = useMemo(() => {
           visit_id: visitNumericId,
           patient_id: patientNumericId,
           facility_id: facilityId,
-          requested_by_staff_id: userId,
+          requested_by_staff_id: staffId,
           priority: formData.priority,
           clinical_notes: formData.clinical_notes || null,
           diagnosis_context: buildDiagnosisContextPayload(formData),
@@ -910,7 +913,7 @@ const selectedTemplateForManagement = useMemo(() => {
       showToast,
       syncAllVisibleLabData,
       updateLabRequest,
-      userId,
+      staffId,
       visitId,
       visitNumericId,
     ]
@@ -934,7 +937,7 @@ const selectedTemplateForManagement = useMemo(() => {
       await cancelLabRequest.mutateAsync({
         uuid: currentRequest.request_uuid,
         reason: 'Cancelled from lab request form',
-        cancelledByStaffId: userId || undefined,
+        cancelledByStaffId: staffId || undefined,
       });
 
       await syncAllVisibleLabData({
@@ -956,7 +959,7 @@ const selectedTemplateForManagement = useMemo(() => {
     showToast,
     syncAllVisibleLabData,
     theme,
-    userId,
+    staffId,
   ]);
 
   /**
@@ -1105,7 +1108,7 @@ const selectedTemplateForManagement = useMemo(() => {
         facilityId={facilityId}
         patientId={patientNumericId}
         visitId={visitNumericId}
-        requestedByStaffId={userId || null}
+        requestedByStaffId={staffId || null}
         request={currentRequest}
       />
 

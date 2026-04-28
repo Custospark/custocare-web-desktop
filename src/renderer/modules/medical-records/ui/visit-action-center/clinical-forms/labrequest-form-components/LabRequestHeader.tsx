@@ -171,7 +171,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
           className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-blue-700"
         >
           <Plus className="h-4 w-4" />
-          Add Lab Item
+          Add Lab Test
         </button>
       </div>
     </div>

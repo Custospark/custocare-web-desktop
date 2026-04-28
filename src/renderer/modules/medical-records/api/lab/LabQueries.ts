@@ -396,7 +396,9 @@ export const useGetLabTests = (
     queryKey: labKeys.testList(filters),
     queryFn: async () => {
       const response = await axiosInstance.get('/lab/tests', { params: filters });
-      return response.data;
+      console.log("Hook response");
+      console.log(response.data.data.tests);
+      return response.data.data.tests;
     },
     ...options,
   });

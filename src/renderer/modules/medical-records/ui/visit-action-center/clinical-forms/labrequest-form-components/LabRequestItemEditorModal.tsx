@@ -488,7 +488,7 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                     : 'cursor-pointer bg-blue-600 hover:bg-blue-700'
                 )}
               >
-                {editingItem ? 'Update Lab Item' : 'Add Lab Item'}
+                {editingItem ? 'Update Lab Test' : 'Add Lab Test'}
               </button>
             </div>
           </motion.div>
