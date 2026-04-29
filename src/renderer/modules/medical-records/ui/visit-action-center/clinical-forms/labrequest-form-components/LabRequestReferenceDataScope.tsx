@@ -56,7 +56,6 @@ const extractLabItems = (payload: unknown): LabTest[] => {
   // Case 2: payload has direct data array: { data: LabTest[], meta: {...} }
   const withDirectData = payload as { data: LabTest[]; meta?: unknown };
   if (Array.isArray(withDirectData.data)) {
-    console.log("Extracted direct data array:", withDirectData.data.length);
     return withDirectData.data;
   }
 

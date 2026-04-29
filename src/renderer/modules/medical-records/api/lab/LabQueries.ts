@@ -634,13 +634,15 @@ export const useGetLabTemplateField = (
  */
 export const useGetFieldsByTemplate = (
   templateUuid: string,
-  options?: Omit<UseQueryOptions<ApiResponse<LabTemplateField[]>, AxiosError<ApiResponse<null>>>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<LabTemplateField[], AxiosError<ApiResponse<null>>>, 'queryKey' | 'queryFn'>
 ) => {
   return useQuery({
     queryKey: labKeys.fieldByTemplate(templateUuid),
     queryFn: async () => {
       const response = await axiosInstance.get(`/lab/template-fields/template/${templateUuid}`);
-      return response.data;
+      // Extract fields from response.data.data.fields
+      const fields = response.data?.data?.fields || [];
+      return fields;
     },
     enabled: !!templateUuid,
     ...options,
