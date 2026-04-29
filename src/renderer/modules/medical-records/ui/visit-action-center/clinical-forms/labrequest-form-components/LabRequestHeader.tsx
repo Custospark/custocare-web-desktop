@@ -7,7 +7,6 @@ import {
   LibraryBig,
   Plus,
   RefreshCw,
-  Rows3,
 } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import type { LabRequest } from '../../../../api/lab/LabTypes';
@@ -19,7 +18,7 @@ interface LabRequestHeaderProps {
   request: LabRequest | null;
   onOpenTemplateSelector: () => void;
   onOpenTemplateManager: () => void;
-  onOpenTemplateFieldManager: () => void;
+  onOpenTemplateFieldManager?: () => void;
   onOpenLabItemManager: () => void;
   onAddItem: () => void;
   onRefresh?: () => void;
@@ -32,7 +31,6 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
   request,
   onOpenTemplateSelector,
   onOpenTemplateManager,
-  onOpenTemplateFieldManager,
   onOpenLabItemManager,
   onAddItem,
   onRefresh,
@@ -126,7 +124,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
           Manage Templates
         </button>
 
-        <button
+        {/* <button
           type="button"
           onClick={onOpenTemplateFieldManager}
           className={cn(
@@ -138,7 +136,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
         >
           <Rows3 className="h-4 w-4" />
           Manage Template Fields
-        </button>
+        </button> */}
 
         <button
           type="button"

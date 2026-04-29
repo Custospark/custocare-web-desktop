@@ -635,7 +635,7 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
     <AnimatePresence>
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
           onClick={(e) => e.target === e.currentTarget && onClose()}
         >
           <motion.div

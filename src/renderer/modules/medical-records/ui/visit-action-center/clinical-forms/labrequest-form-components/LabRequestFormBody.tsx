@@ -15,7 +15,6 @@ import type {
 import { labKeys, useAddItemsToRequest, useCancelItem, useCancelLabRequest, useCreateLabRequestItem, useCreateLabRequestWithItems, useUpdateLabRequest, useUpdateLabRequestItem } from '../../../../api/lab/LabQueries';
 
 import LabRequestHeader from './LabRequestHeader';
-import LabRequestContextBanner from './LabRequestContextBanner';
 import LabRequestDetailsCard from './LabRequestDetailsCard';
 import LabRequestItemsTable from './LabRequestItemsTable';
 import { LabRequestStateGuard } from './LabRequestStateGuard';
@@ -753,15 +752,7 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
           isRefreshing={isManualRefreshing}
         />
 
-        <LabRequestContextBanner
-          isDark={isDark}
-          colors={colors}
-          facilityId={facilityId || null}
-          patientId={patientNumericId}
-          visitId={visitNumericId}
-          requestedByStaffId={staffId || null}
-          request={currentRequest}
-        />
+       
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-6">
