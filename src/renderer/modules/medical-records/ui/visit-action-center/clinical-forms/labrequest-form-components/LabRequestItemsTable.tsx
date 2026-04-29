@@ -47,7 +47,7 @@ export const LabRequestItemsTable: React.FC<LabRequestItemsTableProps> = ({
             Lab Request Tests
           </h3>
           <p className={cn('text-sm', colors.text.secondary)}>
-            {items.length} item{items.length === 1 ? '' : 's'} linked to this request
+            {items.length} lab test{items.length === 1 ? '' : 's'} linked to this request
           </p>
         </div>
 

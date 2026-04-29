@@ -53,17 +53,6 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
               {hasExistingRequest ? 'Existing Lab Request' : 'Create Lab Request'}
             </h2>
 
-            {request?.request_uuid && (
-              <span
-                className={cn(
-                  'rounded-full px-2.5 py-1 text-xs font-medium',
-                  isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-50 text-blue-700'
-                )}
-              >
-                {request.request_uuid}
-              </span>
-            )}
-
             {request?.status && (
               <span
                 className={cn(
