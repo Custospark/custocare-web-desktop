@@ -188,8 +188,9 @@ export interface LabTemplate {
 export type ActiveTemplatesResponse = {
   templates: LabTemplate[];
 };
+
 /**
- * Lab Test Entity
+ * Lab Test Entity (FULL version with all relationships)
  */
 export interface LabTest {
   id: number;
@@ -209,8 +210,16 @@ export interface LabTest {
   updated_at: string;
   deleted_at: string | null;
   
-  // Relationships
-  template?: LabTemplate;
+  // Relationships - FULL (when loaded)
+  template?: {
+    id: number;
+    template_uuid: string;
+    name: string;
+    description: string | null;
+    structure_type: LabTemplateStructureType;
+    is_active: boolean;
+    fields?: LabTemplateField[];
+  };
   facility?: LabFacilityInfo | null;
   
   // Statistics
@@ -273,134 +282,6 @@ export interface LabTemplateField {
 }
 
 /**
- * Lab Request Entity
- */
-export interface LabRequest {
-  id: number;
-  request_uuid: string;
-  visit_id: number;
-  patient_id: number;
-  facility_id: number;
-  requested_by_staff_id: number | null;
-  priority: LabRequestPriority;
-  status: LabRequestStatus;
-  clinical_notes: string | null;
-  diagnosis_context: DiagnosisContext | null;
-  requested_at: string;
-  collected_at: string | null;
-  completed_at: string | null;
-  reviewed_at: string | null;
-  reviewed_by_staff_id: number | null;
-  cancellation_reason: string | null;
-  cancelled_at: string | null;
-  metadata: Record<string, unknown> | null;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-  
-  // Relationships
-  visit?: LabVisitInfo;
-  patient?: LabPatientInfo;
-  facility?: LabFacilityInfo;
-  requested_by?: LabStaffInfo | null;
-  reviewed_by?: LabStaffInfo | null;
-  items?: LabRequestItem[];
-  
-  // Statistics
-  items_count?: number;
-  progress_percentage: number;
-  completed_items_count: number;
-  verified_items_count: number;
-  
-  // Helper attributes
-  priority_label: string;
-  status_label: string;
-  priority_badge_color: string;
-  status_badge_color: string;
-  is_pending: boolean;
-  is_in_progress: boolean;
-  is_completed: boolean;
-  is_reviewed: boolean;
-  is_cancelled: boolean;
-  is_stat: boolean;
-  is_urgent: boolean;
-  is_routine: boolean;
-  all_items_completed: boolean;
-  
-  // URLs
-  urls?: {
-    self: string;
-    items: string;
-    patient: string;
-    visit: string;
-  };
-}
-
-/**
- * Lab Request Item Entity
- */
-export interface LabRequestItem {
-  id: number;
-  item_uuid: string;
-  lab_request_id: number;
-  lab_test_id: number;
-  status: LabRequestItemStatus;
-  sample_type: string | null;
-  sample_identifier: string | null;
-  collected_at: string | null;
-  collected_by_staff_id: number | null;
-  started_at: string | null;
-  completed_at: string | null;
-  verified_by_staff_id: number | null;
-  verified_at: string | null;
-  result_flag: LabResultFlag;
-  notes: string | null;
-  cancellation_reason: string | null;
-  cancelled_at: string | null;
-  metadata: Record<string, unknown> | null;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-  
-  // Relationships
-  lab_request?: LabRequest;
-  lab_test?: LabTest;
-  collected_by?: LabStaffInfo | null;
-  verified_by?: LabStaffInfo | null;
-  results?: LabResult[];
-  primary_result?: LabResult | null;
-  
-  // Statistics
-  results_count?: number;
-  turnaround_time_minutes: number | null;
-  collection_to_completion_minutes: number | null;
-  
-  // Helper attributes
-  status_label: string;
-  result_flag_label: string;
-  status_badge_color: string;
-  result_flag_badge_color: string;
-  is_pending: boolean;
-  is_sample_collected: boolean;
-  is_in_progress: boolean;
-  is_completed: boolean;
-  is_verified: boolean;
-  is_cancelled: boolean;
-  is_result_normal: boolean;
-  is_result_abnormal: boolean;
-  is_result_critical: boolean;
-  all_results_verified: boolean;
-  
-  // URLs
-  urls?: {
-    self: string;
-    request: string;
-    test: string;
-    results: string;
-  };
-}
-
-/**
  * Lab Result Entity
  */
 export interface LabResult {
@@ -459,6 +340,145 @@ export interface LabResult {
     field: string;
   };
 }
+
+/**
+ * Lab Request Item Entity (FULL version with nested lab_test)
+ * Used when items are loaded with their lab_test relationship
+ */
+export interface LabRequestItem {
+  id: number;
+  item_uuid: string;
+  lab_request_id: number;
+  lab_test_id: number;
+  status: LabRequestItemStatus;
+  sample_type: string | null;
+  sample_identifier: string | null;
+  collected_at: string | null;
+  collected_by_staff_id: number | null;
+  started_at: string | null;
+  completed_at: string | null;
+  verified_by_staff_id: number | null;
+  verified_at: string | null;
+  result_flag: LabResultFlag;
+  notes: string | null;
+  cancellation_reason: string | null;
+  cancelled_at: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  
+  lab_test?: LabTest;  // This is the key relationship for accessing test details
+  collected_by?: LabStaffInfo | null;
+  verified_by?: LabStaffInfo | null;
+  results?: LabResult[];
+  primary_result?: LabResult | null;
+  
+  // Statistics
+  results_count?: number;
+  turnaround_time_minutes: number | null;
+  collection_to_completion_minutes: number | null;
+  
+  // Helper attributes
+  status_label: string;
+  result_flag_label: string;
+  status_badge_color: string;
+  result_flag_badge_color: string;
+  is_pending: boolean;
+  is_sample_collected: boolean;
+  is_in_progress: boolean;
+  is_completed: boolean;
+  is_verified: boolean;
+  is_cancelled: boolean;
+  is_result_normal: boolean;
+  is_result_abnormal: boolean;
+  is_result_critical: boolean;
+  all_results_verified: boolean;
+  
+  // URLs
+  urls?: {
+    self: string;
+    request: string;
+    test: string;
+    results: string;
+  };
+}
+
+/**
+ * Lab Request Entity (FULL version with nested items)
+ * Used for the response from /with-items endpoint
+ */
+export interface LabRequest {
+  id: number;
+  request_uuid: string;
+  visit_id: number;
+  patient_id: number;
+  facility_id: number;
+  requested_by_staff_id: number | null;
+  priority: LabRequestPriority;
+  status: LabRequestStatus;
+  clinical_notes: string | null;
+  diagnosis_context: DiagnosisContext | null;
+  requested_at: string;
+  collected_at: string | null;
+  completed_at: string | null;
+  reviewed_at: string | null;
+  reviewed_by_staff_id: number | null;
+  cancellation_reason: string | null;
+  cancelled_at: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  
+  // Relationships - FULL (when loaded from with-items endpoint)
+  visit?: LabVisitInfo;
+  patient?: LabPatientInfo;
+  facility?: LabFacilityInfo;
+  requested_by?: LabStaffInfo | null;
+  reviewed_by?: LabStaffInfo | null;
+  items?: LabRequestItem[];  // This contains the nested items with their lab_test data
+  
+  // Statistics
+  items_count?: number;
+  progress_percentage: number;
+  completed_items_count: number;
+  verified_items_count: number;
+  
+  // Helper attributes
+  priority_label: string;
+  status_label: string;
+  priority_badge_color: string;
+  status_badge_color: string;
+  is_pending: boolean;
+  is_in_progress: boolean;
+  is_completed: boolean;
+  is_reviewed: boolean;
+  is_cancelled: boolean;
+  is_stat: boolean;
+  is_urgent: boolean;
+  is_routine: boolean;
+  all_items_completed: boolean;
+  
+  // URLs
+  urls?: {
+    self: string;
+    items: string;
+    patient: string;
+    visit: string;
+  };
+}
+
+// Helper type for accessing lab test from an item
+export type LabRequestItemWithTest = LabRequestItem & {
+  lab_test: LabTest;  // Ensure lab_test is present
+  results?: LabResult[];
+};
+
+// Helper type for accessing items from a request
+export type LabRequestWithItems = LabRequest & {
+  items: LabRequestItemWithTest[];  // Ensure items are present with tests
+};
 
 /* -------------------------------------------------------------------------- */
 /*                          REQUEST/RESPONSE TYPES                            */
@@ -830,6 +850,19 @@ export interface ApiResponse<T> {
   success: boolean;
   message: string;
   data: T;
+  error?: string;
+}
+
+/**
+ * With Items API Response
+ * Matches the structure from your backend controller
+ */
+export interface WithItemsApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    request: LabRequest;  // This will have items with nested lab_test
+  };
   error?: string;
 }
 
