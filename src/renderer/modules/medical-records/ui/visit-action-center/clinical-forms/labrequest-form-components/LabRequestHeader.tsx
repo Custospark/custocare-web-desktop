@@ -54,7 +54,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
             {request?.status && (
               <span
                 className={cn(
-                  'rounded-full px-2.5 py-1 text-xs font-medium',
+                  'rounded-full px-2.5 py-1 text-xs font-medium cursor-default',
                   isDark ? 'bg-emerald-900/30 text-emerald-300' : 'bg-emerald-50 text-emerald-700'
                 )}
               >
@@ -63,14 +63,14 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
             )}
           </div>
 
-          <p className={cn('mt-1 text-sm', colors.text.secondary)}>
+          <p className={cn('mt-1 text-sm cursor-default', colors.text.secondary)}>
             {hasExistingRequest
               ? 'Review the active lab request, then add or update only what is needed.'
               : 'Build a lab request from Lab Tests, templates, and inventory-aware selections.'}
           </p>
 
           {request?.updated_at && (
-            <p className={cn('mt-1 text-xs', colors.text.tertiary)}>
+            <p className={cn('mt-1 text-xs cursor-default', colors.text.tertiary)}>
               Last updated: {new Date(request.updated_at).toLocaleString()}
             </p>
           )}
@@ -78,13 +78,14 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        {/* Utility Action - Least frequently used (Leftmost) */}
         {onRefresh && (
           <button
             type="button"
             onClick={onRefresh}
             disabled={isRefreshing}
             className={cn(
-              'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+              'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
               colors.border.primary,
               colors.bg.hover,
               colors.text.secondary,
@@ -96,39 +97,12 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={onOpenTemplateSelector}
-          className={cn(
-            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
-            colors.border.primary,
-            colors.bg.hover,
-            colors.text.brand
-          )}
-        >
-          <FolderOpen className="h-4 w-4" />
-          Use Template
-        </button>
-
-        <button
-          type="button"
-          onClick={onOpenTemplateManager}
-          className={cn(
-            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
-            colors.border.primary,
-            colors.bg.hover,
-            colors.text.primary
-          )}
-        >
-          <FolderCog className="h-4 w-4" />
-          Manage Templates
-        </button>
-
+        {/* Secondary Actions - Medium frequency */}
         <button
           type="button"
           onClick={onOpenLabItemManager}
           className={cn(
-            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
             colors.border.primary,
             colors.bg.hover,
             colors.text.primary
@@ -140,8 +114,37 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
 
         <button
           type="button"
+          onClick={onOpenTemplateManager}
+          className={cn(
+            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+            colors.border.primary,
+            colors.bg.hover,
+            colors.text.primary
+          )}
+        >
+          <FolderCog className="h-4 w-4" />
+          Manage Templates
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenTemplateSelector}
+          className={cn(
+            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+            colors.border.primary,
+            colors.bg.hover,
+            colors.text.brand
+          )}
+        >
+          <FolderOpen className="h-4 w-4" />
+          Use Template
+        </button>
+
+        {/* Primary Action - Most frequently used (Rightmost) */}
+        <button
+          type="button"
           onClick={onAddItem}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-blue-700"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           <Plus className="h-4 w-4" />
           Add Lab Test

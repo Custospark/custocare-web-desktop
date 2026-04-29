@@ -549,7 +549,7 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
             {/* Header */}
             <div className={cn('flex items-center justify-between border-b p-5', colors.border.primary)}>
               <div>
-                <h3 className={cn('text-lg font-semibold', colors.text.primary)}>Lab Test Catalog</h3>
+                <h3 className={cn('text-lg font-semibold', colors.text.primary)}>Laboratory Test Library</h3>
                 <p className={cn('mt-1 text-sm', colors.text.secondary)}>Create and manage lab tests that clinicians can order.</p>
               </div>
               <button onClick={onClose} className={cn('rounded p-1 transition-colors', colors.bg.hover, colors.text.secondary)}>
@@ -692,7 +692,7 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
                     </div>
 
                     <div>
-                      <label className={cn('mb-1 block text-sm font-medium', colors.text.primary)}>Test Template <span className="text-red-500">*</span></label>
+                      <label className={cn('mb-1 block text-sm font-medium', colors.text.primary)}>Test Template(Optional)</label>
                       <select value={form.template_id} onChange={e => setForm(prev => ({ ...prev, template_id: e.target.value }))}
                         className={cn('w-full rounded-lg border p-2.5 text-sm', colors.bg.input, colors.text.primary, colors.border.primary, 'focus:outline-none focus:ring-2 focus:ring-blue-500')}
                       >
@@ -741,7 +741,7 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
                     <button onClick={handleNewClick} className={cn('rounded-lg px-4 py-2 text-sm font-medium transition-all', colors.bg.hover, colors.text.secondary)}>
                       Clear Form
                     </button>
-                    <button onClick={handleSave} disabled={isMutating || !form.name.trim() || !form.template_id}
+                    <button onClick={handleSave} disabled={isMutating || !form.name.trim()}
                       className={cn('inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors',
                         isMutating || !form.name.trim() || !form.template_id ? 'cursor-not-allowed bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
                       )}>

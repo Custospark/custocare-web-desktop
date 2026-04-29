@@ -8,6 +8,7 @@ import {
   Search,
   Sparkles,
   X,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import type { LabTemplate, LabTest } from '../../../../api/lab/LabTypes';
@@ -366,11 +367,17 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                     </div>
                   </div>
 
-                  {!formData.lab_test_id && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/30 dark:bg-red-950/30 dark:text-red-300">
-                      ⚠️ Please select a lab test from the catalog before adding to the request.
-                    </div>
-                  )}
+                {!formData.lab_test_id && (
+                          <div className={cn(
+                            "rounded-xl border p-3 text-sm",
+                            "border-red-300 bg-red-100 text-red-800",
+                            "dark:border-red-500/40 dark:bg-red-950/50 dark:text-red-200",
+                            "flex items-start gap-2"
+                          )}>
+                            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            <span>Please select a lab test from the catalog before adding to the request.</span>
+                          </div>
+                        )}
                 </div>
               </div>
             </div>

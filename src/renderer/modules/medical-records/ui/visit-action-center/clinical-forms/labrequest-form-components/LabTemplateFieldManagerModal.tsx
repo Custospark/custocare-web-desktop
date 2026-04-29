@@ -2,20 +2,25 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
+  CheckCircle2,
+  GripVertical,
+  Hash,
+  Loader2,
   Plus,
   Rows3,
   Save,
   Search,
+  Sparkles,
   Trash2,
   X,
-  Loader2,
+  Zap,
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import { axiosInstance } from '../../../../../../app/api/axiosConfig';
-import { useToast } from '../../../../../../app/store/contexts/toast/useToast';
 import type { ApiResponse, LabTemplate, LabTemplateField } from '../../../../api/lab/LabTypes';
 import { TemplateFieldDataType } from '../../../../api/lab/LabTypes';
 import {
@@ -66,719 +71,763 @@ const EMPTY_FIELD_FORM: FieldFormState = {
   clinical_notes: '',
 };
 
-// Helper function to safely get array
+const DATA_TYPE_LABELS: Record<TemplateFieldDataType, string> = {
+  [TemplateFieldDataType.NUMBER]: 'Number',
+  [TemplateFieldDataType.TEXT]: 'Text',
+  [TemplateFieldDataType.BOOLEAN]: 'Yes / No',
+  [TemplateFieldDataType.SELECT]: 'Dropdown',
+};
+
+// Helper function
 const safeArray = <T,>(arr: T[] | undefined | null): T[] => {
   return Array.isArray(arr) ? arr : [];
 };
+
+// Chip component
+const Chip: React.FC<{ label: string; variant: 'blue' | 'red' | 'gray' | 'green' | 'violet' }> = ({
+  label,
+  variant,
+}) => {
+  const cls = {
+    blue: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    red: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+    gray: 'bg-gray-100 text-gray-600 dark:bg-gray-700/60 dark:text-gray-300',
+    green: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+    violet: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
+  }[variant];
+  return (
+    <span className={cn('inline-block rounded-full px-2 py-0.5 text-[11px] font-medium', cls)}>
+      {label}
+    </span>
+  );
+};
+
+// Label component
+const Label: React.FC<{ children: React.ReactNode; required?: boolean; className?: string }> = ({
+  children,
+  required,
+  className,
+}) => (
+  <label className={cn('mb-1.5 block text-xs font-semibold uppercase tracking-wide', className)}>
+    {children}
+    {required && <span className="ml-1 text-red-500">*</span>}
+  </label>
+);
+
+// Toggle component
+const Toggle: React.FC<{
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+  description?: string;
+  colors: ColorTokens;
+}> = ({ checked, onChange, label, description, colors }) => (
+  <button
+    type="button"
+    onClick={() => onChange(!checked)}
+    className="flex w-full items-center justify-between gap-3 rounded-lg py-1 text-left"
+  >
+    <div>
+      <p className={cn('text-sm font-medium', colors.text.primary)}>{label}</p>
+      {description && <p className={cn('text-xs', colors.text.tertiary)}>{description}</p>}
+    </div>
+    <div
+      className={cn(
+        'relative h-5 w-9 shrink-0 rounded-full transition-colors duration-200',
+        checked ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+      )}
+    >
+      <div
+        className={cn(
+          'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200',
+          checked ? 'translate-x-4' : 'translate-x-0.5'
+        )}
+      />
+    </div>
+  </button>
+);
 
 export const LabTemplateFieldManagerModal: React.FC<LabTemplateFieldManagerModalProps> = ({
   open,
   isDark,
   colors,
   selectedTemplate,
-  templates,
   onClose,
   onTemplateChange,
 }) => {
-  const { showToast } = useToast();
   const queryClient = useQueryClient();
 
-  // Local state
-  const [search, setSearch] = useState('');
-  const [form, setForm] = useState<FieldFormState>(EMPTY_FIELD_FORM);
+  // State
+  const [fieldSearch, setFieldSearch] = useState('');
   const [selectedField, setSelectedField] = useState<LabTemplateField | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isLocalMutating, setIsLocalMutating] = useState(false);
-  
-  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [fieldForm, setFieldForm] = useState<FieldFormState>(EMPTY_FIELD_FORM);
+  const [showDeleteFieldConfirm, setShowDeleteFieldConfirm] = useState(false);
+  const [toastMsg, setToastMsg] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // API hooks - now returns fields array directly
+  // API hooks
   const fieldsQuery = useGetFieldsByTemplate(selectedTemplate?.template_uuid || '', {
     enabled: !!selectedTemplate?.template_uuid && open,
   });
 
+  const fields = useMemo(() => safeArray(fieldsQuery.data), [fieldsQuery.data]);
+
   const createField = useCreateLabTemplateField();
   const bulkUpdateOrders = useBulkUpdateDisplayOrders();
 
-  const updateField = useMutation<
-    ApiResponse<LabTemplateField>,
-    Error,
-    { uuid: string; data: Record<string, unknown> }
-  >({
-    mutationFn: async ({ uuid, data }) => {
-      const response = await axiosInstance.put(`/lab/template-fields/${uuid}`, data);
-      return response.data;
-    },
+  const updateField = useMutation<ApiResponse<LabTemplateField>, Error, { uuid: string; data: Record<string, unknown> }>({
+    mutationFn: async ({ uuid, data }) => (await axiosInstance.put(`/lab/template-fields/${uuid}`, data)).data,
     onSuccess: async () => {
-      showToast('success', 'Field updated successfully');
-      setSuccessMessage('Field updated successfully');
-      setTimeout(() => setSuccessMessage(null), 3000);
-      if (selectedTemplate?.template_uuid) {
-        await queryClient.invalidateQueries({
-          queryKey: labKeys.fieldByTemplate(selectedTemplate.template_uuid),
-        });
-      }
+      fireToast('Field updated successfully', 'success');
+      if (selectedTemplate?.template_uuid)
+        await queryClient.invalidateQueries({ queryKey: labKeys.fieldByTemplate(selectedTemplate.template_uuid) });
       onTemplateChange?.();
     },
-    onError: () => {
-      showToast('error', 'Failed to update field');
-    },
+    onError: () => fireToast('Failed to update field', 'error'),
   });
 
   const deleteField = useMutation<ApiResponse<null>, Error, { uuid: string }>({
-    mutationFn: async ({ uuid }) => {
-      const response = await axiosInstance.delete(`/lab/template-fields/${uuid}`);
-      return response.data;
-    },
+    mutationFn: async ({ uuid }) => (await axiosInstance.delete(`/lab/template-fields/${uuid}`)).data,
     onSuccess: async () => {
-      showToast('success', 'Field deleted successfully');
-      setSuccessMessage('Field deleted successfully');
-      setTimeout(() => setSuccessMessage(null), 3000);
+      fireToast('Field deleted successfully', 'success');
       setSelectedField(null);
-      setForm(EMPTY_FIELD_FORM);
-      if (selectedTemplate?.template_uuid) {
-        await queryClient.invalidateQueries({
-          queryKey: labKeys.fieldByTemplate(selectedTemplate.template_uuid),
-        });
-      }
+      setFieldForm({ ...EMPTY_FIELD_FORM, display_order: fields.length });
+      setShowDeleteFieldConfirm(false);
+      if (selectedTemplate?.template_uuid)
+        await queryClient.invalidateQueries({ queryKey: labKeys.fieldByTemplate(selectedTemplate.template_uuid) });
       onTemplateChange?.();
     },
-    onError: () => {
-      showToast('error', 'Failed to delete field');
-    },
+    onError: () => fireToast('Failed to delete field', 'error'),
   });
 
-  // Fields are now directly an array from the hook
-  const fields = useMemo(() => {
-    return safeArray(fieldsQuery.data);
-  }, [fieldsQuery.data]);
+  const isMutating = createField.isPending || updateField.isPending || deleteField.isPending || bulkUpdateOrders.isPending;
 
-  // Safely get templates array
-  const safeTemplates = useMemo(() => {
-    return safeArray(templates);
-  }, [templates]);
+  // Toast helper
+  const fireToast = useCallback((msg: string, type: 'success' | 'error') => {
+    if (toastRef.current) clearTimeout(toastRef.current);
+    setToastMsg({ msg, type });
+    toastRef.current = setTimeout(() => setToastMsg(null), 3000);
+  }, []);
 
-  // Filter fields based on search
+  // Filtered fields
   const filteredFields = useMemo(() => {
-    const term = search.trim().toLowerCase();
+    const term = fieldSearch.trim().toLowerCase();
     if (!term) return fields;
-    
-    return fields.filter((field) => {
-      const name = (field.name || '').toLowerCase();
-      const code = (field.code || '').toLowerCase();
-      const unit = (field.unit || '').toLowerCase();
-      const notes = (field.clinical_notes || '').toLowerCase();
-      return name.includes(term) || code.includes(term) || unit.includes(term) || notes.includes(term);
-    });
-  }, [fields, search]);
-
-  // Load field data when selected field changes
-  useEffect(() => {
-    if (selectedField) {
-      setForm({
-        field_uuid: selectedField.field_uuid,
-        name: selectedField.name,
-        code: selectedField.code || '',
-        data_type: selectedField.data_type,
-        unit: selectedField.unit || '',
-        reference_min: selectedField.reference_min?.toString() || '',
-        reference_max: selectedField.reference_max?.toString() || '',
-        display_order: selectedField.display_order,
-        is_required: selectedField.is_required,
-        is_active: selectedField.is_active,
-        is_critical: selectedField.is_critical,
-        clinical_notes: selectedField.clinical_notes || '',
-      });
-    } else {
-      setForm({
-        ...EMPTY_FIELD_FORM,
-        display_order: fields.length + 1,
-      });
-    }
-  }, [selectedField, fields.length]);
+    return fields.filter(
+      (f) =>
+        (f.name ?? '').toLowerCase().includes(term) ||
+        (f.code ?? '').toLowerCase().includes(term) ||
+        (f.unit ?? '').toLowerCase().includes(term)
+    );
+  }, [fields, fieldSearch]);
 
   // Reset when modal closes
   useEffect(() => {
     if (!open) {
       setSelectedField(null);
-      setSearch('');
-      setForm(EMPTY_FIELD_FORM);
-      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
-      setSuccessMessage(null);
+      setFieldSearch('');
+      setFieldForm(EMPTY_FIELD_FORM);
+      setShowDeleteFieldConfirm(false);
+      if (toastRef.current) clearTimeout(toastRef.current);
+      setToastMsg(null);
     }
   }, [open]);
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
-    };
-  }, []);
+  useEffect(() => () => { if (toastRef.current) clearTimeout(toastRef.current); }, []);
 
-  const isMutating =
-    createField.isPending ||
-    updateField.isPending ||
-    deleteField.isPending ||
-    bulkUpdateOrders.isPending ||
-    isLocalMutating;
+  // Field handlers
+  const handleSelectField = useCallback(
+    (field: LabTemplateField) => {
+      if (selectedField?.field_uuid === field.field_uuid) {
+        setSelectedField(null);
+        setFieldForm({ ...EMPTY_FIELD_FORM, display_order: fields.length + 1 });
+        setShowDeleteFieldConfirm(false);
+      } else {
+        setSelectedField(field);
+        setFieldForm({
+          field_uuid: field.field_uuid,
+          name: field.name,
+          code: field.code ?? '',
+          data_type: field.data_type,
+          unit: field.unit ?? '',
+          reference_min: field.reference_min?.toString() ?? '',
+          reference_max: field.reference_max?.toString() ?? '',
+          display_order: field.display_order,
+          is_required: field.is_required,
+          is_active: field.is_active,
+          is_critical: field.is_critical,
+          clinical_notes: field.clinical_notes ?? '',
+        });
+        setShowDeleteFieldConfirm(false);
+      }
+    },
+    [selectedField, fields.length]
+  );
 
-  const handleSelectTemplate = (template: LabTemplate) => {
-    setSelectedField(null);
-    setSearch('');
-    onTemplateChange?.();
-  };
+  const handleSaveField = useCallback(async () => {
+    if (!selectedTemplate?.id || !fieldForm.name.trim()) return;
 
-  const handleSave = async () => {
-    if (!selectedTemplate?.id || !form.name.trim()) return;
-
-    setIsLocalMutating(true);
-    
     const payload = {
-      name: form.name.trim(),
-      code: form.code.trim() || null,
+      name: fieldForm.name.trim(),
+      code: fieldForm.code.trim() || null,
       template_id: selectedTemplate.id,
-      data_type: form.data_type,
-      unit: form.unit.trim() || null,
-      reference_min: form.reference_min ? Number(form.reference_min) : null,
-      reference_max: form.reference_max ? Number(form.reference_max) : null,
-      display_order: form.display_order,
-      is_required: form.is_required,
-      is_active: form.is_active,
-      is_critical: form.is_critical,
-      clinical_notes: form.clinical_notes.trim() || null,
-      metadata: {
-        source: 'lab-template-field-manager-modal',
-      },
+      data_type: fieldForm.data_type,
+      unit: fieldForm.unit.trim() || null,
+      reference_min: fieldForm.reference_min ? Number(fieldForm.reference_min) : null,
+      reference_max: fieldForm.reference_max ? Number(fieldForm.reference_max) : null,
+      display_order: fieldForm.display_order,
+      is_required: fieldForm.is_required,
+      is_active: fieldForm.is_active,
+      is_critical: fieldForm.is_critical,
+      clinical_notes: fieldForm.clinical_notes.trim() || null,
+      metadata: { source: 'lab-template-field-manager-modal' },
     };
 
     try {
       if (selectedField?.field_uuid) {
-        await updateField.mutateAsync({
-          uuid: selectedField.field_uuid,
-          data: payload,
-        });
+        await updateField.mutateAsync({ uuid: selectedField.field_uuid, data: payload });
       } else {
         await createField.mutateAsync(payload);
-        setSuccessMessage('Field created successfully');
-        setTimeout(() => setSuccessMessage(null), 3000);
+        fireToast('Field created successfully', 'success');
         setSelectedField(null);
-        setForm({
-          ...EMPTY_FIELD_FORM,
-          display_order: fields.length + 2,
-        });
+        setFieldForm({ ...EMPTY_FIELD_FORM, display_order: fields.length + 2 });
       }
       onTemplateChange?.();
-    } catch (error) {
-      console.error('Failed to save field:', error);
-    } finally {
-      setIsLocalMutating(false);
+    } catch {
+      fireToast('Failed to save field', 'error');
     }
-  };
+  }, [fieldForm, selectedField, selectedTemplate, fields.length, createField, updateField, fireToast, onTemplateChange]);
 
-  const handleNewField = () => {
-    setSelectedField(null);
-  };
+  const handleDeleteField = useCallback(async () => {
+    if (!selectedField?.field_uuid) return;
+    await deleteField.mutateAsync({ uuid: selectedField.field_uuid });
+  }, [deleteField, selectedField]);
 
-  const moveField = async (field: LabTemplateField, direction: 'up' | 'down') => {
-    const currentIndex = fields.findIndex((entry) => entry.field_uuid === field.field_uuid);
-    if (currentIndex < 0) return;
+  const moveField = useCallback(
+    async (field: LabTemplateField, direction: 'up' | 'down') => {
+      const idx = fields.findIndex((f) => f.field_uuid === field.field_uuid);
+      if (idx < 0) return;
+      const target = direction === 'up' ? idx - 1 : idx + 1;
+      if (target < 0 || target >= fields.length) return;
+      const reordered = [...fields];
+      [reordered[idx], reordered[target]] = [reordered[target], reordered[idx]];
+      await bulkUpdateOrders.mutateAsync({
+        orders: reordered.map((f, i) => ({ field_uuid: f.field_uuid, display_order: i + 1 })),
+      });
+    },
+    [fields, bulkUpdateOrders]
+  );
 
-    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    if (targetIndex < 0 || targetIndex >= fields.length) return;
+  const inputCls = cn(
+    'w-full rounded-lg border px-3 py-2 text-sm transition-colors',
+    colors.bg.input,
+    colors.text.primary,
+    colors.border.primary,
+    'focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500',
+    'placeholder:text-gray-400 dark:placeholder:text-gray-500'
+  );
 
-    const reordered = [...fields];
-    [reordered[currentIndex], reordered[targetIndex]] = [reordered[targetIndex], reordered[currentIndex]];
-
-    await bulkUpdateOrders.mutateAsync({
-      orders: reordered.map((entry, index) => ({
-        field_uuid: entry.field_uuid,
-        display_order: index + 1,
-      })),
-    });
-  };
-
-  const handleResetForm = () => {
-    setSelectedField(null);
-    setForm({
-      ...EMPTY_FIELD_FORM,
-      display_order: fields.length + 1,
-    });
-  };
-
-  const getStructureTypeName = (type: string): string => {
-    const types: Record<string, string> = {
-      standard: 'Standard',
-      simple: 'Simple',
-      panel: 'Panel',
-    };
-    return types[type] || type;
-  };
+  if (!selectedTemplate) {
+    return null;
+  }
 
   return (
     <AnimatePresence>
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
           onClick={(e) => e.target === e.currentTarget && onClose()}
         >
           <motion.div
-            initial={{ scale: 0.97, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.97, opacity: 0 }}
-            className={cn('w-full max-w-7xl rounded-2xl border shadow-xl', colors.border.primary, colors.bg.card)}
+            initial={{ scale: 0.96, opacity: 0, y: 16 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.96, opacity: 0, y: 16 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+            className={cn(
+              'flex w-full flex-col overflow-hidden rounded-t-2xl border shadow-2xl sm:rounded-2xl',
+              'sm:max-w-5xl',
+              colors.border.primary,
+              colors.bg.card
+            )}
+            style={{ maxHeight: '92vh' }}
           >
             {/* Header */}
-            <div className={cn('flex items-center justify-between border-b p-5', colors.border.primary)}>
-              <div>
-                <h3 className={cn('text-lg font-semibold', colors.text.primary)}>
-                  Template Fields Manager
-                </h3>
-                <p className={cn('mt-1 text-sm', colors.text.secondary)}>
-                  Define and manage the fields (results) that will be captured for each lab test template.
-                </p>
+            <div className={cn('flex shrink-0 items-center justify-between border-b px-5 py-4', colors.border.primary)}>
+              <div className="flex items-center gap-3">
+                <div className={cn('flex h-9 w-9 items-center justify-center rounded-xl', isDark ? 'bg-violet-900/40' : 'bg-violet-50')}>
+                  <Rows3 className="h-5 w-5 text-violet-500" />
+                </div>
+                <div>
+                  <h2 className={cn('text-base font-bold', colors.text.primary)}>
+                    Field Manager — {selectedTemplate.name}
+                  </h2>
+                  <p className={cn('text-xs', colors.text.tertiary)}>
+                    Define result fields for this template
+                  </p>
+                </div>
               </div>
               <button
                 onClick={onClose}
-                className={cn('rounded p-1 transition-colors', colors.bg.hover, colors.text.secondary)}
+                className={cn(
+                  'rounded-lg p-1.5 transition-colors',
+                  isDark ? 'text-gray-400 hover:bg-gray-700 hover:text-gray-200' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+                )}
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Success Message */}
+            {/* Toast */}
             <AnimatePresence>
-              {successMessage && (
+              {toastMsg && (
                 <motion.div
-                  initial={{ opacity: 0, y: -12 }}
+                  key="toast"
+                  initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -12 }}
-                  className="mx-5 mt-4 rounded-lg bg-green-600 p-3 text-center text-sm font-medium text-white shadow-lg"
+                  exit={{ opacity: 0, y: -8 }}
+                  className={cn(
+                    'mx-5 mt-3 flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-lg',
+                    toastMsg.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'
+                  )}
                 >
-                  {successMessage}
+                  {toastMsg.type === 'success' ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                  )}
+                  {toastMsg.msg}
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <div className="grid max-h-[82vh] grid-cols-1 overflow-hidden lg:grid-cols-[280px_1fr_420px]">
-              {/* Left Panel - Templates List */}
-              <div className={cn('border-r p-4', colors.border.primary)}>
-                <p className={cn('mb-3 text-sm font-semibold', colors.text.primary)}>Templates</p>
-                <div className="space-y-2">
-                  {safeTemplates.length === 0 ? (
-                    <div className={cn('rounded-lg border border-dashed p-3 text-center text-sm', colors.border.primary, colors.text.secondary)}>
-                      No templates available
-                    </div>
-                  ) : (
-                    safeTemplates.map((template) => (
-                      <button
-                        key={template.id}
-                        onClick={() => handleSelectTemplate(template)}
-                        className={cn(
-                          'w-full cursor-pointer rounded-xl border p-3 text-left transition-all',
-                          colors.border.primary,
-                          selectedTemplate?.id === template.id
-                            ? 'border-blue-600 ring-2 ring-blue-500/30 bg-blue-50 dark:bg-blue-950/20'
-                            : isDark ? 'hover:bg-gray-800/60' : 'hover:bg-gray-50'
-                        )}
-                      >
-                        <div className={cn('font-medium', colors.text.primary)}>
-                          {template.name}
-                        </div>
-                        <div className={cn('mt-1 text-xs', colors.text.secondary)}>
-                          {getStructureTypeName(template.structure_type)}
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Middle Panel - Fields List */}
-              <div className={cn('border-r p-4', colors.border.primary)}>
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <p className={cn('text-sm font-semibold', colors.text.primary)}>
-                    {selectedTemplate ? `${selectedTemplate.name} Fields` : 'Fields'}
-                  </p>
-                  {selectedTemplate && (
-                    <button
-                      onClick={handleNewField}
-                      className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-                    >
-                      <Plus className="h-4 w-4" />
-                      New Field
-                    </button>
-                  )}
-                </div>
-
-                {selectedTemplate && (
-                  <>
-                    <div className="relative mb-3">
-                      <Search className={cn('absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2', colors.text.tertiary)} />
+            {/* Main Content */}
+            <div className="flex min-h-0 flex-1 overflow-hidden">
+              {/* Left Panel - Fields List */}
+              <div className={cn('flex w-72 shrink-0 flex-col border-r', colors.border.primary)}>
+                <div className="shrink-0 p-3">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className={cn('absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2', colors.text.tertiary)} />
                       <input
                         type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search fields..."
-                        className={cn(
-                          'w-full rounded-lg border py-2.5 pl-9 pr-3 text-sm',
-                          colors.bg.input,
-                          colors.text.primary,
-                          colors.border.primary,
-                          'focus:outline-none focus:ring-2 focus:ring-blue-500'
-                        )}
+                        value={fieldSearch}
+                        onChange={(e) => setFieldSearch(e.target.value)}
+                        placeholder="Search fields…"
+                        className={cn(inputCls, 'py-1.5 pl-8 pr-3 text-xs')}
                       />
                     </div>
-
-                    <div className="max-h-[66vh] space-y-2 overflow-y-auto pr-1">
-                      {fieldsQuery.isLoading ? (
-                        <div className={cn('flex items-center justify-center p-8', colors.text.secondary)}>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Loading fields...
-                        </div>
-                      ) : filteredFields.length === 0 ? (
-                        <div className={cn('rounded-lg border border-dashed p-4 text-center text-sm', colors.border.primary, colors.text.secondary)}>
-                          No fields found.
-                          <button onClick={handleNewField} className="ml-1 text-blue-600 hover:underline dark:text-blue-400">
-                            Create one
-                          </button>
-                        </div>
-                      ) : (
-                        filteredFields.map((field, index) => {
-                          const isSelected = selectedField?.field_uuid === field.field_uuid;
-                          return (
-                            <div
-                              key={field.field_uuid}
-                              className={cn(
-                                'rounded-xl border p-3 transition-all',
-                                colors.border.primary,
-                                isSelected
-                                  ? 'border-blue-600 ring-2 ring-blue-500/30 bg-blue-50 dark:bg-blue-950/20'
-                                  : colors.bg.subtle
-                              )}
-                            >
-                              <button
-                                onClick={() => setSelectedField(field)}
-                                className="w-full text-left"
-                              >
-                                <div className={cn('font-medium', colors.text.primary)}>
-                                  {field.name}
-                                </div>
-                                <div className={cn('mt-1 text-xs', colors.text.secondary)}>
-                                  {field.data_type} • {field.unit || 'no unit'} • Order: {field.display_order}
-                                </div>
-                                <div className="mt-1 flex flex-wrap gap-1">
-                                  {field.is_required && (
-                                    <span className={cn('inline-block text-xs px-1.5 py-0.5 rounded', isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700')}>
-                                      Required
-                                    </span>
-                                  )}
-                                  {field.is_critical && (
-                                    <span className={cn('inline-block text-xs px-1.5 py-0.5 rounded', isDark ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-700')}>
-                                      Critical
-                                    </span>
-                                  )}
-                                </div>
-                              </button>
-
-                              <div className="mt-3 flex items-center gap-2">
-                                <button
-                                  onClick={() => moveField(field, 'up')}
-                                  disabled={index === 0 || isMutating}
-                                  className={cn(
-                                    'rounded-lg border p-2 transition-colors',
-                                    colors.border.primary,
-                                    index === 0 || isMutating
-                                      ? 'cursor-not-allowed opacity-50'
-                                      : colors.bg.hover
-                                  )}
-                                >
-                                  <ArrowUp className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => moveField(field, 'down')}
-                                  disabled={index === filteredFields.length - 1 || isMutating}
-                                  className={cn(
-                                    'rounded-lg border p-2 transition-colors',
-                                    colors.border.primary,
-                                    index === filteredFields.length - 1 || isMutating
-                                      ? 'cursor-not-allowed opacity-50'
-                                      : colors.bg.hover
-                                  )}
-                                >
-                                  <ArrowDown className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => deleteField.mutate({ uuid: field.field_uuid })}
-                                  disabled={isMutating}
-                                  className={cn(
-                                    'ml-auto rounded-lg border p-2 transition-colors',
-                                    colors.border.primary,
-                                    isDark
-                                      ? 'text-red-300 hover:bg-red-950/40'
-                                      : 'text-red-700 hover:bg-red-50'
-                                  )}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </>
-                )}
-
-                {!selectedTemplate && (
-                  <div className={cn('mt-4 rounded-xl border border-dashed p-4 text-center text-sm', colors.border.primary, colors.text.secondary)}>
-                    Select a template from the left to manage its fields.
+                    <button
+                      onClick={() => {
+                        setSelectedField(null);
+                        setFieldForm({ ...EMPTY_FIELD_FORM, display_order: fields.length + 1 });
+                        setShowDeleteFieldConfirm(false);
+                      }}
+                      title="New field"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-700"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
                   </div>
-                )}
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-3 pb-3">
+                  {fieldsQuery.isLoading ? (
+                    <div className={cn('flex items-center justify-center gap-2 p-6 text-xs', colors.text.tertiary)}>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading fields…
+                    </div>
+                  ) : filteredFields.length === 0 ? (
+                    <div className={cn('rounded-lg border border-dashed p-4 text-center text-xs', colors.border.primary, colors.text.tertiary)}>
+                      No fields yet.{' '}
+                      <button
+                        onClick={() => {
+                          setSelectedField(null);
+                          setFieldForm({ ...EMPTY_FIELD_FORM, display_order: fields.length + 1 });
+                        }}
+                        className="text-blue-500 hover:underline"
+                      >
+                        Add one
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {filteredFields.map((field, idx) => {
+                        const isSelected = selectedField?.field_uuid === field.field_uuid;
+                        return (
+                          <div
+                            key={field.field_uuid}
+                            className={cn(
+                              'group rounded-xl border transition-all',
+                              isSelected
+                                ? isDark
+                                  ? 'border-violet-500/50 bg-violet-950/30 ring-1 ring-violet-500/20'
+                                  : 'border-violet-300 bg-violet-50 ring-1 ring-violet-200'
+                                : cn(colors.border.primary, isDark ? 'hover:bg-gray-800/40' : 'hover:bg-gray-50')
+                            )}
+                          >
+                            <button
+                              onClick={() => handleSelectField(field)}
+                              className="w-full px-3 py-2.5 text-left"
+                            >
+                              <div className="flex items-start gap-2">
+                                <GripVertical className={cn('mt-0.5 h-3.5 w-3.5 shrink-0', colors.text.tertiary)} />
+                                <div className="min-w-0 flex-1">
+                                  <p className={cn('truncate text-xs font-semibold', colors.text.primary)}>
+                                    {field.name}
+                                  </p>
+                                  <div className="mt-0.5 flex items-center gap-1 flex-wrap">
+                                    <span className={cn('text-[10px]', colors.text.tertiary)}>
+                                      {DATA_TYPE_LABELS[field.data_type] ?? field.data_type}
+                                    </span>
+                                    {field.unit && (
+                                      <span className={cn('text-[10px]', colors.text.tertiary)}>• {field.unit}</span>
+                                    )}
+                                  </div>
+                                  <div className="mt-1 flex flex-wrap gap-1">
+                                    {field.is_required && <Chip label="Required" variant="blue" />}
+                                    {field.is_critical && <Chip label="Critical" variant="red" />}
+                                    {!field.is_active && <Chip label="Inactive" variant="gray" />}
+                                  </div>
+                                </div>
+                                <span className={cn('mt-0.5 shrink-0 text-[10px] font-mono', colors.text.tertiary)}>
+                                  #{field.display_order}
+                                </span>
+                              </div>
+                            </button>
+                            {/* Reorder buttons */}
+                            <div className={cn('flex items-center gap-1 border-t px-2 py-1.5', colors.border.primary)}>
+                              <button
+                                onClick={() => moveField(field, 'up')}
+                                disabled={idx === 0 || isMutating}
+                                className={cn(
+                                  'rounded p-1 transition-colors',
+                                  idx === 0 || isMutating
+                                    ? 'cursor-not-allowed opacity-30'
+                                    : isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                                )}
+                                title="Move up"
+                              >
+                                <ArrowUp className={cn('h-3 w-3', colors.text.secondary)} />
+                              </button>
+                              <button
+                                onClick={() => moveField(field, 'down')}
+                                disabled={idx === filteredFields.length - 1 || isMutating}
+                                className={cn(
+                                  'rounded p-1 transition-colors',
+                                  idx === filteredFields.length - 1 || isMutating
+                                    ? 'cursor-not-allowed opacity-30'
+                                    : isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                                )}
+                                title="Move down"
+                              >
+                                <ArrowDown className={cn('h-3 w-3', colors.text.secondary)} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  handleSelectField(field);
+                                  setShowDeleteFieldConfirm(true);
+                                }}
+                                disabled={isMutating}
+                                className={cn(
+                                  'ml-auto rounded p-1 transition-colors',
+                                  isDark ? 'text-red-400 hover:bg-red-950/30' : 'text-red-600 hover:bg-red-50'
+                                )}
+                                title="Delete field"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Right Panel - Field Form */}
-              <div className="max-h-[82vh] overflow-y-auto p-5">
-                <div className={cn('rounded-xl border p-4', colors.border.primary, colors.bg.subtle)}>
-                  <div className="mb-4 flex items-center gap-2">
-                    <Rows3 className={cn('h-4 w-4', colors.text.brand)} />
-                    <h4 className={cn('text-sm font-semibold', colors.text.primary)}>
-                      {selectedField ? 'Edit Field' : 'Create New Field'}
-                    </h4>
+              <div className="flex-1 overflow-y-auto p-5">
+                <div className={cn('rounded-xl border p-5', colors.border.primary, isDark ? 'bg-gray-900/40' : 'bg-gray-50/60')}>
+                  {/* Header */}
+                  <div className="mb-5 flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <div className={cn('flex h-7 w-7 items-center justify-center rounded-lg', isDark ? 'bg-violet-900/40' : 'bg-violet-50')}>
+                          <Sparkles className="h-4 w-4 text-violet-500" />
+                        </div>
+                        <h3 className={cn('text-sm font-bold', colors.text.primary)}>
+                          {selectedField ? 'Edit Field' : 'New Result Field'}
+                        </h3>
+                      </div>
+                      <p className={cn('mt-1 text-xs', colors.text.tertiary)}>
+                        {selectedField
+                          ? `Editing "${selectedField.name}" in ${selectedTemplate.name}`
+                          : `Adding a new result field to ${selectedTemplate.name}`}
+                      </p>
+                    </div>
+                    {selectedTemplate && (
+                      <div className="flex gap-2">
+                        <span className={cn('rounded-full px-2 py-1 text-xs', isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700')}>
+                          {fields.length} field{fields.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
-                  {!selectedTemplate ? (
-                    <div className={cn('rounded-xl border border-dashed p-4 text-center text-sm', colors.border.primary, colors.text.secondary)}>
-                      Select a template first to create or edit fields.
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div>
-                        <label className={cn('mb-1 block text-sm font-medium', colors.text.primary)}>
-                          Field Name <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={form.name}
-                          onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                          placeholder="e.g., Hemoglobin, Glucose, WBC Count"
-                          className={cn(
-                            'w-full rounded-lg border p-2.5 text-sm',
-                            colors.bg.input,
-                            colors.text.primary,
-                            colors.border.primary,
-                            'focus:outline-none focus:ring-2 focus:ring-blue-500'
-                          )}
-                        />
-                      </div>
-
-                      <div>
-                        <label className={cn('mb-1 block text-sm font-medium', colors.text.primary)}>
-                          Field Code
-                        </label>
-                        <input
-                          type="text"
-                          value={form.code}
-                          onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
-                          placeholder="e.g., HGB, GLU, WBC"
-                          className={cn(
-                            'w-full rounded-lg border p-2.5 text-sm',
-                            colors.bg.input,
-                            colors.text.primary,
-                            colors.border.primary,
-                            'focus:outline-none focus:ring-2 focus:ring-blue-500'
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div>
-                          <label className={cn('mb-1 block text-sm font-medium', colors.text.primary)}>
-                            Data Type
-                          </label>
-                          <select
-                            value={form.data_type}
-                            onChange={(e) =>
-                              setForm((prev) => ({
-                                ...prev,
-                                data_type: e.target.value as TemplateFieldDataType,
-                              }))
-                            }
-                            className={cn(
-                              'w-full rounded-lg border p-2.5 text-sm',
-                              colors.bg.input,
-                              colors.text.primary,
-                              colors.border.primary,
-                              'focus:outline-none focus:ring-2 focus:ring-blue-500'
-                            )}
-                          >
-                            {Object.values(TemplateFieldDataType).map((type) => (
-                              <option key={type} value={type}>
-                                {type}
-                              </option>
-                            ))}
-                          </select>
+                  {/* Delete confirmation */}
+                  <AnimatePresence>
+                    {showDeleteFieldConfirm && selectedField && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className={cn(
+                          'mb-4 rounded-xl border p-4',
+                          isDark ? 'border-red-900/40 bg-red-950/30' : 'border-red-200 bg-red-50'
+                        )}
+                      >
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle className={cn('mt-0.5 h-4 w-4 shrink-0', isDark ? 'text-red-400' : 'text-red-600')} />
+                          <div>
+                            <p className={cn('text-sm font-semibold', isDark ? 'text-red-300' : 'text-red-700')}>
+                              Delete field "{selectedField.name}"?
+                            </p>
+                            <p className={cn('mt-0.5 text-xs', isDark ? 'text-red-400' : 'text-red-600')}>
+                              This cannot be undone.
+                            </p>
+                            <div className="mt-3 flex gap-2">
+                              <button
+                                onClick={() => setShowDeleteFieldConfirm(false)}
+                                className={cn(
+                                  'rounded-lg px-3 py-1.5 text-xs font-semibold',
+                                  isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                )}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={handleDeleteField}
+                                disabled={isMutating}
+                                className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                              >
+                                {deleteField.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                                {deleteField.isPending ? 'Deleting…' : 'Delete Field'}
+                              </button>
+                            </div>
+                          </div>
                         </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-                        <div>
-                          <label className={cn('mb-1 block text-sm font-medium', colors.text.primary)}>
-                            Unit
-                          </label>
+                  {/* Form fields */}
+                  <div className="space-y-5">
+                    {/* Name + Code */}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <Label required  className={colors.text.secondary}>
+                          Field Name
+                        </Label>
+                        <input
+                          type="text"
+                          value={fieldForm.name}
+                          onChange={(e) => setFieldForm((p) => ({ ...p, name: e.target.value }))}
+                          placeholder="e.g., Hemoglobin, Glucose, WBC Count"
+                          className={inputCls}
+                        />
+                      </div>
+                      <div>
+                        <Label  className={colors.text.secondary}>
+                          Short Code
+                        </Label>
+                        <div className="relative">
+                          <Hash className={cn('absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2', colors.text.tertiary)} />
                           <input
                             type="text"
-                            value={form.unit}
-                            onChange={(e) => setForm((prev) => ({ ...prev, unit: e.target.value }))}
-                            placeholder="e.g., mg/dL, g/dL, cells/uL"
-                            className={cn(
-                              'w-full rounded-lg border p-2.5 text-sm',
-                              colors.bg.input,
-                              colors.text.primary,
-                              colors.border.primary,
-                              'focus:outline-none focus:ring-2 focus:ring-blue-500'
-                            )}
+                            value={fieldForm.code}
+                            onChange={(e) => setFieldForm((p) => ({ ...p, code: e.target.value }))}
+                            placeholder="HGB, GLU, WBC"
+                            className={cn(inputCls, 'pl-8 uppercase tracking-wide')}
                           />
                         </div>
-                      </div>
-
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div>
-                          <label className={cn('mb-1 block text-sm font-medium', colors.text.primary)}>
-                            Reference Range (Min)
-                          </label>
-                          <input
-                            type="number"
-                            step="any"
-                            value={form.reference_min}
-                            onChange={(e) => setForm((prev) => ({ ...prev, reference_min: e.target.value }))}
-                            placeholder="0.0"
-                            className={cn(
-                              'w-full rounded-lg border p-2.5 text-sm',
-                              colors.bg.input,
-                              colors.text.primary,
-                              colors.border.primary,
-                              'focus:outline-none focus:ring-2 focus:ring-blue-500'
-                            )}
-                          />
-                        </div>
-
-                        <div>
-                          <label className={cn('mb-1 block text-sm font-medium', colors.text.primary)}>
-                            Reference Range (Max)
-                          </label>
-                          <input
-                            type="number"
-                            step="any"
-                            value={form.reference_max}
-                            onChange={(e) => setForm((prev) => ({ ...prev, reference_max: e.target.value }))}
-                            placeholder="100.0"
-                            className={cn(
-                              'w-full rounded-lg border p-2.5 text-sm',
-                              colors.bg.input,
-                              colors.text.primary,
-                              colors.border.primary,
-                              'focus:outline-none focus:ring-2 focus:ring-blue-500'
-                            )}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className={cn('mb-1 block text-sm font-medium', colors.text.primary)}>
-                          Display Order
-                        </label>
-                        <input
-                          type="number"
-                          min={1}
-                          value={form.display_order}
-                          onChange={(e) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              display_order: Number(e.target.value) || 1,
-                            }))
-                          }
-                          className={cn(
-                            'w-full rounded-lg border p-2.5 text-sm',
-                            colors.bg.input,
-                            colors.text.primary,
-                            colors.border.primary,
-                            'focus:outline-none focus:ring-2 focus:ring-blue-500'
-                          )}
-                        />
-                      </div>
-
-                      <div>
-                        <label className={cn('mb-1 block text-sm font-medium', colors.text.primary)}>
-                          Clinical Notes
-                        </label>
-                        <textarea
-                          rows={3}
-                          value={form.clinical_notes}
-                          onChange={(e) => setForm((prev) => ({ ...prev, clinical_notes: e.target.value }))}
-                          placeholder="Any clinical guidance for interpreting this field..."
-                          className={cn(
-                            'w-full resize-y rounded-lg border p-2.5 text-sm',
-                            colors.bg.input,
-                            colors.text.primary,
-                            colors.border.primary,
-                            'focus:outline-none focus:ring-2 focus:ring-blue-500'
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid gap-3 md:grid-cols-3">
-                        <label className="flex cursor-pointer items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={form.is_required}
-                            onChange={(e) => setForm((prev) => ({ ...prev, is_required: e.target.checked }))}
-                            className="cursor-pointer"
-                          />
-                          <span className={cn('text-sm', colors.text.primary)}>Required Field</span>
-                        </label>
-
-                        <label className="flex cursor-pointer items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={form.is_active}
-                            onChange={(e) => setForm((prev) => ({ ...prev, is_active: e.target.checked }))}
-                            className="cursor-pointer"
-                          />
-                          <span className={cn('text-sm', colors.text.primary)}>Active</span>
-                        </label>
-
-                        <label className="flex cursor-pointer items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={form.is_critical}
-                            onChange={(e) => setForm((prev) => ({ ...prev, is_critical: e.target.checked }))}
-                            className="cursor-pointer"
-                          />
-                          <span className={cn('text-sm', colors.text.primary)}>Critical Alert</span>
-                        </label>
-                      </div>
-
-                      <div className="flex justify-end gap-3 pt-2">
-                        <button
-                          onClick={handleResetForm}
-                          className={cn('rounded-lg px-4 py-2 text-sm font-medium transition-all', colors.bg.hover, colors.text.secondary)}
-                        >
-                          Clear Form
-                        </button>
-                        <button
-                          onClick={handleSave}
-                          disabled={isMutating || !form.name.trim()}
-                          className={cn(
-                            'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors',
-                            isMutating || !form.name.trim()
-                              ? 'cursor-not-allowed bg-gray-400'
-                              : 'bg-blue-600 hover:bg-blue-700'
-                          )}
-                        >
-                          <Save className="h-4 w-4" />
-                          {createField.isPending || updateField.isPending ? 'Saving...' : (selectedField ? 'Save Changes' : 'Create Field')}
-                        </button>
                       </div>
                     </div>
-                  )}
+
+                    {/* Data type + Unit */}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <Label  className={colors.text.secondary}>
+                          Data Type
+                        </Label>
+                        <select
+                          value={fieldForm.data_type}
+                          onChange={(e) => setFieldForm((p) => ({ ...p, data_type: e.target.value as TemplateFieldDataType }))}
+                          className={inputCls}
+                        >
+                          {Object.values(TemplateFieldDataType).map((type) => (
+                            <option key={type} value={type}>
+                              {DATA_TYPE_LABELS[type] ?? type}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <Label  className={colors.text.secondary}>
+                          Unit of Measure
+                        </Label>
+                        <input
+                          type="text"
+                          value={fieldForm.unit}
+                          onChange={(e) => setFieldForm((p) => ({ ...p, unit: e.target.value }))}
+                          placeholder="mg/dL, g/dL, cells/µL"
+                          className={inputCls}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Reference range */}
+                    <div>
+                      <Label  className={colors.text.secondary}>
+                        Normal Reference Range
+                      </Label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="number"
+                          step="any"
+                          value={fieldForm.reference_min}
+                          onChange={(e) => setFieldForm((p) => ({ ...p, reference_min: e.target.value }))}
+                          placeholder="Min"
+                          className={cn(inputCls, 'flex-1')}
+                        />
+                        <span className={cn('shrink-0 text-xs font-semibold', colors.text.tertiary)}>to</span>
+                        <input
+                          type="number"
+                          step="any"
+                          value={fieldForm.reference_max}
+                          onChange={(e) => setFieldForm((p) => ({ ...p, reference_max: e.target.value }))}
+                          placeholder="Max"
+                          className={cn(inputCls, 'flex-1')}
+                        />
+                        {fieldForm.unit && (
+                          <span className={cn('shrink-0 rounded-lg border px-2 py-2 text-xs', colors.border.primary, colors.text.tertiary, isDark ? 'bg-gray-800' : 'bg-gray-100')}>
+                            {fieldForm.unit}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Display order */}
+                    <div>
+                      <Label  className={colors.text.secondary}>
+                        Display Order
+                      </Label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={fieldForm.display_order}
+                        onChange={(e) => setFieldForm((p) => ({ ...p, display_order: Number(e.target.value) || 1 }))}
+                        className={cn(inputCls, 'w-32')}
+                      />
+                    </div>
+
+                    {/* Clinical notes */}
+                    <div>
+                      <Label  className={colors.text.secondary}>
+                        Clinical Notes
+                      </Label>
+                      <textarea
+                        rows={2}
+                        value={fieldForm.clinical_notes}
+                        onChange={(e) => setFieldForm((p) => ({ ...p, clinical_notes: e.target.value }))}
+                        placeholder="Clinical guidance for interpreting this result…"
+                        className={cn(inputCls, 'resize-y')}
+                      />
+                    </div>
+
+                    {/* Flags */}
+                    <div className={cn('divide-y rounded-xl border', colors.border.primary)}>
+                      <div className="px-4 py-2">
+                        <Toggle
+                          checked={fieldForm.is_required}
+                          onChange={(v) => setFieldForm((p) => ({ ...p, is_required: v }))}
+                          label="Required field"
+                          description="Lab staff must fill this before submitting results"
+                          
+                        />
+                      </div>
+                      <div className="px-4 py-2">
+                        <Toggle
+                          checked={fieldForm.is_active}
+                          onChange={(v) => setFieldForm((p) => ({ ...p, is_active: v }))}
+                          label="Active"
+                          description="Inactive fields are hidden from result entry forms"
+                          
+                        />
+                      </div>
+                      <div className="px-4 py-2">
+                        <div className="flex w-full items-center justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <Zap className="h-3.5 w-3.5 text-red-500" />
+                              <p className={cn('text-sm font-medium', colors.text.primary)}>Critical alert</p>
+                            </div>
+                            <p className={cn('text-xs', colors.text.tertiary)}>
+                              Abnormal values in this field trigger urgent clinical alerts
+                            </p>
+                          </div>
+                          <div
+                            className={cn(
+                              'relative h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors duration-200',
+                              fieldForm.is_critical ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
+                            )}
+                            onClick={() => setFieldForm((p) => ({ ...p, is_critical: !p.is_critical }))}
+                          >
+                            <div
+                              className={cn(
+                                'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200',
+                                fieldForm.is_critical ? 'translate-x-4' : 'translate-x-0.5'
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-between gap-3 pt-2">
+                      <button
+                        onClick={() => {
+                          setSelectedField(null);
+                          setFieldForm({ ...EMPTY_FIELD_FORM, display_order: fields.length + 1 });
+                          setShowDeleteFieldConfirm(false);
+                        }}
+                        className={cn('rounded-lg px-3 py-2 text-xs font-semibold transition-colors', colors.bg.hover, colors.text.secondary)}
+                      >
+                        Clear Form
+                      </button>
+                      <button
+                        onClick={handleSaveField}
+                        disabled={isMutating || !fieldForm.name.trim()}
+                        className={cn(
+                          'flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white transition-colors',
+                          isMutating || !fieldForm.name.trim()
+                            ? 'cursor-not-allowed bg-gray-400'
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        )}
+                      >
+                        {createField.isPending || updateField.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Save className="h-3.5 w-3.5" />
+                        )}
+                        {createField.isPending || updateField.isPending
+                          ? 'Saving…'
+                          : selectedField
+                          ? 'Save Changes'
+                          : 'Add Field'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

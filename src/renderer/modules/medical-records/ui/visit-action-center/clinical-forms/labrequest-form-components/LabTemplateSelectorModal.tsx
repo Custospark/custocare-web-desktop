@@ -72,24 +72,32 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
 }) => {
   const [search, setSearch] = useState('');
 
- const filteredTemplates = useMemo(() => {
-  const safeTemplates = Array.isArray(templates) ? templates : [];
-  const term = search.trim().toLowerCase();
+  const filteredTemplates = useMemo(() => {
+    const safeTemplates = Array.isArray(templates) ? templates : [];
+    const term = search.trim().toLowerCase();
 
-  if (!term) return safeTemplates;
+    if (!term) return safeTemplates;
 
-  return safeTemplates.filter((template) => {
-    const name = template.name.toLowerCase();
-    const description = (template.description || '').toLowerCase();
-    const structure = template.structure_type.toLowerCase();
+    return safeTemplates.filter((template) => {
+      const name = template.name.toLowerCase();
+      const description = (template.description || '').toLowerCase();
+      const structure = template.structure_type.toLowerCase();
 
-    return (
-      name.includes(term) ||
-      description.includes(term) ||
-      structure.includes(term)
-    );
-  });
-}, [search, templates]);
+      return (
+        name.includes(term) ||
+        description.includes(term) ||
+        structure.includes(term)
+      );
+    });
+  }, [search, templates]);
+
+  // Handle fields button click - open template field manager for the selected template
+  const handleFieldsClick = (template: LabTemplate) => {
+    // Close the current modal
+    onClose();
+    // Open the template field manager for this specific template
+    onManageTemplateFields(template);
+  };
 
   return (
     <AnimatePresence>
@@ -115,7 +123,7 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
               <button
                 type="button"
                 onClick={onClose}
-                className={cn('rounded p-1 transition-colors', colors.bg.hover, colors.text.secondary)}
+                className={cn('rounded p-1 transition-colors cursor-pointer', colors.bg.hover, colors.text.secondary)}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -127,7 +135,7 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
                   type="button"
                   onClick={onManageTemplates}
                   className={cn(
-                    'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium',
+                    'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all',
                     colors.border.primary,
                     colors.bg.hover,
                     colors.text.primary
@@ -141,7 +149,7 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
                   type="button"
                   onClick={onManageLabItems}
                   className={cn(
-                    'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium',
+                    'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all',
                     colors.border.primary,
                     colors.bg.hover,
                     colors.text.primary
@@ -181,6 +189,7 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
                 <div className="max-h-[55vh] space-y-3 overflow-y-auto pr-1">
                   {filteredTemplates.map((template) => {
                     const templateItems = buildTemplateItems(template, labItems);
+                    const hasFields = template.fields && template.fields.length > 0;
 
                     return (
                       <div
@@ -188,7 +197,7 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
                         className={cn('rounded-xl border p-4', colors.border.primary, colors.bg.subtle)}
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
+                          <div className="flex-1">
                             <p className={cn('font-semibold', colors.text.primary)}>{template.name}</p>
                             {template.description && (
                               <p className={cn('mt-1 text-sm', colors.text.secondary)}>
@@ -203,19 +212,25 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
                               <span className={cn('rounded-full px-2 py-0.5 text-xs', isDark ? 'bg-cyan-900/30 text-cyan-300' : 'bg-cyan-100 text-cyan-700')}>
                                 {templateItems.length} Lab Test{templateItems.length === 1 ? '' : 's'}
                               </span>
+                              {hasFields && (
+                                <span className={cn('rounded-full px-2 py-0.5 text-xs', isDark ? 'bg-emerald-900/30 text-emerald-300' : 'bg-emerald-100 text-emerald-700')}>
+                                  {template.fields.length} Field{template.fields.length === 1 ? '' : 's'}
+                                </span>
+                              )}
                             </div>
                           </div>
 
                           <div className="flex flex-wrap gap-2">
                             <button
                               type="button"
-                              onClick={() => onManageTemplateFields(template)}
+                              onClick={() => handleFieldsClick(template)}
                               className={cn(
-                                'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium',
+                                'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all',
                                 colors.border.primary,
                                 colors.bg.hover,
                                 colors.text.primary
                               )}
+                              title="Manage template fields"
                             >
                               <Rows3 className="h-4 w-4" />
                               Fields
@@ -231,7 +246,7 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
                               }
                               disabled={!templateItems.length}
                               className={cn(
-                                'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white',
+                                'inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white transition-all',
                                 !templateItems.length
                                   ? 'cursor-not-allowed bg-gray-400'
                                   : 'bg-blue-600 hover:bg-blue-700'
@@ -243,23 +258,66 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
                           </div>
                         </div>
 
+                        {/* Show template fields preview if available */}
+                        {hasFields && (
+                          <div className="mt-3 rounded-lg border p-3">
+                            <p className={cn('mb-2 text-xs font-semibold uppercase tracking-wide', colors.text.tertiary)}>
+                              Template Fields
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {template.fields.slice(0, 5).map((field) => (
+                                <span
+                                  key={field.id}
+                                  className={cn(
+                                    'rounded-full px-2 py-0.5 text-xs cursor-default',
+                                    isDark ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-100 text-purple-700'
+                                  )}
+                                >
+                                  {field.name} {field.is_required && <span className="text-red-500">*</span>}
+                                </span>
+                              ))}
+                              {template.fields.length > 5 && (
+                                <span
+                                  className={cn(
+                                    'rounded-full px-2 py-0.5 text-xs cursor-default',
+                                    isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'
+                                  )}
+                                >
+                                  +{template.fields.length - 5} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Show included lab tests preview */}
                         {templateItems.length > 0 && (
                           <div className="mt-3 rounded-lg border p-3">
                             <p className={cn('mb-2 text-xs font-semibold uppercase tracking-wide', colors.text.tertiary)}>
                               Included Lab Tests
                             </p>
                             <div className="flex flex-wrap gap-2">
-                              {templateItems.map((item) => (
+                              {templateItems.slice(0, 5).map((item) => (
                                 <span
                                   key={`${template.id}-${item.lab_test_id}-${item.display_name}`}
                                   className={cn(
-                                    'rounded-full px-2 py-0.5 text-xs',
+                                    'rounded-full px-2 py-0.5 text-xs cursor-default',
                                     isDark ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-700'
                                   )}
                                 >
                                   {item.display_name}
                                 </span>
                               ))}
+                              {templateItems.length > 5 && (
+                                <span
+                                  className={cn(
+                                    'rounded-full px-2 py-0.5 text-xs cursor-default',
+                                    isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'
+                                  )}
+                                >
+                                  +{templateItems.length - 5} more
+                                </span>
+                              )}
                             </div>
                           </div>
                         )}
