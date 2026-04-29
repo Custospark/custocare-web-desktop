@@ -197,7 +197,7 @@ export interface LabTest {
   test_uuid: string;
   name: string;
   code: string | null;
-  template_id: number;
+  template_id?: number | null | undefined;
   facility_id: number | null;
   is_shared: boolean;
   category: string | null;

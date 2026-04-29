@@ -1,6 +1,7 @@
+// labrequest-form-components/LabRequestFormBody.tsx
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
-import { RefreshCw, Save, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { RefreshCw, Save, X, Heart } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { cn } from '../../../../../../shared/utils/classNameUtils';
@@ -103,12 +104,15 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+  
+  // Navigation loading state
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [navigationMessage, setNavigationMessage] = useState('');
 
   const displayItems = useMemo<LabRequestDraftItem[]>(() => {
     if (currentRequest) {
       return toLabRequestDraftItems(currentRequest.items || []);
     }
-
     return localDraftItems;
   }, [currentRequest, localDraftItems]);
 
@@ -232,7 +236,6 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
 
   const handleManualRefresh = useCallback(async () => {
     setIsManualRefreshing(true);
-
     try {
       await syncAllVisibleLabData({
         toastMessage: 'Lab request data refreshed',
@@ -256,6 +259,16 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
     [refetchReferenceData]
   );
 
+  const withNavigation = useCallback(async (message: string, handler: () => Promise<void>) => {
+    setIsNavigating(true);
+    setNavigationMessage(message);
+    try {
+      await handler();
+    } finally {
+      setTimeout(() => setIsNavigating(false), 300);
+    }
+  }, []);
+
   const resetItemEditor = useCallback(() => {
     setItemEditorData(EMPTY_LAB_REQUEST_ITEM);
     setEditingItem(null);
@@ -263,47 +276,45 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
   }, []);
 
   const openAddItemModal = useCallback(async () => {
-    await refreshReferenceDataSafely(
-      'Failed to refresh reference data before opening item modal:'
-    );
+    await refreshReferenceDataSafely('Failed to refresh reference data before opening item modal:');
     setItemEditorData(EMPTY_LAB_REQUEST_ITEM);
     setEditingItem(null);
     setShowItemEditorModal(true);
   }, [refreshReferenceDataSafely]);
 
   const handleOpenTemplateSelector = useCallback(async () => {
-    setShowTemplateSelector(true);
-    await refreshReferenceDataSafely(
-      'Failed to refresh templates before opening selector:'
-    );
-  }, [refreshReferenceDataSafely]);
+    await withNavigation('Loading template selector...', async () => {
+      await refreshReferenceDataSafely('Failed to refresh templates before opening selector:');
+      setShowTemplateSelector(true);
+    });
+  }, [refreshReferenceDataSafely, withNavigation]);
 
   const handleOpenTemplateManager = useCallback(async () => {
-    await refreshReferenceDataSafely(
-      'Failed to refresh templates before opening manager:'
-    );
-    setShowTemplateManager(true);
-  }, [refreshReferenceDataSafely]);
+    await withNavigation('Loading templates manager...', async () => {
+      await refreshReferenceDataSafely('Failed to refresh templates before opening manager:');
+      setShowTemplateManager(true);
+    });
+  }, [refreshReferenceDataSafely, withNavigation]);
 
   const handleOpenTemplateFieldManager = useCallback(
     async (template?: LabTemplate | null) => {
-      await refreshReferenceDataSafely(
-        'Failed to refresh reference data before opening field manager:'
-      );
-      if (template) {
-        setSelectedTemplateUuid(template.template_uuid);
-      }
-      setShowTemplateFieldManager(true);
+      await withNavigation('Loading template fields...', async () => {
+        await refreshReferenceDataSafely('Failed to refresh reference data before opening field manager:');
+        if (template) {
+          setSelectedTemplateUuid(template.template_uuid);
+        }
+        setShowTemplateFieldManager(true);
+      });
     },
-    [refreshReferenceDataSafely]
+    [refreshReferenceDataSafely, withNavigation]
   );
 
   const handleOpenLabItemManager = useCallback(async () => {
-    await refreshReferenceDataSafely(
-      'Failed to refresh lab tests before opening manager:'
-    );
-    setShowLabItemManager(true);
-  }, [refreshReferenceDataSafely]);
+    await withNavigation('Loading lab tests manager...', async () => {
+      await refreshReferenceDataSafely('Failed to refresh lab tests before opening manager:');
+      setShowLabItemManager(true);
+    });
+  }, [refreshReferenceDataSafely, withNavigation]);
 
   const handleFormChange = useCallback(
     (field: keyof LabRequestFormData, value: string | LabRequestPriority) => {
@@ -313,10 +324,7 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
   );
 
   const handleItemEditorChange = useCallback(
-    (
-      field: keyof LabRequestItemEditorData,
-      value: string | number | boolean | null
-    ) => {
+    (field: keyof LabRequestItemEditorData, value: string | number | boolean | null) => {
       setItemEditorData((prev) => ({ ...prev, [field]: value }));
     },
     []
@@ -324,10 +332,7 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
 
   const handleEditItem = useCallback(
     async (item: LabRequestDraftItem) => {
-      await refreshReferenceDataSafely(
-        'Failed to refresh reference data before editing item:'
-      );
-
+      await refreshReferenceDataSafely('Failed to refresh reference data before editing item:');
       setEditingItem(item);
       setItemEditorData({
         id: item.id ?? null,
@@ -374,29 +379,18 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
           uuid: editingItem.item_uuid,
           data: toLabRequestItemUpdatePayload(itemEditorData, currentRequest.id),
         });
-
         await syncAllVisibleLabData({
           requestUuid: currentRequest.request_uuid,
           includeReferenceData: true,
           includeRequestData: true,
         });
-
         resetItemEditor();
         return;
       }
 
       if (editingItem && !currentRequest) {
-        const updatedLocalItem = buildLocalLabRequestDraftItem(
-          itemEditorData,
-          editingItem.id || Date.now()
-        );
-
-        setLocalDraftItems((prev) =>
-          prev.map((item) =>
-            item.id === editingItem.id ? updatedLocalItem : item
-          )
-        );
-
+        const updatedLocalItem = buildLocalLabRequestDraftItem(itemEditorData, editingItem.id || Date.now());
+        setLocalDraftItems((prev) => prev.map((item) => item.id === editingItem.id ? updatedLocalItem : item));
         resetItemEditor();
         showToast('success', 'Lab request item updated', 3000);
         return;
@@ -407,13 +401,11 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
           lab_request_id: currentRequest.id,
           ...toLabRequestItemCreatePayload(itemEditorData),
         });
-
         await syncAllVisibleLabData({
           requestUuid: currentRequest.request_uuid,
           includeReferenceData: true,
           includeRequestData: true,
         });
-
         resetItemEditor();
         return;
       }
@@ -421,11 +413,7 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
       const localItem = buildLocalLabRequestDraftItem(itemEditorData, Date.now());
       setLocalDraftItems((prev) => [...prev, localItem]);
       resetItemEditor();
-      showToast(
-        'success',
-        'Lab request item added. It will be saved when you submit the request.',
-        4000
-      );
+      showToast('success', 'Lab request item added. It will be saved when you submit the request.', 4000);
     } catch (error) {
       console.error('Failed to save lab request item:', error);
       showToast('error', 'Failed to save lab request item', 5000);
@@ -463,16 +451,13 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
             reason: 'Removed during lab request update',
             cancelledByStaffId: staffId || undefined,
           });
-
           await syncAllVisibleLabData({
             requestUuid: currentRequest.request_uuid,
             includeReferenceData: true,
             includeRequestData: true,
           });
-
           return;
         }
-
         setLocalDraftItems((prev) => prev.filter((draft) => draft.id !== item.id));
         showToast('success', 'Lab request item removed', 3000);
       } catch (error) {
@@ -480,29 +465,15 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
         showToast('error', 'Failed to remove lab request test', 5000);
       }
     },
-    [
-      cancelItem,
-      confirm,
-      currentRequest,
-      showToast,
-      staffId,
-      syncAllVisibleLabData,
-      theme,
-    ]
+    [cancelItem, confirm, currentRequest, showToast, staffId, syncAllVisibleLabData, theme]
   );
 
   const handleApplyTemplate = useCallback(
     async (selection: LabTemplateSelectionResult) => {
-      const persistableItems = selection.items.filter(
-        isLabRequestDraftItemPersistable
-      );
+      const persistableItems = selection.items.filter(isLabRequestDraftItemPersistable);
 
       if (!persistableItems.length) {
-        showToast(
-          'error',
-          'The selected template did not produce any valid lab tests that can be added to a request.',
-          5000
-        );
+        showToast('error', 'The selected template did not produce any valid lab tests that can be added to a request.', 5000);
         return;
       }
 
@@ -516,7 +487,6 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
               notes: item.notes || null,
             })),
           });
-
           await syncAllVisibleLabData({
             requestUuid: currentRequest.request_uuid,
             includeReferenceData: true,
@@ -525,7 +495,6 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
         } else {
           setLocalDraftItems((prev) => [...prev, ...persistableItems]);
         }
-
         setSelectedTemplateUuid(selection.template.template_uuid);
         setShowTemplateSelector(false);
       } catch (error) {
@@ -544,41 +513,30 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
         showToast('error', 'Missing facility information', 5000);
         return;
       }
-
       if (!patientId) {
         showToast('error', 'Missing patient information', 5000);
         return;
       }
-
       if (!visitId) {
         showToast('error', 'Missing active visit information', 5000);
         return;
       }
-
       if (!staffId) {
         showToast('error', 'Missing requesting staff information', 5000);
         return;
       }
-
       if (!formData.priority) {
         showToast('error', 'Request priority is required', 5000);
         return;
       }
-
       if (displayItems.length === 0) {
         showToast('error', 'Please add at least one Lab Test to the request', 5000);
         return;
       }
 
-      const unresolvedItems = displayItems.filter(
-        (item) => !isLabRequestDraftItemPersistable(item)
-      );
+      const unresolvedItems = displayItems.filter((item) => !isLabRequestDraftItemPersistable(item));
       if (unresolvedItems.length > 0) {
-        showToast(
-          'error',
-          'Some selected items are not yet mapped to valid Lab Tests. Resolve them before submitting the request.',
-          6000
-        );
+        showToast('error', 'Some selected items are not yet mapped to valid Lab Tests. Resolve them before submitting the request.', 6000);
         return;
       }
 
@@ -596,24 +554,18 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
               priority: formData.priority,
               clinical_notes: formData.clinical_notes || null,
               diagnosis_context: buildDiagnosisContextPayload(formData),
-              metadata: {
-                source: 'lab-request-form',
-                context: 'active-visit',
-              },
+              metadata: { source: 'lab-request-form', context: 'active-visit' },
             },
           });
-
           if (result.success) {
             await syncAllVisibleLabData({
               requestUuid: currentRequest.request_uuid,
               includeReferenceData: true,
               includeRequestData: true,
             });
-
             setIsDetailsEditorOpen(false);
             onSuccess?.(result.data.id);
           }
-
           return;
         }
 
@@ -625,34 +577,25 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
           priority: formData.priority,
           clinical_notes: formData.clinical_notes || null,
           diagnosis_context: buildDiagnosisContextPayload(formData),
-          metadata: {
-            source: 'lab-request-form',
-            context: 'active-visit',
-          },
-          items: displayItems
-            .filter(isLabRequestDraftItemPersistable)
-            .map((item) => ({
-              lab_test_id: item.lab_test_id as number,
-              sample_type: item.sample_type || null,
-              notes: item.notes || null,
-            })),
+          metadata: { source: 'lab-request-form', context: 'active-visit' },
+          items: displayItems.filter(isLabRequestDraftItemPersistable).map((item) => ({
+            lab_test_id: item.lab_test_id as number,
+            sample_type: item.sample_type || null,
+            notes: item.notes || null,
+          })),
         };
 
         const result = await createLabRequestWithItems.mutateAsync(createPayload);
-
         if (result.success) {
           const newRequestUuid = result.data.request_uuid;
-
           setCreatedRequestUuid(newRequestUuid);
           setLocalDraftItems([]);
           setIsDetailsEditorOpen(false);
-
           await syncAllVisibleLabData({
             requestUuid: newRequestUuid,
             includeReferenceData: true,
             includeRequestData: true,
           });
-
           onSuccess?.(result.data.id);
         }
       } catch (error) {
@@ -683,7 +626,6 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
 
   const handleCancelCurrentRequest = useCallback(async () => {
     if (!currentRequest?.request_uuid) return;
-
     const confirmed = await confirm({
       title: 'Cancel Lab Request',
       message: 'Are you sure you want to cancel this lab request?',
@@ -692,195 +634,222 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
       variant: 'danger',
       theme,
     });
-
     if (!confirmed) return;
-
     try {
       await cancelLabRequest.mutateAsync({
         uuid: currentRequest.request_uuid,
         reason: 'Cancelled from lab request form',
         cancelledByStaffId: staffId || undefined,
       });
-
       await syncAllVisibleLabData({
         requestUuid: currentRequest.request_uuid,
         includeReferenceData: true,
         includeRequestData: true,
       });
-
       onCancel?.();
     } catch (error) {
       console.error('Failed to cancel lab request:', error);
       showToast('error', 'Failed to cancel lab request', 5000);
     }
-  }, [
-    cancelLabRequest,
-    confirm,
-    currentRequest,
-    onCancel,
-    showToast,
-    staffId,
-    syncAllVisibleLabData,
-    theme,
-  ]);
+  }, [cancelLabRequest, confirm, currentRequest, onCancel, showToast, staffId, syncAllVisibleLabData, theme]);
 
   return (
-    <LabRequestStateGuard
-      isLoading={isLoadingInitial}
-      isDark={isDark}
-      colors={colors}
-      patientId={patientId}
-      facilityId={facilityId}
-      onCancel={onCancel}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -14 }}
-        className="p-6"
-      >
-        <LabRequestHeader
-          isDark={isDark}
-          colors={colors}
-          request={currentRequest}
-          onOpenTemplateSelector={handleOpenTemplateSelector}
-          onOpenTemplateManager={handleOpenTemplateManager}
-          onOpenTemplateFieldManager={() => handleOpenTemplateFieldManager()}
-          onOpenLabItemManager={handleOpenLabItemManager}
-          onAddItem={openAddItemModal}
-          onRefresh={handleManualRefresh}
-          isRefreshing={isManualRefreshing}
-        />
-
-       
-
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-6">
-            <LabRequestDetailsCard
-              isDark={isDark}
-              colors={colors}
-              request={currentRequest}
-              formData={formData}
-              isEditorOpen={isDetailsEditorOpen}
-              onOpenEditor={() => setIsDetailsEditorOpen(true)}
-              onCloseEditor={() => {
-                if (currentRequest) {
-                  setFormData(toLabRequestFormData(currentRequest));
-                }
-                setIsDetailsEditorOpen(false);
-              }}
-              onChange={handleFormChange}
-              onCancelRequest={handleCancelCurrentRequest}
-              isCancellingRequest={cancelLabRequest.isPending}
-            />
-
-            <LabRequestItemsTable
-              isDark={isDark}
-              colors={colors}
-              request={currentRequest}
-              items={displayItems}
-              onAddItem={openAddItemModal}
-              onEditItem={handleEditItem}
-              onDeleteItem={handleDeleteItem}
-              onManageLabItems={handleOpenLabItemManager}
-            />
-          </div>
-
-          <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-            {onCancel && (
-              <button
-                type="button"
-                onClick={onCancel}
-                className={cn(
-                  'inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
-                  colors.bg.hover,
-                  colors.text.secondary
-                )}
-              >
-                <X className="h-4 w-4" />
-                Cancel
-              </button>
-            )}
-
-            <button
-              type="submit"
-              disabled={isMutating || isSubmitting || displayItems.length === 0}
+    <>
+      {/* Full-screen Navigation Loading Overlay */}
+      <AnimatePresence>
+        {isNavigating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.2 } }}
+            role="status"
+            aria-live="assertive"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          >
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.85, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 150, damping: 20 }}
               className={cn(
-                'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
-                isMutating || isSubmitting || displayItems.length === 0
-                  ? 'cursor-not-allowed bg-gray-400'
-                  : 'cursor-pointer bg-blue-600 hover:bg-blue-700'
+                "p-10 rounded-3xl flex flex-col items-center gap-6 border-2 shadow-2xl max-w-sm mx-4",
+                isDark ? "bg-slate-900/95 border-slate-700" : "bg-white/95 border-slate-200"
               )}
             >
-              {isSubmitting ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
+              <div className="relative">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+                  className={cn(
+                    "w-20 h-20 border-[4px] rounded-full",
+                    isDark ? "border-blue-500/30 border-t-blue-500 shadow-lg shadow-blue-500/20" : "border-blue-500/30 border-t-blue-600 shadow-lg shadow-blue-500/30"
+                  )}
+                />
+                <motion.div
+                  animate={{ scale: [1, 1.25, 1], rotate: [0, 180, 360] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                >
+                  <Heart className="w-9 h-9 text-emerald-500 drop-shadow-lg" />
+                </motion.div>
+              </div>
+              <div className="text-center space-y-2">
+                <motion.p
+                  className={cn("font-bold text-xl tracking-tight", isDark ? "text-white" : "text-slate-900")}
+                  animate={{ opacity: [1, 0.6, 1] }}
+                  transition={{ duration: 1.8, repeat: Infinity }}
+                >
+                  {navigationMessage}
+                </motion.p>
+                <p className={cn("text-sm font-medium", isDark ? "text-slate-400" : "text-slate-600")}>
+                  Loading content, please wait...
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <LabRequestStateGuard
+        isLoading={isLoadingInitial}
+        isDark={isDark}
+        colors={colors}
+        patientId={patientId}
+        facilityId={facilityId}
+        onCancel={onCancel}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -14 }}
+          className="p-6"
+        >
+          <LabRequestHeader
+            isDark={isDark}
+            colors={colors}
+            request={currentRequest}
+            onOpenTemplateSelector={handleOpenTemplateSelector}
+            onOpenTemplateManager={handleOpenTemplateManager}
+            onOpenLabItemManager={handleOpenLabItemManager}
+            onAddItem={openAddItemModal}
+            onRefresh={handleManualRefresh}
+            isRefreshing={isManualRefreshing}
+          />
+
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-6">
+              <LabRequestDetailsCard
+                isDark={isDark}
+                colors={colors}
+                request={currentRequest}
+                formData={formData}
+                isEditorOpen={isDetailsEditorOpen}
+                onOpenEditor={() => setIsDetailsEditorOpen(true)}
+                onCloseEditor={() => {
+                  if (currentRequest) {
+                    setFormData(toLabRequestFormData(currentRequest));
+                  }
+                  setIsDetailsEditorOpen(false);
+                }}
+                onChange={handleFormChange}
+                onCancelRequest={handleCancelCurrentRequest}
+                isCancellingRequest={cancelLabRequest.isPending}
+              />
+
+              <LabRequestItemsTable
+                isDark={isDark}
+                colors={colors}
+                request={currentRequest}
+                items={displayItems}
+                onAddItem={openAddItemModal}
+                onEditItem={handleEditItem}
+                onDeleteItem={handleDeleteItem}
+                onManageLabItems={handleOpenLabItemManager}
+              />
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+              {onCancel && (
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className={cn('inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all', colors.bg.hover, colors.text.secondary)}
+                >
+                  <X className="h-4 w-4" />
+                  Cancel
+                </button>
               )}
-              {currentRequest ? 'Save Lab Request Updates' : 'Create Lab Request'}
-            </button>
-          </div>
-        </form>
 
-        <LabRequestItemEditorController
-          open={showItemEditorModal}
-          isDark={isDark}
-          colors={colors}
-          editingItem={editingItem}
-          formData={itemEditorData}
-          isMutating={isMutating}
-          templates={templates}
-          labItems={labItems}
-          popularLabItems={popularLabItems}
-          onClose={resetItemEditor}
-          onChange={handleItemEditorChange}
-          onOpenTemplateManager={handleOpenTemplateManager}
-          onOpenLabItemManager={handleOpenLabItemManager}
-          onSubmit={handleSaveItem}
-        />
+              <button
+                type="submit"
+                disabled={isMutating || isSubmitting || displayItems.length === 0}
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
+                  isMutating || isSubmitting || displayItems.length === 0 ? 'cursor-not-allowed bg-gray-400' : 'cursor-pointer bg-blue-600 hover:bg-blue-700'
+                )}
+              >
+                {isSubmitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {currentRequest ? 'Save Lab Request Updates' : 'Create Lab Request'}
+              </button>
+            </div>
+          </form>
 
-        <LabRequestManagementModals
-          openTemplateSelector={showTemplateSelector}
-          openTemplateManager={showTemplateManager}
-          openTemplateFieldManager={showTemplateFieldManager}
-          openLabItemManager={showLabItemManager}
-          isDark={isDark}
-          colors={colors}
-          templates={templates}
-          labItems={labItems}
-          popularLabItems={popularLabItems}
-          selectedTemplateUuid={selectedTemplateUuid}
-          selectedLabItemUuid={selectedLabItemUuid}
-          onSelectTemplateUuid={setSelectedTemplateUuid}
-          onSelectLabItemUuid={setSelectedLabItemUuid}
-          onCloseTemplateSelector={() => setShowTemplateSelector(false)}
-          onCloseTemplateManager={async () => {
-            setShowTemplateManager(false);
-            await refreshReferenceDataSafely(
-              'Failed to refresh templates after closing manager:'
-            );
-          }}
-          onCloseTemplateFieldManager={async () => {
-            setShowTemplateFieldManager(false);
-            await refreshReferenceDataSafely(
-              'Failed to refresh template field data after closing manager:'
-            );
-          }}
-          onCloseLabItemManager={async () => {
-            setShowLabItemManager(false);
-            await refreshReferenceDataSafely(
-              'Failed to refresh lab test data after closing manager:'
-            );
-          }}
-          onApplyTemplate={handleApplyTemplate}
-          onOpenTemplateManager={handleOpenTemplateManager}
-          onOpenLabItemManager={handleOpenLabItemManager}
-          onOpenTemplateFieldManager={(template) => {
-            setSelectedTemplateUuid(template.template_uuid);
-            setShowTemplateFieldManager(true);
-          }}
-        />
-      </motion.div>
-    </LabRequestStateGuard>
+          <LabRequestItemEditorController
+            open={showItemEditorModal}
+            isDark={isDark}
+            colors={colors}
+            editingItem={editingItem}
+            formData={itemEditorData}
+            isMutating={isMutating}
+            templates={templates}
+            labItems={labItems}
+            popularLabItems={popularLabItems}
+            onClose={resetItemEditor}
+            onChange={handleItemEditorChange}
+            onOpenTemplateManager={handleOpenTemplateManager}
+            onOpenLabItemManager={handleOpenLabItemManager}
+            onSubmit={handleSaveItem}
+          />
+
+          <LabRequestManagementModals
+            openTemplateSelector={showTemplateSelector}
+            openTemplateManager={showTemplateManager}
+            openTemplateFieldManager={showTemplateFieldManager}
+            openLabItemManager={showLabItemManager}
+            isDark={isDark}
+            colors={colors}
+            templates={templates}
+            labItems={labItems}
+            popularLabItems={popularLabItems}
+            selectedTemplateUuid={selectedTemplateUuid}
+            selectedLabItemUuid={selectedLabItemUuid}
+            onSelectTemplateUuid={setSelectedTemplateUuid}
+            onSelectLabItemUuid={setSelectedLabItemUuid}
+            onCloseTemplateSelector={() => setShowTemplateSelector(false)}
+            onCloseTemplateManager={async () => {
+              setShowTemplateManager(false);
+              await refreshReferenceDataSafely('Failed to refresh templates after closing manager:');
+            }}
+            onCloseTemplateFieldManager={async () => {
+              setShowTemplateFieldManager(false);
+              await refreshReferenceDataSafely('Failed to refresh template field data after closing manager:');
+            }}
+            onCloseLabItemManager={async () => {
+              setShowLabItemManager(false);
+              await refreshReferenceDataSafely('Failed to refresh lab test data after closing manager:');
+            }}
+            onApplyTemplate={handleApplyTemplate}
+            onOpenTemplateManager={handleOpenTemplateManager}
+            onOpenLabItemManager={handleOpenLabItemManager}
+            onOpenTemplateFieldManager={(template) => {
+              setSelectedTemplateUuid(template.template_uuid);
+              setShowTemplateFieldManager(true);
+            }}
+          />
+        </motion.div>
+      </LabRequestStateGuard>
+    </>
   );
 };
+
+export default LabRequestFormBody;

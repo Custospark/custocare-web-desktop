@@ -471,12 +471,12 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!form.name.trim() || !form.template_id) return;
+    if (!form.name.trim()) return;
 
-    const payload = {
+    const payload:any = {
       name: form.name.trim(),
       code: form.code.trim() || null,
-      template_id: Number(form.template_id),
+      template_id: form.template_id ? Number(form.template_id) : undefined,
       category: form.category.trim() || null,
       facility_id: facilityId ?? undefined,
       description: form.description.trim() || null,
@@ -741,9 +741,9 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
                     <button onClick={handleNewClick} className={cn('rounded-lg px-4 py-2 text-sm font-medium transition-all', colors.bg.hover, colors.text.secondary)}>
                       Clear Form
                     </button>
-                    <button onClick={handleSave} disabled={isMutating || !form.name.trim()}
+                   <button onClick={handleSave} disabled={isMutating || !form.name.trim()}
                       className={cn('inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors',
-                        isMutating || !form.name.trim() || !form.template_id ? 'cursor-not-allowed bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
+                        isMutating || !form.name.trim() ? 'cursor-not-allowed bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
                       )}>
                       <Save className="h-4 w-4" />
                       {createLabTest.isPending || updateLabTest.isPending ? 'Saving...' : (isEditing ? 'Save Changes' : 'Create Lab Test')}

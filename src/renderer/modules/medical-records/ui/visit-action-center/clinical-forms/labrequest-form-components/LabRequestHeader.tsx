@@ -18,7 +18,6 @@ interface LabRequestHeaderProps {
   request: LabRequest | null;
   onOpenTemplateSelector: () => void;
   onOpenTemplateManager: () => void;
-  onOpenTemplateFieldManager?: () => void;
   onOpenLabItemManager: () => void;
   onAddItem: () => void;
   onRefresh?: () => void;
@@ -78,7 +77,6 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {/* Utility Action - Least frequently used (Leftmost) */}
         {onRefresh && (
           <button
             type="button"
@@ -97,7 +95,6 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
           </button>
         )}
 
-        {/* Secondary Actions - Medium frequency */}
         <button
           type="button"
           onClick={onOpenLabItemManager}
@@ -140,7 +137,6 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
           Use Template
         </button>
 
-        {/* Primary Action - Most frequently used (Rightmost) */}
         <button
           type="button"
           onClick={onAddItem}
