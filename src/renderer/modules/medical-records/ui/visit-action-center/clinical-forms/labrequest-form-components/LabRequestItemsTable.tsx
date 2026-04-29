@@ -119,11 +119,6 @@ export const LabRequestItemsTable: React.FC<LabRequestItemsTableProps> = ({
                           <TestTubeDiagonal className={cn('mt-0.5 h-4 w-4', isDark ? 'text-cyan-300' : 'text-cyan-600')} />
                           <div className="min-w-0">
                             <div className={cn('font-semibold', colors.text.primary)}>{item.display_name}</div>
-                            {item.template_name && (
-                              <div className={cn('mt-1 text-xs', colors.text.secondary)}>
-                                Template: {item.template_name}
-                              </div>
-                            )}
                           </div>
                         </div>
                       </td>
