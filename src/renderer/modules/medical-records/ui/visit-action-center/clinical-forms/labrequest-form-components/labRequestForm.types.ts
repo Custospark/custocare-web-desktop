@@ -1,4 +1,5 @@
 // labrequest-form-components/labRequestForm.types.ts
+
 import type {
   CreateLabRequestItemRequest,
   DiagnosisContext,
@@ -67,6 +68,10 @@ export interface LabRequestDraftItem {
   status?: LabRequestItemStatus;
   result_flag?: LabResultFlag;
   lab_test?: LabTest | null;
+  
+  // NEW: Draft tracking fields
+  isDraft?: boolean;      // Whether this item is a draft (not yet saved to DB)
+  tempId?: string;        // Temporary ID for draft items
 }
 
 export interface LabRequestItemEditorData {
@@ -186,55 +191,73 @@ export const toLabRequestDraftItems = (
     status: item.status,
     result_flag: item.result_flag,
     lab_test: item.lab_test || null,
+    isDraft: false,  // Saved items are not drafts
+    tempId: undefined,
   }));
+};
+
+// NEW: Helper to identify draft items
+export const isDraftItem = (item: LabRequestDraftItem): boolean => {
+  return item.isDraft === true;
+};
+
+// NEW: Generate a temporary ID for draft items
+export const generateTempId = (): string => {
+  return `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
 export const buildLocalLabRequestDraftItem = (
   data: LabRequestItemEditorData,
   localId: number
-): LabRequestDraftItem => ({
-  id: localId,
-  item_uuid: data.item_uuid,
-  display_name: data.display_name.trim(),
-  lab_test_id: data.lab_test_id,
-  source: data.source,
-  source_inventory_item_id: data.source_inventory_item_id,
-  sample_type: data.sample_type.trim() || null,
-  notes: data.notes.trim() || null,
-  template_id: data.template_id,
-  template_name: data.template_name.trim() || null,
-  code: data.code.trim() || null,
-  category: data.category.trim() || null,
-  turnaround_time_hours: data.turnaround_time_hours,
-  requires_fasting: data.requires_fasting,
-  is_from_inventory: data.is_from_inventory,
-  inventory_display_unit: data.inventory_display_unit.trim() || null,
-  inventory_available_quantity: data.inventory_available_quantity,
-  status: LabRequestItemStatus.PENDING,
-  result_flag: LabResultFlag.PENDING,
-  lab_test: {
-    id: data.lab_test_id!,
-    test_uuid: '',
-    name: data.display_name.trim(),
+): LabRequestDraftItem => {
+  const tempId = generateTempId();
+  
+  return {
+    id: localId,
+    item_uuid: data.item_uuid,
+    display_name: data.display_name.trim(),
+    lab_test_id: data.lab_test_id,
+    source: data.source,
+    source_inventory_item_id: data.source_inventory_item_id,
+    sample_type: data.sample_type.trim() || null,
+    notes: data.notes.trim() || null,
+    template_id: data.template_id,
+    template_name: data.template_name.trim() || null,
     code: data.code.trim() || null,
-    template_id: data.template_id!,
-    facility_id: null,
-    is_shared: false,
     category: data.category.trim() || null,
-    description: data.notes.trim() || null,
-    is_active: true,
-    requires_fasting: data.requires_fasting,
     turnaround_time_hours: data.turnaround_time_hours,
-    metadata: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    deleted_at: null,
-    status: 'active',
-    formatted_turnaround_time: data.turnaround_time_hours ? `${data.turnaround_time_hours} hour(s)` : null,
-    fasting_required: data.requires_fasting,
-    fasting_instruction: data.requires_fasting ? 'Fasting required for this test' : 'No fasting required',
-  },
-});
+    requires_fasting: data.requires_fasting,
+    is_from_inventory: data.is_from_inventory,
+    inventory_display_unit: data.inventory_display_unit.trim() || null,
+    inventory_available_quantity: data.inventory_available_quantity,
+    status: LabRequestItemStatus.PENDING,
+    result_flag: LabResultFlag.PENDING,
+    isDraft: true,  // Mark as draft
+    tempId: tempId,  // Set temporary ID
+    lab_test: {
+      id: data.lab_test_id!,
+      test_uuid: '',
+      name: data.display_name.trim(),
+      code: data.code.trim() || null,
+      template_id: data.template_id!,
+      facility_id: null,
+      is_shared: false,
+      category: data.category.trim() || null,
+      description: data.notes.trim() || null,
+      is_active: true,
+      requires_fasting: data.requires_fasting,
+      turnaround_time_hours: data.turnaround_time_hours,
+      metadata: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      deleted_at: null,
+      status: 'active',
+      formatted_turnaround_time: data.turnaround_time_hours ? `${data.turnaround_time_hours} hour(s)` : null,
+      fasting_required: data.requires_fasting,
+      fasting_instruction: data.requires_fasting ? 'Fasting required for this test' : 'No fasting required',
+    },
+  };
+};
 
 export const isLabRequestDraftItemPersistable = (
   item: LabRequestDraftItem

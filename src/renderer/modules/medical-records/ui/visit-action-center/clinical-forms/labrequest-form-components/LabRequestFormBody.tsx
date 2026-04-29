@@ -322,151 +322,174 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
     []
   );
 
+  const handleEditItem = useCallback(
+    async (item: LabRequestDraftItem) => {
+      await refreshReferenceDataSafely(
+        'Failed to refresh reference data before editing item:'
+      );
+
+      setEditingItem(item);
+      setItemEditorData({
+        id: item.id ?? null,
+        item_uuid: item.item_uuid ?? null,
+        display_name: item.display_name,
+        lab_test_id: item.lab_test_id ?? null,
+        source: item.source,
+        source_inventory_item_id: item.source_inventory_item_id ?? null,
+        sample_type: item.sample_type || '',
+        notes: item.notes || '',
+        template_id: item.template_id ?? null,
+        template_name: item.template_name || '',
+        code: item.code || '',
+        category: item.category || '',
+        turnaround_time_hours: item.turnaround_time_hours ?? null,
+        requires_fasting: !!item.requires_fasting,
+        is_from_inventory: !!item.is_from_inventory,
+        inventory_display_unit: item.inventory_display_unit || '',
+        inventory_available_quantity: item.inventory_available_quantity ?? null,
+      });
+      setShowItemEditorModal(true);
+    },
+    [refreshReferenceDataSafely]
+  );
 
   const handleSaveItem = useCallback(async () => {
-  console.log('🔍 Saving item with data:', itemEditorData);
-
-  if (!itemEditorData.display_name.trim()) {
-    showToast('error', 'Lab Test name is required', 3000);
-    return;
-  }
-
-  if (!itemEditorData.lab_test_id) {
-    console.error('❌ No lab_test_id found in:', itemEditorData);
-    showToast(
-      'error',
-      'Please select a lab test from the catalog before adding it to the request.',
-      5000
-    );
-    return;
-  }
-
-  try {
-    // Case 1: Editing existing item in an existing request
-    if (editingItem && currentRequest?.id && editingItem.item_uuid) {
-      console.log('📝 Updating existing item in request');
-      await updateLabRequestItem.mutateAsync({
-        uuid: editingItem.item_uuid,
-        data: toLabRequestItemUpdatePayload(itemEditorData, currentRequest.id),
-      });
-
-      // Force refresh the request data
-      await refreshRequestData(currentRequest.request_uuid);
-      await refetchCurrentRequest();
-      
-      showToast('success', 'Lab test updated successfully', 3000);
-      resetItemEditor();
+    if (!itemEditorData.display_name.trim()) {
+      showToast('error', 'Lab Test name is required', 3000);
       return;
     }
 
-    // Case 2: Editing existing local draft item (no request yet)
-    if (editingItem && !currentRequest) {
-      console.log('📝 Updating local draft item');
-      const updatedLocalItem = buildLocalLabRequestDraftItem(
-        itemEditorData,
-        editingItem.id || Date.now()
+    if (!itemEditorData.lab_test_id) {
+      showToast(
+        'error',
+        'This selection is not yet mapped to a Lab Test. Create or map a Lab Test before adding it to the lab request.',
+        5000
       );
+      return;
+    }
 
-      setLocalDraftItems((prev) =>
-        prev.map((item) =>
-          item.id === editingItem.id ? updatedLocalItem : item
-        )
+    try {
+      if (editingItem && currentRequest?.id && editingItem.item_uuid) {
+        await updateLabRequestItem.mutateAsync({
+          uuid: editingItem.item_uuid,
+          data: toLabRequestItemUpdatePayload(itemEditorData, currentRequest.id),
+        });
+
+        await syncAllVisibleLabData({
+          requestUuid: currentRequest.request_uuid,
+          includeReferenceData: true,
+          includeRequestData: true,
+        });
+
+        resetItemEditor();
+        return;
+      }
+
+      if (editingItem && !currentRequest) {
+        const updatedLocalItem = buildLocalLabRequestDraftItem(
+          itemEditorData,
+          editingItem.id || Date.now()
+        );
+
+        setLocalDraftItems((prev) =>
+          prev.map((item) =>
+            item.id === editingItem.id ? updatedLocalItem : item
+          )
+        );
+
+        resetItemEditor();
+        showToast('success', 'Lab request item updated', 3000);
+        return;
+      }
+
+      if (currentRequest?.id) {
+        await createLabRequestItem.mutateAsync({
+          lab_request_id: currentRequest.id,
+          ...toLabRequestItemCreatePayload(itemEditorData),
+        });
+
+        await syncAllVisibleLabData({
+          requestUuid: currentRequest.request_uuid,
+          includeReferenceData: true,
+          includeRequestData: true,
+        });
+
+        resetItemEditor();
+        return;
+      }
+
+      const localItem = buildLocalLabRequestDraftItem(itemEditorData, Date.now());
+      setLocalDraftItems((prev) => [...prev, localItem]);
+      resetItemEditor();
+      showToast(
+        'success',
+        'Lab request item added. It will be saved when you submit the request.',
+        4000
       );
-
-      showToast('success', 'Lab test updated successfully', 3000);
-      resetItemEditor();
-      return;
+    } catch (error) {
+      console.error('Failed to save lab request item:', error);
+      showToast('error', 'Failed to save lab request item', 5000);
     }
+  }, [
+    createLabRequestItem,
+    currentRequest,
+    editingItem,
+    itemEditorData,
+    resetItemEditor,
+    showToast,
+    syncAllVisibleLabData,
+    updateLabRequestItem,
+  ]);
 
-    // Case 3: Adding new item to existing request via API
-    if (currentRequest?.id) {
-      console.log('➕ Adding new item to existing request via API');
-      console.log('Request ID:', currentRequest.id);
-      
-      const createPayload = toLabRequestItemCreatePayload(itemEditorData);
-      console.log('Create payload:', createPayload);
-      
-      // Create the item
-      await createLabRequestItem.mutateAsync({
-        lab_request_id: currentRequest.id,
-        ...createPayload,
+  const handleDeleteItem = useCallback(
+    async (item: LabRequestDraftItem) => {
+      const confirmed = await confirm({
+        title: currentRequest ? 'Cancel Lab Test' : 'Remove Lab Test.',
+        message: currentRequest
+          ? `Are you sure you want to cancel "${item.display_name}" from this lab request?`
+          : `Are you sure you want to remove "${item.display_name}" from this unsaved lab request?`,
+        confirmText: currentRequest ? 'Cancel Lab Test' : 'Remove Lab Test',
+        cancelText: 'Keep Lab Test',
+        variant: 'danger',
+        theme,
       });
-      
-      console.log('✅ Item created, refreshing data...');
-      
-      // Force immediate refresh of the request data
-      // Use multiple methods to ensure data is refreshed
-      await Promise.all([
-        // Invalidate all relevant queries
-        queryClient.invalidateQueries({ 
-          queryKey: labKeys.requestWithItems(currentRequest.request_uuid) 
-        }),
-        queryClient.invalidateQueries({ 
-          queryKey: labKeys.requestDetail(currentRequest.request_uuid) 
-        }),
-        queryClient.invalidateQueries({ 
-          queryKey: labKeys.requestWithFullDetails(currentRequest.request_uuid) 
-        }),
-        queryClient.invalidateQueries({ 
-          queryKey: labKeys.itemByLabRequest(currentRequest.request_uuid) 
-        }),
-        // Refresh the current request
-        refetchCurrentRequest(),
-        // Refresh visit requests if needed
-        visitNumericId ? refetchVisitRequests() : Promise.resolve(),
-      ]);
-      
-      // Explicitly refetch the request with items
-      await queryClient.refetchQueries({
-        queryKey: labKeys.requestWithItems(currentRequest.request_uuid),
-        exact: true,
-        type: 'active',
-      });
-      
-      console.log('✅ Data refresh complete');
-      showToast('success', 'Lab test added successfully!', 3000);
-      resetItemEditor();
-      return;
-    }
 
-    // Case 4: Adding new item to local draft (new request)
-    console.log('📝 Adding new item to local draft (new request)');
-    const localItem = buildLocalLabRequestDraftItem(itemEditorData, Date.now());
-    console.log('Local item created:', localItem);
-    setLocalDraftItems((prev) => [...prev, localItem]);
-    
-    showToast(
-      'success',
-      'Lab test added. It will be saved when you submit the request.',
-      4000
-    );
-    resetItemEditor();
-    
-  } catch (error: any) {
-    console.error('❌ Failed to save lab request item:', error);
-    console.error('Error details:', error.response?.data || error.message);
-    showToast(
-      'error', 
-      error.response?.data?.message || 'Failed to save lab test. Please try again.',
-      5000
-    );
-  }
-}, [
-  createLabRequestItem,
-  currentRequest,
-  editingItem,
-  itemEditorData,
-  queryClient,
-  refetchCurrentRequest,
-  refetchVisitRequests,
-  refreshRequestData,
-  resetItemEditor,
-  showToast,
-  updateLabRequestItem,
-  visitNumericId,
-]);
+      if (!confirmed) return;
 
-  
+      try {
+        if (currentRequest && item.item_uuid) {
+          await cancelItem.mutateAsync({
+            uuid: item.item_uuid,
+            reason: 'Removed during lab request update',
+            cancelledByStaffId: staffId || undefined,
+          });
+
+          await syncAllVisibleLabData({
+            requestUuid: currentRequest.request_uuid,
+            includeReferenceData: true,
+            includeRequestData: true,
+          });
+
+          return;
+        }
+
+        setLocalDraftItems((prev) => prev.filter((draft) => draft.id !== item.id));
+        showToast('success', 'Lab request item removed', 3000);
+      } catch (error) {
+        console.error('Failed to remove/cancel lab request test:', error);
+        showToast('error', 'Failed to remove lab request test', 5000);
+      }
+    },
+    [
+      cancelItem,
+      confirm,
+      currentRequest,
+      showToast,
+      staffId,
+      syncAllVisibleLabData,
+      theme,
+    ]
+  );
 
   const handleApplyTemplate = useCallback(
     async (selection: LabTemplateSelectionResult) => {
@@ -752,14 +775,15 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
             />
 
             <LabRequestItemsTable
-                isDark={isDark}
-                colors={colors}
-                request={currentRequest}
-                staffId={staffId}
-                onAddItem={openAddItemModal}
-                onManageLabItems={handleOpenLabItemManager}
-                onRequestUpdate={refreshRequestData}
-              />
+              isDark={isDark}
+              colors={colors}
+              request={currentRequest}
+              items={displayItems}
+              onAddItem={openAddItemModal}
+              onEditItem={handleEditItem}
+              onDeleteItem={handleDeleteItem}
+              onManageLabItems={handleOpenLabItemManager}
+            />
           </div>
 
           <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
