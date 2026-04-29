@@ -2,14 +2,11 @@
 import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  AlertTriangle,
-  Boxes,
   Edit3,
   FolderCog,
   LibraryBig,
   Search,
   Sparkles,
-  TestTubeDiagonal,
   X,
 } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
@@ -19,7 +16,6 @@ import type {
   LabRequestDraftItem,
   LabRequestItemEditorData,
 } from './labRequestForm.types';
-import LabInventoryAutocomplete, { type InventoryLiteItem } from './LabInventoryAutocomplete';
 
 interface LabRequestItemEditorModalProps {
   open: boolean;
@@ -31,7 +27,6 @@ interface LabRequestItemEditorModalProps {
   templates: LabTemplate[];
   labItems: LabTest[];
   popularLabItems: LabTest[];
-  inventoryItems?: InventoryLiteItem[];
   onClose: () => void;
   onChange: (
     field: keyof LabRequestItemEditorData,
@@ -41,8 +36,6 @@ interface LabRequestItemEditorModalProps {
   onOpenLabItemManager: () => void;
   onSubmit: () => void;
 }
-
-type PickerMode = 'lab_test' | 'inventory';
 
 const RequiredLabel: React.FC<{ children: React.ReactNode; className?: string }> = ({
   children,
@@ -63,18 +56,13 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
   templates,
   labItems,
   popularLabItems,
-  inventoryItems = [],
   onClose,
   onChange,
   onOpenTemplateManager,
   onOpenLabItemManager,
   onSubmit,
 }) => {
-  const [pickerMode, setPickerMode] = useState<PickerMode>(
-    formData.source === 'inventory' ? 'inventory' : 'lab_test'
-  );
   const [searchText, setSearchText] = useState('');
-  const [inventorySearch, setInventorySearch] = useState(formData.display_name);
 
   // Find available lab tests based on search
   const availableLabTests = useMemo(() => {
@@ -113,27 +101,14 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
   const selectLabTest = (test: LabTest) => {
     onChange('display_name', test.name);
     onChange('lab_test_id', test.id);
-    onChange('source', pickerMode);
+    onChange('source', 'lab_test');
     onChange('code', test.code || '');
     onChange('category', test.category || '');
     onChange('template_id', test.template_id);
     onChange('template_name', test.template?.name || '');
     onChange('turnaround_time_hours', test.turnaround_time_hours ?? null);
     onChange('requires_fasting', test.requires_fasting);
-    onChange('is_from_inventory', pickerMode === 'inventory');
-  };
-
-  // Select an inventory item as starting point
-  const selectInventoryItem = (item: InventoryLiteItem) => {
-    setPickerMode('inventory');
-    setInventorySearch(item.name);
-    onChange('display_name', item.name);
-    onChange('source', 'inventory');
-    onChange('source_inventory_item_id', item.id);
-    onChange('is_from_inventory', true);
-    onChange('inventory_display_unit', item.unit || '');
-    onChange('inventory_available_quantity', item.available_quantity ?? null);
-    onChange('code', item.code || '');
+    onChange('is_from_inventory', false);
   };
   
   // Find the currently selected template
@@ -160,7 +135,7 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                   {editingItem ? 'Edit Lab Test' : 'Add Lab Test'}
                 </h3>
                 <p className={cn('mt-1 text-sm', colors.text.secondary)}>
-                  Pick a lab test from our catalog, or start with an inventory item and connect it to the right lab test.
+                  Select a lab test from our catalog to add to this request.
                 </p>
               </div>
 
@@ -178,42 +153,6 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                 {/* Left Column - Test Selection */}
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPickerMode('lab_test');
-                        onChange('source', 'lab_test');
-                        onChange('is_from_inventory', false);
-                      }}
-                      className={cn(
-                        'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium',
-                        pickerMode === 'lab_test'
-                          ? 'border-blue-600 bg-blue-600 text-white'
-                          : cn(colors.border.primary, colors.bg.hover, colors.text.primary)
-                      )}
-                    >
-                      <TestTubeDiagonal className="h-4 w-4" />
-                      Browse Lab Tests
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPickerMode('inventory');
-                        onChange('source', 'inventory');
-                        onChange('is_from_inventory', true);
-                      }}
-                      className={cn(
-                        'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium',
-                        pickerMode === 'inventory'
-                          ? 'border-blue-600 bg-blue-600 text-white'
-                          : cn(colors.border.primary, colors.bg.hover, colors.text.primary)
-                      )}
-                    >
-                      <Boxes className="h-4 w-4" />
-                      Start from Inventory
-                    </button>
-
                     <button
                       type="button"
                       onClick={onOpenLabItemManager}
@@ -243,130 +182,89 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                     </button>
                   </div>
 
-                  {pickerMode === 'lab_test' ? (
-                    <div className={cn('rounded-xl border p-4', colors.border.primary, colors.bg.subtle)}>
-                      <label className={cn('mb-2 block text-sm font-medium', colors.text.primary)}>
-                        Find a Lab Test
-                      </label>
-                      <div className="relative mb-3">
-                        <Search className={cn('absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2', colors.text.tertiary)} />
-                        <input
-                          type="text"
-                          value={searchText}
-                          onChange={(e) => setSearchText(e.target.value)}
-                          placeholder="Search by test name, code, category, or template"
-                          className={cn(
-                            'w-full rounded-lg border py-2.5 pl-9 pr-3 text-sm',
-                            colors.bg.input,
-                            colors.text.primary,
-                            colors.border.primary,
-                            'focus:outline-none focus:ring-2 focus:ring-blue-500'
-                          )}
-                        />
-                      </div>
+                  <div className={cn('rounded-xl border p-4', colors.border.primary, colors.bg.subtle)}>
+                    <label className={cn('mb-2 block text-sm font-medium', colors.text.primary)}>
+                      Find a Lab Test
+                    </label>
+                    <div className="relative mb-3">
+                      <Search className={cn('absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2', colors.text.tertiary)} />
+                      <input
+                        type="text"
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        placeholder="Search by test name, code, category, or template"
+                        className={cn(
+                          'w-full rounded-lg border py-2.5 pl-9 pr-3 text-sm',
+                          colors.bg.input,
+                          colors.text.primary,
+                          colors.border.primary,
+                          'focus:outline-none focus:ring-2 focus:ring-blue-500'
+                        )}
+                      />
+                    </div>
 
-                      <div className="grid gap-2">
-                        {availableLabTests.length === 0 ? (
-                          <div className={cn('rounded-lg border border-dashed p-4 text-sm', colors.border.primary, colors.text.secondary)}>
-                            No lab tests match your search. Try different keywords or browse the full catalog.
-                          </div>
-                        ) : (
-                          availableLabTests.map((test) => (
-                            <button
-                              key={test.id}
-                              type="button"
-                              onClick={() => selectLabTest(test)}
-                              className={cn(
-                                'rounded-xl border p-3 text-left transition-all',
-                                colors.border.primary,
-                                formData.lab_test_id === test.id
-                                  ? 'border-blue-600 ring-2 ring-blue-500/30'
-                                  : isDark ? 'hover:bg-gray-800/60' : 'hover:bg-gray-50'
-                              )}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div>
+                    <div className="grid gap-2">
+                      {availableLabTests.length === 0 ? (
+                        <div className={cn('rounded-lg border border-dashed p-4 text-sm text-center', colors.border.primary, colors.text.secondary)}>
+                          <p>No lab tests match your search.</p>
+                          <button
+                            type="button"
+                            onClick={onOpenLabItemManager}
+                            className="mt-2 text-blue-600 hover:underline dark:text-blue-400"
+                          >
+                            Create a new lab test?
+                          </button>
+                        </div>
+                      ) : (
+                        availableLabTests.map((test) => (
+                          <button
+                            key={test.id}
+                            type="button"
+                            onClick={() => selectLabTest(test)}
+                            className={cn(
+                              'rounded-xl border p-3 text-left transition-all cursor-pointer',
+                              colors.border.primary,
+                              formData.lab_test_id === test.id
+                                ? 'border-blue-600 ring-2 ring-blue-500/30 bg-blue-50 dark:bg-blue-950/20'
+                                : isDark ? 'hover:bg-gray-800/60' : 'hover:bg-gray-50'
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
                                   <p className={cn('font-medium', colors.text.primary)}>{test.name}</p>
-                                  <div className={cn('mt-1 text-xs', colors.text.secondary)}>
-                                    {test.code || 'No code'} • {test.category || 'Uncategorized'}
-                                  </div>
-                                  <div className="mt-2 flex flex-wrap gap-2">
-                                    {test.template?.name && (
-                                      <span className={cn('rounded-full px-2 py-0.5 text-xs', isDark ? 'bg-violet-900/30 text-violet-300' : 'bg-violet-100 text-violet-700')}>
-                                        Template: {test.template.name}
-                                      </span>
-                                    )}
-                                    {test.requires_fasting && (
-                                      <span className={cn('rounded-full px-2 py-0.5 text-xs', isDark ? 'bg-orange-900/30 text-orange-300' : 'bg-orange-100 text-orange-700')}>
-                                        Needs fasting
-                                      </span>
-                                    )}
-                                  </div>
+                                  {!test.is_active && (
+                                    <span className={cn('text-xs px-1.5 py-0.5 rounded', isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600')}>
+                                      Inactive
+                                    </span>
+                                  )}
                                 </div>
-
-                                <div className={cn('text-xs whitespace-nowrap', colors.text.secondary)}>
-                                  {test.turnaround_time_hours ? `${test.turnaround_time_hours} hours` : 'TBD'}
+                                <div className={cn('mt-1 text-xs', colors.text.secondary)}>
+                                  {test.code || 'No code'} • {test.category || 'Uncategorized'}
+                                </div>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {test.template?.name && (
+                                    <span className={cn('rounded-full px-2 py-0.5 text-xs', isDark ? 'bg-violet-900/30 text-violet-300' : 'bg-violet-100 text-violet-700')}>
+                                      Template: {test.template.name}
+                                    </span>
+                                  )}
+                                  {test.requires_fasting && (
+                                    <span className={cn('rounded-full px-2 py-0.5 text-xs', isDark ? 'bg-orange-900/30 text-orange-300' : 'bg-orange-100 text-orange-700')}>
+                                      Needs fasting
+                                    </span>
+                                  )}
                                 </div>
                               </div>
-                            </button>
-                          ))
-                        )}
-                      </div>
+
+                              <div className={cn('text-xs whitespace-nowrap', colors.text.secondary)}>
+                                {test.turnaround_time_hours ? `${test.turnaround_time_hours} hrs` : 'TBD'}
+                              </div>
+                            </div>
+                          </button>
+                        ))
+                      )}
                     </div>
-                  ) : (
-                    <div className={cn('rounded-xl border p-4', colors.border.primary, colors.bg.subtle)}>
-                      <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
-                        <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                        <div className="text-sm">
-                          Inventory items help you track consumables, but each request still needs an official lab test assigned.
-                        </div>
-                      </div>
-
-                      <label className={cn('mb-2 block text-sm font-medium', colors.text.primary)}>
-                        What inventory item are you using?
-                      </label>
-
-                      <LabInventoryAutocomplete
-                        value={inventorySearch}
-                        onChange={setInventorySearch}
-                        onSelect={selectInventoryItem}
-                        inventoryItems={inventoryItems}
-                        isDark={isDark}
-                        colors={colors}
-                        placeholder="Search for kits, reagents, or supplies"
-                      />
-
-                      <div className="mt-4">
-                        <RequiredLabel className={cn('mb-2 block text-sm font-medium', colors.text.primary)}>
-                          Connect to an Official Lab Test
-                        </RequiredLabel>
-
-                        <select
-                          value={formData.lab_test_id || ''}
-                          onChange={(e) => {
-                            const selectedId = Number(e.target.value);
-                            const selectedTest = labItems.find((test) => test.id === selectedId);
-                            onChange('lab_test_id', selectedId || null);
-                            if (selectedTest) selectLabTest(selectedTest);
-                          }}
-                          className={cn(
-                            'w-full rounded-lg border p-2.5 text-sm',
-                            colors.bg.input,
-                            colors.text.primary,
-                            colors.border.primary,
-                            'focus:outline-none focus:ring-2 focus:ring-blue-500'
-                          )}
-                        >
-                          <option value="">Choose a lab test to link</option>
-                          {labItems.map((test) => (
-                            <option key={test.id} value={test.id}>
-                              {test.name} {test.code ? `(${test.code})` : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Right Column - Test Details */}
@@ -440,15 +338,12 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                   <div className={cn('rounded-xl border p-4', colors.border.primary, colors.bg.subtle)}>
                     <h4 className={cn('mb-3 flex items-center gap-2 text-sm font-semibold', colors.text.primary)}>
                       <Sparkles className="h-4 w-4" />
-                      What You've Selected
+                      Selected Test Details
                     </h4>
 
                     <div className="space-y-2 text-sm">
                       <div className={colors.text.primary}>
-                        <span className="font-medium">Where it came from:</span> {formData.source === 'lab_test' ? 'Lab Test Catalog' : 'Inventory'}
-                      </div>
-                      <div className={colors.text.primary}>
-                        <span className="font-medium">Linked Lab Test:</span> {formData.lab_test_id ? 'Connected ✓' : 'Not yet connected'}
+                        <span className="font-medium">Test Name:</span> {formData.display_name || 'Not selected'}
                       </div>
                       <div className={colors.text.primary}>
                         <span className="font-medium">Test Code:</span> {formData.code || 'Not specified'}
@@ -468,18 +363,12 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                           <span className="font-medium">Test Template:</span> {selectedTemplate.name}
                         </div>
                       )}
-                      {formData.is_from_inventory && (
-                        <div className={colors.text.primary}>
-                          <span className="font-medium">Available Quantity:</span>{' '}
-                          {formData.inventory_available_quantity ?? 'Unknown'} {formData.inventory_display_unit || 'units'}
-                        </div>
-                      )}
                     </div>
                   </div>
 
                   {!formData.lab_test_id && (
                     <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/30 dark:bg-red-950/30 dark:text-red-300">
-                      ⚠️ This test needs to be connected to an official lab test before you can add it to the request.
+                      ⚠️ Please select a lab test from the catalog before adding to the request.
                     </div>
                   )}
                 </div>
