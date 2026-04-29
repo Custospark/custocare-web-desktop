@@ -625,7 +625,7 @@ export const LabTemplateFieldManagerModal: React.FC<LabTemplateFieldManagerModal
                     {/* Name + Code */}
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
-                        <Label required  className={colors.text.secondary}>
+                        <Label required className={colors.text.secondary}>
                           Field Name
                         </Label>
                         <input
@@ -637,7 +637,7 @@ export const LabTemplateFieldManagerModal: React.FC<LabTemplateFieldManagerModal
                         />
                       </div>
                       <div>
-                        <Label  className={colors.text.secondary}>
+                        <Label className={colors.text.secondary}>
                           Short Code
                         </Label>
                         <div className="relative">
@@ -656,7 +656,7 @@ export const LabTemplateFieldManagerModal: React.FC<LabTemplateFieldManagerModal
                     {/* Data type + Unit */}
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
-                        <Label  className={colors.text.secondary}>
+                        <Label className={colors.text.secondary}>
                           Data Type
                         </Label>
                         <select
@@ -672,7 +672,7 @@ export const LabTemplateFieldManagerModal: React.FC<LabTemplateFieldManagerModal
                         </select>
                       </div>
                       <div>
-                        <Label  className={colors.text.secondary}>
+                        <Label className={colors.text.secondary}>
                           Unit of Measure
                         </Label>
                         <input
@@ -687,7 +687,7 @@ export const LabTemplateFieldManagerModal: React.FC<LabTemplateFieldManagerModal
 
                     {/* Reference range */}
                     <div>
-                      <Label  className={colors.text.secondary}>
+                      <Label className={colors.text.secondary}>
                         Normal Reference Range
                       </Label>
                       <div className="flex items-center gap-3">
@@ -718,7 +718,7 @@ export const LabTemplateFieldManagerModal: React.FC<LabTemplateFieldManagerModal
 
                     {/* Display order */}
                     <div>
-                      <Label  className={colors.text.secondary}>
+                      <Label className={colors.text.secondary}>
                         Display Order
                       </Label>
                       <input
@@ -732,7 +732,7 @@ export const LabTemplateFieldManagerModal: React.FC<LabTemplateFieldManagerModal
 
                     {/* Clinical notes */}
                     <div>
-                      <Label  className={colors.text.secondary}>
+                      <Label className={colors.text.secondary}>
                         Clinical Notes
                       </Label>
                       <textarea
@@ -752,7 +752,7 @@ export const LabTemplateFieldManagerModal: React.FC<LabTemplateFieldManagerModal
                           onChange={(v) => setFieldForm((p) => ({ ...p, is_required: v }))}
                           label="Required field"
                           description="Lab staff must fill this before submitting results"
-                          
+                          colors={colors}
                         />
                       </div>
                       <div className="px-4 py-2">
@@ -761,7 +761,7 @@ export const LabTemplateFieldManagerModal: React.FC<LabTemplateFieldManagerModal
                           onChange={(v) => setFieldForm((p) => ({ ...p, is_active: v }))}
                           label="Active"
                           description="Inactive fields are hidden from result entry forms"
-                          
+                          colors={colors}
                         />
                       </div>
                       <div className="px-4 py-2">

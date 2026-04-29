@@ -77,8 +77,8 @@ export const LabRequestDetailsCard: React.FC<LabRequestDetailsCardProps> = ({
               Lab Request Details
             </h3>
             {request?.requested_by && (
-              <p className={cn('mt-1 text-xs', colors.text.secondary)}>
-                Requested by: {request.requested_by.name || 'Unknown clinician'}
+              <p className={cn('mt-1 text-xs font-bold', colors.text.secondary)}>
+                Requested by: Dr. {request.requested_by.name || 'Unknown clinician'}
               </p>
             )}
           </div>

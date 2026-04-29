@@ -692,7 +692,7 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
                     </div>
 
                     <div>
-                      <label className={cn('mb-1 block text-sm font-medium', colors.text.primary)}>Test Template(Optional)</label>
+                      <label className={cn('mb-1 block text-sm font-medium', colors.text.primary)}>Test Template</label>
                       <select value={form.template_id} onChange={e => setForm(prev => ({ ...prev, template_id: e.target.value }))}
                         className={cn('w-full rounded-lg border p-2.5 text-sm', colors.bg.input, colors.text.primary, colors.border.primary, 'focus:outline-none focus:ring-2 focus:ring-blue-500')}
                       >

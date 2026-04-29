@@ -702,7 +702,7 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
                   {navigationMessage}
                 </motion.p>
                 <p className={cn("text-sm font-medium", isDark ? "text-slate-400" : "text-slate-600")}>
-                  Loading content, please wait...
+                  Loading data, please wait...
                 </p>
               </div>
             </motion.div>
