@@ -272,10 +272,10 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
   }, [refreshReferenceDataSafely]);
 
   const handleOpenTemplateSelector = useCallback(async () => {
+    setShowTemplateSelector(true);
     await refreshReferenceDataSafely(
       'Failed to refresh templates before opening selector:'
     );
-    setShowTemplateSelector(true);
   }, [refreshReferenceDataSafely]);
 
   const handleOpenTemplateManager = useCallback(async () => {

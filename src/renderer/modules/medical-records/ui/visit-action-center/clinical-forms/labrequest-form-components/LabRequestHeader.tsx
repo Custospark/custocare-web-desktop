@@ -124,20 +124,6 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
           Manage Templates
         </button>
 
-        {/* <button
-          type="button"
-          onClick={onOpenTemplateFieldManager}
-          className={cn(
-            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
-            colors.border.primary,
-            colors.bg.hover,
-            colors.text.primary
-          )}
-        >
-          <Rows3 className="h-4 w-4" />
-          Manage Template Fields
-        </button> */}
-
         <button
           type="button"
           onClick={onOpenLabItemManager}
