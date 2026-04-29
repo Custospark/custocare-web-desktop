@@ -100,17 +100,25 @@ export const LabRequestManagementModals: React.FC<
     }
   }, [labItems, onSelectLabItemUuid, openLabItemManager, selectedLabItemUuid]);
 
-  const selectedTemplateForManagement = useMemo(
-    () =>
-      templates.find((template) => template.template_uuid === selectedTemplateUuid) ||
-      null,
-    [selectedTemplateUuid, templates]
-  );
+    const selectedTemplateForManagement = useMemo(() => {
+      const safeTemplates = Array.isArray(templates) ? templates : [];
 
-  const selectedLabItemForManagement = useMemo(
-    () => labItems.find((item) => item.test_uuid === selectedLabItemUuid) || null,
-    [labItems, selectedLabItemUuid]
-  );
+      return (
+        safeTemplates.find(
+          (template) => template.template_uuid === selectedTemplateUuid
+        ) || null
+      );
+    }, [templates, selectedTemplateUuid]);
+
+    const selectedLabItemForManagement = useMemo(() => {
+      const safeLabItems = Array.isArray(labItems) ? labItems : [];
+
+      return (
+        safeLabItems.find(
+          (item) => item.test_uuid === selectedLabItemUuid
+        ) || null
+      );
+    }, [labItems, selectedLabItemUuid]);
 
   return (
     <>

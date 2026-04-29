@@ -945,8 +945,7 @@ export const useGetRequestWithItems = (
     queryKey: labKeys.requestWithItems(uuid),
     queryFn: async () => {
       const response = await axiosInstance.get(`/lab/requests/${uuid}/with-items`);
-      console.log("Dump");
-      console.log(response.data);
+
       return response.data.data.request;
     },
     enabled: !!uuid,

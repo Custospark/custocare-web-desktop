@@ -47,15 +47,34 @@ const extractTemplates = (payload: unknown): LabTemplate[] => {
 };
 
 const extractLabItems = (payload: unknown): LabTest[] => {
-  if (Array.isArray(payload)) return payload as LabTest[];
+  // Return empty array if payload is falsy or not an object
   if (!payload || typeof payload !== 'object') return [];
 
+  // Case 1: payload is already an array
+  if (Array.isArray(payload)) return payload as LabTest[];
+
+  // Case 2: payload has direct data array: { data: LabTest[], meta: {...} }
+  const withDirectData = payload as { data: LabTest[]; meta?: unknown };
+  if (Array.isArray(withDirectData.data)) {
+    console.log("Extracted direct data array:", withDirectData.data.length);
+    return withDirectData.data;
+  }
+
+  // Case 3: ApiResponse with nested paginated data
   const paginatedPayload = payload as ApiResponse<PaginatedResponse<LabTest>>;
-  if (Array.isArray(paginatedPayload.data?.data)) return paginatedPayload.data.data;
+  if (Array.isArray(paginatedPayload.data?.data)) {
+    console.log("Extracted paginated data:", paginatedPayload.data.data.length);
+    return paginatedPayload.data.data;
+  }
 
+  // Case 4: payload has nested tests array: { data: { tests: LabTest[] } }
   const testsPayload = payload as { data?: { tests?: LabTest[] } };
-  if (Array.isArray(testsPayload.data?.tests)) return testsPayload.data.tests;
+  if (Array.isArray(testsPayload.data?.tests)) {
+    console.log("Extracted tests array:", testsPayload.data.tests.length);
+    return testsPayload.data.tests;
+  }
 
+  console.log("No matching structure found for payload:", payload);
   return [];
 };
 
@@ -65,6 +84,10 @@ const extractPopularLabItems = (payload: unknown): LabTest[] => {
 
   const apiPayload = payload as ApiResponse<LabTest[]>;
   if (Array.isArray(apiPayload.data)) return apiPayload.data;
+
+  // Handle direct array in data property
+  const withData = payload as { data: LabTest[] };
+  if (Array.isArray(withData.data)) return withData.data;
 
   return [];
 };
