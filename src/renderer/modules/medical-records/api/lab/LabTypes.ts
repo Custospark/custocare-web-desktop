@@ -288,7 +288,7 @@ export interface LabResult {
   id: number;
   result_uuid: string;
   lab_request_item_id: number;
-  template_field_id: number;
+  template_field_id: number | null;
   value: string | null;
   unit: string | null;
   numeric_value: number | null;
