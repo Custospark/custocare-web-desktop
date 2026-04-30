@@ -1,4 +1,3 @@
-// labrequest-form-components/LabRequestDetailsCard.tsx
 import React, { useState } from 'react';
 import {
   Activity,
@@ -12,7 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import type { LabRequest } from '../../../../api/lab/LabTypes';
-import { LabRequestPriority } from '../../../../api/lab/LabTypes';
+import { LabRequestPriority, LabRequestStatus } from '../../../../api/lab/LabTypes';
 import type { ColorTokens, LabRequestFormData } from './labRequestForm.types';
 
 interface LabRequestDetailsCardProps {
@@ -62,11 +61,42 @@ export const LabRequestDetailsCard: React.FC<LabRequestDetailsCardProps> = ({
   isCancellingRequest = false,
 }) => {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const canCancel =
-    !!request &&
-    request.status !== 'cancelled' &&
-    request.status !== 'completed' &&
-    request.status !== 'reviewed';
+  
+  // Permission rules based on request status
+  const canEdit = !!request && !['cancelled', 'completed', 'reviewed'].includes(request.status);
+  
+  const canCancel = !!request && 
+    request.status !== LabRequestStatus.CANCELLED &&
+    request.status !== LabRequestStatus.COMPLETED &&
+    request.status !== LabRequestStatus.REVIEWED;
+  
+  const getCancelButtonTooltip = (): string => {
+    if (!request) return '';
+    switch (request.status) {
+      case LabRequestStatus.COMPLETED:
+        return 'Cannot cancel completed requests';
+      case LabRequestStatus.REVIEWED:
+        return 'Cannot cancel reviewed requests';
+      case LabRequestStatus.CANCELLED:
+        return 'Request is already cancelled';
+      default:
+        return 'Cancel this lab request';
+    }
+  };
+  
+  const getEditButtonTooltip = (): string => {
+    if (!request) return '';
+    switch (request.status) {
+      case LabRequestStatus.COMPLETED:
+        return 'Cannot edit completed requests';
+      case LabRequestStatus.REVIEWED:
+        return 'Cannot edit reviewed requests';
+      case LabRequestStatus.CANCELLED:
+        return 'Cannot edit cancelled requests';
+      default:
+        return 'Edit request details';
+    }
+  };
 
   return (
     <>
@@ -89,10 +119,13 @@ export const LabRequestDetailsCard: React.FC<LabRequestDetailsCardProps> = ({
                 <button
                   type="button"
                   onClick={onOpenEditor}
+                  disabled={!canEdit}
+                  title={getEditButtonTooltip()}
                   className={cn(
                     'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
-                    colors.bg.hover,
-                    colors.text.brand
+                    canEdit 
+                      ? cn(colors.bg.hover, colors.text.brand)
+                      : 'cursor-not-allowed opacity-50',
                   )}
                 >
                   <Pencil className="h-4 w-4" />
@@ -104,6 +137,7 @@ export const LabRequestDetailsCard: React.FC<LabRequestDetailsCardProps> = ({
                     type="button"
                     onClick={() => setShowCancelConfirm(true)}
                     disabled={isCancellingRequest}
+                    title={getCancelButtonTooltip()}
                     className={cn(
                       'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
                       'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40',
@@ -112,6 +146,22 @@ export const LabRequestDetailsCard: React.FC<LabRequestDetailsCardProps> = ({
                   >
                     <Trash2 className="h-4 w-4" />
                     {isCancellingRequest ? 'Cancelling...' : 'Cancel Request'}
+                  </button>
+                )}
+
+                {/* Show disabled cancel button for completed/reviewed/cancelled requests */}
+                {!canCancel && request && onCancelRequest && (
+                  <button
+                    type="button"
+                    disabled
+                    title={getCancelButtonTooltip()}
+                    className={cn(
+                      'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
+                      'cursor-not-allowed opacity-50 text-gray-400 dark:text-gray-600'
+                    )}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Cancel Request
                   </button>
                 )}
               </>
@@ -297,7 +347,10 @@ export const LabRequestDetailsCard: React.FC<LabRequestDetailsCardProps> = ({
                 Are you sure you want to cancel this lab request?
               </p>
               <p className={cn('mt-2 text-sm', colors.text.secondary)}>
-                This will mark the request as cancelled and it will no longer proceed through the workflow.
+                {request?.status === LabRequestStatus.IN_PROGRESS 
+                  ? 'This request is already in progress. Cancelling it will stop any ongoing work, and some tests may have been partially completed.'
+                  : 'This will mark the request as cancelled and it will no longer proceed through the workflow.'
+                }
               </p>
             </div>
 

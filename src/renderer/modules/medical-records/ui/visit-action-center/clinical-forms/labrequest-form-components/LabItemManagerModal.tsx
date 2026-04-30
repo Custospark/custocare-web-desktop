@@ -713,11 +713,21 @@ export const LabItemManagerModal: React.FC<LabItemManagerModalProps> = ({
 
                     <div>
                       <label className={cn('mb-1 block text-sm font-medium', colors.text.primary)}>Turnaround Time (hours)</label>
-                      <input type="number" min={0} step={0.5} value={form.turnaround_time_hours}
-                        onChange={e => setForm(prev => ({ ...prev, turnaround_time_hours: e.target.value }))}
-                        placeholder="e.g., 24, 48"
-                        className={cn('w-full rounded-lg border p-2.5 text-sm', colors.bg.input, colors.text.primary, colors.border.primary, 'focus:outline-none focus:ring-2 focus:ring-blue-500')}
-                      />
+                    <input 
+                      type="number" 
+                      min={0} 
+                      step={0.1} 
+                      value={form.turnaround_time_hours ?? ''}
+                      onChange={e => {
+                        const rawValue = e.target.value;
+                        setForm(prev => ({ 
+                          ...prev, 
+                          turnaround_time_hours: rawValue 
+                        }));
+                      }}
+                      placeholder="e.g., 0.5, 1.5, 24"
+                      className={cn('w-full rounded-lg border p-2.5 text-sm', colors.bg.input, colors.text.primary, colors.border.primary, 'focus:outline-none focus:ring-2 focus:ring-blue-500')}
+                    />
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-3">

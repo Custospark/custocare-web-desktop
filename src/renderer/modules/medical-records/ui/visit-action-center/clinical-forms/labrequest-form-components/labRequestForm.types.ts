@@ -45,6 +45,59 @@ export interface LabRequestFormData {
   icd_codes: string;
 }
 
+// Helper to format dates consistently
+export const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return 'N/A';
+  
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  // Today: show time only
+  if (diffDays === 0 && date.toDateString() === now.toDateString()) {
+    return `Today at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  
+  // Yesterday
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) {
+    return `Yesterday at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  
+  // Within last 7 days: show day name
+  if (diffDays < 7) {
+    return date.toLocaleDateString([], { weekday: 'long', hour: '2-digit', minute: '2-digit' });
+  }
+  
+  // Older: show full date
+  return date.toLocaleDateString([], { 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+// Helper function to calculate time difference between two dates
+export const getTimeDifference = (startDate: string, endDate: string): string => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffMs = end.getTime() - start.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffDays > 0) {
+    return `${diffDays}d ${diffHours % 24}h`;
+  }
+  if (diffHours > 0) {
+    return `${diffHours}h ${diffMins % 60}m`;
+  }
+  return `${diffMins}m`;
+};
 export type LabRequestItemSource = 'lab_test' | 'inventory' | 'template';
 
 export interface LabRequestDraftItem {

@@ -8,9 +8,10 @@ import { cn } from '../../../../../../shared/utils/classNameUtils';
 import { useConfirm } from '../../../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { useToast } from '../../../../../../app/store/contexts/toast/useToast';
 
-import type {
-  CreateLabRequestWithItemsRequest,
-  LabRequestPriority,
+import {
+  LabRequestStatus,
+  type CreateLabRequestWithItemsRequest,
+  type LabRequestPriority,
 } from '../../../../api/lab/LabTypes';
 import { labKeys, useAddItemsToRequest, useCancelItem, useCancelLabRequest, useCreateLabRequestItem, useCreateLabRequestWithItems, useUpdateLabRequest, useUpdateLabRequestItem } from '../../../../api/lab/LabQueries';
 
@@ -328,6 +329,12 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
     },
     []
   );
+
+      const canModifyRequest = !currentRequest || (
+      currentRequest.status !== LabRequestStatus.CANCELLED &&
+      currentRequest.status !== LabRequestStatus.COMPLETED &&
+      currentRequest.status !== LabRequestStatus.REVIEWED
+    );
 
   const handleEditItem = useCallback(
     async (item: LabRequestDraftItem) => {
@@ -726,7 +733,7 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
           <LabRequestHeader
             isDark={isDark}
             colors={colors}
-            request={currentRequest}
+            request={currentRequest} 
             onOpenTemplateSelector={handleOpenTemplateSelector}
             onOpenTemplateManager={handleOpenTemplateManager}
             onOpenLabItemManager={handleOpenLabItemManager}
@@ -767,30 +774,46 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
               />
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+           <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
               {onCancel && (
                 <button
                   type="button"
                   onClick={onCancel}
-                  className={cn('inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all', colors.bg.hover, colors.text.secondary)}
+                  className={cn(
+                    'inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
+                    colors.bg.hover,
+                    colors.text.secondary
+                  )}
                 >
                   <X className="h-4 w-4" />
                   Cancel
                 </button>
               )}
-
-              <button
-                type="submit"
-                disabled={isMutating || isSubmitting || displayItems.length === 0}
-                className={cn(
-                  'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
-                  isMutating || isSubmitting || displayItems.length === 0 ? 'cursor-not-allowed bg-gray-400' : 'cursor-pointer bg-blue-600 hover:bg-blue-700'
-                )}
-              >
-                {isSubmitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {currentRequest ? 'Save Lab Request Updates' : 'Create Lab Request'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isMutating || isSubmitting || displayItems.length === 0 || !canModifyRequest}
+              title={
+                !canModifyRequest
+                  ? `Cannot save changes to ${currentRequest?.status} requests`
+                  : displayItems.length === 0
+                  ? 'Please add at least one lab test'
+                  : undefined
+              }
+              className={cn(
+                'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
+                isMutating || isSubmitting || displayItems.length === 0 || !canModifyRequest
+                  ? 'cursor-not-allowed bg-gray-400'
+                  : 'cursor-pointer bg-blue-600 hover:bg-blue-700'
+              )}
+            >
+              {isSubmitting ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              {currentRequest ? 'Save Lab Request Updates' : 'Create Lab Request'}
+            </button>
+          </div>
           </form>
 
           <LabRequestItemEditorController
