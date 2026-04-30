@@ -1,6 +1,6 @@
 // lab-results/labresult-form-components/LabResultItemResultEditor/index.tsx
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, Plus } from 'lucide-react';
 import { cn } from '../../../../../../../shared/utils/classNameUtils';
 import {
   useBulkCreateResults,
@@ -39,11 +39,65 @@ const getSelectOptions = (field?: LabTemplateField | null): string[] => {
   return options.map((option) => String(option));
 };
 
+// Create a manual fallback draft when no template fields exist
+const createManualFallbackDraft = (existingResults: LabResult[]): LabResultFieldDraft[] => {
+  // If there are existing results, use them
+  if (existingResults.length > 0) {
+    return existingResults.map((result, index) => ({
+      localId: result.result_uuid || `manual-${index}`,
+      result_uuid: result.result_uuid,
+      template_field_id: result.template_field_id,
+      field_uuid: result.template_field?.field_uuid || null,
+      field_name: result.template_field?.name || 'Result Value',
+      field_code: result.template_field?.code || null,
+      data_type: result.template_field?.data_type || TemplateFieldDataType.TEXT,
+      display_order: result.template_field?.display_order || index + 1,
+      is_required: false,
+      is_critical: false,
+      value: result.value || (result.numeric_value !== null ? String(result.numeric_value) : ''),
+      numeric_value: result.numeric_value !== null ? String(result.numeric_value) : '',
+      unit: result.unit || result.template_field?.unit || '',
+      reference_min: result.reference_min !== null ? String(result.reference_min) : '',
+      reference_max: result.reference_max !== null ? String(result.reference_max) : '',
+      flag: result.flag,
+      interpretation: result.interpretation || '',
+      comments: result.comments || '',
+      existingResult: result,
+      isNew: false,
+    }));
+  }
+
+  // Create a single manual entry field
+  return [
+    {
+      localId: 'manual-field-1',
+      result_uuid: undefined,
+      template_field_id: null,
+      field_uuid: null,
+      field_name: 'Result Value',
+      field_code: null,
+      data_type: TemplateFieldDataType.TEXT,
+      display_order: 1,
+      is_required: false,
+      is_critical: false,
+      value: '',
+      numeric_value: '',
+      unit: '',
+      reference_min: '',
+      reference_max: '',
+      flag: 'pending' as any,
+      interpretation: '',
+      comments: '',
+      existingResult: undefined,
+      isNew: true,
+    },
+  ];
+};
+
 export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
   open,
   isDark,
   colors,
-  request,
   item,
   staffId,
   requestLocked,
@@ -52,12 +106,15 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
 }) => {
   const [drafts, setDrafts] = useState<LabResultFieldDraft[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isManualMode, setIsManualMode] = useState(false);
 
   const templateUuid = item?.lab_test?.template?.template_uuid || '';
   const itemUuid = item?.item_uuid || '';
+  const hasTemplate = !!templateUuid;
+  const hasTemplateWithFields = hasTemplate;
 
   const fieldsQuery = useGetFieldsByTemplate(templateUuid, {
-    enabled: open && !!templateUuid,
+    enabled: open && hasTemplateWithFields,
   });
 
   const resultsQuery = useGetResultsByLabRequestItem(itemUuid, {
@@ -77,11 +134,33 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
     [resultsQuery.data]
   );
 
+  // Determine if we should use manual mode
+  const shouldUseManualMode = useMemo(() => {
+    const noTemplateFields = !hasTemplateWithFields || templateFields.length === 0;
+    const hasExistingResults = existingResults.length > 0;
+    
+    // Use manual mode if no template fields but have existing results OR explicitly toggled
+    return (!hasTemplateWithFields || (noTemplateFields && !hasExistingResults)) || isManualMode;
+  }, [hasTemplateWithFields, templateFields.length, existingResults.length, isManualMode]);
+
   useEffect(() => {
     if (!open || !item) return;
     setSaveError(null);
-    setDrafts(buildDraftsFromFieldsAndResults(templateFields, existingResults));
-  }, [open, item, templateFields, existingResults]);
+    
+    // Check if we should use manual mode
+    const noTemplateFields = !hasTemplateWithFields || templateFields.length === 0;
+    const hasExistingResults = existingResults.length > 0;
+    
+    if (noTemplateFields || (shouldUseManualMode && !hasExistingResults)) {
+      // Use manual fallback mode
+      setDrafts(createManualFallbackDraft(existingResults));
+      setIsManualMode(true);
+    } else {
+      // Use template-based drafts
+      setDrafts(buildDraftsFromFieldsAndResults(templateFields, existingResults));
+      setIsManualMode(false);
+    }
+  }, [open, item, templateFields, existingResults, hasTemplateWithFields, shouldUseManualMode]);
 
   const loading = fieldsQuery.isLoading || resultsQuery.isLoading;
   const saving = createResults.isPending || updateResult.isPending;
@@ -91,7 +170,7 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
     item?.status === LabRequestItemStatus.CANCELLED ||
     item?.status === LabRequestItemStatus.VERIFIED;
 
-  const hasConfiguredFields = templateFields.length > 0 || existingResults.length > 0;
+  const hasConfiguredFields = drafts.length > 0;
 
   const missingRequiredField = drafts.some(
     (draft) => draft.is_required && !hasMeaningfulDraftData(draft)
@@ -106,13 +185,39 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
     );
   };
 
+  const handleAddManualField = () => {
+    const newDraft: LabResultFieldDraft = {
+      localId: `manual-field-${Date.now()}`,
+      result_uuid: undefined,
+      template_field_id: null,
+      field_uuid: null,
+      field_name: `Additional Result ${drafts.length + 1}`,
+      field_code: null,
+      data_type: TemplateFieldDataType.TEXT,
+      display_order: drafts.length + 1,
+      is_required: false,
+      is_critical: false,
+      value: '',
+      numeric_value: '',
+      unit: '',
+      reference_min: '',
+      reference_max: '',
+      flag: 'pending' as any,
+      interpretation: '',
+      comments: '',
+      existingResult: undefined,
+      isNew: true,
+    };
+    setDrafts((prev) => [...prev, newDraft]);
+  };
+
   const handleSave = async () => {
     if (!item) return;
 
     setSaveError(null);
 
     if (!hasConfiguredFields) {
-      setSaveError('This lab test has no configured template fields.');
+      setSaveError('No result fields available to save.');
       return;
     }
 
@@ -132,12 +237,12 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
       draft.data_type === TemplateFieldDataType.NUMBER ? draft.numeric_value : draft.value;
 
     const createPayloads = meaningfulDrafts
-      .filter((draft) => draft.isNew && !!draft.template_field_id)
+      .filter((draft) => draft.isNew && !draft.result_uuid)
       .map((draft) => {
         const rawValue = getDraftInputValue(draft);
 
         return {
-          template_field_id: draft.template_field_id as number,
+          template_field_id: draft.template_field_id,
           value: rawValue || null,
           unit: draft.unit || null,
           numeric_value: deriveNumericValue(rawValue, draft.data_type),
@@ -155,6 +260,7 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
           recorded_by_staff_id: staffId || null,
           metadata: {
             source: 'lab-result-item-result-editor',
+            is_manual_entry: !hasTemplateWithFields,
           },
         };
       });
@@ -184,6 +290,7 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
             recorded_by_staff_id: staffId || null,
             metadata: {
               source: 'lab-result-item-result-editor',
+              is_manual_entry: !hasTemplateWithFields,
             },
           },
         };
@@ -235,7 +342,6 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
           <EditorInfoBar
             colors={colors}
             testName={item.lab_test?.name || 'N/A'}
-            requestUuid={request.request_uuid}
             sampleType={item.sample_type}
             status={item.status_label || item.status}
           />
@@ -251,32 +357,36 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
             </div>
           )}
 
+          {/* Manual Mode Banner */}
+          {!readOnly && isManualMode && (
+            <div
+              className={cn(
+                'mb-4 rounded-xl border px-4 py-3 text-sm',
+                isDark ? 'border-blue-800/50 bg-blue-950/30 text-blue-300' : 'border-blue-200 bg-blue-50 text-blue-700'
+              )}
+            >
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold">Manual Result Entry Mode</p>
+                  <p className={cn('text-xs mt-0.5', isDark ? 'text-blue-300/80' : 'text-blue-600')}>
+                    This lab test doesn't have a configured template or fields. You can still enter results manually below.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {loading ? (
             <div className={cn('flex items-center justify-center gap-2 py-16 text-sm', colors.text.secondary)}>
               <Loader2 className="h-5 w-5 animate-spin" />
               Loading template fields and item results...
             </div>
-          ) : !hasConfiguredFields ? (
-            <div
-              className={cn(
-                'rounded-2xl border border-dashed p-10 text-center',
-                colors.border.primary,
-                colors.bg.subtle
-              )}
-            >
-              <AlertCircle className={cn('mx-auto mb-3 h-10 w-10', colors.text.tertiary)} />
-              <p className={cn('text-base font-semibold', colors.text.primary)}>
-                No result fields configured
-              </p>
-              <p className={cn('mt-2 text-sm', colors.text.secondary)}>
-                This lab test template does not expose result fields yet. Configure template fields before entering results.
-              </p>
-            </div>
           ) : (
             <div className="space-y-4">
               {drafts.map((draft) => {
                 const fieldOptions =
-                  draft.data_type === TemplateFieldDataType.SELECT
+                  draft.data_type === TemplateFieldDataType.SELECT && draft.template_field_id
                     ? getSelectOptions(
                         templateFields.find((field) => field.id === draft.template_field_id) || null
                       )
@@ -294,6 +404,24 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
                   />
                 );
               })}
+
+              {/* Add More Fields Button (only in manual mode) */}
+              {!readOnly && isManualMode && (
+                <button
+                  type="button"
+                  onClick={handleAddManualField}
+                  className={cn(
+                    'cursor-pointer inline-flex items-center gap-2 rounded-lg border border-dashed px-4 py-3 text-sm font-medium transition-all w-full justify-center',
+                    colors.border.primary,
+                    colors.bg.hover,
+                    colors.text.primary,
+                    'hover:shadow-sm'
+                  )}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Another Result Field
+                </button>
+              )}
             </div>
           )}
 
