@@ -313,9 +313,6 @@ export const FocusedModeLayout: React.FC<FocusedModeLayoutProps> = ({
                     <h3 className={cn('text-sm font-semibold uppercase tracking-wide', text.muted)}>
                       Current Patient
                     </h3>
-                    <p className={cn('mt-0.5 text-xs', text.secondary)}>
-                      {getPhaseDisplayName(visitPhase || '')}
-                    </p>
                   </div>
                 </div>
               </div>

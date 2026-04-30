@@ -289,9 +289,7 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({
   theme,
   patient,
   visitInfo,
-  visitPhase,
   calculateWaitTime,
-  getPhaseDisplayName,
   onWorkOnAnotherPatient,
   isNavigating = false
 }) => {
@@ -335,14 +333,11 @@ const PatientInfoCard: React.FC<PatientInfoCardProps> = ({
           }`}>
             <User className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm uppercase tracking-wide truncate">
-              Current Patient
-            </h3>
-            <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              {getPhaseDisplayName(visitPhase || '')}
-            </p>
-          </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-sm uppercase tracking-wide break-words text-center">
+            Current Patient
+          </h3>
+        </div>
         </div>
       </div>
 
