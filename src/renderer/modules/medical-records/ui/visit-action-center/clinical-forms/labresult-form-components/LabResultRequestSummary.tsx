@@ -7,7 +7,6 @@ import {
   FlaskConical,
   Hash,
   ShieldCheck,
-  Stethoscope,
   User,
 } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';

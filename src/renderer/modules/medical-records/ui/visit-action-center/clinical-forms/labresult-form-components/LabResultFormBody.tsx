@@ -13,9 +13,9 @@ import {
 import { LabResultHeader } from './LabResultHeader';
 import { LabResultRequestSummary } from './LabResultRequestSummary';
 import { LabResultItemsTable } from './LabResultItemsTable';
-import { LabResultItemResultEditor } from './LabResultItemResultEditor';
 import { LabResultPreviewModal } from './LabResultPreviewModal';
 import { LabResultEmptyState } from './LabResultEmptyState';
+import LabResultItemResultEditor from './LabResultItemResultEditor';
 
 interface LabResultFormBodyProps {
   theme: 'light' | 'dark';
