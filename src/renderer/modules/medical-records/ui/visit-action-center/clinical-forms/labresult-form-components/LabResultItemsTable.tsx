@@ -122,14 +122,15 @@ const LabResultTableRow: React.FC<RowProps> = ({
 
   return (
     <>
+      {/* Desktop Row */}
       <tr className={cn('border-b align-top transition-colors', colors.border.primary, isDark ? 'hover:bg-gray-800/40' : 'hover:bg-slate-50')}>
-        <td className="px-3 py-4 text-center">
+        <td className="px-3 py-4 text-center whitespace-nowrap">
           <span className={cn('text-sm font-semibold', colors.text.secondary)}>{index + 1}</span>
         </td>
 
-        <td className="px-4 py-4">
-          <div className="flex items-start gap-2.5">
-            <FlaskConical className={cn('mt-0.5 h-4 w-4', isDark ? 'text-cyan-300' : 'text-cyan-600')} />
+        <td className="px-4 py-4 whitespace-nowrap">
+          <div className="flex items-start gap-2.5 min-w-[200px]">
+            <FlaskConical className={cn('mt-0.5 h-4 w-4 flex-shrink-0', isDark ? 'text-cyan-300' : 'text-cyan-600')} />
             <div className="space-y-1">
               <div className={cn('font-semibold', colors.text.primary)}>
                 {item.lab_test?.name || 'Unnamed test'}
@@ -146,8 +147,8 @@ const LabResultTableRow: React.FC<RowProps> = ({
           </div>
         </td>
 
-        <td className="px-4 py-4">
-          <div className="space-y-2">
+        <td className="px-4 py-4 whitespace-nowrap">
+          <div className="space-y-2 min-w-[130px]">
             <StatusIndicator item={item} isDark={isDark} />
             <div className={cn('text-xs', colors.text.secondary)}>
               Sample: {item.sample_type || 'N/A'}
@@ -156,22 +157,24 @@ const LabResultTableRow: React.FC<RowProps> = ({
         </td>
 
         <td className="px-4 py-4">
-          {loading ? (
-            <span className={cn('text-xs', colors.text.secondary)}>Loading results...</span>
-          ) : (
-            <div className="space-y-2">
-              <span className={cn(badgeBase, getResultFlagClasses(primaryFlag, isDark))}>
-                {formatLabel(primaryFlag)}
-              </span>
-              <p className={cn('max-w-[300px] text-xs leading-5', colors.text.primary)}>
-                {resultSummary}
-              </p>
-            </div>
-          )}
+          <div className="min-w-[200px] max-w-[300px]">
+            {loading ? (
+              <span className={cn('text-xs', colors.text.secondary)}>Loading results...</span>
+            ) : (
+              <div className="space-y-2">
+                <span className={cn(badgeBase, getResultFlagClasses(primaryFlag, isDark))}>
+                  {formatLabel(primaryFlag)}
+                </span>
+                <p className={cn('text-xs leading-5 break-words', colors.text.primary)}>
+                  {resultSummary}
+                </p>
+              </div>
+            )}
+          </div>
         </td>
 
-        <td className="px-4 py-4">
-          <div className="space-y-1.5 text-xs">
+        <td className="px-4 py-4 whitespace-nowrap">
+          <div className="space-y-1.5 text-xs min-w-[140px]">
             <div className={cn(colors.text.primary)}>
               Results: <strong>{results.length}</strong>
             </div>
@@ -184,18 +187,18 @@ const LabResultTableRow: React.FC<RowProps> = ({
           </div>
         </td>
 
-        <td className="px-4 py-4">
-          <div className="flex flex-col items-start gap-2">
+        <td className="px-4 py-4 whitespace-nowrap">
+          <div className="flex flex-col items-start gap-2 min-w-[180px]">
             <button
               type="button"
               onClick={() => onEditItemResults(item)}
-              disabled={item.status === LabRequestItemStatus.CANCELLED}
+              disabled={item.status === LabRequestItemStatus.CANCELLED || requestLocked}
               className={cn(
-                'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all',
+                'cursor-pointer inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all',
                 colors.border.primary,
                 colors.bg.hover,
                 colors.text.primary,
-                item.status === LabRequestItemStatus.CANCELLED && 'cursor-not-allowed opacity-50'
+                (item.status === LabRequestItemStatus.CANCELLED || requestLocked) && 'cursor-not-allowed opacity-50'
               )}
             >
               <Edit3 className="h-3.5 w-3.5" />
@@ -216,91 +219,111 @@ const LabResultTableRow: React.FC<RowProps> = ({
         </td>
       </tr>
 
-      <tr className={cn('border-b xl:hidden', colors.border.primary)}>
-        <td colSpan={6} className="px-4 py-3">
-          <div className={cn('rounded-xl border p-4', colors.border.primary, colors.bg.subtle)}>
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <div>
-                <div className={cn('font-semibold', colors.text.primary)}>
+      {/* Mobile Card View */}
+      <tr className={cn('block xl:hidden border-b', colors.border.primary)}>
+        <td colSpan={6} className="block p-0">
+          <div className={cn('rounded-xl border m-4 p-4', colors.border.primary, colors.bg.subtle)}>
+            <div className="mb-3 flex items-start justify-between gap-3 flex-wrap">
+              <div className="flex-1 min-w-0">
+                <div className={cn('font-semibold break-words', colors.text.primary)}>
                   {item.lab_test?.name || 'Unnamed test'}
                 </div>
-                <div className={cn('text-xs', colors.text.secondary)}>
+                <div className={cn('text-xs break-words', colors.text.secondary)}>
                   {item.lab_test?.code || 'No code'} • {item.lab_test?.category || 'Uncategorized'}
                 </div>
               </div>
               <StatusIndicator item={item} isDark={isDark} />
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div>
-                <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
-                  Result Summary
-                </p>
-                <p className={cn('mt-1 text-sm', colors.text.primary)}>
-                  {loading ? 'Loading results...' : resultSummary}
-                </p>
-              </div>
+            <div className="space-y-3">
+              {/* Result Summary */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
+                    Result Summary
+                  </p>
+                  <p className={cn('mt-1 text-sm break-words', colors.text.primary)}>
+                    {loading ? 'Loading results...' : resultSummary || 'No results yet'}
+                  </p>
+                </div>
 
-              <div>
-                <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
-                  Primary Flag
-                </p>
-                <div className="mt-1">
-                  <span className={cn(badgeBase, getResultFlagClasses(primaryFlag, isDark))}>
-                    {formatLabel(primaryFlag)}
-                  </span>
+                <div>
+                  <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
+                    Primary Flag
+                  </p>
+                  <div className="mt-1">
+                    <span className={cn(badgeBase, getResultFlagClasses(primaryFlag, isDark))}>
+                      {formatLabel(primaryFlag)}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
+                    Sample Type
+                  </p>
+                  <p className={cn('mt-1 text-sm break-words', colors.text.primary)}>
+                    {item.sample_type || 'N/A'}
+                  </p>
+                </div>
+
+                <div>
+                  <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
+                    Results Count
+                  </p>
+                  <p className={cn('mt-1 text-sm', colors.text.primary)}>
+                    <strong>{results.length}</strong> total results
+                  </p>
+                </div>
+
+                <div>
+                  <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
+                    Completed At
+                  </p>
+                  <p className={cn('mt-1 text-sm break-words', colors.text.primary)}>
+                    {formatDisplayDateTime(item.completed_at) || 'Not completed'}
+                  </p>
+                </div>
+
+                <div>
+                  <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
+                    Verified At
+                  </p>
+                  <p className={cn('mt-1 text-sm break-words', colors.text.primary)}>
+                    {formatDisplayDateTime(item.verified_at) || 'Not verified'}
+                  </p>
                 </div>
               </div>
 
-              <div>
-                <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
-                  Sample Type
-                </p>
-                <p className={cn('mt-1 text-sm', colors.text.primary)}>
-                  {item.sample_type || 'N/A'}
-                </p>
+              {/* Actions */}
+              <div className="flex flex-col gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => onEditItemResults(item)}
+                  disabled={item.status === LabRequestItemStatus.CANCELLED || requestLocked}
+                  className={cn(
+                    'cursor-pointer inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all',
+                    colors.border.primary,
+                    colors.bg.hover,
+                    colors.text.primary,
+                    (item.status === LabRequestItemStatus.CANCELLED || requestLocked) && 'cursor-not-allowed opacity-50'
+                  )}
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  Enter / Edit Results
+                </button>
+
+                <LabResultItemStatusActions
+                  item={item}
+                  results={results}
+                  staffId={staffId}
+                  requestLocked={requestLocked}
+                  onActionComplete={() => {
+                    void resultsQuery.refetch();
+                    onActionComplete();
+                  }}
+                />
               </div>
-
-              <div>
-                <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
-                  Timeline
-                </p>
-                <p className={cn('mt-1 text-sm', colors.text.primary)}>
-                  Completed: {formatDisplayDateTime(item.completed_at)}
-                </p>
-                <p className={cn('text-sm', colors.text.secondary)}>
-                  Verified: {formatDisplayDateTime(item.verified_at)}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => onEditItemResults(item)}
-                disabled={item.status === LabRequestItemStatus.CANCELLED}
-                className={cn(
-                  'inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all',
-                  colors.border.primary,
-                  colors.bg.hover,
-                  colors.text.primary,
-                  item.status === LabRequestItemStatus.CANCELLED && 'cursor-not-allowed opacity-50'
-                )}
-              >
-                <Edit3 className="h-3.5 w-3.5" />
-                Enter / Edit Results
-              </button>
-
-              <LabResultItemStatusActions
-                item={item}
-                results={results}
-                staffId={staffId}
-                requestLocked={requestLocked}
-                onActionComplete={() => {
-                  void resultsQuery.refetch();
-                  onActionComplete();
-                }}
-              />
             </div>
           </div>
         </td>
@@ -334,19 +357,20 @@ export const LabResultItemsTable: React.FC<LabResultItemsTableProps> = ({
   ).length;
 
   return (
-    <section className={cn('rounded-2xl border', colors.border.primary, colors.bg.card)}>
-      <div className={cn('flex flex-wrap items-start justify-between gap-4 border-b p-5', colors.border.primary)}>
+    <section className={cn('rounded-2xl border overflow-hidden', colors.border.primary, colors.bg.card)}>
+      {/* Header */}
+      <div className={cn('flex flex-wrap items-start justify-between gap-4 border-b p-4 sm:p-5', colors.border.primary)}>
         <div className="space-y-2">
           <div>
-            <h2 className={cn('text-base font-semibold', colors.text.primary)}>
+            <h2 className={cn('text-base sm:text-lg font-semibold', colors.text.primary)}>
               Requested Lab Tests and Results
             </h2>
-            <p className={cn('mt-1 text-sm', colors.text.secondary)}>
+            <p className={cn('mt-1 text-xs sm:text-sm', colors.text.secondary)}>
               Enter, review, verify, and monitor status progression for each requested lab test.
             </p>
           </div>
 
-          <div className={cn('flex flex-wrap gap-4 text-sm', colors.text.secondary)}>
+          <div className={cn('flex flex-wrap gap-3 sm:gap-4 text-xs sm:text-sm', colors.text.secondary)}>
             <div className="flex items-center gap-1.5">
               <div className="h-2.5 w-2.5 rounded-full bg-gray-500" />
               <span>{pendingCount} Pending</span>
@@ -374,15 +398,18 @@ export const LabResultItemsTable: React.FC<LabResultItemsTableProps> = ({
               : 'border-emerald-200 bg-emerald-50 text-emerald-700'
           )}
         >
-          {requestLocked ? <AlertCircle className="h-4 w-4" /> : <FileSearch className="h-4 w-4" />}
-          {requestLocked
-            ? 'Request-level editing restrictions are active'
-            : 'Result entry and status actions are available'}
+          {requestLocked ? <AlertCircle className="h-4 w-4 flex-shrink-0" /> : <FileSearch className="h-4 w-4 flex-shrink-0" />}
+          <span className="break-words">
+            {requestLocked
+              ? 'Request-level editing restrictions are active'
+              : 'Result entry and status actions are available'}
+          </span>
         </div>
       </div>
 
-      <div className="hidden overflow-x-auto xl:block">
-        <table className="w-full min-w-[1200px] border-collapse">
+      {/* Desktop Table with Horizontal Scroll */}
+      <div className="hidden xl:block overflow-x-auto">
+        <table className="w-full border-collapse min-w-[1000px]">
           <thead>
             <tr className={cn('border-b', colors.border.primary)}>
               <th className={cn('w-12 px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>#</th>
@@ -413,10 +440,16 @@ export const LabResultItemsTable: React.FC<LabResultItemsTableProps> = ({
         </table>
       </div>
 
-      <div className="grid gap-4 p-4 xl:hidden">
-        {items.map((item, index) => (
-          <div key={item.item_uuid}>
+      {/* Mobile Cards */}
+      <div className="xl:hidden">
+        {items.length === 0 ? (
+          <div className={cn('p-8 text-center', colors.text.secondary)}>
+            No lab tests requested yet.
+          </div>
+        ) : (
+          items.map((item, index) => (
             <LabResultTableRow
+              key={item.item_uuid}
               item={item}
               index={index}
               isDark={isDark}
@@ -428,8 +461,8 @@ export const LabResultItemsTable: React.FC<LabResultItemsTableProps> = ({
               onResultsHydrated={onResultsHydrated}
               onActionComplete={onActionComplete}
             />
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </section>
   );
