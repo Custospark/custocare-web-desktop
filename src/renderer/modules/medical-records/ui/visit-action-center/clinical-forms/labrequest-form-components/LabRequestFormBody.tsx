@@ -11,7 +11,6 @@ import { useToast } from '../../../../../../app/store/contexts/toast/useToast';
 import type {
   CreateLabRequestWithItemsRequest,
   LabRequestPriority,
-  LabTemplate,
 } from '../../../../api/lab/LabTypes';
 import { labKeys, useAddItemsToRequest, useCancelItem, useCancelLabRequest, useCreateLabRequestItem, useCreateLabRequestWithItems, useUpdateLabRequest, useUpdateLabRequestItem } from '../../../../api/lab/LabQueries';
 
@@ -296,18 +295,18 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
     });
   }, [refreshReferenceDataSafely, withNavigation]);
 
-  const handleOpenTemplateFieldManager = useCallback(
-    async (template?: LabTemplate | null) => {
-      await withNavigation('Loading template fields...', async () => {
-        await refreshReferenceDataSafely('Failed to refresh reference data before opening field manager:');
-        if (template) {
-          setSelectedTemplateUuid(template.template_uuid);
-        }
-        setShowTemplateFieldManager(true);
-      });
-    },
-    [refreshReferenceDataSafely, withNavigation]
-  );
+  // const handleOpenTemplateFieldManager = useCallback(
+  //   async (template?: LabTemplate | null) => {
+  //     await withNavigation('Loading template fields...', async () => {
+  //       await refreshReferenceDataSafely('Failed to refresh reference data before opening field manager:');
+  //       if (template) {
+  //         setSelectedTemplateUuid(template.template_uuid);
+  //       }
+  //       setShowTemplateFieldManager(true);
+  //     });
+  //   },
+  //   [refreshReferenceDataSafely, withNavigation]
+  // );
 
   const handleOpenLabItemManager = useCallback(async () => {
     await withNavigation('Loading lab tests manager...', async () => {

@@ -700,17 +700,15 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
 
             {/* ── Tab Bar ──────────────────────────────────────────────── */}
             <div className={cn('flex shrink-0 items-center gap-1 border-b px-5', colors.border.primary)}>
-              {(
-                [
-                  { id: 'template' as const, label: 'Templates', icon: <FileText className="h-3.5 w-3.5" /> },
-                  {
-                    id: 'fields' as const,
-                    label: selectedTemplate ? `${selectedTemplate.name} — Fields` : 'Fields',
-                    icon: <Rows3 className="h-3.5 w-3.5" />,
-                    disabled: !selectedTemplate,
-                  },
-                ] as const
-              ).map(({ id, label, icon, disabled }) => (
+              {[
+                { id: 'template' as const, label: 'Templates', icon: <FileText className="h-3.5 w-3.5" /> },
+                {
+                  id: 'fields' as const,
+                  label: selectedTemplate ? `${selectedTemplate.name} — Fields` : 'Fields',
+                  icon: <Rows3 className="h-3.5 w-3.5" />,
+                  disabled: !selectedTemplate,
+                },
+              ].map(({ id, label, icon, disabled }) => (
                 <button
                   key={id}
                   onClick={() => !disabled && setActivePanel(id)}
@@ -720,8 +718,8 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
                     activePanel === id
                       ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                       : disabled
-                      ? 'cursor-not-allowed border-transparent opacity-40 ' + colors.text.tertiary
-                      : cn('border-transparent', colors.text.secondary, 'hover:border-gray-300 hover:' + colors.text.primary)
+                      ? cn('cursor-not-allowed border-transparent opacity-40', colors.text.tertiary)
+                      : cn('border-transparent', colors.text.secondary, 'hover:border-gray-300', colors.text.primary)
                   )}
                 >
                   {icon}
@@ -1004,7 +1002,7 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
                       <div className="space-y-5">
                         {/* Name */}
                         <div>
-                          <Label required colors={colors} className={colors.text.secondary}>
+                          <Label required  className={colors.text.secondary}>
                             Template Name
                           </Label>
                           <input
@@ -1018,7 +1016,7 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
 
                         {/* Description */}
                         <div>
-                          <Label colors={colors} className={colors.text.secondary}>
+                          <Label  className={colors.text.secondary}>
                             Description
                           </Label>
                           <textarea
@@ -1032,7 +1030,7 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
 
                         {/* Structure type */}
                         <div>
-                          <Label required colors={colors} className={colors.text.secondary}>
+                          <Label required className={colors.text.secondary}>
                             Test Structure Type
                           </Label>
                           <div className="grid gap-2 sm:grid-cols-3">
@@ -1354,7 +1352,7 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
                         {/* Name + Code */}
                         <div className="grid gap-4 sm:grid-cols-2">
                           <div>
-                            <Label required colors={colors} className={colors.text.secondary}>
+                            <Label required className={colors.text.secondary}>
                               Field Name
                             </Label>
                             <input
@@ -1366,7 +1364,7 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
                             />
                           </div>
                           <div>
-                            <Label colors={colors} className={colors.text.secondary}>
+                            <Label className={colors.text.secondary}>
                               Short Code
                             </Label>
                             <div className="relative">
@@ -1385,7 +1383,7 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
                         {/* Data type + Unit */}
                         <div className="grid gap-4 sm:grid-cols-2">
                           <div>
-                            <Label colors={colors} className={colors.text.secondary}>
+                            <Label className={colors.text.secondary}>
                               Data Type
                             </Label>
                             <select
@@ -1401,7 +1399,7 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
                             </select>
                           </div>
                           <div>
-                            <Label colors={colors} className={colors.text.secondary}>
+                            <Label className={colors.text.secondary}>
                               Unit of Measure
                             </Label>
                             <input
@@ -1416,7 +1414,7 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
 
                         {/* Reference range */}
                         <div>
-                          <Label colors={colors} className={colors.text.secondary}>
+                          <Label className={colors.text.secondary}>
                             Normal Reference Range
                           </Label>
                           <div className="flex items-center gap-3">
@@ -1448,7 +1446,7 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
                         {/* Display order */}
                         <div className="grid gap-4 sm:grid-cols-2">
                           <div>
-                            <Label colors={colors} className={colors.text.secondary}>
+                            <Label className={colors.text.secondary}>
                               Display Order
                             </Label>
                             <input
@@ -1463,7 +1461,7 @@ export const LabTemplateManagerModal: React.FC<LabTemplateManagerModalProps> = (
 
                         {/* Clinical notes */}
                         <div>
-                          <Label colors={colors} className={colors.text.secondary}>
+                          <Label className={colors.text.secondary}>
                             Clinical Notes
                           </Label>
                           <textarea

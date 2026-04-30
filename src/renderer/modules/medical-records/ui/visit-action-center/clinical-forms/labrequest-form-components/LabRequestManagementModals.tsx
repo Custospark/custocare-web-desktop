@@ -1,3 +1,4 @@
+// LabRequestManagementModals.tsx
 import React, { useEffect, useMemo } from 'react';
 
 import type { LabTemplate, LabTest } from '../../../../api/lab/LabTypes';
@@ -100,25 +101,15 @@ export const LabRequestManagementModals: React.FC<
     }
   }, [labItems, onSelectLabItemUuid, openLabItemManager, selectedLabItemUuid]);
 
-    const selectedTemplateForManagement = useMemo(() => {
-      const safeTemplates = Array.isArray(templates) ? templates : [];
+  const selectedTemplateForManagement = useMemo(() => {
+    const safeTemplates = Array.isArray(templates) ? templates : [];
+    return (
+      safeTemplates.find(
+        (template) => template.template_uuid === selectedTemplateUuid
+      ) || null
+    );
+  }, [templates, selectedTemplateUuid]);
 
-      return (
-        safeTemplates.find(
-          (template) => template.template_uuid === selectedTemplateUuid
-        ) || null
-      );
-    }, [templates, selectedTemplateUuid]);
-
-    const selectedLabItemForManagement = useMemo(() => {
-      const safeLabItems = Array.isArray(labItems) ? labItems : [];
-
-      return (
-        safeLabItems.find(
-          (item) => item.test_uuid === selectedLabItemUuid
-        ) || null
-      );
-    }, [labItems, selectedLabItemUuid]);
 
   return (
     <>
@@ -142,15 +133,10 @@ export const LabRequestManagementModals: React.FC<
         open={openTemplateManager}
         isDark={isDark}
         colors={colors}
-        selectedTemplate={selectedTemplateForManagement}
         templates={templates}
         onClose={onCloseTemplateManager}
-        onSelectTemplate={(template) =>
-          onSelectTemplateUuid(template?.template_uuid ?? null)
-        }
-        onManageFields={(template) => {
-          onSelectTemplateUuid(template.template_uuid);
-          onOpenTemplateFieldManager(template);
+        onTemplateChange={() => {
+          // Refresh templates after changes
         }}
       />
 
@@ -161,21 +147,22 @@ export const LabRequestManagementModals: React.FC<
         selectedTemplate={selectedTemplateForManagement}
         templates={templates}
         onClose={onCloseTemplateFieldManager}
-        onSelectTemplate={(template) =>
-          onSelectTemplateUuid(template?.template_uuid ?? null)
-        }
+        onTemplateChange={() => {
+          // Refresh fields after changes
+        }}
       />
 
       <LabItemManagerModal
         open={openLabItemManager}
         isDark={isDark}
         colors={colors}
-        selectedLabItem={selectedLabItemForManagement}
         templates={templates}
         labItems={labItems}
         popularLabItems={popularLabItems}
         onClose={onCloseLabItemManager}
-        onSelectLabItem={(item) => onSelectLabItemUuid(item?.test_uuid ?? null)}
+        onLabItemsChange={() => {
+          // Refresh lab items after changes
+        }}
       />
     </>
   );

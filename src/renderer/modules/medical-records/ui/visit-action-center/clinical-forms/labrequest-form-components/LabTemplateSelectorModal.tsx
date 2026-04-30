@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import type { LabTemplate, LabTest } from '../../../../api/lab/LabTypes';
+import { LabRequestItemStatus, LabResultFlag } from '../../../../api/lab/LabTypes';
 import type {
   ColorTokens,
   LabRequestDraftItem,
@@ -52,8 +53,8 @@ const buildTemplateItems = (template: LabTemplate, labItems: LabTest[]): LabRequ
     is_from_inventory: false,
     inventory_display_unit: '',
     inventory_available_quantity: null,
-    status: 'pending',
-    result_flag: 'pending',
+    status: LabRequestItemStatus.PENDING,
+    result_flag: LabResultFlag.PENDING,
     lab_test: item,
   }));
 };
@@ -93,11 +94,12 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
 
   // Handle fields button click - open template field manager for the selected template
   const handleFieldsClick = (template: LabTemplate) => {
-    // Close the current modal
     onClose();
-    // Open the template field manager for this specific template
     onManageTemplateFields(template);
   };
+
+  // Safely get fields array
+  const getFields = (template: LabTemplate) => template.fields ?? [];
 
   return (
     <AnimatePresence>
@@ -189,7 +191,8 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
                 <div className="max-h-[55vh] space-y-3 overflow-y-auto pr-1">
                   {filteredTemplates.map((template) => {
                     const templateItems = buildTemplateItems(template, labItems);
-                    const hasFields = template.fields && template.fields.length > 0;
+                    const templateFields = getFields(template);
+                    const hasFields = templateFields.length > 0;
 
                     return (
                       <div
@@ -214,7 +217,7 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
                               </span>
                               {hasFields && (
                                 <span className={cn('rounded-full px-2 py-0.5 text-xs', isDark ? 'bg-emerald-900/30 text-emerald-300' : 'bg-emerald-100 text-emerald-700')}>
-                                  {template.fields.length} Field{template.fields.length === 1 ? '' : 's'}
+                                  {templateFields.length} Field{templateFields.length === 1 ? '' : 's'}
                                 </span>
                               )}
                             </div>
@@ -265,7 +268,7 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
                               Template Fields
                             </p>
                             <div className="flex flex-wrap gap-2">
-                              {template.fields.slice(0, 5).map((field) => (
+                              {templateFields.slice(0, 5).map((field) => (
                                 <span
                                   key={field.id}
                                   className={cn(
@@ -276,14 +279,14 @@ export const LabTemplateSelectorModal: React.FC<LabTemplateSelectorModalProps> =
                                   {field.name} {field.is_required && <span className="text-red-500">*</span>}
                                 </span>
                               ))}
-                              {template.fields.length > 5 && (
+                              {templateFields.length > 5 && (
                                 <span
                                   className={cn(
                                     'rounded-full px-2 py-0.5 text-xs cursor-default',
                                     isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'
                                   )}
                                 >
-                                  +{template.fields.length - 5} more
+                                  +{templateFields.length - 5} more
                                 </span>
                               )}
                             </div>

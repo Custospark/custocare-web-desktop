@@ -105,7 +105,7 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
     onChange('source', 'lab_test');
     onChange('code', test.code || '');
     onChange('category', test.category || '');
-    onChange('template_id', test.template_id);
+    onChange('template_id', test.template_id ?? null);
     onChange('template_name', test.template?.name || '');
     onChange('turnaround_time_hours', test.turnaround_time_hours ?? null);
     onChange('requires_fasting', test.requires_fasting);
