@@ -17,6 +17,7 @@ import { ConfirmProvider } from './shared/components/Feedback/ConfirmDialog/Conf
 import { ToastProvider } from './app/store/contexts/toast/ToastContext';
 import { NavigationBridge } from './app/routes/navigation/NavigationBridge';
 import { UpdateNotification } from './shared/components/Feedback/UpdateNotification';
+import { ScrollToTop } from './shared/components/ScrollToTop/ScrollToTop'; // ← Import ScrollToTop
 
 import './App.css';
 import { BillingTray } from './modules/medical-records/ui/visit-action-center/billing-space';
@@ -44,6 +45,7 @@ function App() {
           <Provider store={store}>
             <QueryClientProvider client={queryClient}>
               <Router>
+                <ScrollToTop /> {/* ← Add ScrollToTop here - MUST be inside Router */}
                 <NavigationBridge /> {/* ← registers imperativeNavigate.tS, must be inside <Router> */}
                 <AppProvider>
                   {/* One-time initialization layer */}
