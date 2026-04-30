@@ -1,21 +1,42 @@
-// LabResultFocus.tsx
+// lab-results/LabResultFocus.tsx
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LabResultForm, type LabResultFormData } from '../LabResultForm';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { MEDICAL_RECORDS_ROUTES } from '../../../../../../app/routes/routeConstants';
-
+import LabResultForm from '../LabResultForm';
 interface LabResultFocusProps {
   theme?: 'light' | 'dark';
+  requestUuid?: string | null;
 }
 
-export const LabResultFocus: React.FC<LabResultFocusProps> = ({ theme = 'light' }) => {
-  const navigate = useNavigate();
+interface LabResultLocationState {
+  requestUuid?: string;
+  labRequestUuid?: string;
+  uuid?: string;
+}
 
-  const handleSave = (data: LabResultFormData) => {
-    console.log('Lab Result saved:', data);
-    // TODO: Save to backend
-    navigate(MEDICAL_RECORDS_ROUTES.CLINICAL_CARE);
-  };
+export const LabResultFocus: React.FC<LabResultFocusProps> = ({
+  theme = 'light',
+  requestUuid,
+}) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams<{
+    requestUuid?: string;
+    uuid?: string;
+    labRequestUuid?: string;
+  }>();
+
+  const locationState = (location.state || {}) as LabResultLocationState;
+
+  const resolvedRequestUuid =
+    requestUuid ||
+    params.requestUuid ||
+    params.labRequestUuid ||
+    params.uuid ||
+    locationState.requestUuid ||
+    locationState.labRequestUuid ||
+    locationState.uuid ||
+    null;
 
   const handleCancel = () => {
     navigate(MEDICAL_RECORDS_ROUTES.CLINICAL_CARE);
@@ -24,7 +45,7 @@ export const LabResultFocus: React.FC<LabResultFocusProps> = ({ theme = 'light' 
   return (
     <LabResultForm
       theme={theme}
-      onSave={handleSave}
+      requestUuid={resolvedRequestUuid}
       onCancel={handleCancel}
     />
   );

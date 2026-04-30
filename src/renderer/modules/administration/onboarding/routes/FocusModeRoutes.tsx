@@ -95,7 +95,7 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
     key="lab-result-focus"
     path={FOCUS_MODE_ROUTES.LAB_RESULT_FOCUS}
     element={
-      <FocusedModeLayout title="Lab Result">
+      <FocusedModeLayout title="Laboratory Test Results">
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <LabResultFocus theme={theme} />
         </Suspense>
