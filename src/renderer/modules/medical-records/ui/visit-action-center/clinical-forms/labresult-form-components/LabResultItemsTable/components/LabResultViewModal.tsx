@@ -1,15 +1,15 @@
 import React from 'react';
 import { X, Calendar, User, FileText, AlertCircle, CheckCircle2, Clock, FlaskConical, CheckCheck } from 'lucide-react';
-import { cn } from '../../../../../../shared/utils/classNameUtils';
-import type { LabRequestItem, LabResult } from '../../../../api/lab/LabTypes';
-import { LabRequestItemStatus } from '../../../../api/lab/LabTypes';
-import type { ColorTokens } from './labResultForm.types';
+import { cn } from '../../../../../../../../shared/utils/classNameUtils';
+import type { LabRequestItem, LabResult } from '../../../../../../api/lab/LabTypes';
+import { LabRequestItemStatus } from '../../../../../../api/lab/LabTypes';
+import type { ColorTokens } from './../../labResultForm.types';
 import {
   formatDisplayDateTime,
   formatLabel,
   getResultFlagClasses,
   formatReferenceRange,
-} from './labResultForm.utils';
+}  from '../../labResultForm.utils';
 
 interface LabResultViewModalProps {
   isOpen: boolean;
