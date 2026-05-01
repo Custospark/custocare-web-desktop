@@ -6,7 +6,7 @@ import type { ColorTokens } from '../../labResultForm.types';
 interface LabResultViewButtonProps {
   onClick: () => void;
   hasResults: boolean;
-  isDark: boolean;
+  isDark?: boolean;
   colors: ColorTokens;
   disabled?: boolean;
 }
@@ -14,7 +14,6 @@ interface LabResultViewButtonProps {
 export const LabResultViewButton: React.FC<LabResultViewButtonProps> = ({
   onClick,
   hasResults,
-  isDark,
   colors,
   disabled = false,
 }) => {

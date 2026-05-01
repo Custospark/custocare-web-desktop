@@ -93,7 +93,6 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
   open,
   isDark,
   colors,
-  request,
   item,
   staffId,
   requestLocked,

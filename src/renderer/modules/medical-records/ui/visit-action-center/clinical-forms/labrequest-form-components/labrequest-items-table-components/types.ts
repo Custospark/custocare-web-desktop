@@ -2,7 +2,7 @@ import type React from 'react';
 import type {
   LabRequestItemStatus as LabRequestItemStatusType,
   LabRequestItemWithTest,
-  LabRequestWithItems,
+  LabRequest,
   LabResult,
 } from '../../../../../api/lab/LabTypes';
 import type { ColorTokens, LabRequestDraftItem } from '../labRequestForm.types';
@@ -10,7 +10,7 @@ import type { ColorTokens, LabRequestDraftItem } from '../labRequestForm.types';
 export interface LabRequestItemsTableProps {
   isDark: boolean;
   colors: ColorTokens;
-  request: LabRequestWithItems | null;
+  request: LabRequest | null;
   items: LabRequestDraftItem[];
   onAddItem: () => void;
   onEditItem: (item: LabRequestDraftItem) => void;

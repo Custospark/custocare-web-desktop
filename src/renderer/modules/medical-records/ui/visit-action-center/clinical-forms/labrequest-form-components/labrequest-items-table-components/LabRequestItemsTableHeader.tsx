@@ -9,7 +9,7 @@ import {
   User,
 } from 'lucide-react';
 import { cn } from '../../../../../../../shared/utils/classNameUtils';
-import type { LabRequestWithItems } from '../../../../../api/lab/LabTypes';
+import type { LabRequest } from '../../../../../api/lab/LabTypes';
 import type { ColorTokens } from '../labRequestForm.types';
 import { formatDate } from '../labRequestForm.types';
 import type { LabRequestItemsTableStats } from './types';
@@ -17,7 +17,7 @@ import type { LabRequestItemsTableStats } from './types';
 interface LabRequestItemsTableHeaderProps {
   isDark: boolean;
   colors: ColorTokens;
-  request: LabRequestWithItems | null;
+  request: LabRequest | null;
   requestedByName: string | null;
   stats: LabRequestItemsTableStats;
   isReadOnly: boolean;

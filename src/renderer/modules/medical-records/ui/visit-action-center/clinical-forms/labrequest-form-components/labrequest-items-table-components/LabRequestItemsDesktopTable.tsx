@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../../../../../shared/utils/classNameUtils';
 import { LabRequestItemStatus } from '../../../../../api/lab/LabTypes';
-import type { LabRequestItemWithTest, LabRequestWithItems } from '../../../../../api/lab/LabTypes';
+import type { LabRequestItemWithTest, LabRequest } from '../../../../../api/lab/LabTypes';
 import type { ColorTokens } from '../labRequestForm.types';
 import { LabRequestItemDetailsContent } from './LabRequestItemDetailsContent';
 import type { LabRequestItemsTableRow } from './types';
@@ -29,7 +29,7 @@ interface LabRequestItemsDesktopTableProps {
   colors: ColorTokens;
   rows: LabRequestItemsTableRow[];
   canModify: boolean;
-  request: LabRequestWithItems | null;
+  request: LabRequest | null;
   onEditItem: (item: LabRequestItemsTableRow['draftItem']) => void;
   onDeleteItem: (item: LabRequestItemsTableRow['draftItem']) => void;
   onViewResults: (persistedItem: LabRequestItemWithTest) => void;

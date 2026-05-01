@@ -37,13 +37,17 @@ export const LabRequestItemsTable: React.FC<LabRequestItemsTableProps> = ({
   const isReadOnly = !canModify;
   const requestedByName = request?.requested_by ? formatStaffName(request.requested_by) : null;
 
+  // Only include items that have lab_test (required for LabRequestItemWithTest)
   const persistedItemsById = useMemo(() => {
     const map = new Map<number, LabRequestItemWithTest>();
-
+    
     for (const item of request?.items ?? []) {
-      map.set(item.id, item);
+      // Only add items that have lab_test defined
+      if (item.lab_test) {
+        map.set(item.id, item as LabRequestItemWithTest);
+      }
     }
-
+    
     return map;
   }, [request]);
 
