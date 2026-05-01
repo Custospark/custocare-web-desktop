@@ -12,7 +12,7 @@ import {
 } from './labResultForm.utils';
 import { LabResultHeader } from './LabResultHeader';
 import { LabResultRequestSummary } from './LabResultRequestSummary';
-import { LabResultItemsTable } from './LabResultItemsTable';
+import { LabResultItemsTable } from './LabResultItemsTable/index';
 import { LabResultPreviewModal } from './LabResultPreviewModal';
 import { LabResultEmptyState } from './LabResultEmptyState';
 import LabResultItemResultEditor from './LabResultItemResultEditor';
