@@ -340,7 +340,6 @@ export interface LabResult {
     field: string;
   };
 }
-
 /**
  * Lab Request Item Entity (FULL version with nested lab_test)
  * Used when items are loaded with their lab_test relationship
@@ -353,24 +352,45 @@ export interface LabRequestItem {
   status: LabRequestItemStatus;
   sample_type: string | null;
   sample_identifier: string | null;
+  
+  // Sample Collection tracking
   collected_at: string | null;
   collected_by_staff_id: number | null;
+  collected_by?: LabStaffInfo | null;
+  
+  // Processing tracking
   started_at: string | null;
+  started_by_staff_id: number | null;
+  started_by?: LabStaffInfo | null;
+  
+  // Completion tracking
   completed_at: string | null;
+  completed_by_staff_id: number | null;
+  completed_by?: LabStaffInfo | null;
+  
+  // Verification tracking
   verified_by_staff_id: number | null;
   verified_at: string | null;
+  verified_by?: LabStaffInfo | null;
+  
+  // Cancellation tracking
+  cancelled_at: string | null;
+  cancelled_by_staff_id: number | null;
+  cancelled_by?: LabStaffInfo | null;
+
+  //Creation tracking
+  created_by?: LabStaffInfo | null;
+
+  
   result_flag: LabResultFlag;
   notes: string | null;
   cancellation_reason: string | null;
-  cancelled_at: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
   
   lab_test?: LabTest;  // This is the key relationship for accessing test details
-  collected_by?: LabStaffInfo | null;
-  verified_by?: LabStaffInfo | null;
   results?: LabResult[];
   primary_result?: LabResult | null;
   

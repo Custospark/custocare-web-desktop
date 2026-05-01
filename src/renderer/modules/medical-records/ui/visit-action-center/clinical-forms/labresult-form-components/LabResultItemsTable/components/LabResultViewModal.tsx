@@ -9,7 +9,7 @@ import {
   formatLabel,
   getResultFlagClasses,
   formatReferenceRange,
-}  from '../../labResultForm.utils';
+} from '../../labResultForm.utils';
 
 interface LabResultViewModalProps {
   isOpen: boolean;
@@ -26,6 +26,17 @@ interface ResultDetailCardProps {
   isDark: boolean;
   colors: ColorTokens;
 }
+
+// Helper function to format staff name with Dr. prefix
+const formatStaffName = (name: string | null | undefined, professionalTitle?: string | null): string => {
+  if (!name) return '—';
+  
+  const title = professionalTitle || '';
+  if (title.toLowerCase().includes('dr') || title.toLowerCase().includes('physician')) {
+    return name;
+  }
+  return `Dr. ${name}`;
+};
 
 const ResultDetailCard: React.FC<ResultDetailCardProps> = ({
   result,
@@ -160,7 +171,7 @@ const ResultDetailCard: React.FC<ResultDetailCardProps> = ({
           <div className="flex items-center gap-1.5">
             <User className={cn('h-3.5 w-3.5', colors.text.tertiary)} />
             <span className={cn('text-xs', colors.text.secondary)}>
-              By: {result.recorded_by.name}
+              By: {formatStaffName(result.recorded_by.name, result.recorded_by.professional_title)}
             </span>
           </div>
         )}
@@ -178,7 +189,7 @@ const ResultDetailCard: React.FC<ResultDetailCardProps> = ({
               <div className="flex items-center gap-1.5">
                 <User className={cn('h-3.5 w-3.5', colors.text.tertiary)} />
                 <span className={cn('text-xs', colors.text.secondary)}>
-                  By: {result.verified_by.name}
+                  By: {formatStaffName(result.verified_by.name, result.verified_by.professional_title)}
                 </span>
               </div>
             )}
@@ -198,17 +209,19 @@ const ResultDetailCard: React.FC<ResultDetailCardProps> = ({
   );
 };
 
-// Timeline Step Component
+// Timeline Step Component with staff name
 const TimelineStep: React.FC<{
   status: string;
   label: string;
   date: string | null;
+  staffName: string | null | undefined;
+  staffTitle?: string | null;
   isActive: boolean;
   isCompleted: boolean;
   isLast: boolean;
   isDark: boolean;
   colors: ColorTokens;
-}> = ({ status, label, date, isActive, isCompleted, isLast, isDark, colors }) => {
+}> = ({ status, label, date, staffName, staffTitle, isActive, isCompleted, isLast, isDark, colors }) => {
   const getStatusIcon = () => {
     if (status === 'verified') return <CheckCheck className="h-4 w-4" />;
     if (status === 'completed') return <CheckCircle2 className="h-4 w-4" />;
@@ -223,6 +236,23 @@ const TimelineStep: React.FC<{
     if (status === 'cancelled') return 'bg-red-500 text-white';
     return isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500';
   };
+
+  const getTextColor = () => {
+    if (isCompleted || isActive) return 'text-blue-400 dark:text-blue-300';
+    if (status === 'cancelled') return 'text-red-500 dark:text-red-400';
+    return colors.text.tertiary;
+  };
+
+  const getStaffNameWithPrefix = () => {
+    if (!staffName) return null;
+    const title = staffTitle || '';
+    if (title.toLowerCase().includes('dr') || title.toLowerCase().includes('physician')) {
+      return staffName;
+    }
+    return `Dr. ${staffName}`;
+  };
+
+  const formattedStaffName = getStaffNameWithPrefix();
 
   return (
     <div className="flex-1 relative">
@@ -255,6 +285,11 @@ const TimelineStep: React.FC<{
             {formatDisplayDateTime(date)}
           </p>
         )}
+        {formattedStaffName && (
+          <p className={cn('text-[9px] text-center mt-0.5 font-medium', getTextColor())}>
+            by {formattedStaffName}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -272,14 +307,49 @@ export const LabResultViewModal: React.FC<LabResultViewModalProps> = ({
 
   const hasResults = results.length > 0;
 
-  // Determine timeline steps based on item status
+  // Determine timeline steps based on item status with staff names
   const getTimelineSteps = () => {
     const steps = [
-      { status: 'pending', label: 'Pending', date: item.created_at, completed: item.created_at !== null },
-      { status: 'sample_collected', label: 'Collected', date: item.collected_at, completed: item.collected_at !== null },
-      { status: 'in_progress', label: 'Processing', date: item.started_at, completed: item.started_at !== null },
-      { status: 'completed', label: 'Completed', date: item.completed_at, completed: item.completed_at !== null },
-      { status: 'verified', label: 'Verified', date: item.verified_at, completed: item.verified_at !== null },
+      { 
+        status: 'pending', 
+        label: 'Pending', 
+        date: item.created_at, 
+        completed: item.created_at !== null,
+        staffName: item.created_by?.name || null,
+        staffTitle: item.created_by?.professional_title || null
+      },
+      { 
+        status: 'sample_collected', 
+        label: 'Collected', 
+        date: item.collected_at, 
+        completed: item.collected_at !== null,
+        staffName: item.collected_by?.name || null,
+        staffTitle: item.collected_by?.professional_title || null
+      },
+      { 
+        status: 'in_progress', 
+        label: 'Processing', 
+        date: item.started_at, 
+        completed: item.started_at !== null,
+        staffName: item.started_by?.name || null,
+        staffTitle: item.started_by?.professional_title || null
+      },
+      { 
+        status: 'completed', 
+        label: 'Completed', 
+        date: item.completed_at, 
+        completed: item.completed_at !== null,
+        staffName: item.completed_by?.name || null,
+        staffTitle: item.completed_by?.professional_title || null
+      },
+      { 
+        status: 'verified', 
+        label: 'Verified', 
+        date: item.verified_at, 
+        completed: item.verified_at !== null,
+        staffName: item.verified_by?.name || null,
+        staffTitle: item.verified_by?.professional_title || null
+      },
     ];
 
     const currentStatus = item.status;
@@ -297,8 +367,7 @@ export const LabResultViewModal: React.FC<LabResultViewModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40
-"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -362,9 +431,16 @@ export const LabResultViewModal: React.FC<LabResultViewModalProps> = ({
                   Test Cancelled
                 </p>
                 {item.cancelled_at && (
-                  <p className={cn('text-xs mt-1', colors.text.secondary)}>
-                    Cancelled on: {formatDisplayDateTime(item.cancelled_at)}
-                  </p>
+                  <div className="mt-2 space-y-0.5">
+                    <p className={cn('text-xs', colors.text.secondary)}>
+                      Cancelled on: {formatDisplayDateTime(item.cancelled_at)}
+                    </p>
+                    {item.cancelled_by?.name && (
+                      <p className={cn('text-xs', colors.text.primary)}>
+                        Cancelled by: {formatStaffName(item.cancelled_by.name, item.cancelled_by.professional_title)}
+                      </p>
+                    )}
+                  </div>
                 )}
                 {item.cancellation_reason && (
                   <p className={cn('text-xs mt-1', colors.text.secondary)}>
@@ -380,6 +456,8 @@ export const LabResultViewModal: React.FC<LabResultViewModalProps> = ({
                     status={step.status}
                     label={step.label}
                     date={step.date}
+                    staffName={step.staffName}
+                    staffTitle={step.staffTitle}
                     isActive={step.isActive}
                     isCompleted={step.isCompleted}
                     isLast={idx === timelineSteps.length - 1}
@@ -434,7 +512,7 @@ export const LabResultViewModal: React.FC<LabResultViewModalProps> = ({
                   )}
                 >
                   <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
-                    Item Status
+                    Test Status
                   </p>
                   <p className={cn('mt-1 text-sm font-semibold', colors.text.primary)}>
                     {formatLabel(item.status)}
