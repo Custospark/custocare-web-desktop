@@ -95,7 +95,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
               {hasExistingRequest ? 'Existing Lab Request' : 'Create Lab Request'}
             </h2>
 
-            {/* {request?.status && (
+            {request?.status && (
               <span
                 className={cn(
                   'rounded-full px-2.5 py-1 text-xs font-medium cursor-default',
@@ -107,7 +107,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
               >
                 {request.status_label || request.status}
               </span>
-            )} */}
+            )}
           </div>
 
           <p className={cn('mt-1 text-sm cursor-default', colors.text.secondary)}>
