@@ -33,7 +33,7 @@ export interface ColorTokens {
 export interface LabResultFieldDraft {
   localId: string;
   result_uuid?: string;
-  template_field_id: number | null;
+  template_field_id?: number | null;
   field_uuid?: string | null;
   field_name: string;
   field_code?: string | null;

@@ -25,7 +25,6 @@ import {
   selectActivePatient,
   selectActiveVisitInfo,
   selectActiveVisitPatientId,
-  selectActiveVisitPhase,
 } from '../../../app/store/slices/visitSlice';
 import { formatText } from '../../../modules/medical-records/ui/revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 import LogoImage from '../../assets/LogoImage';
@@ -107,12 +106,11 @@ export const FocusedModeLayout: React.FC<FocusedModeLayoutProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  const { theme, patient, visitInfo, visitPhase, patientId } = useSelector(
+  const { theme, patient, visitInfo, patientId } = useSelector(
     (state: RootState) => ({
       theme: state.ui.theme as ThemeMode,
       patient: selectActivePatient(state),
       visitInfo: selectActiveVisitInfo(state),
-      visitPhase: selectActiveVisitPhase(state),
       patientId: selectActiveVisitPatientId(state),
     })
   );
@@ -229,8 +227,6 @@ export const FocusedModeLayout: React.FC<FocusedModeLayoutProps> = ({
     }
   };
 
-  const getPhaseDisplayName = (phase: string): string =>
-    phase?.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Active Visit';
 
   return (
     <div

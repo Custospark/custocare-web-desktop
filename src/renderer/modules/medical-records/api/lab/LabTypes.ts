@@ -288,7 +288,7 @@ export interface LabResult {
   id: number;
   result_uuid: string;
   lab_request_item_id: number;
-  template_field_id: number | null;
+  template_field_id?: number | null;
   value: string | null;
   unit: string | null;
   numeric_value: number | null;
@@ -642,7 +642,7 @@ export interface UpdateLabRequestItemRequest {
  */
 export interface CreateLabResultRequest {
   lab_request_item_id: number;
-  template_field_id: number;
+  template_field_id?: number | null;
   value?: string | null;
   unit?: string | null;
   numeric_value?: number | null;
@@ -709,7 +709,7 @@ export interface AddItemsToLabRequestRequest {
  */
 export interface BulkCreateLabResultsRequest {
   results: Array<{
-    template_field_id: number;
+    template_field_id?: number | null;
     value?: string | null;
     unit?: string | null;
     numeric_value?: number | null;
@@ -828,7 +828,7 @@ export interface LabRequestItemFilters {
  */
 export interface LabResultFilters {
   lab_request_item_id?: number;
-  template_field_id?: number;
+  template_field_id?: number | null;
   flag?: LabResultFlag;
   is_abnormal_flagged?: boolean;
   is_verified?: boolean;

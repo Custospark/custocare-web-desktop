@@ -860,6 +860,24 @@ export const useGetPendingRequests = (
 };
 
 /**
+ * Get request with its items
+ */
+export const useGetRequestWithItemsModified = (
+  uuid: string,
+  options?: Omit<UseQueryOptions<LabRequest, AxiosError<ApiResponse<null>>>, 'queryKey' | 'queryFn'>
+) => {
+  return useQuery({
+    queryKey: labKeys.requestWithItems(uuid),
+    queryFn: async () => {
+      const response = await axiosInstance.get(`/lab/requests/${uuid}/with-items`);
+      return response.data.data.request;
+    },
+    enabled: !!uuid,
+    ...options,
+  });
+};
+
+/**
  * Get requests requiring attention (STAT priority)
  */
 export const useGetRequestsRequiringAttention = (
@@ -1965,6 +1983,7 @@ export default {
   useUpdateRequestStatus,
   useCancelLabRequest,
   useAddItemsToRequest,
+  useGetRequestWithItemsModified,
   
   // Item queries
   useGetLabRequestItems,

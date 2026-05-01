@@ -1,8 +1,7 @@
-// lab-results/labresult-form-components/LabResultResolvedRequestScope.tsx
 import React from 'react';
 import { useSelector } from 'react-redux';
 import {
-  useGetRequestWithItems,
+  useGetRequestWithItemsModified,
   useGetRequestsByVisit,
 } from '../../../../api/lab/LabQueries';
 import type { LabResultResolvedRequestScopeRenderPayload } from './labResultForm.types';
@@ -10,6 +9,7 @@ import { LabResultEmptyState } from './LabResultEmptyState';
 import { LabResultErrorState } from './LabResultErrorState';
 import { LabResultLoadingState } from './LabResultLoadingState';
 import { selectActiveVisitId } from '../../../../../../app/store/slices/visitSlice';
+import { selectTheme } from '../../../../../../app/store/slices/uiSlice';
 
 interface LabResultResolvedRequestScopeProps {
   /** Optional explicit request UUID – if provided, it takes precedence */
@@ -20,12 +20,14 @@ interface LabResultResolvedRequestScopeProps {
 export const LabResultResolvedRequestScope: React.FC<
   LabResultResolvedRequestScopeProps
 > = ({ requestUuid: explicitRequestUuid, children }) => {
-  // 1. Get active visit ID from Redux
+  // 1. Get active visit ID and theme from Redux
   const activeVisitId = useSelector(selectActiveVisitId);
+  const globalTheme = useSelector(selectTheme);
+  const isDark = globalTheme === 'dark';
 
   // 2. If no explicit UUID, fetch all lab requests for the active visit
   const {
-    data: visitRequestsResponse,
+    data: visitRequests,
     isLoading: isLoadingVisitRequests,
     isError: isErrorVisitRequests,
     refetch: refetchVisitRequests,
@@ -34,12 +36,9 @@ export const LabResultResolvedRequestScope: React.FC<
   });
 
   // Extract the first request's UUID from the visit's requests
-  // The response structure: data is an array of LabRequest objects
-  const visitRequests = Array.isArray(visitRequestsResponse) 
-    ? visitRequestsResponse 
-    : (visitRequestsResponse as any)?.requests ?? [];
-  
-  const derivedRequestUuid = visitRequests.length > 0 ? visitRequests[0].request_uuid : null;
+  const derivedRequestUuid = visitRequests && visitRequests.length > 0 
+    ? visitRequests[0].request_uuid 
+    : null;
 
   // Final UUID: explicit takes precedence, otherwise derived from visit
   const resolvedRequestUuid = explicitRequestUuid ?? derivedRequestUuid;
@@ -52,7 +51,7 @@ export const LabResultResolvedRequestScope: React.FC<
     isError: isErrorRequest,
     refetch: refetchRequest,
     error,
-  } = useGetRequestWithItems(resolvedRequestUuid || '', {
+  } = useGetRequestWithItemsModified(resolvedRequestUuid || '', {
     // Only enable if we have a valid UUID string
     enabled: !!resolvedRequestUuid && resolvedRequestUuid.length > 0,
   });
@@ -63,7 +62,7 @@ export const LabResultResolvedRequestScope: React.FC<
     return (
       <LabResultLoadingState
         message="Loading active visit and lab requests..."
-        theme="light"
+        theme={isDark ? 'dark' : 'light'}
       />
     );
   }
@@ -73,7 +72,7 @@ export const LabResultResolvedRequestScope: React.FC<
     return (
       <LabResultLoadingState
         message="Loading lab request and requested tests..."
-        theme="light"
+        theme={isDark ? 'dark' : 'light'}
       />
     );
   }
@@ -90,7 +89,7 @@ export const LabResultResolvedRequestScope: React.FC<
   }
 
   // No explicit UUID, visit has no lab requests, and we're done loading
-  if (!explicitRequestUuid && visitRequests.length === 0 && !isLoadingVisitRequests) {
+  if (!explicitRequestUuid && (!visitRequests || visitRequests.length === 0) && !isLoadingVisitRequests) {
     return (
       <LabResultEmptyState
         title="No lab requests found for this visit"

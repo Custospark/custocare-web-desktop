@@ -10,6 +10,7 @@ import {
 } from '../../../../../api/lab/LabQueries';
 import {
   LabRequestItemStatus,
+  LabResult,
   TemplateFieldDataType,
   type LabTemplateField,
 } from '../../../../../api/lab/LabTypes';
