@@ -51,16 +51,18 @@ export const LabResultTableRow: React.FC<LabResultTableRowProps> = ({
   };
 
   return (
-    <>
+    <React.Fragment>
       <tr className={cn('border-b align-top transition-colors', colors.border.primary, isDark ? 'hover:bg-gray-800/40' : 'hover:bg-slate-50')}>
-        <td className="px-3 py-4 text-center whitespace-nowrap">
+        {/* # Column - Reduced width */}
+        <td className="px-2 py-3 text-center whitespace-nowrap">
           <span className={cn('text-sm font-semibold', colors.text.secondary)}>{index + 1}</span>
         </td>
 
-        <td className="px-4 py-4 whitespace-nowrap">
-          <div className="flex items-start gap-2.5 min-w-[200px]">
-            <div className="space-y-1">
-              <div className={cn('font-semibold', colors.text.primary)}>
+        {/* Test Column - Reduced padding */}
+        <td className="px-3 py-3 whitespace-nowrap">
+          <div className="flex items-start gap-2">
+            <div className="space-y-0.5">
+              <div className={cn('font-semibold text-sm', colors.text.primary)}>
                 {item.lab_test?.name || 'Unnamed test'}
               </div>
               <div className={cn('text-xs', colors.text.secondary)}>
@@ -75,20 +77,21 @@ export const LabResultTableRow: React.FC<LabResultTableRowProps> = ({
           </div>
         </td>
 
-        <td className="px-4 py-4 whitespace-nowrap">
-          <div className="space-y-2 min-w-[130px]">
+        {/* Status Column - Reduced padding */}
+        <td className="px-3 py-3 whitespace-nowrap">
+          <div className="space-y-1.5">
             <LabResultStatusIndicator item={item} isDark={isDark} />
-            {
-              item.sample_type && 
-               <div className={cn('text-xs', colors.text.secondary)}>
-              Sample: {item.sample_type || 'N/A'}
-            </div>
-            }
+            {item.sample_type && (
+              <div className={cn('text-xs', colors.text.secondary)}>
+                Sample: {item.sample_type}
+              </div>
+            )}
           </div>
         </td>
 
-       <td className="px-4 py-4">
-          <div className="flex flex-col items-start gap-2 min-w-[180px]">
+        {/* Results Column - Reduced padding */}
+        <td className="px-3 py-3">
+          <div className="flex flex-col items-start gap-1.5">
             <span className={cn(badgeBase, getResultFlagClasses(primaryFlag, isDark))}>
               {formatLabel(primaryFlag)}
             </span>
@@ -111,16 +114,15 @@ export const LabResultTableRow: React.FC<LabResultTableRowProps> = ({
           </div>
         </td>
 
-       
-
-        <td className="px-4 py-4 whitespace-nowrap">
-          <div className="flex flex-col items-start gap-2 min-w-[160px]">
+        {/* Actions Column - Reduced padding */}
+        <td className="px-3 py-3 whitespace-nowrap">
+          <div className="flex flex-col items-start gap-1.5">
             <button
               type="button"
               onClick={() => onEditItemResults(item)}
               disabled={item.status === LabRequestItemStatus.CANCELLED || requestLocked}
               className={cn(
-                'cursor-pointer inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all',
+                'cursor-pointer inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-all',
                 colors.border.primary,
                 colors.bg.hover,
                 colors.text.primary,
@@ -141,14 +143,16 @@ export const LabResultTableRow: React.FC<LabResultTableRowProps> = ({
         </td>
       </tr>
 
-      <LabResultViewModal
-        isOpen={isViewModalOpen}
-        onClose={handleCloseModal}
-        item={item}
-        results={results}
-        isDark={isDark}
-        colors={colors}
-      />
-    </>
+      {isViewModalOpen && (
+        <LabResultViewModal
+          isOpen={isViewModalOpen}
+          onClose={handleCloseModal}
+          item={item}
+          results={results}
+          isDark={isDark}
+          colors={colors}
+        />
+      )}
+    </React.Fragment>
   );
 };

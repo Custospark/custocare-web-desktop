@@ -18,17 +18,20 @@ export const LabResultViewButton: React.FC<LabResultViewButtonProps> = ({
   colors,
   disabled = false,
 }) => {
+  const isDisabled = disabled || !hasResults;
+  
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled || !hasResults}
+      disabled={isDisabled}
       className={cn(
         'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all',
         colors.border.primary,
         colors.bg.hover,
         colors.text.primary,
-        (!hasResults || disabled) && 'cursor-not-allowed opacity-50'
+        isDisabled && 'cursor-not-allowed opacity-50',
+        !isDisabled && 'cursor-pointer'
       )}
       title={!hasResults ? 'No results to view' : 'View detailed results'}
     >

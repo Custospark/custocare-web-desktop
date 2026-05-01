@@ -218,7 +218,7 @@ const TimelineStep: React.FC<{
   };
 
   const getStatusColor = () => {
-    if (isCompleted) return 'bg-green-500 text-white';
+    if (isCompleted) return 'bg-blue-500 text-white';
     if (isActive) return 'bg-blue-500 text-white animate-pulse';
     if (status === 'cancelled') return 'bg-red-500 text-white';
     return isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500';
@@ -231,7 +231,7 @@ const TimelineStep: React.FC<{
         <div 
           className={cn(
             'absolute top-4 left-1/2 w-full h-0.5',
-            isCompleted ? 'bg-green-500' : isDark ? 'bg-gray-700' : 'bg-gray-200'
+            isCompleted ? 'bg-blue-500' : isDark ? 'bg-gray-700' : 'bg-gray-200'
           )}
           style={{ transform: 'translateX(0%)' }}
         />
@@ -297,7 +297,8 @@ export const LabResultViewModal: React.FC<LabResultViewModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40
+"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

@@ -52,34 +52,34 @@ export const LabResultItemsTable: React.FC<LabResultItemsTableProps> = ({
       />
 
       {/* Desktop Table */}
-      <div className="hidden xl:block overflow-x-auto">
-        <table className="w-full border-collapse min-w-[1000px]">
-          <thead>
-            <tr className={cn('border-b', colors.border.primary)}>
-              <th className={cn('w-12 px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>#</th>
-              <th className={cn('px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>Test</th>
-              <th className={cn('px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>Status</th>
-              <th className={cn('px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>Results</th>
-              <th className={cn('px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, index) => (
-              <LabResultTableRow
-                key={item.item_uuid}
-                item={item}
-                index={index}
-                isDark={isDark}
-                colors={colors}
-                staffId={staffId}
-                requestLocked={requestLocked}
-                onEditItemResults={onEditItemResults}
-                onActionComplete={onActionComplete}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <div className="hidden xl:block overflow-x-auto">
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className={cn('border-b', colors.border.primary)}>
+            <th className={cn('w-8 px-2 py-3 text-center text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>#</th>
+            <th className={cn('px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>Test</th>
+            <th className={cn('px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>Status</th>
+            <th className={cn('px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>Results</th>
+            <th className={cn('px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide', colors.text.secondary)}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item, index) => (
+            <LabResultTableRow
+              key={item.item_uuid}
+              item={item}
+              index={index}
+              isDark={isDark}
+              colors={colors}
+              staffId={staffId}
+              requestLocked={requestLocked}
+              onEditItemResults={onEditItemResults}
+              onActionComplete={onActionComplete}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
 
       {/* Mobile Cards */}
       <div className="xl:hidden">
