@@ -61,7 +61,7 @@ export const LabResultResolvedRequestScope: React.FC<
   if (!explicitRequestUuid && isLoadingVisitRequests) {
     return (
       <LabResultLoadingState
-        message="Loading active visit and lab requests..."
+        message="Loading active Patient and lab requests..."
         theme={isDark ? 'dark' : 'light'}
       />
     );
@@ -92,8 +92,8 @@ export const LabResultResolvedRequestScope: React.FC<
   if (!explicitRequestUuid && (!visitRequests || visitRequests.length === 0) && !isLoadingVisitRequests) {
     return (
       <LabResultEmptyState
-        title="No lab requests found for this visit"
-        description="No lab tests have been requested for the current active visit."
+        title="No laboratory requests found for this Patient."
+        description="No lab tests have been requested for the current active Patient."
       />
     );
   }
@@ -103,7 +103,7 @@ export const LabResultResolvedRequestScope: React.FC<
     return (
       <LabResultErrorState
         title="Unable to load lab requests for this visit"
-        description="There was a problem fetching the visit's lab requests."
+        description="There was a problem fetching the Patient's lab requests."
         onRetry={() => void refetchVisitRequests()}
       />
     );

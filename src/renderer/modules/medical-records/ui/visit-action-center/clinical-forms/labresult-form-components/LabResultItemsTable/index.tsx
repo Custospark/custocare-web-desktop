@@ -13,9 +13,7 @@ interface LabResultItemsTableProps {
   request: LabRequest;
   staffId?: number | null;
   requestLocked: boolean;
-  refreshToken: number;
   onEditItemResults: (item: any) => void;
-  onResultsHydrated: (itemUuid: string, results: any[]) => void;
   onActionComplete: () => void;
 }
 
@@ -25,9 +23,7 @@ export const LabResultItemsTable: React.FC<LabResultItemsTableProps> = ({
   request,
   staffId,
   requestLocked,
-  refreshToken,
   onEditItemResults,
-  onResultsHydrated,
   onActionComplete,
 }) => {
   const items = Array.isArray(request.items) ? request.items : [];
@@ -78,9 +74,7 @@ export const LabResultItemsTable: React.FC<LabResultItemsTableProps> = ({
                 colors={colors}
                 staffId={staffId}
                 requestLocked={requestLocked}
-                refreshToken={refreshToken}
                 onEditItemResults={onEditItemResults}
-                onResultsHydrated={onResultsHydrated}
                 onActionComplete={onActionComplete}
               />
             ))}
@@ -104,9 +98,7 @@ export const LabResultItemsTable: React.FC<LabResultItemsTableProps> = ({
               colors={colors}
               staffId={staffId}
               requestLocked={requestLocked}
-              refreshToken={refreshToken}
               onEditItemResults={onEditItemResults}
-              onResultsHydrated={onResultsHydrated}
               onActionComplete={onActionComplete}
             />
           ))

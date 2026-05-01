@@ -1,19 +1,40 @@
-// lab-results/labresult-form-components/LabResultLoadingState.tsx
 import React from 'react';
-import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
+import { useSelector } from 'react-redux';
+import { Loader2 } from 'lucide-react';
+import { cn } from '../../../../../../shared/utils/classNameUtils';
 import type { LabResultLoadingStateProps } from './labResultForm.types';
+import { selectTheme } from '../../../../../../app/store/slices/uiSlice';
 
 export const LabResultLoadingState: React.FC<LabResultLoadingStateProps> = ({
-  message = 'Loading laboratory results...',
-  theme = 'light',
+  message = 'Loading lab results...',
 }) => {
+  const globalTheme = useSelector(selectTheme);
+  const isDark = globalTheme === 'dark';
+
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-      <LoadingSkeleton
-        variant="detail"
-        theme={theme}
-        message={message}
+    <div
+      className={cn(
+        'rounded-2xl border p-12 text-center shadow-sm transition-colors',
+        isDark
+          ? 'border-gray-700 bg-gray-900'
+          : 'border-gray-200 bg-white'
+      )}
+    >
+      <Loader2
+        className={cn(
+          'mx-auto mb-4 h-12 w-12 animate-spin',
+          isDark ? 'text-blue-400' : 'text-blue-600'
+        )}
       />
+
+      <p
+        className={cn(
+          'text-sm',
+          isDark ? 'text-gray-400' : 'text-gray-600'
+        )}
+      >
+        {message}
+      </p>
     </div>
   );
 };

@@ -1,7 +1,6 @@
-// lab-results/labresult-form-components/LabResultFormBody.tsx
 import React, { useCallback, useMemo, useState } from 'react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
-import type { LabRequest, LabRequestItem, LabResult } from '../../../../api/lab/LabTypes';
+import type { LabRequest, LabRequestItem } from '../../../../api/lab/LabTypes';
 import type { ColorTokens, LabResultHydratedMap } from './labResultForm.types';
 import {
   buildLabResultFileName,
@@ -46,7 +45,7 @@ export const LabResultFormBody: React.FC<LabResultFormBodyProps> = ({
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [resultsMap, setResultsMap] = useState<LabResultHydratedMap>({});
-  const [refreshToken, setRefreshToken] = useState(0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const requestLocked = useMemo(
     () => isRequestLockedForEditing(request),
@@ -55,20 +54,33 @@ export const LabResultFormBody: React.FC<LabResultFormBodyProps> = ({
 
   const itemCount = Array.isArray(request.items) ? request.items.length : 0;
 
-  const handleResultsHydrated = useCallback((itemUuid: string, results: LabResult[]) => {
-    setResultsMap((prev) => {
-      const current = prev[itemUuid] || [];
-      const nextSerialized = JSON.stringify(results);
-      const currentSerialized = JSON.stringify(current);
-
-      if (nextSerialized === currentSerialized) return prev;
-
-      return {
-        ...prev,
-        [itemUuid]: results,
-      };
-    });
+  // Build results map from the request data (single source of truth)
+  const buildResultsMapFromRequest = useCallback((labRequest: LabRequest): LabResultHydratedMap => {
+    const map: LabResultHydratedMap = {};
+    
+    if (Array.isArray(labRequest.items)) {
+      labRequest.items.forEach((item) => {
+        if (Array.isArray(item.results) && item.results.length > 0) {
+          map[item.item_uuid] = item.results;
+        } else {
+          map[item.item_uuid] = [];
+        }
+      });
+    }
+    
+    return map;
   }, []);
+
+  // Update results map when request changes
+  React.useEffect(() => {
+    const newMap = buildResultsMapFromRequest(request);
+    setResultsMap((prev) => {
+      const prevStr = JSON.stringify(prev);
+      const newStr = JSON.stringify(newMap);
+      if (prevStr === newStr) return prev;
+      return newMap;
+    });
+  }, [request, buildResultsMapFromRequest]);
 
   const handleOpenEditor = useCallback((item: LabRequestItem) => {
     setSelectedItem(item);
@@ -81,12 +93,13 @@ export const LabResultFormBody: React.FC<LabResultFormBodyProps> = ({
   }, []);
 
   const handleSaved = useCallback(async () => {
-    setRefreshToken((prev) => prev + 1);
+    // Trigger refresh to get latest data
+    setRefreshTrigger((prev) => prev + 1);
     await refetchRequest();
   }, [refetchRequest]);
 
   const handleRefresh = useCallback(async () => {
-    setRefreshToken((prev) => prev + 1);
+    setRefreshTrigger((prev) => prev + 1);
     await refetchRequest();
   }, [refetchRequest]);
 
@@ -113,6 +126,10 @@ export const LabResultFormBody: React.FC<LabResultFormBodyProps> = ({
 
     downloadHtmlDocument(buildLabResultFileName(request), html);
   }, [request, resultsMap]);
+
+  const handleActionComplete = useCallback(async () => {
+    await handleRefresh();
+  }, [handleRefresh]);
 
   return (
     <div 
@@ -195,21 +212,17 @@ export const LabResultFormBody: React.FC<LabResultFormBodyProps> = ({
             </div>
 
             {/* Results Table */}
-            <div className="p-6 sm:p-8 md:p-10">
-              <LabResultItemsTable
-                isDark={isDark}
-                colors={colors}
-                request={request}
-                refreshToken={refreshToken}
-                requestLocked={requestLocked}
-                staffId={staffId}
-                onEditItemResults={handleOpenEditor}
-                onResultsHydrated={handleResultsHydrated}
-                onActionComplete={() => {
-                  void handleRefresh();
-                }}
-              />
-            </div>
+          <div className="p-6 sm:p-8 md:p-10">
+            <LabResultItemsTable
+              isDark={isDark}
+              colors={colors}
+              request={request}
+              requestLocked={requestLocked}
+              staffId={staffId}
+              onEditItemResults={handleOpenEditor}
+              onActionComplete={handleActionComplete}
+            />
+          </div>
           </div>
         )}
       </div>

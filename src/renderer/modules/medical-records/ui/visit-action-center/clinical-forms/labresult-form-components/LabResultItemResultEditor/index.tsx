@@ -1,16 +1,13 @@
-// lab-results/labresult-form-components/LabResultItemResultEditor/index.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, Loader2, Plus } from 'lucide-react';
 import { cn } from '../../../../../../../shared/utils/classNameUtils';
 import {
   useBulkCreateResults,
   useGetFieldsByTemplate,
-  useGetResultsByLabRequestItem,
   useUpdateLabResult,
 } from '../../../../../api/lab/LabQueries';
 import {
   LabRequestItemStatus,
-  LabResult,
   TemplateFieldDataType,
   type LabTemplateField,
 } from '../../../../../api/lab/LabTypes';
@@ -19,7 +16,6 @@ import {
   buildDraftsFromFieldsAndResults,
   deriveNumericValue,
   deriveResultFlag,
-  extractResultsArray,
   hasMeaningfulDraftData,
 } from '../labResultForm.utils';
 import { EditorHeader } from './EditorHeader';
@@ -41,7 +37,7 @@ const getSelectOptions = (field?: LabTemplateField | null): string[] => {
 };
 
 // Create a manual fallback draft when no template fields exist
-const createManualFallbackDraft = (existingResults: LabResult[]): LabResultFieldDraft[] => {
+const createManualFallbackDraft = (existingResults: any[]): LabResultFieldDraft[] => {
   // If there are existing results, use them
   if (existingResults.length > 0) {
     return existingResults.map((result, index) => ({
@@ -110,16 +106,11 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
   const [isManualMode, setIsManualMode] = useState(false);
 
   const templateUuid = item?.lab_test?.template?.template_uuid || '';
-  const itemUuid = item?.item_uuid || '';
   const hasTemplate = !!templateUuid;
   const hasTemplateWithFields = hasTemplate;
 
   const fieldsQuery = useGetFieldsByTemplate(templateUuid, {
     enabled: open && hasTemplateWithFields,
-  });
-
-  const resultsQuery = useGetResultsByLabRequestItem(itemUuid, {
-    enabled: open && !!itemUuid,
   });
 
   const createResults = useBulkCreateResults();
@@ -130,10 +121,8 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
     [fieldsQuery.data]
   );
 
-  const existingResults = useMemo(
-    () => extractResultsArray(resultsQuery.data),
-    [resultsQuery.data]
-  );
+  // Results come directly from the item (already loaded in the request)
+  const existingResults = useMemo(() => item?.results || [], [item]);
 
   // Determine if we should use manual mode
   const shouldUseManualMode = useMemo(() => {
@@ -163,7 +152,7 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
     }
   }, [open, item, templateFields, existingResults, hasTemplateWithFields, shouldUseManualMode]);
 
-  const loading = fieldsQuery.isLoading || resultsQuery.isLoading;
+  const loading = fieldsQuery.isLoading;
   const saving = createResults.isPending || updateResult.isPending;
 
   const readOnly =
@@ -238,7 +227,7 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
       draft.data_type === TemplateFieldDataType.NUMBER ? draft.numeric_value : draft.value;
 
     const createPayloads = meaningfulDrafts
-      .filter((draft) => draft.isNew && !draft.result_uuid)
+      .filter((draft) => draft.isNew && !draft.result_uuid && draft.template_field_id != null)
       .map((draft) => {
         const rawValue = getDraftInputValue(draft);
 
@@ -309,6 +298,7 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
         await Promise.all(updatePayloads.map((payload) => updateResult.mutateAsync(payload)));
       }
 
+      // Call onSaved to trigger parent refresh
       onSaved();
     } catch {
       setSaveError('Unable to save result entries right now. Please try again.');
@@ -381,7 +371,7 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
           {loading ? (
             <div className={cn('flex items-center justify-center gap-2 py-16 text-sm', colors.text.secondary)}>
               <Loader2 className="h-5 w-5 animate-spin" />
-              Loading template fields and item results...
+              Loading template fields...
             </div>
           ) : (
             <div className="space-y-4">
