@@ -279,11 +279,33 @@ export const summarizeResults = (results: LabResult[]): string => {
 
 export const getPrimaryFlag = (results: LabResult[]): LabResultFlag => {
   if (!results.length) return LabResultFlag.PENDING;
-  if (results.some((result) => result.flag === LabResultFlag.CRITICAL)) return LabResultFlag.CRITICAL;
-  if (results.some((result) => result.flag === LabResultFlag.HIGH)) return LabResultFlag.HIGH;
-  if (results.some((result) => result.flag === LabResultFlag.LOW)) return LabResultFlag.LOW;
-  if (results.some((result) => result.flag === LabResultFlag.ABNORMAL)) return LabResultFlag.ABNORMAL;
-  if (results.every((result) => result.flag === LabResultFlag.NORMAL)) return LabResultFlag.NORMAL;
+  
+  // Highest priority: Critical (life-threatening)
+  if (results.some((result) => result.flag === LabResultFlag.CRITICAL)) {
+    return LabResultFlag.CRITICAL;
+  }
+  
+  // Second priority: Abnormal (clinically significant)
+  if (results.some((result) => result.flag === LabResultFlag.ABNORMAL)) {
+    return LabResultFlag.ABNORMAL;
+  }
+  
+  // Third priority: High (above reference range)
+  if (results.some((result) => result.flag === LabResultFlag.HIGH)) {
+    return LabResultFlag.HIGH;
+  }
+  
+  // Fourth priority: Low (below reference range)
+  if (results.some((result) => result.flag === LabResultFlag.LOW)) {
+    return LabResultFlag.LOW;
+  }
+  
+  // Only return NORMAL if EVERY result is NORMAL
+  if (results.every((result) => result.flag === LabResultFlag.NORMAL)) {
+    return LabResultFlag.NORMAL;
+  }
+  
+  // Default fallback
   return LabResultFlag.PENDING;
 };
 

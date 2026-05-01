@@ -38,7 +38,6 @@ const getSelectOptions = (field?: LabTemplateField | null): string[] => {
 
 // Create a manual fallback draft when no template fields exist
 const createManualFallbackDraft = (existingResults: any[]): LabResultFieldDraft[] => {
-  // If there are existing results, use them
   if (existingResults.length > 0) {
     return existingResults.map((result, index) => ({
       localId: result.result_uuid || `manual-${index}`,
@@ -64,7 +63,6 @@ const createManualFallbackDraft = (existingResults: any[]): LabResultFieldDraft[
     }));
   }
 
-  // Create a single manual entry field
   return [
     {
       localId: 'manual-field-1',
@@ -95,6 +93,7 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
   open,
   isDark,
   colors,
+  request,
   item,
   staffId,
   requestLocked,
@@ -104,6 +103,7 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
   const [drafts, setDrafts] = useState<LabResultFieldDraft[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isManualMode, setIsManualMode] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const templateUuid = item?.lab_test?.template?.template_uuid || '';
   const hasTemplate = !!templateUuid;
@@ -122,38 +122,42 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
   );
 
   // Results come directly from the item (already loaded in the request)
-  const existingResults = useMemo(() => item?.results || [], [item]);
+  // Use a stable key to track when results actually change
+  const existingResults = useMemo(() => item?.results || [], [item?.results]);
+  const resultsKey = useMemo(() => 
+    existingResults.map(r => `${r.result_uuid}-${r.updated_at}`).join(','),
+    [existingResults]
+  );
 
   // Determine if we should use manual mode
   const shouldUseManualMode = useMemo(() => {
     const noTemplateFields = !hasTemplateWithFields || templateFields.length === 0;
     const hasExistingResults = existingResults.length > 0;
     
-    // Use manual mode if no template fields but have existing results OR explicitly toggled
     return (!hasTemplateWithFields || (noTemplateFields && !hasExistingResults)) || isManualMode;
   }, [hasTemplateWithFields, templateFields.length, existingResults.length, isManualMode]);
 
+  // Reset drafts when modal opens or when results change
   useEffect(() => {
     if (!open || !item) return;
-    setSaveError(null);
     
-    // Check if we should use manual mode
+    setSaveError(null);
+    setIsSaving(false);
+    
     const noTemplateFields = !hasTemplateWithFields || templateFields.length === 0;
     const hasExistingResults = existingResults.length > 0;
     
     if (noTemplateFields || (shouldUseManualMode && !hasExistingResults)) {
-      // Use manual fallback mode
       setDrafts(createManualFallbackDraft(existingResults));
       setIsManualMode(true);
     } else {
-      // Use template-based drafts
       setDrafts(buildDraftsFromFieldsAndResults(templateFields, existingResults));
       setIsManualMode(false);
     }
-  }, [open, item, templateFields, existingResults, hasTemplateWithFields, shouldUseManualMode]);
+  }, [open, item, resultsKey, templateFields, hasTemplateWithFields, shouldUseManualMode]);
 
   const loading = fieldsQuery.isLoading;
-  const saving = createResults.isPending || updateResult.isPending;
+  const saving = createResults.isPending || updateResult.isPending || isSaving;
 
   const readOnly =
     requestLocked ||
@@ -205,64 +209,36 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
     if (!item) return;
 
     setSaveError(null);
+    setIsSaving(true);
 
-    if (!hasConfiguredFields) {
-      setSaveError('No result fields available to save.');
-      return;
-    }
+    try {
+      if (!hasConfiguredFields) {
+        setSaveError('No result fields available to save.');
+        return;
+      }
 
-    if (missingRequiredField) {
-      setSaveError('Fill all required result fields before saving.');
-      return;
-    }
+      if (missingRequiredField) {
+        setSaveError('Fill all required result fields before saving.');
+        return;
+      }
 
-    const meaningfulDrafts = drafts.filter(hasMeaningfulDraftData);
+      const meaningfulDrafts = drafts.filter(hasMeaningfulDraftData);
 
-    if (!meaningfulDrafts.length) {
-      setSaveError('Enter at least one result value before saving.');
-      return;
-    }
+      if (!meaningfulDrafts.length) {
+        setSaveError('Enter at least one result value before saving.');
+        return;
+      }
 
-    const getDraftInputValue = (draft: LabResultFieldDraft): string =>
-      draft.data_type === TemplateFieldDataType.NUMBER ? draft.numeric_value : draft.value;
+      const getDraftInputValue = (draft: LabResultFieldDraft): string =>
+        draft.data_type === TemplateFieldDataType.NUMBER ? draft.numeric_value : draft.value;
 
-    const createPayloads = meaningfulDrafts
-      .filter((draft) => draft.isNew && !draft.result_uuid && draft.template_field_id != null)
-      .map((draft) => {
-        const rawValue = getDraftInputValue(draft);
+      const createPayloads = meaningfulDrafts
+        .filter((draft) => draft.isNew && !draft.result_uuid)
+        .map((draft) => {
+          const rawValue = getDraftInputValue(draft);
 
-        return {
-          template_field_id: draft.template_field_id,
-          value: rawValue || null,
-          unit: draft.unit || null,
-          numeric_value: deriveNumericValue(rawValue, draft.data_type),
-          flag: deriveResultFlag({
-            rawValue,
-            dataType: draft.data_type,
-            referenceMin: draft.reference_min,
-            referenceMax: draft.reference_max,
-            currentFlag: draft.flag,
-          }),
-          reference_min: draft.reference_min ? Number(draft.reference_min) : null,
-          reference_max: draft.reference_max ? Number(draft.reference_max) : null,
-          interpretation: draft.interpretation || null,
-          comments: draft.comments || null,
-          recorded_by_staff_id: staffId || null,
-          metadata: {
-            source: 'lab-result-item-result-editor',
-            is_manual_entry: !hasTemplateWithFields,
-          },
-        };
-      });
-
-    const updatePayloads = meaningfulDrafts
-      .filter((draft) => !draft.isNew && !!draft.result_uuid)
-      .map((draft) => {
-        const rawValue = getDraftInputValue(draft);
-
-        return {
-          uuid: draft.result_uuid as string,
-          data: {
+          return {
+            template_field_id: draft.template_field_id,
             value: rawValue || null,
             unit: draft.unit || null,
             numeric_value: deriveNumericValue(rawValue, draft.data_type),
@@ -282,11 +258,41 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
               source: 'lab-result-item-result-editor',
               is_manual_entry: !hasTemplateWithFields,
             },
-          },
-        };
-      });
+          };
+        });
 
-    try {
+      const updatePayloads = meaningfulDrafts
+        .filter((draft) => !draft.isNew && !!draft.result_uuid)
+        .map((draft) => {
+          const rawValue = getDraftInputValue(draft);
+
+          return {
+            uuid: draft.result_uuid as string,
+            data: {
+              value: rawValue || null,
+              unit: draft.unit || null,
+              numeric_value: deriveNumericValue(rawValue, draft.data_type),
+              flag: deriveResultFlag({
+                rawValue,
+                dataType: draft.data_type,
+                referenceMin: draft.reference_min,
+                referenceMax: draft.reference_max,
+                currentFlag: draft.flag,
+              }),
+              reference_min: draft.reference_min ? Number(draft.reference_min) : null,
+              reference_max: draft.reference_max ? Number(draft.reference_max) : null,
+              interpretation: draft.interpretation || null,
+              comments: draft.comments || null,
+              recorded_by_staff_id: staffId || null,
+              metadata: {
+                source: 'lab-result-item-result-editor',
+                is_manual_entry: !hasTemplateWithFields,
+              },
+            },
+          };
+        });
+
+      // Execute saves
       if (createPayloads.length) {
         await createResults.mutateAsync({
           itemUuid: item.item_uuid,
@@ -298,10 +304,19 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
         await Promise.all(updatePayloads.map((payload) => updateResult.mutateAsync(payload)));
       }
 
-      // Call onSaved to trigger parent refresh
-      onSaved();
-    } catch {
+      // Close modal first, then trigger refresh
+      onClose();
+      
+      // Small delay to ensure modal animation completes before refresh
+      setTimeout(() => {
+        onSaved();
+      }, 100);
+      
+    } catch (error) {
+      console.error('Save error:', error);
       setSaveError('Unable to save result entries right now. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -348,7 +363,6 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
             </div>
           )}
 
-          {/* Manual Mode Banner */}
           {!readOnly && isManualMode && (
             <div
               className={cn(
@@ -396,7 +410,6 @@ export const LabResultItemResultEditor: React.FC<LabResultEditorModalProps> = ({
                 );
               })}
 
-              {/* Add More Fields Button (only in manual mode) */}
               {!readOnly && isManualMode && (
                 <button
                   type="button"

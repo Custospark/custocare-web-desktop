@@ -93,9 +93,12 @@ export const LabResultFormBody: React.FC<LabResultFormBodyProps> = ({
   }, []);
 
   const handleSaved = useCallback(async () => {
-    // Trigger refresh to get latest data
+    // Increment refresh trigger to force table refresh
     setRefreshTrigger((prev) => prev + 1);
+    // Refetch the request to get latest data
     await refetchRequest();
+    // Reset results map to trigger re-render
+    setResultsMap({});
   }, [refetchRequest]);
 
   const handleRefresh = useCallback(async () => {
@@ -212,22 +215,23 @@ export const LabResultFormBody: React.FC<LabResultFormBodyProps> = ({
             </div>
 
             {/* Results Table */}
-          <div className="p-6 sm:p-8 md:p-10">
-            <LabResultItemsTable
-              isDark={isDark}
-              colors={colors}
-              request={request}
-              requestLocked={requestLocked}
-              staffId={staffId}
-              onEditItemResults={handleOpenEditor}
-              onActionComplete={handleActionComplete}
-            />
-          </div>
+            <div className="p-6 sm:p-8 md:p-10">
+              <LabResultItemsTable
+                isDark={isDark}
+                colors={colors}
+                request={request}
+                requestLocked={requestLocked}
+                staffId={staffId}
+                refreshTrigger={refreshTrigger}
+                onEditItemResults={handleOpenEditor}
+                onActionComplete={handleActionComplete}
+              />
+            </div>
           </div>
         )}
       </div>
 
-      {/* Modals - These should be portaled, but styling handled inside */}
+      {/* Modals */}
       <LabResultItemResultEditor
         open={isEditorOpen}
         isDark={isDark}
@@ -239,7 +243,6 @@ export const LabResultFormBody: React.FC<LabResultFormBodyProps> = ({
         onClose={handleCloseEditor}
         onSaved={() => {
           void handleSaved();
-          handleCloseEditor();
         }}
       />
 
