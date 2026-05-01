@@ -163,18 +163,6 @@ export const LabRequestItemsDesktopTable: React.FC<LabRequestItemsDesktopTablePr
                           Cancelled
                         </span>
                       )}
-
-                      {row.isLocked && !row.isCancelled && (
-                        <span
-                          className={cn(
-                            badgeBase,
-                            isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'
-                          )}
-                        >
-                          <Clock3 className="mr-1 h-2.5 w-2.5" />
-                          In Progress
-                        </span>
-                      )}
                     </div>
 
                     {row.notes && (

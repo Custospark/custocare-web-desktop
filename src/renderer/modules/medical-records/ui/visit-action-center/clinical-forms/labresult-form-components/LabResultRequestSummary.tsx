@@ -139,11 +139,6 @@ export const LabResultRequestSummary: React.FC<LabResultRequestSummaryProps> = (
               value={
                 <div>
                   <div>Dr. {requesterDisplay.name}</div>
-                  {/* {requesterDisplay.title && (
-                    <div className={cn('text-xs font-normal mt-0.5', colors.text.secondary)}>
-                      {requesterDisplay.title}
-                    </div>
-                  )} */}
                 </div>
               }
               colors={colors}
