@@ -8,7 +8,7 @@ import {
   Building2,
 } from 'lucide-react';
 import type { LabRequest } from '../../../../api/lab/LabTypes';
-import { RootState } from '../../../../../../app/store/rootReducer';
+import type { RootState } from '../../../../../../app/store/rootReducer';
 import { useGetFacilityIdentity } from '../../../../api/facility/FacilityQueries';
 
 interface LabResultPreviewHeaderProps {
@@ -18,7 +18,7 @@ interface LabResultPreviewHeaderProps {
 export const LabResultPreviewHeader: React.FC<LabResultPreviewHeaderProps> = ({
   request,
 }) => {
-  // First, try to get facility data from Redux slice
+  // Redux slice data
   const activeFacilityId = useSelector((state: RootState) => state.activeContext.activeFacilityId);
   const activeFacility = useSelector((state: RootState) => {
     const staffCapability = state.activeContext.capabilities.staff;
@@ -26,218 +26,102 @@ export const LabResultPreviewHeader: React.FC<LabResultPreviewHeaderProps> = ({
     return staffCapability.facilities.find(f => f.facility_id === activeFacilityId);
   });
 
-  // Only fetch if Redux slice doesn't have the facility data
   const shouldFetch = !activeFacility || !activeFacility.facility_name;
-  const { data, isLoading, error } = useGetFacilityIdentity({
-    enabled: shouldFetch,
-  });
+  const { data, isLoading } = useGetFacilityIdentity({ enabled: shouldFetch });
 
-  // Helper to get address string
-  const getAddressString = (facility: typeof activeFacility): string => {
-    if (!facility) return 'Address not available';
-    const parts = [
-      facility.state_province,
-      facility.city,
-      facility.address_line1,
-      facility.address_line2,
-    ].filter(Boolean);
-    return parts.length > 0 ? parts.join(', ') : 'Address not available';
-  };
+  // Determine which facility data to use
+  const facility = activeFacility && activeFacility.facility_name
+    ? {
+        name: activeFacility.facility_name,
+        code: activeFacility.facility_code || 'N/A',
+        email: activeFacility.email,
+        phone: activeFacility.main_phone,
+        address: [
+          activeFacility.address_line1,
+          activeFacility.address_line2,
+          activeFacility.city,
+          activeFacility.state_province,
+        ].filter(Boolean).join(', ') || 'Address not available',
+      }
+    : data?.data?.facility
+    ? {
+        name: data.data.facility.name,
+        code: data.data.facility.code || 'N/A',
+        email: data.data.facility.email,
+        phone: data.data.facility.phone,
+        address: typeof data.data.facility.address === 'string'
+          ? data.data.facility.address
+          : data.data.facility.address?.formatted || 'Address not available',
+      }
+    : {
+        name: request.facility?.facility_name || 'MEDICAL FACILITY',
+        code: request.facility?.facility_uuid || 'N/A',
+        email: null,
+        phone: null,
+        address: request.facility?.facility_name || 'Address not available',
+      };
 
-  // If we have data in Redux, use it
-  if (activeFacility && activeFacility.facility_name) {
-    return (
-      <div className="mb-6 border-b-2 border-blue-600 pb-5 text-center">
-        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
-          <Building2 className="h-7 w-7 text-blue-600" />
-        </div>
-
-        <h1 className="text-2xl font-black tracking-tight text-slate-900">
-          {activeFacility.facility_name.toUpperCase()}
-        </h1>
-
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-          <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
-            Laboratory Services
-          </span>
-          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-            Official Result Report
-          </span>
-        </div>
-
-        <div className="mt-3 space-y-1 text-xs text-gray-600">
-          <p className="inline-flex items-center gap-1">
-            <MapPin className="h-3.5 w-3.5" />
-            {getAddressString(activeFacility)}
-          </p>
-
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <span className="inline-flex items-center gap-1">
-              <Phone className="h-3.5 w-3.5" />
-              {activeFacility.main_phone || 'N/A'}
-            </span>
-            {activeFacility.email && (
-              <span className="inline-flex items-center gap-1">
-                <Mail className="h-3.5 w-3.5" />
-                {activeFacility.email}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400">
-          Facility Number: {activeFacility.facility_code || 'N/A'}
-        </p>
-
-        <div className="mt-4 rounded-xl bg-gradient-to-r from-blue-50 to-emerald-50 px-4 py-3">
-          <p className="text-lg font-black tracking-wide text-blue-700">
-            LABORATORY RESULT REPORT
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Fallback to fetching if Redux slice is empty
   if (isLoading) {
     return (
-      <div className="mb-6 border-b-2 border-blue-600 pb-5 text-center">
-        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
+      <div className="mb-6 border-b-2 border-blue-600 pb-5 text-center print:mb-4 print:pb-4">
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 print:hidden">
           <Building2 className="h-7 w-7 text-blue-600" />
         </div>
-        <h1 className="text-2xl font-black tracking-tight text-slate-900">
-          LOADING...
-        </h1>
+        <h1 className="text-2xl font-black tracking-tight text-slate-900">Loading...</h1>
       </div>
     );
   }
-
-  if (error || !data?.data?.facility) {
-    // Final fallback to request.facility data
-    const facilityName = request.facility?.facility_name || 'MEDICAL FACILITY';
-    const facilityCode = request.facility?.facility_uuid || 'N/A';
-
-    return (
-      <div className="mb-6 border-b-2 border-blue-600 pb-5 text-center">
-        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
-          <Building2 className="h-7 w-7 text-blue-600" />
-        </div>
-
-        <h1 className="text-2xl font-black tracking-tight text-slate-900">
-          {facilityName.toUpperCase()}
-        </h1>
-
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-          <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
-            Laboratory Services
-          </span>
-          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-            Official Result Report
-          </span>
-        </div>
-
-        <div className="mt-3 space-y-1 text-xs text-gray-600">
-          <p className="inline-flex items-center gap-1">
-            <MapPin className="h-3.5 w-3.5" />
-            {request.facility?.facility_name || 'Address not available'}
-          </p>
-
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <span className="inline-flex items-center gap-1">
-              <Phone className="h-3.5 w-3.5" />
-              N/A
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Mail className="h-3.5 w-3.5" />
-              N/A
-            </span>
-          </div>
-        </div>
-
-        <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400">
-          Facility Number: {facilityCode}
-        </p>
-
-        <div className="mt-4 rounded-xl bg-gradient-to-r from-blue-50 to-emerald-50 px-4 py-3">
-          <p className="text-lg font-black tracking-wide text-blue-700">
-            LABORATORY RESULT REPORT
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const facility = data.data.facility;
-
-  const getFetchedAddressString = (): string => {
-    if (!facility.address) return 'Address not available';
-
-    if (typeof facility.address === 'string') return facility.address;
-
-    if (typeof facility.address === 'object' && facility.address !== null) {
-      if ('formatted' in facility.address && facility.address.formatted) {
-        return facility.address.formatted;
-      }
-
-      const addr = facility.address as any;
-      const parts = [
-        addr.street,
-        addr.city,
-        addr.state,
-        addr.country,
-      ].filter(Boolean);
-
-      if (parts.length > 0) return parts.join(', ');
-    }
-
-    return 'Address not available';
-  };
 
   return (
-    <div className="mb-6 border-b-2 border-blue-600 pb-5 text-center">
-      <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
+    <div className="mb-6 border-b-2 border-blue-600 pb-5 text-center print:mb-4 print:pb-4 print:border-blue-800">
+      {/* Icon - hidden in print */}
+      <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 print:hidden">
         <Building2 className="h-7 w-7 text-blue-600" />
       </div>
 
-      <h1 className="text-2xl font-black tracking-tight text-slate-900">
+      <h1 className="text-2xl font-black tracking-tight text-slate-900 print:text-xl">
         {facility.name.toUpperCase()}
       </h1>
 
-      <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-        <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-2 print:mt-1">
+        <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700 print:bg-transparent print:p-0 print:text-gray-600">
           Laboratory Services
         </span>
-        <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+        <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 print:bg-transparent print:p-0 print:text-gray-600">
           Official Result Report
         </span>
       </div>
 
-      <div className="mt-3 space-y-1 text-xs text-gray-600">
-        <p className="inline-flex items-center gap-1">
-          <MapPin className="h-3.5 w-3.5" />
-          {getFetchedAddressString()}
+      <div className="mt-3 space-y-1 text-xs text-gray-600 print:mt-2">
+        <p className="inline-flex items-center gap-1 print:gap-1.5">
+          <MapPin className="h-3.5 w-3.5 print:hidden" />
+          {facility.address}
         </p>
 
-        <div className="flex flex-wrap items-center justify-center gap-4">
+        <div className="flex flex-wrap items-center justify-center gap-4 print:gap-3">
           <span className="inline-flex items-center gap-1">
-            <Phone className="h-3.5 w-3.5" />
+            <Phone className="h-3.5 w-3.5 print:hidden" />
             {facility.phone || 'N/A'}
           </span>
           {facility.email && (
             <span className="inline-flex items-center gap-1">
-              <Mail className="h-3.5 w-3.5" />
+              <Mail className="h-3.5 w-3.5 print:hidden" />
               {facility.email}
             </span>
           )}
         </div>
       </div>
 
-          <p className="mt-3 inline-block rounded-full bg-gray-100 font-bold px-3 py-1 text-2xl uppercase text-black">
-        Facility Number: <span className="text-gray-700">{facility.code || 'N/A'}</span>
-  </p>
+      {/* Facility Number - Cleaner formatting */}
+      <div className="mt-3 print:mt-2">
+        <span className="inline-block rounded-full bg-gray-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500 print:bg-transparent print:p-0 print:text-gray-400">
+          Facility Number: <span className="text-gray-700 print:text-gray-900">{facility.code}</span>
+        </span>
+      </div>
 
-      <div className="mt-4 rounded-xl bg-gradient-to-r from-blue-50 to-emerald-50 px-4 py-3">
-        <p className="text-lg font-black tracking-wide text-blue-700">
+      {/* Report Title Banner */}
+      <div className="mt-4 rounded-xl bg-gradient-to-r from-blue-50 to-emerald-50 px-4 py-3 print:mt-3 print:rounded-none print:bg-transparent print:border-y print:border-gray-200 print:py-2">
+        <p className="text-lg font-black tracking-wide text-blue-700 print:text-base print:text-slate-900">
           LABORATORY RESULT REPORT
         </p>
       </div>

@@ -1,13 +1,10 @@
+// lab-results/labresult-form-components/LabResultFormBody.tsx
 import React, { useCallback, useMemo, useState } from 'react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import type { LabRequest, LabRequestItem } from '../../../../api/lab/LabTypes';
 import type { ColorTokens, LabResultHydratedMap } from './labResultForm.types';
 import {
-  buildLabResultFileName,
-  buildLabResultReportHtml,
-  downloadHtmlDocument,
   isRequestLockedForEditing,
-  triggerPrintWindow,
 } from './labResultForm.utils';
 import { LabResultHeader } from './LabResultHeader';
 import { LabResultRequestSummary } from './LabResultRequestSummary';
@@ -45,7 +42,6 @@ export const LabResultFormBody: React.FC<LabResultFormBodyProps> = ({
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [resultsMap, setResultsMap] = useState<LabResultHydratedMap>({});
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const requestLocked = useMemo(
     () => isRequestLockedForEditing(request),
@@ -57,7 +53,7 @@ export const LabResultFormBody: React.FC<LabResultFormBodyProps> = ({
   // Build results map from the request data (single source of truth)
   const buildResultsMapFromRequest = useCallback((labRequest: LabRequest): LabResultHydratedMap => {
     const map: LabResultHydratedMap = {};
-    
+
     if (Array.isArray(labRequest.items)) {
       labRequest.items.forEach((item) => {
         if (Array.isArray(item.results) && item.results.length > 0) {
@@ -67,7 +63,7 @@ export const LabResultFormBody: React.FC<LabResultFormBodyProps> = ({
         }
       });
     }
-    
+
     return map;
   }, []);
 
@@ -93,64 +89,28 @@ export const LabResultFormBody: React.FC<LabResultFormBodyProps> = ({
   }, []);
 
   const handleSaved = useCallback(async () => {
-    // Increment refresh trigger to force table refresh
-    setRefreshTrigger((prev) => prev + 1);
-    // Refetch the request to get latest data
     await refetchRequest();
-    // Reset results map to trigger re-render
     setResultsMap({});
   }, [refetchRequest]);
 
   const handleRefresh = useCallback(async () => {
-    setRefreshTrigger((prev) => prev + 1);
     await refetchRequest();
   }, [refetchRequest]);
-
-  const handlePrint = useCallback(() => {
-    const html = buildLabResultReportHtml(request, resultsMap, {
-      name: request.facility?.facility_name || 'Medical Facility',
-      address: request.facility?.facility_name || 'Address not available',
-      phone: null,
-      email: null,
-      code: request.facility?.facility_uuid || null,
-    });
-
-    triggerPrintWindow(html);
-  }, [request, resultsMap]);
-
-  const handleDownload = useCallback(() => {
-    const html = buildLabResultReportHtml(request, resultsMap, {
-      name: request.facility?.facility_name || 'Medical Facility',
-      address: request.facility?.facility_name || 'Address not available',
-      phone: null,
-      email: null,
-      code: request.facility?.facility_uuid || null,
-    });
-
-    downloadHtmlDocument(buildLabResultFileName(request), html);
-  }, [request, resultsMap]);
 
   const handleActionComplete = useCallback(async () => {
     await handleRefresh();
   }, [handleRefresh]);
 
   return (
-    <div 
+    <div
       className={cn(
-        // Base layout
         'min-h-screen w-full',
-        
-        // Responsive padding - breathing room on all sides
         'px-4 py-6',
         'sm:px-6 sm:py-8',
         'md:px-8 md:py-10',
         'lg:px-10 lg:py-12',
-        
-        // Content width constraint for readability
         'mx-auto',
         'max-w-[1400px]',
-        
-        // Background and spacing
         colors.bg.page,
         'space-y-6',
         'sm:space-y-8',
@@ -166,7 +126,7 @@ export const LabResultFormBody: React.FC<LabResultFormBodyProps> = ({
         colors.border.primary,
         'border'
       )}>
-        <LabResultHeader
+       <LabResultHeader
           isDark={isDark}
           colors={colors}
           request={request}
@@ -174,11 +134,7 @@ export const LabResultFormBody: React.FC<LabResultFormBodyProps> = ({
           requestLocked={requestLocked}
           onCancel={onCancel}
           onPreview={() => setIsPreviewOpen(true)}
-          onPrint={handlePrint}
-          onDownload={handleDownload}
-          onRefresh={() => {
-            void handleRefresh();
-          }}
+          onRefresh={() => void handleRefresh()}
         />
       </div>
 
@@ -222,7 +178,6 @@ export const LabResultFormBody: React.FC<LabResultFormBodyProps> = ({
                 request={request}
                 requestLocked={requestLocked}
                 staffId={staffId}
-                refreshTrigger={refreshTrigger}
                 onEditItemResults={handleOpenEditor}
                 onActionComplete={handleActionComplete}
               />

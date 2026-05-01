@@ -27,8 +27,6 @@ interface LabResultHeaderProps {
   requestLocked: boolean;
   isRefreshing?: boolean;
   onPreview: () => void;
-  onPrint: () => void;
-  onDownload: () => void;
   onRefresh: () => void;
   onCancel?: () => void;
 }
@@ -40,8 +38,6 @@ export const LabResultHeader: React.FC<LabResultHeaderProps> = ({
   requestLocked,
   isRefreshing = false,
   onPreview,
-  onPrint,
-  onDownload,
   onRefresh,
   onCancel,
 }) => {
@@ -182,10 +178,10 @@ export const LabResultHeader: React.FC<LabResultHeaderProps> = ({
               <span>Preview</span>
             </button>
 
-            {/* Print Button - Primary Action */}
+            {/* Print Button - Opens Preview Modal (react-to-print lives there) */}
             <button
               type="button"
-              onClick={onPrint}
+              onClick={onPreview}
               className={cn(
                 'cursor-pointer inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium transition-all',
                 'bg-blue-600 text-white',
@@ -197,10 +193,10 @@ export const LabResultHeader: React.FC<LabResultHeaderProps> = ({
               <span>Print</span>
             </button>
 
-            {/* Download Button */}
+            {/* Download Button - Opens Preview Modal (react-to-print lives there) */}
             <button
               type="button"
-              onClick={onDownload}
+              onClick={onPreview}
               className={cn(
                 'cursor-pointer inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium transition-all',
                 isDark 

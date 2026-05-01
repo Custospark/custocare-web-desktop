@@ -49,7 +49,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
               </span>
             )}
 
-            {request?.status_label && (
+            {/* {request?.status_label && (
               <span
                 className={cn(
                   'rounded-full px-2.5 py-1 text-xs font-medium',
@@ -58,7 +58,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
               >
                 {request.status_label}
               </span>
-            )}
+            )} */}
           </div>
 
           <p className={cn('mt-1 text-sm', colors.text.secondary)}>

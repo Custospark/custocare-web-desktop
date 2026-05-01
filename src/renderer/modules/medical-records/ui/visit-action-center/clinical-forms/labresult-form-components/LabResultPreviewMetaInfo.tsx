@@ -1,3 +1,4 @@
+// lab-results/labresult-form-components/LabResultPreviewMetaInfo.tsx
 import React from 'react';
 import {
   Calendar,
@@ -28,12 +29,12 @@ const InfoRow: React.FC<{
   label: string;
   value: React.ReactNode;
 }> = ({ icon, label, value }) => (
-  <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
-    <span className="flex items-center gap-2 text-xs font-medium text-gray-500">
-      {icon}
+  <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 print:py-1.5">
+    <span className="flex items-center gap-2 text-xs font-medium text-gray-500 print:text-[10px]">
+      <span className="print:hidden">{icon}</span>
       {label}
     </span>
-    <span className="text-xs font-semibold text-gray-800 text-right">
+    <span className="text-xs font-semibold text-gray-800 text-right print:text-[10px]">
       {value}
     </span>
   </div>
@@ -49,76 +50,76 @@ export const LabResultPreviewMetaInfo: React.FC<LabResultPreviewMetaInfoProps> =
   ).length || 0;
 
   return (
-    <div className="my-6 bg-gray-50 rounded-lg p-4 space-y-2">
+    <div className="my-6 bg-gray-50 rounded-lg p-4 space-y-2 print:my-4 print:bg-transparent print:p-0 print:border print:border-gray-200 print:rounded-lg print:p-3">
       {/* Report Information */}
-      <InfoRow 
+      <InfoRow
         icon={<Calendar className="h-3.5 w-3.5" />}
-        label="Report Date" 
-        value={formatDisplayDate(request.requested_at)} 
+        label="Report Date"
+        value={formatDisplayDate(request.requested_at)}
       />
-      <InfoRow 
+      <InfoRow
         icon={<Clock className="h-3.5 w-3.5" />}
-        label="Report Time" 
-        value={new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 
+        label="Report Time"
+        value={new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
       />
-      
+
       {/* Patient Information */}
-      <InfoRow 
+      <InfoRow
         icon={<User className="h-3.5 w-3.5" />}
-        label="Patient Name" 
-        value={request.patient?.full_name || 'Unknown patient'} 
+        label="Patient Name"
+        value={request.patient?.full_name || 'Unknown patient'}
       />
-      <InfoRow 
+      <InfoRow
         icon={<Fingerprint className="h-3.5 w-3.5" />}
-        label="Patient Number" 
-        value={request.patient?.patient_uuid || 'N/A'} 
+        label="Patient Number"
+        value={request.patient?.patient_uuid || 'N/A'}
       />
-      
+
       {/* Request Information */}
-      <InfoRow 
+      <InfoRow
         icon={<Stethoscope className="h-3.5 w-3.5" />}
-        label="Requested By" 
+        label="Requested By"
         value={
-          request.requested_by?.name 
-            ? request.requested_by.name.startsWith('Dr.') 
+          request.requested_by?.name
+            ? request.requested_by.name.startsWith('Dr.')
               ? request.requested_by.name
               : `Dr. ${request.requested_by.name}`
             : 'N/A'
-        } 
+        }
       />
-      <InfoRow 
+      <InfoRow
         icon={<CalendarDays className="h-3.5 w-3.5" />}
-        label="Request Date" 
-        value={formatDisplayDate(request.requested_at)} 
+        label="Request Date"
+        value={formatDisplayDate(request.requested_at)}
       />
-      <InfoRow 
+      <InfoRow
         icon={<Beaker className="h-3.5 w-3.5" />}
-        label="Tests Ordered" 
-        value={totalTests} 
+        label="Tests Ordered"
+        value={totalTests}
       />
-      <InfoRow 
+      <InfoRow
         icon={<CheckCircle2 className="h-3.5 w-3.5 text-green-500" />}
-        label="Results Verified" 
+        label="Results Verified"
         value={
           <span className="inline-flex items-center gap-1">
             {verifiedTests}/{totalTests}
           </span>
-        } 
+        }
       />
 
       {/* Completion / Review Status */}
       {request.reviewed_at && (
-        <InfoRow 
+        <InfoRow
           icon={<ClipboardCheck className="h-3.5 w-3.5" />}
-          label="Reviewed On" 
-          value={formatDisplayDateTime(request.reviewed_at)} 
+          label="Reviewed On"
+          value={formatDisplayDateTime(request.reviewed_at)}
         />
       )}
       {request.reviewed_by?.name && (
-        <InfoRow 
+        <InfoRow
           icon={<Users className="h-3.5 w-3.5" />}
-          label="Reviewed By" 
-          value={request.reviewed_by.name} 
+          label="Reviewed By"
+          value={request.reviewed_by.name}
         />
       )}
     </div>
