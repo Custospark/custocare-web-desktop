@@ -317,6 +317,7 @@ export const flattenPreviewRows = (
 
   return items.flatMap((item) => {
     const itemResults = Array.isArray(resultsMap[item.item_uuid]) ? resultsMap[item.item_uuid] : [];
+    
     const base = {
       itemUuid: item.item_uuid,
       testName: item.lab_test?.name || 'Unnamed test',
@@ -324,6 +325,20 @@ export const flattenPreviewRows = (
       category: item.lab_test?.category || 'N/A',
       sampleType: item.sample_type || 'N/A',
       itemStatus: formatLabel(item.status),
+      // Timeline staff tracking
+      createdBy: item.created_by?.name || '—',
+      collectedBy: item.collected_by?.name || null,
+      startedBy: item.started_by?.name || null,
+      completedBy: item.completed_by?.name || null,
+      verifiedBy: item.verified_by?.name || null,
+      cancelledBy: item.cancelled_by?.name || null,
+      // Timeline dates
+      createdAt: item.created_at,
+      collectedAt: item.collected_at,
+      startedAt: item.started_at,
+      completedAt: item.completed_at,
+      verifiedAt: item.verified_at,
+      cancelledAt: item.cancelled_at,
     };
 
     if (!itemResults.length) {
@@ -339,9 +354,7 @@ export const flattenPreviewRows = (
           interpretation: 'No result entered yet',
           comments: item.notes || '—',
           recordedAt: '—',
-          verifiedAt: '—',
           recordedBy: '—',
-          verifiedBy: '—',
         },
       ];
     }
@@ -362,9 +375,7 @@ export const flattenPreviewRows = (
       interpretation: result.interpretation || '—',
       comments: result.comments || '—',
       recordedAt: formatDisplayDateTime(result.recorded_at),
-      verifiedAt: formatDisplayDateTime(result.verified_at),
       recordedBy: result.recorded_by?.name || '—',
-      verifiedBy: result.verified_by?.name || '—',
     }));
   });
 };

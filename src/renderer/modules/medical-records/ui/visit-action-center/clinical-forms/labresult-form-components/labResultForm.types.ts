@@ -73,9 +73,21 @@ export interface LabResultPreviewRow {
   interpretation: string;
   comments: string;
   recordedAt: string;
-  verifiedAt: string;
   recordedBy: string;
-  verifiedBy: string;
+  // Timeline staff tracking
+  createdBy: string;
+  collectedBy: string | null;
+  startedBy: string | null;
+  completedBy: string | null;
+  verifiedBy: string | null;
+  cancelledBy: string | null;
+  // Timeline dates
+  createdAt: string | null;
+  collectedAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  verifiedAt: string | null;
+  cancelledAt: string | null;
 }
 
 export interface LabResultResolvedRequestScopeRenderPayload {
