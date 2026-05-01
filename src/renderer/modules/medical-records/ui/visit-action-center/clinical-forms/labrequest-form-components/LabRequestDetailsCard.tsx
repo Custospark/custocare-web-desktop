@@ -68,6 +68,7 @@ export const LabRequestDetailsCard: React.FC<LabRequestDetailsCardProps> = ({
   const canCancel = !!request && 
     request.status !== LabRequestStatus.CANCELLED &&
     request.status !== LabRequestStatus.COMPLETED &&
+    request.status !== LabRequestStatus.IN_PROGRESS &&
     request.status !== LabRequestStatus.REVIEWED;
   
   const getCancelButtonTooltip = (): string => {
@@ -116,22 +117,24 @@ export const LabRequestDetailsCard: React.FC<LabRequestDetailsCardProps> = ({
           <div className="flex items-center gap-2">
             {!isEditorOpen ? (
               <>
-                <button
-                  type="button"
-                  onClick={onOpenEditor}
-                  disabled={!canEdit}
-                  title={getEditButtonTooltip()}
-                  className={cn(
-                    'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
-                    canEdit 
-                      ? cn(colors.bg.hover, colors.text.brand)
-                      : 'cursor-not-allowed opacity-50',
-                  )}
-                >
-                  <Pencil className="h-4 w-4" />
-                  Edit Details
-                </button>
+                {/* Edit button - only show if accessible */}
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={onOpenEditor}
+                    title={getEditButtonTooltip()}
+                    className={cn(
+                      'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
+                      colors.bg.hover,
+                      colors.text.brand
+                    )}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Edit Details
+                  </button>
+                )}
 
+                {/* Cancel button - only show if accessible */}
                 {canCancel && onCancelRequest && (
                   <button
                     type="button"
@@ -146,22 +149,6 @@ export const LabRequestDetailsCard: React.FC<LabRequestDetailsCardProps> = ({
                   >
                     <Trash2 className="h-4 w-4" />
                     {isCancellingRequest ? 'Cancelling...' : 'Cancel Request'}
-                  </button>
-                )}
-
-                {/* Show disabled cancel button for completed/reviewed/cancelled requests */}
-                {!canCancel && request && onCancelRequest && (
-                  <button
-                    type="button"
-                    disabled
-                    title={getCancelButtonTooltip()}
-                    className={cn(
-                      'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
-                      'cursor-not-allowed opacity-50 text-gray-400 dark:text-gray-600'
-                    )}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Cancel Request
                   </button>
                 )}
               </>

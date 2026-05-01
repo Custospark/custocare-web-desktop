@@ -1663,7 +1663,7 @@ export const useUpdateItemStatus = (callbacks?: { onSuccess?: (data: ApiResponse
       return response.data;
     },
     onSuccess: (data, variables) => {
-      showToast('success', data.message || 'Item status updated successfully');
+      showToast('success', data.message || 'Status updated successfully');
       queryClient.invalidateQueries({ queryKey: labKeys.itemDetail(variables.uuid) });
       queryClient.invalidateQueries({ queryKey: labKeys.items() });
       callbacks?.onSuccess?.(data);

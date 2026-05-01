@@ -1,14 +1,15 @@
 import React from 'react';
-import { X, Calendar, User, FileText, AlertCircle } from 'lucide-react';
-import { cn } from '../../../../../../../../shared/utils/classNameUtils';
-import type { LabRequestItem, LabResult } from '../../../../../../api/lab/LabTypes';
-import type { ColorTokens } from '../../labResultForm.types';
+import { X, Calendar, User, FileText, AlertCircle, CheckCircle2, Clock, FlaskConical, CheckCheck } from 'lucide-react';
+import { cn } from '../../../../../../shared/utils/classNameUtils';
+import type { LabRequestItem, LabResult } from '../../../../api/lab/LabTypes';
+import { LabRequestItemStatus } from '../../../../api/lab/LabTypes';
+import type { ColorTokens } from './labResultForm.types';
 import {
   formatDisplayDateTime,
   formatLabel,
   getResultFlagClasses,
   formatReferenceRange,
-} from '../../labResultForm.utils';
+} from './labResultForm.utils';
 
 interface LabResultViewModalProps {
   isOpen: boolean;
@@ -186,11 +187,73 @@ const ResultDetailCard: React.FC<ResultDetailCardProps> = ({
 
         {result.is_critical_alert_sent && (
           <div className="flex items-center gap-1.5">
-            <AlertCircle className={cn('h-3.5 w-3.5', 'text-red-500')} />
-            <span className={cn('text-xs', 'text-red-600 dark:text-red-400')}>
+            <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+            <span className="text-xs text-red-600 dark:text-red-400">
               Critical Alert Sent
             </span>
           </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Timeline Step Component
+const TimelineStep: React.FC<{
+  status: string;
+  label: string;
+  date: string | null;
+  isActive: boolean;
+  isCompleted: boolean;
+  isLast: boolean;
+  isDark: boolean;
+  colors: ColorTokens;
+}> = ({ status, label, date, isActive, isCompleted, isLast, isDark, colors }) => {
+  const getStatusIcon = () => {
+    if (status === 'verified') return <CheckCheck className="h-4 w-4" />;
+    if (status === 'completed') return <CheckCircle2 className="h-4 w-4" />;
+    if (status === 'in_progress') return <FlaskConical className="h-4 w-4" />;
+    if (status === 'sample_collected') return <Clock className="h-4 w-4" />;
+    return <Clock className="h-4 w-4" />;
+  };
+
+  const getStatusColor = () => {
+    if (isCompleted) return 'bg-green-500 text-white';
+    if (isActive) return 'bg-blue-500 text-white animate-pulse';
+    if (status === 'cancelled') return 'bg-red-500 text-white';
+    return isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500';
+  };
+
+  return (
+    <div className="flex-1 relative">
+      {/* Connector line */}
+      {!isLast && (
+        <div 
+          className={cn(
+            'absolute top-4 left-1/2 w-full h-0.5',
+            isCompleted ? 'bg-green-500' : isDark ? 'bg-gray-700' : 'bg-gray-200'
+          )}
+          style={{ transform: 'translateX(0%)' }}
+        />
+      )}
+      
+      {/* Dot/Circle */}
+      <div className="relative z-10 flex flex-col items-center">
+        <div
+          className={cn(
+            'flex h-8 w-8 items-center justify-center rounded-full transition-all',
+            getStatusColor()
+          )}
+        >
+          {getStatusIcon()}
+        </div>
+        <p className={cn('mt-2 text-xs font-semibold text-center', colors.text.primary)}>
+          {label}
+        </p>
+        {date && (
+          <p className={cn('text-[10px] text-center mt-0.5', colors.text.tertiary)}>
+            {formatDisplayDateTime(date)}
+          </p>
         )}
       </div>
     </div>
@@ -208,6 +271,29 @@ export const LabResultViewModal: React.FC<LabResultViewModalProps> = ({
   if (!isOpen || !item) return null;
 
   const hasResults = results.length > 0;
+
+  // Determine timeline steps based on item status
+  const getTimelineSteps = () => {
+    const steps = [
+      { status: 'pending', label: 'Pending', date: item.created_at, completed: item.created_at !== null },
+      { status: 'sample_collected', label: 'Collected', date: item.collected_at, completed: item.collected_at !== null },
+      { status: 'in_progress', label: 'Processing', date: item.started_at, completed: item.started_at !== null },
+      { status: 'completed', label: 'Completed', date: item.completed_at, completed: item.completed_at !== null },
+      { status: 'verified', label: 'Verified', date: item.verified_at, completed: item.verified_at !== null },
+    ];
+
+    const currentStatus = item.status;
+    const activeIndex = steps.findIndex(s => s.status === currentStatus);
+    
+    return steps.map((step, idx) => ({
+      ...step,
+      isActive: idx === activeIndex,
+      isCompleted: step.completed,
+    }));
+  };
+
+  const timelineSteps = getTimelineSteps();
+  const isCancelled = item.status === LabRequestItemStatus.CANCELLED;
 
   return (
     <div
@@ -257,6 +343,53 @@ export const LabResultViewModal: React.FC<LabResultViewModalProps> = ({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5">
+          {/* Timeline Section */}
+          <div className="mb-6">
+            <h3 className={cn('mb-4 text-sm font-semibold', colors.text.primary)}>
+              Test Workflow Timeline
+            </h3>
+            
+            {isCancelled ? (
+              <div
+                className={cn(
+                  'rounded-xl border p-4 text-center',
+                  isDark ? 'border-red-800/50 bg-red-950/20' : 'border-red-200 bg-red-50'
+                )}
+              >
+                <AlertCircle className="mx-auto mb-2 h-6 w-6 text-red-500" />
+                <p className={cn('text-sm font-semibold', colors.text.primary)}>
+                  Test Cancelled
+                </p>
+                {item.cancelled_at && (
+                  <p className={cn('text-xs mt-1', colors.text.secondary)}>
+                    Cancelled on: {formatDisplayDateTime(item.cancelled_at)}
+                  </p>
+                )}
+                {item.cancellation_reason && (
+                  <p className={cn('text-xs mt-1', colors.text.secondary)}>
+                    Reason: {item.cancellation_reason}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between px-4 py-6">
+                {timelineSteps.map((step, idx) => (
+                  <TimelineStep
+                    key={step.status}
+                    status={step.status}
+                    label={step.label}
+                    date={step.date}
+                    isActive={step.isActive}
+                    isCompleted={step.isCompleted}
+                    isLast={idx === timelineSteps.length - 1}
+                    isDark={isDark}
+                    colors={colors}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
           {!hasResults ? (
             <div
               className={cn(

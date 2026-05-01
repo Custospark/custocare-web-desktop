@@ -4,7 +4,6 @@ import type { LabRequestItem } from '../../../../../../api/lab/LabTypes';
 import { LabRequestItemStatus } from '../../../../../../api/lab/LabTypes';
 import type { ColorTokens } from '../../labResultForm.types';
 import {
-  formatDisplayDateTime,
   formatLabel,
   getPrimaryFlag,
   getResultFlagClasses,
@@ -79,9 +78,12 @@ export const LabResultTableRow: React.FC<LabResultTableRowProps> = ({
         <td className="px-4 py-4 whitespace-nowrap">
           <div className="space-y-2 min-w-[130px]">
             <LabResultStatusIndicator item={item} isDark={isDark} />
-            <div className={cn('text-xs', colors.text.secondary)}>
+            {
+              item.sample_type && 
+               <div className={cn('text-xs', colors.text.secondary)}>
               Sample: {item.sample_type || 'N/A'}
             </div>
+            }
           </div>
         </td>
 
@@ -109,19 +111,7 @@ export const LabResultTableRow: React.FC<LabResultTableRowProps> = ({
           </div>
         </td>
 
-        <td className="px-4 py-4 whitespace-nowrap">
-          <div className="space-y-1.5 text-xs min-w-[140px]">
-            <div className={cn(colors.text.primary)}>
-              Results: <strong>{results.length}</strong>
-            </div>
-            <div className={cn(colors.text.secondary)}>
-              Completed: {formatDisplayDateTime(item.completed_at)}
-            </div>
-            <div className={cn(colors.text.secondary)}>
-              Verified: {formatDisplayDateTime(item.verified_at)}
-            </div>
-          </div>
-        </td>
+       
 
         <td className="px-4 py-4 whitespace-nowrap">
           <div className="flex flex-col items-start gap-2 min-w-[160px]">

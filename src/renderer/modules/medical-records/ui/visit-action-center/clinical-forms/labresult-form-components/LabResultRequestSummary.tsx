@@ -1,4 +1,3 @@
-// lab-results/labresult-form-components/LabResultRequestSummary.tsx
 import React from 'react';
 import {
   Calendar,
@@ -14,7 +13,6 @@ import type { LabRequest } from '../../../../api/lab/LabTypes';
 import type { ColorTokens } from './labResultForm.types';
 import {
   formatDisplayDate,
-  formatDisplayDateTime,
   formatDisplayTime,
   formatLabel,
 } from './labResultForm.utils';
@@ -55,6 +53,23 @@ export const LabResultRequestSummary: React.FC<LabResultRequestSummaryProps> = (
   const suspectedConditions = request.diagnosis_context?.suspected_conditions || [];
   const icdCodes = request.diagnosis_context?.icd_codes || [];
 
+  const getRequesterDisplay = () => {
+    const name = request.requested_by?.name || 'N/A';
+    const title = request.requested_by?.professional_title;
+    
+    if (name === 'N/A') return { name, title: null };
+    
+    // Check if title indicates doctor
+    const isDoctor = title && (title.toLowerCase().includes('dr') || title.toLowerCase().includes('physician'));
+    
+    return {
+      name: isDoctor && !name.startsWith('Dr.') && !name.startsWith('Dr ') ? `Dr. ${name}` : name,
+      title: title || 'Ordering clinician'
+    };
+  };
+
+  const requesterDisplay = getRequesterDisplay();
+
   return (
     <section className={cn(
       'w-full',
@@ -77,13 +92,13 @@ export const LabResultRequestSummary: React.FC<LabResultRequestSummaryProps> = (
               Lab Request Summary
             </h2>
             <p className={cn('text-xs sm:text-sm', colors.text.secondary)}>
-              Request, patient, visit, and clinical context details
+              Request, patient, and clinical context details
             </p>
           </div>
         </div>
       </div>
 
-      {/* Two Column Layout - Responsive */}
+      {/* Two Column Layout */}
       <div className="flex flex-col gap-5 lg:flex-row lg:gap-6">
         {/* Left Column - Basic Info */}
         <div className={cn(
@@ -119,6 +134,21 @@ export const LabResultRequestSummary: React.FC<LabResultRequestSummaryProps> = (
               colors={colors}
             />
             <SummaryRow
+              icon={<User className="h-4 w-4 flex-shrink-0" />}
+              label="Requested By"
+              value={
+                <div>
+                  <div>Dr. {requesterDisplay.name}</div>
+                  {/* {requesterDisplay.title && (
+                    <div className={cn('text-xs font-normal mt-0.5', colors.text.secondary)}>
+                      {requesterDisplay.title}
+                    </div>
+                  )} */}
+                </div>
+              }
+              colors={colors}
+            />
+            <SummaryRow
               icon={<FlaskConical className="h-4 w-4 flex-shrink-0" />}
               label="Number of Tests"
               value={request.items_count || request.items?.length || 0}
@@ -133,164 +163,86 @@ export const LabResultRequestSummary: React.FC<LabResultRequestSummaryProps> = (
           </div>
         </div>
 
-        {/* Right Column - Timeline & Clinical Context */}
-        <div className="flex-1 space-y-5">
-          {/* Operational Timeline */}
+        {/* Right Column - Clinical Context Only */}
+        {(request.clinical_notes || diagnosisNotes || suspectedConditions.length > 0 || icdCodes.length > 0) && (
           <div className={cn(
+            'flex-1',
             'rounded-2xl border',
             'p-4 sm:p-5',
             colors.border.primary,
             colors.bg.subtle
           )}>
             <h3 className={cn('mb-4 text-sm font-semibold', colors.text.primary)}>
-              Operational Timeline
+              Clinical Context
             </h3>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-              <div className={cn(
-                'rounded-xl border',
-                'px-3 py-2.5',
-                colors.border.primary,
-                colors.bg.card
-              )}>
-                <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
-                  Requested By
-                </p>
-                <p className={cn('mt-1 text-sm font-semibold break-words', colors.text.primary)}>
-                  {request.requested_by?.name || 'N/A'}
-                </p>
-                <p className={cn('text-xs break-words', colors.text.secondary)}>
-                  {request.requested_by?.professional_title || 'Ordering clinician'}
-                </p>
-              </div>
+            <div className="space-y-4">
+              {request.clinical_notes && (
+                <div>
+                  <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
+                    Clinical Notes
+                  </p>
+                  <p className={cn('mt-1 text-sm leading-6 break-words', colors.text.primary)}>
+                    {request.clinical_notes}
+                  </p>
+                </div>
+              )}
 
-              <div className={cn(
-                'rounded-xl border',
-                'px-3 py-2.5',
-                colors.border.primary,
-                colors.bg.card
-              )}>
-                <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
-                  Collected At
-                </p>
-                <p className={cn('mt-1 text-sm font-semibold break-words', colors.text.primary)}>
-                  {formatDisplayDateTime(request.collected_at)}
-                </p>
-              </div>
+              {diagnosisNotes && (
+                <div>
+                  <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
+                    Diagnosis Notes
+                  </p>
+                  <p className={cn('mt-1 text-sm leading-6 break-words', colors.text.primary)}>
+                    {diagnosisNotes}
+                  </p>
+                </div>
+              )}
 
-              <div className={cn(
-                'rounded-xl border',
-                'px-3 py-2.5',
-                colors.border.primary,
-                colors.bg.card
-              )}>
-                <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
-                  Completed At
-                </p>
-                <p className={cn('mt-1 text-sm font-semibold break-words', colors.text.primary)}>
-                  {formatDisplayDateTime(request.completed_at)}
-                </p>
-              </div>
+              {suspectedConditions.length > 0 && (
+                <div>
+                  <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
+                    Suspected Conditions
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {suspectedConditions.map((condition) => (
+                      <span
+                        key={condition}
+                        className={cn(
+                          'rounded-full px-2.5 py-1 text-xs font-medium break-words',
+                          isDark ? 'bg-blue-950/30 text-blue-300' : 'bg-blue-100 text-blue-700'
+                        )}
+                      >
+                        {condition}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-              <div className={cn(
-                'rounded-xl border',
-                'px-3 py-2.5',
-                colors.border.primary,
-                colors.bg.card
-              )}>
-                <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
-                  Reviewed By
-                </p>
-                <p className={cn('mt-1 text-sm font-semibold break-words', colors.text.primary)}>
-                  {request.reviewed_by?.name || 'N/A'}
-                </p>
-                <p className={cn('text-xs break-words', colors.text.secondary)}>
-                  Reviewed At: {formatDisplayDateTime(request.reviewed_at)}
-                </p>
-              </div>
+              {icdCodes.length > 0 && (
+                <div>
+                  <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
+                    ICD Codes
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {icdCodes.map((code) => (
+                      <span
+                        key={code}
+                        className={cn(
+                          'rounded-full px-2.5 py-1 text-xs font-medium break-words',
+                          isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
+                        )}
+                      >
+                        {formatLabel(code)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Clinical Context */}
-          {(request.clinical_notes || diagnosisNotes || suspectedConditions.length > 0 || icdCodes.length > 0) && (
-            <div className={cn(
-              'rounded-2xl border',
-              'p-4 sm:p-5',
-              colors.border.primary,
-              colors.bg.subtle
-            )}>
-              <h3 className={cn('mb-4 text-sm font-semibold', colors.text.primary)}>
-                Clinical Context
-              </h3>
-
-              <div className="space-y-4">
-                {request.clinical_notes && (
-                  <div>
-                    <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
-                      Clinical Notes
-                    </p>
-                    <p className={cn('mt-1 text-sm leading-6 break-words', colors.text.primary)}>
-                      {request.clinical_notes}
-                    </p>
-                  </div>
-                )}
-
-                {diagnosisNotes && (
-                  <div>
-                    <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
-                      Diagnosis Notes
-                    </p>
-                    <p className={cn('mt-1 text-sm leading-6 break-words', colors.text.primary)}>
-                      {diagnosisNotes}
-                    </p>
-                  </div>
-                )}
-
-                {suspectedConditions.length > 0 && (
-                  <div>
-                    <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
-                      Suspected Conditions
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {suspectedConditions.map((condition) => (
-                        <span
-                          key={condition}
-                          className={cn(
-                            'rounded-full px-2.5 py-1 text-xs font-medium break-words',
-                            isDark ? 'bg-blue-950/30 text-blue-300' : 'bg-blue-100 text-blue-700'
-                          )}
-                        >
-                          {condition}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {icdCodes.length > 0 && (
-                  <div>
-                    <p className={cn('text-[11px] font-semibold uppercase tracking-wide', colors.text.tertiary)}>
-                      ICD Codes
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {icdCodes.map((code) => (
-                        <span
-                          key={code}
-                          className={cn(
-                            'rounded-full px-2.5 py-1 text-xs font-medium break-words',
-                            isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
-                          )}
-                        >
-                          {formatLabel(code)}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Cancellation Notice */}
