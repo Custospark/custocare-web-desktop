@@ -13,7 +13,7 @@ interface ClinicalNotesEmptyStateProps {
 export const ClinicalNotesEmptyState: React.FC<ClinicalNotesEmptyStateProps> = ({
   isDark,
   colors,
-//   patientId,
+  // patientId, // Reserved for future use (patient-specific messaging)
   onCreate,
 }) => {
   return (

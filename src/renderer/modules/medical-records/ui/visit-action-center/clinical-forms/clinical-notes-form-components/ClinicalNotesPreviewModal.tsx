@@ -3,7 +3,7 @@ import { Download, Eye, Printer, X } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { ClinicalNotesPreviewDocument } from './ClinicalNotesPreviewDocument';
 import type {
-  ClinicalNoteListItem,
+  ClinicalNoteResponse,
   ClinicalNotesFormValues,
   ClinicalNotesPreviewAction,
 } from './clinicalNotesForm.types';
@@ -11,7 +11,7 @@ import type {
 interface ClinicalNotesPreviewModalProps {
   open: boolean;
   onClose: () => void;
-  note: ClinicalNoteListItem | null;
+  note: ClinicalNoteResponse | null;
   values: ClinicalNotesFormValues;
   noteTitle: string;
   initialAction?: ClinicalNotesPreviewAction;
@@ -50,6 +50,9 @@ export const ClinicalNotesPreviewModal: React.FC<ClinicalNotesPreviewModalProps>
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
           background: white;
+        }
+        .no-print {
+          display: none !important;
         }
       }
     `,
@@ -102,12 +105,13 @@ export const ClinicalNotesPreviewModal: React.FC<ClinicalNotesPreviewModalProps>
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex h-[96vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:h-[92vh] sm:rounded-2xl">
+      <div className="no-print flex h-[96vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:h-[92vh] sm:rounded-2xl">
+        {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 print:hidden">
           <div>
             <h3 className="text-base font-semibold text-slate-900">Clinical Note Preview</h3>
             <p className="mt-1 text-sm text-slate-600">
-              Print or save the exact preview below using the browser print dialog.
+              Review the clinical note before printing or saving as PDF.
             </p>
           </div>
 
@@ -115,7 +119,7 @@ export const ClinicalNotesPreviewModal: React.FC<ClinicalNotesPreviewModalProps>
             <button
               type="button"
               onClick={() => handlePrint?.()}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-blue-700"
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-blue-700"
             >
               <Printer className="h-4 w-4" />
               Print
@@ -124,7 +128,7 @@ export const ClinicalNotesPreviewModal: React.FC<ClinicalNotesPreviewModalProps>
             <button
               type="button"
               onClick={() => handleDownload?.()}
-              className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 transition-all hover:bg-emerald-100"
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 transition-all hover:bg-emerald-100"
             >
               <Download className="h-4 w-4" />
               Download PDF
@@ -132,7 +136,8 @@ export const ClinicalNotesPreviewModal: React.FC<ClinicalNotesPreviewModalProps>
 
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50"
+              disabled
+              className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-400"
             >
               <Eye className="h-4 w-4" />
               Preview
@@ -141,13 +146,14 @@ export const ClinicalNotesPreviewModal: React.FC<ClinicalNotesPreviewModalProps>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-200 p-2 text-slate-600 transition-all hover:bg-slate-50"
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 p-2 text-slate-600 transition-all hover:bg-slate-50"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
+        {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
           <div ref={contentRef}>
             <ClinicalNotesPreviewDocument
@@ -158,6 +164,7 @@ export const ClinicalNotesPreviewModal: React.FC<ClinicalNotesPreviewModalProps>
           </div>
         </div>
 
+        {/* Modal Footer */}
         <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500 print:hidden">
           Printing and downloading use the exact same preview container above so the exported output
           matches what the clinician reviewed on screen.

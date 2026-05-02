@@ -10,6 +10,7 @@ import {
   useGetActiveVisitClinicalNotes,
   useUpdateClinicalNote,
 } from '../../../api/clinical-notes/clinicalNoteQueries';
+import type { CreateClinicalNoteRequest } from '../../../api/clinical-notes/clinicalNoteTypes';
 import {
   ClinicalNotesEditor,
   ClinicalNotesEmptyState,
@@ -70,6 +71,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     [activeVisitNote]
   );
 
+  // Reset form when mode changes or note changes
   useEffect(() => {
     if (mode === 'idle') {
       setFormData(activeVisitNote ? hydratedValues : EMPTY_CLINICAL_NOTES_FORM);
@@ -78,6 +80,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     }
   }, [mode, activeVisitNote, hydratedValues]);
 
+  // Handle API mutation errors
   const handleMutationError = useCallback((error: unknown) => {
     const normalizedMessage = extractClinicalNoteErrorMessage(
       error as never,
@@ -88,6 +91,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     setFieldErrors(mapApiFieldErrorsToFormErrors(apiFieldErrors));
   }, []);
 
+  // Create mutation
   const createMutation = useCreateClinicalNote({
     onSuccess: (response) => {
       const savedUuid = getClinicalNoteUuid(response.data ?? null);
@@ -99,6 +103,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     onError: handleMutationError,
   });
 
+  // Update mutation
   const updateMutation = useUpdateClinicalNote({
     onSuccess: (response) => {
       const savedUuid = getClinicalNoteUuid(response.data ?? null);
@@ -113,6 +118,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
   const isLoading = notesQuery.isLoading && !!activeVisitId;
 
+  // Form field change handler
   const handleChange = useCallback(
     (field: keyof ClinicalNotesFormData, value: string) => {
       setFormError(null);
@@ -122,6 +128,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     []
   );
 
+  // Create new note
   const handleCreate = useCallback(() => {
     setFormError(null);
     setFieldErrors({});
@@ -129,6 +136,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     setMode('create');
   }, []);
 
+  // Edit existing note
   const handleEdit = useCallback(() => {
     setFormError(null);
     setFieldErrors({});
@@ -136,6 +144,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     setMode('edit');
   }, [hydratedValues]);
 
+  // Cancel editing
   const handleCancelEdit = useCallback(() => {
     setFormError(null);
     setFieldErrors({});
@@ -143,16 +152,37 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     setMode('idle');
   }, [activeVisitNote, hydratedValues]);
 
+  // Open preview modal
   const openPreview = useCallback((action: ClinicalNotesPreviewAction = 'preview') => {
     setPreviewAction(action);
     setPreviewOpen(true);
   }, []);
 
+  // Close preview modal
   const closePreview = useCallback(() => {
     setPreviewOpen(false);
     setPreviewAction('preview');
   }, []);
 
+  // Submit create mutation
+  const handleCreateSubmit = useCallback(() => {
+    const payload = buildCreateClinicalNotePayload(formData);
+    // Type assertion is safe because the mutation hook adds facility_id, visit_id, patient_id, staff_id
+    createMutation.mutate(payload as CreateClinicalNoteRequest);
+  }, [createMutation, formData]);
+
+  // Submit update mutation
+  const handleUpdateSubmit = useCallback(() => {
+    const uuid = getClinicalNoteUuid(activeVisitNote);
+    if (!uuid) {
+      setFormError('This note could not be updated because its identifier is missing.');
+      return;
+    }
+    const payload = buildUpdateClinicalNotePayload(formData);
+    updateMutation.mutate({ uuid, data: payload });
+  }, [activeVisitNote, formData, updateMutation]);
+
+  // Main form submit handler
   const handleSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -160,6 +190,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
       setFormError(null);
       setFieldErrors({});
 
+      // Validate required field
       if (!formData.chiefComplaint.trim()) {
         setFieldErrors({
           chiefComplaint: 'Please enter the main reason for this visit.',
@@ -168,23 +199,12 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
       }
 
       if (mode === 'edit' && activeVisitNote) {
-        const uuid = getClinicalNoteUuid(activeVisitNote);
-
-        if (!uuid) {
-          setFormError('This note could not be updated because its identifier is missing.');
-          return;
-        }
-
-        updateMutation.mutate({
-          uuid,
-          data: buildUpdateClinicalNotePayload(formData),
-        });
-        return;
+        handleUpdateSubmit();
+      } else {
+        handleCreateSubmit();
       }
-
-      createMutation.mutate(buildCreateClinicalNotePayload(formData));
     },
-    [activeVisitNote, createMutation, formData, mode, updateMutation]
+    [formData, mode, activeVisitNote, handleCreateSubmit, handleUpdateSubmit]
   );
 
   const previewValues = mode === 'create' || mode === 'edit' ? formData : hydratedValues;
@@ -192,6 +212,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
   return (
     <>
       <div className="space-y-6 px-6">
+        {/* Header Section */}
         <ClinicalNotesHeader
           isDark={isDark}
           colors={colors}
@@ -202,6 +223,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
           onBack={onCancel}
         />
 
+        {/* No Active Visit State */}
         {!activeVisitId && (
           <div
             className={cn(
@@ -214,7 +236,6 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
               <div className={cn('rounded-xl p-2.5', isDark ? 'bg-amber-900/20' : 'bg-amber-50')}>
                 <AlertTriangle className={cn('h-5 w-5', isDark ? 'text-amber-300' : 'text-amber-700')} />
               </div>
-
               <div>
                 <h3 className={cn('text-base font-semibold', colors.text.primary)}>
                   No active visit selected
@@ -227,14 +248,13 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
           </div>
         )}
 
+        {/* Loading State */}
         {!!activeVisitId && isLoading && (
           <div className={cn('rounded-2xl border p-6', colors.border.primary, colors.bg.card)}>
             <div className="flex items-center gap-3">
               <RefreshCw className={cn('h-5 w-5 animate-spin', colors.text.secondary)} />
               <div>
-                <p className={cn('text-sm font-medium', colors.text.primary)}>
-                  Loading clinical notes
-                </p>
+                <p className={cn('text-sm font-medium', colors.text.primary)}>Loading clinical notes</p>
                 <p className={cn('text-sm', colors.text.secondary)}>
                   Checking whether this visit already has a saved note.
                 </p>
@@ -243,6 +263,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
           </div>
         )}
 
+        {/* Error State */}
         {!!activeVisitId && notesQuery.isError && !isLoading && (
           <div className={cn('rounded-2xl border p-5', colors.border.primary, colors.bg.card)}>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -250,7 +271,6 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
                 <div className={cn('rounded-xl p-2.5', isDark ? 'bg-red-900/20' : 'bg-red-50')}>
                   <AlertTriangle className={cn('h-5 w-5', isDark ? 'text-red-300' : 'text-red-700')} />
                 </div>
-
                 <div>
                   <h3 className={cn('text-base font-semibold', colors.text.primary)}>
                     Unable to load clinical notes
@@ -263,12 +283,11 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
                   </p>
                 </div>
               </div>
-
               <button
                 type="button"
                 onClick={() => notesQuery.refetch()}
                 className={cn(
-                  'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
+                  'inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
                   'bg-blue-600 text-white hover:bg-blue-700'
                 )}
               >
@@ -279,6 +298,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
           </div>
         )}
 
+        {/* Summary View - Existing Note */}
         {!!activeVisitId && !isLoading && !notesQuery.isError && mode === 'idle' && activeVisitNote && (
           <ClinicalNotesSummaryCard
             isDark={isDark}
@@ -293,6 +313,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
           />
         )}
 
+        {/* Empty State - No Note Exists */}
         {!!activeVisitId && !isLoading && !notesQuery.isError && mode === 'idle' && !activeVisitNote && (
           <ClinicalNotesEmptyState
             isDark={isDark}
@@ -302,6 +323,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
           />
         )}
 
+        {/* Editor View - Create or Edit Mode */}
         {!!activeVisitId && !isLoading && !notesQuery.isError && (mode === 'create' || mode === 'edit') && (
           <ClinicalNotesEditor
             isDark={isDark}
@@ -319,6 +341,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
         )}
       </div>
 
+      {/* Preview Modal */}
       <ClinicalNotesPreviewModal
         open={previewOpen}
         onClose={closePreview}

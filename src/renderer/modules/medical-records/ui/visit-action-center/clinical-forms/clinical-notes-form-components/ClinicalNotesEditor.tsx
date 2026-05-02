@@ -72,7 +72,7 @@ export const ClinicalNotesEditor: React.FC<ClinicalNotesEditorProps> = ({
                 {isEditing ? 'Edit Clinical Note' : 'Create Clinical Note'}
               </h3>
               <p className={cn('mt-1 text-sm', colors.text.secondary)}>
-                Use clear, easy-to-understand wording and record today’s findings accurately.
+                Use clear, easy-to-understand wording and record today's findings accurately.
               </p>
             </div>
           </div>
@@ -82,7 +82,7 @@ export const ClinicalNotesEditor: React.FC<ClinicalNotesEditorProps> = ({
               type="button"
               onClick={onPreview}
               className={cn(
-                'inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+                'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
                 colors.border.primary,
                 colors.text.primary,
                 colors.bg.hover
@@ -96,7 +96,7 @@ export const ClinicalNotesEditor: React.FC<ClinicalNotesEditorProps> = ({
               type="button"
               onClick={onCancel}
               className={cn(
-                'inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+                'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
                 colors.border.primary,
                 colors.text.secondary,
                 colors.bg.hover
@@ -148,7 +148,7 @@ export const ClinicalNotesEditor: React.FC<ClinicalNotesEditorProps> = ({
             type="button"
             onClick={onCancel}
             className={cn(
-              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
+              'inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
               colors.text.secondary,
               colors.bg.hover
             )}
@@ -161,7 +161,7 @@ export const ClinicalNotesEditor: React.FC<ClinicalNotesEditorProps> = ({
             type="submit"
             disabled={isSubmitting}
             className={cn(
-              'inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-white transition-all',
+              'inline-flex cursor-pointer items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-white transition-all',
               isSubmitting
                 ? 'cursor-not-allowed bg-slate-400'
                 : 'bg-blue-600 hover:bg-blue-700'

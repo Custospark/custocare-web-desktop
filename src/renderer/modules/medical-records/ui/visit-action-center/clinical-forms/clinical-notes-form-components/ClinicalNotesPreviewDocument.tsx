@@ -8,12 +8,12 @@ import {
   getPreviewSectionText,
 } from './clinicalNotesForm.utils';
 import type {
-  ClinicalNoteListItem,
+  ClinicalNoteResponse,
   ClinicalNotesFormValues,
 } from './clinicalNotesForm.types';
 
 interface ClinicalNotesPreviewDocumentProps {
-  note: ClinicalNoteListItem | null;
+  note: ClinicalNoteResponse | null;
   values: ClinicalNotesFormValues;
   noteTitle: string;
 }
@@ -27,6 +27,7 @@ export const ClinicalNotesPreviewDocument: React.FC<ClinicalNotesPreviewDocument
 
   return (
     <div className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm print:max-w-none print:rounded-none print:border-0 print:p-0 print:shadow-none">
+      {/* Header Section */}
       <div className="border-b-2 border-blue-700 pb-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -51,42 +52,63 @@ export const ClinicalNotesPreviewDocument: React.FC<ClinicalNotesPreviewDocument
           </div>
         </div>
 
-        {(meta.author || meta.status || meta.updatedAt || meta.createdAt) && (
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 print:bg-transparent">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                Clinician
-              </p>
-              <p className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-800">
-                <UserRound className="h-4 w-4 print:hidden" />
-                {meta.author || 'Not available'}
-              </p>
-            </div>
+        {/* Metadata Cards */}
+        {(meta.author || meta.status || meta.noteType || meta.updatedAt || meta.createdAt) && (
+          <div className="mt-4 grid gap-3 sm:grid-cols-4">
+            {meta.author && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 print:bg-transparent">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Clinician
+                </p>
+                <p className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-800">
+                  <UserRound className="h-4 w-4 print:hidden" />
+                  {meta.author}
+                </p>
+              </div>
+            )}
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 print:bg-transparent">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                Status
-              </p>
-              <p className="mt-1 text-sm font-medium text-slate-800">
-                {meta.status || 'Draft'}
-              </p>
-            </div>
+            {meta.status && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 print:bg-transparent">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Status
+                </p>
+                <p className="mt-1 text-sm font-medium text-slate-800">
+                  {meta.status}
+                </p>
+              </div>
+            )}
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 print:bg-transparent">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                Last Updated
-              </p>
-              <p className="mt-1 text-sm font-medium text-slate-800">
-                {formatClinicalNoteDate(meta.updatedAt || meta.createdAt)}
-              </p>
-            </div>
+            {meta.noteType && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 print:bg-transparent">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Note Type
+                </p>
+                <p className="mt-1 text-sm font-medium text-slate-800">
+                  {meta.noteType}
+                </p>
+              </div>
+            )}
+
+            {(meta.updatedAt || meta.createdAt) && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 print:bg-transparent">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Last Updated
+                </p>
+                <p className="mt-1 text-sm font-medium text-slate-800">
+                  {formatClinicalNoteDate(meta.updatedAt || meta.createdAt)}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
 
+      {/* SOAP Note Sections */}
       <div className="mt-6 space-y-5 print:mt-4">
         {CLINICAL_NOTES_SECTIONS.map((section) => {
           const Icon = section.icon;
+          const displayValue = getPreviewSectionText(values, section.key, section.previewFallback);
+          const isValueEmpty = !values[section.key]?.trim();
 
           return (
             <section
@@ -98,26 +120,33 @@ export const ClinicalNotesPreviewDocument: React.FC<ClinicalNotesPreviewDocument
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">
                   {section.label}
                 </h2>
+                {section.backendField && (
+                  <span className="ml-auto text-[10px] text-slate-400 print:hidden">
+                    {section.backendField}
+                  </span>
+                )}
               </div>
 
               <div
                 className={cn(
                   'whitespace-pre-wrap text-sm leading-7 text-slate-800',
-                  !values[section.key].trim() && 'italic text-slate-500'
+                  isValueEmpty && 'italic text-slate-500'
                 )}
               >
-                {getPreviewSectionText(values, section.key, section.previewFallback)}
+                {displayValue}
               </div>
             </section>
           );
         })}
       </div>
 
+      {/* Footer Disclaimer */}
       <div className="mt-8 border-t border-slate-200 pt-4 text-center">
         <p className="text-[11px] leading-5 text-slate-500">
-          This clinical note is part of the patient’s medical record and should be interpreted in
+          This clinical note is part of the patient's medical record and should be interpreted in
           the full clinical context by an authorized healthcare professional.
         </p>
+        
       </div>
     </div>
   );

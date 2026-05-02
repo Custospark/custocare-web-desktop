@@ -20,7 +20,7 @@ export const ClinicalNotesHeader: React.FC<ClinicalNotesHeaderProps> = ({
   hasExistingNote,
   noteCount,
   isFetching,
-//   onBack,
+  // onBack,
 }) => {
   return (
     <section
@@ -104,7 +104,7 @@ export const ClinicalNotesHeader: React.FC<ClinicalNotesHeaderProps> = ({
             type="button"
             onClick={onBack}
             className={cn(
-              'inline-flex items-center gap-2 self-start rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+              'inline-flex cursor-pointer items-center gap-2 self-start rounded-lg border px-4 py-2 text-sm font-medium transition-all',
               colors.border.primary,
               colors.text.secondary,
               colors.bg.hover

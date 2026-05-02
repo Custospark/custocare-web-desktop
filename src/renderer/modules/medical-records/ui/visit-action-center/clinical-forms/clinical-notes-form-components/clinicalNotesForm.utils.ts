@@ -1,3 +1,22 @@
+/**
+ * clinicalNotesForm.utils.ts
+ * ============================================================================
+ * CLINICAL NOTES FORM UTILITIES
+ * ============================================================================
+ * 
+ * This file contains utility functions for the clinical notes form.
+ * All mappings align with the backend ClinicalNoteResponse structure.
+ * 
+ * BACKEND MAPPING:
+ * - chiefComplaint        → subjective
+ * - historyOfPresentIllness → review_of_systems
+ * - pastMedicalHistory    → past_medical_history
+ * - observations          → objective
+ * - clinicalNotes         → assessment + plan
+ * 
+ * @module clinicalNotesForm.utils
+ */
+
 import {
   Activity,
   ClipboardList,
@@ -10,14 +29,25 @@ import type {
   ClinicalNoteValidationErrorResponse,
   CreateClinicalNoteRequest,
   UpdateClinicalNoteRequest,
+  ClinicalNoteResponse,
 } from '../../../../api/clinical-notes/clinicalNoteTypes';
 import type {
-  ClinicalNoteListItem,
   ClinicalNotesFormValues,
   ClinicalNotesSectionDefinition,
   ClinicalNotesThemeTokens,
+  ClinicalNoteListItem,
 } from './clinicalNotesForm.types';
 
+// Re-export types for convenience
+export type { ClinicalNoteListItem, ClinicalNotesFormValues };
+
+/* -------------------------------------------------------------------------- */
+/*                              FORM CONSTANTS                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Empty form values for creating a new clinical note
+ */
 export const EMPTY_CLINICAL_NOTES_FORM: ClinicalNotesFormValues = {
   chiefComplaint: '',
   historyOfPresentIllness: '',
@@ -26,6 +56,9 @@ export const EMPTY_CLINICAL_NOTES_FORM: ClinicalNotesFormValues = {
   clinicalNotes: '',
 };
 
+/**
+ * Form section definitions with backend field mapping documentation
+ */
 export const CLINICAL_NOTES_SECTIONS: ClinicalNotesSectionDefinition[] = [
   {
     key: 'chiefComplaint',
@@ -36,97 +69,57 @@ export const CLINICAL_NOTES_SECTIONS: ClinicalNotesSectionDefinition[] = [
     required: true,
     previewFallback: 'No reason for visit recorded.',
     icon: Activity as LucideIcon,
+    backendField: 'subjective',
   },
   {
     key: 'historyOfPresentIllness',
     label: 'Current problem details',
     description: 'When it started, how it changed, and related symptoms',
-    placeholder:
-      'Describe when the problem started, how it progressed, and what makes it better or worse',
+    placeholder: 'Describe when the problem started, how it progressed, and what makes it better or worse',
     rows: 4,
     previewFallback: 'No current problem details recorded.',
     icon: FileSearch as LucideIcon,
+    backendField: 'review_of_systems',
   },
   {
     key: 'pastMedicalHistory',
     label: 'Past health history',
     description: 'Long-term illnesses, surgeries, allergies, or regular medicines',
-    placeholder:
-      'Example: Hypertension, asthma, previous surgery, regular medications, allergies',
+    placeholder: 'Example: Hypertension, asthma, previous surgery, regular medications, allergies',
     rows: 3,
     previewFallback: 'No past health history recorded.',
     icon: HeartPulse as LucideIcon,
+    backendField: 'past_medical_history',
   },
   {
     key: 'observations',
     label: 'Exam findings',
     description: 'Important findings from the physical examination',
-    placeholder:
-      'Example: Alert, mild respiratory distress, temperature 38.4°C, reduced air entry bilaterally',
+    placeholder: 'Example: Alert, mild respiratory distress, temperature 38.4°C, reduced air entry bilaterally',
     rows: 4,
     previewFallback: 'No exam findings recorded.',
     icon: ClipboardList as LucideIcon,
+    backendField: 'objective',
   },
   {
     key: 'clinicalNotes',
     label: 'Assessment and plan',
     description: 'Clinical impression, next steps, and care plan',
-    placeholder:
-      'Example: Likely lower respiratory tract infection. Start treatment, monitor vitals, review in 48 hours.',
+    placeholder: 'Example: Likely lower respiratory tract infection. Start treatment, monitor vitals, review in 48 hours.',
     rows: 4,
     previewFallback: 'No assessment or plan recorded.',
     icon: FileText as LucideIcon,
+    backendField: 'assessment + plan',
   },
 ];
 
-const asRecord = (value: unknown): Record<string, unknown> =>
-  value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+/* -------------------------------------------------------------------------- */
+/*                              THEME FUNCTIONS                               */
+/* -------------------------------------------------------------------------- */
 
-const readString = (source: unknown, keys: string[]): string => {
-  const record = asRecord(source);
-
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === 'string') {
-      return value;
-    }
-  }
-
-  return '';
-};
-
-const readNumber = (source: unknown, keys: string[]): number | null => {
-  const record = asRecord(source);
-
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === 'number') return value;
-    if (typeof value === 'string' && value.trim() && !Number.isNaN(Number(value))) {
-      return Number(value);
-    }
-  }
-
-  return null;
-};
-
-const readNestedName = (source: unknown, keys: string[]): string => {
-  const record = asRecord(source);
-
-  for (const key of keys) {
-    const nested = record[key];
-    const nestedRecord = asRecord(nested);
-
-    const name =
-      (typeof nestedRecord.name === 'string' && nestedRecord.name) ||
-      (typeof nestedRecord.full_name === 'string' && nestedRecord.full_name) ||
-      (typeof nestedRecord.display_name === 'string' && nestedRecord.display_name);
-
-    if (name) return name;
-  }
-
-  return '';
-};
-
+/**
+ * Get theme tokens for light/dark mode
+ */
 export const getClinicalNotesTheme = (theme: 'light' | 'dark'): ClinicalNotesThemeTokens => {
   const isDark = theme === 'dark';
 
@@ -161,92 +154,54 @@ export const getClinicalNotesTheme = (theme: 'light' | 'dark'): ClinicalNotesThe
   };
 };
 
+/* -------------------------------------------------------------------------- */
+/*                          NOTE SELECTION HELPERS                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Pick the primary (most recent) clinical note from a list
+ */
 export const pickPrimaryClinicalNote = (
-  notes: ClinicalNoteListItem[] | undefined | null
-): ClinicalNoteListItem | null => {
+  notes: ClinicalNoteResponse[] | undefined | null
+): ClinicalNoteResponse | null => {
   if (!notes?.length) return null;
 
   const sorted = [...notes].sort((a, b) => {
-    const aDate = new Date(
-      readString(a, ['updated_at', 'created_at', 'updatedAt', 'createdAt']) || 0
-    ).getTime();
-    const bDate = new Date(
-      readString(b, ['updated_at', 'created_at', 'updatedAt', 'createdAt']) || 0
-    ).getTime();
-
+    const aDate = new Date(a.updated_at || a.created_at || 0).getTime();
+    const bDate = new Date(b.updated_at || b.created_at || 0).getTime();
     return bDate - aDate;
   });
 
   return sorted[0] ?? null;
 };
 
-export const extractClinicalNotesFormValues = (
-  note: ClinicalNoteListItem | null | undefined
-): ClinicalNotesFormValues => ({
-  chiefComplaint: readString(note, ['chief_complaint', 'chiefComplaint', 'title', 'subject']),
-  historyOfPresentIllness: readString(note, [
-    'history_of_present_illness',
-    'historyOfPresentIllness',
-    'history_present_illness',
-  ]),
-  pastMedicalHistory: readString(note, [
-    'past_medical_history',
-    'pastMedicalHistory',
-    'medical_history',
-  ]),
-  observations: readString(note, ['observations', 'physical_exam', 'physicalExam', 'findings']),
-  clinicalNotes: readString(note, [
-    'clinical_notes',
-    'clinicalNotes',
-    'assessment_and_plan',
-    'assessmentAndPlan',
-    'notes',
-    'note',
-    'content',
-  ]),
-});
-
-export const buildCreateClinicalNotePayload = (
-  values: ClinicalNotesFormValues
-): CreateClinicalNoteRequest =>
-  ({
-    chief_complaint: values.chiefComplaint.trim(),
-    history_of_present_illness: values.historyOfPresentIllness.trim(),
-    past_medical_history: values.pastMedicalHistory.trim(),
-    observations: values.observations.trim(),
-    clinical_notes: values.clinicalNotes.trim(),
-  }) as CreateClinicalNoteRequest;
-
-export const buildUpdateClinicalNotePayload = (
-  values: ClinicalNotesFormValues
-): UpdateClinicalNoteRequest =>
-  ({
-    chief_complaint: values.chiefComplaint.trim(),
-    history_of_present_illness: values.historyOfPresentIllness.trim(),
-    past_medical_history: values.pastMedicalHistory.trim(),
-    observations: values.observations.trim(),
-    clinical_notes: values.clinicalNotes.trim(),
-  }) as UpdateClinicalNoteRequest;
-
-export const getClinicalNoteUuid = (note: ClinicalNoteListItem | null | undefined): string | null => {
-  const uuid = readString(note, ['uuid', 'id']);
-  return uuid || null;
+/**
+ * Get clinical note UUID from a note object
+ */
+export const getClinicalNoteUuid = (note: ClinicalNoteResponse | null | undefined): string | null => {
+  if (!note) return null;
+  return note.uuid || null;
 };
 
+/**
+ * Get clinical note title (uses chief complaint or subjective)
+ */
 export const getClinicalNoteTitle = (
-  note: ClinicalNoteListItem | null | undefined,
+  note: ClinicalNoteResponse | null | undefined,
   values: ClinicalNotesFormValues
 ): string => {
-  const explicitTitle = readString(note, ['title', 'subject']);
-  if (explicitTitle) return explicitTitle;
-
   if (values.chiefComplaint.trim()) {
     return values.chiefComplaint.trim().slice(0, 80);
   }
-
+  if (note?.subjective) {
+    return note.subjective.slice(0, 80);
+  }
   return 'Clinical Note';
 };
 
+/**
+ * Format clinical note date for display
+ */
 export const formatClinicalNoteDate = (value: string | null | undefined): string => {
   if (!value) return 'Not available';
 
@@ -262,40 +217,131 @@ export const formatClinicalNoteDate = (value: string | null | undefined): string
   }).format(date);
 };
 
-export const getClinicalNoteMeta = (note: ClinicalNoteListItem | null | undefined) => ({
-  createdAt: readString(note, ['created_at', 'createdAt']),
-  updatedAt: readString(note, ['updated_at', 'updatedAt']),
-  status: readString(note, ['status', 'note_status']),
-  author:
-    readNestedName(note, ['staff', 'author', 'created_by', 'clinician']) ||
-    readString(note, ['author_name', 'staff_name', 'created_by_name']),
-  patientId: readNumber(note, ['patient_id', 'patientId']),
-  visitId: readNumber(note, ['visit_id', 'visitId']),
+/**
+ * Get clinical note metadata for display
+ */
+export const getClinicalNoteMeta = (note: ClinicalNoteResponse | null | undefined) => ({
+  createdAt: note?.created_at || null,
+  updatedAt: note?.updated_at || null,
+  status: note?.note_status || null,
+  author: note?.staff?.full_name || null,
+  patientId: note?.patient_id || null,
+  visitId: note?.visit_id || null,
+  noteType: note?.note_type || null,
 });
 
+/* -------------------------------------------------------------------------- */
+/*                          FORM VALUE EXTRACTION                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Extract form values from backend note response
+ * Maps backend SOAP fields to form fields
+ */
+export const extractClinicalNotesFormValues = (
+  note: ClinicalNoteResponse | null | undefined
+): ClinicalNotesFormValues => ({
+  // MAP: backend.subjective → form.chiefComplaint
+  chiefComplaint: note?.subjective || '',
+  
+  // MAP: backend.review_of_systems → form.historyOfPresentIllness
+  historyOfPresentIllness: note?.review_of_systems || '',
+  
+  // MAP: backend.past_medical_history → form.pastMedicalHistory
+  pastMedicalHistory: note?.past_medical_history || '',
+  
+  // MAP: backend.objective → form.observations
+  observations: note?.objective || '',
+  
+  // MAP: backend.assessment + plan → form.clinicalNotes
+  clinicalNotes: [note?.assessment, note?.plan].filter(Boolean).join('\n\n') || '',
+});
+
+/* -------------------------------------------------------------------------- */
+/*                          PAYLOAD BUILDERS                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Build create payload from form values
+ * Maps form fields to backend CreateClinicalNoteRequest
+ * 
+ * Note: facility_id, visit_id, patient_id, staff_id are added by the mutation hook
+ */
+export const buildCreateClinicalNotePayload = (
+  values: ClinicalNotesFormValues
+): Partial<CreateClinicalNoteRequest> => ({
+  // MAP: form.chiefComplaint → backend.subjective
+  subjective: values.chiefComplaint.trim() || null,
+  
+  // MAP: form.observations → backend.objective
+  objective: values.observations.trim() || null,
+  
+  // MAP: form.clinicalNotes → backend.assessment
+  assessment: values.clinicalNotes.trim() || null,
+  
+  // MAP: form.clinicalNotes → backend.plan (same value goes to both)
+  plan: values.clinicalNotes.trim() || null,
+  
+  // MAP: form.pastMedicalHistory → backend.past_medical_history
+  past_medical_history: values.pastMedicalHistory.trim() || null,
+  
+  // MAP: form.historyOfPresentIllness → backend.review_of_systems
+  review_of_systems: values.historyOfPresentIllness.trim() || null,
+});
+
+/**
+ * Build update payload from form values
+ * Maps form fields to backend UpdateClinicalNoteRequest
+ */
+export const buildUpdateClinicalNotePayload = (
+  values: ClinicalNotesFormValues
+): Partial<UpdateClinicalNoteRequest> => ({
+  subjective: values.chiefComplaint.trim() || null,
+  objective: values.observations.trim() || null,
+  assessment: values.clinicalNotes.trim() || null,
+  plan: values.clinicalNotes.trim() || null,
+  past_medical_history: values.pastMedicalHistory.trim() || null,
+  review_of_systems: values.historyOfPresentIllness.trim() || null,
+});
+
+/* -------------------------------------------------------------------------- */
+/*                          ERROR MAPPING                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Map API field errors to form field errors
+ * Converts backend validation errors to frontend-friendly format
+ */
 export const mapApiFieldErrorsToFormErrors = (
   errors: ClinicalNoteValidationErrorResponse['errors'] | null
 ): Partial<Record<keyof ClinicalNotesFormValues, string>> => {
   if (!errors) return {};
 
   return {
-    chiefComplaint: errors.chief_complaint?.[0],
-    historyOfPresentIllness: errors.history_of_present_illness?.[0],
+    // MAP: backend.subjective error → form.chiefComplaint
+    chiefComplaint: errors.subjective?.[0],
+    
+    // MAP: backend.review_of_systems error → form.historyOfPresentIllness
+    historyOfPresentIllness: errors.review_of_systems?.[0],
+    
+    // MAP: backend.past_medical_history error → form.pastMedicalHistory
     pastMedicalHistory: errors.past_medical_history?.[0],
-    observations: errors.observations?.[0],
-    clinicalNotes: errors.clinical_notes?.[0],
+    
+    // MAP: backend.objective error → form.observations
+    observations: errors.objective?.[0],
+    
+    // MAP: backend.assessment or plan error → form.clinicalNotes
+    clinicalNotes: errors.assessment?.[0] || errors.plan?.[0],
   };
 };
 
-export const getSectionCompletion = (values: ClinicalNotesFormValues): number => {
-  const total = CLINICAL_NOTES_SECTIONS.length;
-  const completed = CLINICAL_NOTES_SECTIONS.filter((section) =>
-    values[section.key].trim()
-  ).length;
+/* -------------------------------------------------------------------------- */
+/*                          PREVIEW & COMPLETION                              */
+/* -------------------------------------------------------------------------- */
 
-  return Math.round((completed / total) * 100);
-};
-
+/**
+ * Get preview section text (returns value or fallback)
+ */
 export const getPreviewSectionText = (
   values: ClinicalNotesFormValues,
   key: keyof ClinicalNotesFormValues,
@@ -303,4 +349,74 @@ export const getPreviewSectionText = (
 ): string => {
   const value = values[key]?.trim();
   return value || fallback;
+};
+
+/**
+ * Calculate form completion percentage
+ */
+export const getSectionCompletion = (values: ClinicalNotesFormValues): number => {
+  const total = CLINICAL_NOTES_SECTIONS.length;
+  const completed = CLINICAL_NOTES_SECTIONS.filter((section) =>
+    values[section.key]?.trim()
+  ).length;
+
+  return Math.round((completed / total) * 100);
+};
+
+/* -------------------------------------------------------------------------- */
+/*                          SOAP NOTE FORMATTING                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Format clinical note as SOAP format for display
+ */
+export const formatAsSoapNote = (note: ClinicalNoteResponse): string => {
+  const sections: string[] = [];
+
+  if (note.subjective) {
+    sections.push(`**SUBJECTIVE**\n${note.subjective}`);
+  }
+  if (note.objective) {
+    sections.push(`**OBJECTIVE**\n${note.objective}`);
+  }
+  if (note.assessment) {
+    sections.push(`**ASSESSMENT**\n${note.assessment}`);
+  }
+  if (note.plan) {
+    sections.push(`**PLAN**\n${note.plan}`);
+  }
+
+  return sections.join('\n\n');
+};
+
+/**
+ * Get note summary (first 200 characters of assessment or plan)
+ */
+export const getNoteSummary = (note: ClinicalNoteResponse, maxLength: number = 200): string => {
+  const content = note.assessment || note.plan || note.subjective || '';
+  if (content.length <= maxLength) return content;
+  return content.substring(0, maxLength) + '...';
+};
+
+/* -------------------------------------------------------------------------- */
+/*                            EXPORT DEFAULTS                                 */
+/* -------------------------------------------------------------------------- */
+
+export default {
+  EMPTY_CLINICAL_NOTES_FORM,
+  CLINICAL_NOTES_SECTIONS,
+  getClinicalNotesTheme,
+  pickPrimaryClinicalNote,
+  getClinicalNoteUuid,
+  getClinicalNoteTitle,
+  formatClinicalNoteDate,
+  getClinicalNoteMeta,
+  extractClinicalNotesFormValues,
+  buildCreateClinicalNotePayload,
+  buildUpdateClinicalNotePayload,
+  mapApiFieldErrorsToFormErrors,
+  getPreviewSectionText,
+  getSectionCompletion,
+  formatAsSoapNote,
+  getNoteSummary,
 };
