@@ -205,7 +205,7 @@ export interface DiagnosesSectionDefinition {
 export interface DiagnosesFieldDefinition {
   key: keyof DiagnosesFormValues;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'date';
+  type: 'text' | 'textarea' | 'select' | 'date' | 'combobox';  
   placeholder?: string;
   description?: string;
   required?: boolean;

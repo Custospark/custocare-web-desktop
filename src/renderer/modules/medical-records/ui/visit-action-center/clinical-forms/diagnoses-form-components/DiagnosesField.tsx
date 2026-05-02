@@ -16,11 +16,16 @@ export const DiagnosesField: React.FC<DiagnosesFieldProps> = ({
   field,
   value,
   error,
-//   isDark,
+  // isDark,
   colors,
   autoFocus = false,
   onChange,
 }) => {
+  // Skip rendering for 'combobox' type - it's handled directly in DiagnosesEditor
+  if (field.type === 'combobox') {
+    return null;
+  }
+
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     onChange(field.key, e.target.value || null);
   };
