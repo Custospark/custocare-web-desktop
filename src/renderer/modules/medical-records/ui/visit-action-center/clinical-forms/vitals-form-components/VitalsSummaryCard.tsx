@@ -80,14 +80,7 @@ export const VitalsSummaryCard: React.FC<VitalsSummaryCardProps> = ({
                 Measured: {formatVitalsDate(meta.measuredAt || meta.createdAt)}
               </span>
 
-              <span
-                className={cn(
-                  'rounded-full px-3 py-1 font-medium',
-                  isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'
-                )}
-              >
-                Patient ID: {meta.patientId ?? 'N/A'}
-              </span>
+             
 
               <span
                 className={cn(
@@ -100,12 +93,12 @@ export const VitalsSummaryCard: React.FC<VitalsSummaryCardProps> = ({
             </div>
 
             {/* Clinical Alert */}
-            {vitals.clinical_alert && (
-              <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">
-                <AlertTriangle className="h-4 w-4" />
-                <span>{vitals.clinical_alert}</span>
-              </div>
-            )}
+          {vitals.clinical_alert && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-800">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <span>{vitals.clinical_alert}</span>
+          </div>
+        )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

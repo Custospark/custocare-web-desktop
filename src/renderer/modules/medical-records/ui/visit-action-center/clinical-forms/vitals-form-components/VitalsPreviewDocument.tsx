@@ -13,15 +13,14 @@ import {
   ShieldCheck,
   Sparkles,
   Thermometer,
-  Heart,
-  Lungs,
+  Heart, 
   Activity,
   Droplet,
   Ruler,
   Weight,
   Brain,
 } from 'lucide-react';
-import { cn } from '../../../../../../shared/utils/classNameUtils';
+import {FaLungs } from 'react-icons/fa';
 import { useGetFacilityIdentity } from '../../../../api/facility/FacilityQueries';
 import type { RootState } from '../../../../../../app/store/rootReducer';
 import {
@@ -32,7 +31,6 @@ import {
 import type {
   VitalResponse,
   VitalsFormValues,
-  DynamicCustomFields,
 } from './vitalsForm.types';
 
 // Helper component for info rows
@@ -59,7 +57,6 @@ interface VitalsPreviewDocumentProps {
 
 export const VitalsPreviewDocument: React.FC<VitalsPreviewDocumentProps> = ({
   vitals,
-  values,
 }) => {
   const meta = getVitalsMeta(vitals);
   const bmiCategory = getBmiCategory(vitals?.bmi || null);
@@ -245,7 +242,7 @@ export const VitalsPreviewDocument: React.FC<VitalsPreviewDocumentProps> = ({
           {/* Respiratory Rate */}
           <div className="rounded-xl border border-slate-200 p-3">
             <div className="flex items-center gap-2">
-              <Lungs className="h-4 w-4 text-slate-500" />
+              <FaLungs className="h-4 w-4 text-slate-500" />
               <span className="text-xs font-medium text-slate-500">Respiratory Rate</span>
             </div>
             <p className="mt-1 text-base font-semibold text-slate-800">
@@ -284,7 +281,7 @@ export const VitalsPreviewDocument: React.FC<VitalsPreviewDocumentProps> = ({
               <span className="text-xs font-medium text-slate-500">Pain Score</span>
             </div>
             <p className="mt-1 text-base font-semibold text-slate-800">
-              {vitals?.pain_score !== null ? `${vitals.pain_score}/10` : '—'}
+              {vitals?.pain_score !== null ? `${vitals?.pain_score}/10` : '—'}
             </p>
           </div>
 
@@ -317,7 +314,7 @@ export const VitalsPreviewDocument: React.FC<VitalsPreviewDocumentProps> = ({
               <span className="text-xs font-medium text-slate-500">BMI</span>
             </div>
             <p className="mt-1 text-base font-semibold text-slate-800">
-              {vitals?.bmi !== null ? vitals.bmi : '—'}
+              {vitals?.bmi !== null ? vitals?.bmi : '—'}
             </p>
             {bmiCategory && <p className="text-xs text-slate-500">{bmiCategory}</p>}
           </div>
@@ -329,7 +326,7 @@ export const VitalsPreviewDocument: React.FC<VitalsPreviewDocumentProps> = ({
               <span className="text-xs font-medium text-slate-500">MAP</span>
             </div>
             <p className="mt-1 text-base font-semibold text-slate-800">
-              {vitals?.map !== null ? `${vitals.map} mmHg` : '—'}
+              {vitals?.map !== null ? `${vitals?.map} mmHg` : '—'}
             </p>
           </div>
         </div>

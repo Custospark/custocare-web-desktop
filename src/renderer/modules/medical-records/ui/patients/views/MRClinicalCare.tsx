@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Plus,
   Eye,
+  Heart,
   AlertTriangle
 } from 'lucide-react';
 import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/focusModeRouteConstants';
@@ -72,7 +73,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
 
   // Record Care Form Options with "Add:" prefix
 const formOptions: ActionItem[] = useMemo(() => [
-    { 
+  { 
     key: 'allergy', 
     label: 'Allergy', 
     icon: <AlertTriangle className="w-5 h-5" />, 
@@ -90,7 +91,7 @@ const formOptions: ActionItem[] = useMemo(() => [
     actionPrefix: 'Add',
     handler: () => navigate(FOCUS_MODE_ROUTES.CLINICAL_NOTES_FOCUS)
   },
-    { 
+  { 
     key: 'clinical-templates', 
     label: 'Clinical Template', 
     icon: <FileText className="w-5 h-5" />, 
@@ -107,6 +108,15 @@ const formOptions: ActionItem[] = useMemo(() => [
     category: 'Clinical',
     actionPrefix: 'Add',
     handler: () => navigate(FOCUS_MODE_ROUTES.DIAGNOSIS_FOCUS)
+  },
+  { 
+    key: 'vitals', 
+    label: 'Vitals', 
+    icon: <Heart className="w-5 h-5" />, 
+    description: 'Record temperature, blood pressure, heart rate, and other vital signs',
+    category: 'Clinical',
+    actionPrefix: 'Add',
+    handler: () => navigate(FOCUS_MODE_ROUTES.VITALS_FOCUS)
   },
   { 
     key: 'prescription', 

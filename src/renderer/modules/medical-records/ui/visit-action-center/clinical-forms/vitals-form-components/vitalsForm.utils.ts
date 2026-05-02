@@ -536,6 +536,100 @@ export const buildUpdateVitalPayload = (
     custom_fields: Object.keys(customFields).length > 0 ? customFields : null,
   };
 };
+/* -------------------------------------------------------------------------- */
+/*                          CLIENT-SIDE VALIDATION                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Validate vitals form data before submission
+ * Matches backend validation rules from StoreVitalRequest
+ */
+export const validateVitalsForm = (values: VitalsFormValues): { isValid: boolean; errors: Record<string, string> } => {
+  const errors: Record<string, string> = {};
+
+  // Temperature validation (handles both Celsius and Fahrenheit)
+  if (values.temperature !== null && values.temperature !== undefined) {
+    const temp = values.temperature;
+    if (temp < 25 || temp > 45) {
+      errors.temperature = 'Temperature must be between 25°C and 45°C (77°F - 113°F)';
+    }
+  }
+
+  // Heart Rate validation
+  if (values.heartRate !== null && values.heartRate !== undefined) {
+    if (values.heartRate < 0 || values.heartRate > 300) {
+      errors.heartRate = 'Heart rate must be between 0 and 300 bpm';
+    }
+  }
+
+  // Respiratory Rate validation
+  if (values.respiratoryRate !== null && values.respiratoryRate !== undefined) {
+    if (values.respiratoryRate < 0 || values.respiratoryRate > 100) {
+      errors.respiratoryRate = 'Respiratory rate must be between 0 and 100 breaths/min';
+    }
+  }
+
+  // Oxygen Saturation validation
+  if (values.oxygenSaturation !== null && values.oxygenSaturation !== undefined) {
+    if (values.oxygenSaturation < 0 || values.oxygenSaturation > 100) {
+      errors.oxygenSaturation = 'Oxygen saturation must be between 0% and 100%';
+    }
+  }
+
+  // Systolic BP validation
+  if (values.systolicBp !== null && values.systolicBp !== undefined) {
+    if (values.systolicBp < 30 || values.systolicBp > 300) {
+      errors.systolicBp = 'Systolic BP must be between 30 and 300 mmHg';
+    }
+  }
+
+  // Diastolic BP validation
+  if (values.diastolicBp !== null && values.diastolicBp !== undefined) {
+    if (values.diastolicBp < 30 || values.diastolicBp > 200) {
+      errors.diastolicBp = 'Diastolic BP must be between 30 and 200 mmHg';
+    }
+  }
+
+  // Height validation
+  if (values.height !== null && values.height !== undefined) {
+    if (values.height < 10 || values.height > 300) {
+      errors.height = 'Height must be between 10 and 300 units';
+    }
+  }
+
+  // Weight validation
+  if (values.weight !== null && values.weight !== undefined) {
+    if (values.weight < 0.1 || values.weight > 500) {
+      errors.weight = 'Weight must be between 0.1 and 500 units';
+    }
+  }
+
+  // Pain Score validation
+  if (values.painScore !== null && values.painScore !== undefined) {
+    if (values.painScore < 0 || values.painScore > 10) {
+      errors.painScore = 'Pain score must be between 0 and 10';
+    }
+  }
+
+  // Head Circumference validation (pediatric)
+  if (values.headCircumference !== null && values.headCircumference !== undefined) {
+    if (values.headCircumference < 20 || values.headCircumference > 100) {
+      errors.headCircumference = 'Head circumference must be between 20 and 100 cm';
+    }
+  }
+
+  // Length validation (pediatric)
+  if (values.length !== null && values.length !== undefined) {
+    if (values.length < 20 || values.length > 150) {
+      errors.length = 'Length must be between 20 and 150 cm';
+    }
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+};
 
 /* -------------------------------------------------------------------------- */
 /*                          ERROR MAPPING                                     */

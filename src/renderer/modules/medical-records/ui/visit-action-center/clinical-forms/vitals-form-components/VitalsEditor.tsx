@@ -34,8 +34,8 @@ const VITALS_FIELD_DEFINITIONS = [
     type: 'number' as const,
     placeholder: 'e.g., 98.6',
     description: 'Body temperature',
-    min: 95,
-    max: 108,
+    min: 25,  // Backend: min:25, max:45 (Celsius)
+    max: 45,
     step: 0.1,
     unitOptions: [
       { value: 'celsius' as const, label: '°C' },
@@ -51,8 +51,8 @@ const VITALS_FIELD_DEFINITIONS = [
     type: 'number' as const,
     placeholder: 'e.g., 72',
     description: 'Beats per minute',
-    min: 30,
-    max: 250,
+    min: 0,    // Backend: min:0, max:300
+    max: 300,
     step: 1,
     previewFallback: 'No heart rate recorded',
     colSpan: 1,
@@ -63,8 +63,8 @@ const VITALS_FIELD_DEFINITIONS = [
     type: 'number' as const,
     placeholder: 'e.g., 16',
     description: 'Breaths per minute',
-    min: 8,
-    max: 60,
+    min: 0,    // Backend: min:0, max:100
+    max: 100,
     step: 1,
     previewFallback: 'No respiratory rate recorded',
     colSpan: 1,
@@ -75,7 +75,7 @@ const VITALS_FIELD_DEFINITIONS = [
     type: 'number' as const,
     placeholder: 'e.g., 98',
     description: 'SpO2 percentage',
-    min: 50,
+    min: 0,    // Backend: min:0, max:100
     max: 100,
     step: 1,
     previewFallback: 'No SpO2 recorded',
@@ -84,26 +84,26 @@ const VITALS_FIELD_DEFINITIONS = [
   // Core Vitals - Row 2 (BP)
   {
     key: 'systolicBp' as const,
-    label: 'Blood Pressure',
+    label: 'Systolic BP',
     type: 'number' as const,
     placeholder: 'Systolic',
-    description: 'Systolic (top number)',
-    min: 60,
-    max: 250,
+    description: 'Systolic blood pressure (top number)',
+    min: 30,   // Backend: min:30, max:300
+    max: 300,
     step: 1,
-    previewFallback: 'No BP recorded',
+    previewFallback: 'No systolic BP recorded',
     colSpan: 1,
   },
   {
     key: 'diastolicBp' as const,
-    label: 'Diastolic',
+    label: 'Diastolic BP',
     type: 'number' as const,
     placeholder: 'Diastolic',
-    description: 'Diastolic (bottom number)',
-    min: 30,
-    max: 150,
+    description: 'Diastolic blood pressure (bottom number)',
+    min: 30,   // Backend: min:30, max:200
+    max: 200,
     step: 1,
-    previewFallback: 'No BP recorded',
+    previewFallback: 'No diastolic BP recorded',
     colSpan: 1,
   },
   // Anthropometrics
@@ -113,7 +113,7 @@ const VITALS_FIELD_DEFINITIONS = [
     type: 'number' as const,
     placeholder: 'e.g., 170',
     description: 'Patient height',
-    min: 20,
+    min: 10,   // Backend: min:10, max:300
     max: 300,
     step: 0.1,
     unitOptions: [
@@ -130,7 +130,7 @@ const VITALS_FIELD_DEFINITIONS = [
     type: 'number' as const,
     placeholder: 'e.g., 70',
     description: 'Patient weight',
-    min: 1,
+    min: 0.1,  // Backend: min:0.1, max:500
     max: 500,
     step: 0.1,
     unitOptions: [
@@ -146,9 +146,9 @@ const VITALS_FIELD_DEFINITIONS = [
     label: 'BMI',
     type: 'number' as const,
     placeholder: 'Auto-calculated',
-    description: 'Body Mass Index',
-    min: 10,
-    max: 60,
+    description: 'Body Mass Index (auto-calculated from height/weight)',
+    // min: 10,   
+    // max: 500,
     step: 0.1,
     previewFallback: 'BMI not calculated',
     colSpan: 1,
@@ -160,7 +160,7 @@ const VITALS_FIELD_DEFINITIONS = [
     type: 'number' as const,
     placeholder: '0-10',
     description: 'Pain level (0 = no pain, 10 = worst pain)',
-    min: 0,
+    min: 0,    // Backend: min:0, max:10
     max: 10,
     step: 1,
     previewFallback: 'No pain score recorded',
@@ -181,7 +181,7 @@ const VITALS_FIELD_DEFINITIONS = [
     label: 'Consciousness Level',
     type: 'select' as const,
     placeholder: 'Select level',
-    description: 'AVPU Scale',
+    description: 'AVPU Scale (Alert, Verbal, Pain, Unresponsive)',
     options: [
       { value: 'alert', label: 'Alert' },
       { value: 'verbal', label: 'Responds to Verbal' },

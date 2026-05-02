@@ -11,14 +11,13 @@ import {
   useUpdateVital,
 } from '../../../api/vitals/vitalQueries';
 import type { CreateVitalRequest } from '../../../api/vitals/vitalTypes';
-
-import VitalsEditor from './vitals-form-components/VitalsEditor';
-import VitalsEmptyState from './vitals-form-components/VitalsEmptyState';
-import VitalsHeader from './vitals-form-components/VitalsHeader';
-import VitalsPreviewModal from './vitals-form-components/VitalsPreviewModal';
-import   VitalsSummaryCard
- from './vitals-form-components/VitalsSummaryCard';
-
+import {
+  VitalsEditor,
+  VitalsEmptyState,
+  VitalsHeader,
+  VitalsPreviewModal,
+  VitalsSummaryCard,
+} from './vitals-form-components';
 import type {
   VitalsFormData,
   VitalsMode,
@@ -34,6 +33,7 @@ import {
   mapApiFieldErrorsToFormErrors,
   pickPrimaryVitals,
   calculateBmi,
+  deserializeCustomFields,
   serializeCustomFields,
 } from './vitals-form-components/vitalsForm.utils';
 
@@ -46,6 +46,7 @@ export interface VitalsFormProps {
 export const VitalsForm: React.FC<VitalsFormProps> = ({
   theme = 'light',
   onSaved,
+  onCancel,
 }) => {
   const isDark = theme === 'dark';
   const colors = getVitalsTheme(theme);
@@ -142,8 +143,8 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
       setFormData((prev) => {
         const updated = { ...prev, [field]: value };
         
-        // Auto-calculate BMI when height or weight changes
-        if (field === 'height' || field === 'weight' || field === 'heightUnit' || field === 'weightUnit') {
+        // Auto-calculate BMI when height or weight changes (but preserve the actual values)
+        if (field === 'height' || field === 'weight') {
           const bmi = calculateBmi(
             updated.height,
             updated.weight,
@@ -161,16 +162,17 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
     []
   );
 
+  // FIXED: Unit change should NOT modify the actual value, only the unit field
   const handleUnitChange = useCallback(
     (field: keyof VitalsFormData, value: string) => {
       setFormData((prev) => {
         const updated = { ...prev, [field]: value };
         
-        // Recalculate BMI when units change
+        // Recalculate BMI when units change, but preserve height/weight values
         if (field === 'heightUnit' || field === 'weightUnit') {
           const bmi = calculateBmi(
-            updated.height,
-            updated.weight,
+            updated.height,    // Keep original height value
+            updated.weight,    // Keep original weight value
             updated.heightUnit,
             updated.weightUnit
           );
@@ -226,7 +228,6 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
 
   const handleCreateSubmit = useCallback(() => {
     const payload = buildCreateVitalPayload(formData);
-    // Add custom fields to payload
     const customFieldsSerialized = serializeCustomFields(customFields);
     const finalPayload = {
       ...payload,
@@ -242,7 +243,6 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
       return;
     }
     const payload = buildUpdateVitalPayload(formData);
-    // Add custom fields to payload
     const customFieldsSerialized = serializeCustomFields(customFields);
     const finalPayload = {
       ...payload,
@@ -272,7 +272,6 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
   return (
     <>
       <div className="space-y-6 px-6 mb-6">
-        {/* Vitals Header with Refresh Button */}
         <VitalsHeader
           isDark={isDark}
           colors={colors}

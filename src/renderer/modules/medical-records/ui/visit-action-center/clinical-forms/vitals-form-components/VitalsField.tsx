@@ -19,7 +19,7 @@ export const VitalsField: React.FC<VitalsFieldProps> = ({
   value,
   unitValue,
   error,
-//   isDark,
+  isDark,
   colors,
   autoFocus = false,
   onChange,
@@ -44,10 +44,16 @@ export const VitalsField: React.FC<VitalsFieldProps> = ({
   };
 
   const handleUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    if (onUnitChange) {
-      onUnitChange(field.key as keyof VitalsFormValues, e.target.value);
+    if (onUnitChange && field.unitField) {
+      onUnitChange(field.unitField, e.target.value);
     }
   };
+
+  // BMI is display-only, no validation
+  const isBmiField = field.key === 'bmi';
+  const inputMin = isBmiField ? undefined : field.min;
+  const inputMax = isBmiField ? undefined : field.max;
+  const inputStep = isBmiField ? undefined : field.step;
 
   return (
     <div className="space-y-1">
@@ -69,10 +75,11 @@ export const VitalsField: React.FC<VitalsFieldProps> = ({
               value={value ?? ''}
               onChange={handleNumberChange}
               placeholder={field.placeholder}
-              min={field.min}
-              max={field.max}
-              step={field.step || 1}
+              min={inputMin}
+              max={inputMax}
+              step={inputStep}
               autoFocus={autoFocus}
+              readOnly={isBmiField}
               className={cn(
                 'w-full rounded-lg border px-3 py-2 text-sm outline-none transition-all',
                 colors.bg.input,
@@ -126,7 +133,7 @@ export const VitalsField: React.FC<VitalsFieldProps> = ({
               onChange={handleSelectChange}
               autoFocus={autoFocus}
               className={cn(
-                'w-full rounded-lg border px-3 py-2 text-sm outline-none transition-all cursor-pointer',
+                'w-full cursor-pointer rounded-lg border px-3 py-2 text-sm outline-none transition-all',
                 colors.bg.input,
                 colors.text.primary,
                 colors.border.primary,
@@ -145,13 +152,13 @@ export const VitalsField: React.FC<VitalsFieldProps> = ({
           )}
         </div>
 
-        {/* Unit Toggle (if applicable) */}
-        {field.type === 'number' && field.unitOptions && field.unitField && onUnitChange && (
+        {/* Unit Toggle - BMI has no units */}
+        {field.type === 'number' && field.unitOptions && field.unitField && onUnitChange && !isBmiField && (
           <select
             value={unitValue || (field.unitOptions[0]?.value as string)}
             onChange={handleUnitChange}
             className={cn(
-              'w-24 rounded-lg border px-2 py-2 text-sm outline-none transition-all cursor-pointer',
+              'w-24 cursor-pointer rounded-lg border px-2 py-2 text-sm outline-none transition-all',
               colors.bg.input,
               colors.text.primary,
               colors.border.primary,
