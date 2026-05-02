@@ -56,9 +56,7 @@ export const ClinicalNotesSummaryCard: React.FC<ClinicalNotesSummaryCardProps> =
       <div className={cn('border-b p-5 sm:p-6', colors.border.primary)}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h3 className={cn('text-lg font-semibold', colors.text.primary)}>
-              {noteTitle || 'Clinical Note'}
-            </h3>
+          
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
               {meta.status && (
                 <span
@@ -129,7 +127,7 @@ export const ClinicalNotesSummaryCard: React.FC<ClinicalNotesSummaryCardProps> =
               <div className="mt-4 inline-flex items-center gap-2 text-sm">
                 <UserRound className={cn('h-4 w-4', colors.text.tertiary)} />
                 <span className={colors.text.secondary}>Clinician:</span>
-                <span className={cn('font-medium', colors.text.primary)}>{meta.author}</span>
+                <span className={cn('font-medium', colors.text.primary)}>Dr.  {meta.author}</span>
               </div>
             )}
           </div>

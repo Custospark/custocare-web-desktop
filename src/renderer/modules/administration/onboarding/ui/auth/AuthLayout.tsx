@@ -20,7 +20,7 @@ interface AuthLayoutProps {
 
 const DEFAULT_HERO = {
   image: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=1200&q=80',
-  headline: 'Continuous Care. Operational Excellence.',
+  headline: 'Continuous Care. Clinical Excellence.',
   subtext: 'Unifying clinical workflows, financial operations, and patient engagement into one scalable healthcare platform.',
 };
 

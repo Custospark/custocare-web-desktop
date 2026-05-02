@@ -169,7 +169,7 @@ export const Landing: React.FC = () => {
                   "text-[11px] font-bold tracking-wide uppercase",
                   theme === 'dark' ? "text-slate-500" : "text-slate-500"
                 )}>
-          Continuous Care. Operational Excellence.
+          Continuous Care. Clinical Excellence.
                 </div>
               </div>
             </motion.div>

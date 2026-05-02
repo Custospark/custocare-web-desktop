@@ -185,6 +185,9 @@ export interface ClinicalNoteResponse {
   visit_id: number;
   patient_id: number;
   patient_number?: number;
+  patient_name?: string;
+  //Staff information
+  staff_name?: string;
   staff_id: number;
   
   // Clinical Content

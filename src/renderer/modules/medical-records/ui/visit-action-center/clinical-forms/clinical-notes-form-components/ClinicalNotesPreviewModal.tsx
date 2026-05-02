@@ -22,20 +22,31 @@ export const ClinicalNotesPreviewModal: React.FC<ClinicalNotesPreviewModalProps>
   onClose,
   note,
   values,
-  noteTitle,
+  noteTitle, 
   initialAction = 'preview',
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // Generate proper filename: patient_name_clinical-note_YYYY-MM-DD
   const documentTitle = useMemo(() => {
-    const safeTitle = (noteTitle || 'clinical-note')
+    // Get patient name from note
+    const patientName = note?.patient?.full_name || note?.patient_name || 'patient';
+    
+    // Sanitize patient name: lowercase, replace spaces with hyphens, remove special chars
+    const safePatientName = patientName
+      .toLowerCase()
       .replace(/[^\w\s-]/g, '')
       .trim()
-      .replace(/\s+/g, '-')
-      .toLowerCase();
-
-    return safeTitle || 'clinical-note';
-  }, [noteTitle]);
+      .replace(/\s+/g, '-');
+    
+    // Get today's date in YYYY-MM-DD format
+    const todayDate = new Date().toISOString().split('T')[0];
+    
+    // Build filename: patientName_clinical-note_2026-05-02
+    const fileName = `${safePatientName}_clinical-note_${todayDate}`;
+    
+    return fileName || 'clinical-note';
+  }, [note]);
 
   const handlePrint = useReactToPrint({
     contentRef,
@@ -60,7 +71,6 @@ export const ClinicalNotesPreviewModal: React.FC<ClinicalNotesPreviewModalProps>
 
   const handleDownload = useReactToPrint({
     contentRef,
-    documentTitle,
     pageStyle: `
       @page {
         size: A4;
@@ -164,11 +174,7 @@ export const ClinicalNotesPreviewModal: React.FC<ClinicalNotesPreviewModalProps>
           </div>
         </div>
 
-        {/* Modal Footer */}
-        <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500 print:hidden">
-          Printing and downloading use the exact same preview container above so the exported output
-          matches what the clinician reviewed on screen.
-        </div>
+        {/* Footer removed - no clinical value */}
       </div>
     </div>
   );

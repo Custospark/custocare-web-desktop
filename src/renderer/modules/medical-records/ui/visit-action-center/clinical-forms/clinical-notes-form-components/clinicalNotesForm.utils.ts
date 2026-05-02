@@ -181,6 +181,26 @@ export const pickPrimaryClinicalNote = (
 };
 
 /**
+ * Format clinical note datetime for display
+ */
+export const formatClinicalNoteDateTime = (value: string | null | undefined): string => {
+  if (!value) return 'Not available';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not available';
+
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  }).format(date);
+};
+
+/**
  * Get clinical note UUID from a note object
  */
 export const getClinicalNoteUuid = (note: ClinicalNoteResponse | null | undefined): string | null => {
@@ -229,8 +249,11 @@ export const getClinicalNoteMeta = (note: ClinicalNoteResponse | null | undefine
   createdAt: note?.created_at || null,
   updatedAt: note?.updated_at || null,
   status: note?.note_status || null,
-  author: note?.staff?.full_name || null,
+  author: note?.staff?.full_name || note?.staff_name || null,
   patientId: note?.patient_id || null,
+  patientNumber: note?.patient_number || null,
+  patientName: note?.patient_name || null,
+  staffName: note?.staff_name || note?.staff_name || null,
   visitId: note?.visit_id || null,
   noteType: note?.note_type || null,
 });

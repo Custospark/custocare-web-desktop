@@ -47,7 +47,7 @@ export const ReceiptFooter: React.FC = () => {
 
       <div className="flex flex-col items-center gap-1 mt-2">
         <p className="text-[8px] font-semibold text-blue-600">
-          Continuous Care. Operational Excellence.
+          Continuous Care. Clinical Excellence.
         </p>
       </div>
       

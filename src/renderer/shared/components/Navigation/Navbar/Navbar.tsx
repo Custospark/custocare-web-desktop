@@ -301,7 +301,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       <p className={cn('text-xs mt-0.5 font-semibold', isDark ? 'text-blue-500' : 'text-blue-600')}>
-        Continuous Care. Operational Excellence.
+        Continuous Care. Clinical Excellence.
       </p>
     </div>
   </div>

@@ -243,19 +243,19 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
           </div>
         )}
 
-        {!!activeVisitId && isLoading && (
-          <div className={cn('rounded-2xl border p-6', colors.border.primary, colors.bg.card)}>
-            <div className="flex items-center gap-3">
-              <RefreshCw className={cn('h-5 w-5 animate-spin', colors.text.secondary)} />
-              <div>
-                <p className={cn('text-sm font-medium', colors.text.primary)}>Loading clinical notes</p>
-                <p className={cn('text-sm', colors.text.secondary)}>
-                  Checking whether this visit already has a saved note.
-                </p>
-              </div>
-            </div>
+     {!!activeVisitId && isLoading && (
+      <div className={cn('rounded-2xl border p-6 mb-6', colors.border.primary, colors.bg.card)}>
+        <div className="flex items-center gap-3">
+          <RefreshCw className={cn('h-5 w-5 animate-spin', colors.text.secondary)} />
+          <div>
+            <p className={cn('text-sm font-medium', colors.text.primary)}>Loading clinical notes</p>
+            <p className={cn('text-sm', colors.text.secondary)}>
+              Checking whether this visit already has a saved note.
+            </p>
           </div>
-        )}
+        </div>
+      </div>
+    )}
 
         {!!activeVisitId && notesQuery.isError && !isLoading && (
           <div className={cn('rounded-2xl border p-5', colors.border.primary, colors.bg.card)}>
