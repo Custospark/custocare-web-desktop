@@ -154,7 +154,7 @@ export const DiagnosesSummaryCard: React.FC<DiagnosesSummaryCardProps> = ({
                   <CheckCircle className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                   <span className={colors.text.secondary}>
                     Verified: {formatDiagnosisDate(diagnosis.verified_at)}
-                    {meta.verifierName && ` by ${meta.verifierName}`}
+                    {meta.verifierName && ` by Dr. ${meta.verifierName}`}
                   </span>
                 </div>
               )}

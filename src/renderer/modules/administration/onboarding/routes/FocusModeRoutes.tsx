@@ -25,7 +25,7 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
     key="diagnosis-focus"
     path={FOCUS_MODE_ROUTES.DIAGNOSIS_FOCUS}
     element={
-      <FocusedModeLayout title="Clinical Diagnosis">
+      <FocusedModeLayout title="Clinical Diagnoses">
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <DiagnosisFocus theme={theme} />
         </Suspense>
