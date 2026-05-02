@@ -48,12 +48,12 @@ export const ClinicalNotesEditor: React.FC<ClinicalNotesEditorProps> = ({
   return (
     <section
       className={cn(
-        'rounded-2xl border',
+        'rounded-2xl border mb-6',
         colors.border.primary,
         colors.bg.card
       )}
     >
-      <div className={cn('border-b p-5', colors.border.primary)}>
+      <div className={cn('border-b p-5 mb-6', colors.border.primary)}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-3">
             <div

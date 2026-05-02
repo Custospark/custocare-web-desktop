@@ -207,7 +207,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
 
   return (
     <>
-      <div className="space-y-6 px-6">
+      <div className="space-y-6 px-6 mb-6">
         {/* Clinical Notes Header with Refresh Button */}
         <ClinicalNotesHeader
           isDark={isDark}
@@ -258,7 +258,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     )}
 
         {!!activeVisitId && notesQuery.isError && !isLoading && (
-          <div className={cn('rounded-2xl border p-5', colors.border.primary, colors.bg.card)}>
+          <div className={cn('rounded-2xl border p-5 mb-6', colors.border.primary, colors.bg.card)}>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
                 <div className={cn('rounded-xl p-2.5', isDark ? 'bg-red-900/20' : 'bg-red-50')}>
