@@ -1,177 +1,485 @@
-// DiagnosisForm.tsx - Remove the outer header, keep only the form content
-import React, { useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { Activity, Save, X, AlertCircle } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSelector } from 'react-redux';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { cn } from '../../../../../shared/utils/classNameUtils';
+import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
+import {
+  extractDiagnosisErrorMessage,
+  extractDiagnosisFieldErrors,
+  useCreateDiagnosis,
+  useGetActiveVisitDiagnoses,
+  useUpdateDiagnosis,
+  useVerifyDiagnosis,
+  useDisputeDiagnosis,
+  useResolveDiagnosis,
+  useReactivateDiagnosis,
+  // useRestoreDiagnosis,
+  // useDeleteDiagnosis,
+} from '../../../api/diagnosis/diagnosisQueries';
+import type { CreateDiagnosisRequest } from '../../../api/diagnosis/diagnosisTypes';
 
-interface DiagnosisFormProps {
+import DiagnosesEditor from './diagnoses-form-components/DiagnosesEditor';
+import DiagnosesEmptyState from './diagnoses-form-components/DiagnosesEmptyState';
+import DiagnosesHeader from './diagnoses-form-components/DiagnosesHeader';
+import DiagnosesPreviewModal from './diagnoses-form-components/DiagnosesPreviewModal';
+import DiagnosesSummaryCard from './diagnoses-form-components/DiagnosesSummaryCard';
+import type {
+  DiagnosesFormData,
+  DiagnosesMode,
+  DiagnosesPreviewAction,
+} from './diagnoses-form-components/diagnosesForm.types';
+import {
+  EMPTY_DIAGNOSES_FORM,
+  buildCreateDiagnosisPayload,
+  buildUpdateDiagnosisPayload,
+  extractDiagnosesFormValues,
+  getDiagnosisId,
+  getDiagnosesTheme,
+  mapApiFieldErrorsToFormErrors,
+  pickPrimaryDiagnosis,
+  // deserializeCustomFields,
+  serializeCustomFields,
+} from './diagnoses-form-components/diagnosesForm.utils';
+
+export interface DiagnosisFormProps {
   theme?: 'light' | 'dark';
-  initialData?: {
-    primaryDiagnosis?: string;
-    secondaryDiagnosis?: string;
-    notes?: string;
-  };
-  onSave?: (data: DiagnosisFormData) => void;
+  onSaved?: (diagnosisId: number | null) => void;
   onCancel?: () => void;
 }
 
-export interface DiagnosisFormData {
-  primaryDiagnosis: string;
-  secondaryDiagnosis: string;
-  notes: string;
-}
-
-export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({ 
-  theme = 'light', 
-  initialData,
-  onSave,
-  onCancel 
+export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
+  theme = 'light',
+  onSaved,
+  // onCancel,
 }) => {
   const isDark = theme === 'dark';
-  const [formData, setFormData] = useState<DiagnosisFormData>({
-    primaryDiagnosis: initialData?.primaryDiagnosis || '',
-    secondaryDiagnosis: initialData?.secondaryDiagnosis || '',
-    notes: initialData?.notes || '',
+  const colors = getDiagnosesTheme(theme);
+
+  const activeVisitId = useSelector(selectActiveVisitId);
+  const activePatientId = useSelector(selectActiveVisitPatientId);
+
+  const [mode, setMode] = useState<DiagnosesMode>('idle');
+  const [formData, setFormData] = useState<DiagnosesFormData>(EMPTY_DIAGNOSES_FORM);
+  const [customFields, setCustomFields] = useState(formData.dynamicCustomFields);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof DiagnosesFormData, string>>>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewAction, setPreviewAction] = useState<DiagnosesPreviewAction>('preview');
+
+  const diagnosesQuery = useGetActiveVisitDiagnoses({
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 
-  const colors = {
-    bg: {
-      input: isDark ? 'bg-gray-800' : 'bg-gray-50',
-      hover: isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50',
-    },
-    text: {
-      primary: isDark ? 'text-gray-100' : 'text-gray-900',
-      secondary: isDark ? 'text-gray-400' : 'text-gray-600',
-      tertiary: isDark ? 'text-gray-500' : 'text-gray-400',
-    },
-    border: {
-      primary: isDark ? 'border-gray-700' : 'border-gray-200',
-      focus: isDark ? 'focus:border-blue-500' : 'focus:border-blue-500',
-    },
-  };
+  const visitDiagnoses = diagnosesQuery.data?.data ?? [];
+  const activeDiagnosis = useMemo(() => pickPrimaryDiagnosis(visitDiagnoses), [visitDiagnoses]);
+  const hydratedValues = useMemo(
+    () => extractDiagnosesFormValues(activeDiagnosis),
+    [activeDiagnosis]
+  );
 
-  const handleChange = useCallback((
-    field: keyof DiagnosisFormData,
-    value: string
-  ) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  // Initialize custom fields from hydrated values
+  useEffect(() => {
+    if (activeDiagnosis) {
+      setCustomFields(hydratedValues.dynamicCustomFields);
+    } else {
+      setCustomFields([]);
+    }
+  }, [activeDiagnosis, hydratedValues.dynamicCustomFields]);
+
+  // Helper function to refresh diagnoses after mutation
+  const refreshDiagnoses = useCallback(() => {
+    if (activeVisitId) {
+      diagnosesQuery.refetch();
+    }
+  }, [activeVisitId, diagnosesQuery]);
+
+  useEffect(() => {
+    if (mode === 'idle') {
+      setFormData(activeDiagnosis ? hydratedValues : EMPTY_DIAGNOSES_FORM);
+      setCustomFields(activeDiagnosis ? hydratedValues.dynamicCustomFields : []);
+      setFieldErrors({});
+      setFormError(null);
+    }
+  }, [mode, activeDiagnosis, hydratedValues]);
+
+  const handleMutationError = useCallback((error: unknown) => {
+    const normalizedMessage = extractDiagnosisErrorMessage(
+      error as never,
+      'Unable to save diagnosis right now.'
+    );
+    const apiFieldErrors = extractDiagnosisFieldErrors(error as never);
+    setFormError(normalizedMessage);
+    setFieldErrors(mapApiFieldErrorsToFormErrors(apiFieldErrors));
   }, []);
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.primaryDiagnosis.trim()) {
+  const createMutation = useCreateDiagnosis({
+    onSuccess: (response) => {
+      const savedId = getDiagnosisId(response.data ?? null);
+      refreshDiagnoses();
+      setMode('idle');
+      setFieldErrors({});
+      setFormError(null);
+      onSaved?.(savedId);
+    },
+    onError: handleMutationError,
+  });
+
+  const updateMutation = useUpdateDiagnosis({
+    onSuccess: (response) => {
+      const savedId = getDiagnosisId(response.data ?? null);
+      refreshDiagnoses();
+      setMode('idle');
+      setFieldErrors({});
+      setFormError(null);
+      onSaved?.(savedId);
+    },
+    onError: handleMutationError,
+  });
+
+  const verifyMutation = useVerifyDiagnosis({
+    onSuccess: (response) => {
+      refreshDiagnoses();
+      setMode('idle');
+      onSaved?.(response.data?.id ?? null);
+    },
+    onError: handleMutationError,
+  });
+
+  const disputeMutation = useDisputeDiagnosis({
+    onSuccess: (response) => {
+      refreshDiagnoses();
+      setMode('idle');
+      onSaved?.(response.data?.id ?? null);
+    },
+    onError: handleMutationError,
+  });
+
+  const resolveMutation = useResolveDiagnosis({
+    onSuccess: (response) => {
+      refreshDiagnoses();
+      setMode('idle');
+      onSaved?.(response.data?.id ?? null);
+    },
+    onError: handleMutationError,
+  });
+
+  const reactivateMutation = useReactivateDiagnosis({
+    onSuccess: (response) => {
+      refreshDiagnoses();
+      setMode('idle');
+      onSaved?.(response.data?.id ?? null);
+    },
+    onError: handleMutationError,
+  });
+
+  // const restoreMutation = useRestoreDiagnosis({
+  //   onSuccess: (response) => {
+  //     refreshDiagnoses();
+  //     setMode('idle');
+  //     onSaved?.(response.data?.id ?? null);
+  //   },
+  //   onError: handleMutationError,
+  // });
+
+  // const deleteMutation = useDeleteDiagnosis({
+  //   onSuccess: () => {
+  //     refreshDiagnoses();
+  //     setMode('idle');
+  //   },
+  //   onError: handleMutationError,
+  // });
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const isLoading = diagnosesQuery.isLoading && !!activeVisitId;
+
+  const isVerifying = verifyMutation.isPending;
+  const isDisputing = disputeMutation.isPending;
+  const isResolving = resolveMutation.isPending;
+  const isReactivating = reactivateMutation.isPending;
+
+  const handleChange = useCallback(
+    (field: keyof DiagnosesFormData, value: string | null) => {
+      setFormError(null);
+      setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
+
+  const handleCustomFieldsChange = useCallback((fields: typeof customFields) => {
+    setCustomFields(fields);
+    setFormData((prev) => ({ ...prev, dynamicCustomFields: fields }));
+  }, []);
+
+  const handleCreate = useCallback(() => {
+    setFormError(null);
+    setFieldErrors({});
+    setFormData(EMPTY_DIAGNOSES_FORM);
+    setCustomFields([]);
+    setMode('create');
+  }, []);
+
+  const handleEdit = useCallback(() => {
+    setFormError(null);
+    setFieldErrors({});
+    setFormData(hydratedValues);
+    setCustomFields(hydratedValues.dynamicCustomFields);
+    setMode('edit');
+  }, [hydratedValues]);
+
+  const handleCancelEdit = useCallback(() => {
+    setFormError(null);
+    setFieldErrors({});
+    setFormData(activeDiagnosis ? hydratedValues : EMPTY_DIAGNOSES_FORM);
+    setCustomFields(activeDiagnosis ? hydratedValues.dynamicCustomFields : []);
+    setMode('idle');
+  }, [activeDiagnosis, hydratedValues]);
+
+  const openPreview = useCallback((action: DiagnosesPreviewAction = 'preview') => {
+    setPreviewAction(action);
+    setPreviewOpen(true);
+  }, []);
+
+  const closePreview = useCallback(() => {
+    setPreviewOpen(false);
+    setPreviewAction('preview');
+  }, []);
+
+  const handleCreateSubmit = useCallback(() => {
+    const payload = buildCreateDiagnosisPayload(formData);
+    const customFieldsSerialized = serializeCustomFields(customFields);
+    const finalPayload = {
+      ...payload,
+      custom_fields: Object.keys(customFieldsSerialized).length > 0 ? customFieldsSerialized : null,
+    };
+    createMutation.mutate(finalPayload as CreateDiagnosisRequest);
+  }, [createMutation, formData, customFields]);
+
+  const handleUpdateSubmit = useCallback(() => {
+    const id = getDiagnosisId(activeDiagnosis);
+    if (!id) {
+      setFormError('This diagnosis could not be updated because its identifier is missing.');
       return;
     }
-    onSave?.(formData);
-  }, [formData, onSave]);
+    const payload = buildUpdateDiagnosisPayload(formData);
+    const customFieldsSerialized = serializeCustomFields(customFields);
+    const finalPayload = {
+      ...payload,
+      custom_fields: Object.keys(customFieldsSerialized).length > 0 ? customFieldsSerialized : null,
+    };
+    updateMutation.mutate({ id, data: finalPayload });
+  }, [activeDiagnosis, formData, customFields, updateMutation]);
 
-  const handleCancel = useCallback(() => {
-    onCancel?.();
-  }, [onCancel]);
+  const handleSubmit = useCallback(
+    (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+
+      setFormError(null);
+      setFieldErrors({});
+
+      // Validate required fields
+      if (!formData.diagnosisCode.trim()) {
+        setFieldErrors({ diagnosisCode: 'Please enter a diagnosis code.' });
+        return;
+      }
+      if (!formData.diagnosisDescription.trim()) {
+        setFieldErrors({ diagnosisDescription: 'Please enter a diagnosis description.' });
+        return;
+      }
+
+      if (mode === 'edit' && activeDiagnosis) {
+        handleUpdateSubmit();
+      } else {
+        handleCreateSubmit();
+      }
+    },
+    [formData, mode, activeDiagnosis, handleCreateSubmit, handleUpdateSubmit]
+  );
+
+  const handleVerify = useCallback(() => {
+    const id = getDiagnosisId(activeDiagnosis);
+    if (id) {
+      verifyMutation.mutate(id);
+    }
+  }, [activeDiagnosis, verifyMutation]);
+
+  const handleDispute = useCallback(() => {
+    const id = getDiagnosisId(activeDiagnosis);
+    if (id) {
+      const reason = window.prompt('Please provide a reason for disputing this diagnosis:');
+      if (reason !== null) {
+        disputeMutation.mutate({ id, reason: reason || undefined });
+      }
+    }
+  }, [activeDiagnosis, disputeMutation]);
+
+  const handleResolve = useCallback(() => {
+    const id = getDiagnosisId(activeDiagnosis);
+    if (id) {
+      const notes = window.prompt('Add resolution notes (optional):');
+      resolveMutation.mutate({ id, resolution_notes: notes || undefined });
+    }
+  }, [activeDiagnosis, resolveMutation]);
+
+  const handleReactivate = useCallback(() => {
+    const id = getDiagnosisId(activeDiagnosis);
+    if (id) {
+      reactivateMutation.mutate(id);
+    }
+  }, [activeDiagnosis, reactivateMutation]);
+
+  const previewValues = mode === 'create' || mode === 'edit' ? formData : hydratedValues;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-    >
-      <div className="p-6">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className={`rounded-lg p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-            <Activity className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className={`text-lg font-semibold ${colors.text.primary}`}>
-              Diagnosis
-            </h2>
-            <p className={`text-sm ${colors.text.secondary}`}>
-              Record primary and secondary diagnoses
-            </p>
-          </div>
-        </div>
+    <>
+      <div className="space-y-6 px-6 mb-6">
+        {/* Diagnoses Header with Refresh Button */}
+        <DiagnosesHeader
+          isDark={isDark}
+          colors={colors}
+          hasActiveVisit={!!activeVisitId}
+          hasExistingDiagnoses={!!activeDiagnosis}
+          diagnosesCount={visitDiagnoses.length}
+          isFetching={diagnosesQuery.isFetching}
+          onRefresh={refreshDiagnoses}
+        />
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Primary Diagnosis */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${colors.text.primary}`}>
-              Primary Diagnosis <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.primaryDiagnosis}
-              onChange={(e) => handleChange('primaryDiagnosis', e.target.value)}
-              placeholder="e.g., Acute Bronchitis, Hypertension, Diabetes Type 2"
-              className={`w-full cursor-text rounded-lg border p-3 text-sm outline-none transition-all ${colors.bg.input} ${colors.text.primary} ${colors.border.primary} ${colors.border.focus}`}
-              autoFocus
-            />
-          </div>
-
-          {/* Secondary Diagnosis */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${colors.text.primary}`}>
-              Secondary Diagnosis <span className={`text-xs ${colors.text.tertiary}`}>(Optional)</span>
-            </label>
-            <input
-              type="text"
-              value={formData.secondaryDiagnosis}
-              onChange={(e) => handleChange('secondaryDiagnosis', e.target.value)}
-              placeholder="e.g., Allergic Rhinitis, Obesity, Anxiety"
-              className={`w-full cursor-text rounded-lg border p-3 text-sm outline-none transition-all ${colors.bg.input} ${colors.text.primary} ${colors.border.primary} ${colors.border.focus}`}
-            />
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${colors.text.primary}`}>
-              Clinical Notes
-            </label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => handleChange('notes', e.target.value)}
-              placeholder="Additional clinical notes, observations, or comments..."
-              rows={4}
-              className={`w-full cursor-text rounded-lg border p-3 text-sm outline-none transition-all resize-y ${colors.bg.input} ${colors.text.primary} ${colors.border.primary} ${colors.border.focus}`}
-            />
-          </div>
-
-          {/* Validation Hint */}
-          {!formData.primaryDiagnosis.trim() && (
-            <div className={`flex items-center gap-2 rounded-lg p-3 ${isDark ? 'bg-yellow-900/20' : 'bg-yellow-50'}`}>
-              <AlertCircle className={`h-4 w-4 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`} />
-              <p className={`text-xs ${isDark ? 'text-yellow-400' : 'text-yellow-700'}`}>
-                Primary diagnosis is required before saving
-              </p>
+        {!activeVisitId && (
+          <div
+            className={cn(
+              'rounded-2xl border p-5',
+              colors.border.primary,
+              colors.bg.card
+            )}
+          >
+            <div className="flex items-start gap-3">
+              <div className={cn('rounded-xl p-2.5', isDark ? 'bg-amber-900/20' : 'bg-amber-50')}>
+                <AlertTriangle className={cn('h-5 w-5', isDark ? 'text-amber-300' : 'text-amber-700')} />
+              </div>
+              <div>
+                <h3 className={cn('text-base font-semibold', colors.text.primary)}>
+                  No active visit selected
+                </h3>
+                <p className={cn('mt-1 text-sm', colors.text.secondary)}>
+                  Select the current patient visit first to record or update diagnoses.
+                </p>
+              </div>
             </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={handleCancel}
-              className={`flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${colors.bg.hover} ${colors.text.secondary}`}
-            >
-              <X className="h-4 w-4" />
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!formData.primaryDiagnosis.trim()}
-              className={`flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                formData.primaryDiagnosis.trim()
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-gray-400 cursor-not-allowed text-gray-200'
-              }`}
-            >
-              <Save className="h-4 w-4" />
-              Save Diagnosis
-            </button>
           </div>
-        </form>
+        )}
+
+        {!!activeVisitId && isLoading && (
+          <div className={cn('rounded-2xl border p-6 mb-6', colors.border.primary, colors.bg.card)}>
+            <div className="flex items-center gap-3">
+              <RefreshCw className={cn('h-5 w-5 animate-spin', colors.text.secondary)} />
+              <div>
+                <p className={cn('text-sm font-medium', colors.text.primary)}>Loading diagnoses</p>
+                <p className={cn('text-sm', colors.text.secondary)}>
+                  Checking whether this visit already has recorded diagnoses.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!!activeVisitId && diagnosesQuery.isError && !isLoading && (
+          <div className={cn('rounded-2xl border p-5 mb-6', colors.border.primary, colors.bg.card)}>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className={cn('rounded-xl p-2.5', isDark ? 'bg-red-900/20' : 'bg-red-50')}>
+                  <AlertTriangle className={cn('h-5 w-5', isDark ? 'text-red-300' : 'text-red-700')} />
+                </div>
+                <div>
+                  <h3 className={cn('text-base font-semibold', colors.text.primary)}>
+                    Unable to load diagnoses
+                  </h3>
+                  <p className={cn('mt-1 text-sm', colors.text.secondary)}>
+                    {extractDiagnosisErrorMessage(
+                      diagnosesQuery.error as never,
+                      'Something went wrong while loading diagnoses.'
+                    )}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => diagnosesQuery.refetch()}
+                className={cn(
+                  'inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
+                  'bg-blue-600 text-white hover:bg-blue-700'
+                )}
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!!activeVisitId && !isLoading && !diagnosesQuery.isError && mode === 'idle' && activeDiagnosis && (
+          <DiagnosesSummaryCard
+            isDark={isDark}
+            colors={colors}
+            diagnosis={activeDiagnosis}
+            customFields={customFields}
+            onEdit={handleEdit}
+            onPreview={() => openPreview('preview')}
+            onPrint={() => openPreview('print')}
+            onDownload={() => openPreview('download')}
+            onVerify={activeDiagnosis.verification_status === 'draft' ? handleVerify : undefined}
+            onDispute={activeDiagnosis.verification_status !== 'disputed' ? handleDispute : undefined}
+            onResolve={activeDiagnosis.clinical_status !== 'resolved' && activeDiagnosis.verification_status === 'verified' ? handleResolve : undefined}
+            onReactivate={activeDiagnosis.clinical_status === 'resolved' ? handleReactivate : undefined}
+          />
+        )}
+
+        {!!activeVisitId && !isLoading && !diagnosesQuery.isError && mode === 'idle' && !activeDiagnosis && (
+          <DiagnosesEmptyState
+            isDark={isDark}
+            colors={colors}
+            patientId={activePatientId ?? null}
+            onCreate={handleCreate}
+          />
+        )}
+
+        {!!activeVisitId && !isLoading && !diagnosesQuery.isError && (mode === 'create' || mode === 'edit') && (
+          <DiagnosesEditor
+            isDark={isDark}
+            colors={colors}
+            mode={mode}
+            formData={formData}
+            customFields={customFields}
+            fieldErrors={fieldErrors}
+            formError={formError}
+            isSubmitting={isSubmitting}
+            isVerifying={isVerifying}
+            isDisputing={isDisputing}
+            isResolving={isResolving}
+            isReactivating={isReactivating}
+            onChange={handleChange}
+            onCustomFieldsChange={handleCustomFieldsChange}
+            onCancel={handleCancelEdit}
+            onPreview={() => openPreview('preview')}
+            onSubmit={handleSubmit}
+            onVerify={mode === 'edit' && activeDiagnosis?.verification_status === 'draft' ? handleVerify : undefined}
+            onDispute={mode === 'edit' && activeDiagnosis?.verification_status !== 'disputed' ? handleDispute : undefined}
+            onResolve={mode === 'edit' && activeDiagnosis?.clinical_status !== 'resolved' && activeDiagnosis?.verification_status === 'verified' ? handleResolve : undefined}
+            onReactivate={mode === 'edit' && activeDiagnosis?.clinical_status === 'resolved' ? handleReactivate : undefined}
+          />
+        )}
       </div>
-    </motion.div>
+
+      <DiagnosesPreviewModal
+        open={previewOpen}
+        onClose={closePreview}
+        diagnosis={activeDiagnosis}
+        values={previewValues}
+        initialAction={previewAction}
+      />
+    </>
   );
 };
 
+export type { DiagnosesFormData };
 export default DiagnosisForm;

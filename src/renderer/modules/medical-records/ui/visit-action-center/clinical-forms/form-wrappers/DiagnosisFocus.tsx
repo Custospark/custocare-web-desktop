@@ -1,32 +1,16 @@
-// DiagnosisFocus.tsx
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { DiagnosisForm, type DiagnosisFormData } from '../DiagnosisForm';
-import { MEDICAL_RECORDS_ROUTES } from '../../../../../../app/routes/routeConstants';
+import { DiagnosisForm } from '../DiagnosisForm';
 
-interface DiagnosisFocusProps {
+interface DiagnosesFocusProps {
   theme?: 'light' | 'dark';
 }
 
-export const DiagnosisFocus: React.FC<DiagnosisFocusProps> = ({ theme = 'light' }) => {
-  const navigate = useNavigate();
-
-  const handleSave = (data: DiagnosisFormData) => {
-    console.log('Diagnosis saved:', data);
-    // TODO: Save to backend
-    // Navigate back to Clinical Care
-    navigate(MEDICAL_RECORDS_ROUTES.CLINICAL_CARE);
-  };
-
-  const handleCancel = () => {
-    navigate(MEDICAL_RECORDS_ROUTES.CLINICAL_CARE);
-  };
-
+export const DiagnosisFocus: React.FC<DiagnosesFocusProps> = ({ theme = 'light' }) => {
   return (
     <DiagnosisForm
       theme={theme}
-      onSave={handleSave}
-      onCancel={handleCancel}
+      onSaved={() => {}}  // Do nothing on save - just focus on diagnosis entry
+      onCancel={() => {}} // Do nothing on cancel
     />
   );
 };
