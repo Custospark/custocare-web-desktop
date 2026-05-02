@@ -13,8 +13,6 @@ import {
   useDisputeDiagnosis,
   useResolveDiagnosis,
   useReactivateDiagnosis,
-  // useRestoreDiagnosis,
-  // useDeleteDiagnosis,
 } from '../../../api/diagnosis/diagnosisQueries';
 import type { CreateDiagnosisRequest } from '../../../api/diagnosis/diagnosisTypes';
 
@@ -23,6 +21,7 @@ import DiagnosesEmptyState from './diagnoses-form-components/DiagnosesEmptyState
 import DiagnosesHeader from './diagnoses-form-components/DiagnosesHeader';
 import DiagnosesPreviewModal from './diagnoses-form-components/DiagnosesPreviewModal';
 import DiagnosesSummaryCard from './diagnoses-form-components/DiagnosesSummaryCard';
+import ConfirmationDialog from '../../../../../shared/components/Feedback/Prompt/ConfirmationDialog';
 import type {
   DiagnosesFormData,
   DiagnosesMode,
@@ -37,7 +36,6 @@ import {
   getDiagnosesTheme,
   mapApiFieldErrorsToFormErrors,
   pickPrimaryDiagnosis,
-  // deserializeCustomFields,
   serializeCustomFields,
 } from './diagnoses-form-components/diagnosesForm.utils';
 
@@ -47,10 +45,23 @@ export interface DiagnosisFormProps {
   onCancel?: () => void;
 }
 
+// Dialog state type
+interface DialogState {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'error' | 'success';
+  confirmText: string;
+  cancelText: string;
+  showInput: boolean;
+  inputLabel: string;
+  inputPlaceholder: string;
+  onConfirm: (value?: string) => void;
+}
+
 export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
   theme = 'light',
   onSaved,
-  // onCancel,
 }) => {
   const isDark = theme === 'dark';
   const colors = getDiagnosesTheme(theme);
@@ -65,6 +76,7 @@ export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
   const [formError, setFormError] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewAction, setPreviewAction] = useState<DiagnosesPreviewAction>('preview');
+  const [dialogState, setDialogState] = useState<DialogState | null>(null);
 
   const diagnosesQuery = useGetActiveVisitDiagnoses({
     retry: 1,
@@ -173,23 +185,6 @@ export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
     onError: handleMutationError,
   });
 
-  // const restoreMutation = useRestoreDiagnosis({
-  //   onSuccess: (response) => {
-  //     refreshDiagnoses();
-  //     setMode('idle');
-  //     onSaved?.(response.data?.id ?? null);
-  //   },
-  //   onError: handleMutationError,
-  // });
-
-  // const deleteMutation = useDeleteDiagnosis({
-  //   onSuccess: () => {
-  //     refreshDiagnoses();
-  //     setMode('idle');
-  //   },
-  //   onError: handleMutationError,
-  // });
-
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
   const isLoading = diagnosesQuery.isLoading && !!activeVisitId;
 
@@ -197,6 +192,24 @@ export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
   const isDisputing = disputeMutation.isPending;
   const isResolving = resolveMutation.isPending;
   const isReactivating = reactivateMutation.isPending;
+
+  // Helper to show dialog
+  const showDialog = useCallback((options: Omit<DialogState, 'isOpen' | 'onConfirm'>): Promise<string | boolean> => {
+    return new Promise((resolve) => {
+      setDialogState({
+        ...options,
+        isOpen: true,
+        onConfirm: (value?: string) => {
+          resolve(value ?? true);
+          setDialogState(null);
+        },
+      });
+    });
+  }, []);
+
+  const closeDialog = useCallback(() => {
+    setDialogState(null);
+  }, []);
 
   const handleChange = useCallback(
     (field: keyof DiagnosesFormData, value: string | null) => {
@@ -297,37 +310,81 @@ export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
     [formData, mode, activeDiagnosis, handleCreateSubmit, handleUpdateSubmit]
   );
 
-  const handleVerify = useCallback(() => {
+  const handleVerify = useCallback(async () => {
     const id = getDiagnosisId(activeDiagnosis);
     if (id) {
-      verifyMutation.mutate(id);
+      const confirmed = await showDialog({
+        title: 'Verify Diagnosis',
+        message: 'Are you sure you want to verify this diagnosis? This action confirms the diagnosis is accurate.',
+        type: 'success',
+        confirmText: 'Yes, Verify',
+        cancelText: 'Cancel',
+        showInput: false,
+        inputLabel: '',
+        inputPlaceholder: '',
+      });
+      if (confirmed) {
+        verifyMutation.mutate(id);
+      }
     }
-  }, [activeDiagnosis, verifyMutation]);
+  }, [activeDiagnosis, verifyMutation, showDialog]);
 
-  const handleDispute = useCallback(() => {
+  const handleDispute = useCallback(async () => {
     const id = getDiagnosisId(activeDiagnosis);
     if (id) {
-      const reason = window.prompt('Please provide a reason for disputing this diagnosis:');
-      if (reason !== null) {
+      const reason = await showDialog({
+        title: 'Dispute Diagnosis',
+        message: 'Please provide a reason for disputing this diagnosis:',
+        type: 'warning',
+        confirmText: 'Submit Dispute',
+        cancelText: 'Cancel',
+        showInput: true,
+        inputLabel: 'Dispute Reason',
+        inputPlaceholder: 'Enter the reason for disputing this diagnosis...',
+      });
+      if (reason && typeof reason === 'string') {
         disputeMutation.mutate({ id, reason: reason || undefined });
       }
     }
-  }, [activeDiagnosis, disputeMutation]);
+  }, [activeDiagnosis, disputeMutation, showDialog]);
 
-  const handleResolve = useCallback(() => {
+  const handleResolve = useCallback(async () => {
     const id = getDiagnosisId(activeDiagnosis);
     if (id) {
-      const notes = window.prompt('Add resolution notes (optional):');
-      resolveMutation.mutate({ id, resolution_notes: notes || undefined });
+      const notes = await showDialog({
+        title: 'Resolve Diagnosis',
+        message: 'Add resolution notes (optional):',
+        type: 'success',
+        confirmText: 'Mark as Resolved',
+        cancelText: 'Cancel',
+        showInput: true,
+        inputLabel: 'Resolution Notes',
+        inputPlaceholder: 'Enter resolution notes...',
+      });
+      if (notes !== false) {
+        resolveMutation.mutate({ id, resolution_notes: (notes as string) || undefined });
+      }
     }
-  }, [activeDiagnosis, resolveMutation]);
+  }, [activeDiagnosis, resolveMutation, showDialog]);
 
-  const handleReactivate = useCallback(() => {
+  const handleReactivate = useCallback(async () => {
     const id = getDiagnosisId(activeDiagnosis);
     if (id) {
-      reactivateMutation.mutate(id);
+      const confirmed = await showDialog({
+        title: 'Reactivate Diagnosis',
+        message: 'Are you sure you want to reactivate this diagnosis?',
+        type: 'info',
+        confirmText: 'Yes, Reactivate',
+        cancelText: 'Cancel',
+        showInput: false,
+        inputLabel: '',
+        inputPlaceholder: '',
+      });
+      if (confirmed) {
+        reactivateMutation.mutate(id);
+      }
     }
-  }, [activeDiagnosis, reactivateMutation]);
+  }, [activeDiagnosis, reactivateMutation, showDialog]);
 
   const previewValues = mode === 'create' || mode === 'edit' ? formData : hydratedValues;
 
@@ -477,6 +534,23 @@ export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
         values={previewValues}
         initialAction={previewAction}
       />
+
+      {/* Custom Dialog Component */}
+      {dialogState && (
+        <ConfirmationDialog
+          isOpen={dialogState.isOpen}
+          onClose={closeDialog}
+          onConfirm={dialogState.onConfirm}
+          title={dialogState.title}
+          message={dialogState.message}
+          type={dialogState.type}
+          confirmText={dialogState.confirmText}
+          cancelText={dialogState.cancelText}
+          showInput={dialogState.showInput}
+          inputLabel={dialogState.inputLabel}
+          inputPlaceholder={dialogState.inputPlaceholder}
+        />
+      )}
     </>
   );
 };
