@@ -1,193 +1,335 @@
-// ClinicalNotesForm.tsx
-import React, { useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { FileText, Save, X } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSelector } from 'react-redux';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { cn } from '../../../../../shared/utils/classNameUtils';
+import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
+import {
+  extractClinicalNoteErrorMessage,
+  extractClinicalNoteFieldErrors,
+  useCreateClinicalNote,
+  useGetActiveVisitClinicalNotes,
+  useUpdateClinicalNote,
+} from '../../../api/clinical-notes/clinicalNoteQueries';
+import {
+  ClinicalNotesEditor,
+  ClinicalNotesEmptyState,
+  ClinicalNotesHeader,
+  ClinicalNotesPreviewModal,
+  ClinicalNotesSummaryCard,
+} from './clinical-notes-form-components';
+import type {
+  ClinicalNotesFormData,
+  ClinicalNotesMode,
+  ClinicalNotesPreviewAction,
+} from './clinical-notes-form-components/clinicalNotesForm.types';
+import {
+  EMPTY_CLINICAL_NOTES_FORM,
+  buildCreateClinicalNotePayload,
+  buildUpdateClinicalNotePayload,
+  extractClinicalNotesFormValues,
+  getClinicalNoteUuid,
+  getClinicalNotesTheme,
+  getClinicalNoteTitle,
+  mapApiFieldErrorsToFormErrors,
+  pickPrimaryClinicalNote,
+} from './clinical-notes-form-components/clinicalNotesForm.utils';
 
-interface ClinicalNotesFormProps {
+export interface ClinicalNotesFormProps {
   theme?: 'light' | 'dark';
-  initialData?: {
-    chiefComplaint?: string;
-    historyOfPresentIllness?: string;
-    pastMedicalHistory?: string;
-    observations?: string;
-    clinicalNotes?: string;
-  };
-  onSave?: (data: ClinicalNotesFormData) => void;
+  onSaved?: (noteUuid: string | null) => void;
   onCancel?: () => void;
 }
 
-export interface ClinicalNotesFormData {
-  chiefComplaint: string;
-  historyOfPresentIllness: string;
-  pastMedicalHistory: string;
-  observations: string;
-  clinicalNotes: string;
-}
-
-export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({ 
-  theme = 'light', 
-  initialData,
-  onSave,
-  onCancel 
+export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
+  theme = 'light',
+  onSaved,
+  onCancel,
 }) => {
   const isDark = theme === 'dark';
-  const [formData, setFormData] = useState<ClinicalNotesFormData>({
-    chiefComplaint: initialData?.chiefComplaint || '',
-    historyOfPresentIllness: initialData?.historyOfPresentIllness || '',
-    pastMedicalHistory: initialData?.pastMedicalHistory || '',
-    observations: initialData?.observations || '',
-    clinicalNotes: initialData?.clinicalNotes || '',
+  const colors = getClinicalNotesTheme(theme);
+
+  const activeVisitId = useSelector(selectActiveVisitId);
+  const activePatientId = useSelector(selectActiveVisitPatientId);
+
+  const [mode, setMode] = useState<ClinicalNotesMode>('idle');
+  const [formData, setFormData] = useState<ClinicalNotesFormData>(EMPTY_CLINICAL_NOTES_FORM);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ClinicalNotesFormData, string>>>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewAction, setPreviewAction] = useState<ClinicalNotesPreviewAction>('preview');
+
+  const notesQuery = useGetActiveVisitClinicalNotes({
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 
-  const colors = {
-    bg: {
-      input: isDark ? 'bg-gray-800' : 'bg-gray-50',
-      hover: isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50',
-    },
-    text: {
-      primary: isDark ? 'text-gray-100' : 'text-gray-900',
-      secondary: isDark ? 'text-gray-400' : 'text-gray-600',
-      tertiary: isDark ? 'text-gray-500' : 'text-gray-400',
-    },
-    border: {
-      primary: isDark ? 'border-gray-700' : 'border-gray-200',
-      focus: isDark ? 'focus:border-blue-500' : 'focus:border-blue-500',
-    },
-  };
+  const visitNotes = notesQuery.data?.data ?? [];
+  const activeVisitNote = useMemo(() => pickPrimaryClinicalNote(visitNotes), [visitNotes]);
+  const hydratedValues = useMemo(
+    () => extractClinicalNotesFormValues(activeVisitNote),
+    [activeVisitNote]
+  );
 
-  const handleChange = useCallback((
-    field: keyof ClinicalNotesFormData,
-    value: string
-  ) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  useEffect(() => {
+    if (mode === 'idle') {
+      setFormData(activeVisitNote ? hydratedValues : EMPTY_CLINICAL_NOTES_FORM);
+      setFieldErrors({});
+      setFormError(null);
+    }
+  }, [mode, activeVisitNote, hydratedValues]);
+
+  const handleMutationError = useCallback((error: unknown) => {
+    const normalizedMessage = extractClinicalNoteErrorMessage(
+      error as never,
+      'Unable to save clinical notes right now.'
+    );
+    const apiFieldErrors = extractClinicalNoteFieldErrors(error as never);
+    setFormError(normalizedMessage);
+    setFieldErrors(mapApiFieldErrorsToFormErrors(apiFieldErrors));
   }, []);
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    onSave?.(formData);
-  }, [formData, onSave]);
+  const createMutation = useCreateClinicalNote({
+    onSuccess: (response) => {
+      const savedUuid = getClinicalNoteUuid(response.data ?? null);
+      setMode('idle');
+      setFieldErrors({});
+      setFormError(null);
+      onSaved?.(savedUuid);
+    },
+    onError: handleMutationError,
+  });
 
-  const handleCancel = useCallback(() => {
-    onCancel?.();
-  }, [onCancel]);
+  const updateMutation = useUpdateClinicalNote({
+    onSuccess: (response) => {
+      const savedUuid = getClinicalNoteUuid(response.data ?? null);
+      setMode('idle');
+      setFieldErrors({});
+      setFormError(null);
+      onSaved?.(savedUuid);
+    },
+    onError: handleMutationError,
+  });
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const isLoading = notesQuery.isLoading && !!activeVisitId;
+
+  const handleChange = useCallback(
+    (field: keyof ClinicalNotesFormData, value: string) => {
+      setFormError(null);
+      setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
+
+  const handleCreate = useCallback(() => {
+    setFormError(null);
+    setFieldErrors({});
+    setFormData(EMPTY_CLINICAL_NOTES_FORM);
+    setMode('create');
+  }, []);
+
+  const handleEdit = useCallback(() => {
+    setFormError(null);
+    setFieldErrors({});
+    setFormData(hydratedValues);
+    setMode('edit');
+  }, [hydratedValues]);
+
+  const handleCancelEdit = useCallback(() => {
+    setFormError(null);
+    setFieldErrors({});
+    setFormData(activeVisitNote ? hydratedValues : EMPTY_CLINICAL_NOTES_FORM);
+    setMode('idle');
+  }, [activeVisitNote, hydratedValues]);
+
+  const openPreview = useCallback((action: ClinicalNotesPreviewAction = 'preview') => {
+    setPreviewAction(action);
+    setPreviewOpen(true);
+  }, []);
+
+  const closePreview = useCallback(() => {
+    setPreviewOpen(false);
+    setPreviewAction('preview');
+  }, []);
+
+  const handleSubmit = useCallback(
+    (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+
+      setFormError(null);
+      setFieldErrors({});
+
+      if (!formData.chiefComplaint.trim()) {
+        setFieldErrors({
+          chiefComplaint: 'Please enter the main reason for this visit.',
+        });
+        return;
+      }
+
+      if (mode === 'edit' && activeVisitNote) {
+        const uuid = getClinicalNoteUuid(activeVisitNote);
+
+        if (!uuid) {
+          setFormError('This note could not be updated because its identifier is missing.');
+          return;
+        }
+
+        updateMutation.mutate({
+          uuid,
+          data: buildUpdateClinicalNotePayload(formData),
+        });
+        return;
+      }
+
+      createMutation.mutate(buildCreateClinicalNotePayload(formData));
+    },
+    [activeVisitNote, createMutation, formData, mode, updateMutation]
+  );
+
+  const previewValues = mode === 'create' || mode === 'edit' ? formData : hydratedValues;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-    >
-      <div className="p-6">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className={`rounded-lg p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-            <FileText className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className={`text-lg font-semibold ${colors.text.primary}`}>
-              Clinical Notes
-            </h2>
-            <p className={`text-sm ${colors.text.secondary}`}>
-              Record patient symptoms, history, and examination findings
-            </p>
-          </div>
-        </div>
+    <>
+      <div className="space-y-6 px-6">
+        <ClinicalNotesHeader
+          isDark={isDark}
+          colors={colors}
+          hasActiveVisit={!!activeVisitId}
+          hasExistingNote={!!activeVisitNote}
+          noteCount={visitNotes.length}
+          isFetching={notesQuery.isFetching}
+          onBack={onCancel}
+        />
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Chief Complaint */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${colors.text.primary}`}>
-              Chief Complaint <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              value={formData.chiefComplaint}
-              onChange={(e) => handleChange('chiefComplaint', e.target.value)}
-              placeholder="e.g., Fever, cough, and difficulty breathing for 3 days..."
-              rows={3}
-              className={`w-full cursor-text rounded-lg border p-3 text-sm outline-none transition-all resize-y ${colors.bg.input} ${colors.text.primary} ${colors.border.primary} ${colors.border.focus}`}
-              autoFocus
-            />
-          </div>
+        {!activeVisitId && (
+          <div
+            className={cn(
+              'rounded-2xl border p-5',
+              colors.border.primary,
+              colors.bg.card
+            )}
+          >
+            <div className="flex items-start gap-3">
+              <div className={cn('rounded-xl p-2.5', isDark ? 'bg-amber-900/20' : 'bg-amber-50')}>
+                <AlertTriangle className={cn('h-5 w-5', isDark ? 'text-amber-300' : 'text-amber-700')} />
+              </div>
 
-          {/* History of Present Illness */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${colors.text.primary}`}>
-              History of Present Illness
-            </label>
-            <textarea
-              value={formData.historyOfPresentIllness}
-              onChange={(e) => handleChange('historyOfPresentIllness', e.target.value)}
-              placeholder="Detailed chronological account of the patient's symptoms and progression..."
-              rows={4}
-              className={`w-full cursor-text rounded-lg border p-3 text-sm outline-none transition-all resize-y ${colors.bg.input} ${colors.text.primary} ${colors.border.primary} ${colors.border.focus}`}
-            />
+              <div>
+                <h3 className={cn('text-base font-semibold', colors.text.primary)}>
+                  No active visit selected
+                </h3>
+                <p className={cn('mt-1 text-sm', colors.text.secondary)}>
+                  Select the current patient visit first to create or update visit-based clinical notes.
+                </p>
+              </div>
+            </div>
           </div>
+        )}
 
-          {/* Past Medical History */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${colors.text.primary}`}>
-              Past Medical History
-            </label>
-            <textarea
-              value={formData.pastMedicalHistory}
-              onChange={(e) => handleChange('pastMedicalHistory', e.target.value)}
-              placeholder="Previous illnesses, surgeries, chronic conditions, medications..."
-              rows={3}
-              className={`w-full cursor-text rounded-lg border p-3 text-sm outline-none transition-all resize-y ${colors.bg.input} ${colors.text.primary} ${colors.border.primary} ${colors.border.focus}`}
-            />
+        {!!activeVisitId && isLoading && (
+          <div className={cn('rounded-2xl border p-6', colors.border.primary, colors.bg.card)}>
+            <div className="flex items-center gap-3">
+              <RefreshCw className={cn('h-5 w-5 animate-spin', colors.text.secondary)} />
+              <div>
+                <p className={cn('text-sm font-medium', colors.text.primary)}>
+                  Loading clinical notes
+                </p>
+                <p className={cn('text-sm', colors.text.secondary)}>
+                  Checking whether this visit already has a saved note.
+                </p>
+              </div>
+            </div>
           </div>
+        )}
 
-          {/* Physical Examination Findings */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${colors.text.primary}`}>
-              Physical Examination Findings
-            </label>
-            <textarea
-              value={formData.observations}
-              onChange={(e) => handleChange('observations', e.target.value)}
-              placeholder="Vitals, general appearance, system-specific findings..."
-              rows={4}
-              className={`w-full cursor-text rounded-lg border p-3 text-sm outline-none transition-all resize-y ${colors.bg.input} ${colors.text.primary} ${colors.border.primary} ${colors.border.focus}`}
-            />
-          </div>
+        {!!activeVisitId && notesQuery.isError && !isLoading && (
+          <div className={cn('rounded-2xl border p-5', colors.border.primary, colors.bg.card)}>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className={cn('rounded-xl p-2.5', isDark ? 'bg-red-900/20' : 'bg-red-50')}>
+                  <AlertTriangle className={cn('h-5 w-5', isDark ? 'text-red-300' : 'text-red-700')} />
+                </div>
 
-          {/* Additional Clinical Notes */}
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${colors.text.primary}`}>
-              Additional Clinical Notes
-            </label>
-            <textarea
-              value={formData.clinicalNotes}
-              onChange={(e) => handleChange('clinicalNotes', e.target.value)}
-              placeholder="Any other relevant information, assessment, or plan..."
-              rows={3}
-              className={`w-full cursor-text rounded-lg border p-3 text-sm outline-none transition-all resize-y ${colors.bg.input} ${colors.text.primary} ${colors.border.primary} ${colors.border.focus}`}
-            />
-          </div>
+                <div>
+                  <h3 className={cn('text-base font-semibold', colors.text.primary)}>
+                    Unable to load clinical notes
+                  </h3>
+                  <p className={cn('mt-1 text-sm', colors.text.secondary)}>
+                    {extractClinicalNoteErrorMessage(
+                      notesQuery.error as never,
+                      'Something went wrong while loading this visit note.'
+                    )}
+                  </p>
+                </div>
+              </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t">
-            <button
-              type="button"
-              onClick={handleCancel}
-              className={`flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${colors.bg.hover} ${colors.text.secondary}`}
-            >
-              <X className="h-4 w-4" />
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 bg-blue-600 text-white hover:bg-blue-700"
-            >
-              <Save className="h-4 w-4" />
-              Save Clinical Notes
-            </button>
+              <button
+                type="button"
+                onClick={() => notesQuery.refetch()}
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
+                  'bg-blue-600 text-white hover:bg-blue-700'
+                )}
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </button>
+            </div>
           </div>
-        </form>
+        )}
+
+        {!!activeVisitId && !isLoading && !notesQuery.isError && mode === 'idle' && activeVisitNote && (
+          <ClinicalNotesSummaryCard
+            isDark={isDark}
+            colors={colors}
+            note={activeVisitNote}
+            values={hydratedValues}
+            noteTitle={getClinicalNoteTitle(activeVisitNote, hydratedValues)}
+            onEdit={handleEdit}
+            onPreview={() => openPreview('preview')}
+            onPrint={() => openPreview('print')}
+            onDownload={() => openPreview('download')}
+          />
+        )}
+
+        {!!activeVisitId && !isLoading && !notesQuery.isError && mode === 'idle' && !activeVisitNote && (
+          <ClinicalNotesEmptyState
+            isDark={isDark}
+            colors={colors}
+            patientId={activePatientId ?? null}
+            onCreate={handleCreate}
+          />
+        )}
+
+        {!!activeVisitId && !isLoading && !notesQuery.isError && (mode === 'create' || mode === 'edit') && (
+          <ClinicalNotesEditor
+            isDark={isDark}
+            colors={colors}
+            mode={mode}
+            formData={formData}
+            fieldErrors={fieldErrors}
+            formError={formError}
+            isSubmitting={isSubmitting}
+            onChange={handleChange}
+            onCancel={handleCancelEdit}
+            onPreview={() => openPreview('preview')}
+            onSubmit={handleSubmit}
+          />
+        )}
       </div>
-    </motion.div>
+
+      <ClinicalNotesPreviewModal
+        open={previewOpen}
+        onClose={closePreview}
+        note={activeVisitNote}
+        values={previewValues}
+        noteTitle={getClinicalNoteTitle(activeVisitNote, previewValues)}
+        initialAction={previewAction}
+      />
+    </>
   );
 };
 
+export type { ClinicalNotesFormData };
 export default ClinicalNotesForm;
