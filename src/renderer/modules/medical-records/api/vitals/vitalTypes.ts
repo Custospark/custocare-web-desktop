@@ -185,6 +185,8 @@ export interface VitalResponse {
   visit_id: number;
   patient_id: number;
   staff_id: number;
+  patient_number?: string;
+  patient_name?: string;
   
   // Core Vital Signs
   temperature: number | null;

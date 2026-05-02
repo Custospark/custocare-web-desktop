@@ -79,7 +79,7 @@ const ROLES = [
     gradient: 'from-purple-600 to-pink-600',
     route: ROUTES.HEALTHCARE_ONBOARDING,
     benefits: [
-      'Operational excellence across departments',
+      'Clinical Excellence across departments',
       'Real-time facility performance insights',
       'Scalable, audit-ready healthcare operations'
     ]

@@ -51,6 +51,11 @@ export const VitalsSummaryCard: React.FC<VitalsSummaryCardProps> = ({
   const meta = getVitalsMeta(vitals);
   const bmiCategory = getBmiCategory(vitals.bmi);
 
+  // Format clinician name with Dr. prefix
+  const formattedClinicianName = meta.staffName 
+    ? `Dr. ${meta.staffName}`
+    : null;
+
   return (
     <section
       className={cn(
@@ -80,25 +85,23 @@ export const VitalsSummaryCard: React.FC<VitalsSummaryCardProps> = ({
                 Measured: {formatVitalsDate(meta.measuredAt || meta.createdAt)}
               </span>
 
-             
-
               <span
                 className={cn(
                   'rounded-full px-3 py-1 font-medium',
                   isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'
                 )}
               >
-                Visit ID: {meta.visitId ?? 'N/A'}
+                Patient Number: {vitals?.patient_number ?? 'N/A'}
               </span>
             </div>
 
             {/* Clinical Alert */}
-          {vitals.clinical_alert && (
-          <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-800">
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-            <span>{vitals.clinical_alert}</span>
-          </div>
-        )}
+            {vitals.clinical_alert && (
+              <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-800">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <span>{vitals.clinical_alert}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -337,12 +340,12 @@ export const VitalsSummaryCard: React.FC<VitalsSummaryCardProps> = ({
           </div>
         )}
 
-        {/* Clinician Info */}
-        {meta.staffName && (
+        {/* Clinician Info with Dr. Prefix */}
+        {formattedClinicianName && (
           <div className="mt-4 flex items-center gap-2 text-sm">
             <UserRound className={cn('h-4 w-4', colors.text.tertiary)} />
             <span className={colors.text.secondary}>Recorded by:</span>
-            <span className={cn('font-medium', colors.text.primary)}>{meta.staffName}</span>
+            <span className={cn('font-medium', colors.text.primary)}>{formattedClinicianName}</span>
           </div>
         )}
       </div>

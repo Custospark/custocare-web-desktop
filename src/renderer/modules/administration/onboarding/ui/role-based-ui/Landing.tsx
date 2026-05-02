@@ -275,7 +275,7 @@ export const Landing: React.FC = () => {
                   >
                     <Sparkles className="w-4 h-4 text-white animate-pulse" aria-hidden="true" />
                     <span className="text-sm font-bold text-white tracking-tight">
-                    Built for Continuous Care & Operational Excellence.
+                    Built for Continuous Care & Clinical Excellence.
                   </span>
 
                   </motion.div>
@@ -311,7 +311,7 @@ export const Landing: React.FC = () => {
                     theme === 'dark' ? "text-slate-300" : "text-slate-700"
                   )}
                 >
-                  Powering Continuity of Care and Operational Excellence in Healthcare.
+                  Powering Continuity of Care and Clinical Excellence in Healthcare.
                   </motion.p>
 
 
@@ -356,7 +356,7 @@ export const Landing: React.FC = () => {
                 {
                   icon: Building,
                   title: "For Health Facilities",
-                  description: "Operational excellence with real-time visibility.",
+                  description: "Clinical Excellence with real-time visibility.",
                   gradient: "from-purple-500 to-purple-600",
                   color: "purple",
                 }

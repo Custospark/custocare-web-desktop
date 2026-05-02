@@ -13,24 +13,26 @@ import {
   ShieldCheck,
   Sparkles,
   Thermometer,
-  Heart, 
+  Heart,
   Activity,
   Droplet,
   Ruler,
   Weight,
   Brain,
 } from 'lucide-react';
-import {FaLungs } from 'react-icons/fa';
+import { FaLungs } from 'react-icons/fa';
 import { useGetFacilityIdentity } from '../../../../api/facility/FacilityQueries';
 import type { RootState } from '../../../../../../app/store/rootReducer';
 import {
   formatVitalsDate,
   getBmiCategory,
   getVitalsMeta,
+  deserializeCustomFields,
 } from './vitalsForm.utils';
 import type {
   VitalResponse,
   VitalsFormValues,
+  DynamicCustomFields,
 } from './vitalsForm.types';
 
 // Helper component for info rows
@@ -57,9 +59,19 @@ interface VitalsPreviewDocumentProps {
 
 export const VitalsPreviewDocument: React.FC<VitalsPreviewDocumentProps> = ({
   vitals,
+  values,
 }) => {
   const meta = getVitalsMeta(vitals);
   const bmiCategory = getBmiCategory(vitals?.bmi || null);
+
+  // Deserialize custom fields from vitals or use values from form
+  const customFields: DynamicCustomFields = vitals?.custom_fields
+    ? deserializeCustomFields(vitals.custom_fields as Record<string, unknown>)
+    : values?.dynamicCustomFields || [];
+
+  // Format clinician name with Dr. prefix
+  const clinicianName = vitals?.staff?.full_name || meta.staffName || 'Not specified';
+  const formattedClinicianName = clinicianName !== 'Not specified' ? `Dr. ${clinicianName}` : clinicianName;
 
   // Get facility info from Redux
   const activeFacilityId = useSelector((state: RootState) => state.activeContext.activeFacilityId);
@@ -106,8 +118,7 @@ export const VitalsPreviewDocument: React.FC<VitalsPreviewDocumentProps> = ({
 
   // Get patient name from vitals or fallback
   const patientName = vitals?.patient?.full_name || meta.patientName || 'Unknown Patient';
-  const patientNumber = meta.patientId?.toString() || 'N/A';
-  const clinicianName = vitals?.staff?.full_name || meta.staffName || 'Not specified';
+  const patientNumber = vitals?.patient_number || 'N/A';
 
   if (isLoading) {
     return (
@@ -205,7 +216,7 @@ export const VitalsPreviewDocument: React.FC<VitalsPreviewDocumentProps> = ({
         <InfoRow
           icon={<Stethoscope className="h-3.5 w-3.5" />}
           label="Clinician Name"
-          value={clinicianName}
+          value={formattedClinicianName}
         />
         <InfoRow
           icon={<Calendar className="h-3.5 w-3.5" />}
@@ -392,6 +403,24 @@ export const VitalsPreviewDocument: React.FC<VitalsPreviewDocumentProps> = ({
           </div>
         )}
 
+        {/* Additional Measurements (Custom Fields) */}
+        {customFields.length > 0 && (
+          <div className="mt-4 rounded-xl border border-slate-200 p-4">
+            <h4 className="mb-3 text-sm font-semibold text-slate-700">Additional Measurements</h4>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {customFields.map((field) => (
+                <div key={field.id} className="border-b border-slate-100 pb-2 last:border-0">
+                  <span className="text-xs font-medium text-slate-500">{field.label}</span>
+                  <p className="text-sm text-slate-700">
+                    {field.value !== null && field.value !== '' ? String(field.value) : '—'}
+                    {field.unit && ` ${field.unit}`}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Clinical Alert */}
         {vitals?.clinical_alert && (
           <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
@@ -440,12 +469,6 @@ export const VitalsPreviewDocument: React.FC<VitalsPreviewDocumentProps> = ({
               .replace(/,/g, '')}
           </span>
         </p>
-
-        {vitals?.id && (
-          <p className="mt-2 text-[9px] font-mono text-gray-400 break-all">
-            Document ID: {vitals.id}
-          </p>
-        )}
       </div>
     </div>
   );
