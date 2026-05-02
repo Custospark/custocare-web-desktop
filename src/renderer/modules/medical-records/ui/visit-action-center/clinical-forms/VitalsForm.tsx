@@ -33,7 +33,6 @@ import {
   mapApiFieldErrorsToFormErrors,
   pickPrimaryVitals,
   calculateBmi,
-  deserializeCustomFields,
   serializeCustomFields,
 } from './vitals-form-components/vitalsForm.utils';
 
@@ -46,7 +45,6 @@ export interface VitalsFormProps {
 export const VitalsForm: React.FC<VitalsFormProps> = ({
   theme = 'light',
   onSaved,
-  onCancel,
 }) => {
   const isDark = theme === 'dark';
   const colors = getVitalsTheme(theme);

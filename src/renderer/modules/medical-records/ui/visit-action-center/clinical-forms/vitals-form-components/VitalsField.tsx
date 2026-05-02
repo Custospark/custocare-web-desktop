@@ -19,7 +19,7 @@ export const VitalsField: React.FC<VitalsFieldProps> = ({
   value,
   unitValue,
   error,
-  isDark,
+  // isDark,
   colors,
   autoFocus = false,
   onChange,
