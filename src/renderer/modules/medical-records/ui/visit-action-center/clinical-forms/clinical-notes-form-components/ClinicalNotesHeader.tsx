@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, RefreshCw, Stethoscope } from 'lucide-react';
+import { FileText, RefreshCw, Stethoscope, Activity, Clock, FileCheck } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import type { ClinicalNotesThemeTokens } from './clinicalNotesForm.types';
 
@@ -10,7 +10,7 @@ interface ClinicalNotesHeaderProps {
   hasExistingNote: boolean;
   noteCount: number;
   isFetching: boolean;
-  onBack?: () => void;
+  onRefresh?: () => void;
 }
 
 export const ClinicalNotesHeader: React.FC<ClinicalNotesHeaderProps> = ({
@@ -20,7 +20,7 @@ export const ClinicalNotesHeader: React.FC<ClinicalNotesHeaderProps> = ({
   hasExistingNote,
   noteCount,
   isFetching,
-  // onBack,
+  onRefresh,
 }) => {
   return (
     <section
@@ -52,6 +52,7 @@ export const ClinicalNotesHeader: React.FC<ClinicalNotesHeaderProps> = ({
             </p>
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
+              {/* Active Visit Status */}
               <span
                 className={cn(
                   'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold',
@@ -60,10 +61,11 @@ export const ClinicalNotesHeader: React.FC<ClinicalNotesHeaderProps> = ({
                     : `${colors.state.warningSoft} ${colors.state.warning}`
                 )}
               >
-                <FileText className="h-3.5 w-3.5" />
+                <Activity className="h-3.5 w-3.5" />
                 {hasActiveVisit ? 'Active visit found' : 'Waiting for active visit'}
               </span>
 
+              {/* Note Existence Status */}
               <span
                 className={cn(
                   'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold',
@@ -72,18 +74,33 @@ export const ClinicalNotesHeader: React.FC<ClinicalNotesHeaderProps> = ({
                     : `${colors.state.warningSoft} ${colors.state.warning}`
                 )}
               >
+                <FileCheck className="h-3.5 w-3.5" />
                 {hasExistingNote ? 'Existing note available' : 'No note created yet'}
               </span>
 
+              {/* Note Count */}
               <span
                 className={cn(
                   'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold',
                   isDark ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-700'
                 )}
               >
+                <FileText className="h-3.5 w-3.5" />
                 Visit notes: {noteCount}
               </span>
 
+              {/* Last Updated / Timestamp placeholder */}
+              <span
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold',
+                  isDark ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-700'
+                )}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                Auto-sync enabled
+              </span>
+
+              {/* Fetching Indicator */}
               {isFetching && (
                 <span
                   className={cn(
@@ -92,28 +109,33 @@ export const ClinicalNotesHeader: React.FC<ClinicalNotesHeaderProps> = ({
                   )}
                 >
                   <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  Refreshing
+                  Refreshing...
                 </span>
               )}
             </div>
           </div>
         </div>
 
-        {/* {onBack && (
+        {/* Refresh Button */}
+        {onRefresh && (
           <button
             type="button"
-            onClick={onBack}
+            onClick={onRefresh}
+            disabled={isFetching}
             className={cn(
-              'inline-flex cursor-pointer items-center gap-2 self-start rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+              'inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
+              'border',
               colors.border.primary,
-              colors.text.secondary,
-              colors.bg.hover
+              colors.text.primary,
+              colors.bg.hover,
+              isFetching && 'cursor-not-allowed opacity-50'
             )}
+            title="Refresh clinical notes"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back
+            <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
+            Refresh
           </button>
-        )} */}
+        )}
       </div>
     </section>
   );

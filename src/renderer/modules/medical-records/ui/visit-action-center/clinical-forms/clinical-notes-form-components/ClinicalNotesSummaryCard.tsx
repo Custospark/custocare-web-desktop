@@ -18,6 +18,7 @@ import type {
   ClinicalNotesFormValues,
   ClinicalNotesThemeTokens,
 } from './clinicalNotesForm.types';
+import { formatText } from '../../../revenue/stats/billing-revenue-stats-component/revenueDashboardUtils';
 
 interface ClinicalNotesSummaryCardProps {
   isDark: boolean;
@@ -66,7 +67,7 @@ export const ClinicalNotesSummaryCard: React.FC<ClinicalNotesSummaryCardProps> =
                     isDark ? 'bg-emerald-950/40 text-emerald-300' : 'bg-emerald-50 text-emerald-700'
                   )}
                 >
-                  {meta.status}
+                  {formatText(meta.status)}
                 </span>
               )}
 
@@ -77,26 +78,18 @@ export const ClinicalNotesSummaryCard: React.FC<ClinicalNotesSummaryCardProps> =
                     isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'
                   )}
                 >
-                  {meta.noteType}
+                  {formatText(meta.noteType)}
                 </span>
               )}
 
+              
               <span
                 className={cn(
                   'rounded-full px-3 py-1 font-medium',
                   isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'
                 )}
               >
-                Visit ID: {meta.visitId ?? 'N/A'}
-              </span>
-
-              <span
-                className={cn(
-                  'rounded-full px-3 py-1 font-medium',
-                  isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'
-                )}
-              >
-                Patient ID: {meta.patientId ?? 'N/A'}
+                Patient Number: {note?.patient_number ?? 'N/A'}
               </span>
             </div>
 

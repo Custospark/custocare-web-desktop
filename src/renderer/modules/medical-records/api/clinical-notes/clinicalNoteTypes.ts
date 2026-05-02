@@ -184,6 +184,7 @@ export interface ClinicalNoteResponse {
   facility_id: number;
   visit_id: number;
   patient_id: number;
+  patient_number?: number;
   staff_id: number;
   
   // Clinical Content

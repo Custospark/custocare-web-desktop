@@ -12,7 +12,12 @@
  * - historyOfPresentIllness → review_of_systems
  * - pastMedicalHistory    → past_medical_history
  * - observations          → objective
- * - clinicalNotes         → assessment + plan
+ * - clinicalNotes         → assessment + plan (handled intelligently to prevent duplication)
+ * 
+ * ASSESSMENT & PLAN HANDLING:
+ * - When both fields have SAME content → store in both, display once
+ * - When both fields have DIFFERENT content → store separately, display with headers
+ * - When only one field has content → store in both, display that content
  * 
  * @module clinicalNotesForm.utils
  */
@@ -231,6 +236,97 @@ export const getClinicalNoteMeta = (note: ClinicalNoteResponse | null | undefine
 });
 
 /* -------------------------------------------------------------------------- */
+/*                    ASSESSMENT & PLAN HELPERS (FIX)                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Combine assessment and plan for display in the form
+ * Prevents duplicate content when both fields contain the same value
+ * 
+ * @param assessment - Backend assessment field
+ * @param plan - Backend plan field
+ * @returns Combined string for form display
+ * 
+ * BEHAVIOR:
+ * - Both empty → empty string
+ * - Only assessment exists → assessment content
+ * - Only plan exists → plan content
+ * - Same content → show once
+ * - Different content → show with **ASSESSMENT** and **PLAN** headers
+ */
+const combineAssessmentAndPlan = (
+  assessment: string | null | undefined,
+  plan: string | null | undefined
+): string => {
+  const hasAssessment = assessment && assessment.trim();
+  const hasPlan = plan && plan.trim();
+
+  // Neither field has content
+  if (!hasAssessment && !hasPlan) {
+    return '';
+  }
+
+  // Only assessment exists
+  if (hasAssessment && !hasPlan) {
+    return assessment!.trim();
+  }
+
+  // Only plan exists
+  if (!hasAssessment && hasPlan) {
+    return plan!.trim();
+  }
+
+  // Both exist - check if they are the same
+  const isDuplicate = assessment!.trim() === plan!.trim();
+  
+  if (isDuplicate) {
+    // Same content - show once
+    return assessment!.trim();
+  }
+
+  // Different content - combine with section headers
+  return `**ASSESSMENT**\n${assessment!.trim()}\n\n**PLAN**\n${plan!.trim()}`;
+};
+
+/**
+ * Split combined clinical notes into assessment and plan for backend
+ * Reverses the combineAssessmentAndPlan operation
+ * 
+ * @param clinicalNotes - Combined string from form
+ * @returns Object with assessment and plan fields
+ */
+const splitAssessmentAndPlan = (clinicalNotes: string): { assessment: string | null; plan: string | null } => {
+  if (!clinicalNotes.trim()) {
+    return { assessment: null, plan: null };
+  }
+
+  const trimmed = clinicalNotes.trim();
+  
+  // Check if the text contains section headers (from combined display with different content)
+  const assessmentMatch = trimmed.match(/\*\*ASSESSMENT\*\*\n([\s\S]*?)(?=\n\n\*\*PLAN\*\*|\n\*\*PLAN\*\*|$)/);
+  const planMatch = trimmed.match(/\*\*PLAN\*\*\n([\s\S]*?)$/);
+
+  if (assessmentMatch && planMatch) {
+    // This was a combined display with different content
+    return {
+      assessment: assessmentMatch[1].trim() || null,
+      plan: planMatch[1].trim() || null,
+    };
+  }
+
+  // No section headers - treat entire content as both assessment and plan
+  // This handles:
+  // - New notes created with this system (same content)
+  // - Existing notes from legacy systems
+  // - Notes where user entered content without using headers
+  const content = trimmed;
+  return {
+    assessment: content,
+    plan: content,
+  };
+};
+
+/* -------------------------------------------------------------------------- */
 /*                          FORM VALUE EXTRACTION                             */
 /* -------------------------------------------------------------------------- */
 
@@ -253,8 +349,8 @@ export const extractClinicalNotesFormValues = (
   // MAP: backend.objective → form.observations
   observations: note?.objective || '',
   
-  // MAP: backend.assessment + plan → form.clinicalNotes
-  clinicalNotes: [note?.assessment, note?.plan].filter(Boolean).join('\n\n') || '',
+  // FIX: Intelligently combine assessment and plan
+  clinicalNotes: combineAssessmentAndPlan(note?.assessment, note?.plan),
 });
 
 /* -------------------------------------------------------------------------- */
@@ -269,25 +365,30 @@ export const extractClinicalNotesFormValues = (
  */
 export const buildCreateClinicalNotePayload = (
   values: ClinicalNotesFormValues
-): Partial<CreateClinicalNoteRequest> => ({
-  // MAP: form.chiefComplaint → backend.subjective
-  subjective: values.chiefComplaint.trim() || null,
+): Partial<CreateClinicalNoteRequest> => {
+  // FIX: Split clinicalNotes into assessment and plan intelligently
+  const { assessment, plan } = splitAssessmentAndPlan(values.clinicalNotes);
   
-  // MAP: form.observations → backend.objective
-  objective: values.observations.trim() || null,
-  
-  // MAP: form.clinicalNotes → backend.assessment
-  assessment: values.clinicalNotes.trim() || null,
-  
-  // MAP: form.clinicalNotes → backend.plan (same value goes to both)
-  plan: values.clinicalNotes.trim() || null,
-  
-  // MAP: form.pastMedicalHistory → backend.past_medical_history
-  past_medical_history: values.pastMedicalHistory.trim() || null,
-  
-  // MAP: form.historyOfPresentIllness → backend.review_of_systems
-  review_of_systems: values.historyOfPresentIllness.trim() || null,
-});
+  return {
+    // MAP: form.chiefComplaint → backend.subjective
+    subjective: values.chiefComplaint.trim() || null,
+    
+    // MAP: form.observations → backend.objective
+    objective: values.observations.trim() || null,
+    
+    // MAP: form.clinicalNotes → backend.assessment (split if needed)
+    assessment: assessment || values.clinicalNotes.trim() || null,
+    
+    // MAP: form.clinicalNotes → backend.plan (split if needed)
+    plan: plan || values.clinicalNotes.trim() || null,
+    
+    // MAP: form.pastMedicalHistory → backend.past_medical_history
+    past_medical_history: values.pastMedicalHistory.trim() || null,
+    
+    // MAP: form.historyOfPresentIllness → backend.review_of_systems
+    review_of_systems: values.historyOfPresentIllness.trim() || null,
+  };
+};
 
 /**
  * Build update payload from form values
@@ -295,14 +396,19 @@ export const buildCreateClinicalNotePayload = (
  */
 export const buildUpdateClinicalNotePayload = (
   values: ClinicalNotesFormValues
-): Partial<UpdateClinicalNoteRequest> => ({
-  subjective: values.chiefComplaint.trim() || null,
-  objective: values.observations.trim() || null,
-  assessment: values.clinicalNotes.trim() || null,
-  plan: values.clinicalNotes.trim() || null,
-  past_medical_history: values.pastMedicalHistory.trim() || null,
-  review_of_systems: values.historyOfPresentIllness.trim() || null,
-});
+): Partial<UpdateClinicalNoteRequest> => {
+  // FIX: Split clinicalNotes into assessment and plan intelligently
+  const { assessment, plan } = splitAssessmentAndPlan(values.clinicalNotes);
+  
+  return {
+    subjective: values.chiefComplaint.trim() || null,
+    objective: values.observations.trim() || null,
+    assessment: assessment || values.clinicalNotes.trim() || null,
+    plan: plan || values.clinicalNotes.trim() || null,
+    past_medical_history: values.pastMedicalHistory.trim() || null,
+    review_of_systems: values.historyOfPresentIllness.trim() || null,
+  };
+};
 
 /* -------------------------------------------------------------------------- */
 /*                          ERROR MAPPING                                     */
@@ -398,6 +504,17 @@ export const getNoteSummary = (note: ClinicalNoteResponse, maxLength: number = 2
   return content.substring(0, maxLength) + '...';
 };
 
+/**
+ * Check if assessment and plan are different (for UI hints)
+ */
+export const hasDistinctAssessmentAndPlan = (note: ClinicalNoteResponse | null | undefined): boolean => {
+  if (!note) return false;
+  const hasAssessment = note.assessment && note.assessment.trim();
+  const hasPlan = note.plan && note.plan.trim();
+  if (!hasAssessment || !hasPlan) return false;
+  return note.assessment!.trim() !== note.plan!.trim();
+};
+
 /* -------------------------------------------------------------------------- */
 /*                            EXPORT DEFAULTS                                 */
 /* -------------------------------------------------------------------------- */
@@ -419,4 +536,5 @@ export default {
   getSectionCompletion,
   formatAsSoapNote,
   getNoteSummary,
+  hasDistinctAssessmentAndPlan,
 };

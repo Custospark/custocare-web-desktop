@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback,useMemo, useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { cn } from '../../../../../shared/utils/classNameUtils';
@@ -44,7 +44,7 @@ export interface ClinicalNotesFormProps {
 export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
   theme = 'light',
   onSaved,
-  onCancel,
+  // onCancel,
 }) => {
   const isDark = theme === 'dark';
   const colors = getClinicalNotesTheme(theme);
@@ -64,14 +64,20 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     refetchOnWindowFocus: false,
   });
 
-  const visitNotes = notesQuery.data?.data ?? [];
+  const visitNotes = useMemo(() => notesQuery.data?.data ?? [], [notesQuery.data]);
   const activeVisitNote = useMemo(() => pickPrimaryClinicalNote(visitNotes), [visitNotes]);
   const hydratedValues = useMemo(
     () => extractClinicalNotesFormValues(activeVisitNote),
     [activeVisitNote]
   );
 
-  // Reset form when mode changes or note changes
+  // Helper function to refresh notes after mutation
+  const refreshNotes = useCallback(() => {
+    if (activeVisitId) {
+      notesQuery.refetch();
+    }
+  }, [activeVisitId, notesQuery]);
+
   useEffect(() => {
     if (mode === 'idle') {
       setFormData(activeVisitNote ? hydratedValues : EMPTY_CLINICAL_NOTES_FORM);
@@ -80,7 +86,6 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     }
   }, [mode, activeVisitNote, hydratedValues]);
 
-  // Handle API mutation errors
   const handleMutationError = useCallback((error: unknown) => {
     const normalizedMessage = extractClinicalNoteErrorMessage(
       error as never,
@@ -91,10 +96,11 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     setFieldErrors(mapApiFieldErrorsToFormErrors(apiFieldErrors));
   }, []);
 
-  // Create mutation
   const createMutation = useCreateClinicalNote({
     onSuccess: (response) => {
       const savedUuid = getClinicalNoteUuid(response.data ?? null);
+      // Refresh notes to get the newly created note with all its data
+      refreshNotes();
       setMode('idle');
       setFieldErrors({});
       setFormError(null);
@@ -103,10 +109,11 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     onError: handleMutationError,
   });
 
-  // Update mutation
   const updateMutation = useUpdateClinicalNote({
     onSuccess: (response) => {
       const savedUuid = getClinicalNoteUuid(response.data ?? null);
+      // Refresh notes to get the updated note with latest timestamps and data
+      refreshNotes();
       setMode('idle');
       setFieldErrors({});
       setFormError(null);
@@ -118,7 +125,6 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
   const isLoading = notesQuery.isLoading && !!activeVisitId;
 
-  // Form field change handler
   const handleChange = useCallback(
     (field: keyof ClinicalNotesFormData, value: string) => {
       setFormError(null);
@@ -128,7 +134,6 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     []
   );
 
-  // Create new note
   const handleCreate = useCallback(() => {
     setFormError(null);
     setFieldErrors({});
@@ -136,7 +141,6 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     setMode('create');
   }, []);
 
-  // Edit existing note
   const handleEdit = useCallback(() => {
     setFormError(null);
     setFieldErrors({});
@@ -144,7 +148,6 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     setMode('edit');
   }, [hydratedValues]);
 
-  // Cancel editing
   const handleCancelEdit = useCallback(() => {
     setFormError(null);
     setFieldErrors({});
@@ -152,26 +155,21 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     setMode('idle');
   }, [activeVisitNote, hydratedValues]);
 
-  // Open preview modal
   const openPreview = useCallback((action: ClinicalNotesPreviewAction = 'preview') => {
     setPreviewAction(action);
     setPreviewOpen(true);
   }, []);
 
-  // Close preview modal
   const closePreview = useCallback(() => {
     setPreviewOpen(false);
     setPreviewAction('preview');
   }, []);
 
-  // Submit create mutation
   const handleCreateSubmit = useCallback(() => {
     const payload = buildCreateClinicalNotePayload(formData);
-    // Type assertion is safe because the mutation hook adds facility_id, visit_id, patient_id, staff_id
     createMutation.mutate(payload as CreateClinicalNoteRequest);
   }, [createMutation, formData]);
 
-  // Submit update mutation
   const handleUpdateSubmit = useCallback(() => {
     const uuid = getClinicalNoteUuid(activeVisitNote);
     if (!uuid) {
@@ -182,7 +180,6 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
     updateMutation.mutate({ uuid, data: payload });
   }, [activeVisitNote, formData, updateMutation]);
 
-  // Main form submit handler
   const handleSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -190,7 +187,6 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
       setFormError(null);
       setFieldErrors({});
 
-      // Validate required field
       if (!formData.chiefComplaint.trim()) {
         setFieldErrors({
           chiefComplaint: 'Please enter the main reason for this visit.',
@@ -212,7 +208,7 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
   return (
     <>
       <div className="space-y-6 px-6">
-        {/* Header Section */}
+        {/* Clinical Notes Header with Refresh Button */}
         <ClinicalNotesHeader
           isDark={isDark}
           colors={colors}
@@ -220,10 +216,9 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
           hasExistingNote={!!activeVisitNote}
           noteCount={visitNotes.length}
           isFetching={notesQuery.isFetching}
-          onBack={onCancel}
+          onRefresh={refreshNotes}
         />
 
-        {/* No Active Visit State */}
         {!activeVisitId && (
           <div
             className={cn(
@@ -248,7 +243,6 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
           </div>
         )}
 
-        {/* Loading State */}
         {!!activeVisitId && isLoading && (
           <div className={cn('rounded-2xl border p-6', colors.border.primary, colors.bg.card)}>
             <div className="flex items-center gap-3">
@@ -263,7 +257,6 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
           </div>
         )}
 
-        {/* Error State */}
         {!!activeVisitId && notesQuery.isError && !isLoading && (
           <div className={cn('rounded-2xl border p-5', colors.border.primary, colors.bg.card)}>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -298,7 +291,6 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
           </div>
         )}
 
-        {/* Summary View - Existing Note */}
         {!!activeVisitId && !isLoading && !notesQuery.isError && mode === 'idle' && activeVisitNote && (
           <ClinicalNotesSummaryCard
             isDark={isDark}
@@ -313,7 +305,6 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
           />
         )}
 
-        {/* Empty State - No Note Exists */}
         {!!activeVisitId && !isLoading && !notesQuery.isError && mode === 'idle' && !activeVisitNote && (
           <ClinicalNotesEmptyState
             isDark={isDark}
@@ -323,7 +314,6 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
           />
         )}
 
-        {/* Editor View - Create or Edit Mode */}
         {!!activeVisitId && !isLoading && !notesQuery.isError && (mode === 'create' || mode === 'edit') && (
           <ClinicalNotesEditor
             isDark={isDark}
@@ -341,7 +331,6 @@ export const ClinicalNotesForm: React.FC<ClinicalNotesFormProps> = ({
         )}
       </div>
 
-      {/* Preview Modal */}
       <ClinicalNotesPreviewModal
         open={previewOpen}
         onClose={closePreview}
