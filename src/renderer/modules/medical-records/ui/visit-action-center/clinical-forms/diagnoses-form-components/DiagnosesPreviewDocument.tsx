@@ -23,7 +23,6 @@ import {
   formatDiagnosisDate,
   formatDiagnosisDateTime,
   getDiagnosisMeta,
-  formatSupportingEvidence,
 } from './diagnosesForm.utils';
 import {
   DIAGNOSIS_TYPE_LABELS,
@@ -60,15 +59,12 @@ interface DiagnosesPreviewDocumentProps {
 
 export const DiagnosesPreviewDocument: React.FC<DiagnosesPreviewDocumentProps> = ({
   diagnosis,
-//   values,
 }) => {
   const meta = getDiagnosisMeta(diagnosis);
 
   // Format clinician name with Dr. prefix
   const clinicianName = diagnosis?.staff?.full_name || meta.staffName || 'Not specified';
   const formattedClinicianName = clinicianName !== 'Not specified' ? `Dr. ${clinicianName}` : clinicianName;
-//   const verifierName = diagnosis?.verifier?.full_name || meta.verifierName;
-//   const formattedVerifierName = verifierName ? `Dr. ${verifierName}` : null;
 
   // Get facility info from Redux
   const activeFacilityId = useSelector((state: RootState) => state.activeContext.activeFacilityId);
@@ -115,7 +111,7 @@ export const DiagnosesPreviewDocument: React.FC<DiagnosesPreviewDocumentProps> =
 
   // Get patient name from diagnosis or fallback
   const patientName = diagnosis?.patient?.full_name || meta.patientName || 'Unknown Patient';
-  const patientNumber = diagnosis?.patient_id?.toString() || 'N/A';
+  const patientNumber = diagnosis?.patient_number?.toString() || 'N/A';
 
   if (isLoading) {
     return (
@@ -226,12 +222,12 @@ export const DiagnosesPreviewDocument: React.FC<DiagnosesPreviewDocumentProps> =
       <div className="mt-6 print:mt-4">
         {/* Diagnosis Header */}
         <div className="mb-4 border-b border-slate-200 pb-3">
-          <h2 className="text-xl font-bold text-slate-800 print:text-lg">
+          <h2 className="text-sm font-bold text-slate-800 print:text-lg">
             {diagnosis?.diagnosis_code} - {diagnosis?.diagnosis_description}
           </h2>
         </div>
 
-        {/* Diagnosis Grid */}
+        {/* Diagnosis Grid - ALL FIELDS NOW VISIBLE */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {/* Diagnosis Type */}
           <div className="rounded-xl border border-slate-200 p-3">
@@ -304,19 +300,8 @@ export const DiagnosesPreviewDocument: React.FC<DiagnosesPreviewDocumentProps> =
           </div>
         )}
 
-        {/* Supporting Evidence */}
-        {diagnosis?.supporting_evidence && (
-          <div className="mt-4 rounded-xl border border-slate-200 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Activity className="h-4 w-4 text-slate-500" />
-              <span className="text-sm font-semibold text-slate-700">Supporting Evidence</span>
-            </div>
-            <p className="text-sm text-slate-600">{formatSupportingEvidence(diagnosis.supporting_evidence)}</p>
-          </div>
-        )}
-
         {/* Verification Info */}
-        {(diagnosis?.verified_at || diagnosis?.verifier?.full_name) && (
+        {diagnosis?.verified_at && (
           <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-3">
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-600" />

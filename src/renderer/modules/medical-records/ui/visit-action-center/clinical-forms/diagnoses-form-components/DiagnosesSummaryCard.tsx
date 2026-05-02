@@ -17,7 +17,6 @@ import { cn } from '../../../../../../shared/utils/classNameUtils';
 import {
   formatDiagnosisDate,
   getCertaintyBadgeColor,
-//   getClinicalStatusBadgeColor,
   getDiagnosisMeta,
 } from './diagnosesForm.utils';
 import {
@@ -67,10 +66,8 @@ export const DiagnosesSummaryCard: React.FC<DiagnosesSummaryCardProps> = ({
 }) => {
   const meta = getDiagnosisMeta(diagnosis);
   const isVerified = diagnosis.verification_status === 'verified';
-//   const isDraft = diagnosis.verification_status === 'draft';
   const isDisputed = diagnosis.verification_status === 'disputed';
   const isResolved = diagnosis.clinical_status === 'resolved';
-//   const isActive = diagnosis.clinical_status === 'active';
   const isDeleted = !!diagnosis.deleted_at;
 
   const statusColors = getDiagnosisStatusColor(diagnosis.verification_status);
@@ -88,15 +85,8 @@ export const DiagnosesSummaryCard: React.FC<DiagnosesSummaryCardProps> = ({
       <div className={cn('border-b p-5 sm:p-6', colors.border.primary)}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="flex items-center gap-2">
-              <Activity className={cn('h-5 w-5', colors.text.brand)} />
-              <h3 className={cn('text-lg font-semibold', colors.text.primary)}>
-                {diagnosis.diagnosis_code} - {diagnosis.diagnosis_description.slice(0, 80)}
-                {diagnosis.diagnosis_description.length > 80 && '...'}
-              </h3>
-            </div>
-
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+            {/* Status Badges Row */}
+            <div className="flex flex-wrap items-center gap-2 text-xs">
               {/* Verification Status Badge */}
               <span
                 className={cn(
@@ -123,7 +113,7 @@ export const DiagnosesSummaryCard: React.FC<DiagnosesSummaryCardProps> = ({
               <span
                 className={cn(
                   'rounded-full px-2.5 py-1 font-medium',
-                  isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'
+                  isDark ? 'bg-slate-800 text-slate-100' : 'bg-slate-100 text-slate-700'
                 )}
               >
                 {DIAGNOSIS_TYPE_LABELS[diagnosis.diagnosis_type]}
@@ -140,10 +130,11 @@ export const DiagnosesSummaryCard: React.FC<DiagnosesSummaryCardProps> = ({
               </span>
             </div>
 
+            {/* Date & Verification Info Row */}
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
               {/* Onset Date */}
               {diagnosis.onset_date && (
-                <div className="flex items-center gap-1">
+                <div className={cn('flex items-center gap-1', colors.text.secondary)}>
                   <Calendar className="h-3.5 w-3.5" />
                   <span>Onset: {formatDiagnosisDate(diagnosis.onset_date)}</span>
                 </div>
@@ -151,7 +142,7 @@ export const DiagnosesSummaryCard: React.FC<DiagnosesSummaryCardProps> = ({
 
               {/* Abatement Date */}
               {diagnosis.abatement_date && (
-                <div className="flex items-center gap-1">
+                <div className={cn('flex items-center gap-1', colors.text.secondary)}>
                   <Clock className="h-3.5 w-3.5" />
                   <span>Resolved: {formatDiagnosisDate(diagnosis.abatement_date)}</span>
                 </div>
@@ -160,8 +151,8 @@ export const DiagnosesSummaryCard: React.FC<DiagnosesSummaryCardProps> = ({
               {/* Verified Info */}
               {diagnosis.verified_at && (
                 <div className="flex items-center gap-1">
-                  <CheckCircle className="h-3.5 w-3.5 text-green-600" />
-                  <span>
+                  <CheckCircle className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                  <span className={colors.text.secondary}>
                     Verified: {formatDiagnosisDate(diagnosis.verified_at)}
                     {meta.verifierName && ` by ${meta.verifierName}`}
                   </span>
@@ -171,23 +162,22 @@ export const DiagnosesSummaryCard: React.FC<DiagnosesSummaryCardProps> = ({
               {/* Dispute Reason */}
               {diagnosis.dispute_reason && (
                 <div className="flex items-center gap-1">
-                  <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
-                  <span>Disputed: {diagnosis.dispute_reason.slice(0, 50)}</span>
+                  <AlertTriangle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                  <span className={colors.text.secondary}>
+                    Disputed: {diagnosis.dispute_reason.slice(0, 50)}
+                  </span>
                 </div>
               )}
             </div>
           </div>
 
+          {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Workflow Action Buttons */}
             {onVerify && !isVerified && !isDisputed && (
               <button
                 type="button"
                 onClick={onVerify}
-                className={cn(
-                  'inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
-                  'bg-green-600 text-white hover:bg-green-700'
-                )}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all bg-green-600 text-white hover:bg-green-700"
               >
                 <CheckCircle className="h-4 w-4" />
                 Verify
@@ -213,10 +203,7 @@ export const DiagnosesSummaryCard: React.FC<DiagnosesSummaryCardProps> = ({
               <button
                 type="button"
                 onClick={onResolve}
-                className={cn(
-                  'inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
-                  'bg-teal-600 text-white hover:bg-teal-700'
-                )}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all bg-teal-600 text-white hover:bg-teal-700"
               >
                 <CheckCircle className="h-4 w-4" />
                 Resolve
@@ -227,10 +214,7 @@ export const DiagnosesSummaryCard: React.FC<DiagnosesSummaryCardProps> = ({
               <button
                 type="button"
                 onClick={onReactivate}
-                className={cn(
-                  'inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
-                  'bg-amber-600 text-white hover:bg-amber-700'
-                )}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all bg-amber-600 text-white hover:bg-amber-700"
               >
                 <RefreshCw className="h-4 w-4" />
                 Reactivate
@@ -241,10 +225,7 @@ export const DiagnosesSummaryCard: React.FC<DiagnosesSummaryCardProps> = ({
               <button
                 type="button"
                 onClick={onRestore}
-                className={cn(
-                  'inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
-                  'bg-gray-600 text-white hover:bg-gray-700'
-                )}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all bg-gray-600 text-white hover:bg-gray-700"
               >
                 <RefreshCw className="h-4 w-4" />
                 Restore
@@ -307,66 +288,86 @@ export const DiagnosesSummaryCard: React.FC<DiagnosesSummaryCardProps> = ({
 
       {/* Content Grid */}
       <div className="p-5 sm:p-6">
+        {/* Diagnosis Details Grid - FULL WIDTH WITH CODE AND DESCRIPTION */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-6">
+          {/* Diagnosis Code */}
+          <div className={cn('rounded-xl border p-3', colors.border.primary, colors.bg.subtle)}>
+            <span className={cn('text-xs font-medium', colors.text.secondary)}>Diagnosis Code</span>
+            <p className={cn('mt-1 text-sm font-semibold font-mono', colors.text.primary)}>
+              {diagnosis.diagnosis_code}
+            </p>
+          </div>
+
+          {/* Diagnosis Description - FULL TEXT, NO TRUNCATION */}
+          <div className={cn('rounded-xl border p-3 sm:col-span-1', colors.border.primary, colors.bg.subtle)}>
+            <span className={cn('text-xs font-medium', colors.text.secondary)}>Diagnosis Description</span>
+            <p className={cn('mt-1 text-sm', colors.text.primary)}>
+              {diagnosis.diagnosis_description}
+            </p>
+          </div>
+
+          {/* Diagnosis Type */}
+          <div className={cn('rounded-xl border p-3', colors.border.primary, colors.bg.subtle)}>
+            <span className={cn('text-xs font-medium', colors.text.secondary)}>Diagnosis Type</span>
+            <p className={cn('mt-1 text-sm font-semibold', colors.text.primary)}>
+              {DIAGNOSIS_TYPE_LABELS[diagnosis.diagnosis_type]}
+            </p>
+          </div>
+
+          {/* Certainty */}
+          <div className={cn('rounded-xl border p-3', colors.border.primary, colors.bg.subtle)}>
+            <span className={cn('text-xs font-medium', colors.text.secondary)}>Certainty</span>
+            <p className={cn('mt-1 text-sm font-semibold', colors.text.primary)}>
+              {DIAGNOSIS_CERTAINTY_LABELS[diagnosis.certainty]}
+            </p>
+          </div>
+
+          {/* Clinical Status */}
+          <div className={cn('rounded-xl border p-3', colors.border.primary, colors.bg.subtle)}>
+            <span className={cn('text-xs font-medium', colors.text.secondary)}>Clinical Status</span>
+            <p className={cn('mt-1 text-sm font-semibold', colors.text.primary)}>
+              {DIAGNOSIS_CLINICAL_STATUS_LABELS[diagnosis.clinical_status]}
+            </p>
+          </div>
+
+          {/* Onset Date */}
+          <div className={cn('rounded-xl border p-3', colors.border.primary, colors.bg.subtle)}>
+            <span className={cn('text-xs font-medium', colors.text.secondary)}>Onset Date</span>
+            <p className={cn('mt-1 text-sm', colors.text.primary)}>
+              {diagnosis.onset_date ? formatDiagnosisDate(diagnosis.onset_date) : 'Not recorded'}
+            </p>
+          </div>
+
+          {/* Abatement Date (if exists) */}
+          {diagnosis.abatement_date && (
+            <div className={cn('rounded-xl border p-3', colors.border.primary, colors.bg.subtle)}>
+              <span className={cn('text-xs font-medium', colors.text.secondary)}>Abatement Date</span>
+              <p className={cn('mt-1 text-sm', colors.text.primary)}>
+                {formatDiagnosisDate(diagnosis.abatement_date)}
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Clinical Notes Section */}
         {diagnosis.clinical_notes && (
-          <div className={cn('mb-4 rounded-xl border p-4', colors.border.primary, colors.bg.subtle)}>
+          <div className={cn('mb-6 rounded-xl border p-4', colors.border.primary, colors.bg.subtle)}>
             <div className="flex items-center gap-2 mb-2">
               <Info className={cn('h-4 w-4', colors.text.tertiary)} />
               <span className={cn('text-sm font-medium', colors.text.primary)}>Clinical Notes</span>
             </div>
-            <p className={cn('text-sm', colors.text.secondary)}>{diagnosis.clinical_notes}</p>
+            <p className={cn('text-sm whitespace-pre-wrap', colors.text.secondary)}>{diagnosis.clinical_notes}</p>
           </div>
         )}
 
         {/* Diagnostic Criteria Met Section */}
         {diagnosis.diagnostic_criteria_met && (
-          <div className={cn('mb-4 rounded-xl border p-4', colors.border.primary, colors.bg.subtle)}>
+          <div className={cn('mb-6 rounded-xl border p-4', colors.border.primary, colors.bg.subtle)}>
             <div className="flex items-center gap-2 mb-2">
               <Activity className={cn('h-4 w-4', colors.text.tertiary)} />
               <span className={cn('text-sm font-medium', colors.text.primary)}>Diagnostic Criteria Met</span>
             </div>
-            <p className={cn('text-sm', colors.text.secondary)}>{diagnosis.diagnostic_criteria_met}</p>
-          </div>
-        )}
-
-        {/* Supporting Evidence Section */}
-        {(diagnosis.supporting_evidence?.labs?.length ||
-          diagnosis.supporting_evidence?.imaging?.length ||
-          diagnosis.supporting_evidence?.clinical_findings?.length) && (
-          <div className={cn('mb-4 rounded-xl border p-4', colors.border.primary, colors.bg.subtle)}>
-            <div className="flex items-center gap-2 mb-3">
-              <Activity className={cn('h-4 w-4', colors.text.tertiary)} />
-              <span className={cn('text-sm font-medium', colors.text.primary)}>Supporting Evidence</span>
-            </div>
-
-            <div className="space-y-3">
-              {diagnosis.supporting_evidence.labs && diagnosis.supporting_evidence.labs.length > 0 && (
-                <div>
-                  <span className={cn('text-xs font-medium', colors.text.tertiary)}>Labs:</span>
-                  <p className={cn('text-sm', colors.text.secondary)}>
-                    {diagnosis.supporting_evidence.labs.join(', ')}
-                  </p>
-                </div>
-              )}
-
-              {diagnosis.supporting_evidence.imaging && diagnosis.supporting_evidence.imaging.length > 0 && (
-                <div>
-                  <span className={cn('text-xs font-medium', colors.text.tertiary)}>Imaging:</span>
-                  <p className={cn('text-sm', colors.text.secondary)}>
-                    {diagnosis.supporting_evidence.imaging.join(', ')}
-                  </p>
-                </div>
-              )}
-
-              {diagnosis.supporting_evidence.clinical_findings && diagnosis.supporting_evidence.clinical_findings.length > 0 && (
-                <div>
-                  <span className={cn('text-xs font-medium', colors.text.tertiary)}>Clinical Findings:</span>
-                  <p className={cn('text-sm', colors.text.secondary)}>
-                    {diagnosis.supporting_evidence.clinical_findings.join(', ')}
-                  </p>
-                </div>
-              )}
-            </div>
+            <p className={cn('text-sm whitespace-pre-wrap', colors.text.secondary)}>{diagnosis.diagnostic_criteria_met}</p>
           </div>
         )}
 
@@ -403,7 +404,7 @@ export const DiagnosesSummaryCard: React.FC<DiagnosesSummaryCardProps> = ({
           </div>
         )}
 
-        {/* Verifier Info (if different from recorder) */}
+        {/* Verifier Info */}
         {meta.verifierName && meta.verifierName !== meta.staffName && (
           <div className="mt-2 flex items-center gap-2 text-sm">
             <CheckCircle className={cn('h-4 w-4', colors.text.tertiary)} />

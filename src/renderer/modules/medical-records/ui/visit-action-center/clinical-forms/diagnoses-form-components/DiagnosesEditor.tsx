@@ -1,3 +1,4 @@
+import React, { useState, useMemo } from 'react';
 import {
   Eye,
   Loader2,
@@ -10,6 +11,7 @@ import {
   AlertTriangle,
   Check,
   RefreshCw,
+  Search,
 } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import { DiagnosesField } from './DiagnosesField';
@@ -33,15 +35,156 @@ import type {
   CustomFieldValueType,
 } from './diagnosesForm.types';
 
+// Predefined diagnosis codes (ICD-10 common codes)
+const PREDEFINED_DIAGNOSIS_CODES = [
+  { code: 'A09', description: 'Infectious gastroenteritis and colitis, unspecified' },
+  { code: 'B34.9', description: 'Viral infection, unspecified' },
+  { code: 'E11.9', description: 'Type 2 diabetes mellitus without complications' },
+  { code: 'I10', description: 'Essential (primary) hypertension' },
+  { code: 'I25.10', description: 'Atherosclerotic heart disease of native coronary artery without angina pectoris' },
+  { code: 'J06.9', description: 'Acute upper respiratory infection, unspecified' },
+  { code: 'J15.0', description: 'Pneumonia due to Mycoplasma pneumoniae' },
+  { code: 'J20.9', description: 'Acute bronchitis, unspecified' },
+  { code: 'J45.909', description: 'Unspecified asthma, uncomplicated' },
+  { code: 'K21.9', description: 'Gastro-esophageal reflux disease without esophagitis' },
+  { code: 'M54.5', description: 'Low back pain' },
+  { code: 'N39.0', description: 'Urinary tract infection, site not specified' },
+  { code: 'R50.9', description: 'Fever, unspecified' },
+  { code: 'R51', description: 'Headache' },
+  { code: 'Z23', description: 'Encounter for immunization' },
+];
+
+// Searchable combobox component for diagnosis code
+interface DiagnosisCodeComboboxProps {
+  value: string;
+  error?: string;
+  isDark: boolean;
+  colors: DiagnosesThemeTokens;
+  autoFocus?: boolean;
+  onChange: (value: string) => void;
+}
+
+const DiagnosisCodeCombobox: React.FC<DiagnosisCodeComboboxProps> = ({
+  value,
+  error,
+//   isDark,
+  colors,
+  autoFocus,
+  onChange,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(value);
+
+  // Filter codes based on search term
+  const filteredCodes = useMemo(() => {
+    if (!searchTerm) return PREDEFINED_DIAGNOSIS_CODES;
+    const term = searchTerm.toLowerCase();
+    return PREDEFINED_DIAGNOSIS_CODES.filter(
+      (item) =>
+        item.code.toLowerCase().includes(term) ||
+        item.description.toLowerCase().includes(term)
+    );
+  }, [searchTerm]);
+
+  const handleSelect = (code: string) => {
+    onChange(code);
+    setSearchTerm(code);
+    setIsOpen(false);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setSearchTerm(newValue);
+    onChange(newValue);
+    setIsOpen(true);
+  };
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={handleInputChange}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => {
+            // Delay closing to allow click selection
+            setTimeout(() => setIsOpen(false), 200);
+          }}
+          placeholder="e.g., J15.0, I10, E11.9 or enter custom code"
+          autoFocus={autoFocus}
+          className={cn(
+            'w-full rounded-lg border px-3 py-2 pl-9 text-sm outline-none transition-all',
+            colors.bg.input,
+            colors.text.primary,
+            colors.border.primary,
+            'focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+            error && 'border-red-500 focus:ring-red-500'
+          )}
+        />
+        <Search
+          className={cn(
+            'absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2',
+            colors.text.tertiary
+          )}
+        />
+      </div>
+
+      {isOpen && filteredCodes.length > 0 && (
+        <div
+          className={cn(
+            'absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border shadow-lg',
+            colors.bg.card,
+            colors.border.primary
+          )}
+        >
+          {filteredCodes.map((item) => (
+            <button
+              key={item.code}
+              type="button"
+              onClick={() => handleSelect(item.code)}
+              className={cn(
+                'w-full px-3 py-2 text-left text-sm transition-colors cursor-pointer',
+                colors.text.primary,
+                colors.bg.hover
+              )}
+            >
+              <span className="font-semibold">{item.code}</span>
+              <span className={cn('ml-2 text-xs', colors.text.secondary)}>
+                {item.description}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {isOpen && filteredCodes.length === 0 && (
+        <div
+          className={cn(
+            'absolute z-10 mt-1 w-full rounded-lg border p-3 text-center text-sm shadow-lg',
+            colors.bg.card,
+            colors.border.primary,
+            colors.text.secondary
+          )}
+        >
+          No matching codes. You can enter a custom code.
+        </div>
+      )}
+
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+    </div>
+  );
+};
+
 // Field definitions for diagnoses form
 const DIAGNOSES_FIELD_DEFINITIONS = [
   // Diagnosis Code & Description
   {
     key: 'diagnosisCode' as const,
     label: 'Diagnosis Code',
-    type: 'text' as const,
-    placeholder: 'e.g., J15.0, I10, E11.9',
-    description: 'ICD-10/11 code (can enter custom code if not listed)',
+    type: 'combobox' as const,
+    placeholder: 'Search or enter ICD-10 code...',
+    description: 'ICD-10/11 code (search from list or enter custom code)',
     required: true,
     previewFallback: 'No diagnosis code recorded',
     colSpan: 1,
@@ -171,7 +314,6 @@ export const DiagnosesEditor: React.FC<DiagnosesEditorProps> = ({
   onReactivate,
 }) => {
   const isEditing = mode === 'edit';
-//   const isDraft = formData.verificationStatus === 'draft';
   const isVerified = formData.verificationStatus === DiagnosisVerificationStatus.VERIFIED;
   const isDisputed = formData.verificationStatus === DiagnosisVerificationStatus.DISPUTED;
   const isResolved = formData.clinicalStatus === 'resolved';
@@ -189,7 +331,7 @@ export const DiagnosesEditor: React.FC<DiagnosesEditorProps> = ({
   };
 
   // Group fields for grid layout
-  const row1Fields = DIAGNOSES_FIELD_DEFINITIONS.slice(0, 2);
+//   const row1Fields = DIAGNOSES_FIELD_DEFINITIONS.slice(0, 2);
   const row2Fields = DIAGNOSES_FIELD_DEFINITIONS.slice(2, 5);
   const row3Fields = DIAGNOSES_FIELD_DEFINITIONS.slice(5, 7);
   const row4Fields = DIAGNOSES_FIELD_DEFINITIONS.slice(7, 8);
@@ -343,18 +485,50 @@ export const DiagnosesEditor: React.FC<DiagnosesEditorProps> = ({
 
         {/* Diagnosis Code & Description - Row 1 */}
         <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {row1Fields.map((field) => (
-            <div key={field.key} className={field.colSpan === 2 ? 'lg:col-span-2' : ''}>
-              <DiagnosesField
-                field={field}
-                value={formData[field.key] as string | null}
-                error={fieldErrors[field.key]}
-                isDark={isDark}
-                colors={colors}
-                onChange={onChange}
-              />
-            </div>
-          ))}
+          {/* Diagnosis Code - Custom Combobox */}
+          <div>
+            <label className={cn('mb-1 flex items-center gap-1 text-sm font-medium', colors.text.primary)}>
+              Diagnosis Code <span className="text-red-500 text-xs">*</span>
+            </label>
+            <p className={cn('mb-2 text-xs', colors.text.tertiary)}>
+              Search from predefined ICD codes or enter your own
+            </p>
+            <DiagnosisCodeCombobox
+              value={formData.diagnosisCode}
+              error={fieldErrors.diagnosisCode}
+              isDark={isDark}
+              colors={colors}
+              autoFocus={true}
+              onChange={(value) => onChange('diagnosisCode', value)}
+            />
+          </div>
+
+          {/* Diagnosis Description */}
+          <div className="lg:col-span-2">
+            <label className={cn('mb-1 flex items-center gap-1 text-sm font-medium', colors.text.primary)}>
+              Diagnosis Description <span className="text-red-500 text-xs">*</span>
+            </label>
+            <p className={cn('mb-2 text-xs', colors.text.tertiary)}>
+              Human-readable diagnosis description
+            </p>
+            <textarea
+              value={formData.diagnosisDescription || ''}
+              onChange={(e) => onChange('diagnosisDescription', e.target.value)}
+              placeholder="e.g., Pneumonia due to Mycoplasma pneumoniae"
+              rows={3}
+              className={cn(
+                'w-full rounded-lg border px-3 py-2 text-sm outline-none transition-all resize-y',
+                colors.bg.input,
+                colors.text.primary,
+                colors.border.primary,
+                'focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                fieldErrors.diagnosisDescription && 'border-red-500 focus:ring-red-500'
+              )}
+            />
+            {fieldErrors.diagnosisDescription && (
+              <p className="mt-1 text-xs text-red-500">{fieldErrors.diagnosisDescription}</p>
+            )}
+          </div>
         </div>
 
         {/* Diagnosis Classification - Row 2 */}

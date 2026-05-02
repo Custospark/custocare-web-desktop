@@ -166,6 +166,7 @@ export interface DiagnosisResponse {
   visit_id: number;
   patient_id: number;
   staff_id: number;
+  patient_number: string;
   
   // Diagnosis Data
   diagnosis_code: string;
