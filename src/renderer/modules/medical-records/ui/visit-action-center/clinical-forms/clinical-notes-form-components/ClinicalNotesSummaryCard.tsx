@@ -37,7 +37,7 @@ export const ClinicalNotesSummaryCard: React.FC<ClinicalNotesSummaryCardProps> =
   colors,
   note,
   values,
-  noteTitle,
+  // noteTitle,
   onEdit,
   onPreview,
   onPrint,
