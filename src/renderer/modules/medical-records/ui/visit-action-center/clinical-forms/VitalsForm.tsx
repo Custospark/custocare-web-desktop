@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { cn } from '../../../../../shared/utils/classNameUtils';
@@ -65,21 +65,15 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
     refetchOnWindowFocus: false,
   });
 
-  const visitVitals = vitalsQuery.data?.data ?? [];
+  const visitVitals = useMemo(
+    () => vitalsQuery.data?.data ?? [],
+    [vitalsQuery.data]
+  );
   const activeVitals = useMemo(() => pickPrimaryVitals(visitVitals), [visitVitals]);
   const hydratedValues = useMemo(
     () => extractVitalsFormValues(activeVitals),
     [activeVitals]
   );
-
-  // Initialize custom fields from hydrated values
-  useEffect(() => {
-    if (activeVitals) {
-      setCustomFields(hydratedValues.dynamicCustomFields);
-    } else {
-      setCustomFields([]);
-    }
-  }, [activeVitals, hydratedValues.dynamicCustomFields]);
 
   // Helper function to refresh vitals after mutation
   const refreshVitals = useCallback(() => {
@@ -87,15 +81,6 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
       vitalsQuery.refetch();
     }
   }, [activeVisitId, vitalsQuery]);
-
-  useEffect(() => {
-    if (mode === 'idle') {
-      setFormData(activeVitals ? hydratedValues : EMPTY_VITALS_FORM);
-      setCustomFields(activeVitals ? hydratedValues.dynamicCustomFields : []);
-      setFieldErrors({});
-      setFormError(null);
-    }
-  }, [mode, activeVitals, hydratedValues]);
 
   const handleMutationError = useCallback((error: unknown) => {
     const normalizedMessage = extractVitalErrorMessage(
@@ -357,7 +342,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
             isDark={isDark}
             colors={colors}
             vitals={activeVitals}
-            customFields={customFields}
+            customFields={hydratedValues.dynamicCustomFields}
             onEdit={handleEdit}
             onPreview={() => openPreview('preview')}
             onPrint={() => openPreview('print')}
