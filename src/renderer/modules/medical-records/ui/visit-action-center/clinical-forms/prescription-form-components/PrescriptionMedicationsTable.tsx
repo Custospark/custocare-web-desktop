@@ -1,4 +1,3 @@
-// PrescriptionMedicationsTable.tsx
 import { useState } from 'react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import type { Prescription } from '../../../../api/prescription/PrescriptionTypes';
@@ -6,8 +5,7 @@ import type { PrescriptionItem } from '../../../../api/prescription-items/Prescr
 import type { ColorTokens, PrescriptionFormData } from './prescriptionForm.types';
 import { PrescriptionMedicationsHeader } from './PrescriptionMedicationsHeader';
 import { PrescriptionMedicationsDataTable } from './PrescriptionMedicationsDataTable';
-import { PrescriptionMedicationsPreview } from './PrescriptionMedicationsPreview';
-// Import the functions and type from the utility file
+import { PrescriptionPreviewModal } from './PrescriptionPreviewModal';
 import { 
   buildPreviewItems, 
 } from './prescriptionInstructionsUtils';
@@ -34,38 +32,50 @@ export default function PrescriptionMedicationsTable({
   onDeleteMedication,
 }: PrescriptionMedicationsTableProps) {
   const [showPreview, setShowPreview] = useState(false);
+  const [previewAction, setPreviewAction] = useState<'preview' | 'print' | 'download'>('preview');
   const previewItems = buildPreviewItems(medications);
 
-  return (
-    <section className={cn('rounded-2xl border', colors.border.primary, colors.bg.card)}>
-      <PrescriptionMedicationsHeader
-        colors={colors}
-        medicationCount={medications.length}
-        showPreview={showPreview}
-        onTogglePreview={() => setShowPreview((prev) => !prev)}
-        onAddMedication={onAddMedication}
-      />
+  const handleOpenPreview = (action: 'preview' | 'print' | 'download' = 'preview') => {
+    setPreviewAction(action);
+    setShowPreview(true);
+  };
 
-      <div className="space-y-4 p-4">
-        <PrescriptionMedicationsDataTable
-          isDark={isDark}
+  const handleClosePreview = () => {
+    setShowPreview(false);
+    setPreviewAction('preview');
+  };
+
+  return (
+    <>
+      <section className={cn('rounded-2xl border', colors.border.primary, colors.bg.card)}>
+        <PrescriptionMedicationsHeader
           colors={colors}
-          medications={medications}
-          onEditMedication={onEditMedication}
-          onDeleteMedication={onDeleteMedication}
+          medicationCount={medications.length}
+          showPreview={showPreview}
+          onTogglePreview={() => handleOpenPreview('preview')}
+          onAddMedication={onAddMedication}
         />
 
-        {showPreview && (
-          <PrescriptionMedicationsPreview
+        <div className="space-y-4 p-4">
+          <PrescriptionMedicationsDataTable
             isDark={isDark}
             colors={colors}
-            prescription={prescription}
-            formData={formData}
-            previewItems={previewItems}
-            onClose={() => setShowPreview(false)}
+            medications={medications}
+            onEditMedication={onEditMedication}
+            onDeleteMedication={onDeleteMedication}
           />
-        )}
-      </div>
-    </section>
+        </div>
+      </section>
+
+      {/* Professional Preview Modal */}
+      <PrescriptionPreviewModal
+        open={showPreview}
+        onClose={handleClosePreview}
+        prescription={prescription}
+        formData={formData}
+        previewItems={previewItems}
+        initialAction={previewAction}
+      />
+    </>
   );
 }

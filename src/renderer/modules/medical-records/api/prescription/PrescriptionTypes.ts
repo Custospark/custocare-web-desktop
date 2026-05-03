@@ -134,6 +134,7 @@ export enum CancellationReason {
 export interface PatientReference {
   id: number;
   name: string;
+  number: string;
   patient_number?: string;
 }
 
