@@ -1,4 +1,4 @@
-import { Eye, Printer, Download, Plus, Pill } from 'lucide-react';
+import { Eye, Printer, Download, Plus } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import type { ColorTokens } from './prescriptionForm.types';
 
