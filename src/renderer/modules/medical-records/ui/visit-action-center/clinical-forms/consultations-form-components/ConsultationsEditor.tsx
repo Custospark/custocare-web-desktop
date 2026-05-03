@@ -4,20 +4,15 @@ import {
   Loader2,
   Plus,
   RotateCcw,
-  Save,
   SquarePen,
   X,
   CheckCircle,
-  AlertTriangle,
   Calendar,
-  Clock,
-  MapPin,
   FileText,
   Send,
   Ban,
   CalendarCheck,
   Trash2,
-  RefreshCw,
 } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import { ConsultationsField } from './ConsultationsField';
@@ -29,7 +24,6 @@ import {
 import {
   CONSULTATION_TYPE_OPTIONS,
   CONSULTATION_PRIORITY_OPTIONS,
-  ConsultationPriority,
   ConsultationStatus,
 } from '../../../../api/consultations/consultationTypes';
 import type {

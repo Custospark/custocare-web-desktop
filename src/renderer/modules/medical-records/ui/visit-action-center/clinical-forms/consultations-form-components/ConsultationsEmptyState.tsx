@@ -13,7 +13,7 @@ interface ConsultationsEmptyStateProps {
 export const ConsultationsEmptyState: React.FC<ConsultationsEmptyStateProps> = ({
   isDark,
   colors,
-  patientId, // Reserved for future use (patient-specific messaging)
+//   patientId, // Reserved for future use (patient-specific messaging)
   onCreate,
 }) => {
   return (
