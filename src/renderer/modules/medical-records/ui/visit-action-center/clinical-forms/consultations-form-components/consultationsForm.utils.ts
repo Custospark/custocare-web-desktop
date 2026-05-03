@@ -44,6 +44,7 @@ import {
   DEFAULT_CONSULTATION_TYPE,
   DEFAULT_CONSULTATION_PRIORITY,
   DEFAULT_DURATION_MINUTES,
+  ConsultationStatus,
 } from '../../../../api/consultations/consultationTypes';
 import type {
   ConsultationsFormValues,
@@ -67,6 +68,7 @@ export const EMPTY_CONSULTATIONS_FORM: ConsultationsFormValues = {
   consultationType: DEFAULT_CONSULTATION_TYPE,
   priority: DEFAULT_CONSULTATION_PRIORITY,
   scheduledFor: null,
+  request_status:ConsultationStatus.PENDING,
   location: null,
   durationMinutes: DEFAULT_DURATION_MINUTES,
   requiresFollowup: false,
