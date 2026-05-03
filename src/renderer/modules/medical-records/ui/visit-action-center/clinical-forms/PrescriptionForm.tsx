@@ -707,7 +707,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
 
           if (result.success) {
             await refreshPrescription();
-            showToast('success', 'Prescription updated successfully', 5000);
+            // showToast('success', 'Prescription updated successfully', 5000);
             onSuccess?.(result.data.id);
           }
         } else {
