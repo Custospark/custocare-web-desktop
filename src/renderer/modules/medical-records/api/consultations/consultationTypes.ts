@@ -173,6 +173,7 @@ export interface ConsultationResponse {
   facility_id: number;
   visit_id: number;
   patient_id: number;
+  patient_number: string;
   requesting_staff_id: number;
   consultant_staff_id: number | null;
   

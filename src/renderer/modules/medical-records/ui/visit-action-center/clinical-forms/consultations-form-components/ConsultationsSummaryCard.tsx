@@ -32,7 +32,6 @@ import {
   CONSULTATION_STATUS_LABELS,
   getConsultationPriorityColor,
   getConsultationStatusColor,
-  ConsultationPriority,
   ConsultationStatus,
 } from '../../../../api/consultations/consultationTypes';
 import type {

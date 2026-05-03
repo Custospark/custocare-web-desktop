@@ -121,7 +121,7 @@ export const ConsultationsPreviewDocument: React.FC<ConsultationsPreviewDocument
 
   // Get patient name from consultation or fallback
   const patientName = consultation?.patient?.full_name || meta.patientName || 'Unknown Patient';
-  const patientNumber = consultation?.patient_id?.toString() || 'N/A';
+  const patientNumber = consultation?.patient_number?.toString() || 'N/A';
 
   if (isLoading) {
     return (
@@ -451,12 +451,6 @@ export const ConsultationsPreviewDocument: React.FC<ConsultationsPreviewDocument
               .replace(/,/g, '')}
           </span>
         </p>
-
-        {consultation?.id && (
-          <p className="mt-2 text-[9px] font-mono text-gray-400 break-all">
-            Document ID: {consultation.id}
-          </p>
-        )}
       </div>
     </div>
   );
