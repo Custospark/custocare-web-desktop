@@ -15,7 +15,8 @@ import {
   Plus,
   Eye,
   Heart,
-  AlertTriangle
+  AlertTriangle,
+  Users
 } from 'lucide-react';
 import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/focusModeRouteConstants';
 
@@ -72,6 +73,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
   };
 
   // Record Care Form Options with "Add:" prefix
+// Record Care Form Options with "Add:" prefix
 const formOptions: ActionItem[] = useMemo(() => [
   { 
     key: 'allergy', 
@@ -117,6 +119,15 @@ const formOptions: ActionItem[] = useMemo(() => [
     category: 'Clinical',
     actionPrefix: 'Add',
     handler: () => navigate(FOCUS_MODE_ROUTES.VITALS_FOCUS)
+  },
+  { 
+    key: 'consultation', 
+    label: 'Consultation', 
+    icon: <Users className="w-5 h-5" />, 
+    description: 'Record consultation notes, referrals, and specialist opinions',
+    category: 'Clinical',
+    actionPrefix: 'Add',
+    handler: () => navigate(FOCUS_MODE_ROUTES.CONSULTATION_FOCUS)
   },
   { 
     key: 'prescription', 

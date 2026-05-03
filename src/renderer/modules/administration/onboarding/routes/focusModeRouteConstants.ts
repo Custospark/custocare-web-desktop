@@ -9,6 +9,8 @@ export const FOCUS_MODE_ROUTES = {
   LAB_RESULT_FOCUS: '/clinical-care-focus/lab-result',
   ALLERGY_FOCUS: '/clinical-care-focus/allergy',  
   VITALS_FOCUS: '/clinical-care-focus/vitals',  
+  CONSULTATION_FOCUS: '/clinical-care-focus/consultations',  
+  
 
   CLINICAL_TEMPLATE_FOCUS: '/clinical-care-focus/clinical-template-focus',  
 
