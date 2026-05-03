@@ -9,7 +9,7 @@ import { useToast } from '../../../../../../app/store/contexts/toast/useToast';
 
 import {
   LabRequestStatus,
-  LabResult,
+  type LabResult,
   type CreateLabRequestWithItemsRequest,
   type LabRequestPriority,
 } from '../../../../api/lab/LabTypes';

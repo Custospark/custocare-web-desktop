@@ -1,41 +1,34 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Download, Eye, Printer, X } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
-import LabResultPreviewHeader from '../labresult-form-components/LabResultPreviewHeader';
-import LabResultPreviewMetaInfo from '../labresult-form-components/LabResultPreviewMetaInfo';
-import LabResultPreviewTable from '../labresult-form-components/LabResultPreviewTable';
-import LabResultPreviewFooter from '../labresult-form-components/LabResultPreviewFooter';
-import { flattenPreviewRows, buildLabResultFileName } from'../labresult-form-components/labResultForm.utils';
-import type { LabRequest } from '../../../../api/lab/LabTypes';
-import { type LabResultHydratedMap } from '../labresult-form-components/labResultForm.types';
+import { AllergiesPreviewDocument } from './AllergiesPreviewDocument';
+import { buildAllergyFileName } from './allergiesForm.utils';
+import type { Allergy } from '../../../../api/allergies/AllergyTypes';
+import type { AllergiesPreviewAction } from './allergiesForm.types';
 
-interface LabRequestResultsPreviewModalProps {
+interface AllergiesPreviewModalProps {
   open: boolean;
   onClose: () => void;
-  request: LabRequest | null;
-  resultsMap: LabResultHydratedMap;
-  initialAction?: 'preview' | 'print' | 'download';
+  allergies: Allergy[];
+  patientName: string;
+  patientNumber: string;
+  initialAction?: AllergiesPreviewAction;
 }
 
-export const LabRequestResultsPreviewModal: React.FC<LabRequestResultsPreviewModalProps> = ({
+export const AllergiesPreviewModal: React.FC<AllergiesPreviewModalProps> = ({
   open,
   onClose,
-  request,
-  resultsMap,
+  allergies,
+  patientName,
+  patientNumber,
   initialAction = 'preview',
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Generate proper filename using existing lab result utility
+  // Generate proper filename: patientName_allergies_YYYY-MM-DD
   const documentTitle = useMemo(() => {
-    if (!request) return 'lab-results';
-    return buildLabResultFileName(request);
-  }, [request]);
-
-  const previewRows = useMemo(() => {
-    if (!request) return [];
-    return flattenPreviewRows(request, resultsMap);
-  }, [request, resultsMap]);
+    return buildAllergyFileName(patientName);
+  }, [patientName]);
 
   const handlePrint = useReactToPrint({
     contentRef,
@@ -94,9 +87,7 @@ export const LabRequestResultsPreviewModal: React.FC<LabRequestResultsPreviewMod
     }
   }, [handleDownload, handlePrint, initialAction, open]);
 
-  if (!open || !request) return null;
-
-  const hasResults = previewRows.length > 0;
+  if (!open) return null;
 
   return (
     <div
@@ -109,9 +100,9 @@ export const LabRequestResultsPreviewModal: React.FC<LabRequestResultsPreviewMod
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 print:hidden">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">Laboratory Results Preview</h3>
+            <h3 className="text-base font-semibold text-slate-900">Allergy Report Preview</h3>
             <p className="mt-1 text-sm text-slate-600">
-              Review the laboratory results before printing or saving as PDF.
+              Review the allergy report before printing or saving as PDF.
             </p>
           </div>
 
@@ -155,19 +146,12 @@ export const LabRequestResultsPreviewModal: React.FC<LabRequestResultsPreviewMod
 
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
-          <div ref={contentRef} className="mx-auto max-w-5xl">
-            {!hasResults ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
-                <p className="text-slate-500">No results have been recorded for this lab request yet.</p>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm print:rounded-none print:border-0 print:p-0">
-                <LabResultPreviewHeader request={request} />
-                <LabResultPreviewMetaInfo request={request} rows={previewRows} />
-                <LabResultPreviewTable rows={previewRows} />
-                <LabResultPreviewFooter />
-              </div>
-            )}
+          <div ref={contentRef}>
+            <AllergiesPreviewDocument
+              allergies={allergies}
+              patientName={patientName}
+              patientNumber={patientNumber}
+            />
           </div>
         </div>
 
@@ -177,4 +161,4 @@ export const LabRequestResultsPreviewModal: React.FC<LabRequestResultsPreviewMod
   );
 };
 
-export default LabRequestResultsPreviewModal;
+export default AllergiesPreviewModal;
