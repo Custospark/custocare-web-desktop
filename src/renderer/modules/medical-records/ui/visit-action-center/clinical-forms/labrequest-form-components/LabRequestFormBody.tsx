@@ -1,4 +1,3 @@
-// labrequest-form-components/LabRequestFormBody.tsx
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, Save, X, Heart } from 'lucide-react';
@@ -10,6 +9,7 @@ import { useToast } from '../../../../../../app/store/contexts/toast/useToast';
 
 import {
   LabRequestStatus,
+  LabResult,
   type CreateLabRequestWithItemsRequest,
   type LabRequestPriority,
 } from '../../../../api/lab/LabTypes';
@@ -23,6 +23,8 @@ import { LabRequestItemEditorController } from './LabRequestItemEditorController
 import { LabRequestManagementModals } from './LabRequestManagementModals';
 import { useLabRequestResolvedRequest } from './LabRequestResolvedRequestScope';
 import { useLabRequestReferenceData } from './LabRequestReferenceDataScope';
+import { LabRequestPreviewModal } from './LabRequestPreviewModal';
+import { LabRequestResultsPreviewModal } from './LabRequestResultsPreviewModal';
 import type {
   ColorTokens,
   LabRequestDraftItem,
@@ -48,7 +50,7 @@ interface LabRequestFormBodyProps {
   colors: ColorTokens;
   facilityId: number | null;
   patientId: number | null;
-  visitId: number | null ;
+  visitId: number | null;
   staffId: number | null | undefined;
   patientNumericId: number;
   visitNumericId: number;
@@ -99,6 +101,11 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
   const [showTemplateFieldManager, setShowTemplateFieldManager] = useState(false);
   const [showLabItemManager, setShowLabItemManager] = useState(false);
 
+  // Preview modal states
+  const [showRequestPreview, setShowRequestPreview] = useState(false);
+  const [showResultsPreview, setShowResultsPreview] = useState(false);
+  const [previewAction, setPreviewAction] = useState<'preview' | 'print' | 'download'>('preview');
+
   const [selectedTemplateUuid, setSelectedTemplateUuid] = useState<string | null>(null);
   const [selectedLabItemUuid, setSelectedLabItemUuid] = useState<string | null>(null);
 
@@ -115,6 +122,27 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
     }
     return localDraftItems;
   }, [currentRequest, localDraftItems]);
+
+  // Check if request has any results
+  const hasResults = useMemo(() => {
+    if (!currentRequest?.items) return false;
+    return currentRequest.items.some(item => item.results && item.results.length > 0);
+  }, [currentRequest]);
+
+  // Build results map for preview
+  const resultsMap = useMemo(() => {
+    const map: Record<string, LabResult[]> = {};
+    if (!currentRequest?.items) return map;
+    
+    currentRequest.items.forEach((item) => {
+      if (item.results && item.results.length > 0) {
+        map[item.item_uuid] = item.results;
+      } else {
+        map[item.item_uuid] = [];
+      }
+    });
+    return map;
+  }, [currentRequest]);
 
   const createLabRequestWithItems = useCreateLabRequestWithItems();
   const updateLabRequest = useUpdateLabRequest();
@@ -296,19 +324,6 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
     });
   }, [refreshReferenceDataSafely, withNavigation]);
 
-  // const handleOpenTemplateFieldManager = useCallback(
-  //   async (template?: LabTemplate | null) => {
-  //     await withNavigation('Loading template fields...', async () => {
-  //       await refreshReferenceDataSafely('Failed to refresh reference data before opening field manager:');
-  //       if (template) {
-  //         setSelectedTemplateUuid(template.template_uuid);
-  //       }
-  //       setShowTemplateFieldManager(true);
-  //     });
-  //   },
-  //   [refreshReferenceDataSafely, withNavigation]
-  // );
-
   const handleOpenLabItemManager = useCallback(async () => {
     await withNavigation('Loading lab tests manager...', async () => {
       await refreshReferenceDataSafely('Failed to refresh lab tests before opening manager:');
@@ -330,11 +345,11 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
     []
   );
 
-      const canModifyRequest = !currentRequest || (
-      currentRequest.status !== LabRequestStatus.CANCELLED &&
-      currentRequest.status !== LabRequestStatus.COMPLETED &&
-      currentRequest.status !== LabRequestStatus.REVIEWED
-    );
+  const canModifyRequest = !currentRequest || (
+    currentRequest.status !== LabRequestStatus.CANCELLED &&
+    currentRequest.status !== LabRequestStatus.COMPLETED &&
+    currentRequest.status !== LabRequestStatus.REVIEWED
+  );
 
   const handleEditItem = useCallback(
     async (item: LabRequestDraftItem) => {
@@ -510,6 +525,27 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
     },
     [addItemsToRequest, currentRequest, showToast, syncAllVisibleLabData]
   );
+
+  // Preview handlers
+  const handleOpenRequestPreview = useCallback(() => {
+    setPreviewAction('preview');
+    setShowRequestPreview(true);
+  }, []);
+
+  const handlePrintRequest = useCallback(() => {
+    setPreviewAction('print');
+    setShowRequestPreview(true);
+  }, []);
+
+  const handleOpenResultsPreview = useCallback(() => {
+    setPreviewAction('preview');
+    setShowResultsPreview(true);
+  }, []);
+
+  const handlePrintResults = useCallback(() => {
+    setPreviewAction('print');
+    setShowResultsPreview(true);
+  }, []);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -733,13 +769,18 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
           <LabRequestHeader
             isDark={isDark}
             colors={colors}
-            request={currentRequest} 
+            request={currentRequest}
             onOpenTemplateSelector={handleOpenTemplateSelector}
             onOpenTemplateManager={handleOpenTemplateManager}
             onOpenLabItemManager={handleOpenLabItemManager}
             onAddItem={openAddItemModal}
             onRefresh={handleManualRefresh}
             isRefreshing={isManualRefreshing}
+            onPreviewRequest={handleOpenRequestPreview}
+            onPrintRequest={handlePrintRequest}
+            onPreviewResults={hasResults ? handleOpenResultsPreview : undefined}
+            onPrintResults={hasResults ? handlePrintResults : undefined}
+            hasResults={hasResults}
           />
 
           <form onSubmit={handleSubmit}>
@@ -774,7 +815,7 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
               />
             </div>
 
-           <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+            <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
               {onCancel && (
                 <button
                   type="button"
@@ -789,31 +830,31 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
                   Cancel
                 </button>
               )}
-            <button
-              type="submit"
-              disabled={isMutating || isSubmitting || displayItems.length === 0 || !canModifyRequest}
-              title={
-                !canModifyRequest
-                  ? `Cannot save changes to ${currentRequest?.status} requests`
-                  : displayItems.length === 0
-                  ? 'Please add at least one lab test'
-                  : undefined
-              }
-              className={cn(
-                'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
-                isMutating || isSubmitting || displayItems.length === 0 || !canModifyRequest
-                  ? 'cursor-not-allowed bg-gray-400'
-                  : 'cursor-pointer bg-blue-600 hover:bg-blue-700'
-              )}
-            >
-              {isSubmitting ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              {currentRequest ? 'Save Lab Request Updates' : 'Create Lab Request'}
-            </button>
-          </div>
+              <button
+                type="submit"
+                disabled={isMutating || isSubmitting || displayItems.length === 0 || !canModifyRequest}
+                title={
+                  !canModifyRequest
+                    ? `Cannot save changes to ${currentRequest?.status} requests`
+                    : displayItems.length === 0
+                    ? 'Please add at least one lab test'
+                    : undefined
+                }
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
+                  isMutating || isSubmitting || displayItems.length === 0 || !canModifyRequest
+                    ? 'cursor-not-allowed bg-gray-400'
+                    : 'cursor-pointer bg-blue-600 hover:bg-blue-700'
+                )}
+              >
+                {isSubmitting ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                {currentRequest ? 'Save Lab Request Updates' : 'Create Lab Request'}
+              </button>
+            </div>
           </form>
 
           <LabRequestItemEditorController
@@ -867,6 +908,23 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
               setSelectedTemplateUuid(template.template_uuid);
               setShowTemplateFieldManager(true);
             }}
+          />
+
+          {/* Lab Request Preview Modal */}
+          <LabRequestPreviewModal
+            open={showRequestPreview}
+            onClose={() => setShowRequestPreview(false)}
+            request={currentRequest}
+            initialAction={previewAction}
+          />
+
+          {/* Lab Results Preview Modal (from request) */}
+          <LabRequestResultsPreviewModal
+            open={showResultsPreview}
+            onClose={() => setShowResultsPreview(false)}
+            request={currentRequest}
+            resultsMap={resultsMap}
+            initialAction={previewAction}
           />
         </motion.div>
       </LabRequestStateGuard>

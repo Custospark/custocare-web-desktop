@@ -1,22 +1,21 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Calendar,
   ClipboardList,
   FolderCog,
   FolderOpen,
-  LibraryBig,
   Plus,
   RefreshCw,
   CheckCircle2,
   XCircle,
   Eye,
+  Printer,
+  TestTube,
 } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import type { LabRequest } from '../../../../api/lab/LabTypes';
 import { LabRequestStatus } from '../../../../api/lab/LabTypes';
 import { formatDate, getTimeDifference, type ColorTokens } from './labRequestForm.types';
-import { FOCUS_MODE_ROUTES } from '../../../../../administration/onboarding/routes/focusModeRouteConstants';
 
 interface LabRequestHeaderProps {
   isDark: boolean;
@@ -28,6 +27,11 @@ interface LabRequestHeaderProps {
   onAddItem: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  onPreviewRequest?: () => void;
+  onPrintRequest?: () => void;
+  onPreviewResults?: () => void;
+  onPrintResults?: () => void;
+  hasResults?: boolean;
 }
 
 export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
@@ -40,8 +44,12 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
   onAddItem,
   onRefresh,
   isRefreshing = false,
+  onPreviewRequest,
+  onPrintRequest,
+  onPreviewResults,
+  onPrintResults,
+  hasResults = false,
 }) => {
-  const navigate = useNavigate();
   const hasExistingRequest = !!request;
   
   // Check if request is in a finalized state
@@ -56,14 +64,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
   const canAddItems = !hasExistingRequest || canModifyRequest;
   
   // Check if request has results to view
-  const hasResults = request && request.items && request.items.length > 0;
-  
-  const handleViewResults = () => {
-    if (request?.request_uuid) {
-      // Navigate to results view page
-      navigate(FOCUS_MODE_ROUTES.LAB_RESULT_FOCUS);
-    }
-  };
+  const hasResultsToShow = hasResults || (request?.items?.some(item => item.results && item.results.length > 0) ?? false);
   
   const getAddItemTooltip = (): string => {
     if (!hasExistingRequest) return 'Add a lab test to this request';
@@ -84,12 +85,14 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
 
   return (
     <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      {/* Left Section - Icon and Info */}
       <div className="flex items-start gap-3">
         <div className={cn('rounded-xl p-2.5', isDark ? 'bg-cyan-900/20' : 'bg-cyan-50')}>
           <ClipboardList className={cn('h-5 w-5', isDark ? 'text-cyan-300' : 'text-cyan-600')} />
         </div>
 
         <div>
+          {/* Title Row */}
           <div className="flex flex-wrap items-center gap-2">
             <h2 className={cn('text-lg font-semibold', colors.text.primary)}>
               {hasExistingRequest ? 'Existing Lab Request' : 'Create Lab Request'}
@@ -110,6 +113,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
             )}
           </div>
 
+          {/* Description */}
           <p className={cn('mt-1 text-sm cursor-default', colors.text.secondary)}>
             {hasExistingRequest
               ? canModifyRequest
@@ -169,15 +173,76 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
         </div>
       </div>
 
+      {/* Right Section - Action Buttons */}
       <div className="flex flex-wrap items-center gap-2">
-        {/* Refresh Button - Always visible */}
+        {/* ==================== VIEW & PRINT ACTIONS ==================== */}
+        
+        {/* Preview Results */}
+        {hasResultsToShow && onPreviewResults && (
+          <button
+            type="button"
+            onClick={onPreviewResults}
+            className={cn(
+              'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all',
+              colors.border.primary,
+              colors.text.primary,
+              colors.bg.hover
+            )}
+          >
+            <Eye className="h-4 w-4" />
+            Preview Results
+          </button>
+        )}
+
+        {/* Print Results */}
+        {hasResultsToShow && onPrintResults && (
+          <button
+            type="button"
+            onClick={onPrintResults}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-teal-600 px-3 py-1.5 text-sm font-medium text-white transition-all hover:bg-teal-700"
+          >
+            <Printer className="h-4 w-4" />
+            Print Results
+          </button>
+        )}
+
+        {/* Preview Request */}
+        {onPreviewRequest && (
+          <button
+            type="button"
+            onClick={onPreviewRequest}
+            className={cn(
+              'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all',
+              colors.border.primary,
+              colors.text.primary,
+              colors.bg.hover
+            )}
+          >
+            <Eye className="h-4 w-4" />
+            Preview Request
+          </button>
+        )}
+
+        {/* Print Request */}
+        {onPrintRequest && (
+          <button
+            type="button"
+            onClick={onPrintRequest}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-all hover:bg-blue-700"
+          >
+            <Printer className="h-4 w-4" />
+            Print Request
+          </button>
+        )}
+
+        {/* Refresh Button */}
         {onRefresh && (
           <button
             type="button"
             onClick={onRefresh}
             disabled={isRefreshing}
             className={cn(
-              'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+              'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all',
               colors.border.primary,
               colors.bg.hover,
               colors.text.secondary,
@@ -189,27 +254,29 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
           </button>
         )}
 
-        {/* Manage Lab Tests - Always visible */}
+        {/* ==================== MANAGEMENT ACTIONS ==================== */}
+        
+        {/* Manage Tests */}
         <button
           type="button"
           onClick={onOpenLabItemManager}
           className={cn(
-            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all',
             colors.border.primary,
             colors.bg.hover,
             colors.text.primary
           )}
         >
-          <LibraryBig className="h-4 w-4" />
-          Manage Lab Tests
+          <TestTube className="h-4 w-4" />
+          Manage Tests
         </button>
 
-        {/* Manage Templates - Always visible */}
+        {/* Manage Templates */}
         <button
           type="button"
           onClick={onOpenTemplateManager}
           className={cn(
-            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all',
             colors.border.primary,
             colors.bg.hover,
             colors.text.primary
@@ -219,7 +286,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
           Manage Templates
         </button>
 
-        {/* Use Template - Hide when request is finalized */}
+        {/* Use Template */}
         {!isFinalized && (
           <button
             type="button"
@@ -227,7 +294,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
             disabled={!canAddItems}
             title={!canAddItems ? getAddItemTooltip() : undefined}
             className={cn(
-              'inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+              'inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all',
               canAddItems
                 ? cn('cursor-pointer', colors.border.primary, colors.bg.hover, colors.text.brand)
                 : 'cursor-not-allowed opacity-50',
@@ -239,7 +306,7 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
           </button>
         )}
 
-        {/* Add Lab Test - Hide when request is finalized */}
+        {/* Add Test */}
         {!isFinalized && (
           <button
             type="button"
@@ -247,29 +314,14 @@ export const LabRequestHeader: React.FC<LabRequestHeaderProps> = ({
             disabled={!canAddItems}
             title={!canAddItems ? getAddItemTooltip() : undefined}
             className={cn(
-              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+              'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-white transition-all',
               canAddItems
                 ? 'cursor-pointer bg-blue-600 hover:bg-blue-700'
                 : 'cursor-not-allowed bg-gray-400'
             )}
           >
             <Plus className="h-4 w-4" />
-            Add Lab Test
-          </button>
-        )}
-
-        {/* View Results - Show when request is finalized and has results */}
-        {isFinalized && hasResults && (
-          <button
-            type="button"
-            onClick={handleViewResults}
-            className={cn(
-              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-              'cursor-pointer bg-emerald-600 text-white hover:bg-emerald-700'
-            )}
-          >
-            <Eye className="h-4 w-4" />
-            View Results
+            Add Test
           </button>
         )}
       </div>
