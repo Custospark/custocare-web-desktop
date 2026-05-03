@@ -115,7 +115,7 @@ export interface ConsultationsFormValues {
   /** Expected duration in minutes */
   durationMinutes: number;
 
-  request_status:ConsultationStatus;
+  request_status?:ConsultationStatus;
   
   // Follow-up
   /** Whether follow-up consultation is needed */
