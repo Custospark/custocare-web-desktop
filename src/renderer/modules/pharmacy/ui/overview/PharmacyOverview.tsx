@@ -6,6 +6,8 @@ import { PrescriptionActivityChart } from './PrescriptionActivityChart';
 import { RecentActivityFeed } from './RecentActivityFeed';
 import { PerformanceMetrics } from './PerformanceMetrics';
 import { RefreshCw } from 'lucide-react';
+import { usePharmacyDashboard } from '../../api/overview/usePharmacyDashboardQueries';
+
 interface PharmacyOverviewProps {
   theme: 'light' | 'dark';
 }
@@ -15,15 +17,16 @@ export const PharmacyOverview: React.FC<PharmacyOverviewProps> = ({ theme }) => 
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
 
-  const handleRefresh = (): void => {
-    setRefreshKey(prev => prev + 1);
-    setLastRefreshed(new Date());
-  };
+  const { data, isLoading, isFetching, isError, error, refetch } = usePharmacyDashboard(refreshKey);
 
+  const handleRefresh = (): void => {
+    setRefreshKey((prev) => prev + 1);
+    setLastRefreshed(new Date());
+    void refetch();
+  };
 
   return (
     <div className="space-y-3">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Pharmacy intelligence</h1>
@@ -36,37 +39,70 @@ export const PharmacyOverview: React.FC<PharmacyOverviewProps> = ({ theme }) => 
             Last updated: {lastRefreshed.toLocaleTimeString()}
           </span>
           <button
+            type="button"
             onClick={handleRefresh}
+            disabled={isFetching}
             className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               isDark
                 ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
+            } ${isFetching ? 'opacity-60 cursor-not-allowed' : ''}`}
             aria-label="Refresh dashboard data"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
       </div>
 
-      {/* High-Level Metrics */}
-      <OverviewStats theme={theme} refreshKey={refreshKey} />
+      {isError && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            isDark ? 'border-red-900 bg-red-950/40 text-red-200' : 'border-red-200 bg-red-50 text-red-800'
+          }`}
+        >
+          {error instanceof Error ? error.message : 'Could not load pharmacy dashboard.'}
+        </div>
+      )}
 
-      {/* Charts Row */}
+      <OverviewStats
+        theme={theme}
+        refreshKey={refreshKey}
+        summary={data?.summary}
+        isLoading={isLoading}
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <PrescriptionActivityChart theme={theme} refreshKey={refreshKey} />
-        <InventoryTrendsChart theme={theme} refreshKey={refreshKey} />
+        <PrescriptionActivityChart
+          theme={theme}
+          refreshKey={refreshKey}
+          activity={data?.prescription_activity}
+          isLoading={isLoading}
+        />
+        <InventoryTrendsChart
+          theme={theme}
+          refreshKey={refreshKey}
+          trends={data?.inventory_trends}
+          isLoading={isLoading}
+        />
       </div>
-     
 
-      {/* Performance & Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <RecentActivityFeed theme={theme} refreshKey={refreshKey} />
+          <RecentActivityFeed
+            theme={theme}
+            refreshKey={refreshKey}
+            items={data?.recent_activity}
+            isLoading={isLoading}
+          />
         </div>
         <div>
-          <PerformanceMetrics theme={theme} refreshKey={refreshKey} />
+          <PerformanceMetrics
+            theme={theme}
+            refreshKey={refreshKey}
+            performance={data?.performance}
+            isLoading={isLoading}
+          />
         </div>
       </div>
     </div>
