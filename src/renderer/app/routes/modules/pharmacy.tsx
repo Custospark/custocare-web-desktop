@@ -15,7 +15,7 @@ import MRPatientWalkIn from '../../../modules/medical-records/ui/patients/views/
 import PharmacyFrontDesk from '../../../modules/pharmacy/ui/patients/PharmacyFrontDesk';
 import PharmacyPatientQueue from '../../../modules/pharmacy/ui/patients/views/PharmacyPatientQueue';
 import PharmacyActionCenter from '../../../modules/pharmacy/ui/action-center/PharmacyActionCenter';
-import PharmacyDispensingPanel from '../../../modules/pharmacy/ui/action-center/PharmacyDispensingPanel';
+import PharmacyDispenseMedication from '../../../modules/pharmacy/ui/action-center/PharmacyDispenseMedication';
 
 /** Standard pharmacy page shell: table layout + theme from module outlet. */
 const pharmacyTablePage = (Component: ComponentType<ThemeProp>) => (
@@ -122,7 +122,7 @@ export const pharmacyRoutes = [
     <Route
       key="pharmacy-ac-dispensing"
       path="dispensing"
-      element={pharmacyTablePage(PharmacyDispensingPanel)}
+      element={pharmacyTablePage(PharmacyDispenseMedication)}
     />
     <Route
       key="pharmacy-ac-prescription-search"

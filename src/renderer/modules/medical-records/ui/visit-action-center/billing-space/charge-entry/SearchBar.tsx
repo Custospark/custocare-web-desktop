@@ -23,6 +23,8 @@ interface SearchBarProps {
   onClearSearch: () => void;
   searchWrapRef: React.RefObject<HTMLDivElement>;
   inputRef: React.RefObject<HTMLInputElement>;
+  /** Optional footer when search returned no rows (e.g. “Create new item”). */
+  noResultsFooter?: React.ReactNode;
 }
 
 const getStockBadge = (
@@ -110,6 +112,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   onClearSearch,
   searchWrapRef,
   inputRef,
+  noResultsFooter,
 }) => {
   const isDark = theme === 'dark';
 
@@ -325,6 +328,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                   <p className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                     Search by service name, code, or category
                   </p>
+                  {noResultsFooter ? <div className="mt-4">{noResultsFooter}</div> : null}
                 </div>
               )}
             </div>

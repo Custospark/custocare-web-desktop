@@ -763,7 +763,6 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
               queryKey: prescriptionKeys.patient(Number(patientId)),
             });
 
-            showToast('success', 'Prescription created successfully', 5000);
             onSuccess?.(result.data.id);
           }
         }
