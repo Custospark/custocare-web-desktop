@@ -1,5 +1,5 @@
 // MRPatientCreate.tsx
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,7 +8,10 @@ import { FileText, ArrowRight, ClipboardList, Heart, CheckCircle2, Loader2 } fro
 import PatientCreate from '../../../../pharmacy/ui/dispensing/dispensing-medication/views/PatientCreate';
 import { cn } from '../../../../../shared/utils/classNameUtils';
 import type { PatientSearchResult } from '../../../../pharmacy/api/dispensing/patient-search/usePatientTypes';
-import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
+import {
+  getPatientIntakeRoutes,
+  type PatientIntakeModule,
+} from '../../../../../app/routes/utils/patientIntakeRoutes';
 import { useCreateVisit } from '../../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { 
@@ -24,6 +27,7 @@ import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 interface MRPatientCreateProps {
   theme: 'light' | 'dark';
   className?: string;
+  intakeModule?: PatientIntakeModule;
 }
 
 // Processing overlay component
@@ -141,10 +145,15 @@ const VisitProcessingOverlay: React.FC<{
   );
 };
 
-const MRPatientCreate: React.FC<MRPatientCreateProps> = ({ theme, className }) => {
+const MRPatientCreate: React.FC<MRPatientCreateProps> = ({
+  theme,
+  className,
+  intakeModule = 'medical-records',
+}) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { showToast } = useToast();
+  const routes = useMemo(() => getPatientIntakeRoutes(intakeModule), [intakeModule]);
   
   // State for processing overlay
   const [processingStage, setProcessingStage] = useState<'creating' | 'saving' | 'redirecting' | null>(null);
@@ -185,7 +194,7 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({ theme, className }) =
       if (!patient.id) {
         console.error('Patient ID is missing:', patient);
         showToast('error', 'Invalid patient data. Patient ID is missing.', 4000);
-        navigate(MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER, { replace: true });
+        navigate(routes.actionCenter, { replace: true });
         return;
       }
 
@@ -220,7 +229,8 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({ theme, className }) =
           facility_id: facilityId,
           patient_id: patient.id,
           visit_type: VisitType.OUTPATIENT,
-          chief_complaints: ['Initial medical records visit'],
+          chief_complaints:
+            intakeModule === 'pharmacy' ? ['Pharmacy visit'] : ['Initial medical records visit'],
           arrived_at: formattedDateTime,
           registered_at: formattedDateTime,
           current_phase: VisitPhase.REGISTRATION,
@@ -279,7 +289,7 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({ theme, className }) =
           await new Promise(resolve => setTimeout(resolve, 500));
           
           // Navigate to action center
-          navigate(MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER, { replace: true });
+          navigate(routes.actionCenter, { replace: true });
         } else {
           throw new Error('Visit creation failed: Invalid response from server');
         }
@@ -312,28 +322,42 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({ theme, className }) =
         showToast('error', errorMessage, 5000);
         
         // Fallback: navigate with patient ID only
-        navigate(`${MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}?patientId=${patient.patient_number}`, {
+        navigate(`${routes.actionCenter}?patientId=${patient.patient_number}`, {
           replace: true,
         });
       }
     },
-    [navigate, dispatch, facilityId, staffId, hasCompleteStaff, createVisitMutation, showToast]
+    [
+      navigate,
+      dispatch,
+      facilityId,
+      staffId,
+      hasCompleteStaff,
+      createVisitMutation,
+      showToast,
+      routes,
+      intakeModule,
+    ]
   );
 
   const handleCancel = useCallback(() => {
-    navigate(MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH, { replace: true });
-  }, [navigate]);
+    navigate(routes.search, { replace: true });
+  }, [navigate, routes.search]);
 
   return (
     <>
       <div className={cn(className)}>
-        <PatientCreate 
-          theme={theme} 
-          title="Register New Patient" 
-          subtitle="Create a new patient record for medical documentation and history tracking" 
-          onSuccess={handleSuccess} 
+        <PatientCreate
+          theme={theme}
+          title="Register new patient"
+          subtitle={
+            intakeModule === 'pharmacy'
+              ? 'Create a record so you can start visits and dispensing from pharmacy'
+              : 'Create a new patient record for medical documentation and history tracking'
+          }
+          onSuccess={handleSuccess}
           onProceed={handleProceed}
-          onCancel={handleCancel} 
+          onCancel={handleCancel}
         />
 
         <div>
@@ -343,11 +367,11 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({ theme, className }) =
               ? 'bg-gray-800 border-gray-700 hover:bg-gray-700/50' 
               : 'bg-white border-gray-200 hover:bg-gray-50'
           )}
-          onClick={() => navigate(MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH)}
+          onClick={() => navigate(routes.search)}
           >
             <div className={cn('text-sm flex-1', theme === 'dark' ? 'text-gray-300' : 'text-gray-700')}>
-              After registration, you'll see a confirmation modal with the patient number. 
-              Click "Continue" to go to the medical records action center, or return here to search.
+              After registration, you will see a confirmation with the patient number. Continue to the
+              {intakeModule === 'pharmacy' ? ' medication encounter workflow' : ' clinical encounter workflow'}, or return to search.
             </div>
             <div className="flex items-center gap-2 text-blue-600 flex-shrink-0">
               <ClipboardList className="w-4 h-4" />

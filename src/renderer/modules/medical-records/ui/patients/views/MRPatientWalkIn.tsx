@@ -1,11 +1,14 @@
 // MRPatientWalkIn.tsx (Simplified)
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, FileText, Loader2 } from 'lucide-react';
 
 import WalkInSessionCreator from '../../../../pharmacy/ui/dispensing/dispensing-medication/views/WalkInSessionCreator';
-import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
+import {
+  getPatientIntakeRoutes,
+  type PatientIntakeModule,
+} from '../../../../../app/routes/utils/patientIntakeRoutes';
 import { type WalkInSession } from '../../../../pharmacy/api/dispensing/customer-walkin/useCustomerWalkInTypes';
 import { clearAll } from '../../visit-action-center/billing-space';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
@@ -14,14 +17,17 @@ interface MRPatientWalkInProps {
   theme?: 'light' | 'dark';
   customFacilityId?: number;
   className?: string;
+  intakeModule?: PatientIntakeModule;
 }
 
 const MRPatientWalkIn: React.FC<MRPatientWalkInProps> = ({
   theme = 'light',
   customFacilityId,
   className,
+  intakeModule = 'medical-records',
 }) => {
   const navigate = useNavigate();
+  const routes = useMemo(() => getPatientIntakeRoutes(intakeModule), [intakeModule]);
   const dispatch = useDispatch();
   const { showToast } = useToast();
   const isDark = theme === 'dark';
@@ -54,14 +60,14 @@ const MRPatientWalkIn: React.FC<MRPatientWalkInProps> = ({
       showToast('success', `✨ Ready to care for ${createdSession.walkin.display_name || 'patient'}!`, 3000);
       
       // Navigate directly to action center - the visit is already persisted in Redux
-      navigate(MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER, { replace: true });
+      navigate(routes.actionCenter, { replace: true });
     } catch (error) {
       console.error('Error clearing previous data:', error);
       showToast('error', 'Failed to prepare workspace. Please try again.', 4000);
     } finally {
       setIsProceeding(false);
     }
-  }, [createdSession, dispatch, navigate, showToast]);
+  }, [createdSession, dispatch, navigate, showToast, routes.actionCenter]);
 
   // After session creation
   if (createdSession) {
@@ -77,7 +83,9 @@ const MRPatientWalkIn: React.FC<MRPatientWalkInProps> = ({
               </div>
               <h3 className="text-xl font-semibold mb-2">✓ Walk-in Ready</h3>
               <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                Patient is ready for clinical care
+                {intakeModule === 'pharmacy'
+                  ? 'Patient is ready for pharmacy services'
+                  : 'Patient is ready for clinical care'}
               </p>
               <p className={`mt-2 text-sm font-medium ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
                 Patient: {createdSession.walkin.display_name || 'Walk-in Patient'}
@@ -102,7 +110,7 @@ const MRPatientWalkIn: React.FC<MRPatientWalkInProps> = ({
               ) : (
                 <>
                   <FileText className="w-5 h-5" />
-                  Proceed to Action Center
+                  {intakeModule === 'pharmacy' ? 'Proceed to medication workflow' : 'Proceed to action center'}
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}

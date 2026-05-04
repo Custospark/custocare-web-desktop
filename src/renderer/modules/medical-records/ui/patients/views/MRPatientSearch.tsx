@@ -1,5 +1,5 @@
 // MRPatientSearch.tsx
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,7 +9,10 @@ import PatientSearch from '../../../../pharmacy/ui/dispensing/dispensing-medicat
 import { cn } from '../../../../../shared/utils/classNameUtils';
 import type { PatientSearchResult } from '../../../../pharmacy/api/dispensing/patient-search/usePatientTypes';
 import { PatientStatus } from '../../../../pharmacy/api/dispensing/patient-search/usePatientTypes';
-import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
+import {
+  getPatientIntakeRoutes,
+  type PatientIntakeModule,
+} from '../../../../../app/routes/utils/patientIntakeRoutes';
 import { useCreateVisit } from '../../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { clearAll } from '../../visit-action-center/billing-space';
@@ -25,6 +28,8 @@ import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 interface MRPatientSearchProps {
   theme: 'light' | 'dark';
   className?: string;
+  /** When `pharmacy`, navigation targets pharmacy patient intake and action center. */
+  intakeModule?: PatientIntakeModule;
 }
 
 // Processing overlay component (reused from MRPatientCreate)
@@ -142,11 +147,16 @@ const VisitProcessingOverlay: React.FC<{
   );
 };
 
-const MRPatientSearch: React.FC<MRPatientSearchProps> = ({ theme, className }) => {
+const MRPatientSearch: React.FC<MRPatientSearchProps> = ({
+  theme,
+  className,
+  intakeModule = 'medical-records',
+}) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { showToast } = useToast();
   const isDark = theme === 'dark';
+  const routes = useMemo(() => getPatientIntakeRoutes(intakeModule), [intakeModule]);
 
   const [selectedPatient, setSelectedPatient] = useState<PatientSearchResult | null>(null);
   const [processingStage, setProcessingStage] = useState<'creating' | 'saving' | 'redirecting' | null>(null);
@@ -161,11 +171,11 @@ const MRPatientSearch: React.FC<MRPatientSearchProps> = ({ theme, className }) =
 
   const handleCreateNewPatient = useCallback(
     (searchText: string) => {
-      navigate(MEDICAL_RECORDS_ROUTES.PATIENTS_REGISTER, {
-        state: { prefillSearch: searchText }
+      navigate(routes.register, {
+        state: { prefillSearch: searchText },
       });
     },
-    [navigate]
+    [navigate, routes.register]
   );
 
 const handleTakeAction = useCallback(
@@ -189,7 +199,7 @@ const handleTakeAction = useCallback(
     if (!patient.id) {
       console.error('Patient ID is missing:', patient);
       showToast('error', 'Invalid patient data. Patient ID is missing.', 4000);
-      navigate(`${MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}?patientId=${patient.patient_number}`, { replace: true });
+      navigate(`${routes.actionCenter}?patientId=${patient.patient_number}`, { replace: true });
       return;
     }
 
@@ -221,7 +231,8 @@ const handleTakeAction = useCallback(
         facility_id: facilityId,
         patient_id: patient.id,
         visit_type: VisitType.OUTPATIENT,
-        chief_complaints: ['Medical records consultation'],
+        chief_complaints:
+          intakeModule === 'pharmacy' ? ['Pharmacy visit'] : ['Medical records consultation'],
         arrived_at: formattedDateTime,
         registered_at: formattedDateTime,
         current_phase: VisitPhase.REGISTRATION,
@@ -280,7 +291,7 @@ const handleTakeAction = useCallback(
         await new Promise(resolve => setTimeout(resolve, 500));          
         
         // Navigate to action center
-        navigate(MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER, { replace: true });
+        navigate(routes.actionCenter, { replace: true });
       } else {
         throw new Error('Visit creation failed: Invalid response from server');
       }
@@ -313,16 +324,68 @@ const handleTakeAction = useCallback(
       showToast('error', errorMessage, 5000);
       
       // Fallback: navigate with patient ID only
-      navigate(`${MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER}?patientId=${patient.patient_number}`, {
+      navigate(`${routes.actionCenter}?patientId=${patient.patient_number}`, {
         replace: true,
       });
     }
   },
-  [navigate, dispatch, facilityId, staffId, hasCompleteStaff, createVisitMutation, showToast]
+  [
+    navigate,
+    dispatch,
+    facilityId,
+    staffId,
+    hasCompleteStaff,
+    createVisitMutation,
+    showToast,
+    routes,
+    intakeModule,
+  ]
 );
 
   const renderQuickActions = () => {
     if (!selectedPatient) return null;
+
+    if (intakeModule === 'pharmacy') {
+      return (
+        <div
+          className={cn(
+            'mt-6 rounded-xl border p-6',
+            isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white',
+            className
+          )}
+        >
+          <div className="mb-4 flex items-center gap-3">
+            <FileText className={cn('h-5 w-5', isDark ? 'text-blue-300' : 'text-blue-700')} />
+            <div className={cn('font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+              Pharmacy intake
+            </div>
+          </div>
+          <div
+            className={cn(
+              'cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:scale-[1.01]',
+              isDark
+                ? 'border-blue-800/50 bg-blue-900/20 hover:bg-blue-900/30'
+                : 'border-blue-100 bg-blue-50 hover:bg-blue-100'
+            )}
+            onClick={() => void handleTakeAction(selectedPatient)}
+          >
+            <div className="flex items-start gap-3">
+              <ClipboardList
+                className={cn('mt-0.5 h-5 w-5 flex-shrink-0', isDark ? 'text-blue-300' : 'text-blue-600')}
+              />
+              <div className="min-w-0 flex-1">
+                <div className={cn('mb-1 font-medium', isDark ? 'text-blue-200' : 'text-blue-900')}>
+                  Start medication encounter
+                </div>
+                <div className={cn('text-sm', isDark ? 'text-blue-300' : 'text-blue-700')}>
+                  Create an outpatient visit and open the medication workflow for this patient.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className={cn(
@@ -492,8 +555,16 @@ const handleTakeAction = useCallback(
       <div className={cn(className)}>
         <PatientSearch
           theme={theme}
-          title="Medical Records Patient Search"
-          subtitle="Search for patients to access medical records, documents, and history"
+          title={
+            intakeModule === 'pharmacy'
+              ? 'Patient search'
+              : 'Medical Records Patient Search'
+          }
+          subtitle={
+            intakeModule === 'pharmacy'
+              ? 'Find a patient to register a visit and begin pharmacy services'
+              : 'Search for patients to access medical records, documents, and history'
+          }
           placeholder="Search by patient number, name, phone, or national ID"
           filters={{ status: PatientStatus.ACTIVE }}
           onPatientSelect={setSelectedPatient}

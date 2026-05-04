@@ -152,6 +152,7 @@ export interface UserReference {
  */
 export interface VisitReference {
   id: number;
+  visit_uuid?: string;
   visit_date: string | null;
   facility_name: string | null;
 }

@@ -56,7 +56,7 @@ const AddStock: React.FC<AddStockProps> = ({ theme }) => {
 
   const { mutate: createStock, isPending } = useCreateInventoryItem({
     onSuccess: () => {
-     navigate(PHARMACY_ROUTES.DISPENSING_DISPENSE_MEDICATION);
+     navigate(PHARMACY_ROUTES.PATIENT_QUEUE);
     },
     onError: (error) => {
       const errorMessage = error.response?.data?.message || 'Failed to create stock item';
@@ -148,7 +148,7 @@ const AddStock: React.FC<AddStockProps> = ({ theme }) => {
     if (hasUnsavedChanges) {
       setShowCancelConfirm(true);
     } else {
-     navigate(PHARMACY_ROUTES.DISPENSING_DISPENSE_MEDICATION);
+     navigate(PHARMACY_ROUTES.PATIENT_QUEUE);
     }
   };
 
@@ -169,7 +169,7 @@ const AddStock: React.FC<AddStockProps> = ({ theme }) => {
       status: InventoryItemStatus.ACTIVE,
     });
     setShowCancelConfirm(false);
-     navigate(PHARMACY_ROUTES.DISPENSING_DISPENSE_MEDICATION);
+     navigate(PHARMACY_ROUTES.PATIENT_QUEUE);
   };
 
   const handleDismissCancel = () => {

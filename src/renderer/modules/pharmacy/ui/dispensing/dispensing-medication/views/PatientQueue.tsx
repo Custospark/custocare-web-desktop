@@ -75,6 +75,8 @@ export interface PatientQueueProps {
   title?: string;
   description?: string;
   initialFilters?: QueueFilters;
+  /** When set, only visits passing this predicate are shown (e.g. has pending prescription). */
+  filterVisit?: (visit: QueueVisitItem) => boolean;
 
   onVisitSelect?: (visit: QueueVisitItem) => void;
   onTakeAction?: (visit: QueueVisitItem) => void;
@@ -293,6 +295,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   title = 'Patient Queue',
   description = 'Patients waiting for service',
   initialFilters = {},
+  filterVisit,
   onVisitSelect,
   onTakeAction,
   onNewPatientRegistration,
@@ -347,7 +350,11 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     }
   }, [dataUpdatedAt]);
 
-  const queueVisits = useMemo(() => normalizeQueueVisits(queueData), [queueData]);
+  const queueVisits = useMemo(() => {
+    const raw = normalizeQueueVisits(queueData);
+    if (!filterVisit) return raw;
+    return raw.filter(filterVisit);
+  }, [queueData, filterVisit]);
 
   const hasFetchedQueue = queueData !== undefined && queueData !== null;
   const error = externalError ?? (queryError instanceof Error ? queryError : null);

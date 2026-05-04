@@ -1,111 +1,67 @@
+import { type ComponentType } from "react";
 import { Navigate, Route } from "react-router-dom";
-import { PlaceholderPanel, WithThemeProp, SuspenseWrapper } from "./shared/routeUtils";
+import { WithThemeProp, SuspenseWrapper, type ThemeProp } from "./shared/routeUtils";
 import { PHARMACY_ROUTES } from "../routeConstants";
 
-// Main Pharmacy Components
 import PharmacyOverview from '../../../modules/pharmacy/ui/overview/PharmacyOverview';
-import Inventory from '../../../modules/pharmacy/ui/inventory/Inventory';
-import Dispensing from '../../../modules/pharmacy/ui/dispensing/Dispensing';
 import Prescriptions from "../../../modules/pharmacy/ui/precriptions/Prescriptions";
-import Billing from "../../../modules/pharmacy/ui/billing/Billing";
-// Dispensing Components
-import DispenseMedication from '../../../modules/pharmacy/ui/dispensing/dispensing-medication/DispenseMedication';
-import ValidatePrescription from '../../../modules/pharmacy/ui/dispensing/ValidatePrescription';
-import SearchPrescription from '../../../modules/pharmacy/ui/dispensing/SearchPrescription';
-import DispensingHistory from '../../../modules/pharmacy/ui/dispensing/DispensingHistory';
-import IssuesQueue from '../../../modules/pharmacy/ui/dispensing/IssuesQueue';
+import PrescriptionWorkbench from '../../../modules/pharmacy/ui/precriptions/views/PrescriptionWorkbench';
+import { MRBillingReview } from '../../../modules/medical-records/ui/revenue/MRBillingReview';
+import { AdminInventoryItem } from '../../../modules/administration/admin-module/ui/inventory/AdminInventoryItems';
 
-// Dispensing Sub-components
-import CustomerWalkIn from '../../../modules/pharmacy/ui/dispensing/dispensing-medication/views/CustomerWalkIn';
-import PatientSearch from '../../../modules/pharmacy/ui/dispensing/dispensing-medication/views/PhamarcyPatientSearch';
-import QuickPatientCreate from '../../../modules/pharmacy/ui/dispensing/dispensing-medication/views/QuickPatientCreate';
-import DispensingQueue from '../../../modules/pharmacy/ui/dispensing/dispensing-medication/views/DispensingQueue';
+import MRPatientSearch from '../../../modules/medical-records/ui/patients/views/MRPatientSearch';
+import MRPatientCreate from '../../../modules/medical-records/ui/patients/views/MRPatientCreate';
+import MRPatientWalkIn from '../../../modules/medical-records/ui/patients/views/MRPatientWalkIn';
+import PharmacyFrontDesk from '../../../modules/pharmacy/ui/patients/PharmacyFrontDesk';
+import PharmacyPatientQueue from '../../../modules/pharmacy/ui/patients/views/PharmacyPatientQueue';
+import PharmacyActionCenter from '../../../modules/pharmacy/ui/action-center/PharmacyActionCenter';
+import PharmacyDispensingPanel from '../../../modules/pharmacy/ui/action-center/PharmacyDispensingPanel';
 
-// Inventory Components
-import AddStock from '../../../modules/pharmacy/ui/inventory/AddStock';
-import SearchStock from '../../../modules/pharmacy/ui/inventory/views/SearchStock';
-
-/**
- * Pharmacy Inventory Routes Configuration
- */
-export const pharmacyInventoryRoutes = [
-  <Route
-    key="inventory-overview"
-    path="overview"
-    element={<PlaceholderPanel title="Inventory Stock Overview" />}
-  />,
-  <Route
-    key="inventory-add-stock"
-    path="add-stock"
-    element={<WithThemeProp Component={AddStock} />}
-  />,
-  <Route
-    key="inventory-search-item"
-    path="search-item"
-    element={<WithThemeProp Component={SearchStock} />}
-  />,
-  <Route
-    key="inventory-adjust-stock"
-    path="adjust-stock"
-    element={<PlaceholderPanel title="Adjust Existing Stock" />}
-  />,
-  <Route
-    key="inventory-expired-items"
-    path="expired-items"
-    element={<PlaceholderPanel title="Expired / Near-Expiry Items" />}
-  />,
-];
+/** Standard pharmacy page shell: table layout + theme from module outlet. */
+const pharmacyTablePage = (Component: ComponentType<ThemeProp>) => (
+  <SuspenseWrapper variant="table">
+    <WithThemeProp Component={Component} />
+  </SuspenseWrapper>
+);
 
 /**
- * Pharmacy Dispensing Routes Configuration
+ * Pharmacy Prescriptions Routes Configuration
  */
-export const pharmacyDispensingRoutes = [
+export const pharmacyPrescriptionRoutes = [
   <Route
-    key="dispense-medication"
-    path="dispense-medication"
-    element={<WithThemeProp Component={DispenseMedication} />}
-  >
-    <Route index element={<Navigate to={PHARMACY_ROUTES.DISPENSING_WALK_IN} replace />} />
-    <Route
-      key="walk-in"
-      path="walk-in"
-      element={<WithThemeProp Component={CustomerWalkIn} />}
-    />
-    <Route
-      key="patient-search"
-      path="patient-search"
-      element={<WithThemeProp Component={PatientSearch} />}
-    />
-    <Route
-      key="quick-create"
-      path="quick-create"
-      element={<WithThemeProp Component={QuickPatientCreate} />}
-    />
-    <Route
-      key="queue"
-      path="queue"
-      element={<WithThemeProp Component={DispensingQueue} />}
-    />
-  </Route>,
-  <Route
-    key="validate-prescription"
-    path="validate-prescription"
-    element={<WithThemeProp Component={ValidatePrescription} />}
+    key="prescriptions-index"
+    index
+    element={<Navigate to={PHARMACY_ROUTES.PRESCRIPTIONS_QUEUE} replace />}
   />,
   <Route
-    key="search-prescription"
-    path="search-prescription"
-    element={<WithThemeProp Component={SearchPrescription} />}
+    key="prescriptions-queue"
+    path="queue"
+    element={<WithThemeProp Component={PrescriptionWorkbench} props={{ mode: 'queue' }} />}
   />,
   <Route
-    key="history"
-    path="history"
-    element={<WithThemeProp Component={DispensingHistory} />}
+    key="prescriptions-create"
+    path="create"
+    element={<WithThemeProp Component={PrescriptionWorkbench} props={{ mode: 'create' }} />}
   />,
   <Route
-    key="issues-queue"
-    path="issues-queue"
-    element={<WithThemeProp Component={IssuesQueue} />}
+    key="prescriptions-review"
+    path="review"
+    element={<WithThemeProp Component={PrescriptionWorkbench} props={{ mode: 'review' }} />}
+  />,
+  <Route
+    key="prescriptions-search"
+    path="search"
+    element={<WithThemeProp Component={PrescriptionWorkbench} props={{ mode: 'search' }} />}
+  />,
+  <Route
+    key="prescriptions-flagged"
+    path="flagged"
+    element={<WithThemeProp Component={PrescriptionWorkbench} props={{ mode: 'flagged' }} />}
+  />,
+  <Route
+    key="prescriptions-approved"
+    path="approved"
+    element={<WithThemeProp Component={PrescriptionWorkbench} props={{ mode: 'approved' }} />}
   />,
 ];
 
@@ -116,69 +72,100 @@ export const pharmacyRoutes = [
   <Route
     key="pharmacy-index"
     index
-    element={<Navigate to={PHARMACY_ROUTES.OVERVIEW} replace />}
+    element={<Navigate to={PHARMACY_ROUTES.PATIENTS_SEARCH} replace />}
   />,
 
   <Route
     key="pharmacy-overview"
     path="overview"
-    element={
-      <SuspenseWrapper variant="table">
-        <WithThemeProp Component={PharmacyOverview} />
-      </SuspenseWrapper>
-    }
+    element={pharmacyTablePage(PharmacyOverview)}
+  />,
+
+  <Route key="pharmacy-patients" path="patients" element={pharmacyTablePage(PharmacyFrontDesk)}>
+    <Route index element={<Navigate to={PHARMACY_ROUTES.PATIENTS_SEARCH} replace />} />
+    <Route
+      path="search"
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={MRPatientSearch} props={{ intakeModule: 'pharmacy' }} />
+        </SuspenseWrapper>
+      }
+    />
+    <Route
+      path="register"
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={MRPatientCreate} props={{ intakeModule: 'pharmacy' }} />
+        </SuspenseWrapper>
+      }
+    />
+    <Route path="queue" element={pharmacyTablePage(PharmacyPatientQueue)} />
+    <Route
+      path="walk-in"
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={MRPatientWalkIn} props={{ intakeModule: 'pharmacy' }} />
+        </SuspenseWrapper>
+      }
+    />
+  </Route>,
+
+  <Route
+    key="pharmacy-action-center"
+    path="action-center"
+    element={pharmacyTablePage(PharmacyActionCenter)}
+  >
+    <Route
+      index
+      element={<Navigate to={PHARMACY_ROUTES.ACTION_CENTER_DISPENSING} replace />}
+    />
+    <Route
+      key="pharmacy-ac-dispensing"
+      path="dispensing"
+      element={pharmacyTablePage(PharmacyDispensingPanel)}
+    />
+    <Route
+      key="pharmacy-ac-prescription-search"
+      path="prescription-search"
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp
+            Component={PrescriptionWorkbench}
+            props={{ mode: 'search', scope: 'activeVisit' }}
+          />
+        </SuspenseWrapper>
+      }
+    />
+  </Route>,
+
+  <Route
+    key="pharmacy-workstation-redirect"
+    path="workstation"
+    element={<Navigate to={PHARMACY_ROUTES.ACTION_CENTER_DISPENSING} replace />}
+  />,
+
+  <Route
+    key="pharmacy-legacy-dispensing"
+    path="dispensing/*"
+    element={<Navigate to={PHARMACY_ROUTES.PATIENTS_SEARCH} replace />}
   />,
 
   <Route
     key="pharmacy-prescriptions"
     path="prescriptions"
-    element={
-      <SuspenseWrapper variant="table">
-        <WithThemeProp Component={Prescriptions} />
-      </SuspenseWrapper>
-    }
-  />,
+    element={pharmacyTablePage(Prescriptions)}
+  >
+    {pharmacyPrescriptionRoutes}
+  </Route>,
 
   <Route
     key="pharmacy-inventory"
     path="inventory"
-    element={
-      <SuspenseWrapper variant="table">
-        <WithThemeProp Component={Inventory} />
-      </SuspenseWrapper>
-    }
-  >
-    <Route
-      index
-      element={<Navigate to={PHARMACY_ROUTES.INVENTORY_OVERVIEW} replace />}
-    />
-    {pharmacyInventoryRoutes}
-  </Route>,
-
+    element={pharmacyTablePage(AdminInventoryItem)}
+  />,
   <Route
-    key="pharmacy-dispensing"
-    path="dispensing"
-    element={
-      <SuspenseWrapper variant="table">
-        <WithThemeProp Component={Dispensing} />
-      </SuspenseWrapper>
-    }
-  >
-    <Route
-      index
-      element={<Navigate to={PHARMACY_ROUTES.DISPENSING_DISPENSE_MEDICATION} replace />}
-    />
-    {pharmacyDispensingRoutes}
-  </Route>,
-
-  <Route
-    key="pharmacy-billing"
-    path="billing"
-    element={
-      <SuspenseWrapper variant="table">
-        <WithThemeProp Component={Billing} />
-      </SuspenseWrapper>
-    }
+    key="pharmacy-receipts"
+    path="receipts"
+    element={pharmacyTablePage(MRBillingReview)}
   />,
 ];
-

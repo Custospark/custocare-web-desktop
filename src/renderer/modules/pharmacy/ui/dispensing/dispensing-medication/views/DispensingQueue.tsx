@@ -30,12 +30,12 @@ const DispensingQueue: React.FC<DispensingQueueProps> = ({ theme, className = ''
     // Navigation handled by this component
     // Use both patient and queue visit data if available
     console.log('Taking action for patient:','with visit:', queueVisit);
-    navigate(`${PHARMACY_ROUTES.DISPENSING_SEARCH_PRESCRIPTION}`);
+    navigate(`${PHARMACY_ROUTES.PRESCRIPTIONS_SEARCH}`);
   };
 
   const handleCreateNewPatient = () => {
     // Navigation handled by this component
-    navigate(PHARMACY_ROUTES.DISPENSING_QUICK_CREATE);
+    navigate(PHARMACY_ROUTES.PATIENTS_REGISTER);
   };
 
   return (

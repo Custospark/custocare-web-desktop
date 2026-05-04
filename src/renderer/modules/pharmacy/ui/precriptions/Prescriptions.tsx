@@ -7,49 +7,50 @@ interface PrescriptionsProps {
   theme: 'light' | 'dark';
 }
 
+/** Facility-scoped prescription desk; visit-scoped work lives under Medication Encounter Workflow. */
 const Prescriptions: React.FC<PrescriptionsProps> = ({ theme }) => {
   return (
     <BaseActionWorkspace
-      title="Prescriptions"
+      title="Facility prescription desk"
       icon={<FileText className="w-6 h-6" />}
       theme={theme}
       defaultActionTo={PHARMACY_ROUTES.PRESCRIPTIONS_QUEUE}
       actions={[
-        { 
-          key: 'queue', 
-          label: 'Prescription Queue', 
-          icon: <ClipboardList className="w-4 h-4" />, 
-          to: PHARMACY_ROUTES.PRESCRIPTIONS_QUEUE 
+        {
+          key: 'queue',
+          label: 'Prescription queue',
+          icon: <ClipboardList className="w-4 h-4" />,
+          to: PHARMACY_ROUTES.PRESCRIPTIONS_QUEUE,
         },
-        { 
-          key: 'create', 
-          label: 'New Prescription', 
-          icon: <PlusCircle className="w-4 h-4" />, 
-          to: PHARMACY_ROUTES.PRESCRIPTIONS_CREATE 
+        {
+          key: 'create',
+          label: 'New prescription',
+          icon: <PlusCircle className="w-4 h-4" />,
+          to: PHARMACY_ROUTES.PRESCRIPTIONS_CREATE,
         },
-        { 
-          key: 'review', 
-          label: 'Review Prescription', 
-          icon: <FileText className="w-4 h-4" />, 
-          to: PHARMACY_ROUTES.PRESCRIPTIONS_REVIEW 
+        {
+          key: 'review',
+          label: 'Review',
+          icon: <FileText className="w-4 h-4" />,
+          to: PHARMACY_ROUTES.PRESCRIPTIONS_REVIEW,
         },
-        { 
-          key: 'search', 
-          label: 'Search Prescriptions', 
-          icon: <Search className="w-4 h-4" />, 
-          to: PHARMACY_ROUTES.PRESCRIPTIONS_SEARCH 
+        {
+          key: 'search',
+          label: 'Search',
+          icon: <Search className="w-4 h-4" />,
+          to: PHARMACY_ROUTES.PRESCRIPTIONS_SEARCH,
         },
-        { 
-          key: 'flagged', 
-          label: 'Flagged Prescriptions', 
-          icon: <ShieldAlert className="w-4 h-4" />, 
-          to: PHARMACY_ROUTES.PRESCRIPTIONS_FLAGGED 
+        {
+          key: 'flagged',
+          label: 'Flagged',
+          icon: <ShieldAlert className="w-4 h-4" />,
+          to: PHARMACY_ROUTES.PRESCRIPTIONS_FLAGGED,
         },
-        { 
-          key: 'approved', 
-          label: 'Approved Prescriptions', 
-          icon: <CheckCircle className="w-4 h-4" />, 
-          to: `${PHARMACY_ROUTES.PRESCRIPTIONS}/approved` 
+        {
+          key: 'approved',
+          label: 'Approved / fulfilled',
+          icon: <CheckCircle className="w-4 h-4" />,
+          to: PHARMACY_ROUTES.PRESCRIPTIONS_APPROVED,
         },
       ]}
     />

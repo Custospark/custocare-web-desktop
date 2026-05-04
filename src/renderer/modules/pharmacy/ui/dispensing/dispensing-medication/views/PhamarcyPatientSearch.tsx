@@ -27,7 +27,7 @@ const PharmacyPatientSearch: React.FC<PharmacyPatientSearchProps> = ({ theme, cl
   const handleCreateNewPatient = useCallback(
     (searchText: string) => {
       // Navigate to create patient page with pre-filled search text
-      navigate(PHARMACY_ROUTES.DISPENSING_QUICK_CREATE, {
+      navigate(PHARMACY_ROUTES.PATIENTS_REGISTER, {
         state: { prefillSearch: searchText }
       });
     },
@@ -37,7 +37,7 @@ const PharmacyPatientSearch: React.FC<PharmacyPatientSearchProps> = ({ theme, cl
   const handleTakeAction = useCallback(
     (patient: PatientSearchResult) => {
       // This is the Take Action button handler that redirects
-      navigate(`${PHARMACY_ROUTES.DISPENSING_SEARCH_PRESCRIPTION}?patientId=${patient.patient_number}`);
+      navigate(`${PHARMACY_ROUTES.PRESCRIPTIONS_SEARCH}?patientId=${patient.patient_number}`);
     },
     [navigate]
   );

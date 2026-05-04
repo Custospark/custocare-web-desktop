@@ -2,29 +2,24 @@ import { ROUTES } from "./shared.paths";
 export const PHARMACY_ROUTES = {
   ROOT: ROUTES.PHARMACY,
   OVERVIEW: `${ROUTES.PHARMACY}/overview`,
+  /** Same pattern as medical records: facility queue → action center with visit in slice */
+  PATIENTS: `${ROUTES.PHARMACY}/patients`,
+  /** Nested under `/patients` — mirror MR patient registry */
+  PATIENTS_SEARCH: `${ROUTES.PHARMACY}/patients/search`,
+  PATIENTS_REGISTER: `${ROUTES.PHARMACY}/patients/register`,
+  WALKIN_PATIENT: `${ROUTES.PHARMACY}/patients/walk-in`,
+  PATIENT_QUEUE: `${ROUTES.PHARMACY}/patients/queue`,
+  /** @deprecated Use ACTION_CENTER_DISPENSING — old URL redirects in routes */
+  WORKSTATION: `${ROUTES.PHARMACY}/workstation`,
+
+  /** Visit-scoped workspace (mirrors MR visit-action-center) */
+  ACTION_CENTER: `${ROUTES.PHARMACY}/action-center`,
+  ACTION_CENTER_DISPENSING: `${ROUTES.PHARMACY}/action-center/dispensing`,
+  ACTION_CENTER_PRESCRIPTION_SEARCH: `${ROUTES.PHARMACY}/action-center/prescription-search`,
   PRESCRIPTIONS: `${ROUTES.PHARMACY}/prescriptions`,
   INVENTORY: `${ROUTES.PHARMACY}/inventory`,
-  DISPENSING: `${ROUTES.PHARMACY}/dispensing`,
-  BILLING: `${ROUTES.PHARMACY}/billing`,
-
-  // Inventory nested actions
-  INVENTORY_OVERVIEW: `${ROUTES.PHARMACY}/inventory/overview`,
-  INVENTORY_ADD_STOCK: `${ROUTES.PHARMACY}/inventory/add-stock`,
-  INVENTORY_SEARCH_ITEM: `${ROUTES.PHARMACY}/inventory/search-item`,
-  INVENTORY_ADJUST_STOCK: `${ROUTES.PHARMACY}/inventory/adjust-stock`,
-  INVENTORY_EXPIRED_ITEMS: `${ROUTES.PHARMACY}/inventory/expired-items`,
-
-  // Dispensing nested actions.
-  DISPENSING_DISPENSE_MEDICATION: `${ROUTES.PHARMACY}/dispensing/dispense-medication`,
-  DISPENSING_VALIDATE_PRESCRIPTION: `${ROUTES.PHARMACY}/dispensing/validate-prescription`,
-  DISPENSING_SEARCH_PRESCRIPTION: `${ROUTES.PHARMACY}/dispensing/search-prescription`,
-  DISPENSING_HISTORY: `${ROUTES.PHARMACY}/dispensing/history`,
-  DISPENSING_ISSUES_QUEUE: `${ROUTES.PHARMACY}/dispensing/issues-queue`,
-
-  DISPENSING_WALK_IN: `${ROUTES.PHARMACY}/dispensing/dispense-medication/walk-in`,
-  DISPENSING_PATIENT_SEARCH: `${ROUTES.PHARMACY}/dispensing/dispense-medication/patient-search`,
-  DISPENSING_QUICK_CREATE: `${ROUTES.PHARMACY}/dispensing/dispense-medication/quick-create`,
-  DISPENSING_QUEUE: `${ROUTES.PHARMACY}/dispensing/dispense-medication/queue`,
+  /** Billing receipts — same UI as Medical Records billing cycle review */
+  RECEIPTS: `${ROUTES.PHARMACY}/receipts`,
 
   //Prescriptions.
   PRESCRIPTIONS_QUEUE: `${ROUTES.PHARMACY}/prescriptions/queue`,
