@@ -8,6 +8,7 @@ import LabResultPreviewFooter from '../labresult-form-components/LabResultPrevie
 import { flattenPreviewRows, buildLabResultFileName } from'../labresult-form-components/labResultForm.utils';
 import type { LabRequest } from '../../../../api/lab/LabTypes';
 import { type LabResultHydratedMap } from '../labresult-form-components/labResultForm.types';
+import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 
 interface LabRequestResultsPreviewModalProps {
   open: boolean;
@@ -15,6 +16,7 @@ interface LabRequestResultsPreviewModalProps {
   request: LabRequest | null;
   resultsMap: LabResultHydratedMap;
   initialAction?: 'preview' | 'print' | 'download';
+  isLoading?: boolean;
 }
 
 export const LabRequestResultsPreviewModal: React.FC<LabRequestResultsPreviewModalProps> = ({
@@ -23,6 +25,7 @@ export const LabRequestResultsPreviewModal: React.FC<LabRequestResultsPreviewMod
   request,
   resultsMap,
   initialAction = 'preview',
+  isLoading = false,
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -94,9 +97,33 @@ export const LabRequestResultsPreviewModal: React.FC<LabRequestResultsPreviewMod
     }
   }, [handleDownload, handlePrint, initialAction, open]);
 
-  if (!open || !request) return null;
-
-  const hasResults = previewRows.length > 0;
+  if (!open) return null;
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4">
+        <div className="no-print flex h-[96vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:h-[92vh] sm:rounded-2xl">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 print:hidden">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">Laboratory Results Preview</h3>
+              <p className="mt-1 text-sm text-slate-600">Loading report data...</p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 p-2 text-slate-600 transition-all hover:bg-slate-50"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
+            <LoadingSkeleton variant="default" message="Loading laboratory results report..." />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  const hasRequest = !!request;
+  const hasResults = hasRequest && previewRows.length > 0;
 
   return (
     <div
@@ -119,6 +146,7 @@ export const LabRequestResultsPreviewModal: React.FC<LabRequestResultsPreviewMod
             <button
               type="button"
               onClick={() => handlePrint?.()}
+              disabled={!hasRequest}
               className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-blue-700"
             >
               <Printer className="h-4 w-4" />
@@ -128,6 +156,7 @@ export const LabRequestResultsPreviewModal: React.FC<LabRequestResultsPreviewMod
             <button
               type="button"
               onClick={() => handleDownload?.()}
+              disabled={!hasRequest}
               className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 transition-all hover:bg-emerald-100"
             >
               <Download className="h-4 w-4" />
@@ -156,7 +185,11 @@ export const LabRequestResultsPreviewModal: React.FC<LabRequestResultsPreviewMod
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
           <div ref={contentRef} className="mx-auto max-w-5xl">
-            {!hasResults ? (
+            {!hasRequest ? (
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
+                <p className="text-slate-500">No laboratory report found for this visit yet.</p>
+              </div>
+            ) : !hasResults ? (
               <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
                 <p className="text-slate-500">No results have been recorded for this lab request yet.</p>
               </div>

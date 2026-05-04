@@ -33,6 +33,7 @@ export const DiagnosisReportLauncher: React.FC<DiagnosisReportLauncherProps> = (
 
   const visitDiagnoses = useMemo(() => diagnosesQuery.data?.data ?? [], [diagnosesQuery.data]);
   const activeDiagnosis = useMemo(() => pickPrimaryDiagnosis(visitDiagnoses), [visitDiagnoses]);
+  const isLoading = diagnosesQuery.isLoading || diagnosesQuery.isFetching;
   const hydratedValues = useMemo(
     () => extractDiagnosesFormValues(activeDiagnosis),
     [activeDiagnosis]
@@ -60,6 +61,7 @@ export const DiagnosisReportLauncher: React.FC<DiagnosisReportLauncherProps> = (
       diagnosis={activeDiagnosis}
       values={hydratedValues}
       initialAction={initialAction}
+      isLoading={isLoading}
     />
   );
 };

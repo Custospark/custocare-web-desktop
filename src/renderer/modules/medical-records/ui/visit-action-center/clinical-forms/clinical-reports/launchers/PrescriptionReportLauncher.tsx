@@ -72,6 +72,13 @@ export const PrescriptionReportLauncher: React.FC<PrescriptionReportLauncherProp
     () => toPrescriptionFormData(currentPrescription),
     [currentPrescription]
   );
+  const isLoading =
+    patientPrescriptionsQuery.isLoading ||
+    currentPrescriptionQuery.isLoading ||
+    itemsQuery.isLoading ||
+    patientPrescriptionsQuery.isFetching ||
+    currentPrescriptionQuery.isFetching ||
+    itemsQuery.isFetching;
   const previewItems = useMemo(() => buildPreviewItems(medications), [medications]);
 
   useEffect(() => {
@@ -110,6 +117,7 @@ export const PrescriptionReportLauncher: React.FC<PrescriptionReportLauncherProp
       formData={formData}
       previewItems={previewItems}
       initialAction={initialAction}
+      isLoading={isLoading}
     />
   );
 };

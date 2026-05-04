@@ -13,6 +13,17 @@ interface LabRequestReportLauncherProps {
   theme?: 'light' | 'dark';
 }
 
+const extractLabRequest = (payload: unknown): LabRequest | null => {
+  if (!payload || typeof payload !== 'object') return null;
+  const candidate = payload as Partial<LabRequest>;
+  if (typeof candidate.request_uuid === 'string') return candidate as LabRequest;
+  const nested = payload as { data?: Partial<LabRequest> };
+  if (nested.data && typeof nested.data.request_uuid === 'string') {
+    return nested.data as LabRequest;
+  }
+  return null;
+};
+
 export const LabRequestReportLauncher: React.FC<LabRequestReportLauncherProps> = ({
   isOpen,
   onClose,
@@ -56,9 +67,14 @@ export const LabRequestReportLauncher: React.FC<LabRequestReportLauncherProps> =
   });
 
   const request = useMemo<LabRequest | null>(
-    () => requestQuery.data ?? resolvedRequest,
+    () => extractLabRequest(requestQuery.data) ?? resolvedRequest,
     [requestQuery.data, resolvedRequest]
   );
+  const isLoading =
+    visitRequestsQuery.isLoading ||
+    requestQuery.isLoading ||
+    visitRequestsQuery.isFetching ||
+    requestQuery.isFetching;
 
   useEffect(() => {
     if ((visitRequestsQuery.isError || requestQuery.isError) && isOpen) {
@@ -84,6 +100,7 @@ export const LabRequestReportLauncher: React.FC<LabRequestReportLauncherProps> =
       onClose={onClose}
       request={request}
       initialAction={initialAction}
+      isLoading={isLoading}
     />
   );
 };

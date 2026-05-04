@@ -39,6 +39,7 @@ export const ConsultationReportLauncher: React.FC<ConsultationReportLauncherProp
     () => pickPrimaryConsultation(visitConsultations),
     [visitConsultations]
   );
+  const isLoading = consultationsQuery.isLoading || consultationsQuery.isFetching;
   const hydratedValues = useMemo(
     () => extractConsultationsFormValues(activeConsultation),
     [activeConsultation]
@@ -67,6 +68,7 @@ export const ConsultationReportLauncher: React.FC<ConsultationReportLauncherProp
       consultation={activeConsultation}
       values={hydratedValues}
       initialAction={initialAction}
+      isLoading={isLoading}
     />
   );
 };

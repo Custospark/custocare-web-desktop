@@ -33,6 +33,7 @@ export const VitalsReportLauncher: React.FC<VitalsReportLauncherProps> = ({
 
   const visitVitals = useMemo(() => vitalsQuery.data?.data ?? [], [vitalsQuery.data]);
   const activeVitals = useMemo(() => pickPrimaryVitals(visitVitals), [visitVitals]);
+  const isLoading = vitalsQuery.isLoading || vitalsQuery.isFetching;
   const hydratedValues = useMemo(
     () => extractVitalsFormValues(activeVitals),
     [activeVitals]
@@ -60,6 +61,7 @@ export const VitalsReportLauncher: React.FC<VitalsReportLauncherProps> = ({
       vitals={activeVitals}
       values={hydratedValues}
       initialAction={initialAction}
+      isLoading={isLoading}
     />
   );
 };

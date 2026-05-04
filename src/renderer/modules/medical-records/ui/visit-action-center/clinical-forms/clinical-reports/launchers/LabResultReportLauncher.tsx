@@ -56,10 +56,25 @@ export const LabResultReportLauncher: React.FC<LabResultReportLauncherProps> = (
     refetchOnWindowFocus: false,
   });
 
-  const request = useMemo<LabRequest | null>(
-    () => requestQuery.data ?? resolvedRequest,
-    [requestQuery.data, resolvedRequest]
-  );
+  const request = useMemo<LabRequest | null>(() => {
+    // Unwrap payload if it's an ApiResponse<LabRequest>
+    const unwrap = (payload: unknown): LabRequest | null => {
+      if (!payload || typeof payload !== 'object') return null;
+      const candidate = payload as Partial<LabRequest>;
+      if (typeof candidate.request_uuid === 'string') return candidate as LabRequest;
+      const nested = payload as { data?: Partial<LabRequest> };
+      if (nested.data && typeof nested.data.request_uuid === 'string') {
+        return nested.data as LabRequest;
+      }
+      return null;
+    };
+    return unwrap(requestQuery.data) ?? resolvedRequest;
+  }, [requestQuery.data, resolvedRequest]);
+  const isLoading =
+    visitRequestsQuery.isLoading ||
+    requestQuery.isLoading ||
+    visitRequestsQuery.isFetching ||
+    requestQuery.isFetching;
 
   const resultsMap = useMemo<LabResultHydratedMap>(() => {
     const map: LabResultHydratedMap = {};
@@ -97,6 +112,7 @@ export const LabResultReportLauncher: React.FC<LabResultReportLauncherProps> = (
       request={request}
       resultsMap={resultsMap}
       initialAction={initialAction}
+      isLoading={isLoading}
     />
   );
 };
