@@ -6,6 +6,7 @@ import { ProtectedRoutes } from './ProtectedRoutes';
 import { ErrorRoutes } from './ErrorRoutes';
 import { FocusModeRoutes } from '../../modules/administration/onboarding/routes/FocusModeRoutes';
 import { selectTheme } from '../store/slices/uiSlice';
+import { selectActivePatient } from '../store/slices/visitSlice';
 
 /**
  * Main Application Routes Configuration
@@ -19,6 +20,7 @@ import { selectTheme } from '../store/slices/uiSlice';
 function AppRoutes() {
   // Get theme from Redux store
   const theme = useSelector(selectTheme);
+  const activePatient = useSelector(selectActivePatient);
 
   return (
     <Routes>
@@ -26,7 +28,7 @@ function AppRoutes() {
       {...OnboardingRoutes()}
       
       {/* Focus Mode Routes - Outside main layout, independent */}
-      {...FocusModeRoutes({ theme })}
+      {...FocusModeRoutes({ theme, patientName: activePatient?.name ?? null })}
       
       {/* Protected Routes - With main layout */}
       {...ProtectedRoutes()}

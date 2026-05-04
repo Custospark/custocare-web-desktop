@@ -33,14 +33,19 @@ const MedicalHistory = React.lazy(
 
 interface FocusModeRoutesProps {
   theme?: 'light' | 'dark';
+  patientName?: string | null;
 }
 
-export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
+export const FocusModeRoutes = ({ theme = 'light', patientName }: FocusModeRoutesProps) => {
+  const cleanPatientName = patientName?.trim() || 'Unknown Patient';
+  const withPatientTitle = (baseTitle: string) => `${baseTitle} - ${cleanPatientName}`;
+
+  return [
   <Route
     key="diagnosis-focus"
     path={FOCUS_MODE_ROUTES.DIAGNOSIS_FOCUS}
     element={
-      <FocusedModeLayout title="Clinical Diagnoses">
+      <FocusedModeLayout title={withPatientTitle('Clinical Diagnoses')}>
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <DiagnosisFocus theme={theme} />
         </Suspense>
@@ -51,7 +56,7 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
     key="allergy-focus"
     path={FOCUS_MODE_ROUTES.ALLERGY_FOCUS}
     element={
-      <FocusedModeLayout title="Patient Allergies">
+      <FocusedModeLayout title={withPatientTitle('Patient Allergies')}>
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <AllergyFocus theme={theme} />
         </Suspense>
@@ -62,7 +67,7 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
     key="consultations-focus"
     path={FOCUS_MODE_ROUTES.CONSULTATION_FOCUS}
     element={
-      <FocusedModeLayout title="Patient Consultations">
+      <FocusedModeLayout title={withPatientTitle('Patient Consultations')}>
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <ConsultationsFocus theme={theme} />
         </Suspense>
@@ -73,7 +78,7 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
     key="vitals-focus"
     path={FOCUS_MODE_ROUTES.VITALS_FOCUS}
     element={
-      <FocusedModeLayout title="Patient Vitals">
+      <FocusedModeLayout title={withPatientTitle('Patient Vitals')}>
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <VitalsFocus theme={theme} />
         </Suspense>
@@ -84,7 +89,7 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
     key="clinical-templates"
     path={FOCUS_MODE_ROUTES.CLINICAL_TEMPLATE_FOCUS}
     element={
-      <FocusedModeLayout title="Clinical Templates">
+      <FocusedModeLayout title={withPatientTitle('Clinical Templates')}>
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <ClinicalTemplateFocus theme={theme} />
         </Suspense>
@@ -95,7 +100,7 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
     key="clinical-notes-focus"
     path={FOCUS_MODE_ROUTES.CLINICAL_NOTES_FOCUS}
     element={
-      <FocusedModeLayout title="Clinical Notes">
+      <FocusedModeLayout title={withPatientTitle('Clinical Notes')}>
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <ClinicalNotesFocus theme={theme} />
         </Suspense>
@@ -106,7 +111,7 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
     key="prescription-focus"
     path={FOCUS_MODE_ROUTES.PRESCRIPTION_FOCUS}
     element={
-      <FocusedModeLayout title="Prescription">
+      <FocusedModeLayout title={withPatientTitle('Prescription')}>
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <PrescriptionFocus theme={theme} />
         </Suspense>
@@ -117,7 +122,7 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
     key="lab-request-focus"
     path={FOCUS_MODE_ROUTES.LAB_REQUEST_FOCUS}
     element={
-      <FocusedModeLayout title="Laboratory Request">
+      <FocusedModeLayout title={withPatientTitle('Laboratory Request')}>
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <LabRequestFocus theme={theme} />
         </Suspense>
@@ -128,7 +133,7 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
     key="lab-result-focus"
     path={FOCUS_MODE_ROUTES.LAB_RESULT_FOCUS}
     element={
-      <FocusedModeLayout title="Laboratory Test Results">
+      <FocusedModeLayout title={withPatientTitle('Laboratory Test Results')}>
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <LabResultFocus theme={theme} />
         </Suspense>
@@ -139,7 +144,7 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
     key="medical-history-latest-visit"
     path={FOCUS_MODE_ROUTES.LATEST_VISIT_FOCUS}
     element={
-      <FocusedModeLayout title="Current Visit">
+      <FocusedModeLayout title={withPatientTitle('Current Visit')}>
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <LatestVisit theme={theme} />
         </Suspense>
@@ -150,7 +155,7 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
     key="medical-history-full-record"
     path={FOCUS_MODE_ROUTES.MEDICAL_HISTORY_FOCUS}
     element={
-      <FocusedModeLayout title="Medical History">
+      <FocusedModeLayout title={withPatientTitle('Medical History')}>
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <MedicalHistory theme={theme} />
         </Suspense>
@@ -158,3 +163,4 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
     }
   />,
 ];
+};
