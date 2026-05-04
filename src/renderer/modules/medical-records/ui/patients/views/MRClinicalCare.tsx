@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSelector } from 'react-redux';
 import { 
   FileText, 
   Activity, 
@@ -18,6 +19,22 @@ import {
   Users
 } from 'lucide-react';
 import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/focusModeRouteConstants';
+import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
+import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
+import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clinicalNoteQueries';
+import { useGetActiveVisitVitals } from '../../../api/vitals/vitalQueries';
+import { useGetActiveVisitDiagnoses } from '../../../api/diagnosis/diagnosisQueries';
+import { useGetActiveVisitConsultations } from '../../../api/consultations/consultationQueries';
+import { useGetPatientPrescriptions, useGetPrescriptionById } from '../../../api/prescription/PrescriptionQueries';
+import { PrescriptionStatus, type Prescription } from '../../../api/prescription/PrescriptionTypes';
+import { useGetPrescriptionItems } from '../../../api/prescription-items/PrescriptionItemsQueries';
+import { useGetRequestWithItems, useGetRequestsByVisit } from '../../../api/lab/LabQueries';
+import { LabRequestStatus, type LabRequest } from '../../../api/lab/LabTypes';
+import { normalizeAllergyResponse } from '../../visit-action-center/clinical-forms/allergies-form-components';
+import { pickPrimaryClinicalNote } from '../../visit-action-center/clinical-forms/clinical-notes-form-components/clinicalNotesForm.utils';
+import { pickPrimaryVitals } from '../../visit-action-center/clinical-forms/vitals-form-components/vitalsForm.utils';
+import { pickPrimaryDiagnosis } from '../../visit-action-center/clinical-forms/diagnoses-form-components/diagnosesForm.utils';
+import { pickPrimaryConsultation } from '../../visit-action-center/clinical-forms/consultations-form-components/consultationsForm.utils';
 
 import {
   AllergyReportLauncher,
@@ -42,6 +59,10 @@ interface ActionItem {
   description: string;
   category: string;
   actionPrefix?: 'Add' | 'View';
+  statusInfo?: {
+    hasData: boolean;
+    message: string;
+  };
   handler: () => void;
 }
 
@@ -51,9 +72,29 @@ interface ReportModalState {
   action: 'preview' | 'print' | 'download';
 }
 
+const getStatusInfo = (hasData: boolean, documentedNoun: string, ctaVerb: string) => ({
+  hasData,
+  message: hasData
+    ? `${documentedNoun} documented - review/update`
+    : `Not documented - ${ctaVerb}`,
+});
+
+const resolveRequestFromApiPayload = (payload: unknown): LabRequest | null => {
+  if (!payload || typeof payload !== 'object') return null;
+  const candidate = payload as Partial<LabRequest>;
+  if (typeof candidate.request_uuid === 'string') return candidate as LabRequest;
+  const nested = payload as { data?: Partial<LabRequest> };
+  if (nested.data && typeof nested.data.request_uuid === 'string') {
+    return nested.data as LabRequest;
+  }
+  return null;
+};
+
 export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' }) => {
   const navigate = useNavigate();
   const isDark = theme === 'dark';
+  const activeVisitId = useSelector(selectActiveVisitId);
+  const activePatientId = useSelector(selectActiveVisitPatientId);
   const [activeTab, setActiveTab] = useState<ActiveTab>('record-care');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -62,6 +103,87 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
     isOpen: false,
     module: null,
     action: 'preview',
+  });
+
+  const notesQuery = useGetActiveVisitClinicalNotes({
+    enabled: !!activeVisitId,
+  });
+  const vitalsQuery = useGetActiveVisitVitals({
+    enabled: !!activeVisitId,
+  });
+  const diagnosesQuery = useGetActiveVisitDiagnoses({
+    enabled: !!activeVisitId,
+  });
+  const consultationsQuery = useGetActiveVisitConsultations({
+    enabled: !!activeVisitId,
+  });
+  const allergiesQuery = useGetAllergies(activePatientId ?? '', {}, {
+    enabled: !!activePatientId,
+  });
+  const prescriptionsQuery = useGetPatientPrescriptions(Number(activePatientId ?? 0), [], {
+    enabled: !!activePatientId,
+  });
+  const labRequestsQuery = useGetRequestsByVisit(Number(activeVisitId ?? 0), {
+    enabled: !!activeVisitId,
+  });
+  const visitRequests = useMemo(() => labRequestsQuery.data ?? [], [labRequestsQuery.data]);
+  const activeLabRequestForOrders = useMemo<LabRequest | null>(() => {
+    if (!visitRequests.length) return null;
+    const pendingOrActive = visitRequests.filter((request) =>
+      [LabRequestStatus.PENDING, LabRequestStatus.IN_PROGRESS].includes(request.status)
+    );
+    const candidatePool = pendingOrActive.length ? pendingOrActive : visitRequests;
+    return [...candidatePool].sort((a, b) => {
+      const aTime = new Date(a.updated_at ?? a.created_at).getTime();
+      const bTime = new Date(b.updated_at ?? b.created_at).getTime();
+      return bTime - aTime;
+    })[0] ?? null;
+  }, [visitRequests]);
+  const activeLabRequestForResults = useMemo<LabRequest | null>(() => {
+    if (!visitRequests.length) return null;
+    const inProgressOrCompleted = visitRequests.filter((request) =>
+      [LabRequestStatus.IN_PROGRESS, LabRequestStatus.COMPLETED].includes(request.status)
+    );
+    const candidatePool = inProgressOrCompleted.length ? inProgressOrCompleted : visitRequests;
+    return [...candidatePool].sort((a, b) => {
+      const aTime = new Date(a.updated_at ?? a.created_at).getTime();
+      const bTime = new Date(b.updated_at ?? b.created_at).getTime();
+      return bTime - aTime;
+    })[0] ?? null;
+  }, [visitRequests]);
+  const labResultRequestQuery = useGetRequestWithItems(
+    activeLabRequestForResults?.request_uuid ?? '',
+    {
+      enabled: !!activeLabRequestForResults?.request_uuid,
+      refetchOnMount: 'always',
+      refetchOnWindowFocus: false,
+      staleTime: 0,
+    }
+  );
+
+  const resolvedExistingPrescription = useMemo<Prescription | null>(() => {
+    const prescriptions = prescriptionsQuery.data?.data ?? [];
+    if (!prescriptions.length) return null;
+    const drafts = prescriptions.filter((item) => item.status === PrescriptionStatus.DRAFT);
+    const candidatePool = drafts.length ? drafts : prescriptions;
+    return [...candidatePool].sort((a, b) => {
+      const aTime = new Date(a.updated_at || a.created_at).getTime();
+      const bTime = new Date(b.updated_at || b.created_at).getTime();
+      return bTime - aTime;
+    })[0] ?? null;
+  }, [prescriptionsQuery.data]);
+  const selectedPrescriptionId = resolvedExistingPrescription?.id ?? 0;
+  const selectedPrescriptionQuery = useGetPrescriptionById(selectedPrescriptionId, {
+    enabled: !!selectedPrescriptionId,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    staleTime: 0,
+  });
+  const selectedPrescriptionItemsQuery = useGetPrescriptionItems(selectedPrescriptionId, {
+    enabled: !!selectedPrescriptionId,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    staleTime: 0,
   });
 
   const colors = {
@@ -94,6 +216,54 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
     },
   };
 
+  const moduleStatus = useMemo(() => {
+    const normalizedAllergies = normalizeAllergyResponse(allergiesQuery.data);
+    const notesList = notesQuery.data?.data ?? [];
+    const vitalsList = vitalsQuery.data?.data ?? [];
+    const diagnosesList = diagnosesQuery.data?.data ?? [];
+    const consultationsList = consultationsQuery.data?.data ?? [];
+    const currentPrescription =
+      selectedPrescriptionQuery.data?.data ?? resolvedExistingPrescription;
+    const prescriptionItems = selectedPrescriptionItemsQuery.data?.data ?? [];
+    const labResultRequest =
+      resolveRequestFromApiPayload(labResultRequestQuery.data) ?? activeLabRequestForResults;
+    const labResultCount =
+      labResultRequest?.items?.reduce((sum, item) => {
+        const currentCount = Array.isArray(item.results) ? item.results.length : 0;
+        return sum + currentCount;
+      }, 0) ?? 0;
+
+    const hasClinicalNote = !!pickPrimaryClinicalNote(notesList);
+    const hasVitals = !!pickPrimaryVitals(vitalsList);
+    const hasDiagnosis = !!pickPrimaryDiagnosis(diagnosesList);
+    const hasConsultation = !!pickPrimaryConsultation(consultationsList);
+    const hasPrescription = !!currentPrescription || prescriptionItems.length > 0;
+
+    return {
+      allergies: getStatusInfo(normalizedAllergies.allergies.length > 0, 'Allergy profile', 'capture allergy history'),
+      clinicalNotes: getStatusInfo(hasClinicalNote, 'Clinical note', 'document SOAP notes'),
+      vitals: getStatusInfo(hasVitals, 'Vital signs', 'record vitals'),
+      diagnoses: getStatusInfo(hasDiagnosis, 'Diagnosis', 'add a diagnosis'),
+      consultations: getStatusInfo(hasConsultation, 'Consultation', 'add consultation notes'),
+      prescriptions: getStatusInfo(hasPrescription, 'Prescription', 'enter prescription orders'),
+      labRequests: getStatusInfo(!!activeLabRequestForOrders, 'Lab request', 'order lab tests'),
+      labResults: getStatusInfo(labResultCount > 0, 'Lab result', 'enter lab results'),
+      clinicalTemplates: getStatusInfo(hasClinicalNote, 'Clinical template', 'complete template notes'),
+    };
+  }, [
+    activeLabRequestForOrders,
+    activeLabRequestForResults,
+    allergiesQuery.data,
+    consultationsQuery.data,
+    diagnosesQuery.data,
+    labResultRequestQuery.data,
+    notesQuery.data,
+    resolvedExistingPrescription,
+    selectedPrescriptionItemsQuery.data?.data,
+    selectedPrescriptionQuery.data?.data,
+    vitalsQuery.data,
+  ]);
+
   // Open report modal
   const openReport = useCallback((module: ReportModalState['module'], action: 'preview' | 'print' | 'download' = 'preview') => {
     setReportModal({
@@ -121,6 +291,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Record patient allergies, reactions, and severity levels',
       category: 'Clinical',
       actionPrefix: 'Add',
+      statusInfo: moduleStatus.allergies,
       handler: () => navigate(FOCUS_MODE_ROUTES.ALLERGY_FOCUS)
     },
     { 
@@ -130,6 +301,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Record symptoms, observations, and examination findings',
       category: 'Documentation',
       actionPrefix: 'Add',
+      statusInfo: moduleStatus.clinicalNotes,
       handler: () => navigate(FOCUS_MODE_ROUTES.CLINICAL_NOTES_FOCUS)
     },
     { 
@@ -139,6 +311,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Subjective, Objective, Assessment, and Plan documentation',
       category: 'Documentation',
       actionPrefix: 'Add',
+      statusInfo: moduleStatus.clinicalTemplates,
       handler: () => navigate(FOCUS_MODE_ROUTES.CLINICAL_TEMPLATE_FOCUS)
     },
     { 
@@ -148,6 +321,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Record primary and secondary diagnoses',
       category: 'Clinical',
       actionPrefix: 'Add',
+      statusInfo: moduleStatus.diagnoses,
       handler: () => navigate(FOCUS_MODE_ROUTES.DIAGNOSIS_FOCUS)
     },
     { 
@@ -157,6 +331,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Record temperature, blood pressure, heart rate, and other vital signs',
       category: 'Clinical',
       actionPrefix: 'Add',
+      statusInfo: moduleStatus.vitals,
       handler: () => navigate(FOCUS_MODE_ROUTES.VITALS_FOCUS)
     },
     { 
@@ -166,6 +341,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Record consultation notes, referrals, and specialist opinions',
       category: 'Clinical',
       actionPrefix: 'Add',
+      statusInfo: moduleStatus.consultations,
       handler: () => navigate(FOCUS_MODE_ROUTES.CONSULTATION_FOCUS)
     },
     { 
@@ -175,6 +351,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Prescribe medications with dosage and frequency',
       category: 'Treatment',
       actionPrefix: 'Add',
+      statusInfo: moduleStatus.prescriptions,
       handler: () => navigate(FOCUS_MODE_ROUTES.PRESCRIPTION_FOCUS)
     },
     { 
@@ -184,6 +361,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Request laboratory tests and investigations',
       category: 'Diagnostics',
       actionPrefix: 'Add',
+      statusInfo: moduleStatus.labRequests,
       handler: () => navigate(FOCUS_MODE_ROUTES.LAB_REQUEST_FOCUS)
     },
     { 
@@ -193,9 +371,10 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Enter and review laboratory results',
       category: 'Diagnostics',
       actionPrefix: 'Add',
+      statusInfo: moduleStatus.labResults,
       handler: () => navigate(FOCUS_MODE_ROUTES.LAB_RESULT_FOCUS)
     },
-  ], [navigate]);
+  ], [moduleStatus, navigate]);
 
   // Report Options - Opens modals instead of navigation
   const reportOptions: ActionItem[] = useMemo(() => [
@@ -206,6 +385,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Complete allergy documentation for this patient',
       category: 'Clinical',
       actionPrefix: 'View',
+      statusInfo: moduleStatus.allergies,
       handler: () => openReport('allergies', 'preview')
     },
     { 
@@ -215,6 +395,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Complete clinical notes documentation',
       category: 'Documentation',
       actionPrefix: 'View',
+      statusInfo: moduleStatus.clinicalNotes,
       handler: () => openReport('clinical-notes', 'preview')
     },
     { 
@@ -224,6 +405,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Vital signs summary report',
       category: 'Clinical',
       actionPrefix: 'View',
+      statusInfo: moduleStatus.vitals,
       handler: () => openReport('vitals', 'preview')
     },
     { 
@@ -233,6 +415,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Diagnosis documentation report',
       category: 'Clinical',
       actionPrefix: 'View',
+      statusInfo: moduleStatus.diagnoses,
       handler: () => openReport('diagnoses', 'preview')
     },
     { 
@@ -242,6 +425,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Consultation notes and recommendations',
       category: 'Clinical',
       actionPrefix: 'View',
+      statusInfo: moduleStatus.consultations,
       handler: () => openReport('consultations', 'preview')
     },
     { 
@@ -251,6 +435,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Printable prescription document',
       category: 'Treatment',
       actionPrefix: 'View',
+      statusInfo: moduleStatus.prescriptions,
       handler: () => openReport('prescriptions', 'preview')
     },
     { 
@@ -260,6 +445,7 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Laboratory request document',
       category: 'Diagnostics',
       actionPrefix: 'View',
+      statusInfo: moduleStatus.labRequests,
       handler: () => openReport('lab-requests', 'preview')
     },
     { 
@@ -269,9 +455,10 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Laboratory test results report',
       category: 'Diagnostics',
       actionPrefix: 'View',
+      statusInfo: moduleStatus.labResults,
       handler: () => openReport('lab-results', 'preview')
     },
-  ], [openReport]);
+  ], [moduleStatus, openReport]);
 
   const currentItems = activeTab === 'record-care' ? formOptions : reportOptions;
 
@@ -301,6 +488,13 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       return isDark ? 'text-green-400 bg-green-900/20' : 'text-green-600 bg-green-50';
     }
     return isDark ? 'text-blue-400 bg-blue-900/20' : 'text-blue-600 bg-blue-50';
+  };
+
+  const getStatusColor = (hasData: boolean) => {
+    if (hasData) {
+      return isDark ? 'text-emerald-400 bg-emerald-900/20' : 'text-emerald-700 bg-emerald-50';
+    }
+    return isDark ? 'text-amber-400 bg-amber-900/20' : 'text-amber-700 bg-amber-50';
   };
 
   return (
@@ -350,6 +544,8 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
           {searchQuery && (
             <button
               onClick={clearSearch}
+              aria-label="Clear search"
+              title="Clear search"
               className={`absolute right-3 cursor-pointer rounded-full p-0.5 transition-colors ${colors.bg.hover}`}
             >
               <X className={`h-4 w-4 ${colors.text.tertiary}`} />
@@ -427,6 +623,15 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
                         <span className={`mt-1 inline-block text-xs ${colors.text.tertiary}`}>
                           {option.category}
                         </span>
+                      )}
+                      {option.statusInfo && (
+                        <div className="mt-2">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(option.statusInfo.hasData)}`}
+                          >
+                            {option.statusInfo.message}
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>

@@ -19,8 +19,7 @@ import {
   Stethoscope,
   FileSpreadsheet,
 } from 'lucide-react';
-// import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
-import { selectActiveVisitId } from '../../../../../app/store/slices/visitSlice';
+import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
 import AllergyForm from '../clinical-forms/AllergyForm';
 import ClinicalNotesForm from '../clinical-forms/ClinicalNotesForm';
 import VitalsForm from '../clinical-forms/VitalsForm';
@@ -30,6 +29,21 @@ import PrescriptionForm from '../clinical-forms/PrescriptionForm';
 import LabRequestForm from '../clinical-forms/LabRequestForm';
 import LabResultForm from '../clinical-forms/LabResultForm';
 import ClinicalTemplateForm from '../clinical-forms/ClinicalTemplateForm';
+import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
+import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clinicalNoteQueries';
+import { useGetActiveVisitVitals } from '../../../api/vitals/vitalQueries';
+import { useGetActiveVisitDiagnoses } from '../../../api/diagnosis/diagnosisQueries';
+import { useGetActiveVisitConsultations } from '../../../api/consultations/consultationQueries';
+import { useGetPatientPrescriptions, useGetPrescriptionById } from '../../../api/prescription/PrescriptionQueries';
+import { PrescriptionStatus, type Prescription } from '../../../api/prescription/PrescriptionTypes';
+import { useGetPrescriptionItems } from '../../../api/prescription-items/PrescriptionItemsQueries';
+import { useGetRequestWithItems, useGetRequestsByVisit } from '../../../api/lab/LabQueries';
+import { LabRequestStatus, type LabRequest } from '../../../api/lab/LabTypes';
+import { normalizeAllergyResponse } from '../clinical-forms/allergies-form-components';
+import { pickPrimaryClinicalNote } from '../clinical-forms/clinical-notes-form-components/clinicalNotesForm.utils';
+import { pickPrimaryVitals } from '../clinical-forms/vitals-form-components/vitalsForm.utils';
+import { pickPrimaryDiagnosis } from '../clinical-forms/diagnoses-form-components/diagnosesForm.utils';
+import { pickPrimaryConsultation } from '../clinical-forms/consultations-form-components/consultationsForm.utils';
 
 interface CurrentVisitProps {
   theme?: 'light' | 'dark';
@@ -65,7 +79,29 @@ interface FormOption {
     | typeof ClinicalTemplateForm
     | null;
   isAvailable: boolean;
+  statusInfo?: {
+    hasData: boolean;
+    message: string;
+  };
 }
+
+const getStatusInfo = (hasData: boolean, documentedNoun: string, ctaVerb: string) => ({
+  hasData,
+  message: hasData
+    ? `${documentedNoun} documented - review/update`
+    : `Not documented - ${ctaVerb}`,
+});
+
+const resolveRequestFromApiPayload = (payload: unknown): LabRequest | null => {
+  if (!payload || typeof payload !== 'object') return null;
+  const candidate = payload as Partial<LabRequest>;
+  if (typeof candidate.request_uuid === 'string') return candidate as LabRequest;
+  const nested = payload as { data?: Partial<LabRequest> };
+  if (nested.data && typeof nested.data.request_uuid === 'string') {
+    return nested.data as LabRequest;
+  }
+  return null;
+};
 
 // Form Registry - Single source of truth for all forms
 const FORM_REGISTRY: FormOption[] = [
@@ -155,16 +191,174 @@ const FORM_REGISTRY: FormOption[] = [
 export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) => {
   const isDark = theme === 'dark';
   const activeVisitId = useSelector(selectActiveVisitId);
-//   const activePatientId = useSelector(selectActiveVisitPatientId);
+  const activePatientId = useSelector(selectActiveVisitPatientId);
 
   // State for selected form
   const [selectedForm, setSelectedForm] = useState<FormModule>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const notesQuery = useGetActiveVisitClinicalNotes({
+    enabled: !!activeVisitId,
+  });
+  const vitalsQuery = useGetActiveVisitVitals({
+    enabled: !!activeVisitId,
+  });
+  const diagnosesQuery = useGetActiveVisitDiagnoses({
+    enabled: !!activeVisitId,
+  });
+  const consultationsQuery = useGetActiveVisitConsultations({
+    enabled: !!activeVisitId,
+  });
+  const allergiesQuery = useGetAllergies(activePatientId ?? '', {}, {
+    enabled: !!activePatientId,
+  });
+  const prescriptionsQuery = useGetPatientPrescriptions(Number(activePatientId ?? 0), [], {
+    enabled: !!activePatientId,
+  });
+  const labRequestsQuery = useGetRequestsByVisit(Number(activeVisitId ?? 0), {
+    enabled: !!activeVisitId,
+  });
+  const visitRequests = useMemo(() => labRequestsQuery.data ?? [], [labRequestsQuery.data]);
+  const activeLabRequestForOrders = useMemo<LabRequest | null>(() => {
+    if (!visitRequests.length) return null;
+    const pendingOrActive = visitRequests.filter((request) =>
+      [LabRequestStatus.PENDING, LabRequestStatus.IN_PROGRESS].includes(request.status)
+    );
+    const candidatePool = pendingOrActive.length ? pendingOrActive : visitRequests;
+    return [...candidatePool].sort((a, b) => {
+      const aTime = new Date(a.updated_at ?? a.created_at).getTime();
+      const bTime = new Date(b.updated_at ?? b.created_at).getTime();
+      return bTime - aTime;
+    })[0] ?? null;
+  }, [visitRequests]);
+  const activeLabRequestForResults = useMemo<LabRequest | null>(() => {
+    if (!visitRequests.length) return null;
+    const inProgressOrCompleted = visitRequests.filter((request) =>
+      [LabRequestStatus.IN_PROGRESS, LabRequestStatus.COMPLETED].includes(request.status)
+    );
+    const candidatePool = inProgressOrCompleted.length ? inProgressOrCompleted : visitRequests;
+    return [...candidatePool].sort((a, b) => {
+      const aTime = new Date(a.updated_at ?? a.created_at).getTime();
+      const bTime = new Date(b.updated_at ?? b.created_at).getTime();
+      return bTime - aTime;
+    })[0] ?? null;
+  }, [visitRequests]);
+  const labResultRequestQuery = useGetRequestWithItems(
+    activeLabRequestForResults?.request_uuid ?? '',
+    {
+      enabled: !!activeLabRequestForResults?.request_uuid,
+      refetchOnMount: 'always',
+      refetchOnWindowFocus: false,
+      staleTime: 0,
+    }
+  );
+
+  const resolvedExistingPrescription = useMemo<Prescription | null>(() => {
+    const prescriptions = prescriptionsQuery.data?.data ?? [];
+    if (!prescriptions.length) return null;
+    const drafts = prescriptions.filter((item) => item.status === PrescriptionStatus.DRAFT);
+    const candidatePool = drafts.length ? drafts : prescriptions;
+    return [...candidatePool].sort((a, b) => {
+      const aTime = new Date(a.updated_at || a.created_at).getTime();
+      const bTime = new Date(b.updated_at || b.created_at).getTime();
+      return bTime - aTime;
+    })[0] ?? null;
+  }, [prescriptionsQuery.data]);
+  const selectedPrescriptionId = resolvedExistingPrescription?.id ?? 0;
+  const selectedPrescriptionQuery = useGetPrescriptionById(selectedPrescriptionId, {
+    enabled: !!selectedPrescriptionId,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    staleTime: 0,
+  });
+  const selectedPrescriptionItemsQuery = useGetPrescriptionItems(selectedPrescriptionId, {
+    enabled: !!selectedPrescriptionId,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    staleTime: 0,
+  });
+
+  const moduleStatus = useMemo(() => {
+    const normalizedAllergies = normalizeAllergyResponse(allergiesQuery.data);
+    const notesList = notesQuery.data?.data ?? [];
+    const vitalsList = vitalsQuery.data?.data ?? [];
+    const diagnosesList = diagnosesQuery.data?.data ?? [];
+    const consultationsList = consultationsQuery.data?.data ?? [];
+    const currentPrescription =
+      selectedPrescriptionQuery.data?.data ?? resolvedExistingPrescription;
+    const prescriptionItems = selectedPrescriptionItemsQuery.data?.data ?? [];
+    const labResultRequest =
+      resolveRequestFromApiPayload(labResultRequestQuery.data) ?? activeLabRequestForResults;
+    const labResultCount =
+      labResultRequest?.items?.reduce((sum, item) => {
+        const currentCount = Array.isArray(item.results) ? item.results.length : 0;
+        return sum + currentCount;
+      }, 0) ?? 0;
+
+    const hasClinicalNote = !!pickPrimaryClinicalNote(notesList);
+    const hasVitals = !!pickPrimaryVitals(vitalsList);
+    const hasDiagnosis = !!pickPrimaryDiagnosis(diagnosesList);
+    const hasConsultation = !!pickPrimaryConsultation(consultationsList);
+    const hasPrescription = !!currentPrescription || prescriptionItems.length > 0;
+
+    return {
+      allergies: getStatusInfo(normalizedAllergies.allergies.length > 0, 'Allergy profile', 'capture allergy history'),
+      clinicalNotes: getStatusInfo(hasClinicalNote, 'Clinical note', 'document SOAP notes'),
+      vitals: getStatusInfo(hasVitals, 'Vital signs', 'record vitals'),
+      diagnoses: getStatusInfo(hasDiagnosis, 'Diagnosis', 'add a diagnosis'),
+      consultations: getStatusInfo(hasConsultation, 'Consultation', 'add consultation notes'),
+      prescriptions: getStatusInfo(hasPrescription, 'Prescription', 'enter prescription orders'),
+      labRequests: getStatusInfo(!!activeLabRequestForOrders, 'Lab request', 'order lab tests'),
+      labResults: getStatusInfo(labResultCount > 0, 'Lab result', 'enter lab results'),
+      clinicalTemplate: getStatusInfo(hasClinicalNote, 'Clinical template', 'complete template notes'),
+    };
+  }, [
+    activeLabRequestForOrders,
+    activeLabRequestForResults,
+    allergiesQuery.data,
+    consultationsQuery.data,
+    diagnosesQuery.data,
+    labResultRequestQuery.data,
+    notesQuery.data,
+    resolvedExistingPrescription,
+    selectedPrescriptionItemsQuery.data?.data,
+    selectedPrescriptionQuery.data?.data,
+    vitalsQuery.data,
+  ]);
+
+  const formsWithStatus = useMemo(
+    () =>
+      FORM_REGISTRY.map((form) => {
+        switch (form.id) {
+          case 'allergies':
+            return { ...form, statusInfo: moduleStatus.allergies };
+          case 'clinical-notes':
+            return { ...form, statusInfo: moduleStatus.clinicalNotes };
+          case 'vitals':
+            return { ...form, statusInfo: moduleStatus.vitals };
+          case 'diagnoses':
+            return { ...form, statusInfo: moduleStatus.diagnoses };
+          case 'consultations':
+            return { ...form, statusInfo: moduleStatus.consultations };
+          case 'prescriptions':
+            return { ...form, statusInfo: moduleStatus.prescriptions };
+          case 'lab-requests':
+            return { ...form, statusInfo: moduleStatus.labRequests };
+          case 'lab-results':
+            return { ...form, statusInfo: moduleStatus.labResults };
+          case 'clinical-template':
+            return { ...form, statusInfo: moduleStatus.clinicalTemplate };
+          default:
+            return form;
+        }
+      }),
+    [moduleStatus]
+  );
+
   // Filter available forms
   const availableForms = useMemo(() => 
-    FORM_REGISTRY.filter(form => form.isAvailable),
-    []
+    formsWithStatus.filter((form) => form.isAvailable),
+    [formsWithStatus]
   );
 
   // Filter forms by search
@@ -182,9 +376,9 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
   // Get the selected form component
   const SelectedFormComponent = useMemo(() => {
     if (!selectedForm) return null;
-    const form = FORM_REGISTRY.find(f => f.id === selectedForm);
+    const form = formsWithStatus.find((f) => f.id === selectedForm);
     return form?.component;
-  }, [selectedForm]);
+  }, [formsWithStatus, selectedForm]);
 
   const handleSelectForm = useCallback((formId: FormModule) => {
     setSelectedForm(formId);
@@ -225,6 +419,13 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
     border: {
       primary: isDark ? 'border-gray-700' : 'border-gray-200',
     },
+  };
+
+  const getStatusColor = (hasData: boolean) => {
+    if (hasData) {
+      return isDark ? 'text-emerald-400 bg-emerald-900/20' : 'text-emerald-700 bg-emerald-50';
+    }
+    return isDark ? 'text-amber-400 bg-amber-900/20' : 'text-amber-700 bg-amber-50';
   };
 
   // Check if visit is active
@@ -277,6 +478,8 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
             {searchQuery && (
               <button
                 onClick={clearSearch}
+                aria-label="Clear search"
+                title="Clear search"
                 className={`absolute right-3 rounded-full p-0.5 transition-colors ${colors.bg.hover}`}
               >
                 <X className={`h-4 w-4 ${colors.text.tertiary}`} />
@@ -337,6 +540,15 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
                   <span className={`inline-block text-xs px-2 py-0.5 rounded-full ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
                     {form.category}
                   </span>
+                  {form.statusInfo && (
+                    <div className="mt-2">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(form.statusInfo.hasData)}`}
+                      >
+                        {form.statusInfo.message}
+                      </span>
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -344,7 +556,7 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
         </div>
 
         {/* Coming Soon Section - Only show if there are unavailable forms */}
-        {FORM_REGISTRY.filter(f => !f.isAvailable).length > 0 && (
+        {formsWithStatus.filter((f) => !f.isAvailable).length > 0 && (
           <div className={`mt-6 rounded-lg border border-dashed p-4 ${colors.border.primary} ${colors.bg.card}`}>
             <p className={`text-xs ${colors.text.tertiary}`}>
               📋 Additional clinical documents (Diagnosis, Vitals, Prescriptions, Lab Results) coming soon
@@ -371,10 +583,10 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
           <div className="h-6 w-px bg-gray-300 dark:bg-gray-700" />
           <div className="flex items-center gap-2">
             <div className={`rounded-lg p-1.5 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-              {FORM_REGISTRY.find(f => f.id === selectedForm)?.icon}
+              {formsWithStatus.find((f) => f.id === selectedForm)?.icon}
             </div>
             <h2 className={`text-lg font-semibold ${colors.text.primary}`}>
-              {FORM_REGISTRY.find(f => f.id === selectedForm)?.label}
+              {formsWithStatus.find((f) => f.id === selectedForm)?.label}
             </h2>
             <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
               Current Visit
