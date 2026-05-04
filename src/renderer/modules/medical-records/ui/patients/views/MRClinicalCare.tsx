@@ -1,4 +1,3 @@
-// MRClinicalCare.tsx
 import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,6 +19,7 @@ import {
 } from 'lucide-react';
 import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/focusModeRouteConstants';
 
+import { AllergyReportLauncher, ClinicalNoteReportLauncher } from '../../visit-action-center/clinical-forms/clinical-reports/launchers';
 interface MRClinicalCareProps {
   theme?: 'light' | 'dark';
 }
@@ -30,10 +30,16 @@ interface ActionItem {
   key: string;
   label: string;
   icon: React.ReactNode;
+  description: string;
+  category: string;
+  actionPrefix?: 'Add' | 'View';
   handler: () => void;
-  description?: string;
-  category?: string;
-  actionPrefix?: string;
+}
+
+interface ReportModalState {
+  isOpen: boolean;
+  module: 'allergies' | 'clinical-notes' | 'vitals' | 'diagnoses' | 'consultations' | 'prescriptions' | 'lab-requests' | 'lab-results' | null;
+  action: 'preview' | 'print' | 'download';
 }
 
 export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' }) => {
@@ -41,6 +47,13 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
   const isDark = theme === 'dark';
   const [activeTab, setActiveTab] = useState<ActiveTab>('record-care');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Report modal state
+  const [reportModal, setReportModal] = useState<ReportModalState>({
+    isOpen: false,
+    module: null,
+    action: 'preview',
+  });
 
   const colors = {
     bg: {
@@ -72,102 +85,155 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
     },
   };
 
-  // Record Care Form Options with "Add:" prefix
-// Record Care Form Options with "Add:" prefix
-const formOptions: ActionItem[] = useMemo(() => [
-  { 
-    key: 'allergy', 
-    label: 'Allergy', 
-    icon: <AlertTriangle className="w-5 h-5" />, 
-    description: 'Record patient allergies, reactions, and severity levels',
-    category: 'Clinical',
-    actionPrefix: 'Add',
-    handler: () => navigate(FOCUS_MODE_ROUTES.ALLERGY_FOCUS)
-  },
-  { 
-    key: 'clinical-notes', 
-    label: 'Clinical Notes', 
-    icon: <FileText className="w-5 h-5" />, 
-    description: 'Record symptoms, observations, and examination findings',
-    category: 'Documentation',
-    actionPrefix: 'Add',
-    handler: () => navigate(FOCUS_MODE_ROUTES.CLINICAL_NOTES_FOCUS)
-  },
-  { 
-    key: 'clinical-templates', 
-    label: 'Clinical Template', 
-    icon: <FileText className="w-5 h-5" />, 
-    description: 'Subjective, Objective, Assessment, and Plan documentation',
-    category: 'Documentation',
-    actionPrefix: 'Add',
-    handler: () => navigate(FOCUS_MODE_ROUTES.CLINICAL_TEMPLATE_FOCUS)
-  },
-  { 
-    key: 'diagnosis', 
-    label: 'Diagnosis', 
-    icon: <Activity className="w-5 h-5" />, 
-    description: 'Record primary and secondary diagnoses',
-    category: 'Clinical',
-    actionPrefix: 'Add',
-    handler: () => navigate(FOCUS_MODE_ROUTES.DIAGNOSIS_FOCUS)
-  },
-  { 
-    key: 'vitals', 
-    label: 'Vitals', 
-    icon: <Heart className="w-5 h-5" />, 
-    description: 'Record temperature, blood pressure, heart rate, and other vital signs',
-    category: 'Clinical',
-    actionPrefix: 'Add',
-    handler: () => navigate(FOCUS_MODE_ROUTES.VITALS_FOCUS)
-  },
-  { 
-    key: 'consultation', 
-    label: 'Consultation', 
-    icon: <Users className="w-5 h-5" />, 
-    description: 'Record consultation notes, referrals, and specialist opinions',
-    category: 'Clinical',
-    actionPrefix: 'Add',
-    handler: () => navigate(FOCUS_MODE_ROUTES.CONSULTATION_FOCUS)
-  },
-  { 
-    key: 'prescription', 
-    label: 'Prescription', 
-    icon: <Pill className="w-5 h-5" />, 
-    description: 'Prescribe medications with dosage and frequency',
-    category: 'Treatment',
-    actionPrefix: 'Add',
-    handler: () => navigate(FOCUS_MODE_ROUTES.PRESCRIPTION_FOCUS)
-  },
-  { 
-    key: 'lab-request', 
-    label: 'Lab Request', 
-    icon: <Microscope className="w-5 h-5" />, 
-    description: 'Request laboratory tests and investigations',
-    category: 'Diagnostics',
-    actionPrefix: 'Add',
-    handler: () => navigate(FOCUS_MODE_ROUTES.LAB_REQUEST_FOCUS)
-  },
-  { 
-    key: 'lab-result', 
-    label: 'Lab Result', 
-    icon: <ClipboardList className="w-5 h-5" />, 
-    description: 'Enter and review laboratory results',
-    category: 'Diagnostics',
-    actionPrefix: 'Add',
-    handler: () => navigate(FOCUS_MODE_ROUTES.LAB_RESULT_FOCUS)
-  },
-], [navigate]);
+  // Open report modal
+  const openReport = useCallback((module: ReportModalState['module'], action: 'preview' | 'print' | 'download' = 'preview') => {
+    setReportModal({
+      isOpen: true,
+      module,
+      action,
+    });
+  }, []);
 
-  // Report Options with "View" prefix
+  // Close report modal
+  const closeReport = useCallback(() => {
+    setReportModal({
+      isOpen: false,
+      module: null,
+      action: 'preview',
+    });
+  }, []);
+
+  // Record Care Form Options
+  const formOptions: ActionItem[] = useMemo(() => [
+    { 
+      key: 'allergy', 
+      label: 'Allergy', 
+      icon: <AlertTriangle className="w-5 h-5" />, 
+      description: 'Record patient allergies, reactions, and severity levels',
+      category: 'Clinical',
+      actionPrefix: 'Add',
+      handler: () => navigate(FOCUS_MODE_ROUTES.ALLERGY_FOCUS)
+    },
+    { 
+      key: 'clinical-notes', 
+      label: 'Clinical Notes', 
+      icon: <FileText className="w-5 h-5" />, 
+      description: 'Record symptoms, observations, and examination findings',
+      category: 'Documentation',
+      actionPrefix: 'Add',
+      handler: () => navigate(FOCUS_MODE_ROUTES.CLINICAL_NOTES_FOCUS)
+    },
+    { 
+      key: 'clinical-templates', 
+      label: 'Clinical Template', 
+      icon: <FileText className="w-5 h-5" />, 
+      description: 'Subjective, Objective, Assessment, and Plan documentation',
+      category: 'Documentation',
+      actionPrefix: 'Add',
+      handler: () => navigate(FOCUS_MODE_ROUTES.CLINICAL_TEMPLATE_FOCUS)
+    },
+    { 
+      key: 'diagnosis', 
+      label: 'Diagnosis', 
+      icon: <Activity className="w-5 h-5" />, 
+      description: 'Record primary and secondary diagnoses',
+      category: 'Clinical',
+      actionPrefix: 'Add',
+      handler: () => navigate(FOCUS_MODE_ROUTES.DIAGNOSIS_FOCUS)
+    },
+    { 
+      key: 'vitals', 
+      label: 'Vitals', 
+      icon: <Heart className="w-5 h-5" />, 
+      description: 'Record temperature, blood pressure, heart rate, and other vital signs',
+      category: 'Clinical',
+      actionPrefix: 'Add',
+      handler: () => navigate(FOCUS_MODE_ROUTES.VITALS_FOCUS)
+    },
+    { 
+      key: 'consultation', 
+      label: 'Consultation', 
+      icon: <Users className="w-5 h-5" />, 
+      description: 'Record consultation notes, referrals, and specialist opinions',
+      category: 'Clinical',
+      actionPrefix: 'Add',
+      handler: () => navigate(FOCUS_MODE_ROUTES.CONSULTATION_FOCUS)
+    },
+    { 
+      key: 'prescription', 
+      label: 'Prescription', 
+      icon: <Pill className="w-5 h-5" />, 
+      description: 'Prescribe medications with dosage and frequency',
+      category: 'Treatment',
+      actionPrefix: 'Add',
+      handler: () => navigate(FOCUS_MODE_ROUTES.PRESCRIPTION_FOCUS)
+    },
+    { 
+      key: 'lab-request', 
+      label: 'Lab Request', 
+      icon: <Microscope className="w-5 h-5" />, 
+      description: 'Request laboratory tests and investigations',
+      category: 'Diagnostics',
+      actionPrefix: 'Add',
+      handler: () => navigate(FOCUS_MODE_ROUTES.LAB_REQUEST_FOCUS)
+    },
+    { 
+      key: 'lab-result', 
+      label: 'Lab Result', 
+      icon: <ClipboardList className="w-5 h-5" />, 
+      description: 'Enter and review laboratory results',
+      category: 'Diagnostics',
+      actionPrefix: 'Add',
+      handler: () => navigate(FOCUS_MODE_ROUTES.LAB_RESULT_FOCUS)
+    },
+  ], [navigate]);
+
+  // Report Options - Opens modals instead of navigation
   const reportOptions: ActionItem[] = useMemo(() => [
     { 
-      key: 'visit-summary', 
-      label: 'Visit Summary', 
+      key: 'allergy-report', 
+      label: 'Allergy Report', 
       icon: <FileOutput className="w-5 h-5" />, 
-      description: 'Complete summary of the patient visit',
+      description: 'Complete allergy documentation for this patient',
       category: 'Clinical',
       actionPrefix: 'View',
-      handler: () => navigate(FOCUS_MODE_ROUTES.VISIT_SUMMARY_FOCUS)
+      handler: () => openReport('allergies', 'preview')
+    },
+    { 
+      key: 'clinical-notes-report', 
+      label: 'Clinical Notes Report', 
+      icon: <FileOutput className="w-5 h-5" />, 
+      description: 'Complete clinical notes documentation',
+      category: 'Documentation',
+      actionPrefix: 'View',
+      handler: () => openReport('clinical-notes', 'preview')
+    },
+    { 
+      key: 'vitals-report', 
+      label: 'Vitals Report', 
+      icon: <FileOutput className="w-5 h-5" />, 
+      description: 'Vital signs summary report',
+      category: 'Clinical',
+      actionPrefix: 'View',
+      handler: () => openReport('vitals', 'preview')
+    },
+    { 
+      key: 'diagnosis-report', 
+      label: 'Diagnosis Report', 
+      icon: <FileOutput className="w-5 h-5" />, 
+      description: 'Diagnosis documentation report',
+      category: 'Clinical',
+      actionPrefix: 'View',
+      handler: () => openReport('diagnoses', 'preview')
+    },
+    { 
+      key: 'consultation-report', 
+      label: 'Consultation Report', 
+      icon: <FileOutput className="w-5 h-5" />, 
+      description: 'Consultation notes and recommendations',
+      category: 'Clinical',
+      actionPrefix: 'View',
+      handler: () => openReport('consultations', 'preview')
     },
     { 
       key: 'prescription-report', 
@@ -176,27 +242,27 @@ const formOptions: ActionItem[] = useMemo(() => [
       description: 'Printable prescription document',
       category: 'Treatment',
       actionPrefix: 'View',
-      handler: () => navigate(FOCUS_MODE_ROUTES.PRESCRIPTION_REPORT_FOCUS)
+      handler: () => openReport('prescriptions', 'preview')
     },
     { 
-      key: 'lab-report', 
-      label: 'Lab Report', 
+      key: 'lab-request-report', 
+      label: 'Lab Request Report', 
+      icon: <FileOutput className="w-5 h-5" />, 
+      description: 'Laboratory request document',
+      category: 'Diagnostics',
+      actionPrefix: 'View',
+      handler: () => openReport('lab-requests', 'preview')
+    },
+    { 
+      key: 'lab-results-report', 
+      label: 'Lab Results Report', 
       icon: <FileOutput className="w-5 h-5" />, 
       description: 'Laboratory test results report',
       category: 'Diagnostics',
       actionPrefix: 'View',
-      handler: () => navigate(FOCUS_MODE_ROUTES.LAB_REPORT_FOCUS)
+      handler: () => openReport('lab-results', 'preview')
     },
-    { 
-      key: 'full-medical-report', 
-      label: 'Full Medical Report', 
-      icon: <FileOutput className="w-5 h-5" />, 
-      description: 'Complete medical history document',
-      category: 'Clinical',
-      actionPrefix: 'View',
-      handler: () => navigate(FOCUS_MODE_ROUTES.FULL_MEDICAL_REPORT_FOCUS)
-    },
-  ], [navigate]);
+  ], [openReport]);
 
   const currentItems = activeTab === 'record-care' ? formOptions : reportOptions;
 
@@ -207,8 +273,8 @@ const formOptions: ActionItem[] = useMemo(() => [
     return currentItems.filter(
       (item) =>
         item.label.toLowerCase().includes(query) ||
-        item.description?.toLowerCase().includes(query) ||
-        item.category?.toLowerCase().includes(query)
+        item.description.toLowerCase().includes(query) ||
+        item.category.toLowerCase().includes(query)
     );
   }, [currentItems, searchQuery]);
 
@@ -221,7 +287,6 @@ const formOptions: ActionItem[] = useMemo(() => [
     setSearchQuery('');
   }, []);
 
-  // Helper to get action color based on type
   const getActionColor = (actionPrefix?: string) => {
     if (actionPrefix === 'Add') {
       return isDark ? 'text-green-400 bg-green-900/20' : 'text-green-600 bg-green-50';
@@ -363,6 +428,29 @@ const formOptions: ActionItem[] = useMemo(() => [
           )}
         </AnimatePresence>
       </div>
+
+      {/* Report Modals */}
+      <AllergyReportLauncher
+        isOpen={reportModal.isOpen && reportModal.module === 'allergies'}
+        onClose={closeReport}
+        initialAction={reportModal.action}
+        theme={theme}
+      />
+
+      <ClinicalNoteReportLauncher
+        isOpen={reportModal.isOpen && reportModal.module === 'clinical-notes'}
+        onClose={closeReport}
+        initialAction={reportModal.action}
+        theme={theme}
+      />
+
+      {/* Future Report Launchers - Uncomment as they're implemented */}
+      {/* <VitalsReportLauncher ... /> */}
+      {/* <DiagnosisReportLauncher ... /> */}
+      {/* <ConsultationReportLauncher ... /> */}
+      {/* <PrescriptionReportLauncher ... /> */}
+      {/* <LabRequestReportLauncher ... /> */}
+      {/* <LabResultReportLauncher ... /> */}
     </div>
   );
 };

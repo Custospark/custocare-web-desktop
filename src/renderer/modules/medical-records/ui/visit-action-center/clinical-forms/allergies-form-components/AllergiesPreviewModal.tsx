@@ -5,7 +5,7 @@ import { AllergiesPreviewDocument } from './AllergiesPreviewDocument';
 import { buildAllergyFileName } from './allergiesForm.utils';
 import type { Allergy } from '../../../../api/allergies/AllergyTypes';
 import type { AllergiesPreviewAction } from './allergiesForm.types';
-
+import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 interface AllergiesPreviewModalProps {
   open: boolean;
   onClose: () => void;
@@ -13,6 +13,8 @@ interface AllergiesPreviewModalProps {
   patientName: string;
   patientNumber: string;
   initialAction?: AllergiesPreviewAction;
+  isLoading?: boolean;
+  theme?: 'light' | 'dark';
 }
 
 export const AllergiesPreviewModal: React.FC<AllergiesPreviewModalProps> = ({
@@ -22,6 +24,8 @@ export const AllergiesPreviewModal: React.FC<AllergiesPreviewModalProps> = ({
   patientName,
   patientNumber,
   initialAction = 'preview',
+  isLoading = false,
+  theme = 'light',
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -70,7 +74,7 @@ export const AllergiesPreviewModal: React.FC<AllergiesPreviewModalProps> = ({
   });
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || isLoading) return;
 
     if (initialAction === 'print') {
       const timer = window.setTimeout(() => {
@@ -85,9 +89,87 @@ export const AllergiesPreviewModal: React.FC<AllergiesPreviewModalProps> = ({
       }, 150);
       return () => window.clearTimeout(timer);
     }
-  }, [handleDownload, handlePrint, initialAction, open]);
+  }, [handleDownload, handlePrint, initialAction, open, isLoading]);
 
   if (!open) return null;
+
+  // Loading State
+  if (isLoading) {
+    return (
+      <div
+        className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) onClose();
+        }}
+      >
+        <div className="no-print flex h-[96vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:h-[92vh] sm:rounded-2xl">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 print:hidden">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">Allergy Report Preview</h3>
+              <p className="mt-1 text-sm text-slate-600">
+                Loading allergy data...
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 p-2 text-slate-600 transition-all hover:bg-slate-50"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
+            <LoadingSkeleton 
+              variant="default" 
+              message="Loading allergy data..."
+              theme={theme}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty State (no allergies)
+  if (allergies.length === 0) {
+    return (
+      <div
+        className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) onClose();
+        }}
+      >
+        <div className="no-print flex h-[96vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:h-[92vh] sm:rounded-2xl">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 print:hidden">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">Allergy Report Preview</h3>
+              <p className="mt-1 text-sm text-slate-600">
+                No allergy records found
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 p-2 text-slate-600 transition-all hover:bg-slate-50"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
+            <div className="flex flex-col items-center justify-center rounded-lg bg-white p-12 text-center">
+              <div className="mb-4 rounded-full bg-slate-100 p-4">
+                <Eye className="h-8 w-8 text-slate-400" />
+              </div>
+              <h3 className="mb-2 text-lg font-semibold text-slate-900">No Allergies Recorded</h3>
+              <p className="text-sm text-slate-600">
+                No allergy records found for {patientName}.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
