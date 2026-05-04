@@ -94,6 +94,12 @@ export interface PharmacyPerformanceBlock {
   overall_label: string;
 }
 
+export interface PharmacyDashboardDataSources {
+  medication_dispenses_table: boolean;
+  revenue: string;
+  dispense_counts: string;
+}
+
 export interface PharmacyDashboardData {
   summary: PharmacyDashboardSummary;
   prescription_activity: PrescriptionActivityBlock;
@@ -101,6 +107,8 @@ export interface PharmacyDashboardData {
   recent_activity: PharmacyRecentActivityItem[];
   performance: PharmacyPerformanceBlock;
   generated_at: string;
+  /** Backend hints when tables are missing or billing is used for revenue */
+  data_sources?: PharmacyDashboardDataSources;
 }
 
 export interface PharmacyDashboardResponse {
