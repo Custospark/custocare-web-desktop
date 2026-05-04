@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { selectActiveVisitId } from '../../../../../../../app/store/slices/visitSlice';
+import { selectActivePatient, selectActiveVisitId } from '../../../../../../../app/store/slices/visitSlice';
 import { useGetActiveVisitDiagnoses } from '../../../../../api/diagnosis/diagnosisQueries';
 import DiagnosesPreviewModal from '../../diagnoses-form-components/DiagnosesPreviewModal';
 import {
@@ -22,6 +22,7 @@ export const DiagnosisReportLauncher: React.FC<DiagnosisReportLauncherProps> = (
   initialAction = 'preview',
 }) => {
   const activeVisitId = useSelector(selectActiveVisitId);
+  const activePatient = useSelector(selectActivePatient);
   const { showToast } = useToast();
 
   const diagnosesQuery = useGetActiveVisitDiagnoses({
@@ -38,6 +39,11 @@ export const DiagnosisReportLauncher: React.FC<DiagnosisReportLauncherProps> = (
     () => extractDiagnosesFormValues(activeDiagnosis),
     [activeDiagnosis]
   );
+  const activePatientFromVisit = activeDiagnosis?.patient;
+  const displayPatientName =
+    activePatient?.name?.trim() ||
+    activePatientFromVisit?.full_name?.trim() ||
+    'this patient';
 
   useEffect(() => {
     if (diagnosesQuery.isError && isOpen) {
@@ -60,6 +66,7 @@ export const DiagnosisReportLauncher: React.FC<DiagnosisReportLauncherProps> = (
       onClose={onClose}
       diagnosis={activeDiagnosis}
       values={hydratedValues}
+      patientName={displayPatientName}
       initialAction={initialAction}
       isLoading={isLoading}
     />

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { selectActiveVisitId } from '../../../../../../../app/store/slices/visitSlice';
+import { selectActivePatient, selectActiveVisitId } from '../../../../../../../app/store/slices/visitSlice';
 import { useGetRequestWithItems, useGetRequestsByVisit } from '../../../../../api/lab/LabQueries';
 import { LabRequestStatus, type LabRequest } from '../../../../../api/lab/LabTypes';
 import { LabRequestResultsPreviewModal } from '../../labrequest-form-components/LabRequestResultsPreviewModal';
@@ -20,6 +20,7 @@ export const LabResultReportLauncher: React.FC<LabResultReportLauncherProps> = (
   initialAction = 'preview',
 }) => {
   const activeVisitId = useSelector(selectActiveVisitId);
+  const activePatient = useSelector(selectActivePatient);
   const { showToast } = useToast();
 
   const visitNumericId = activeVisitId ? Number(activeVisitId) : 0;
@@ -86,6 +87,11 @@ export const LabResultReportLauncher: React.FC<LabResultReportLauncherProps> = (
 
     return map;
   }, [request]);
+  const activePatientFromVisit = request?.patient;
+  const displayPatientName =
+    activePatient?.name?.trim() ||
+    activePatientFromVisit?.full_name?.trim() ||
+    'this patient';
 
   useEffect(() => {
     if ((visitRequestsQuery.isError || requestQuery.isError) && isOpen) {
@@ -111,6 +117,7 @@ export const LabResultReportLauncher: React.FC<LabResultReportLauncherProps> = (
       onClose={onClose}
       request={request}
       resultsMap={resultsMap}
+      patientName={displayPatientName}
       initialAction={initialAction}
       isLoading={isLoading}
     />

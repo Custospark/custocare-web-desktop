@@ -15,6 +15,7 @@ interface ClinicalNotesPreviewModalProps {
   note: ClinicalNoteResponse | null;
   values: ClinicalNotesFormValues;
   noteTitle: string;
+  patientName?: string;
   initialAction?: ClinicalNotesPreviewAction;
   isLoading?: boolean;
   theme?: 'light' | 'dark';
@@ -26,6 +27,7 @@ export const ClinicalNotesPreviewModal: React.FC<ClinicalNotesPreviewModalProps>
   note,
   values,
   noteTitle, 
+  patientName = 'this patient',
   initialAction = 'preview',
   isLoading = false,
   theme = 'light',
@@ -183,7 +185,7 @@ export const ClinicalNotesPreviewModal: React.FC<ClinicalNotesPreviewModalProps>
               </div>
               <h3 className="mb-2 text-lg font-semibold text-slate-900">No Clinical Note Found</h3>
               <p className="text-sm text-slate-600">
-                No clinical note has been created for this visit yet.
+                No clinical note has been created for {patientName} yet.
               </p>
             </div>
           </div>

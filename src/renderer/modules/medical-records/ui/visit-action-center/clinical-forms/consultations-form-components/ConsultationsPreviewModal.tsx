@@ -14,6 +14,7 @@ interface ConsultationsPreviewModalProps {
   onClose: () => void;
   consultation: ConsultationResponse | null;
   values: ConsultationsFormValues;
+  patientName?: string;
   initialAction?: ConsultationsPreviewAction;
   isLoading?: boolean;
 }
@@ -23,6 +24,7 @@ export const ConsultationsPreviewModal: React.FC<ConsultationsPreviewModalProps>
   onClose,
   consultation,
   values,
+  patientName = 'this patient',
   initialAction = 'preview',
   isLoading = false,
 }) => {
@@ -130,6 +132,41 @@ export const ConsultationsPreviewModal: React.FC<ConsultationsPreviewModalProps>
           </div>
           <div className="flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
             <LoadingSkeleton variant="default" message="Loading consultation report..." />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (!consultation) {
+    return (
+      <div
+        className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) onClose();
+        }}
+      >
+        <div className="no-print flex h-[96vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:h-[92vh] sm:rounded-2xl">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 print:hidden">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">Consultation Preview</h3>
+              <p className="mt-1 text-sm text-slate-600">No consultation report found</p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 p-2 text-slate-600 transition-all hover:bg-slate-50"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
+            <div className="flex flex-col items-center justify-center rounded-lg bg-white p-12 text-center">
+              <div className="mb-4 rounded-full bg-slate-100 p-4">
+                <Eye className="h-8 w-8 text-slate-400" />
+              </div>
+              <h3 className="mb-2 text-lg font-semibold text-slate-900">No Consultation Found</h3>
+              <p className="text-sm text-slate-600">No consultation report found for {patientName} yet.</p>
+            </div>
           </div>
         </div>
       </div>

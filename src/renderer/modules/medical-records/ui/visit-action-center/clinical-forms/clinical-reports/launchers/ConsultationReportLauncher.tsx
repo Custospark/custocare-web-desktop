@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { selectActiveVisitId } from '../../../../../../../app/store/slices/visitSlice';
+import { selectActivePatient, selectActiveVisitId } from '../../../../../../../app/store/slices/visitSlice';
 import { useGetActiveVisitConsultations } from '../../../../../api/consultations/consultationQueries';
 import ConsultationsPreviewModal from '../../consultations-form-components/ConsultationsPreviewModal';
 import {
@@ -22,6 +22,7 @@ export const ConsultationReportLauncher: React.FC<ConsultationReportLauncherProp
   initialAction = 'preview',
 }) => {
   const activeVisitId = useSelector(selectActiveVisitId);
+  const activePatient = useSelector(selectActivePatient);
   const { showToast } = useToast();
 
   const consultationsQuery = useGetActiveVisitConsultations({
@@ -44,6 +45,11 @@ export const ConsultationReportLauncher: React.FC<ConsultationReportLauncherProp
     () => extractConsultationsFormValues(activeConsultation),
     [activeConsultation]
   );
+  const activePatientFromVisit = activeConsultation?.patient;
+  const displayPatientName =
+    activePatient?.name?.trim() ||
+    activePatientFromVisit?.full_name?.trim() ||
+    'this patient';
 
   useEffect(() => {
     if (consultationsQuery.isError && isOpen) {
@@ -67,6 +73,7 @@ export const ConsultationReportLauncher: React.FC<ConsultationReportLauncherProp
       onClose={onClose}
       consultation={activeConsultation}
       values={hydratedValues}
+      patientName={displayPatientName}
       initialAction={initialAction}
       isLoading={isLoading}
     />

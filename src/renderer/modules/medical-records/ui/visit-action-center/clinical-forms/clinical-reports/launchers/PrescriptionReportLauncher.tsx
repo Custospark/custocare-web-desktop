@@ -6,7 +6,7 @@ import {
 } from '../../../../../api/prescription/PrescriptionQueries';
 import { PrescriptionStatus, type Prescription } from '../../../../../api/prescription/PrescriptionTypes';
 import { useGetPrescriptionItems } from '../../../../../api/prescription-items/PrescriptionItemsQueries';
-import { selectActiveVisitPatientId } from '../../../../../../../app/store/slices/visitSlice';
+import { selectActivePatient, selectActiveVisitPatientId } from '../../../../../../../app/store/slices/visitSlice';
 import { PrescriptionPreviewModal } from '../../prescription-form-components/PrescriptionPreviewModal';
 import { toPrescriptionFormData } from '../../prescription-form-components/prescriptionForm.types';
 import { buildPreviewItems } from '../../prescription-form-components/prescriptionInstructionsUtils';
@@ -25,6 +25,7 @@ export const PrescriptionReportLauncher: React.FC<PrescriptionReportLauncherProp
   initialAction = 'preview',
 }) => {
   const patientId = useSelector(selectActiveVisitPatientId);
+  const activePatient = useSelector(selectActivePatient);
   const patientNumericId = patientId ? Number(patientId) : 0;
   const { showToast } = useToast();
 
@@ -80,6 +81,11 @@ export const PrescriptionReportLauncher: React.FC<PrescriptionReportLauncherProp
     currentPrescriptionQuery.isFetching ||
     itemsQuery.isFetching;
   const previewItems = useMemo(() => buildPreviewItems(medications), [medications]);
+  const activePatientFromVisit = currentPrescription?.patient;
+  const displayPatientName =
+    activePatient?.name?.trim() ||
+    activePatientFromVisit?.name?.trim() ||
+    'this patient';
 
   useEffect(() => {
     if ((patientPrescriptionsQuery.isError || currentPrescriptionQuery.isError || itemsQuery.isError) && isOpen) {
@@ -116,6 +122,7 @@ export const PrescriptionReportLauncher: React.FC<PrescriptionReportLauncherProp
       prescription={currentPrescription}
       formData={formData}
       previewItems={previewItems}
+      patientName={displayPatientName}
       initialAction={initialAction}
       isLoading={isLoading}
     />

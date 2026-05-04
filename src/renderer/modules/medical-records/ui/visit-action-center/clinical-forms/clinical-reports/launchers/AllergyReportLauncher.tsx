@@ -12,7 +12,7 @@
 
 import React, { useMemo, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { selectActiveVisitPatientId } from '../../../../../../../app/store/slices/visitSlice';
+import { selectActivePatient, selectActiveVisitPatientId } from '../../../../../../../app/store/slices/visitSlice';
 import { useGetAllergies } from '../../../../../api/allergies/AllergyQueries';
 
 import { AllergiesPreviewModal, normalizeAllergyResponse } from '../../allergies-form-components';
@@ -36,6 +36,7 @@ export const AllergyReportLauncher: React.FC<AllergyReportLauncherProps> = ({
   theme = 'light',
 }) => {
   const patientId = useSelector(selectActiveVisitPatientId);
+  const activePatient = useSelector(selectActivePatient);
   const { showToast } = useToast();
 
   // Fetch allergies data - only when modal is open and we have a patient
@@ -57,11 +58,13 @@ export const AllergyReportLauncher: React.FC<AllergyReportLauncherProps> = ({
 
   // Get patient info from first allergy record
   const patientName = useMemo(() => {
-    if (allergies.length > 0 && allergies[0]?.patient?.name) {
-      return allergies[0].patient.name;
-    }
-    return 'Patient';
-  }, [allergies]);
+    const activePatientFromVisit = allergies[0]?.patient;
+    return (
+      activePatient?.name?.trim() ||
+      activePatientFromVisit?.name?.trim() ||
+      'this patient'
+    );
+  }, [activePatient?.name, allergies]);
 
   const patientNumber = useMemo(() => {
     if (allergies.length > 0 && allergies[0]?.patient?.patient_number) {

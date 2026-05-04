@@ -15,6 +15,7 @@ interface LabRequestResultsPreviewModalProps {
   onClose: () => void;
   request: LabRequest | null;
   resultsMap: LabResultHydratedMap;
+  patientName?: string;
   initialAction?: 'preview' | 'print' | 'download';
   isLoading?: boolean;
 }
@@ -24,6 +25,7 @@ export const LabRequestResultsPreviewModal: React.FC<LabRequestResultsPreviewMod
   onClose,
   request,
   resultsMap,
+  patientName = 'this patient',
   initialAction = 'preview',
   isLoading = false,
 }) => {
@@ -187,7 +189,7 @@ export const LabRequestResultsPreviewModal: React.FC<LabRequestResultsPreviewMod
           <div ref={contentRef} className="mx-auto max-w-5xl">
             {!hasRequest ? (
               <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
-                <p className="text-slate-500">No laboratory report found for this visit yet.</p>
+                <p className="text-slate-500">No laboratory report found for {patientName} yet.</p>
               </div>
             ) : !hasResults ? (
               <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">

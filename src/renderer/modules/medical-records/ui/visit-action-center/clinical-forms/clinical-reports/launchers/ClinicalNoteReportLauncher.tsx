@@ -12,7 +12,7 @@
 
 import React, { useMemo, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { selectActiveVisitId } from '../../../../../../../app/store/slices/visitSlice';
+import { selectActivePatient, selectActiveVisitId } from '../../../../../../../app/store/slices/visitSlice';
 import { useGetActiveVisitClinicalNotes } from '../../../../../api/clinical-notes/clinicalNoteQueries';
 import { ClinicalNotesPreviewModal } from '../../clinical-notes-form-components';
 import {
@@ -40,6 +40,7 @@ export const ClinicalNoteReportLauncher: React.FC<ClinicalNoteReportLauncherProp
   theme = 'light',
 }) => {
   const activeVisitId = useSelector(selectActiveVisitId);
+  const activePatient = useSelector(selectActivePatient);
   const { showToast } = useToast();
 
   // Fetch clinical notes - only when modal is open and we have a visit
@@ -61,6 +62,12 @@ export const ClinicalNoteReportLauncher: React.FC<ClinicalNoteReportLauncherProp
     () => getClinicalNoteTitle(activeVisitNote, hydratedValues),
     [activeVisitNote, hydratedValues]
   );
+  const activePatientFromVisit = activeVisitNote?.patient;
+  const displayPatientName =
+    activePatient?.name?.trim() ||
+    activePatientFromVisit?.full_name?.trim() ||
+    activeVisitNote?.patient_name?.trim() ||
+    'this patient';
 
   const isLoading = notesQuery.isLoading;
   const isError = notesQuery.isError;
@@ -91,6 +98,7 @@ export const ClinicalNoteReportLauncher: React.FC<ClinicalNoteReportLauncherProp
       note={activeVisitNote}
       values={hydratedValues}
       noteTitle={noteTitle}
+      patientName={displayPatientName}
       initialAction={initialAction}
       isLoading={isLoading}
       theme={theme}

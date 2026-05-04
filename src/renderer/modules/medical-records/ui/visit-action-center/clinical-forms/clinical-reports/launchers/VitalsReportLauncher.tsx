@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { selectActiveVisitId } from '../../../../../../../app/store/slices/visitSlice';
+import { selectActivePatient, selectActiveVisitId } from '../../../../../../../app/store/slices/visitSlice';
 import { useGetActiveVisitVitals } from '../../../../../api/vitals/vitalQueries';
 import { VitalsPreviewModal } from '../../vitals-form-components';
 import {
@@ -22,6 +22,7 @@ export const VitalsReportLauncher: React.FC<VitalsReportLauncherProps> = ({
   initialAction = 'preview',
 }) => {
   const activeVisitId = useSelector(selectActiveVisitId);
+  const activePatient = useSelector(selectActivePatient);
   const { showToast } = useToast();
 
   const vitalsQuery = useGetActiveVisitVitals({
@@ -38,6 +39,11 @@ export const VitalsReportLauncher: React.FC<VitalsReportLauncherProps> = ({
     () => extractVitalsFormValues(activeVitals),
     [activeVitals]
   );
+  const activePatientFromVisit = activeVitals?.patient;
+  const displayPatientName =
+    activePatient?.name?.trim() ||
+    activePatientFromVisit?.full_name?.trim() ||
+    'this patient';
 
   useEffect(() => {
     if (vitalsQuery.isError && isOpen) {
@@ -60,6 +66,7 @@ export const VitalsReportLauncher: React.FC<VitalsReportLauncherProps> = ({
       onClose={onClose}
       vitals={activeVitals}
       values={hydratedValues}
+      patientName={displayPatientName}
       initialAction={initialAction}
       isLoading={isLoading}
     />
