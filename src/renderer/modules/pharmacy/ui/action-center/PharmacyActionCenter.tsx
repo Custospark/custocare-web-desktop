@@ -12,6 +12,7 @@ import {
   Shield,
   Users,
   UserPlus,
+  List,
   Search,
   ArrowLeftRight,
   ClipboardList,
@@ -180,17 +181,17 @@ const PharmacyActionCenter: React.FC<PharmacyActionCenterProps> = ({ theme }) =>
                 },
                 {
                   key: 'prescription-search',
-                  label: 'Search prescriptions',
-                  icon: <Search className="h-4 w-4" />,
+                  label: 'Prescriptions',
+                  icon: <List className="h-4 w-4" />,
                   to: PHARMACY_ROUTES.ACTION_CENTER_PRESCRIPTION_SEARCH,
-                  description: 'Search and open prescriptions for this visit (from slice context)',
+                  description: 'All medications prescribed for this visit — open dispense to fulfill',
                 },
                 {
                   key: 'prescription-review',
                   label: 'Review prescriptions',
                   icon: <ClipboardList className="h-4 w-4" />,
                   to: PHARMACY_ROUTES.ACTION_CENTER_PRESCRIPTION_REVIEW,
-                  description: 'Rx needing review for this patient / visit',
+                  description: 'See what has been dispensed vs still pending for this visit',
                 },
               ]}
             />
