@@ -289,6 +289,14 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
   const [isSavingToBill, setIsSavingToBill] = useState(false);
   const saveInFlightRef = useRef(false);
 
+  /**
+   * Allergy banner dismiss is scoped per visit (billing session). Other visits/patients keep their own state.
+   * Reset keys re-show for that visit when conflicts / allergy list meaningfully change.
+   */
+  const [bannerHiddenByVisitId, setBannerHiddenByVisitId] = useState<
+    Record<string, { prescriptionConflict?: boolean; knownAllergies?: boolean }>
+  >({});
+
   const allergiesQuery = useGetAllergies(patientIdStr, {}, { enabled: !!patientIdStr });
   const allergyRows = useMemo(
     () => normalizeAllergyList(allergiesQuery.data),
@@ -560,6 +568,53 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
     }
     return out;
   }, [prescriptionLines, checkBlockedByAllergy]);
+
+  const prescriptionConflictBannerResetKey = useMemo(
+    () =>
+      prescriptionAllergyConflicts
+        .map((c) => `${norm(c.medication)}|${norm(c.allergen)}`)
+        .sort()
+        .join(';'),
+    [prescriptionAllergyConflicts]
+  );
+
+  const knownAllergiesBannerResetKey = useMemo(
+    () =>
+      allergyRows
+        .map((a) => `${norm(a.allergen)}|${norm(a.severity)}`)
+        .sort()
+        .join(';'),
+    [allergyRows]
+  );
+
+  const prescriptionConflictBannerHidden = Boolean(
+    visitIdStr && bannerHiddenByVisitId[visitIdStr]?.prescriptionConflict
+  );
+  const knownAllergiesBannerHidden = Boolean(
+    visitIdStr && bannerHiddenByVisitId[visitIdStr]?.knownAllergies
+  );
+
+  useEffect(() => {
+    if (!visitIdStr) return;
+    setBannerHiddenByVisitId((prev) => ({
+      ...prev,
+      [visitIdStr]: {
+        ...prev[visitIdStr],
+        prescriptionConflict: false,
+      },
+    }));
+  }, [prescriptionConflictBannerResetKey, visitIdStr]);
+
+  useEffect(() => {
+    if (!visitIdStr) return;
+    setBannerHiddenByVisitId((prev) => ({
+      ...prev,
+      [visitIdStr]: {
+        ...prev[visitIdStr],
+        knownAllergies: false,
+      },
+    }));
+  }, [knownAllergiesBannerResetKey, visitIdStr]);
 
   const rxDetailLoading =
     rxIdsNeedingDetail.length > 0 && detailQueries.some((q) => q.isPending || q.isLoading);
@@ -1179,7 +1234,7 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5">
           <div className="mx-auto max-w-[1800px] space-y-4">
-            {prescriptionAllergyConflicts.length > 0 && (
+            {prescriptionAllergyConflicts.length > 0 && !prescriptionConflictBannerHidden && (
               <div
                 className={cn(
                   'flex items-start gap-3 rounded-lg border px-3 py-2.5 text-sm',
@@ -1189,7 +1244,7 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
                 )}
               >
                 <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" aria-hidden />
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="font-semibold">Prescription vs allergy</div>
                   <p className="mt-1 text-xs opacity-95">
                     These prescribed medications align with a documented allergen. Do not add them to the bill unless
@@ -1206,36 +1261,80 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
                     ))}
                   </ul>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!visitIdStr) return;
+                    setBannerHiddenByVisitId((prev) => ({
+                      ...prev,
+                      [visitIdStr]: {
+                        ...prev[visitIdStr],
+                        prescriptionConflict: true,
+                      },
+                    }));
+                  }}
+                  className={cn(
+                    '-m-1 shrink-0 rounded-md p-1.5 transition-colors',
+                    isDark ? 'text-red-200 hover:bg-red-950/60' : 'text-red-800 hover:bg-red-100/80'
+                  )}
+                  aria-label="Hide this notice for now"
+                  title="Hide for now"
+                >
+                  <X className="h-4 w-4" aria-hidden />
+                </button>
               </div>
             )}
 
-            {allergyRows.length > 0 && prescriptionAllergyConflicts.length === 0 && (
-              <div
-                className={cn(
-                  'flex items-start gap-3 rounded-lg border px-3 py-2.5 text-sm',
-                  isDark
-                    ? 'border-amber-800/60 bg-amber-950/35 text-amber-50'
-                    : 'border-amber-200 bg-amber-50 text-amber-950'
-                )}
-              >
-                <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
-                <div>
-                  <div className="font-semibold">Known allergies on file</div>
-                  <p className="mt-1 text-xs opacity-95">
-                    No current prescription line matched these allergens. Adding a conflicting medication from search is
-                    still blocked.
-                  </p>
-                  <ul className="mt-1 list-inside list-disc text-xs opacity-95">
-                    {allergyRows.map((a, i) => (
-                      <li key={`${a.allergen}-${a.severity}-${i}`}>
-                        {a.allergen}
-                        {a.severity ? ` · ${a.severity}` : ''}
-                      </li>
-                    ))}
-                  </ul>
+            {allergyRows.length > 0 &&
+              prescriptionAllergyConflicts.length === 0 &&
+              !knownAllergiesBannerHidden && (
+                <div
+                  className={cn(
+                    'flex items-start gap-3 rounded-lg border px-3 py-2.5 text-sm',
+                    isDark
+                      ? 'border-amber-800/60 bg-amber-950/35 text-amber-50'
+                      : 'border-amber-200 bg-amber-50 text-amber-950'
+                  )}
+                >
+                  <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold">Known allergies on file</div>
+                    <p className="mt-1 text-xs opacity-95">
+                      No current prescription line matched these allergens. Adding a conflicting medication from search
+                      is still blocked.
+                    </p>
+                    <ul className="mt-1 list-inside list-disc text-xs opacity-95">
+                      {allergyRows.map((a, i) => (
+                        <li key={`${a.allergen}-${a.severity}-${i}`}>
+                          {a.allergen}
+                          {a.severity ? ` · ${a.severity}` : ''}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!visitIdStr) return;
+                      setBannerHiddenByVisitId((prev) => ({
+                        ...prev,
+                        [visitIdStr]: {
+                          ...prev[visitIdStr],
+                          knownAllergies: true,
+                        },
+                      }));
+                    }}
+                    className={cn(
+                      '-m-1 shrink-0 rounded-md p-1.5 transition-colors',
+                      isDark ? 'text-amber-200 hover:bg-amber-950/50' : 'text-amber-900 hover:bg-amber-100/80'
+                    )}
+                    aria-label="Hide this notice for now"
+                    title="Hide for now"
+                  >
+                    <X className="h-4 w-4" aria-hidden />
+                  </button>
                 </div>
-              </div>
-            )}
+              )}
 
             {isReadOnly && (
               <div

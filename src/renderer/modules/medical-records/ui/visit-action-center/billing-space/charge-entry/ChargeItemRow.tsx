@@ -393,7 +393,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 16, height: 0 }}
         transition={{ duration: 0.22, ease: 'easeOut' }}
-        className={`grid grid-cols-12 gap-3 px-4 py-3 items-center border-b last:border-b-0
+        className={`grid min-w-[720px] grid-cols-12 gap-3 px-4 py-3 items-center border-b last:border-b-0
           ${colors.border.primary} transition-colors duration-150
           ${!isReadOnly ? `hover:${colors.bg.hover}` : ''}
           ${
@@ -415,7 +415,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
           </div>
         </div>
 
-        <div className="col-span-4 min-w-0">
+        <div className="col-span-3 min-w-0">
           <p className={`font-semibold truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
             {item.service.name ?? 'NA'}
           </p>
@@ -476,15 +476,17 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
         </div>
 
         <div className="col-span-2 min-w-0 text-center">
-          <span className={`text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+          <span
+            className={`inline-block max-w-full text-sm font-semibold tabular-nums whitespace-nowrap ${isDark ? 'text-gray-100' : 'text-gray-900'}`}
+          >
             {formatCurrency(item.service.unitPrice)}
           </span>
         </div>
 
         <div className="col-span-4 min-w-0">{renderQuantityControlDesktop()}</div>
 
-        <div className="col-span-1 min-w-0 text-center">
-          <span className="text-sm font-extrabold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+        <div className="col-span-2 min-w-0 text-right">
+          <span className="inline-block max-w-full text-sm font-extrabold tabular-nums whitespace-nowrap bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
             {formatCurrency(item.totalAmount)}
           </span>
         </div>

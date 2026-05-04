@@ -122,22 +122,22 @@ export const ChargeItemsList: React.FC<ChargeItemsListProps> = ({
         >
           {/* Desktop table header */}
           <div
-            className={`hidden md:grid grid-cols-12 gap-3 px-4 py-3 text-sm font-semibold border-b
+            className={`hidden md:grid min-w-[720px] grid-cols-12 gap-3 px-4 py-3 text-sm font-semibold border-b
               ${isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-50 text-gray-600'} 
               ${colors.border.primary} sticky top-0 z-10 rounded-t-xl`}
           >
             <div className="col-span-1 flex items-center gap-1">
               <Hash className={`w-3 h-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
             </div>
-            <div className="col-span-4">Item</div>
+            <div className="col-span-3 min-w-0">Item</div>
             <div className="col-span-2 text-center">Unit</div>
             <div className="col-span-4 text-center">Qty / Actions</div>
-            <div className="col-span-1 text-center">Total</div>
+            <div className="col-span-2 text-right tabular-nums">Total</div>
           </div>
 
           {/* Scrollable list */}
           <div
-            className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scroll-smooth
+            className="flex-1 min-h-0 overflow-y-auto overflow-x-auto scroll-smooth
               [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full
               [&::-webkit-scrollbar-track]:rounded-full
               dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 
@@ -200,12 +200,12 @@ export const ChargeItemsList: React.FC<ChargeItemsListProps> = ({
           <div
             className={`px-4 py-3 border-t ${colors.border.primary} ${
               isDark ? 'bg-gray-800/50' : 'bg-gray-50'
-            } flex items-center justify-between sticky bottom-0 z-10 rounded-b-xl`}
+            } flex min-w-0 items-center justify-between gap-3 sticky bottom-0 z-10 rounded-b-xl`}
           >
-            <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
+            <span className={`min-w-0 shrink text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
               Subtotal
             </span>
-            <span className="text-lg font-extrabold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+            <span className="shrink-0 text-lg font-extrabold tabular-nums whitespace-nowrap bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
               {formatCurrency(subtotal)}
             </span>
           </div>
