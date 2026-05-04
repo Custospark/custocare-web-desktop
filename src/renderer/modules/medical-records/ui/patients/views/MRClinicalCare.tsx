@@ -19,7 +19,16 @@ import {
 } from 'lucide-react';
 import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/focusModeRouteConstants';
 
-import { AllergyReportLauncher, ClinicalNoteReportLauncher } from '../../visit-action-center/clinical-forms/clinical-reports/launchers';
+import {
+  AllergyReportLauncher,
+  ClinicalNoteReportLauncher,
+  ConsultationReportLauncher,
+  DiagnosisReportLauncher,
+  LabRequestReportLauncher,
+  LabResultReportLauncher,
+  PrescriptionReportLauncher,
+  VitalsReportLauncher,
+} from '../../visit-action-center/clinical-forms/clinical-reports/launchers';
 interface MRClinicalCareProps {
   theme?: 'light' | 'dark';
 }
@@ -443,14 +452,42 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
         initialAction={reportModal.action}
         theme={theme}
       />
-
-      {/* Future Report Launchers - Uncomment as they're implemented */}
-      {/* <VitalsReportLauncher ... /> */}
-      {/* <DiagnosisReportLauncher ... /> */}
-      {/* <ConsultationReportLauncher ... /> */}
-      {/* <PrescriptionReportLauncher ... /> */}
-      {/* <LabRequestReportLauncher ... /> */}
-      {/* <LabResultReportLauncher ... /> */}
+      <VitalsReportLauncher
+        isOpen={reportModal.isOpen && reportModal.module === 'vitals'}
+        onClose={closeReport}
+        initialAction={reportModal.action}
+        theme={theme}
+      />
+      <DiagnosisReportLauncher
+        isOpen={reportModal.isOpen && reportModal.module === 'diagnoses'}
+        onClose={closeReport}
+        initialAction={reportModal.action}
+        theme={theme}
+      />
+      <ConsultationReportLauncher
+        isOpen={reportModal.isOpen && reportModal.module === 'consultations'}
+        onClose={closeReport}
+        initialAction={reportModal.action}
+        theme={theme}
+      />
+      <PrescriptionReportLauncher
+        isOpen={reportModal.isOpen && reportModal.module === 'prescriptions'}
+        onClose={closeReport}
+        initialAction={reportModal.action}
+        theme={theme}
+      />
+      <LabRequestReportLauncher
+        isOpen={reportModal.isOpen && reportModal.module === 'lab-requests'}
+        onClose={closeReport}
+        initialAction={reportModal.action}
+        theme={theme}
+      />
+      <LabResultReportLauncher
+        isOpen={reportModal.isOpen && reportModal.module === 'lab-results'}
+        onClose={closeReport}
+        initialAction={reportModal.action}
+        theme={theme}
+      />
     </div>
   );
 };
