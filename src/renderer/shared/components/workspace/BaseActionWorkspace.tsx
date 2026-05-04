@@ -40,6 +40,9 @@ interface BaseActionWorkspaceProps<TActionId extends string> {
   className?: string;
   testId?: string;
   'aria-label'?: string;
+
+  /** Child routes under the same workspace (e.g. `/action-center/prescription-notes/:id`) — do not redirect to default tab */
+  additionalWorkflowPathPrefixes?: readonly string[];
 }
 
 const cx = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
@@ -98,6 +101,7 @@ export function BaseActionWorkspace<TActionId extends string>({
   className = '',
   testId,
   'aria-label': ariaLabel,
+  additionalWorkflowPathPrefixes,
 }: BaseActionWorkspaceProps<TActionId>) {
   const isDark = theme === 'dark';
   const navigate = useNavigate();
@@ -116,9 +120,12 @@ export function BaseActionWorkspace<TActionId extends string>({
   useEffect(() => {
     if (!actions?.length) return;
 
-    const isOnAnyAction = actions.some(
-      (a) => location.pathname === a.to || location.pathname.startsWith(a.to + '/')
-    );
+    const onWorkflowSubpath =
+      additionalWorkflowPathPrefixes?.some((prefix) => location.pathname.startsWith(prefix)) ?? false;
+
+    const isOnAnyAction =
+      onWorkflowSubpath ||
+      actions.some((a) => location.pathname === a.to || location.pathname.startsWith(a.to + '/'));
 
     if (!isOnAnyAction && defaultActionTo) {
       const defaultAction = actions.find((a) => a.to === defaultActionTo);
@@ -138,7 +145,7 @@ export function BaseActionWorkspace<TActionId extends string>({
       });
       if (firstEnabled) navigate(firstEnabled.to, { replace: true });
     }
-  }, [actions, defaultActionTo, location.pathname, navigate, currentTier]);
+  }, [actions, additionalWorkflowPathPrefixes, defaultActionTo, location.pathname, navigate, currentTier]);
 
   useEffect(() => {
     onCollapseChange?.(isCollapsed);

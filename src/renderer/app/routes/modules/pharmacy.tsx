@@ -16,6 +16,7 @@ import PharmacyFrontDesk from '../../../modules/pharmacy/ui/patients/PharmacyFro
 import PharmacyPatientQueue from '../../../modules/pharmacy/ui/patients/views/PharmacyPatientQueue';
 import PharmacyActionCenter from '../../../modules/pharmacy/ui/action-center/PharmacyActionCenter';
 import PharmacyDispenseMedication from '../../../modules/pharmacy/ui/action-center/PharmacyDispenseMedication';
+import PharmacyPrescriptionNotesPage from '../../../modules/pharmacy/ui/action-center/PharmacyPrescriptionNotesPage';
 
 const pharmacyTablePage = (Component: ComponentType<ThemeProp>) => (
   <SuspenseWrapper variant="table">
@@ -110,6 +111,11 @@ export const pharmacyRoutes = [
           />
         </SuspenseWrapper>
       }
+    />
+    <Route
+      key="pharmacy-ac-prescription-notes"
+      path="prescription-notes/:prescriptionId"
+      element={pharmacyTablePage(PharmacyPrescriptionNotesPage)}
     />
   </Route>,
 

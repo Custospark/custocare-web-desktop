@@ -7,7 +7,11 @@ import {
   CheckCircle2,
   Circle,
   ClipboardList,
+  Download,
+  Eye,
+  FileEdit,
   Pill,
+  Printer,
   Search,
   ChevronLeft,
   ChevronRight,
@@ -38,6 +42,7 @@ import type { RootState } from '../../../../../app/store/store';
 import { getActiveFacilityId } from '../../../../../app/store/utils/contextSelectors';
 import { axiosInstance } from '../../../../../app/api/axiosConfig';
 import { PHARMACY_ROUTES } from '../../../../../app/routes/routeConstants';
+import { PharmacyPrescriptionReportModal } from '../../action-center/PharmacyPrescriptionReportModal';
 
 type WorkbenchMode = 'queue' | 'search' | 'review' | 'flagged' | 'approved' | 'create';
 
@@ -109,6 +114,10 @@ export const PrescriptionWorkbench: React.FC<PrescriptionWorkbenchProps> = ({
   const [selectedPrescriptionId, setSelectedPrescriptionId] = useState<number | null>(null);
   const [medicationPage, setMedicationPage] = useState(1);
   const [reviewRxPage, setReviewRxPage] = useState(1);
+  const [reportModal, setReportModal] = useState<{
+    prescriptionId: number;
+    initialAction?: 'preview' | 'print' | 'download';
+  } | null>(null);
 
   const patientNumericId = activePatientId ? Number(activePatientId) : 0;
 
@@ -344,6 +353,10 @@ export const PrescriptionWorkbench: React.FC<PrescriptionWorkbenchProps> = ({
     navigate(PHARMACY_ROUTES.ACTION_CENTER_DISPENSING);
   };
 
+  const openPrescriptionNotes = (prescriptionId: number) => {
+    navigate(`${PHARMACY_ROUTES.ACTION_CENTER_PRESCRIPTION_NOTES}/${prescriptionId}`);
+  };
+
   if (mode !== 'create' && scope === 'facility' && !activeFacilityId) {
     return (
       <div className="rounded-xl border border-dashed border-amber-300 p-6 text-sm text-amber-700">
@@ -442,9 +455,11 @@ export const PrescriptionWorkbench: React.FC<PrescriptionWorkbenchProps> = ({
 
       {isVisitMedicationList && (
         <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-          Only this patient&apos;s prescriptions for the active visit are shown. Use{' '}
-          <span className={`font-semibold ${isDark ? 'text-gray-200' : 'text-slate-800'}`}>Dispense</span>{' '}
-          to open billing / dispensing for this encounter.
+          Only this patient&apos;s prescriptions for the active visit are shown.{' '}
+          <span className={`font-semibold ${isDark ? 'text-gray-200' : 'text-slate-800'}`}>Notes</span> opens the
+          prescription form; <span className={`font-semibold ${isDark ? 'text-gray-200' : 'text-slate-800'}`}>Document</span>{' '}
+          previews / prints / PDF for the patient;{' '}
+          <span className={`font-semibold ${isDark ? 'text-gray-200' : 'text-slate-800'}`}>Dispense</span> opens billing.
         </p>
       )}
 
@@ -490,7 +505,7 @@ export const PrescriptionWorkbench: React.FC<PrescriptionWorkbenchProps> = ({
           }`}
         >
           <div className="max-h-[min(65vh,780px)] overflow-auto">
-            <table className="w-full min-w-[720px] table-fixed border-collapse text-left text-xs sm:text-sm">
+            <table className="w-full min-w-[880px] table-fixed border-collapse text-left text-xs sm:text-sm">
               <thead
                 className={`sticky top-0 z-10 border-b shadow-sm ${
                   isDark ? 'border-gray-700 bg-gray-900' : 'border-slate-200 bg-slate-50'
@@ -502,7 +517,7 @@ export const PrescriptionWorkbench: React.FC<PrescriptionWorkbenchProps> = ({
                   <th className="w-[120px] px-2 py-2.5 font-semibold">Rx #</th>
                   <th className="min-w-[200px] px-2 py-2.5 font-semibold">Qty / directions</th>
                   <th className="w-[140px] px-2 py-2.5 font-semibold">Status</th>
-                  <th className="w-[110px] px-2 py-2.5 text-right font-semibold">Action</th>
+                  <th className="min-w-[220px] px-2 py-2.5 text-right font-semibold">Notes &amp; fulfillment</th>
                 </tr>
               </thead>
               <tbody>
@@ -550,15 +565,43 @@ export const PrescriptionWorkbench: React.FC<PrescriptionWorkbenchProps> = ({
                         </span>
                       </td>
                       <td className="px-2 py-2 align-top text-right">
-                        <button
-                          type="button"
-                          onClick={openDispenseWorkspace}
-                          className="inline-flex cursor-pointer items-center justify-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
-                          title="Open dispense & billing for this visit"
-                        >
-                          <Pill className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                          Dispense
-                        </button>
+                        <div className="flex flex-col items-end gap-1 sm:flex-row sm:flex-wrap sm:justify-end">
+                          <button
+                            type="button"
+                            onClick={() => openPrescriptionNotes(rx.id)}
+                            className={`inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium ${
+                              isDark
+                                ? 'border-gray-600 text-gray-200 hover:bg-gray-800'
+                                : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                            }`}
+                            title="Edit prescription notes (same form as clinical)"
+                          >
+                            <FileEdit className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                            Notes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setReportModal({ prescriptionId: rx.id, initialAction: 'preview' })}
+                            className={`inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium ${
+                              isDark
+                                ? 'border-gray-600 text-gray-200 hover:bg-gray-800'
+                                : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                            }`}
+                            title="Preview, print, or save PDF for the patient"
+                          >
+                            <Eye className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                            Document
+                          </button>
+                          <button
+                            type="button"
+                            onClick={openDispenseWorkspace}
+                            className="inline-flex cursor-pointer items-center justify-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                            title="Open dispense & billing for this visit"
+                          >
+                            <Pill className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                            Dispense
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -707,6 +750,72 @@ export const PrescriptionWorkbench: React.FC<PrescriptionWorkbenchProps> = ({
                     {selectedForReviewDetail.status}
                   </span>
                 </div>
+
+                <div className="mb-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openPrescriptionNotes(selectedForReviewDetail.id)}
+                    className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                      isDark
+                        ? 'border-gray-600 text-gray-100 hover:bg-gray-800'
+                        : 'border-slate-200 text-slate-800 hover:bg-slate-50'
+                    }`}
+                  >
+                    <FileEdit className="h-4 w-4" aria-hidden />
+                    Edit notes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setReportModal({ prescriptionId: selectedForReviewDetail.id, initialAction: 'preview' })
+                    }
+                    className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                      isDark
+                        ? 'border-gray-600 text-gray-100 hover:bg-gray-800'
+                        : 'border-slate-200 text-slate-800 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Eye className="h-4 w-4" aria-hidden />
+                    Preview
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setReportModal({ prescriptionId: selectedForReviewDetail.id, initialAction: 'print' })
+                    }
+                    className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                      isDark
+                        ? 'border-gray-600 text-gray-100 hover:bg-gray-800'
+                        : 'border-slate-200 text-slate-800 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Printer className="h-4 w-4" aria-hidden />
+                    Print
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setReportModal({ prescriptionId: selectedForReviewDetail.id, initialAction: 'download' })
+                    }
+                    className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                      isDark
+                        ? 'border-gray-600 text-gray-100 hover:bg-gray-800'
+                        : 'border-slate-200 text-slate-800 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Download className="h-4 w-4" aria-hidden />
+                    PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openDispenseWorkspace}
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+                  >
+                    <Pill className="h-4 w-4" aria-hidden />
+                    Dispense
+                  </button>
+                </div>
+
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
                   Diagnosis: {selectedForReviewDetail.diagnosis || 'Not documented'}
                 </p>
@@ -907,6 +1016,15 @@ export const PrescriptionWorkbench: React.FC<PrescriptionWorkbenchProps> = ({
           <ShieldAlert className="mr-2 inline h-4 w-4" />
           Prioritize on-hold, expired, and cancelled prescriptions for pharmacist intervention.
         </div>
+      )}
+
+      {scope === 'activeVisit' && (
+        <PharmacyPrescriptionReportModal
+          prescriptionId={reportModal?.prescriptionId ?? null}
+          open={reportModal !== null}
+          onClose={() => setReportModal(null)}
+          initialAction={reportModal?.initialAction ?? 'preview'}
+        />
       )}
     </div>
   );

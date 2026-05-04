@@ -172,6 +172,7 @@ const PharmacyActionCenter: React.FC<PharmacyActionCenterProps> = ({ theme }) =>
               icon={<Pill className="h-6 w-6" />}
               theme={theme}
               defaultActionTo={PHARMACY_ROUTES.ACTION_CENTER_DISPENSING}
+              additionalWorkflowPathPrefixes={[PHARMACY_ROUTES.ACTION_CENTER_PRESCRIPTION_NOTES]}
               actions={[
                 {
                   key: 'dispensing',
