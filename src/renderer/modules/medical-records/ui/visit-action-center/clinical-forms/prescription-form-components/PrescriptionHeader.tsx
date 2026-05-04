@@ -10,6 +10,8 @@ interface PrescriptionHeaderProps {
   prescription: Prescription | null;
   onOpenTemplateSelector: () => void;
   onAddMedication: () => void;
+  /** When false, template and add-medication actions are hidden (dispensed / locked Rx). */
+  allowMedicationMutations?: boolean;
   onRefresh?: () => void;
   isRefreshing?: boolean;
 }
@@ -20,6 +22,7 @@ export const PrescriptionHeader: React.FC<PrescriptionHeaderProps> = ({
   prescription,
   onOpenTemplateSelector,
   onAddMedication,
+  allowMedicationMutations = true,
   onRefresh,
   isRefreshing = false,
 }) => {
@@ -97,28 +100,32 @@ export const PrescriptionHeader: React.FC<PrescriptionHeaderProps> = ({
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={onOpenTemplateSelector}
-          className={cn(
-            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
-            colors.border.primary,
-            colors.bg.hover,
-            colors.text.brand
-          )}
-        >
-          <FolderOpen className="h-4 w-4" />
-          Use Template
-        </button>
+        {allowMedicationMutations && (
+          <>
+            <button
+              type="button"
+              onClick={onOpenTemplateSelector}
+              className={cn(
+                'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all',
+                colors.border.primary,
+                colors.bg.hover,
+                colors.text.brand
+              )}
+            >
+              <FolderOpen className="h-4 w-4" />
+              Use Template
+            </button>
 
-        <button
-          type="button"
-          onClick={onAddMedication}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4" />
-          Add Medication
-        </button>
+            <button
+              type="button"
+              onClick={onAddMedication}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4" />
+              Add Medication
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

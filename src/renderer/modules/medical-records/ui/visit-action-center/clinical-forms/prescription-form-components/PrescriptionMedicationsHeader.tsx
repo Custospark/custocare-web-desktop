@@ -8,6 +8,7 @@ interface PrescriptionMedicationsHeaderProps {
   showPreview: boolean;
   onTogglePreview: () => void;
   onAddMedication: () => void;
+  allowMedicationMutations?: boolean;
   onPrint?: () => void;
   onDownload?: () => void;
 }
@@ -17,6 +18,7 @@ export function PrescriptionMedicationsHeader({
   medicationCount,
   onTogglePreview,
   onAddMedication,
+  allowMedicationMutations = true,
   onPrint,
   onDownload,
 }: PrescriptionMedicationsHeaderProps) {
@@ -80,19 +82,20 @@ export function PrescriptionMedicationsHeader({
           </button>
         )}
 
-        {/* Add Medication Button - matches other modules */}
-        <button
-          type="button"
-          onClick={onAddMedication}
-          className={cn(
-            'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all',
-            'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100',
-            'dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50'
-          )}
-        >
-          <Plus className="h-4 w-4" />
-          Add Medication
-        </button>
+        {allowMedicationMutations && (
+          <button
+            type="button"
+            onClick={onAddMedication}
+            className={cn(
+              'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all',
+              'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100',
+              'dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50'
+            )}
+          >
+            <Plus className="h-4 w-4" />
+            Add Medication
+          </button>
+        )}
       </div>
     </div>
   );

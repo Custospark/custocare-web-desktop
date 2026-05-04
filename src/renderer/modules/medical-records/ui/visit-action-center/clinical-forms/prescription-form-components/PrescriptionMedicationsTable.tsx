@@ -21,6 +21,8 @@ export interface PrescriptionMedicationsTableProps {
   onAddMedication: () => void;
   onEditMedication: (item: PrescriptionItem) => void;
   onDeleteMedication: (item: PrescriptionItem) => void;
+  /** When false, row edit/remove and duplicate add are disabled in UI (parent still guards mutations). */
+  allowMedicationMutations?: boolean;
 }
 
 export default function PrescriptionMedicationsTable({
@@ -32,6 +34,7 @@ export default function PrescriptionMedicationsTable({
   onAddMedication,
   onEditMedication,
   onDeleteMedication,
+  allowMedicationMutations = true,
 }: PrescriptionMedicationsTableProps) {
   const [showPreview, setShowPreview] = useState(false);
   const [previewAction, setPreviewAction] = useState<'preview' | 'print' | 'download'>('preview');
@@ -93,6 +96,7 @@ export default function PrescriptionMedicationsTable({
           showPreview={showPreview}
           onTogglePreview={handleOpenPreview}
           onAddMedication={onAddMedication}
+          allowMedicationMutations={allowMedicationMutations}
           onPrint={handlePrint}
           onDownload={handleDownload}
         />
@@ -104,6 +108,7 @@ export default function PrescriptionMedicationsTable({
             medications={medications}
             onEditMedication={onEditMedication}
             onDeleteMedication={onDeleteMedication}
+            allowMedicationMutations={allowMedicationMutations}
           />
         </div>
       </section>

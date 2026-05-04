@@ -19,7 +19,6 @@ import type {
 import {
   PrescriptionPriority,
   PrescriptionType,
-  PrescriptionStatus,
 } from '../../../../api/prescription/PrescriptionTypes';
 import type { ColorTokens, PrescriptionFormData } from './prescriptionForm.types';
 
@@ -36,7 +35,11 @@ interface PrescriptionDetailsCardProps {
     value: string | PrescriptionType | PrescriptionPriority
   ) => void;
   onDelete?: () => void;
-  currentUserId?: number | null;
+  /** When false, prescription is view-only (dispensed or terminal status). */
+  canEditDetails?: boolean;
+  /** Only drafts may be deleted, and only when the prescriber matches (parent computes). */
+  canDeletePrescription?: boolean;
+  readOnlyHint?: string | null;
   isDeleting?: boolean;
   onRefresh?: () => void;
   isRefreshing?: boolean;
@@ -73,19 +76,18 @@ export const PrescriptionDetailsCard: React.FC<PrescriptionDetailsCardProps> = (
   onCloseEditor,
   onChange,
   onDelete,
-  currentUserId,
+  canEditDetails = true,
+  canDeletePrescription = false,
+  readOnlyHint = null,
   isDeleting = false,
   onRefresh,
   isRefreshing = false,
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isExistingPrescription = !!prescription;
-  
-  // Check if current user is the prescriber and prescription is in DRAFT status
-  const canDelete = isExistingPrescription
-   && 
-    prescription.prescribed_by.id === currentUserId &&
-    (prescription?.status === (PrescriptionStatus.ACTIVE) || PrescriptionStatus.DRAFT);
+  const showEditor = isEditorOpen && canEditDetails;
+
+  const showDeleteButton = !!onDelete && canDeletePrescription && isExistingPrescription;
 
   const handleDeleteClick = () => {
     setShowDeleteConfirm(true);
@@ -104,7 +106,7 @@ export const PrescriptionDetailsCard: React.FC<PrescriptionDetailsCardProps> = (
     <>
       <div className={cn('rounded-2xl border p-5', colors.border.primary, colors.bg.card)}>
         <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
-          <div>
+          <div className="min-w-0 flex-1">
             <h3 className={cn('text-base font-semibold', colors.text.primary)}>
               Prescription Details
             </h3>
@@ -112,6 +114,18 @@ export const PrescriptionDetailsCard: React.FC<PrescriptionDetailsCardProps> = (
               <p className={cn('mt-1 text-xs', colors.text.secondary)}>
                 Prescribed by: {prescription.prescribed_by.name}
               </p>
+            )}
+            {readOnlyHint && (
+              <div
+                className={cn(
+                  'mt-3 flex gap-2 rounded-lg border px-3 py-2 text-sm',
+                  isDark ? 'border-amber-800/60 bg-amber-950/40 text-amber-100' : 'border-amber-200 bg-amber-50 text-amber-950'
+                )}
+                role="status"
+              >
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden />
+                <span>{readOnlyHint}</span>
+              </div>
             )}
           </div>
 
@@ -134,22 +148,24 @@ export const PrescriptionDetailsCard: React.FC<PrescriptionDetailsCardProps> = (
               </button>
             )}
 
-            {!isEditorOpen ? (
+            {!showEditor ? (
               <>
-                <button
-                  type="button"
-                  onClick={onOpenEditor}
-                  className={cn(
-                    'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
-                    colors.bg.hover,
-                    colors.text.brand
-                  )}
-                >
-                  {isExistingPrescription ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                  {isExistingPrescription ? 'Edit Details' : 'Add Details'}
-                </button>
+                {canEditDetails && (
+                  <button
+                    type="button"
+                    onClick={onOpenEditor}
+                    className={cn(
+                      'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
+                      colors.bg.hover,
+                      colors.text.brand
+                    )}
+                  >
+                    {isExistingPrescription ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                    {isExistingPrescription ? 'Edit Details' : 'Add Details'}
+                  </button>
+                )}
 
-                {canDelete && (
+                {showDeleteButton && (
                   <button
                     type="button"
                     onClick={handleDeleteClick}
@@ -183,7 +199,7 @@ export const PrescriptionDetailsCard: React.FC<PrescriptionDetailsCardProps> = (
           </div>
         </div>
 
-        {!isEditorOpen ? (
+        {!showEditor ? (
           <div className="space-y-3">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <SummaryRow

@@ -23,6 +23,7 @@ interface PrescriptionMedicationsDataTableProps {
   medications: PrescriptionItem[];
   onEditMedication: (item: PrescriptionItem) => void;
   onDeleteMedication: (item: PrescriptionItem) => void;
+  allowMedicationMutations?: boolean;
 }
 
 export function PrescriptionMedicationsDataTable({
@@ -31,6 +32,7 @@ export function PrescriptionMedicationsDataTable({
   medications,
   onEditMedication,
   onDeleteMedication,
+  allowMedicationMutations = true,
 }: PrescriptionMedicationsDataTableProps) {
   const tableHeaderClass = cn(
     'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide',
@@ -85,7 +87,9 @@ export function PrescriptionMedicationsDataTable({
               <th className={tableHeaderClass}>Route</th>
               <th className={tableHeaderClass}>Refills / Substitution</th>
               <th className={tableHeaderClass}>Clinical Instructions</th>
-              <th className={cn(tableHeaderClass, 'text-center')}>Actions</th>
+              {allowMedicationMutations && (
+                <th className={cn(tableHeaderClass, 'text-center')}>Actions</th>
+              )}
             </tr>
           </thead>
 
@@ -221,39 +225,41 @@ export function PrescriptionMedicationsDataTable({
                   </div>
                 </td>
 
-                <td className="px-4 py-4 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => onEditMedication(med)}
-                      className={cn(
-                        'rounded-lg border p-2 transition-colors',
-                        colors.border.primary,
-                        isDark
-                          ? 'text-slate-200 hover:bg-slate-700'
-                          : 'text-slate-700 hover:bg-slate-100'
-                      )}
-                      title="Edit medication"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
+                {allowMedicationMutations && (
+                  <td className="px-4 py-4 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onEditMedication(med)}
+                        className={cn(
+                          'rounded-lg border p-2 transition-colors',
+                          colors.border.primary,
+                          isDark
+                            ? 'text-slate-200 hover:bg-slate-700'
+                            : 'text-slate-700 hover:bg-slate-100'
+                        )}
+                        title="Edit medication"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => onDeleteMedication(med)}
-                      className={cn(
-                        'rounded-lg border p-2 transition-colors',
-                        colors.border.primary,
-                        isDark
-                          ? 'text-red-300 hover:bg-red-950/40'
-                          : 'text-red-700 hover:bg-red-50'
-                      )}
-                      title="Delete medication"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </td>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteMedication(med)}
+                        className={cn(
+                          'rounded-lg border p-2 transition-colors',
+                          colors.border.primary,
+                          isDark
+                            ? 'text-red-300 hover:bg-red-950/40'
+                            : 'text-red-700 hover:bg-red-50'
+                        )}
+                        title="Delete medication"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -290,37 +296,39 @@ export function PrescriptionMedicationsDataTable({
                 </div>
               </div>
 
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => onEditMedication(med)}
-                  className={cn(
-                    'rounded-lg border p-2 transition-colors',
-                    colors.border.primary,
-                    isDark
-                      ? 'text-slate-200 hover:bg-slate-700'
-                      : 'text-slate-700 hover:bg-slate-100'
-                  )}
-                  title="Edit medication"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
+              {allowMedicationMutations && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onEditMedication(med)}
+                    className={cn(
+                      'rounded-lg border p-2 transition-colors',
+                      colors.border.primary,
+                      isDark
+                        ? 'text-slate-200 hover:bg-slate-700'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    )}
+                    title="Edit medication"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => onDeleteMedication(med)}
-                  className={cn(
-                    'rounded-lg border p-2 transition-colors',
-                    colors.border.primary,
-                    isDark
-                      ? 'text-red-300 hover:bg-red-950/40'
-                      : 'text-red-700 hover:bg-red-50'
-                  )}
-                  title="Delete medication"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteMedication(med)}
+                    className={cn(
+                      'rounded-lg border p-2 transition-colors',
+                      colors.border.primary,
+                      isDark
+                        ? 'text-red-300 hover:bg-red-950/40'
+                        : 'text-red-700 hover:bg-red-50'
+                    )}
+                    title="Delete medication"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="mt-4 grid gap-3">

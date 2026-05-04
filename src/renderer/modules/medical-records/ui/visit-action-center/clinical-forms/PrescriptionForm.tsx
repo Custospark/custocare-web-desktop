@@ -80,6 +80,11 @@ import {
   toPrescriptionFormData,
   toPrescriptionItemRequest,
 } from './prescription-form-components/prescriptionForm.types';
+import {
+  canDeletePrescriptionForm,
+  canEditPrescriptionForm,
+  prescriptionReadOnlyReason,
+} from './prescription-form-components/prescriptionFormAccess';
 
 interface PrescriptionFormProps {
   theme?: 'light' | 'dark';
@@ -165,6 +170,14 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
   );
 
   const currentPrescription = currentPrescriptionQuery.data?.data || resolvedExistingPrescription;
+
+  const prescriptionStatus = currentPrescription?.status;
+  const canEditForm = canEditPrescriptionForm(prescriptionStatus);
+  const canDeleteRx =
+    canDeletePrescriptionForm(prescriptionStatus) &&
+    !!currentPrescription &&
+    currentPrescription.prescribed_by.id === userId;
+  const readOnlyReason = prescriptionReadOnlyReason(prescriptionStatus);
 
   const [formData, setFormData] = useState<PrescriptionFormData>(EMPTY_PRESCRIPTION);
   const [medications, setMedications] = useState<PrescriptionItem[]>([]);
@@ -275,6 +288,14 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
       setFormData(toPrescriptionFormData(currentPrescription));
     }
   }, [currentPrescription]);
+
+  useEffect(() => {
+    if (!canEditForm) {
+      setIsDetailsEditorOpen(false);
+      setShowMedicationModal(false);
+      setShowTemplateSelector(false);
+    }
+  }, [canEditForm]);
 
   // Update medications when items query returns data
   useEffect(() => {
@@ -437,20 +458,36 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
   }, []);
 
   const openAddMedicationModal = useCallback(() => {
+    if (!canEditForm) {
+      showToast('error', readOnlyReason ?? 'This prescription cannot be edited.', 4000);
+      return;
+    }
     setMedicationForm(EMPTY_MEDICATION);
     setEditingMedication(null);
     setAllergyAlertVisible(null);
     setShowMedicationModal(true);
-  }, []);
+  }, [canEditForm, readOnlyReason, showToast]);
 
-  const editMedicationHandler = useCallback((item: PrescriptionItem) => {
-    setMedicationForm(toMedicationFormData(item));
-    setEditingMedication(item);
-    setShowMedicationModal(true);
-  }, []);
+  const editMedicationHandler = useCallback(
+    (item: PrescriptionItem) => {
+      if (!canEditForm) {
+        showToast('error', readOnlyReason ?? 'This prescription cannot be edited.', 4000);
+        return;
+      }
+      setMedicationForm(toMedicationFormData(item));
+      setEditingMedication(item);
+      setShowMedicationModal(true);
+    },
+    [canEditForm, readOnlyReason, showToast]
+  );
 
   // Add or update medication
   const addOrUpdateMedication = useCallback(async () => {
+    if (!canEditForm) {
+      showToast('error', readOnlyReason ?? 'This prescription cannot be edited.', 4000);
+      return;
+    }
+
     if (!medicationForm.medication_name.trim()) {
       showToast('error', 'Medication name is required', 3000);
       return;
@@ -519,6 +556,8 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
     }
   }, [
     medicationForm,
+    canEditForm,
+    readOnlyReason,
     checkAllergy,
     confirm,
     theme,
@@ -535,6 +574,11 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
   // Delete medication
   const deleteMedicationHandler = useCallback(
     async (item: PrescriptionItem) => {
+      if (!canEditForm) {
+        showToast('error', readOnlyReason ?? 'This prescription cannot be edited.', 4000);
+        return;
+      }
+
       const confirmed = await confirm({
         title: 'Remove Medication',
         message: `Are you sure you want to remove "${item.medication_name}" from this prescription?`,
@@ -563,12 +607,18 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
         showToast('error', 'Failed to remove medication', 5000);
       }
     },
-    [confirm, theme, currentPrescriptionId, deleteItem, refreshItems, refreshPrescription, showToast]
+    [confirm, theme, canEditForm, readOnlyReason, currentPrescriptionId, deleteItem, refreshItems, refreshPrescription, showToast]
   );
 
   // Apply template
   const applyTemplate = useCallback(
     async (template: ClinicalTemplate) => {
+      if (!canEditForm) {
+        setShowTemplateSelector(false);
+        showToast('error', readOnlyReason ?? 'This prescription cannot be edited.', 4000);
+        return;
+      }
+
       setShowTemplateSelector(false);
 
       try {
@@ -608,12 +658,24 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
         showToast('error', 'Failed to apply template', 5000);
       }
     },
-    [currentPrescriptionId, createItem, refreshItems, refreshPrescription, showToast]
+    [canEditForm, readOnlyReason, currentPrescriptionId, createItem, refreshItems, refreshPrescription, showToast]
   );
 
   // Delete prescription handler
   const handleDeletePrescription = useCallback(async () => {
     if (!currentPrescriptionId) return;
+
+    const draftOnly =
+      canDeletePrescriptionForm(prescriptionStatus) &&
+      currentPrescription?.prescribed_by.id === userId;
+    if (!draftOnly) {
+      showToast(
+        'error',
+        'Only draft prescriptions you prescribed can be deleted. Active or dispensed prescriptions cannot be removed here.',
+        5000
+      );
+      return;
+    }
 
     const confirmed = await confirm({
       title: 'Delete Prescription',
@@ -642,7 +704,19 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
       console.error('Failed to delete prescription:', error);
       showToast('error', 'Failed to delete prescription', 5000);
     }
-  }, [currentPrescriptionId, deletePrescription, confirm, theme, queryClient, patientNumericId, onCancel, showToast]);
+  }, [
+    currentPrescriptionId,
+    prescriptionStatus,
+    currentPrescription,
+    userId,
+    deletePrescription,
+    confirm,
+    theme,
+    queryClient,
+    patientNumericId,
+    onCancel,
+    showToast,
+  ]);
 
   const handleNavigateToCreateTemplate = useCallback(() => {
     setIsNavigatingToTemplateCreate(true);
@@ -678,6 +752,15 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
 
       if (medications.length === 0) {
         showToast('error', 'Please add at least one medication', 5000);
+        return;
+      }
+
+      if (currentPrescription?.id && !canEditPrescriptionForm(currentPrescription.status)) {
+        showToast(
+          'error',
+          prescriptionReadOnlyReason(currentPrescription.status) ?? 'This prescription cannot be updated.',
+          5000
+        );
         return;
       }
 
@@ -784,12 +867,12 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
       currentPrescription,
       visitId,
       patientAllergies.length,
+      showToast,
       updatePrescription,
       createPrescription,
       refreshPrescription,
       onSuccess,
       queryClient,
-      showToast,
     ]
   );
 
@@ -906,7 +989,9 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
             onCloseEditor={() => setIsDetailsEditorOpen(false)}
             onChange={handleFormChange}
             onDelete={handleDeletePrescription}
-            currentUserId={userId}
+            canEditDetails={canEditForm}
+            canDeletePrescription={canDeleteRx}
+            readOnlyHint={readOnlyReason}
             isDeleting={deletePrescription.isPending}
           />
 
@@ -919,6 +1004,7 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
             onAddMedication={openAddMedicationModal}
             onEditMedication={editMedicationHandler}
             onDeleteMedication={deleteMedicationHandler}
+            allowMedicationMutations={canEditForm}
           />
         </div>
 
@@ -936,10 +1022,18 @@ export const PrescriptionForm: React.FC<PrescriptionFormProps> = ({
 
           <button
             type="submit"
-            disabled={isMutating || isSubmitting || medications.length === 0}
+            disabled={
+              isMutating ||
+              isSubmitting ||
+              medications.length === 0 ||
+              (!!currentPrescription?.id && !canEditForm)
+            }
             className={cn(
               'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
-              isMutating || isSubmitting || medications.length === 0
+              isMutating ||
+                isSubmitting ||
+                medications.length === 0 ||
+                (!!currentPrescription?.id && !canEditForm)
                 ? 'cursor-not-allowed bg-gray-400'
                 : 'cursor-pointer bg-blue-600 hover:bg-blue-700'
             )}
