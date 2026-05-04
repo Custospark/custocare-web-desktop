@@ -11,6 +11,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
+import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 import type { LabTemplate, LabTest } from '../../../../api/lab/LabTypes';
 import type {
   ColorTokens,
@@ -20,6 +21,7 @@ import type {
 
 interface LabRequestItemEditorModalProps {
   open: boolean;
+  isPreparingData: boolean;
   isDark: boolean;
   colors: ColorTokens;
   editingItem: LabRequestDraftItem | null;
@@ -49,6 +51,7 @@ const RequiredLabel: React.FC<{ children: React.ReactNode; className?: string }>
 
 export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps> = ({
   open,
+  isPreparingData,
   isDark,
   colors,
   editingItem,
@@ -143,6 +146,8 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
               <button
                 type="button"
                 onClick={onClose}
+                aria-label="Close add lab test modal"
+                title="Close"
                 className={cn('cursor-pointer rounded p-1 transition-colors', colors.bg.hover, colors.text.secondary)}
               >
                 <X className="h-5 w-5" />
@@ -150,6 +155,14 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
             </div>
 
             <div className="max-h-[80vh] overflow-y-auto p-5">
+              {isPreparingData ? (
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <LoadingSkeleton
+                    variant="default"
+                    message="Loading lab tests and templates..."
+                  />
+                </div>
+              ) : (
               <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
                 {/* Left Column - Test Selection */}
                 <div className="space-y-4">
@@ -374,12 +387,13 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
                             "dark:border-red-500/40 dark:bg-red-950/50 dark:text-red-200",
                             "flex items-start gap-2"
                           )}>
-                            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                             <span>Please select a lab test from the catalog before adding to the request.</span>
                           </div>
                         )}
                 </div>
               </div>
+              )}
             </div>
 
             <div className={cn('flex justify-end gap-3 border-t p-5', colors.border.primary)}>
@@ -394,10 +408,10 @@ export const LabRequestItemEditorModal: React.FC<LabRequestItemEditorModalProps>
               <button
                 type="button"
                 onClick={onSubmit}
-                disabled={isMutating || !formData.display_name.trim() || !formData.lab_test_id}
+                disabled={isPreparingData || isMutating || !formData.display_name.trim() || !formData.lab_test_id}
                 className={cn(
                   'rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
-                  isMutating || !formData.display_name.trim() || !formData.lab_test_id
+                  isPreparingData || isMutating || !formData.display_name.trim() || !formData.lab_test_id
                     ? 'cursor-not-allowed bg-gray-400'
                     : 'cursor-pointer bg-blue-600 hover:bg-blue-700'
                 )}

@@ -11,6 +11,7 @@ import type {
 
 interface LabRequestItemEditorControllerProps {
   open: boolean;
+  isPreparingData: boolean;
   isDark: boolean;
   colors: ColorTokens;
   editingItem: LabRequestDraftItem | null;
@@ -33,6 +34,7 @@ export const LabRequestItemEditorController: React.FC<
   LabRequestItemEditorControllerProps
 > = ({
   open,
+  isPreparingData,
   isDark,
   colors,
   editingItem,
@@ -50,6 +52,7 @@ export const LabRequestItemEditorController: React.FC<
   return (
     <LabRequestItemEditorModal
       open={open}
+      isPreparingData={isPreparingData}
       isDark={isDark}
       colors={colors}
       editingItem={editingItem}

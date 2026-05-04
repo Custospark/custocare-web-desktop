@@ -19,7 +19,7 @@ import LabRequestHeader from './LabRequestHeader';
 import LabRequestDetailsCard from './LabRequestDetailsCard';
 import LabRequestItemsTable from './LabRequestItemsTable';
 import { LabRequestStateGuard } from './LabRequestStateGuard';
-import { LabRequestItemEditorController } from './LabRequestItemEditorController';
+import LabRequestItemEditorModal from './LabRequestItemEditorModal';
 import { LabRequestManagementModals } from './LabRequestManagementModals';
 import { useLabRequestResolvedRequest } from './LabRequestResolvedRequestScope';
 import { useLabRequestReferenceData } from './LabRequestReferenceDataScope';
@@ -100,6 +100,7 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
   const [showTemplateManager, setShowTemplateManager] = useState(false);
   const [showTemplateFieldManager, setShowTemplateFieldManager] = useState(false);
   const [showLabItemManager, setShowLabItemManager] = useState(false);
+  const [isPreparingItemEditor, setIsPreparingItemEditor] = useState(false);
 
   // Preview modal states
   const [showRequestPreview, setShowRequestPreview] = useState(false);
@@ -300,14 +301,17 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
   const resetItemEditor = useCallback(() => {
     setItemEditorData(EMPTY_LAB_REQUEST_ITEM);
     setEditingItem(null);
+    setIsPreparingItemEditor(false);
     setShowItemEditorModal(false);
   }, []);
 
   const openAddItemModal = useCallback(async () => {
-    await refreshReferenceDataSafely('Failed to refresh reference data before opening item modal:');
+    setShowItemEditorModal(true);
+    setIsPreparingItemEditor(true);
     setItemEditorData(EMPTY_LAB_REQUEST_ITEM);
     setEditingItem(null);
-    setShowItemEditorModal(true);
+    await refreshReferenceDataSafely('Failed to refresh reference data before opening item modal:');
+    setIsPreparingItemEditor(false);
   }, [refreshReferenceDataSafely]);
 
   const handleOpenTemplateSelector = useCallback(async () => {
@@ -353,6 +357,8 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
 
   const handleEditItem = useCallback(
     async (item: LabRequestDraftItem) => {
+      setShowItemEditorModal(true);
+      setIsPreparingItemEditor(true);
       await refreshReferenceDataSafely('Failed to refresh reference data before editing item:');
       setEditingItem(item);
       setItemEditorData({
@@ -374,7 +380,7 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
         inventory_display_unit: item.inventory_display_unit || '',
         inventory_available_quantity: item.inventory_available_quantity ?? null,
       });
-      setShowItemEditorModal(true);
+      setIsPreparingItemEditor(false);
     },
     [refreshReferenceDataSafely]
   );
@@ -723,7 +729,7 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
                   className={cn(
-                    "w-20 h-20 border-[4px] rounded-full",
+                    "h-20 w-20 rounded-full border-4",
                     isDark ? "border-blue-500/30 border-t-blue-500 shadow-lg shadow-blue-500/20" : "border-blue-500/30 border-t-blue-600 shadow-lg shadow-blue-500/30"
                   )}
                 />
@@ -857,8 +863,9 @@ export const LabRequestFormBody: React.FC<LabRequestFormBodyProps> = ({
             </div>
           </form>
 
-          <LabRequestItemEditorController
+          <LabRequestItemEditorModal
             open={showItemEditorModal}
+            isPreparingData={isPreparingItemEditor}
             isDark={isDark}
             colors={colors}
             editingItem={editingItem}
