@@ -130,9 +130,9 @@ export const ChargeItemsList: React.FC<ChargeItemsListProps> = ({
               <Hash className={`w-3 h-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
             </div>
             <div className="col-span-4">Item</div>
-            <div className="col-span-2">Unit</div>
-            <div className="col-span-3">Qty</div>
-            <div className="col-span-2 text-right">Total</div>
+            <div className="col-span-2 text-center">Unit</div>
+            <div className="col-span-4 text-center">Qty / Actions</div>
+            <div className="col-span-1 text-center">Total</div>
           </div>
 
           {/* Scrollable list */}

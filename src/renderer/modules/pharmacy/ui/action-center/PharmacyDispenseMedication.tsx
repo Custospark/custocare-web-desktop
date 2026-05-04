@@ -14,7 +14,6 @@ import {
   Lock,
   Maximize2,
   Pill,
-  RefreshCw,
   ShieldAlert,
   Sparkles,
   X,
@@ -28,6 +27,8 @@ import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import { cn } from '../../../../shared/utils/classNameUtils';
 import { useConfirm } from '../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { containerVariants } from '../../../../shared/components/animations/motionVariants';
+import LogoImage from '../../../../shared/assets/LogoImage';
+import { BrandName } from '../../../../shared/utils/BrandName';
 
 import {
   selectActivePatient,
@@ -797,6 +798,101 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
     showToast('info', 'Prescription list refreshed.', 3000);
   }, [rxQuery, showToast]);
 
+  const handleImportFromPrescription = useCallback(async () => {
+    if (isReadOnly) {
+      showToast('error', 'Billing is settled. Import is locked.', 4000);
+      return;
+    }
+    if (prescriptionLines.length === 0) {
+      showToast('info', 'No prescription lines to import.', 3000);
+      return;
+    }
+
+    const qtyByService = new Map<string, { service: ServiceItem; qty: number }>();
+    let blocked = 0;
+    let unmatched = 0;
+
+    for (const { item } of prescriptionLines) {
+      const medName = item.medication_name ?? '';
+      const block = checkBlockedByAllergy(medName);
+      if (block.blocked) {
+        blocked += 1;
+        continue;
+      }
+
+      const matchedService = dedupedServices.find((s) => medMatchesBillLine(medName, s.name));
+      if (!matchedService) {
+        unmatched += 1;
+        continue;
+      }
+
+      const key = makeBillableKey(matchedService);
+      const qty = clampQty(Number(item.dosage_quantity ?? 1));
+      const existing = qtyByService.get(key);
+      if (existing) {
+        existing.qty += qty;
+      } else {
+        qtyByService.set(key, { service: matchedService, qty });
+      }
+    }
+
+    if (qtyByService.size === 0) {
+      showToast(
+        'info',
+        `Nothing imported. Unmatched: ${unmatched}, blocked by allergy: ${blocked}.`,
+        4500
+      );
+      return;
+    }
+
+    let imported = 0;
+    let adjusted = 0;
+
+    for (const { service, qty } of qtyByService.values()) {
+      const serviceKey = makeBillableKey(service);
+      const existingBackendItem = backendChargeItems.find(
+        (row): row is BackendChargeItem =>
+          row.source === 'backend' && row.serviceKey === serviceKey
+      );
+
+      if (existingBackendItem) {
+        await adjustBillingLineItem({
+          line_item_id: existingBackendItem.lineItemId,
+          action: 'increase',
+          quantity: qty,
+          reason: 'Imported from prescription',
+        });
+        adjusted += 1;
+      } else {
+        for (let i = 0; i < qty; i += 1) {
+          dispatch(addChargeItem(service));
+        }
+        imported += 1;
+      }
+    }
+
+    if (adjusted > 0) {
+      await syncBillingSliceFromServer();
+    }
+
+    showToast(
+      'success',
+      `Imported ${imported} new item(s), updated ${adjusted} saved item(s). Unmatched: ${unmatched}, blocked: ${blocked}.`,
+      6000
+    );
+  }, [
+    isReadOnly,
+    prescriptionLines,
+    checkBlockedByAllergy,
+    dedupedServices,
+    clampQty,
+    backendChargeItems,
+    adjustBillingLineItem,
+    dispatch,
+    syncBillingSliceFromServer,
+    showToast,
+  ]);
+
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       if (!searchWrapRef.current?.contains(e.target as Node)) setShowSearchResults(false);
@@ -816,10 +912,28 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
     return () => el.removeEventListener('scroll', handleScroll);
   }, [dispenseFocusOpen]);
 
+  const requestCloseFocus = useCallback(async () => {
+    if (!dispenseFocusOpen) return;
+    if (isReadOnly || draftChargeItems.length === 0) {
+      setDispenseFocusOpen(false);
+      return;
+    }
+    const confirmed = await confirm({
+      title: 'Exit dispensing?',
+      message:
+        'You have unsaved draft medication lines. Exit now and keep drafts, or stay and save them to the patient bill.',
+      confirmText: 'Exit anyway',
+      cancelText: 'Stay and continue',
+      variant: 'warning',
+      theme,
+    });
+    if (confirmed) setDispenseFocusOpen(false);
+  }, [confirm, dispenseFocusOpen, draftChargeItems.length, isReadOnly, theme]);
+
   useEffect(() => {
     if (!dispenseFocusOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setDispenseFocusOpen(false);
+      if (e.key === 'Escape') void requestCloseFocus();
     };
     window.addEventListener('keydown', onKey);
     const prevOverflow = document.body.style.overflow;
@@ -828,7 +942,7 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = prevOverflow;
     };
-  }, [dispenseFocusOpen]);
+  }, [dispenseFocusOpen, requestCloseFocus]);
 
   const handleSyncData = useCallback(() => {
     void billableQuery.refetch();
@@ -939,19 +1053,16 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
           )}
         >
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => setDispenseFocusOpen(false)}
+            <div
               className={cn(
-                'inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium',
-                isDark
-                  ? 'border-gray-600 text-gray-200 hover:bg-gray-800'
-                  : 'border-gray-300 text-gray-800 hover:bg-gray-50'
+                'hidden md:flex items-center gap-2 rounded-md border px-2 py-1',
+                isDark ? 'border-gray-700 bg-gray-800/70' : 'border-gray-200 bg-white'
               )}
             >
-              <X className="h-4 w-4" aria-hidden />
-              Exit focus
-            </button>
+              <LogoImage size="sm" />
+              <BrandName />
+              <Pill className="h-4 w-4 text-blue-500" />
+            </div>
             <div className="min-w-0">
               <h2 className={cn('truncate text-lg font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
                 Dispense medication
@@ -963,14 +1074,15 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
           </div>
           <button
             type="button"
-            onClick={handleSyncData}
+            onClick={() => void requestCloseFocus()}
             className={cn(
-              'inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium',
-              isDark ? 'border-gray-600 text-gray-200 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
+              'inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border',
+              isDark ? 'border-gray-600 text-gray-200 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'
             )}
+            aria-label="Close dispensing workspace"
+            title="Close"
           >
-            <RefreshCw className="h-4 w-4" />
-            Sync data
+            <X className="h-4 w-4" />
           </button>
         </header>
 
@@ -1016,7 +1128,7 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
               {/* Rx alignment */}
-              <section className={cn('lg:col-span-4 min-h-0 rounded-xl border p-4', panelBg)}>
+              <section className={cn('lg:col-span-3 min-h-0 rounded-xl border p-4', panelBg)}>
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Pill className={cn('h-5 w-5', isDark ? 'text-emerald-400' : 'text-emerald-600')} />
@@ -1024,21 +1136,34 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
                       Prescribed vs bill
                     </h3>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleImportRxHighlight}
-                    className={cn(
-                      'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium',
-                      importPulse
-                        ? 'bg-emerald-600 text-white'
-                        : isDark
-                          ? 'bg-gray-800 text-gray-200'
-                          : 'bg-gray-100 text-gray-800'
-                    )}
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Refresh Rx
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={handleImportRxHighlight}
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium',
+                        isDark ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-800'
+                      )}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Refresh Rx
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleImportFromPrescription()}
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium',
+                        importPulse
+                          ? 'bg-emerald-600 text-white'
+                          : isDark
+                            ? 'bg-emerald-700/70 text-emerald-100 hover:bg-emerald-700'
+                            : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                      )}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Import Rx
+                    </button>
+                  </div>
                 </div>
                 <p className={cn('mb-4 text-xs', subtle)}>
                   Compare orders to what is on the bill (including unsaved lines in the list).
@@ -1103,7 +1228,7 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
               </section>
 
               {/* Charge entry cluster */}
-              <div className="lg:col-span-8 flex min-h-0 flex-col">
+              <div className="lg:col-span-9 flex min-h-0 flex-col">
                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-6">
                   <motion.div
                     variants={containerVariants}

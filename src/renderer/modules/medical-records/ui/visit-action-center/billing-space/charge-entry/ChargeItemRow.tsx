@@ -117,19 +117,19 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
   const hasAuditLogs = isPersistedBackendItem && backendItem?.audit_logs && backendItem.audit_logs.length > 0;
   const displayQuantity = getChargeItemQuantity(item);
 
-  const actionButtonClass = `p-2 border ${
+  const actionButtonClass = `p-1.5 border ${
     isDark
       ? 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300'
       : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600'
   } transition-colors cursor-pointer rounded`;
 
-  const removeButtonClass = `ml-1 p-2 ${
+  const removeButtonClass = `p-1.5 ${
     isDark
       ? 'bg-gray-800 hover:bg-red-900/20 text-gray-300 hover:text-red-400'
       : 'bg-gray-50 hover:bg-red-50 text-gray-500 hover:text-red-500'
   } transition-colors cursor-pointer rounded-full`;
 
-  const historyButtonClass = `ml-1 p-2 ${
+  const historyButtonClass = `p-1.5 ${
     isDark
       ? 'bg-gray-800 hover:bg-blue-900/20 text-gray-300 hover:text-blue-400'
       : 'bg-gray-50 hover:bg-blue-50 text-gray-500 hover:text-blue-500'
@@ -138,18 +138,15 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
   const renderQuantityControlDesktop = () => {
     if (isReadOnly) {
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-1.5">
           <span
             className={`px-3 py-2 border ${
               isDark
                 ? 'border-gray-700 bg-gray-800 text-gray-100'
                 : 'border-gray-200 bg-gray-50 text-gray-900'
-            } rounded text-center w-20`}
+            } rounded text-center w-14`}
           >
             {displayQuantity}
-          </span>
-          <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} ml-2`}>
-            × {formatCurrency(item.service.unitPrice)}
           </span>
           
           {/* Eye button for history - visible even in read-only mode */}
@@ -171,7 +168,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
     }
 
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center gap-1.5">
         <motion.button
           type="button"
           whileTap={{ scale: 0.9 }}
@@ -184,7 +181,7 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
 
         {isPersistedBackendItem ? (
           <div
-            className={`w-20 px-2 py-2 text-center border rounded ${
+            className={`w-14 px-2 py-1.5 text-center border rounded ${
               isDark
                 ? 'border-gray-700 bg-gray-800 text-gray-100'
                 : 'border-gray-200 bg-white text-gray-900'
@@ -199,10 +196,12 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
             inputMode="numeric"
             min={1}
             max={9999}
+            title="Item quantity"
+            aria-label="Item quantity"
             value={displayQuantity}
             onChange={(e) => onQuantityChange(item.id, e.target.value)}
             onBlur={(e) => onQuantityBlur(item.id, e.target.value)}
-            className={`w-20 px-2 py-2 text-center border ${
+            className={`w-14 px-2 py-1.5 text-center border ${
               isDark
                 ? 'border-gray-700 bg-gray-800 text-gray-100'
                 : 'border-gray-200 bg-white text-gray-900'
@@ -317,6 +316,8 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
               inputMode="numeric"
               min={1}
               max={9999}
+              title="Item quantity"
+              aria-label="Item quantity"
               value={displayQuantity}
               onChange={(e) => onQuantityChange(item.id, e.target.value)}
               onBlur={(e) => onQuantityBlur(item.id, e.target.value)}
@@ -474,16 +475,16 @@ export const ChargeItemRow: React.FC<ChargeItemRowProps> = ({
           </div>
         </div>
 
-        <div className="col-span-2">
-          <span className={`font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+        <div className="col-span-2 min-w-0 text-center">
+          <span className={`text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
             {formatCurrency(item.service.unitPrice)}
           </span>
         </div>
 
-        <div className="col-span-3">{renderQuantityControlDesktop()}</div>
+        <div className="col-span-4 min-w-0">{renderQuantityControlDesktop()}</div>
 
-        <div className="col-span-2 text-right">
-          <span className="font-extrabold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+        <div className="col-span-1 min-w-0 text-center">
+          <span className="text-sm font-extrabold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
             {formatCurrency(item.totalAmount)}
           </span>
         </div>
