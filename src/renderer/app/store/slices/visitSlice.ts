@@ -80,6 +80,12 @@ export interface VisitsState {
     staffId: number | null;
     enteredAt: string | null;
   };
+
+  /** Pharmacy intake: visit IDs that currently have Rx ready for dispensing (from queue queries). */
+  medicationEncounterQueue: {
+    visitIdsReadyForDispensing: number[];
+    lastSyncedAt: string | null;
+  };
   
   // UI state
   ui: {
@@ -104,6 +110,11 @@ const initialState: VisitsState = {
     staffId: null,
     enteredAt: null,
   }),
+
+  medicationEncounterQueue: {
+    visitIdsReadyForDispensing: [],
+    lastSyncedAt: null,
+  },
   
   ui: loadFromStorage(STORAGE_KEYS.VISIT_UI_STATE, {
     isTakingAction: false,
@@ -262,6 +273,16 @@ const visitsSlice = createSlice({
       // CHANGE: Save UI state to localStorage
       saveToStorage(STORAGE_KEYS.VISIT_UI_STATE, state.ui);
     },
+
+    setMedicationEncounterQueue: (
+      state,
+      action: PayloadAction<{ visitIds: number[]; syncedAt?: string }>
+    ) => {
+      state.medicationEncounterQueue = {
+        visitIdsReadyForDispensing: action.payload.visitIds,
+        lastSyncedAt: action.payload.syncedAt ?? new Date().toISOString(),
+      };
+    },
     
     /**
      * RESET VISIT STATE - On logout or cleanup
@@ -299,6 +320,7 @@ export const {
   switchToPreviousVisit,
   updateActiveVisitPatient,
   setVisitError,
+  setMedicationEncounterQueue,
   resetVisitsState,
   emergencyClearVisit,
 } = visitsSlice.actions;
@@ -343,6 +365,9 @@ export const selectActiveVisitDepartment = (state: RootState) =>
 // Check if we have an active visit
 export const selectHasActiveVisit = (state: RootState) => 
   !!state.visits.activeVisit;
+
+export const selectMedicationEncounterQueueVisitIds = (state: RootState) =>
+  state.visits.medicationEncounterQueue?.visitIdsReadyForDispensing ?? [];
 
 // Get visit info for display - FIXED VERSION
 export const selectActiveVisitInfo = (state: RootState) => {

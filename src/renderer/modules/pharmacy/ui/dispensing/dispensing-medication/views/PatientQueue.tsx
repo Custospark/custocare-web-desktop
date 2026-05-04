@@ -467,14 +467,14 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     const highAcuityCount = queueVisits.filter((visit) => visit.acuity_score >= 4).length;
 
     return {
-      totalVisits: queueData?.meta?.total_visits ?? queueVisits.length,
+      totalVisits: queueVisits.length,
       averageWaitTime,
       overdueCount,
       isolationCount,
       walkInCount,
       highAcuityCount,
     };
-  }, [queueVisits, queueData]);
+  }, [queueVisits]);
 
   const handleClearSearch = useCallback(() => {
     setFilterState((prev) => ({ ...prev, searchTerm: '' }));

@@ -16,8 +16,15 @@ const PharmacyFrontDesk: React.FC<PharmacyFrontDeskProps> = ({ theme }) => {
       title="Queue & patient intake"
       icon={<PersonStanding className="h-6 w-6" />}
       theme={theme}
-      defaultActionTo={PHARMACY_ROUTES.PATIENTS_SEARCH}
+      defaultActionTo={PHARMACY_ROUTES.PATIENT_QUEUE}
       actions={[
+        {
+          key: 'patient_queue',
+          label: 'Medication queue',
+          icon: <ListOrdered className="h-4 w-4" />,
+          to: PHARMACY_ROUTES.PATIENT_QUEUE,
+          description: 'Visits with prescriptions ready for dispensing',
+        },
         {
           key: 'patient_search',
           label: 'Search patient',
@@ -29,12 +36,6 @@ const PharmacyFrontDesk: React.FC<PharmacyFrontDeskProps> = ({ theme }) => {
           label: 'Register patient',
           icon: <UserPlus className="h-4 w-4" />,
           to: PHARMACY_ROUTES.PATIENTS_REGISTER,
-        },
-        {
-          key: 'patient_queue',
-          label: 'Facility queue',
-          icon: <ListOrdered className="h-4 w-4" />,
-          to: PHARMACY_ROUTES.PATIENT_QUEUE,
         },
         {
           key: 'walk_in_patient',

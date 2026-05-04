@@ -124,6 +124,10 @@ export const PrescriptionWorkbench: React.FC<PrescriptionWorkbenchProps> = ({
       case 'queue':
         return allPrescriptions.filter((item) => item.status === PrescriptionStatus.ACTIVE && !!item.visit_id);
       case 'review':
+        return allPrescriptions.filter(
+          (item) =>
+            item.status === PrescriptionStatus.ON_HOLD || item.status === PrescriptionStatus.DRAFT
+        );
       case 'search':
       case 'create':
       default:

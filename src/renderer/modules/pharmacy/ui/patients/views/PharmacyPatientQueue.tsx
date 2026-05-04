@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Pill } from 'lucide-react';
@@ -6,12 +6,12 @@ import { Pill } from 'lucide-react';
 import PatientQueue from '../../dispensing/dispensing-medication/views/PatientQueue';
 import { cn } from '../../../../../shared/utils/classNameUtils';
 import { PHARMACY_ROUTES } from '../../../../../app/routes/routeConstants';
-import { type QueueVisitItem, VisitPhase } from '../../../api/dispensing/visit-queue/visitTypes';
+import { type QueueVisitItem } from '../../../api/dispensing/visit-queue/visitTypes';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import { useGetPrescriptions } from '../../../../medical-records/api/prescription/PrescriptionQueries';
 import { PrescriptionStatus } from '../../../../medical-records/api/prescription/PrescriptionTypes';
 
-import { setActiveVisit, emergencyClearVisit } from '../../../../../app/store/slices/visitSlice';
+import { setActiveVisit, emergencyClearVisit, setMedicationEncounterQueue } from '../../../../../app/store/slices/visitSlice';
 import { clearAll } from '../../../../medical-records/ui/visit-action-center/billing-space';
 import { useAppSelector } from '../../../../../app/store/hooks/useApp';
 import {
@@ -28,9 +28,9 @@ export interface PharmacyPatientQueueProps {
 }
 
 /**
- * Same UX as medical records patient queue: shared PatientQueue UI, visit stored in visitSlice,
- * billing draft cleared, then navigate to the pharmacy action center. Queue rows are limited to visits
- * that have at least one active, visit-linked prescription for this facility once prescription data loads.
+ * Queue lists only visits that have at least one prescription **ready for dispensing**
+ * (Active – Ready for Dispensing, or Partially Dispensed). Counts/stats use the same filtered set.
+ * Selecting a row loads the visit into visitSlice and opens the medication encounter workflow.
  */
 const PharmacyPatientQueue: React.FC<PharmacyPatientQueueProps> = ({ theme, className = '' }) => {
   const navigate = useNavigate();
@@ -42,34 +42,41 @@ const PharmacyPatientQueue: React.FC<PharmacyPatientQueueProps> = ({ theme, clas
   const staffId = useAppSelector(getStaffId);
   const hasCompleteStaff = useAppSelector(hasCompleteStaffContext);
 
-  const readyRxQuery = useGetPrescriptions(
-    {
-      facility_id: facilityId ?? undefined,
-      status: PrescriptionStatus.ACTIVE,
-    },
-    {
-      enabled: !!facilityId,
-      refetchInterval: 15000,
-    }
+  const activeRxQuery = useGetPrescriptions(
+    { facility_id: facilityId ?? undefined, status: PrescriptionStatus.ACTIVE },
+    { enabled: !!facilityId, refetchInterval: 15000 }
   );
 
-  const visitIdsWithReadyPrescription = useMemo(() => {
-    const rows = readyRxQuery.data?.data ?? [];
+  const partialRxQuery = useGetPrescriptions(
+    { facility_id: facilityId ?? undefined, status: PrescriptionStatus.PARTIALLY_DISPENSED },
+    { enabled: !!facilityId, refetchInterval: 15000 }
+  );
+
+  const rxReady = activeRxQuery.isFetched && partialRxQuery.isFetched;
+  const rxFetching = activeRxQuery.isFetching || partialRxQuery.isFetching;
+
+  const visitIdsWithRxReadyForDispensing = useMemo(() => {
     const ids = new Set<number>();
-    for (const p of rows) {
-      if (p.visit_id != null) {
-        ids.add(p.visit_id);
-      }
+    for (const p of activeRxQuery.data?.data ?? []) {
+      if (p.visit_id != null) ids.add(p.visit_id);
+    }
+    for (const p of partialRxQuery.data?.data ?? []) {
+      if (p.visit_id != null) ids.add(p.visit_id);
     }
     return ids;
-  }, [readyRxQuery.data]);
+  }, [activeRxQuery.data, partialRxQuery.data]);
+
+  useEffect(() => {
+    if (!rxReady) return;
+    dispatch(setMedicationEncounterQueue({ visitIds: [...visitIdsWithRxReadyForDispensing] }));
+  }, [dispatch, rxReady, visitIdsWithRxReadyForDispensing]);
 
   const filterVisit = useCallback(
     (visit: QueueVisitItem) => {
-      if (!readyRxQuery.isFetched) return true;
-      return visit.visit_id != null && visitIdsWithReadyPrescription.has(visit.visit_id);
+      if (!rxReady) return false;
+      return visit.visit_id != null && visitIdsWithRxReadyForDispensing.has(visit.visit_id);
     },
-    [readyRxQuery.isFetched, visitIdsWithReadyPrescription]
+    [rxReady, visitIdsWithRxReadyForDispensing]
   );
 
   const handleTakeAction = async (visit: QueueVisitItem) => {
@@ -113,11 +120,7 @@ const PharmacyPatientQueue: React.FC<PharmacyPatientQueueProps> = ({ theme, clas
         })
       );
 
-      showToast(
-        'success',
-        `Ready for pharmacy — ${visit.patient?.name || 'patient'}. Open the billing tray to record dispensed items.`,
-        3500
-      );
+      showToast('success', `Medication encounter — ${visit.patient?.name || 'patient'}.`, 3500);
 
       navigate(PHARMACY_ROUTES.ACTION_CENTER_DISPENSING);
     } catch (error) {
@@ -136,7 +139,7 @@ const PharmacyPatientQueue: React.FC<PharmacyPatientQueueProps> = ({ theme, clas
     <div className={cn(className)}>
       <PatientQueue
         title="Queue & patient intake"
-        description="Visits with active prescriptions — select a row to open the medication encounter workflow"
+        description="Visits with prescriptions ready for dispensing (active or partially dispensed). Counts match this list."
         filterVisit={filterVisit}
         onTakeAction={handleTakeAction}
         onNewPatientRegistration={handleCreateNewPatient}
@@ -151,9 +154,12 @@ const PharmacyPatientQueue: React.FC<PharmacyPatientQueueProps> = ({ theme, clas
         showNewPatientRegistration={true}
         theme={theme}
         className="cursor-default"
+        isLoading={
+          !!facilityId &&
+          !rxReady &&
+          (activeRxQuery.isLoading || partialRxQuery.isLoading)
+        }
         initialFilters={{
-          current_phase: VisitPhase.REGISTRATION,
-          department_id: undefined,
           include_unassigned: true,
           limit: 100,
         }}

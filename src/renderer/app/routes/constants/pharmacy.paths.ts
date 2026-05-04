@@ -16,12 +16,16 @@ export const PHARMACY_ROUTES = {
   ACTION_CENTER: `${ROUTES.PHARMACY}/action-center`,
   ACTION_CENTER_DISPENSING: `${ROUTES.PHARMACY}/action-center/dispensing`,
   ACTION_CENTER_PRESCRIPTION_SEARCH: `${ROUTES.PHARMACY}/action-center/prescription-search`,
+  /** Visit-scoped Rx needing pharmacist review (from former desk; uses active visit in slice) */
+  ACTION_CENTER_PRESCRIPTION_REVIEW: `${ROUTES.PHARMACY}/action-center/prescription-review`,
+
+  /** @deprecated Facility prescription desk removed — use Queue & intake, then Medication encounter */
   PRESCRIPTIONS: `${ROUTES.PHARMACY}/prescriptions`,
   INVENTORY: `${ROUTES.PHARMACY}/inventory`,
   /** Billing receipts — same UI as Medical Records billing cycle review */
   RECEIPTS: `${ROUTES.PHARMACY}/receipts`,
 
-  //Prescriptions.
+  // Legacy paths (redirect to patients/queue in router)
   PRESCRIPTIONS_QUEUE: `${ROUTES.PHARMACY}/prescriptions/queue`,
   PRESCRIPTIONS_CREATE: `${ROUTES.PHARMACY}/prescriptions/create`,
   PRESCRIPTIONS_REVIEW: `${ROUTES.PHARMACY}/prescriptions/review`,

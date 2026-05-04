@@ -29,25 +29,25 @@ const Dispensing: React.FC<DispensingProps> = ({ theme }) => {
           key: 'validate_prescription',
           label: 'Review prescriptions',
           icon: <ClipboardCheck className="w-4 h-4" />,
-          to: PHARMACY_ROUTES.PRESCRIPTIONS_REVIEW,
+          to: PHARMACY_ROUTES.PATIENT_QUEUE,
         },
         {
           key: 'search_prescription',
           label: 'Search prescriptions',
           icon: <Search className="w-4 h-4" />,
-          to: PHARMACY_ROUTES.PRESCRIPTIONS_SEARCH,
+          to: PHARMACY_ROUTES.PATIENTS_SEARCH,
         },
         {
           key: 'dispensing_history',
           label: 'Fulfilled prescriptions',
           icon: <History className="w-4 h-4" />,
-          to: PHARMACY_ROUTES.PRESCRIPTIONS_APPROVED,
+          to: PHARMACY_ROUTES.PATIENT_QUEUE,
         },
         {
           key: 'issues_queue',
           label: 'Flagged prescriptions',
           icon: <AlertCircle className="w-4 h-4" />,
-          to: PHARMACY_ROUTES.PRESCRIPTIONS_FLAGGED,
+          to: PHARMACY_ROUTES.PATIENT_QUEUE,
         },
       ]}
     />

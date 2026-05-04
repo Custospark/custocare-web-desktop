@@ -1,6 +1,6 @@
-// Pharmacy Action Center — mirrors Medical Records Visit Action Center: visit-bound workspace,
-// patient card, BaseActionWorkspace tabs, and “Work on another patient” clearing visit + billing draft.
-import React, { useState, useCallback } from 'react';
+// Pharmacy Action Center — visit-bound workspace from visitSlice; facility prescription desk removed.
+// Two visit-scoped tools from the former desk: search + review (current patient / active visit).
+import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -14,7 +14,7 @@ import {
   UserPlus,
   Search,
   ArrowLeftRight,
-  Receipt,
+  ClipboardList,
 } from 'lucide-react';
 
 import { type RootState } from '../../../../app/store/rootReducer';
@@ -25,11 +25,8 @@ import {
   selectActiveVisitInfo,
   selectHasActiveVisit,
   emergencyClearVisit,
-  selectActiveVisitId,
-  selectActiveVisitPatientId,
 } from '../../../../app/store/slices/visitSlice';
 import { clearAll } from '../../../medical-records/ui/visit-action-center/billing-space';
-import { openTray } from '../../../../app/store/slices/billingSlice';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 
@@ -46,8 +43,6 @@ const PharmacyActionCenter: React.FC<PharmacyActionCenterProps> = ({ theme }) =>
   const patient = useSelector((state: RootState) => selectActivePatient(state));
   const visitInfo = useSelector((state: RootState) => selectActiveVisitInfo(state));
   const hasActiveVisit = useSelector((state: RootState) => selectHasActiveVisit(state));
-  const visitId = useSelector(selectActiveVisitId);
-  const patientId = useSelector(selectActiveVisitPatientId);
 
   const calculateWaitTime = (arrivedAt: string | null): string => {
     if (!arrivedAt) return 'N/A';
@@ -63,18 +58,6 @@ const PharmacyActionCenter: React.FC<PharmacyActionCenterProps> = ({ theme }) =>
       return 'N/A';
     }
   };
-
-  const handleOpenBillingTray = useCallback(() => {
-    if (visitId == null || patientId == null) return;
-    dispatch(
-      openTray({
-        step: 'charge_entry',
-        visitId: String(visitId),
-        patientId: String(patientId),
-        patientName: patient?.name ?? visitInfo?.patientName ?? undefined,
-      })
-    );
-  }, [dispatch, visitId, patientId, patient?.name, visitInfo?.patientName]);
 
   const handleWorkOnAnotherPatient = async () => {
     try {
@@ -177,7 +160,6 @@ const PharmacyActionCenter: React.FC<PharmacyActionCenterProps> = ({ theme }) =>
               patient={patient}
               visitInfo={visitInfo}
               calculateWaitTime={calculateWaitTime}
-              onOpenBillingTray={handleOpenBillingTray}
               onWorkOnAnotherPatient={handleWorkOnAnotherPatient}
               isNavigating={isNavigating}
             />
@@ -201,7 +183,14 @@ const PharmacyActionCenter: React.FC<PharmacyActionCenterProps> = ({ theme }) =>
                   label: 'Search prescriptions',
                   icon: <Search className="h-4 w-4" />,
                   to: PHARMACY_ROUTES.ACTION_CENTER_PRESCRIPTION_SEARCH,
-                  description: 'Filter Rx for this visit from the patient profile',
+                  description: 'Search and open prescriptions for this visit (from slice context)',
+                },
+                {
+                  key: 'prescription-review',
+                  label: 'Review prescriptions',
+                  icon: <ClipboardList className="h-4 w-4" />,
+                  to: PHARMACY_ROUTES.ACTION_CENTER_PRESCRIPTION_REVIEW,
+                  description: 'Rx needing review for this patient / visit',
                 },
               ]}
             />
@@ -217,7 +206,6 @@ interface PharmacyPatientInfoCardProps {
   patient: ReturnType<typeof selectActivePatient>;
   visitInfo: ReturnType<typeof selectActiveVisitInfo>;
   calculateWaitTime: (arrivedAt: string | null) => string;
-  onOpenBillingTray: () => void;
   onWorkOnAnotherPatient: () => void;
   isNavigating?: boolean;
 }
@@ -227,7 +215,6 @@ const PharmacyPatientInfoCard: React.FC<PharmacyPatientInfoCardProps> = ({
   patient,
   visitInfo,
   calculateWaitTime,
-  onOpenBillingTray,
   onWorkOnAnotherPatient,
   isNavigating = false,
 }) => {
@@ -361,17 +348,6 @@ const PharmacyPatientInfoCard: React.FC<PharmacyPatientInfoCardProps> = ({
       </div>
 
       <div className={`space-y-2 border-t p-4 ${isDark ? 'border-gray-800 bg-gray-800/30' : 'border-gray-200 bg-gray-50'}`}>
-        <button
-          type="button"
-          onClick={onOpenBillingTray}
-          className={`inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-            isDark ? 'focus:ring-offset-gray-900' : 'focus:ring-offset-white'
-          } bg-blue-600 text-white hover:bg-blue-700`}
-        >
-          <Receipt className="h-4 w-4 shrink-0" aria-hidden />
-          Open billing tray
-        </button>
-
         <button
           type="button"
           onClick={onWorkOnAnotherPatient}

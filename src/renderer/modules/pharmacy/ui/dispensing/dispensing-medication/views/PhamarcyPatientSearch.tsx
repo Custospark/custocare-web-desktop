@@ -37,7 +37,7 @@ const PharmacyPatientSearch: React.FC<PharmacyPatientSearchProps> = ({ theme, cl
   const handleTakeAction = useCallback(
     (patient: PatientSearchResult) => {
       // This is the Take Action button handler that redirects
-      navigate(`${PHARMACY_ROUTES.PRESCRIPTIONS_SEARCH}?patientId=${patient.patient_number}`);
+      navigate(`${PHARMACY_ROUTES.PATIENTS_SEARCH}?patientId=${patient.patient_number}`);
     },
     [navigate]
   );

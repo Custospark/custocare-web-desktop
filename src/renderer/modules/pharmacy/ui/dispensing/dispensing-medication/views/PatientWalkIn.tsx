@@ -73,7 +73,7 @@ const CustomerWalkIn: React.FC<CustomerWalkInProps> = ({
 
     const { visit_id, patient_id, billing_cycle_id } = createdSession.ui_next.params;
 
-    navigate(PHARMACY_ROUTES.PRESCRIPTIONS_SEARCH, {
+    navigate(PHARMACY_ROUTES.PATIENTS_SEARCH, {
       state: {
         visitId: visit_id,
         patientId: patient_id,
@@ -86,7 +86,7 @@ const CustomerWalkIn: React.FC<CustomerWalkInProps> = ({
   }, [createdSession, navigate]);
 
   const handleSearchExisting = useCallback(() => {
-    navigate(PHARMACY_ROUTES.PRESCRIPTIONS_SEARCH);
+    navigate(PHARMACY_ROUTES.PATIENTS_SEARCH);
   }, [navigate]);
 
   const handleCreateNewSession = useCallback(() => {

@@ -28,7 +28,7 @@ const QuickPatientCreate: React.FC<QuickPatientCreateProps> = ({ theme, classNam
   const handleProceed = useCallback(
     (patient: PatientSearchResult) => {
       // Navigate to prescription search after user clicks "Continue" in modal
-      navigate(`${PHARMACY_ROUTES.PRESCRIPTIONS_SEARCH}?patientId=${patient.patient_number}`, {
+      navigate(`${PHARMACY_ROUTES.PATIENTS_SEARCH}?patientId=${patient.patient_number}`, {
         replace: true,
       });
     },

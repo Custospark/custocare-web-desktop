@@ -2,7 +2,7 @@
  * Pharmacy shell — sidebar labels follow the same convention as Medical Records
  * (capability name + purpose). Route `id` values must match path segments under `/pharmacy`.
  */
-import { LayoutDashboard, ClipboardList, Package, Receipt, Users, Workflow } from 'lucide-react';
+import { LayoutDashboard, Package, Receipt, Users, Workflow } from 'lucide-react';
 import { BaseModuleWorkspace } from '../../../shared/components/workspace/BaseModuleWorkspace';
 import { ROUTES, PHARMACY_ROUTES } from '../../../app/routes/routeConstants';
 
@@ -17,19 +17,13 @@ const PHARMACY_OPERATIONS = [
     id: 'patients',
     label: 'Queue & Patient Intake',
     icon: <Users className="w-4 h-4" />,
-    subtext: 'Search, register, walk-in, and facility queue — same layout as MR patient registry',
+    subtext: 'Single entry: queue shows visits with Rx ready for dispensing; choose search, register, or walk-in',
   },
   {
     id: 'action-center',
-    label: 'Medication Encounter Workflow',
+    label: 'Medication Encounter Center',
     icon: <Workflow className="w-4 h-4" />,
-    subtext: 'Active visit: dispense, search prescriptions, open billing',
-  },
-  {
-    id: 'prescriptions',
-    label: 'Facility Prescription Desk',
-    icon: <ClipboardList className="w-4 h-4" />,
-    subtext: 'Facility-wide queues, review, and lookup (not tied to one visit)',
+    subtext: 'Active visit from slice: dispense, search & review prescriptions for this patient',
   },
   {
     id: 'inventory',
@@ -51,7 +45,7 @@ const PharmacyModule = () => {
       contextTitle="Pharmacy Services"
       operations={PHARMACY_OPERATIONS}
       basePath={ROUTES.PHARMACY}
-      defaultOperationPath={PHARMACY_ROUTES.PATIENTS_SEARCH}
+      defaultOperationPath={PHARMACY_ROUTES.PATIENT_QUEUE}
     />
   );
 };
