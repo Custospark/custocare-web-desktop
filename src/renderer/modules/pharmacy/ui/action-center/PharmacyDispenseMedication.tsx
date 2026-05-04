@@ -58,7 +58,6 @@ import {
   setBillingDataLoaded,
   setPatientInfo,
   setQuantity,
-  clearDraftChargeItemsOnly,
   selectDisplayBillingData,
 } from '../../../medical-records/ui/visit-action-center/billing-space/billingSlice';
 
@@ -140,9 +139,16 @@ const countBilledUnitsForMed = (
     .filter((row) => medMatchesBillLine(medicationName, row.service.name))
     .reduce((sum, row) => sum + row.quantity, 0);
 
-function buildBillingPayloadFromRootState(state: RootState): BillingSubmissionPayload | null {
-  const draftChargeItems = selectDraftChargeItems(state);
-  if (!draftChargeItems.length) return null;
+function roundMoney(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+/** Submit payload built only from the given draft lines (recalculated totals for allergy-safe partial save). */
+function buildBillingPayloadFromDraftSubset(
+  state: RootState,
+  draftSubset: ReturnType<typeof selectDraftChargeItems>
+): BillingSubmissionPayload | null {
+  if (!draftSubset.length) return null;
   const visitIdNum = selectActiveVisitId(state);
   const patientIdNum = selectActiveVisitPatientId(state);
   if (visitIdNum == null || patientIdNum == null) return null;
@@ -153,10 +159,33 @@ function buildBillingPayloadFromRootState(state: RootState): BillingSubmissionPa
   const hasDiscount =
     discount?.value !== undefined && discount?.value !== null && Number(discount.value) > 0;
 
+  const subtotal = roundMoney(draftSubset.reduce((s, item) => s + item.totalAmount, 0));
+
+  let discountAmount = 0;
+  if (hasDiscount && discount) {
+    if (discount.type === 'percentage') {
+      discountAmount = roundMoney(subtotal * (Number(discount.value) / 100));
+    } else {
+      discountAmount = roundMoney(Math.min(Number(discount.value), subtotal));
+    }
+  }
+
+  const taxableAmount = roundMoney(Math.max(0, subtotal - discountAmount));
+  const taxes = draftBillingData.taxes.map((tax) => ({
+    name: tax.name,
+    rate: tax.rate,
+    amount: roundMoney(taxableAmount * (tax.rate / 100)),
+  }));
+  const taxTotal = roundMoney(taxes.reduce((s, t) => s + t.amount, 0));
+  const grandTotal = roundMoney(taxableAmount + taxTotal);
+  const totalPaid = roundMoney(
+    billingState.paymentMethods.reduce((sum, m) => sum + (Number(m.amount) || 0), 0)
+  );
+
   return {
     visit_id: Number(visitIdNum),
     patient_id: Number(patientIdNum),
-    charge_items: draftChargeItems.map((item) => ({
+    charge_items: draftSubset.map((item) => ({
       service_key: item.serviceKey,
       service: {
         id: item.service.id,
@@ -168,18 +197,15 @@ function buildBillingPayloadFromRootState(state: RootState): BillingSubmissionPa
       quantity: item.quantity,
       totalAmount: item.totalAmount,
     })),
-    ...(hasDiscount && {
-      discount: {
-        type: discount.type,
-        value: discount.value,
-        ...(discount.reason && { reason: discount.reason }),
-      },
-    }),
-    taxes: draftBillingData.taxes.map((tax) => ({
-      name: tax.name,
-      rate: tax.rate,
-      amount: tax.amount,
-    })),
+    ...(hasDiscount &&
+      discount && {
+        discount: {
+          type: discount.type,
+          value: discount.value,
+          ...(discount.reason && { reason: discount.reason }),
+        },
+      }),
+    taxes,
     payment_methods: billingState.paymentMethods
       .filter((m) => (Number(m.amount) || 0) > 0)
       .map((m) => ({
@@ -189,13 +215,13 @@ function buildBillingPayloadFromRootState(state: RootState): BillingSubmissionPa
         details: m.details || undefined,
       })),
     billing_data: {
-      subtotal: draftBillingData.subtotal,
-      discountAmount: draftBillingData.discountAmount,
-      taxableAmount: draftBillingData.taxableAmount,
-      taxTotal: draftBillingData.taxTotal,
-      grandTotal: draftBillingData.grandTotal,
-      totalPaid: draftBillingData.totalPaid,
-      balance: draftBillingData.balance,
+      subtotal,
+      discountAmount,
+      taxableAmount,
+      taxTotal,
+      grandTotal,
+      totalPaid,
+      balance: roundMoney(grandTotal - totalPaid),
     },
     additional_notes: billingState.additionalNotes || undefined,
     status: 'ready',
@@ -259,7 +285,9 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const isReadOnly = billingStatus === 'settled';
-  const isPersisting = useRef(false);
+  /** Must be state (not a ref) so the Save button re-enables after submit — refs do not trigger re-renders. */
+  const [isSavingToBill, setIsSavingToBill] = useState(false);
+  const saveInFlightRef = useRef(false);
 
   const allergiesQuery = useGetAllergies(patientIdStr, {}, { enabled: !!patientIdStr });
   const allergyRows = useMemo(
@@ -440,6 +468,18 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
     [allergyRows]
   );
 
+  /** Draft lines that match an allergen (still shown in session; excluded from save until removed). */
+  const draftLinesMatchingAllergy = useMemo(() => {
+    return draftChargeItems.filter((row) => checkBlockedByAllergy(row.service.name).blocked);
+  }, [draftChargeItems, checkBlockedByAllergy]);
+
+  /** Save posts only non–allergy-flagged drafts — enable Save iff at least one such draft exists. */
+  const hasSaveableDraftLine = useMemo(
+    () =>
+      draftChargeItems.some((row) => !checkBlockedByAllergy(row.service.name).blocked),
+    [draftChargeItems, checkBlockedByAllergy]
+  );
+
   const prescriptionsForVisit: Prescription[] = useMemo(() => {
     const rows = rxQuery.data?.data ?? [];
     if (!visitIdNum) return [];
@@ -497,6 +537,29 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
     }
     return out;
   }, [prescriptionsMerged]);
+
+  /** Prescribed medication names that match a documented allergen (informational / workflow banner). */
+  const prescriptionAllergyConflicts = useMemo(() => {
+    const out: { medication: string; allergen: string; severity: string }[] = [];
+    const seen = new Set<string>();
+    for (const { item } of prescriptionLines) {
+      const med = item.medication_name?.trim() ?? '';
+      if (!med) continue;
+      const r = checkBlockedByAllergy(med);
+      if (r.blocked && r.allergen) {
+        const key = `${norm(med)}|${norm(r.allergen)}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          out.push({
+            medication: med,
+            allergen: r.allergen,
+            severity: r.severity ?? '',
+          });
+        }
+      }
+    }
+    return out;
+  }, [prescriptionLines, checkBlockedByAllergy]);
 
   const rxDetailLoading =
     rxIdsNeedingDetail.length > 0 && detailQueries.some((q) => q.isPending || q.isLoading);
@@ -670,30 +733,60 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
   };
 
   const handleSaveDraftToBill = useCallback(async () => {
-    const payload = buildBillingPayloadFromRootState(store.getState());
+    const drafts = selectDraftChargeItems(store.getState());
+    const safeDrafts = drafts.filter((line) => !checkBlockedByAllergy(line.service.name).blocked);
+    const skippedDrafts = drafts.filter((line) => checkBlockedByAllergy(line.service.name).blocked);
+
+    if (safeDrafts.length === 0) {
+      if (skippedDrafts.length > 0) {
+        showToast(
+          'warning',
+          'Only allergy-flagged lines are in your new items — remove them or add other medications, then save.',
+          7000
+        );
+      } else {
+        showToast('info', 'No new dispensed lines to save.', 3500);
+      }
+      return;
+    }
+
+    const payload = buildBillingPayloadFromDraftSubset(store.getState(), safeDrafts);
     if (!payload) {
       showToast('info', 'No new dispensed lines to save.', 3500);
       return;
     }
-    if (isPersisting.current) return;
-    isPersisting.current = true;
+    if (saveInFlightRef.current) return;
+    saveInFlightRef.current = true;
+    setIsSavingToBill(true);
     try {
       await submitBilling(payload);
-      dispatch(clearDraftChargeItemsOnly());
+      for (const line of safeDrafts) {
+        dispatch(removeChargeItem(line.id));
+      }
       await syncBillingSliceFromServer();
       await queryClient.invalidateQueries({ queryKey: prescriptionKeys.all() });
       await queryClient.invalidateQueries({ queryKey: billingItemsKeys.lists() });
       if (visitIdNum != null) {
         await queryClient.invalidateQueries({ queryKey: billingItemsKeys.detail(visitIdNum) });
       }
-      showToast('success', 'Medication charges saved to the patient bill.', 4500);
+      if (skippedDrafts.length > 0) {
+        const names = skippedDrafts.map((d) => d.service.name).join(', ');
+        showToast(
+          'success',
+          `Saved ${safeDrafts.length} line(s) to the bill. Skipped ${skippedDrafts.length} allergy-flagged line(s): ${names}.`,
+          8000
+        );
+      } else {
+        showToast('success', 'Medication charges saved to the patient bill.', 4500);
+      }
     } catch (e) {
       console.error(e);
       showToast('error', 'Could not save charges. Try again.', 5000);
     } finally {
-      isPersisting.current = false;
+      saveInFlightRef.current = false;
+      setIsSavingToBill(false);
     }
-  }, [dispatch, queryClient, showToast, submitBilling, syncBillingSliceFromServer, visitIdNum]);
+  }, [checkBlockedByAllergy, dispatch, queryClient, showToast, submitBilling, syncBillingSliceFromServer, visitIdNum]);
 
   const handleClearAllDrafts = async () => {
     if (isReadOnly || draftChargeItems.length === 0) return;
@@ -983,8 +1076,6 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
     ? 'max-h-[min(85vh,calc(100vh-11rem))]'
     : 'max-h-[min(70vh,520px)]';
 
-  const hasDraftToSave = draftChargeItems.length > 0;
-
   if (!dispenseFocusOpen) {
     return (
       <div className="space-y-6">
@@ -1088,7 +1179,37 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5">
           <div className="mx-auto max-w-[1800px] space-y-4">
-            {allergyRows.length > 0 && (
+            {prescriptionAllergyConflicts.length > 0 && (
+              <div
+                className={cn(
+                  'flex items-start gap-3 rounded-lg border px-3 py-2.5 text-sm',
+                  isDark
+                    ? 'border-red-900/50 bg-red-950/40 text-red-50'
+                    : 'border-red-200 bg-red-50 text-red-950'
+                )}
+              >
+                <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" aria-hidden />
+                <div>
+                  <div className="font-semibold">Prescription vs allergy</div>
+                  <p className="mt-1 text-xs opacity-95">
+                    These prescribed medications align with a documented allergen. Do not add them to the bill unless
+                    the prescriber has resolved the conflict. Search/add for these drugs remains blocked.
+                  </p>
+                  <ul className="mt-2 list-inside list-disc text-xs font-medium">
+                    {prescriptionAllergyConflicts.map((c, i) => (
+                      <li key={`${c.medication}-${c.allergen}-${i}`}>
+                        <span className="font-semibold">{c.medication}</span>
+                        {' → '}
+                        allergy: {c.allergen}
+                        {c.severity ? ` (${c.severity})` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {allergyRows.length > 0 && prescriptionAllergyConflicts.length === 0 && (
               <div
                 className={cn(
                   'flex items-start gap-3 rounded-lg border px-3 py-2.5 text-sm',
@@ -1097,9 +1218,13 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
                     : 'border-amber-200 bg-amber-50 text-amber-950'
                 )}
               >
-                <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
                 <div>
-                  <div className="font-semibold">Allergy alert — blocked medications</div>
+                  <div className="font-semibold">Known allergies on file</div>
+                  <p className="mt-1 text-xs opacity-95">
+                    No current prescription line matched these allergens. Adding a conflicting medication from search is
+                    still blocked.
+                  </p>
                   <ul className="mt-1 list-inside list-disc text-xs opacity-95">
                     {allergyRows.map((a, i) => (
                       <li key={`${a.allergen}-${a.severity}-${i}`}>
@@ -1354,17 +1479,28 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
                       </p>
                       <button
                         type="button"
-                        disabled={isReadOnly || !hasDraftToSave || isPersisting.current}
+                        disabled={isReadOnly || !hasSaveableDraftLine || isSavingToBill}
+                        title={
+                          !isReadOnly && draftChargeItems.length > 0 && !hasSaveableDraftLine
+                            ? 'Only allergy-flagged lines are in new items — add a safe medication or remove allergy lines.'
+                            : undefined
+                        }
                         onClick={() => void handleSaveDispense()}
                         className={cn(
                           'flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-all',
-                          isReadOnly || !hasDraftToSave
+                          isReadOnly || !hasSaveableDraftLine || isSavingToBill
                             ? 'cursor-not-allowed bg-gray-400 text-gray-200'
-                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                            : 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700'
                         )}
                       >
                         Save to patient bill
                       </button>
+                      {draftLinesMatchingAllergy.length > 0 && (
+                        <p className={cn('text-xs text-amber-700 dark:text-amber-300')}>
+                          Allergy-flagged new lines are not posted — save sends everything else to the bill. Remove those
+                          lines manually when finished.
+                        </p>
+                      )}
                       <div
                         className={cn(
                           'flex items-start gap-2 rounded-lg border p-3 text-xs',
