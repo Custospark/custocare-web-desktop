@@ -79,6 +79,13 @@ const getStatusInfo = (hasData: boolean, documentedNoun: string, ctaVerb: string
     : `Not documented - ${ctaVerb}`,
 });
 
+const getReportStatusInfo = (hasData: boolean, reportNoun: string, ctaHint: string) => ({
+  hasData,
+  message: hasData
+    ? `${reportNoun} ready - view report`
+    : `No report data yet - ${ctaHint}`,
+});
+
 const resolveRequestFromApiPayload = (payload: unknown): LabRequest | null => {
   if (!payload || typeof payload !== 'object') return null;
   const candidate = payload as Partial<LabRequest>;
@@ -385,7 +392,11 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Complete allergy documentation for this patient',
       category: 'Clinical',
       actionPrefix: 'View',
-      statusInfo: moduleStatus.allergies,
+      statusInfo: getReportStatusInfo(
+        moduleStatus.allergies.hasData,
+        'Allergy report',
+        'record allergy details first'
+      ),
       handler: () => openReport('allergies', 'preview')
     },
     { 
@@ -395,7 +406,11 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Complete clinical notes documentation',
       category: 'Documentation',
       actionPrefix: 'View',
-      statusInfo: moduleStatus.clinicalNotes,
+      statusInfo: getReportStatusInfo(
+        moduleStatus.clinicalNotes.hasData,
+        'Clinical notes report',
+        'document clinical notes first'
+      ),
       handler: () => openReport('clinical-notes', 'preview')
     },
     { 
@@ -405,7 +420,11 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Vital signs summary report',
       category: 'Clinical',
       actionPrefix: 'View',
-      statusInfo: moduleStatus.vitals,
+      statusInfo: getReportStatusInfo(
+        moduleStatus.vitals.hasData,
+        'Vitals report',
+        'record vitals first'
+      ),
       handler: () => openReport('vitals', 'preview')
     },
     { 
@@ -415,7 +434,11 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Diagnosis documentation report',
       category: 'Clinical',
       actionPrefix: 'View',
-      statusInfo: moduleStatus.diagnoses,
+      statusInfo: getReportStatusInfo(
+        moduleStatus.diagnoses.hasData,
+        'Diagnosis report',
+        'add diagnosis entries first'
+      ),
       handler: () => openReport('diagnoses', 'preview')
     },
     { 
@@ -425,7 +448,11 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Consultation notes and recommendations',
       category: 'Clinical',
       actionPrefix: 'View',
-      statusInfo: moduleStatus.consultations,
+      statusInfo: getReportStatusInfo(
+        moduleStatus.consultations.hasData,
+        'Consultation report',
+        'capture consultation notes first'
+      ),
       handler: () => openReport('consultations', 'preview')
     },
     { 
@@ -435,7 +462,11 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Printable prescription document',
       category: 'Treatment',
       actionPrefix: 'View',
-      statusInfo: moduleStatus.prescriptions,
+      statusInfo: getReportStatusInfo(
+        moduleStatus.prescriptions.hasData,
+        'Prescription report',
+        'enter prescription orders first'
+      ),
       handler: () => openReport('prescriptions', 'preview')
     },
     { 
@@ -445,7 +476,11 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Laboratory request document',
       category: 'Diagnostics',
       actionPrefix: 'View',
-      statusInfo: moduleStatus.labRequests,
+      statusInfo: getReportStatusInfo(
+        moduleStatus.labRequests.hasData,
+        'Lab request report',
+        'create a lab request first'
+      ),
       handler: () => openReport('lab-requests', 'preview')
     },
     { 
@@ -455,7 +490,11 @@ export const MRClinicalCare: React.FC<MRClinicalCareProps> = ({ theme = 'light' 
       description: 'Laboratory test results report',
       category: 'Diagnostics',
       actionPrefix: 'View',
-      statusInfo: moduleStatus.labResults,
+      statusInfo: getReportStatusInfo(
+        moduleStatus.labResults.hasData,
+        'Lab results report',
+        'enter lab results first'
+      ),
       handler: () => openReport('lab-results', 'preview')
     },
   ], [moduleStatus, openReport]);
