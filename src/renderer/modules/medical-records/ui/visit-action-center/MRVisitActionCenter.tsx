@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   FileText, 
   ArrowRight, 
-  MessageSquare,
+  // MessageSquare,
   User,
   Calendar,
   Clock,
@@ -237,12 +237,12 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
                 to: MEDICAL_RECORDS_ROUTES.CLINICAL_CARE 
               },
 
-              { 
-                key: 'get-complaints', 
-                label: 'Get Complaints', 
-                icon: <MessageSquare className="w-4 h-4" />, 
-                to: MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS 
-              },
+              // { 
+              //   key: 'get-complaints', 
+              //   label: 'Get Complaints', 
+              //   icon: <MessageSquare className="w-4 h-4" />, 
+              //   to: MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS 
+              // },
               { 
                 key: 'forward-patient', 
                 label: 'Forward Patient', 
