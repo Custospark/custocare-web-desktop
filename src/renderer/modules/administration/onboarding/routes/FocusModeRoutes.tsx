@@ -1,4 +1,3 @@
-// src/routes/FocusModeRoutes.tsx
 import React, { Suspense } from 'react';
 import { Route } from 'react-router-dom';
 import { FOCUS_MODE_ROUTES } from './focusModeRouteConstants';
@@ -7,21 +6,36 @@ import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkelet
 import ClinicalTemplateFocus from '../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/ClinicalTemplateFocus';
 import { VitalsFocus } from '../../../medical-records/ui/visit-action-center/clinical-forms/vitals-form-components';
 import ConsultationsFocus from '../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/ConsultationsFocus';
-
-// Lazy load focus mode components - Clinical Care
-const AllergyFocus = React.lazy(() => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/AllergyFocus'));
-const DiagnosisFocus = React.lazy(() => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/DiagnosisFocus'));
-const ClinicalNotesFocus = React.lazy(() => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/ClinicalNotesFocus'));
-const PrescriptionFocus = React.lazy(() => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/PrescriptionFocus'));
-const LabRequestFocus = React.lazy(() => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/LabRequestFocus'));
-const LabResultFocus = React.lazy(() => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/LabResultFocus'));
+const AllergyFocus = React.lazy(
+  () => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/AllergyFocus')
+);
+const DiagnosisFocus = React.lazy(
+  () => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/DiagnosisFocus')
+);
+const ClinicalNotesFocus = React.lazy(
+  () => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/ClinicalNotesFocus')
+);
+const PrescriptionFocus = React.lazy(
+  () => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/PrescriptionFocus')
+);
+const LabRequestFocus = React.lazy(
+  () => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/LabRequestFocus')
+);
+const LabResultFocus = React.lazy(
+  () => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/LabResultFocus')
+);
+const LatestVisit = React.lazy(
+  () => import('../../../medical-records/ui/visit-action-center/patient-records/LatestVisit')
+);
+const MedicalHistory = React.lazy(
+  () => import('../../../medical-records/ui/visit-action-center/patient-records/MedicalHistory')
+);
 
 interface FocusModeRoutesProps {
   theme?: 'light' | 'dark';
 }
 
 export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
-  // Clinical Care Focus Routes
   <Route
     key="diagnosis-focus"
     path={FOCUS_MODE_ROUTES.DIAGNOSIS_FOCUS}
@@ -77,8 +91,6 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
       </FocusedModeLayout>
     }
   />,
-
-  
   <Route
     key="clinical-notes-focus"
     path={FOCUS_MODE_ROUTES.CLINICAL_NOTES_FOCUS}
@@ -90,7 +102,6 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
       </FocusedModeLayout>
     }
   />,
-  
   <Route
     key="prescription-focus"
     path={FOCUS_MODE_ROUTES.PRESCRIPTION_FOCUS}
@@ -102,7 +113,6 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
       </FocusedModeLayout>
     }
   />,
-  
   <Route
     key="lab-request-focus"
     path={FOCUS_MODE_ROUTES.LAB_REQUEST_FOCUS}
@@ -114,7 +124,6 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
       </FocusedModeLayout>
     }
   />,
-  
   <Route
     key="lab-result-focus"
     path={FOCUS_MODE_ROUTES.LAB_RESULT_FOCUS}
@@ -122,6 +131,28 @@ export const FocusModeRoutes = ({ theme = 'light' }: FocusModeRoutesProps) => [
       <FocusedModeLayout title="Laboratory Test Results">
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <LabResultFocus theme={theme} />
+        </Suspense>
+      </FocusedModeLayout>
+    }
+  />,
+  <Route
+    key="medical-history-latest-visit"
+    path={FOCUS_MODE_ROUTES.LATEST_VISIT_FOCUS}
+    element={
+      <FocusedModeLayout title="Current Visit">
+        <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+          <LatestVisit theme={theme} />
+        </Suspense>
+      </FocusedModeLayout>
+    }
+  />,
+  <Route
+    key="medical-history-full-record"
+    path={FOCUS_MODE_ROUTES.MEDICAL_HISTORY_FOCUS}
+    element={
+      <FocusedModeLayout title="Medical History">
+        <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+          <MedicalHistory theme={theme} />
         </Suspense>
       </FocusedModeLayout>
     }

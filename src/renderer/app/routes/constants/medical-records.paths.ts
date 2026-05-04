@@ -29,3 +29,4 @@ export const MEDICAL_RECORDS_ROUTES = {
   CLINICAL_CARE: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/clinical-care`,
   PATIENT_RECORDS: `${ROUTES.MEDICAL_RECORDS}/visit-action-center/patient-records`,
 } as const;
+

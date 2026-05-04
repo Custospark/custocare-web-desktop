@@ -1,9 +1,16 @@
 // MRPatientRecords.tsx
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
-import { Clock, History, Eye, Calendar, FileText, ChevronRight } from 'lucide-react';
+import { Clock, History, Eye, FileText, ChevronRight, Activity, Stethoscope, AlertCircle } from 'lucide-react';
 import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/focusModeRouteConstants';
+import { selectActiveVisitId, selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
+
+// Import queries for status indicators
+import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clinicalNoteQueries';
+import { useGetActiveVisitDiagnoses } from '../../../api/diagnosis/diagnosisQueries';
+import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
 
 interface MRPatientRecordsProps {
   theme?: 'light' | 'dark';
@@ -15,6 +22,11 @@ interface RecordCardProps {
   description: string;
   badge?: string;
   badgeColor?: string;
+  badgeIcon?: React.ReactNode;
+  statusInfo?: {
+    hasData: boolean;
+    message: string;
+  };
   onClick: () => void;
   theme: 'light' | 'dark';
   delay?: number;
@@ -26,6 +38,8 @@ const RecordCard: React.FC<RecordCardProps> = ({
   description,
   badge,
   badgeColor,
+  badgeIcon,
+  statusInfo,
   onClick,
   theme,
   delay = 0,
@@ -52,6 +66,9 @@ const RecordCard: React.FC<RecordCardProps> = ({
     if (badgeColor === 'blue') {
       return isDark ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-700';
     }
+    if (badgeColor === 'amber') {
+      return isDark ? 'bg-amber-900/30 text-amber-400' : 'bg-amber-100 text-amber-700';
+    }
     return isDark ? 'bg-purple-900/30 text-purple-400' : 'bg-purple-100 text-purple-700';
   };
 
@@ -66,7 +83,6 @@ const RecordCard: React.FC<RecordCardProps> = ({
         onClick={onClick}
         className={`group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border transition-all duration-300 ${colors.border.primary} ${colors.bg.card} ${colors.bg.hover} hover:shadow-lg hover:scale-[1.02]`}
       >
-        {/* Decorative gradient overlay */}
         <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none ${
           isDark ? 'bg-gradient-to-br from-blue-500/5 to-transparent' : 'bg-gradient-to-br from-blue-500/10 to-transparent'
         }`} />
@@ -85,16 +101,24 @@ const RecordCard: React.FC<RecordCardProps> = ({
               {title}
             </h3>
             {badge && (
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getBadgeColor()}`}>
+              <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${getBadgeColor()}`}>
+                {badgeIcon}
                 {badge}
               </span>
             )}
           </div>
 
           {/* Description */}
-          <p className={`text-sm ${colors.text.secondary} mb-4`}>
+          <p className={`text-sm ${colors.text.secondary} mb-3`}>
             {description}
           </p>
+
+          {/* Status Info */}
+          {statusInfo && (
+            <div className={`mb-4 text-xs ${statusInfo.hasData ? 'text-emerald-500' : 'text-amber-500'}`}>
+              {statusInfo.message}
+            </div>
+          )}
 
           {/* Action indicator */}
           <div className={`mt-auto flex items-center gap-1 text-sm font-medium transition-all duration-300 ${
@@ -113,6 +137,21 @@ const RecordCard: React.FC<RecordCardProps> = ({
 export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({ theme = 'light' }) => {
   const navigate = useNavigate();
   const isDark = theme === 'dark';
+  const activeVisitId = useSelector(selectActiveVisitId);
+  const activePatientId = useSelector(selectActiveVisitPatientId);
+
+  // Fetch data for status indicators
+  const clinicalNotesQuery = useGetActiveVisitClinicalNotes({
+    enabled: !!activeVisitId,
+  });
+
+  const diagnosesQuery = useGetActiveVisitDiagnoses({
+    enabled: !!activeVisitId,
+  });
+
+  const allergiesQuery = useGetAllergies(activePatientId ?? '', {}, {
+    enabled: !!activePatientId,
+  });
 
   const colors = {
     bg: {
@@ -124,27 +163,80 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({ theme = 'lig
     },
   };
 
+  // Determine latest visit status
+  const latestVisitStatus = useMemo(() => {
+    const hasNotes = (clinicalNotesQuery.data?.data?.length || 0) > 0;
+    const hasDiagnoses = (diagnosesQuery.data?.data?.length || 0) > 0;
+    
+    if (activeVisitId) {
+      if (hasNotes && hasDiagnoses) {
+        return {
+          hasData: true,
+          message: '✓ Documentation complete',
+        };
+      }
+      if (hasNotes || hasDiagnoses) {
+        return {
+          hasData: true,
+          message: '⚠️ Partial documentation',
+        };
+      }
+      return {
+        hasData: false,
+        message: 'No documentation yet',
+      };
+    }
+    return {
+      hasData: false,
+      message: 'No active visit selected',
+    };
+  }, [activeVisitId, clinicalNotesQuery.data, diagnosesQuery.data]);
+
+  // Determine medical history status
+  const medicalHistoryStatus = useMemo(() => {
+    const allergiesCount = allergiesQuery.data?.data?.length || 0;
+    
+    if (activePatientId) {
+      if (allergiesCount > 0) {
+        return {
+          hasData: true,
+          message: `${allergiesCount} allergy record${allergiesCount > 1 ? 's' : ''}`,
+        };
+      }
+      return {
+        hasData: false,
+        message: 'No historical data',
+      };
+    }
+    return {
+      hasData: false,
+      message: 'No patient selected',
+    };
+  }, [activePatientId, allergiesQuery.data]);
+
+  // Handler for Latest Visit
   const handleLatestVisit = useCallback(() => {
     navigate(FOCUS_MODE_ROUTES.LATEST_VISIT_FOCUS);
   }, [navigate]);
 
+  // Handler for Medical History - Navigate to historical records view
   const handleMedicalHistory = useCallback(() => {
+    // Navigate to a read-only historical view
     navigate(FOCUS_MODE_ROUTES.MEDICAL_HISTORY_FOCUS);
   }, [navigate]);
 
-  // Mock data for recent visits preview (will be replaced with real data later)
-  const recentVisits = [
-    { date: '2024-04-15', type: 'Consultation', doctor: 'Dr. Smith' },
-    { date: '2024-04-10', type: 'Lab Results', doctor: 'Dr. Johnson' },
-    { date: '2024-04-05', type: 'Follow-up', doctor: 'Dr. Williams' },
-  ];
-
-  // Mock stats (will be replaced with real data later)
-  const stats = {
-    totalVisits: 24,
-    lastYearVisits: 12,
-    conditions: ['Hypertension', 'Diabetes Type 2'],
-  };
+  // Quick stats based on real data
+  const stats = useMemo(() => {
+    const allergiesCount = allergiesQuery.data?.data?.length || 0;
+    const hasActiveVisit = !!activeVisitId;
+    
+    return {
+      hasActiveVisit,
+      activeVisitId: activeVisitId || 'none',
+      allergiesCount,
+      hasAllergies: allergiesCount > 0,
+    };
+  }, [allergiesQuery.data, activeVisitId]);
 
   return (
     <div className={`h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6 ${colors.bg.primary}`}>
@@ -160,91 +252,82 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({ theme = 'lig
 
       {/* Main Cards Grid */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6 mb-8">
-        {/* Latest Visit Card */}
+        {/* Latest Visit Card - Active/Current Episode */}
         <RecordCard
           icon={<Clock className="h-8 w-8" />}
           title="Latest Visit"
-          description="View the most recent patient encounter with complete clinical notes, diagnosis, and prescriptions"
-          badge="Current"
-          badgeColor="blue"
+          description="View and document the current patient encounter with complete clinical notes, diagnosis, and prescriptions"
+          badge={activeVisitId ? "Current" : "No Active Visit"}
+          badgeColor={activeVisitId ? "blue" : "amber"}
+          badgeIcon={activeVisitId ? <Activity className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+          statusInfo={latestVisitStatus}
           onClick={handleLatestVisit}
           theme={theme}
           delay={0}
         />
 
-        {/* Medical History Card */}
+        {/* Medical History Card - Historical/Lifetime View */}
         <RecordCard
           icon={<History className="h-8 w-8" />}
           title="Medical History"
-          description="Access complete patient history across all facilities including past diagnoses, treatments, and lab results"
-          badge="Complete"
+          description="Access complete patient history across all facilities including past diagnoses, treatments, allergies, and lab results"
+          badge="Lifetime Record"
           badgeColor="purple"
+          badgeIcon={<Stethoscope className="h-3 w-3" />}
+          statusInfo={medicalHistoryStatus}
           onClick={handleMedicalHistory}
           theme={theme}
           delay={0.05}
         />
       </div>
 
-      {/* Quick Stats Section - Preview */}
-      <div className={`mt-6 rounded-xl border p-4 ${colors.bg.primary === 'bg-gray-900' ? 'bg-gray-800/30 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+      {/* Quick Stats Section - Data-driven */}
+      <div className={`mt-6 rounded-xl border p-4 ${isDark ? 'bg-gray-800/30 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
         <div className="flex items-center gap-2 mb-3">
           <FileText className={`h-4 w-4 ${colors.text.secondary}`} />
           <h3 className={`text-sm font-semibold ${colors.text.primary}`}>
-            Quick Overview
+            Clinical Summary
           </h3>
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <p className={`text-2xl font-bold ${colors.text.primary}`}>
-              {stats.totalVisits}
+              {stats.hasActiveVisit ? 'Active' : 'None'}
             </p>
             <p className={`text-xs ${colors.text.secondary}`}>
-              Total Visits
+              Current Visit Status
             </p>
           </div>
           <div>
             <p className={`text-2xl font-bold ${colors.text.primary}`}>
-              {stats.lastYearVisits}
+              {stats.allergiesCount}
             </p>
             <p className={`text-xs ${colors.text.secondary}`}>
-              Last 12 Months
+              Known Allergies
             </p>
           </div>
           <div>
-            <p className={`text-sm font-medium ${colors.text.primary}`}>
-              {stats.conditions.join(', ')}
+            <p className={`text-2xl font-bold ${colors.text.primary}`}>
+              {stats.hasActiveVisit ? 'Editable' : 'Read-only'}
             </p>
             <p className={`text-xs ${colors.text.secondary}`}>
-              Chronic Conditions
+              Data Mode
             </p>
           </div>
         </div>
 
-        {/* Recent Visits Preview */}
-        <div className={`mt-4 pt-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-          <p className={`text-xs font-medium mb-2 ${colors.text.secondary}`}>
-            Recent Activity
-          </p>
-          <div className="space-y-2">
-            {recentVisits.map((visit, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Calendar className={`h-3 w-3 ${colors.text.secondary}`} />
-                  <span className={`text-xs ${colors.text.secondary}`}>
-                    {new Date(visit.date).toLocaleDateString()}
-                  </span>
-                  <span className={`text-xs font-medium ${colors.text.primary}`}>
-                    {visit.type}
-                  </span>
-                </div>
-                <span className={`text-xs ${colors.text.secondary}`}>
-                  {visit.doctor}
-                </span>
-              </div>
-            ))}
+        {/* Info Alert */}
+        {!activeVisitId && (
+          <div className={`mt-4 p-3 rounded-lg ${isDark ? 'bg-amber-900/20 border border-amber-800' : 'bg-amber-50 border border-amber-200'}`}>
+            <div className="flex items-center gap-2">
+              <AlertCircle className={`h-4 w-4 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
+              <p className={`text-xs ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
+                No active visit selected. Latest visit data will be read-only. Select or start a visit to enable documentation.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
