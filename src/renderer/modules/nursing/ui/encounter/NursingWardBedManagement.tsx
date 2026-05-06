@@ -183,7 +183,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
   const releaseMutation = useReleaseWardBed();
   const createBedMutation = useCreateWardBed();
   const updateBedMutation = useUpdateWardBed();
-  const wardFormDrawer = useNursingWardFormDrawer({ facilityId, theme });
+  const wardFormDrawer = useNursingWardFormDrawer({ facilityId, theme, activeVisitUuid: visitUuid });
 
   useEffect(() => {
     if (!optionsQuery.data) return;

@@ -18,10 +18,16 @@ import { parseOptionalInteger } from '../../../../administration/admin-module/ui
 
 import { nursingWardBedKeys } from '../../../api/ward-bed/wardBedQueries';
 
+import { applyUpdatedWardToVisitOptionsCache } from './applyUpdatedWardToVisitOptionsCache';
 import { mapWardToFacilityFormData } from './mapWardToFacilityFormData';
 
-export function useNursingWardFormDrawer(params: { facilityId: number | null; theme: 'light' | 'dark' }) {
-  const { facilityId, theme } = params;
+export function useNursingWardFormDrawer(params: {
+  facilityId: number | null;
+  theme: 'light' | 'dark';
+  /** When set, ward create/update refreshes this visit's ward-bed-options immediately. */
+  activeVisitUuid?: string | null;
+}) {
+  const { facilityId, theme, activeVisitUuid } = params;
   const queryClient = useQueryClient();
 
   const [open, setOpen] = useState(false);
@@ -50,21 +56,36 @@ export function useNursingWardFormDrawer(params: { facilityId: number | null; th
     setFormData(mapWardToFacilityFormData(wardDetailQuery.data));
   }, [open, mode, wardDetailQuery.data]);
 
+  const refreshVisitWardBedOptions = useCallback(async () => {
+    if (activeVisitUuid) {
+      await queryClient.refetchQueries({
+        queryKey: nursingWardBedKeys.byVisit(activeVisitUuid),
+        exact: true,
+      });
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: nursingWardBedKeys.all });
+  }, [activeVisitUuid, queryClient]);
+
   const createMutation = useCreateWard({
     onSuccess: async () => {
       setOpen(false);
       setEditWardId(null);
       await queryClient.invalidateQueries({ queryKey: wardKeys.all });
-      await queryClient.invalidateQueries({ queryKey: nursingWardBedKeys.all });
+      await refreshVisitWardBedOptions();
     },
   });
 
   const updateMutation = useUpdateWard({
-    onSuccess: async () => {
+    onSuccess: async (wardResponse) => {
+      const updatedWard = wardResponse.data;
+      if (activeVisitUuid && updatedWard) {
+        applyUpdatedWardToVisitOptionsCache(queryClient, activeVisitUuid, updatedWard);
+      }
       setOpen(false);
       setEditWardId(null);
       await queryClient.invalidateQueries({ queryKey: wardKeys.all });
-      await queryClient.invalidateQueries({ queryKey: nursingWardBedKeys.all });
+      await refreshVisitWardBedOptions();
     },
   });
 
