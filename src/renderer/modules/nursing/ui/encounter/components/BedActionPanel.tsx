@@ -8,9 +8,13 @@ interface BedActionPanelProps {
   isDark: boolean;
   isBusy: boolean;
   isRefreshing: boolean;
+  /** Optional line explaining why actions are limited */
+  actionHint?: string;
   availableBedActions: BedAction[];
   selectedBedAction: BedAction;
-  selectedBedIsOccupied: boolean;
+  /** Selected bed is current visit's assigned occupied bed (shows "Release bed" on mark_available) */
+  canReleaseCurrentPatientBed?: boolean;
+  selectedBedIsMaintenance?: boolean;
   onSelectAction: (action: BedAction) => void;
   onContinue: () => void;
   continueDisabled: boolean;
@@ -21,16 +25,36 @@ const BedActionPanel: React.FC<BedActionPanelProps> = ({
   isDark,
   isBusy,
   isRefreshing,
+  actionHint,
   availableBedActions,
   selectedBedAction,
-  selectedBedIsOccupied,
+  canReleaseCurrentPatientBed = false,
+  selectedBedIsMaintenance = false,
   onSelectAction,
   onContinue,
   continueDisabled,
 }) => {
+  const actionLabel = (action: BedAction) => {
+    if (action === 'assign') return 'Assign patient';
+    if (action === 'transfer') return 'Transfer patient';
+    if (action === 'mark_available') {
+      if (canReleaseCurrentPatientBed) return 'Release bed';
+      if (selectedBedIsMaintenance) return 'Remove maintenance';
+      return 'Set available';
+    }
+    return 'Mark maintenance';
+  };
+
   return (
     <div className={`mt-3 rounded-lg border p-3 ${isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'}`}>
-      <div className="text-xs font-medium mb-2">Action on selected bed</div>
+      <div className="text-xs font-medium mb-2">Actions for selected bed</div>
+      <p className={`text-[10px] mb-2 leading-snug ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        Another patient&apos;s bed: no actions here. Your current bed: Transfer or Release. Free bed: Assign and/or mark
+        maintenance, or Transfer if this visit is already assigned elsewhere.
+      </p>
+      {actionHint ? (
+        <p className={`text-xs mb-2 ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>{actionHint}</p>
+      ) : null}
       {(isBusy || isRefreshing) && (
         <LoadingSkeleton
           variant="minimal"
@@ -59,30 +83,25 @@ const BedActionPanel: React.FC<BedActionPanelProps> = ({
                     : 'border-gray-300 hover:bg-gray-50'
               }`}
             >
-              {action === 'assign'
-                ? 'Assign'
-                : action === 'transfer'
-                  ? 'Transfer'
-                  : action === 'mark_available'
-                    ? selectedBedIsOccupied
-                      ? 'Release Bed'
-                      : 'Set Available'
-                    : 'Mark Maintenance'}
+              {actionLabel(action)}
             </button>
           ))}
         </div>
       ) : (
         <p className={`text-xs mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-          No valid actions for this bed in its current state.
+          No actions for this bed. Select a free bed to assign or transfer, or select your assigned bed (highlighted as
+          current patient bed when applicable) for Release / Transfer.
         </p>
       )}
-      <button
-        onClick={onContinue}
-        disabled={continueDisabled}
-        className="px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-xs"
-      >
-        Continue with Action
-      </button>
+      <div className="flex justify-end">
+        <button
+          onClick={onContinue}
+          disabled={continueDisabled}
+          className="px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-xs"
+        >
+          Save
+        </button>
+      </div>
     </div>
   );
 };

@@ -13,10 +13,18 @@ export const nursingWardBedKeys = {
   byWard: (wardId: number) => [...nursingWardBedKeys.all, 'ward', wardId] as const,
 };
 
+/** Ward/bed state must track live occupancy; avoid retaining stale lists in memory. */
+const wardBedFreshQueryOptions = {
+  staleTime: 0,
+  gcTime: 0,
+  refetchOnMount: 'always' as const,
+};
+
 export const useWardBedOptions = (visitUuid: string | null) =>
   useQuery({
     queryKey: nursingWardBedKeys.byVisit(visitUuid ?? 'unknown'),
     enabled: Boolean(visitUuid),
+    ...wardBedFreshQueryOptions,
     queryFn: async () => {
       const response = await axiosInstance.get<WardBedOptionsApiResponse>(
         `/visits/${visitUuid}/ward-bed-options`
@@ -63,6 +71,7 @@ export const useWardBeds = (wardId: number | null, facilityId: number | null) =>
   useQuery({
     queryKey: nursingWardBedKeys.byWard(wardId ?? 0),
     enabled: Boolean(wardId && facilityId),
+    ...wardBedFreshQueryOptions,
     queryFn: async () => {
       if (!wardId || !facilityId) {
         return [];
