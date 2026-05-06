@@ -12,6 +12,7 @@ import {
 } from '../../../modules/nursing/ui/NursingActionWorkspaces';
 import MRPatientSearch from '../../../modules/medical-records/ui/patients/views/MRPatientSearch';
 import MRPatientQueue from '../../../modules/medical-records/ui/patients/views/MRPatientQueue';
+import MRPatientRecords from '../../../modules/medical-records/ui/patients/views/MRPatientRecords';
 import NursingWardBedManagement from '../../../modules/nursing/ui/encounter/NursingWardBedManagement';
 
 const nursingTablePage = <P extends { theme: 'light' | 'dark' }>(
@@ -52,7 +53,10 @@ export const nursingRoutes = [
 
   <Route key="nursing-encounter" path="nursing-encounter" element={nursingTablePage(NursingEncounterWorkspace)}>
     <Route index element={<Navigate to={NURSING_ROUTES.NURSING_ENCOUNTER_PATIENT_INFO} replace />} />
-    <Route path="patient-info" element={nursingTablePage(NursingPlaceholderView, { title: 'Patient Info' })} />
+    <Route
+      path="patient-info"
+      element={nursingTablePage(MRPatientRecords, { presentation: 'nursing' })}
+    />
     <Route path="ward-bed" element={nursingTablePage(NursingWardBedManagement)} />
     <Route path="tasks" element={nursingTablePage(NursingPlaceholderView, { title: 'Tasks' })} />
     <Route path="meds" element={nursingTablePage(NursingPlaceholderView, { title: 'Meds' })} />

@@ -12,8 +12,12 @@ import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clin
 import { useGetActiveVisitDiagnoses } from '../../../api/diagnosis/diagnosisQueries';
 import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
 
+export type MRPatientRecordsPresentation = 'clinical-encounter' | 'nursing';
+
 interface MRPatientRecordsProps {
   theme?: 'light' | 'dark';
+  /** Nursing encounter uses the same UI with nursing-oriented labels. */
+  presentation?: MRPatientRecordsPresentation;
 }
 
 interface RecordCardProps {
@@ -134,9 +138,72 @@ const RecordCard: React.FC<RecordCardProps> = ({
   );
 };
 
-export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({ theme = 'light' }) => {
+const presentationCopy: Record<
+  MRPatientRecordsPresentation,
+  {
+    pageTitle: string;
+    pageSubtitle: string;
+    latestVisitTitle: string;
+    latestVisitDescription: string;
+    medicalHistoryTitle: string;
+    medicalHistoryDescription: string;
+    lifetimeBadge: string;
+    summaryHeading: string;
+    statVisitLabel: string;
+    statAllergiesLabel: string;
+    statModeLabel: string;
+    alertNoVisit: string;
+    visitBadgeActive: string;
+    visitBadgeInactive: string;
+  }
+> = {
+  'clinical-encounter': {
+    pageTitle: 'Patient Records',
+    pageSubtitle: 'Access and manage patient clinical history',
+    latestVisitTitle: 'Latest Visit',
+    latestVisitDescription:
+      'View and document the current patient encounter with complete clinical notes, diagnosis, and prescriptions',
+    medicalHistoryTitle: 'Medical History',
+    medicalHistoryDescription:
+      'Access complete patient history across all facilities including past diagnoses, treatments, allergies, and lab results',
+    lifetimeBadge: 'Lifetime Record',
+    summaryHeading: 'Clinical Summary',
+    statVisitLabel: 'Current Visit Status',
+    statAllergiesLabel: 'Known Allergies',
+    statModeLabel: 'Data Mode',
+    alertNoVisit:
+      'No active visit selected. Latest visit data will be read-only. Select or start a visit to enable documentation.',
+    visitBadgeActive: 'Current',
+    visitBadgeInactive: 'No Active Visit',
+  },
+  nursing: {
+    pageTitle: 'Patient Info',
+    pageSubtitle: 'Review clinical context and history to inform nursing care',
+    latestVisitTitle: 'This visit',
+    latestVisitDescription:
+      'Review and contribute to this encounter—clinical notes, orders, care plans, and tasks relevant to bedside nursing',
+    medicalHistoryTitle: 'Patient history',
+    medicalHistoryDescription:
+      'Full clinical picture across time—allergies, prior care, labs, and diagnoses to keep nursing interventions safe',
+    lifetimeBadge: 'Full record',
+    summaryHeading: 'Care snapshot',
+    statVisitLabel: 'Visit status',
+    statAllergiesLabel: 'Known allergies',
+    statModeLabel: 'Documentation mode',
+    alertNoVisit:
+      'No active visit is selected. Current-visit views may be limited. Select or continue a visit from the queue when ready.',
+    visitBadgeActive: 'This visit',
+    visitBadgeInactive: 'No active visit',
+  },
+};
+
+export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({
+  theme = 'light',
+  presentation = 'clinical-encounter',
+}) => {
   const navigate = useNavigate();
   const isDark = theme === 'dark';
+  const copy = presentationCopy[presentation];
   const activeVisitId = useSelector(selectActiveVisitId);
   const activePatientId = useSelector(selectActiveVisitPatientId);
 
@@ -243,10 +310,10 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({ theme = 'lig
       {/* Header Section */}
       <div className="mb-6">
         <h2 className={`text-xl font-semibold ${colors.text.primary}`}>
-          Patient Records
+          {copy.pageTitle}
         </h2>
         <p className={`text-sm ${colors.text.secondary}`}>
-          Access and manage patient clinical history
+          {copy.pageSubtitle}
         </p>
       </div>
 
@@ -255,9 +322,9 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({ theme = 'lig
         {/* Latest Visit Card - Active/Current Episode */}
         <RecordCard
           icon={<Clock className="h-8 w-8" />}
-          title="Latest Visit"
-          description="View and document the current patient encounter with complete clinical notes, diagnosis, and prescriptions"
-          badge={activeVisitId ? "Current" : "No Active Visit"}
+          title={copy.latestVisitTitle}
+          description={copy.latestVisitDescription}
+          badge={activeVisitId ? copy.visitBadgeActive : copy.visitBadgeInactive}
           badgeColor={activeVisitId ? "blue" : "amber"}
           badgeIcon={activeVisitId ? <Activity className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
           statusInfo={latestVisitStatus}
@@ -269,9 +336,9 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({ theme = 'lig
         {/* Medical History Card - Historical/Lifetime View */}
         <RecordCard
           icon={<History className="h-8 w-8" />}
-          title="Medical History"
-          description="Access complete patient history across all facilities including past diagnoses, treatments, allergies, and lab results"
-          badge="Lifetime Record"
+          title={copy.medicalHistoryTitle}
+          description={copy.medicalHistoryDescription}
+          badge={copy.lifetimeBadge}
           badgeColor="purple"
           badgeIcon={<Stethoscope className="h-3 w-3" />}
           statusInfo={medicalHistoryStatus}
@@ -286,7 +353,7 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({ theme = 'lig
         <div className="flex items-center gap-2 mb-3">
           <FileText className={`h-4 w-4 ${colors.text.secondary}`} />
           <h3 className={`text-sm font-semibold ${colors.text.primary}`}>
-            Clinical Summary
+            {copy.summaryHeading}
           </h3>
         </div>
         
@@ -296,7 +363,7 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({ theme = 'lig
               {stats.hasActiveVisit ? 'Active' : 'None'}
             </p>
             <p className={`text-xs ${colors.text.secondary}`}>
-              Current Visit Status
+              {copy.statVisitLabel}
             </p>
           </div>
           <div>
@@ -304,7 +371,7 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({ theme = 'lig
               {stats.allergiesCount}
             </p>
             <p className={`text-xs ${colors.text.secondary}`}>
-              Known Allergies
+              {copy.statAllergiesLabel}
             </p>
           </div>
           <div>
@@ -312,7 +379,7 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({ theme = 'lig
               {stats.hasActiveVisit ? 'Editable' : 'Read-only'}
             </p>
             <p className={`text-xs ${colors.text.secondary}`}>
-              Data Mode
+              {copy.statModeLabel}
             </p>
           </div>
         </div>
@@ -323,7 +390,7 @@ export const MRPatientRecords: React.FC<MRPatientRecordsProps> = ({ theme = 'lig
             <div className="flex items-center gap-2">
               <AlertCircle className={`h-4 w-4 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
               <p className={`text-xs ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
-                No active visit selected. Latest visit data will be read-only. Select or start a visit to enable documentation.
+                {copy.alertNoVisit}
               </p>
             </div>
           </div>

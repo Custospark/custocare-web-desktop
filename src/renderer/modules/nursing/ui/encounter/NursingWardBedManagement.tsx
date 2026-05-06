@@ -6,16 +6,12 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  CircleDot,
   Clock,
   MapPin,
-  Lock,
   PlusCircle,
   RefreshCw,
   Search,
   UserPlus,
-  UserRound,
-  X,
 } from 'lucide-react';
 
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
@@ -34,13 +30,11 @@ import {
   useWardBedOptions,
   nursingWardBedKeys,
 } from '../../api/ward-bed/wardBedQueries';
-import { useCreateWard, wardKeys } from '../../../administration/admin-module/api/wards/wardQueries';
-import { WardType } from '../../../administration/admin-module/api/wards/wardTypes';
 import WardFormDrawer from '../../../administration/admin-module/ui/clinical-space/ward-components/WardFormDrawer';
-import { getEmptyFormData } from '../../../administration/admin-module/ui/clinical-space/ward-components/ward.constants';
-import type { FacilityWardFormData } from '../../../administration/admin-module/ui/clinical-space/ward-components/ward.types';
 import BedActionPanel from './components/BedActionPanel';
 import BedBoardGrid from './components/BedBoardGrid';
+import WardBedPickerModalHeader from './components/WardBedPickerModalHeader';
+import { useNursingWardFormDrawer } from './ward-drawer/useNursingWardFormDrawer';
 
 interface Props {
   theme: 'light' | 'dark';
@@ -176,8 +170,6 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
   const [bedPickerOpen, setBedPickerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const [wardDrawerOpen, setWardDrawerOpen] = useState(false);
-  const [wardFormData, setWardFormData] = useState<FacilityWardFormData>(getEmptyFormData(facilityId));
   const getErrorMessage = (error: unknown, fallback: string) => {
     if (typeof error === 'object' && error !== null) {
       const maybeResponse = error as { response?: { data?: { message?: string } } };
@@ -191,17 +183,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
   const releaseMutation = useReleaseWardBed();
   const createBedMutation = useCreateWardBed();
   const updateBedMutation = useUpdateWardBed();
-  const createWardMutation = useCreateWard({
-    onSuccess: async () => {
-      setWardDrawerOpen(false);
-      await queryClient.invalidateQueries({ queryKey: wardKeys.all });
-      await queryClient.invalidateQueries({ queryKey: nursingWardBedKeys.all });
-    },
-  });
-
-  useEffect(() => {
-    setWardFormData(getEmptyFormData(facilityId));
-  }, [facilityId]);
+  const wardFormDrawer = useNursingWardFormDrawer({ facilityId, theme });
 
   useEffect(() => {
     if (!optionsQuery.data) return;
@@ -564,8 +546,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       showToast('error', 'Select an active facility before creating wards.', 4000);
       return;
     }
-    setWardFormData(getEmptyFormData(facilityId));
-    setWardDrawerOpen(true);
+    wardFormDrawer.openCreateDrawer();
   };
 
   const handleCreateBedFromModal = () => {
@@ -574,24 +555,6 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       const input = document.getElementById('new-bed-label-input') as HTMLInputElement | null;
       input?.focus();
     }, 0);
-  };
-
-  const submitWardCreate = () => {
-    if (!facilityId || !wardFormData.name.trim() || !wardFormData.ward_type) return;
-    createWardMutation.mutate({
-      facility_id: facilityId,
-      name: wardFormData.name.trim(),
-      code: wardFormData.code.trim() || undefined,
-      ward_type: wardFormData.ward_type as WardType,
-      building: wardFormData.building.trim() || undefined,
-      floor: wardFormData.floor.trim() || undefined,
-      status: wardFormData.status,
-      capacity_declared: wardFormData.capacity_declared ? Number(wardFormData.capacity_declared) : undefined,
-      capacity_operational: wardFormData.capacity_operational ? Number(wardFormData.capacity_operational) : undefined,
-      sex_restriction: wardFormData.sex_restriction,
-      age_group: wardFormData.age_group,
-      note: wardFormData.note.trim() || undefined,
-    });
   };
 
   const handleCreateBed = async () => {
@@ -1106,17 +1069,15 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
             aria-modal="true"
             aria-label="Ward bed picker"
           >
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <label className="text-sm font-medium block">{selectedWard?.name ?? 'Ward'} Bed Board</label>
-              <div className="text-xs flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
-                <span className="inline-flex items-center gap-1"><CircleDot className="w-3.5 h-3.5 text-green-500" /> Free</span>
-                <span className="inline-flex items-center gap-1"><UserRound className="w-3.5 h-3.5 text-blue-500" /> This patient</span>
-                <span className="inline-flex items-center gap-1"><Lock className="w-3.5 h-3.5 text-rose-500" /> Other patient</span>
-              </div>
-              <button onClick={() => setBedPickerOpen(false)} className="p-1.5 rounded-md border cursor-pointer" aria-label="Close">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+            <WardBedPickerModalHeader
+              wardName={selectedWard?.name ?? 'Ward'}
+              isDark={isDark}
+              onEditWard={() => {
+                if (selectedWardId != null) wardFormDrawer.openEditDrawerForWardId(selectedWardId);
+              }}
+              onCloseModal={() => setBedPickerOpen(false)}
+              editDisabled={!facilityId || selectedWardId == null}
+            />
             <BedBoardGrid
               isDark={isDark}
               wardBedsLoading={wardBedsQuery.isLoading}
@@ -1291,17 +1252,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
         </div>
       )}
 
-      <WardFormDrawer
-        theme={theme}
-        mode="create"
-        open={wardDrawerOpen}
-        formData={wardFormData}
-        onChange={setWardFormData}
-        onClose={() => setWardDrawerOpen(false)}
-        onSubmit={submitWardCreate}
-        isSubmitting={createWardMutation.isPending}
-        canSubmit={!!wardFormData.name.trim() && !!wardFormData.ward_type && !!facilityId}
-      />
+      <WardFormDrawer {...wardFormDrawer.drawerProps} />
     </div>
   );
 };
