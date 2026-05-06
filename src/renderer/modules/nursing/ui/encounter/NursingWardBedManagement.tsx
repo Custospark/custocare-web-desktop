@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { BedDouble, Building2, Check, CircleDot, Lock, MoveRight, PlusCircle, RefreshCw, Search } from 'lucide-react';
+import { BedDouble, Building2, Check, CircleDot, Lock, MoveRight, PlusCircle, RefreshCw, Search, X } from 'lucide-react';
 
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { getActiveFacilityId } from '../../../../app/store/utils/contextSelectors';
@@ -42,6 +42,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
   const [editingBedId, setEditingBedId] = useState<number | null>(null);
   const [editingBedLabel, setEditingBedLabel] = useState('');
   const [bedSearch, setBedSearch] = useState('');
+  const [bedPickerOpen, setBedPickerOpen] = useState(false);
 
   const [wardDrawerOpen, setWardDrawerOpen] = useState(false);
   const [wardFormData, setWardFormData] = useState<FacilityWardFormData>(getEmptyFormData(facilityId));
@@ -108,7 +109,10 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
     (admissionAction !== 'transfer' || transferReason.trim().length > 0);
 
   const handleAssign = async () => {
-    if (!visitUuid || !selectedWardId) return;
+    if (!visitUuid || !selectedWardId || !selectedBedId) {
+      showToast('error', 'Select ward and bed before saving assignment.', 4000);
+      return;
+    }
     try {
       const response = await assignMutation.mutateAsync({
         visitUuid,
@@ -284,7 +288,11 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
               return (
                 <button
                   key={ward.id}
-                  onClick={() => setSelectedWardId(ward.id)}
+                  onClick={() => {
+                    setSelectedWardId(ward.id);
+                    setBedSearch('');
+                    setBedPickerOpen(true);
+                  }}
                   className={`text-left rounded-xl border p-3 transition cursor-pointer ${
                     active
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
@@ -307,68 +315,17 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
         </div>
 
         {!!selectedWardId && (
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <label className="text-sm font-medium block">Bed Board</label>
-              <div className="text-xs flex items-center gap-3">
-                <span className="inline-flex items-center gap-1"><CircleDot className="w-3.5 h-3.5 text-green-500" /> Free</span>
-                <span className="inline-flex items-center gap-1"><Lock className="w-3.5 h-3.5 text-red-500" /> Occupied</span>
-              </div>
+          <button
+            onClick={() => setBedPickerOpen(true)}
+            className={`w-full rounded-xl border p-3 text-left cursor-pointer ${
+              isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            <div className="text-sm font-medium">Open Bed Picker</div>
+            <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Pick a bed using the calendar-style board.
             </div>
-            <div className="mb-2">
-              <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-300 bg-white'}`}>
-                <Search className="w-4 h-4 opacity-70" />
-                <input
-                  value={bedSearch}
-                  onChange={(e) => setBedSearch(e.target.value)}
-                  placeholder="Search bed label..."
-                  className="w-full bg-transparent outline-none text-sm"
-                />
-              </div>
-            </div>
-            <div className={`rounded-xl border p-3 max-h-72 overflow-auto ${isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                {filteredWardBeds.map((bed) => {
-                  const isOccupied = occupiedBedIds.has(bed.id) || bed.status === 'occupied';
-                  const isBookable = !isOccupied && bed.status !== 'maintenance' && bed.status !== 'inactive';
-                  const active = selectedBedId === bed.id && isBookable;
-                  return (
-                    <button
-                      key={bed.id}
-                      onClick={() => {
-                        if (!isBookable) return;
-                        setSelectedBedId(bed.id);
-                      }}
-                      className={`rounded-lg border px-3 py-2 text-sm text-left transition ${
-                        active
-                          ? 'border-blue-500 bg-blue-600 text-white'
-                          : isOccupied
-                            ? isDark
-                              ? 'border-red-800 bg-red-900/20 text-red-300 cursor-not-allowed'
-                              : 'border-red-200 bg-red-50 text-red-700 cursor-not-allowed'
-                            : bed.status === 'maintenance' || bed.status === 'inactive'
-                              ? isDark
-                                ? 'border-yellow-800 bg-yellow-900/10 text-yellow-300 cursor-not-allowed'
-                                : 'border-yellow-200 bg-yellow-50 text-yellow-700 cursor-not-allowed'
-                              : isDark
-                                ? 'border-gray-700 hover:bg-gray-800 cursor-pointer'
-                                : 'border-gray-300 hover:bg-gray-50 cursor-pointer'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="truncate">{bed.bed_label}</span>
-                        {isOccupied ? (
-                          <Lock className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-red-500'}`} />
-                        ) : (
-                          <CircleDot className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-green-500'}`} />
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+          </button>
         )}
 
         {admissionAction === 'transfer' && (
@@ -458,6 +415,98 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
         <MoveRight className="w-4 h-4" />
         {assignMutation.isPending ? 'Saving...' : 'Save Ward & Bed'}
       </button>
+
+      {bedPickerOpen && !!selectedWardId && (
+        <div className="fixed inset-0 z-50">
+          <button
+            onClick={() => setBedPickerOpen(false)}
+            className="absolute inset-0 bg-black/50 cursor-pointer"
+            aria-label="Close bed picker"
+          />
+          <div
+            className={`absolute left-1/2 top-1/2 w-[92vw] max-w-5xl -translate-x-1/2 -translate-y-1/2 rounded-2xl border p-4 ${
+              isDark ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'
+            }`}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Ward bed picker"
+          >
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <label className="text-sm font-medium block">{selectedWard?.name ?? 'Ward'} Bed Board</label>
+              <div className="text-xs flex items-center gap-3">
+                <span className="inline-flex items-center gap-1"><CircleDot className="w-3.5 h-3.5 text-green-500" /> Free</span>
+                <span className="inline-flex items-center gap-1"><Lock className="w-3.5 h-3.5 text-red-500" /> Occupied</span>
+              </div>
+              <button onClick={() => setBedPickerOpen(false)} className="p-1.5 rounded-md border cursor-pointer" aria-label="Close">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="mb-2">
+              <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-300 bg-white'}`}>
+                <Search className="w-4 h-4 opacity-70" />
+                <input
+                  value={bedSearch}
+                  onChange={(e) => setBedSearch(e.target.value)}
+                  placeholder="Search bed label..."
+                  className="w-full bg-transparent outline-none text-sm"
+                />
+              </div>
+            </div>
+            <div className={`rounded-xl border p-3 max-h-[55vh] overflow-auto ${isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
+              <div className="grid grid-cols-7 gap-2">
+                {filteredWardBeds.map((bed) => {
+                  const isOccupied = occupiedBedIds.has(bed.id) || bed.status === 'occupied';
+                  const isBookable = !isOccupied && bed.status !== 'maintenance' && bed.status !== 'inactive';
+                  const active = selectedBedId === bed.id && isBookable;
+                  const dateLikeLabel = (bed.bed_label.match(/\d+/)?.[0] ?? bed.bed_label).slice(0, 3);
+                  return (
+                    <button
+                      key={bed.id}
+                      onClick={() => {
+                        if (!isBookable) return;
+                        setSelectedBedId(bed.id);
+                      }}
+                      className={`aspect-square rounded-lg border p-2 transition cursor-pointer ${
+                        active
+                          ? 'border-blue-500 bg-blue-600 text-white shadow-sm'
+                          : isOccupied
+                            ? isDark
+                              ? 'border-red-800 bg-red-900/20 text-red-300 cursor-not-allowed'
+                              : 'border-red-200 bg-red-50 text-red-700 cursor-not-allowed'
+                            : bed.status === 'maintenance' || bed.status === 'inactive'
+                              ? isDark
+                                ? 'border-yellow-800 bg-yellow-900/10 text-yellow-300 cursor-not-allowed'
+                                : 'border-yellow-200 bg-yellow-50 text-yellow-700 cursor-not-allowed'
+                              : isDark
+                                ? 'border-gray-700 hover:bg-gray-800'
+                                : 'border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="h-full flex flex-col">
+                        <span className={`text-[10px] leading-none uppercase tracking-wide truncate ${active ? 'text-blue-100' : isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {bed.bed_label}
+                        </span>
+                        <span className="flex-1 flex items-center justify-center">
+                          <span className={`text-sm font-semibold ${active ? 'text-white' : isDark ? 'text-gray-100' : 'text-gray-800'}`}>
+                            {dateLikeLabel}
+                          </span>
+                        </span>
+                        <span className="self-end">
+                          {isOccupied ? (
+                            <Lock className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-red-500'}`} />
+                          ) : (
+                            <CircleDot className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-green-500'}`} />
+                          )}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <WardFormDrawer
         theme={theme}
