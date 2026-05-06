@@ -7,7 +7,38 @@ export const NURSING_ROUTES = {
   MEDICATION_TREATMENT: `${ROUTES.NURSING}/medication-treatment`,
   TASKS_SHIFTS: `${ROUTES.NURSING}/tasks-shifts`,
 
-  // Backward-compatible aliases for existing nursing sub-routes.
+  // Nursing Intelligence sub actions
+  NURSING_INTELLIGENCE_WARD_OVERVIEW: `${ROUTES.NURSING}/nursing-intelligence/ward-overview`,
+  NURSING_INTELLIGENCE_TASK_SUMMARY: `${ROUTES.NURSING}/nursing-intelligence/task-summary`,
+  NURSING_INTELLIGENCE_MEDICATION_SUMMARY: `${ROUTES.NURSING}/nursing-intelligence/medication-summary`,
+  NURSING_INTELLIGENCE_ACTIVITY_TRENDS: `${ROUTES.NURSING}/nursing-intelligence/activity-trends`,
+
+  // Wards & Patients sub actions
+  WARDS_PATIENTS_SEARCH_PATIENT: `${ROUTES.NURSING}/wards-patients/search-patient`,
+  WARDS_PATIENTS_MY_WARD_PATIENTS: `${ROUTES.NURSING}/wards-patients/my-ward-patients`,
+  WARDS_PATIENTS_NEW_PATIENTS_UNASSIGNED: `${ROUTES.NURSING}/wards-patients/new-patients-unassigned`,
+
+  // Nursing Encounter sub actions
+  NURSING_ENCOUNTER_PATIENT_INFO: `${ROUTES.NURSING}/nursing-encounter/patient-info`,
+  NURSING_ENCOUNTER_WARD_BED: `${ROUTES.NURSING}/nursing-encounter/ward-bed`,
+  NURSING_ENCOUNTER_TASKS: `${ROUTES.NURSING}/nursing-encounter/tasks`,
+  NURSING_ENCOUNTER_MEDS: `${ROUTES.NURSING}/nursing-encounter/meds`,
+  NURSING_ENCOUNTER_NOTES: `${ROUTES.NURSING}/nursing-encounter/notes`,
+
+  // Medication & Treatment sub actions
+  MEDICATION_TREATMENT_MEDICATION_SCHEDULE: `${ROUTES.NURSING}/medication-treatment/medication-schedule`,
+  MEDICATION_TREATMENT_ADMINISTER_MEDICATION: `${ROUTES.NURSING}/medication-treatment/administer-medication`,
+  MEDICATION_TREATMENT_MISSED_MEDICATIONS: `${ROUTES.NURSING}/medication-treatment/missed-medications`,
+  MEDICATION_TREATMENT_TREATMENT_LOG: `${ROUTES.NURSING}/medication-treatment/treatment-log`,
+
+  // Tasks & Shifts sub actions
+  TASKS_SHIFTS_MY_TASKS: `${ROUTES.NURSING}/tasks-shifts/my-tasks`,
+  TASKS_SHIFTS_ASSIGN_TASK: `${ROUTES.NURSING}/tasks-shifts/assign-task`,
+  TASKS_SHIFTS_SHIFT_HANDOVER: `${ROUTES.NURSING}/tasks-shifts/shift-handover`,
+  TASKS_SHIFTS_TASK_HISTORY: `${ROUTES.NURSING}/tasks-shifts/task-history`,
+
+  // Backward-compatible aliases for existing nursing keys.
+  OVERVIEW: `${ROUTES.NURSING}/nursing-intelligence`,
   WARDS: `${ROUTES.NURSING}/wards-patients`,
   PATIENTS: `${ROUTES.NURSING}/wards-patients/patients`,
   VITALS: `${ROUTES.NURSING}/nursing-encounter/vitals`,

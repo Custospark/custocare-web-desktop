@@ -5,23 +5,23 @@
       "horizontalActions": [
         {
           "name": "Nursing Intelligence",
-          "subActions": ["Ward Overview", "Task Summary", "Medication Summary", "Activity Trends"]
+          "horizontal": ["Ward Overview", "Task Summary", "Medication Summary", "Activity Trends"]
         },
         {
           "name": "Wards & Patients",
-          "subActions": ["Search Patient", "My Ward Patients", "New Patients (Unassigned)"]
+          "horizontal": ["Search Patient", "My Ward Patients", "New Patients (Unassigned)"]
         },
         {
           "name": "Nursing Encounter",
-          "subActions": ["Patient Info", "Ward & Bed", "Tasks", "Meds", "Notes"]
+          "horizontal": ["Patient Info", "Ward & Bed", "Tasks", "Meds", "Notes"]
         },
         {
           "name": "Medication & Treatment",
-          "subActions": ["Medication Schedule", "Administer Medication", "Missed Medications", "Treatment Log"]
+          "horizontal": ["Medication Schedule", "Administer Medication", "Missed Medications", "Treatment Log"]
         },
         {
           "name": "Tasks & Shifts",
-          "subActions": ["My Tasks", "Assign Task", "Shift Handover", "Task History"]
+          "horizontal": ["My Tasks", "Assign Task", "Shift Handover", "Task History"]
         }
       ]
     }

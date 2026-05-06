@@ -9,6 +9,7 @@ import { accountRoutes } from './modules/account';
 import { onboardingAndDashboardRoutes } from './modules/shared/OnboardingAndDashboard';
 import { pharmacyRoutes } from './modules/pharmacy';
 import { medicalRecordsRoutes } from './modules/medical-records';
+import { nursingRoutes } from './modules/nursing';
 import { clinicalSpaceManagementRoutes } from './modules/adminstration/clinicalspace';
 import { facilitySettingsRoutes } from './modules/adminstration/facility-settings';
 import { platformAdminRoutes } from './modules/PlatformAdministration';
@@ -79,7 +80,9 @@ export const ProtectedRoutes = () => [
                 <WithThemeProp Component={NursingModule} />
               </SuspenseWrapper>
             }
-          />
+          >
+            {nursingRoutes}
+          </Route>
 
           {/* Clinical Module */}
           <Route
