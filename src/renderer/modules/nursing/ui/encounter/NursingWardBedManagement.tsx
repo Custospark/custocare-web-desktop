@@ -3,12 +3,16 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeftRight,
   BedDouble,
-  Building2,
   Check,
+  ChevronLeft,
+  ChevronRight,
   CircleDot,
+  Clock,
+  MapPin,
   Lock,
   PlusCircle,
   RefreshCw,
+  Search,
   UserPlus,
   UserRound,
   X,
@@ -42,6 +46,102 @@ interface Props {
   theme: 'light' | 'dark';
 }
 
+const WARD_PAGE_SIZE_OPTIONS = [6, 12, 24, 48] as const;
+const MANAGE_BED_PAGE_OPTIONS = [8, 16, 32, 64] as const;
+const MODAL_BED_PAGE_OPTIONS = [12, 24, 36, 48] as const;
+
+function PaginationBar({
+  isDark,
+  idPrefix,
+  rangeStart,
+  rangeEnd,
+  totalItems,
+  page,
+  totalPages,
+  pageSize,
+  pageSizeOptions,
+  onPageChange,
+  onPageSizeChange,
+}: {
+  isDark: boolean;
+  idPrefix: string;
+  rangeStart: number;
+  rangeEnd: number;
+  totalItems: number;
+  page: number;
+  totalPages: number;
+  pageSize: number;
+  pageSizeOptions: readonly number[];
+  onPageChange: (p: number) => void;
+  onPageSizeChange: (n: number) => void;
+}) {
+  return (
+    <div
+      className={`flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg border px-3 py-2 text-xs ${
+        isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-200 bg-gray-50'
+      }`}
+    >
+      <span className={`tabular-nums ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        {totalItems === 0 ? (
+          'No results'
+        ) : (
+          <>
+            Showing <span className="font-medium text-inherit">{rangeStart}</span>–
+            <span className="font-medium text-inherit">{rangeEnd}</span> of{' '}
+            <span className="font-medium text-inherit">{totalItems}</span>
+          </>
+        )}
+      </span>
+      <div className="flex flex-wrap items-center gap-2 justify-end">
+        <label htmlFor={`${idPrefix}-page-size`} className={`${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+          Per page
+        </label>
+        <select
+          id={`${idPrefix}-page-size`}
+          value={pageSize}
+          onChange={(e) => onPageSizeChange(Number(e.target.value))}
+          className={`rounded-md border px-2 py-1 text-xs cursor-pointer ${
+            isDark ? 'bg-gray-900 border-gray-600 text-gray-200' : 'bg-white border-gray-300 text-gray-800'
+          }`}
+        >
+          {pageSizeOptions.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            aria-label="Previous page"
+            disabled={page <= 1 || totalItems === 0}
+            onClick={() => onPageChange(page - 1)}
+            className={`p-1 rounded-md border disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
+              isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-100'
+            }`}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className={`min-w-[4.5rem] text-center tabular-nums ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            {totalItems === 0 ? '—' : `${page} / ${totalPages}`}
+          </span>
+          <button
+            type="button"
+            aria-label="Next page"
+            disabled={page >= totalPages || totalItems === 0}
+            onClick={() => onPageChange(page + 1)}
+            className={`p-1 rounded-md border disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
+              isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-100'
+            }`}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
   const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
@@ -62,12 +162,19 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
   const [editingBedLabel, setEditingBedLabel] = useState('');
   const [editingRoomLabel, setEditingRoomLabel] = useState('');
   const [bedSearch, setBedSearch] = useState('');
+  const [wardSearch, setWardSearch] = useState('');
+  const [wardPage, setWardPage] = useState(1);
+  const [wardPageSize, setWardPageSize] = useState<number>(WARD_PAGE_SIZE_OPTIONS[0]);
+  const [manageBedSearch, setManageBedSearch] = useState('');
+  const [manageBedPage, setManageBedPage] = useState(1);
+  const [manageBedPageSize, setManageBedPageSize] = useState<number>(MANAGE_BED_PAGE_OPTIONS[0]);
+  const [bedBoardPage, setBedBoardPage] = useState(1);
+  const [bedBoardPageSize, setBedBoardPageSize] = useState<number>(MODAL_BED_PAGE_OPTIONS[1]);
   const [transferWardId, setTransferWardId] = useState<number | null>(null);
   const [transferRoomLabel, setTransferRoomLabel] = useState<string>('');
   const [transferBedId, setTransferBedId] = useState<number | null>(null);
   const [bedPickerOpen, setBedPickerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastActionMessage, setLastActionMessage] = useState<string | null>(null);
 
   const [wardDrawerOpen, setWardDrawerOpen] = useState(false);
   const [wardFormData, setWardFormData] = useState<FacilityWardFormData>(getEmptyFormData(facilityId));
@@ -121,10 +228,95 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
     () => optionsQuery.data?.wards.find((w) => w.id === selectedWardId) ?? null,
     [optionsQuery.data, selectedWardId]
   );
+  const currentLocation = optionsQuery.data?.current_location;
+  const placementWardMeta = useMemo(
+    () => (optionsQuery.data?.wards ?? []).find((w) => w.id === currentLocation?.ward_id) ?? null,
+    [optionsQuery.data?.wards, currentLocation?.ward_id]
+  );
   const currentAssignedBedId = optionsQuery.data?.current_location?.bed_id ?? null;
   const currentAssignedWardId = optionsQuery.data?.current_location?.ward_id ?? null;
 
   const hasBedAssignment = !!(currentAssignedWardId && currentAssignedBedId);
+
+  const formatPlacementTime = (iso?: string | null) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleString();
+  };
+
+  const filteredWardsForGrid = useMemo(() => {
+    const wards = optionsQuery.data?.wards ?? [];
+    const q = wardSearch.trim().toLowerCase();
+    if (!q) return wards;
+    return wards.filter((w) => {
+      const blob = [w.name, w.code ?? '', w.building ?? '', w.floor ?? '', w.ward_type ?? ''].join(' ').toLowerCase();
+      return blob.includes(q);
+    });
+  }, [optionsQuery.data?.wards, wardSearch]);
+
+  const wardPaging = useMemo(() => {
+    const total = filteredWardsForGrid.length;
+    const totalPages = Math.max(1, Math.ceil(total / wardPageSize));
+    const page = Math.min(Math.max(1, wardPage), totalPages);
+    const start = (page - 1) * wardPageSize;
+    return {
+      slice: filteredWardsForGrid.slice(start, start + wardPageSize),
+      total,
+      totalPages,
+      page,
+      rangeStart: total ? start + 1 : 0,
+      rangeEnd: Math.min(start + wardPageSize, total),
+    };
+  }, [filteredWardsForGrid, wardPage, wardPageSize]);
+
+  const filteredManageBeds = useMemo(() => {
+    const beds = wardBedsQuery.data ?? [];
+    const q = manageBedSearch.trim().toLowerCase();
+    if (!q) return beds;
+    return beds.filter((b) => {
+      const label = b.bed_label.toLowerCase();
+      const room = (b.room_label ?? '').toLowerCase();
+      return label.includes(q) || room.includes(q);
+    });
+  }, [wardBedsQuery.data, manageBedSearch]);
+
+  const manageBedsPaging = useMemo(() => {
+    const total = filteredManageBeds.length;
+    const totalPages = Math.max(1, Math.ceil(total / manageBedPageSize));
+    const page = Math.min(Math.max(1, manageBedPage), totalPages);
+    const start = (page - 1) * manageBedPageSize;
+    return {
+      slice: filteredManageBeds.slice(start, start + manageBedPageSize),
+      total,
+      totalPages,
+      page,
+      rangeStart: total ? start + 1 : 0,
+      rangeEnd: Math.min(start + manageBedPageSize, total),
+    };
+  }, [filteredManageBeds, manageBedPage, manageBedPageSize]);
+
+  useEffect(() => {
+    setWardPage(1);
+  }, [wardSearch]);
+
+  useEffect(() => {
+    setWardPage((p) => {
+      const tp = Math.max(1, Math.ceil(filteredWardsForGrid.length / wardPageSize));
+      return Math.min(p, tp);
+    });
+  }, [filteredWardsForGrid.length, wardPageSize]);
+
+  useEffect(() => {
+    setManageBedPage(1);
+  }, [selectedWardId, manageBedSearch]);
+
+  useEffect(() => {
+    setManageBedPage((p) => {
+      const tp = Math.max(1, Math.ceil(filteredManageBeds.length / manageBedPageSize));
+      return Math.min(p, tp);
+    });
+  }, [filteredManageBeds.length, manageBedPageSize]);
 
   const occupiedBedIds = useMemo(() => {
     const ids = new Set<number>();
@@ -155,12 +347,42 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
     return `Occupied ${dt.toLocaleString()}`;
   };
 
-  const filteredWardBeds = useMemo(() => {
+  const modalBedsFiltered = useMemo(() => {
     const search = bedSearch.trim().toLowerCase();
     const beds = wardBedsQuery.data ?? [];
     if (!search) return beds;
-    return beds.filter((b) => b.bed_label.toLowerCase().includes(search));
+    return beds.filter((b) => {
+      const label = b.bed_label.toLowerCase();
+      const room = (b.room_label ?? '').toLowerCase();
+      return label.includes(search) || room.includes(search);
+    });
   }, [wardBedsQuery.data, bedSearch]);
+
+  const modalBedsPaging = useMemo(() => {
+    const total = modalBedsFiltered.length;
+    const totalPages = Math.max(1, Math.ceil(total / bedBoardPageSize));
+    const page = Math.min(Math.max(1, bedBoardPage), totalPages);
+    const start = (page - 1) * bedBoardPageSize;
+    return {
+      slice: modalBedsFiltered.slice(start, start + bedBoardPageSize),
+      total,
+      totalPages,
+      page,
+      rangeStart: total ? start + 1 : 0,
+      rangeEnd: Math.min(start + bedBoardPageSize, total),
+    };
+  }, [modalBedsFiltered, bedBoardPage, bedBoardPageSize]);
+
+  useEffect(() => {
+    setBedBoardPage((p) => {
+      const tp = Math.max(1, Math.ceil(modalBedsFiltered.length / bedBoardPageSize));
+      return Math.min(p, tp);
+    });
+  }, [modalBedsFiltered.length, bedBoardPageSize]);
+
+  useEffect(() => {
+    setBedBoardPage(1);
+  }, [bedSearch, selectedWardId]);
 
   const selectedBed = useMemo(
     () => (wardBedsQuery.data ?? []).find((bed) => bed.id === selectedBedId) ?? null,
@@ -321,7 +543,6 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       showToast('success', response.message || 'Ward and bed assignment saved.', 4000);
       await optionsQuery.refetch();
       await refetchWardBedsSafely();
-      setLastActionMessage(response.message || 'Ward and bed assignment saved.');
     } catch (error: unknown) {
       showToast('error', getErrorMessage(error, 'Failed to save ward assignment.'), 5000);
     }
@@ -332,7 +553,6 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
     try {
       await optionsQuery.refetch();
       await refetchWardBedsSafely();
-      setLastActionMessage('Ward and bed data refreshed.');
       showToast('success', 'Latest ward and bed data loaded.', 2500);
     } finally {
       setIsRefreshing(false);
@@ -391,7 +611,6 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
         queryClient.invalidateQueries({ queryKey: nursingWardBedKeys.all }),
       ]);
       showToast('success', 'Bed created successfully.', 3000);
-      setLastActionMessage('Bed created successfully.');
     } catch (error: unknown) {
       const msg = getErrorMessage(error, 'Failed to create bed.');
       showToast('error', msg.includes('Duplicate') ? 'Bed label already exists in this ward.' : msg, 5000);
@@ -415,7 +634,6 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
         optionsQuery.refetch(),
       ]);
       showToast('success', 'Bed updated successfully.', 3000);
-      setLastActionMessage('Bed details updated successfully.');
     } catch (error: unknown) {
       showToast('error', getErrorMessage(error, 'Failed to update bed.'), 5000);
     }
@@ -428,7 +646,6 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       return;
     }
     try {
-      setLastActionMessage('Processing bed action...');
       if (selectedBedAction === 'assign') {
         await handleAssign();
         if (closeModal) setBedPickerOpen(false);
@@ -456,7 +673,6 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
           theme,
         });
         if (!approved) {
-          setLastActionMessage(null);
           return;
         }
         const response = await assignMutation.mutateAsync({
@@ -474,7 +690,6 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
         await refetchWardBedsSafely();
         const transferMsg = response.message || 'Patient transferred to selected bed.';
         showToast('success', transferMsg, 4000);
-        setLastActionMessage(transferMsg);
         if (closeModal) setBedPickerOpen(false);
         return;
       }
@@ -492,7 +707,6 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
           await optionsQuery.refetch();
           await refetchWardBedsSafely();
           showToast('success', releaseResponse.message || 'Room/bed released successfully.', 3000);
-          setLastActionMessage(releaseResponse.message || 'Room/bed released successfully.');
           if (closeModal) setBedPickerOpen(false);
           return;
         }
@@ -514,7 +728,6 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
           await optionsQuery.refetch();
           await refetchWardBedsSafely();
           showToast('success', releaseResponse.message || 'Occupant released from bed successfully.', 3000);
-          setLastActionMessage(releaseResponse.message || 'Occupant released from bed successfully.');
           if (closeModal) setBedPickerOpen(false);
           return;
         }
@@ -532,19 +745,11 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
         await optionsQuery.refetch();
         await refetchWardBedsSafely();
         showToast('success', 'Bed status updated successfully.', 3000);
-        setLastActionMessage(
-          selectedBedAction === 'mark_available'
-            ? selectedBedIsOccupied
-              ? 'Room/bed released successfully.'
-              : 'Selected bed marked as available.'
-            : 'Selected bed marked for maintenance.'
-        );
         if (closeModal) setBedPickerOpen(false);
         return;
       }
     } catch (error: unknown) {
       showToast('error', getErrorMessage(error, 'Failed to complete selected bed action.'), 5000);
-      setLastActionMessage(null);
     }
   };
 
@@ -576,12 +781,6 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
           {isRefreshing ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
-
-      {lastActionMessage && (
-        <div className={`rounded-lg border px-3 py-2 text-sm ${isDark ? 'border-emerald-700 bg-emerald-900/20 text-emerald-200' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
-          {lastActionMessage}
-        </div>
-      )}
 
       <div className="space-y-4">
         <div>
@@ -648,7 +847,30 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
               Create Ward
             </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+          <div className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 ${isDark ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-white'}`}>
+            <Search className="w-4 h-4 shrink-0 opacity-70" aria-hidden />
+            <input
+              value={wardSearch}
+              onChange={(e) => setWardSearch(e.target.value)}
+              placeholder="Search wards by name, code, building, or floor…"
+              className={`min-w-0 flex-1 bg-transparent outline-none text-sm ${isDark ? 'placeholder:text-gray-500' : 'placeholder:text-gray-400'}`}
+              aria-label="Search wards"
+            />
+          </div>
+          <PaginationBar
+            isDark={isDark}
+            idPrefix="ward-grid"
+            rangeStart={wardPaging.rangeStart}
+            rangeEnd={wardPaging.rangeEnd}
+            totalItems={wardPaging.total}
+            page={wardPaging.page}
+            totalPages={wardPaging.totalPages}
+            pageSize={wardPageSize}
+            pageSizeOptions={WARD_PAGE_SIZE_OPTIONS}
+            onPageChange={setWardPage}
+            onPageSizeChange={setWardPageSize}
+          />
+          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {optionsQuery.isLoading
               ? Array.from({ length: 6 }).map((_, idx) => (
                 <div
@@ -656,51 +878,118 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                   className={`h-20 rounded-xl border animate-pulse ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-100'}`}
                 />
               ))
-              : (optionsQuery.data?.wards ?? []).map((ward) => {
-              const active = selectedWardId === ward.id;
-              return (
-                <button
-                  key={ward.id}
-                  onClick={() => {
-                    setSelectedWardId(ward.id);
-                    setBedSearch('');
-                    setBedPickerOpen(true);
-                  }}
-                  className={`text-left rounded-xl border p-3 transition cursor-pointer ${
-                    active
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : isDark
-                        ? 'border-gray-700 hover:bg-gray-800'
-                        : 'border-gray-200 hover:bg-gray-50'
+              : wardPaging.total === 0 ? (
+                <div
+                  className={`col-span-full rounded-xl border px-4 py-8 text-center text-sm ${
+                    isDark ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-600'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="font-medium">{ward.name}</div>
-                    {active && <Check className="w-4 h-4 text-blue-600" />}
-                  </div>
-                  <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {ward.available_beds} beds available
-                  </div>
-                </button>
-              );
-              })}
+                  No wards match your search. Adjust the filter or clear the search field.
+                </div>
+              ) : (
+                wardPaging.slice.map((ward) => {
+                  const active = selectedWardId === ward.id;
+                  return (
+                    <button
+                      key={ward.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedWardId(ward.id);
+                        setBedSearch('');
+                        setBedPickerOpen(true);
+                      }}
+                      className={`text-left rounded-xl border p-3 transition cursor-pointer ${
+                        active
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : isDark
+                            ? 'border-gray-700 hover:bg-gray-800'
+                            : 'border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-medium">{ward.name}</div>
+                        {active && <Check className="w-4 h-4 shrink-0 text-blue-600" />}
+                      </div>
+                      <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {ward.available_beds} beds available
+                        {(ward.building || ward.floor) && (
+                          <span className="block truncate opacity-90">
+                            {[ward.building, ward.floor].filter(Boolean).join(' · ')}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
           </div>
         </div>
       </div>
 
-      {selectedWard && (
-        <div className={`rounded-lg border p-3 text-sm ${isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
-          <div className="font-medium flex items-center gap-2 mb-2">
-            <Building2 className="w-4 h-4" />
-            Ward Availability
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>Operational Beds: {selectedWard.capacity_operational}</div>
-            <div>Available Beds: {selectedWard.available_beds}</div>
-            <div className="col-span-2">Location: {selectedWard.building ?? '-'} / {selectedWard.floor ?? '-'}</div>
-          </div>
+      <div
+        className={`rounded-lg border p-4 text-sm ${isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}
+      >
+        <div className="font-medium flex items-center gap-2 mb-3">
+          <MapPin className="w-4 h-4 shrink-0 opacity-90" aria-hidden />
+          Current visit placement
         </div>
-      )}
+        {optionsQuery.isLoading ? (
+          <div className={`h-24 rounded-lg animate-pulse ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`} />
+        ) : !hasBedAssignment ? (
+          <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+            No ward or bed is assigned to this visit yet. Select a ward and bed below to place this patient.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+            <div>
+              <div className={`text-xs font-medium uppercase tracking-wide ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                Patient
+              </div>
+              <div className="mt-0.5 font-medium text-base">{currentLocation?.patient_name?.trim() || '—'}</div>
+              {currentLocation?.patient_uuid?.trim() ? (
+                <div className={`mt-1 font-mono text-xs break-all ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {currentLocation.patient_uuid}
+                </div>
+              ) : null}
+            </div>
+            <div>
+              <div className={`text-xs font-medium uppercase tracking-wide ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                Ward
+              </div>
+              <div className="mt-0.5 font-medium">{currentLocation?.ward_name ?? '—'}</div>
+              {(placementWardMeta?.building || placementWardMeta?.floor) && (
+                <div className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {[placementWardMeta.building, placementWardMeta.floor].filter(Boolean).join(' · ')}
+                </div>
+              )}
+            </div>
+            <div className="sm:col-span-2 lg:col-span-1">
+              <div className={`text-xs font-medium uppercase tracking-wide ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                Room & bed
+              </div>
+              <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                {currentLocation?.room_label ? (
+                  <span className="font-medium">Room {currentLocation.room_label}</span>
+                ) : (
+                  <span className={isDark ? 'text-gray-500' : 'text-gray-500'}>Room —</span>
+                )}
+                <span className={isDark ? 'text-gray-600' : 'text-gray-300'} aria-hidden>
+                  ·
+                </span>
+                {currentLocation?.bed_label ? (
+                  <span className="font-medium">Bed {currentLocation.bed_label}</span>
+                ) : (
+                  <span className={isDark ? 'text-gray-500' : 'text-gray-500'}>Bed —</span>
+                )}
+              </div>
+              <div className={`mt-2 inline-flex items-center gap-1.5 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <Clock className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                <span>Updated {formatPlacementTime(currentLocation?.updated_at)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {selectedWardId && (
         <div className={`rounded-lg border p-3 ${isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
@@ -729,8 +1018,38 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
               Add Bed
             </button>
           </div>
+          <div className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 ${isDark ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-white'}`}>
+            <Search className="w-4 h-4 shrink-0 opacity-70" aria-hidden />
+            <input
+              value={manageBedSearch}
+              onChange={(e) => setManageBedSearch(e.target.value)}
+              placeholder="Search beds by label or room…"
+              className={`min-w-0 flex-1 bg-transparent outline-none text-sm ${isDark ? 'placeholder:text-gray-500' : 'placeholder:text-gray-400'}`}
+              aria-label="Search beds in ward"
+            />
+          </div>
+          <PaginationBar
+            isDark={isDark}
+            idPrefix="manage-beds"
+            rangeStart={manageBedsPaging.rangeStart}
+            rangeEnd={manageBedsPaging.rangeEnd}
+            totalItems={manageBedsPaging.total}
+            page={manageBedsPaging.page}
+            totalPages={manageBedsPaging.totalPages}
+            pageSize={manageBedPageSize}
+            pageSizeOptions={MANAGE_BED_PAGE_OPTIONS}
+            onPageChange={setManageBedPage}
+            onPageSizeChange={setManageBedPageSize}
+          />
           <div className="space-y-2 max-h-44 overflow-auto">
-            {(wardBedsQuery.data ?? []).map((bed) => (
+            {manageBedsPaging.total === 0 ? (
+              <p className={`text-sm py-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                {(wardBedsQuery.data ?? []).length === 0
+                  ? 'No beds defined for this ward yet. Add one above.'
+                  : 'No beds match your search.'}
+              </p>
+            ) : (
+              manageBedsPaging.slice.map((bed) => (
               <div key={bed.id} className="flex items-center gap-2">
                 {editingBedId === bed.id ? (
                   <>
@@ -766,7 +1085,8 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                   </>
                 )}
               </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       )}
@@ -800,7 +1120,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
             <BedBoardGrid
               isDark={isDark}
               wardBedsLoading={wardBedsQuery.isLoading}
-              filteredWardBeds={filteredWardBeds}
+              filteredWardBeds={modalBedsPaging.slice}
               bedSearch={bedSearch}
               onBedSearchChange={setBedSearch}
               onCreateBed={handleCreateBedFromModal}
@@ -821,6 +1141,21 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
               occupiedBedIds={occupiedBedIds}
               occupiedBedMetaById={occupiedBedMetaById}
               formatOccupiedAt={formatOccupiedAt}
+              paginationFooter={
+                <PaginationBar
+                  isDark={isDark}
+                  idPrefix="modal-bed-board"
+                  rangeStart={modalBedsPaging.rangeStart}
+                  rangeEnd={modalBedsPaging.rangeEnd}
+                  totalItems={modalBedsPaging.total}
+                  page={modalBedsPaging.page}
+                  totalPages={modalBedsPaging.totalPages}
+                  pageSize={bedBoardPageSize}
+                  pageSizeOptions={MODAL_BED_PAGE_OPTIONS}
+                  onPageChange={setBedBoardPage}
+                  onPageSizeChange={setBedBoardPageSize}
+                />
+              }
               onSelectBed={(bed, flags) => {
                 if (selectedBedId === bed.id) {
                   setSelectedBedId(null);

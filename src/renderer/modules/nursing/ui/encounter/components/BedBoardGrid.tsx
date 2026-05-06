@@ -24,6 +24,8 @@ interface BedBoardGridProps {
   occupiedBedMetaById: Map<number, { patient_name?: string | null; patient_uuid?: string | null; occupied_at?: string | null; visit_uuid?: string }>;
   onSelectBed: (bed: BedOption, flags: { isOccupied: boolean; isBookable: boolean; isMaintenance: boolean }) => void;
   formatOccupiedAt: (iso?: string | null) => string;
+  /** Renders between search and grid (e.g. pagination) */
+  paginationFooter?: React.ReactNode;
 }
 
 const BedBoardGrid: React.FC<BedBoardGridProps> = ({
@@ -43,6 +45,7 @@ const BedBoardGrid: React.FC<BedBoardGridProps> = ({
   occupiedBedMetaById,
   onSelectBed,
   formatOccupiedAt,
+  paginationFooter,
 }) => {
   const formatAssignmentTime = (iso?: string | null) => {
     if (!iso) return '';
@@ -59,11 +62,12 @@ const BedBoardGrid: React.FC<BedBoardGridProps> = ({
           <input
             value={bedSearch}
             onChange={(e) => onBedSearchChange(e.target.value)}
-            placeholder="Search bed label..."
+            placeholder="Search room or bed label…"
             className="w-full bg-transparent outline-none text-sm"
           />
         </div>
       </div>
+      {paginationFooter ? <div className="mb-2">{paginationFooter}</div> : null}
       <div className={`rounded-xl border p-3 max-h-[55vh] overflow-auto ${isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
         {wardBedsLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
@@ -77,9 +81,13 @@ const BedBoardGrid: React.FC<BedBoardGridProps> = ({
         ) : filteredWardBeds.length === 0 ? (
           <div className={`rounded-lg border border-dashed p-6 text-center ${isDark ? 'border-gray-700 bg-gray-900/40' : 'border-gray-300 bg-white'}`}>
             <BedDouble className={`w-7 h-7 mx-auto mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
-            <div className="text-sm font-medium">No rooms or beds found in this ward</div>
+            <div className="text-sm font-medium">
+              {bedSearch.trim() ? 'No beds match your search' : 'No rooms or beds found in this ward'}
+            </div>
             <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              Create a room/bed first, then assign a patient from this board.
+              {bedSearch.trim()
+                ? 'Try another search term or clear the filter to see all beds on this page.'
+                : 'Create a room/bed first, then assign a patient from this board.'}
             </p>
             <button
               onClick={onCreateBed}
