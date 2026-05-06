@@ -175,9 +175,12 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
     selectedBedIsOccupied;
   const occupiedByAnotherPatient =
     !!selectedBedId && selectedBedIsOccupied && !canReleaseSelectedBed;
+  /** Visit UUID that occupies the selected bed (from ward-bed-options); used to call the correct release API */
+  const occupyingVisitUuidOnSelectedBed =
+    selectedBedId && occupiedByAnotherPatient ? occupiedBedMetaById.get(selectedBedId)?.visit_uuid : undefined;
   const selectedBedIsMaintenance = selectedBed?.status === 'maintenance';
   const selectedBedIsInactive = selectedBed?.status === 'inactive';
-  /** Patient's occupied bed → Release + Transfer. Other occupied whilst visit has assignment → Release (clears assignment only). Else free bed → Assign (+ maintenance); Transfer only applies when source is own bed chip flow. */
+  /** Own occupied bed → Transfer + Release. Other occupant (resolved visit) → Release occupant only. Free bed → Assign + maintenance. */
   const availableBedActions = useMemo(() => {
     if (!selectedBed) return [] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
     if (selectedBedIsInactive) return [] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
@@ -186,7 +189,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       return ['transfer', 'mark_available'] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
     }
 
-    if (occupiedByAnotherPatient && hasBedAssignment) {
+    if (occupiedByAnotherPatient && occupyingVisitUuidOnSelectedBed) {
       return ['mark_available'] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
     }
 
@@ -210,7 +213,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
     currentAssignedBedId,
     canReleaseSelectedBed,
     occupiedByAnotherPatient,
-    hasBedAssignment,
+    occupyingVisitUuidOnSelectedBed,
   ]);
 
   const transferWard = useMemo(
@@ -477,25 +480,46 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       }
 
       if (selectedBedAction === 'mark_available' && selectedBedIsOccupied) {
-        if (!visitUuid || !currentAssignedBedId) {
-          showToast('error', 'No ward/bed assignment to release for this visit.', 4000);
+        if (canReleaseSelectedBed) {
+          if (!visitUuid || !currentAssignedBedId) {
+            showToast('error', 'No ward/bed assignment to release for this visit.', 4000);
+            return;
+          }
+          const releaseResponse = await releaseMutation.mutateAsync({
+            visitUuid,
+            bedId: currentAssignedBedId,
+          });
+          await optionsQuery.refetch();
+          await refetchWardBedsSafely();
+          showToast('success', releaseResponse.message || 'Room/bed released successfully.', 3000);
+          setLastActionMessage(releaseResponse.message || 'Room/bed released successfully.');
+          if (closeModal) setBedPickerOpen(false);
           return;
         }
-        const mayReleaseVisitBed =
-          canReleaseSelectedBed || (occupiedByAnotherPatient && hasBedAssignment);
-        if (!mayReleaseVisitBed) {
-          showToast('error', 'Only release this visit from an occupied bed when it has an assignment.', 4000);
+
+        if (occupiedByAnotherPatient && selectedBedId) {
+          const targetVisitUuid = occupyingVisitUuidOnSelectedBed;
+          if (!targetVisitUuid) {
+            showToast(
+              'error',
+              'Cannot resolve which visit occupies this bed. Refresh ward data and try again.',
+              5000
+            );
+            return;
+          }
+          const releaseResponse = await releaseMutation.mutateAsync({
+            visitUuid: targetVisitUuid,
+            bedId: selectedBedId,
+          });
+          await optionsQuery.refetch();
+          await refetchWardBedsSafely();
+          showToast('success', releaseResponse.message || 'Occupant released from bed successfully.', 3000);
+          setLastActionMessage(releaseResponse.message || 'Occupant released from bed successfully.');
+          if (closeModal) setBedPickerOpen(false);
           return;
         }
-        const releaseResponse = await releaseMutation.mutateAsync({
-          visitUuid,
-          bedId: currentAssignedBedId,
-        });
-        await optionsQuery.refetch();
-        await refetchWardBedsSafely();
-        showToast('success', releaseResponse.message || 'Room/bed released successfully.', 3000);
-        setLastActionMessage(releaseResponse.message || 'Room/bed released successfully.');
-        if (closeModal) setBedPickerOpen(false);
+
+        showToast('error', 'Cannot release this bed from the current selection.', 4000);
         return;
       }
 
@@ -805,7 +829,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                 setSelectedBedId(bed.id);
                 if (flags.isOccupied && currentAssignedBedId === bed.id) {
                   setSelectedBedAction('transfer');
-                } else if (flags.isOccupied && hasBedAssignment) {
+                } else if (flags.isOccupied && occupiedBedMetaById.get(bed.id)?.visit_uuid) {
                   setSelectedBedAction('mark_available');
                 } else if (flags.isBookable) {
                   setSelectedBedAction('assign');
@@ -816,15 +840,15 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
             />
             {!!selectedBedId && (
               <>
-                {occupiedByAnotherPatient && hasBedAssignment && (
+                {occupiedByAnotherPatient && occupyingVisitUuidOnSelectedBed && (
                   <p className={`mt-3 text-xs ${isDark ? 'text-amber-200' : 'text-amber-800'}`}>
-                    This bed is occupied by another patient. Use <span className="font-medium">Release current patient bed</span> to
-                    clear this visit&apos;s assignment, or select a free bed to assign.
+                    This bed is assigned to another Patient. Use <span className="font-medium">Release occupant</span> to clear that
+                    assignment.
                   </p>
                 )}
-                {occupiedByAnotherPatient && !hasBedAssignment && (
+                {occupiedByAnotherPatient && !occupyingVisitUuidOnSelectedBed && (
                   <p className={`mt-3 text-xs ${isDark ? 'text-amber-200' : 'text-amber-800'}`}>
-                    This bed is occupied by another patient. Select a free bed to assign this visit.
+                    Occupancy on this bed could not be linked to a visit. Refresh ward data or choose another bed.
                   </p>
                 )}
                 {selectedBedAction === 'transfer' && (
@@ -909,7 +933,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                 availableBedActions={availableBedActions}
                 selectedBedAction={selectedBedAction}
                 canReleaseCurrentPatientBed={canReleaseSelectedBed}
-                releaseCurrentBedFromOccupiedElsewhereHint={occupiedByAnotherPatient && hasBedAssignment}
+                releaseOccupantHint={occupiedByAnotherPatient && !!occupyingVisitUuidOnSelectedBed}
                 selectedBedIsMaintenance={selectedBedIsMaintenance}
                 onSelectAction={setSelectedBedAction}
                 onContinue={() => executeSelectedBedAction(false)}

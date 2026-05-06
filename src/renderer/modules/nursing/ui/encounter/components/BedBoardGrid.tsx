@@ -166,7 +166,7 @@ const BedBoardGrid: React.FC<BedBoardGridProps> = ({
                       )}
                       <span className={`text-[11px] font-medium leading-snug line-clamp-2 flex-1 min-w-0 ${active ? 'text-white' : ''}`}>
                         {occupancyKind === 'currentEncounter'
-                          ? 'This encounter · your patient'
+                          ? 'Current Patient'
                           : occupancyKind === 'other'
                             ? occupiedMeta?.patient_name?.trim() || 'Other patient · occupied'
                             : bed.status === 'maintenance'
@@ -183,7 +183,7 @@ const BedBoardGrid: React.FC<BedBoardGridProps> = ({
                       >
                         <div className="font-semibold truncate">{currentPatientBed?.name?.trim() || 'Current patient'}</div>
                         <div className="opacity-95 truncate" title={currentPatientBed?.patientNumber || undefined}>
-                          ID {currentPatientBed?.patientNumber || '—'}
+                          Patient Number {currentPatientBed?.patientNumber || '—'}
                         </div>
                         {assignmentUpdatedAt ? (
                           <div className={`mt-0.5 text-[10px] ${active ? 'text-blue-100/90' : isDark ? 'text-blue-200/85' : 'text-blue-800/85'}`}>

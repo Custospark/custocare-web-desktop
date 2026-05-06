@@ -12,10 +12,10 @@ interface BedActionPanelProps {
   actionHint?: string;
   availableBedActions: BedAction[];
   selectedBedAction: BedAction;
-  /** Selected bed is current visit's assigned occupied bed (shows "Release bed" on mark_available) */
+  /** Selected bed is active encounter's assigned occupied bed (shows "Release bed") */
   canReleaseCurrentPatientBed?: boolean;
-  /** Occupied tile is someone else—but visit has a bed; mark_available releases the current patient's assignment */
-  releaseCurrentBedFromOccupiedElsewhereHint?: boolean;
+  /** Selected bed is occupied by another visit we can resolve — release clears that visit's assignment */
+  releaseOccupantHint?: boolean;
   selectedBedIsMaintenance?: boolean;
   onSelectAction: (action: BedAction) => void;
   onContinue: () => void;
@@ -31,7 +31,7 @@ const BedActionPanel: React.FC<BedActionPanelProps> = ({
   availableBedActions,
   selectedBedAction,
   canReleaseCurrentPatientBed = false,
-  releaseCurrentBedFromOccupiedElsewhereHint = false,
+  releaseOccupantHint = false,
   selectedBedIsMaintenance = false,
   onSelectAction,
   onContinue,
@@ -42,7 +42,7 @@ const BedActionPanel: React.FC<BedActionPanelProps> = ({
     if (action === 'transfer') return 'Transfer patient';
     if (action === 'mark_available') {
       if (canReleaseCurrentPatientBed) return 'Release bed';
-      if (releaseCurrentBedFromOccupiedElsewhereHint) return 'Release current patient bed';
+      if (releaseOccupantHint) return 'Release occupant';
       if (selectedBedIsMaintenance) return 'Remove maintenance';
       return 'Set available';
     }
@@ -53,8 +53,8 @@ const BedActionPanel: React.FC<BedActionPanelProps> = ({
     <div className={`mt-3 rounded-lg border p-3 ${isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'}`}>
       <div className="text-xs font-medium mb-2">Actions for selected bed</div>
       <p className={`text-[10px] mb-2 leading-snug ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-        Free bed: Assign (or Transfer only after selecting your patient&apos;s current bed first). Your assigned bed:
-        Transfer or Release. Another patient&apos;s bed: use Release current patient bed to unassign this visit only.
+        Free bed: Assign. Your assigned occupied bed: Transfer or Release bed. Another patient&apos;s occupied bed:
+        Release occupant frees that patient&apos;s assignment on this bed (not the encounter open in your slice).
       </p>
       {actionHint ? (
         <p className={`text-xs mb-2 ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>{actionHint}</p>
