@@ -257,7 +257,17 @@ export const useCreateWard = (
           .join(' | ');
       }
 
-      const displayMessage = errorDetails ? `${apiMessage} (${errorDetails})` : apiMessage;
+      const normalized = `${apiMessage} ${errorDetails}`.toLowerCase();
+      const duplicateWard =
+        normalized.includes('duplicate') ||
+        normalized.includes('already exists') ||
+        normalized.includes('unique');
+
+      const displayMessage = duplicateWard
+        ? 'A ward with the same name or code already exists in this facility.'
+        : errorDetails
+          ? `${apiMessage} (${errorDetails})`
+          : apiMessage;
       showToast('error', displayMessage, 8000);
 
       callbacks.onError?.(error);

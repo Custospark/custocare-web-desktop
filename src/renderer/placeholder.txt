@@ -27,3 +27,5 @@
     }
   }
 }
+
+Allow nurse to admit patient to a ward, assign/change bed, or transfer patient to another ward. Display current location and available wards/beds. Record reason for transfer if applicable.
