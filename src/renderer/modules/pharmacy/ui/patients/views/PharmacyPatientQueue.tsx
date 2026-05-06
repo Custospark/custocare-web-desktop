@@ -53,7 +53,7 @@ const PharmacyPatientQueue: React.FC<PharmacyPatientQueueProps> = ({ theme, clas
   );
 
   const rxReady = activeRxQuery.isFetched && partialRxQuery.isFetched;
-  const rxFetching = activeRxQuery.isFetching || partialRxQuery.isFetching;
+  // const rxFetching = activeRxQuery.isFetching || partialRxQuery.isFetching;
 
   const visitIdsWithRxReadyForDispensing = useMemo(() => {
     const ids = new Set<number>();

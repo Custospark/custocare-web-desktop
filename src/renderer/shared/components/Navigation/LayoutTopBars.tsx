@@ -1,6 +1,5 @@
 // LayoutTopBars.tsx
 import React, { useMemo } from 'react';
-import { PanelTopClose } from 'lucide-react';
 import { cn } from '../../types/cn';
 import Navbar from './Navbar/Navbar';
 import {
@@ -21,9 +20,6 @@ export interface LayoutTopBarsThemeClasses {
 export interface LayoutTopBarsProps {
   theme: ThemeMode;
   themeClasses: LayoutTopBarsThemeClasses;
-
-  topBarsVisible: boolean;
-  onToggleTopBarsVisible: () => void;
 
   systemStatus: SystemStatus;
   isOnline: boolean;
@@ -53,8 +49,6 @@ const STATUS_BAR_H = 56;
 export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
   theme,
   themeClasses,
-  topBarsVisible,
-  onToggleTopBarsVisible,
   systemStatus,
   isOnline,
   latency,
@@ -72,29 +66,27 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
   navbarFullClass,
   appVersion,
 }) => {
-  const navbarTopPx = useMemo(() => (topBarsVisible ? STATUS_BAR_H : 0), [topBarsVisible]);
+  const navbarTopPx = useMemo(() => STATUS_BAR_H, []);
   const navigate = useNavigate();
 
   return (
     <>
-      {topBarsVisible && (
-        <StatusBar
-          theme={theme}
-          themeClasses={{ backdrop: themeClasses.backdrop }}
-          systemStatus={systemStatus}
-          isOnline={isOnline}
-          latency={latency}
-          lastChecked={lastChecked}
-          onRetryConnection={onRetryConnection}
-          sidebarPosition={sidebarPosition}
-          isTransitioning={isTransitioning}
-          onToggleSidebarPosition={onToggleSidebarPosition}
-          onToggleTheme={onToggleTheme}
-          appVersion={appVersion}
-          unreadCount={3}
-          onNotificationClick={() => navigate(ACCOUNT_ROUTES.MESSAGES_INBOX)}
-        />
-      )}
+      <StatusBar
+        theme={theme}
+        themeClasses={{ backdrop: themeClasses.backdrop }}
+        systemStatus={systemStatus}
+        isOnline={isOnline}
+        latency={latency}
+        lastChecked={lastChecked}
+        onRetryConnection={onRetryConnection}
+        sidebarPosition={sidebarPosition}
+        isTransitioning={isTransitioning}
+        onToggleSidebarPosition={onToggleSidebarPosition}
+        onToggleTheme={onToggleTheme}
+        appVersion={appVersion}
+        unreadCount={3}
+        onNotificationClick={() => navigate(ACCOUNT_ROUTES.MESSAGES_INBOX)}
+      />
 
       <div
         className={cn(
@@ -166,30 +158,6 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
             <Navbar theme={theme} onThemeToggle={onToggleTheme} onMenuClick={onToggleMobileSidebar} />
           </div>
 
-          {/* Desktop-only TopBars Toggle */}
-          <div className={cn('hidden lg:flex items-center', sidebarPosition === 'left' ? 'ml-3' : 'mr-3')}>
-            <button
-              onClick={onToggleTopBarsVisible}
-              aria-label={topBarsVisible ? 'Hide top bars' : 'Show top bars'}
-              title={topBarsVisible ? 'Hide top bars' : 'Show top bars'}
-              className={cn(
-                'p-2 rounded-xl border backdrop-blur-xl cursor-pointer',
-                'transition-all duration-200',
-                'hover:scale-105 active:scale-95',
-                'focus:outline-none focus:ring-2 focus:ring-offset-2',
-                theme === 'dark'
-                  ? 'bg-gray-900/60 border-gray-700/40 text-gray-300 hover:text-white hover:border-cyan-500/50 focus:ring-cyan-500/50 focus:ring-offset-gray-950'
-                  : 'bg-white/70 border-gray-300/40 text-gray-700 hover:text-gray-900 hover:border-blue-500/50 focus:ring-blue-500/50 focus:ring-offset-white'
-              )}
-            >
-              <PanelTopClose
-                className={cn(
-                  'w-4 h-4 stroke-[2] transition-transform duration-300',
-                  !topBarsVisible && 'rotate-180'
-                )}
-              />
-            </button>
-          </div>
         </div>
       </div>
     </>

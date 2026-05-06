@@ -28,8 +28,7 @@ import {
 import { useNetworkStatus } from '../../../app/store/hooks/seNetworkStatus';
 
 // ── Search: always-mounted modal + shared keyboard hook ──────────────────────
-// SearchModal is rendered here (not inside SearchBar) so ⌘K continues to work
-// even when the StatusBar / SearchBar are not in the DOM (topBarsVisible=false).
+// SearchModal is rendered here (not inside SearchBar) so ⌘K works globally.
 // useSearchKeyboard is a module-level singleton — this instance shares state
 // with every other call site (e.g. the trigger button in SearchBar).
 import { SearchModal } from './status-bar-components/search/SearchModal';
@@ -41,7 +40,6 @@ interface LocalLayoutState {
   mobileSidebarOpen: boolean;
   sidebarPosition: SidebarPosition;
   isTransitioning: boolean;
-  topBarsVisible: boolean;
 }
 
 const loadSidebarPosition = (): SidebarPosition => {
@@ -52,18 +50,6 @@ const loadSidebarPosition = (): SidebarPosition => {
 const saveSidebarPosition = (position: SidebarPosition): void => {
   localStorage.setItem(STORAGE_KEYS.SIDEBAR_POSITION, position);
 };
-
-const loadTopBarsVisible = (): boolean => {
-  const saved = localStorage.getItem(STORAGE_KEYS.TOP_BARS_VISIBLE);
-  if (saved === null) return true;
-  return saved === 'true';
-};
-
-const saveTopBarsVisible = (value: boolean): void => {
-  localStorage.setItem(STORAGE_KEYS.TOP_BARS_VISIBLE, String(value));
-};
-
-const isDesktopNow = (): boolean => window.matchMedia('(min-width: 1024px)').matches;
 
 export const Layout: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -85,7 +71,6 @@ export const Layout: React.FC = () => {
     mobileSidebarOpen: false,
     sidebarPosition: loadSidebarPosition(),
     isTransitioning: false,
-    topBarsVisible: loadTopBarsVisible(),
   });
 
   // ── Computed values ───────────────────────────────────────────────────────
@@ -129,10 +114,7 @@ export const Layout: React.FC = () => {
     };
   }, [localState.sidebarPosition, sidebarOpen]);
 
-  const topPaddingPx = useMemo(
-    () => (localState.topBarsVisible ? TOP_BARS_TOTAL_H : NAVBAR_H),
-    [localState.topBarsVisible]
-  );
+  const topPaddingPx = useMemo(() => TOP_BARS_TOTAL_H, []);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleToggleSidebar = useCallback(() => {
@@ -168,28 +150,16 @@ export const Layout: React.FC = () => {
     }, ANIMATION_CONFIG.duration.slow);
   }, []);
 
-  const handleToggleTopBarsVisible = useCallback(() => {
-    if (!isDesktopNow()) return;
-    setLocalState(prev => {
-      const next = !prev.topBarsVisible;
-      saveTopBarsVisible(next);
-      return { ...prev, topBarsVisible: next };
-    });
-  }, []);
-
   // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024 && localState.mobileSidebarOpen) {
         handleCloseMobileSidebar();
       }
-      if (window.innerWidth < 1024 && localState.topBarsVisible === false) {
-        setLocalState(prev => ({ ...prev, topBarsVisible: true }));
-      }
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [localState.mobileSidebarOpen, localState.topBarsVisible, handleCloseMobileSidebar]);
+  }, [localState.mobileSidebarOpen, handleCloseMobileSidebar]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.THEME, theme);
@@ -222,7 +192,7 @@ export const Layout: React.FC = () => {
         themeClasses.background
       )}
     >
-      {/* TOP BARS — conditionally rendered based on topBarsVisible */}
+      {/* TOP BARS — always visible */}
       <LayoutTopBars
         theme={theme}
         themeClasses={{
@@ -230,8 +200,6 @@ export const Layout: React.FC = () => {
           glass: themeClasses.glass,
           accent: themeClasses.accent,
         }}
-        topBarsVisible={localState.topBarsVisible}
-        onToggleTopBarsVisible={handleToggleTopBarsVisible}
         systemStatus={systemStatus}
         isOnline={isOnline}
         latency={latency}
@@ -280,8 +248,7 @@ export const Layout: React.FC = () => {
 
       {/*
        * ── Global Search Modal ──────────────────────────────────────────────
-       * Rendered unconditionally here so it is ALWAYS mounted, regardless of
-       * whether the StatusBar (and therefore SearchBar) is visible.
+       * Rendered unconditionally here so it is ALWAYS mounted.
        *
        * Uses the same module-level singleton as SearchBar's trigger button
        * (useSearchKeyboard) so the two are always in sync:
