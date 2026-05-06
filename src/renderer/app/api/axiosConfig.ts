@@ -27,7 +27,7 @@ axiosInstance.interceptors.request.use(
     const state = store.getState();
 
     // ---------------- Authorization ----------------
-    const token = state.auth.token;
+    const token = state.auth.token || localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -36,9 +36,14 @@ axiosInstance.interceptors.request.use(
     const { activeFacilityId, isPatient, isStaffWithFacility, capabilities } =
       state.activeContext;
 
-    if (isStaffWithFacility && activeFacilityId) {
-      config.headers['X-Active-Facility-Id'] = String(activeFacilityId);
-      config.headers['X-Facility-Id'] = String(activeFacilityId);
+    const fallbackFacilityId = localStorage.getItem('activeFacilityId');
+    const resolvedFacilityId = (isStaffWithFacility && activeFacilityId)
+      ? String(activeFacilityId)
+      : (fallbackFacilityId || null);
+
+    if (resolvedFacilityId) {
+      config.headers['X-Active-Facility-Id'] = resolvedFacilityId;
+      config.headers['X-Facility-Id'] = resolvedFacilityId;
     }
 
     if (isPatient) {
@@ -86,7 +91,16 @@ let _isHandling401 = false;
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401 && !_isHandling401) {
+    const state = store.getState();
+    const hasAuthToken = Boolean(state.auth.token || localStorage.getItem('authToken'));
+    const url = String(error.config?.url ?? '');
+    const isAuthEndpoint =
+      url.includes('/auth/login') ||
+      url.includes('/auth/register') ||
+      url.includes('/auth/forgot-password') ||
+      url.includes('/auth/reset-password');
+
+    if (error.response?.status === 401 && hasAuthToken && !isAuthEndpoint && !_isHandling401) {
       _isHandling401 = true;
 
       // 1️⃣  Wipe Redux auth state + clear localStorage (token, user, verification)
