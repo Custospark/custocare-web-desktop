@@ -8,6 +8,7 @@ export interface OccupiedBedLabel {
 
 export interface BedOption {
   id: number;
+  room_label?: string | null;
   bed_label: string;
   status?: 'available' | 'occupied' | 'maintenance' | 'inactive';
 }
@@ -30,6 +31,7 @@ export interface CurrentWardLocation {
   ward_id: number | null;
   ward_name: string | null;
   bed_id: number | null;
+  room_label: string | null;
   bed_label: string | null;
   admission_action: 'admit' | 'assign_bed' | 'transfer' | null;
   transfer_reason: string | null;

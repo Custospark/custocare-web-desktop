@@ -37,12 +37,17 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
   const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
   const [selectedBedId, setSelectedBedId] = useState<number | null>(null);
   const [admissionAction, setAdmissionAction] = useState<'admit' | 'assign_bed' | 'transfer'>('assign_bed');
+  const [selectedBedAction, setSelectedBedAction] = useState<'assign' | 'mark_available' | 'mark_maintenance'>('assign');
   const [transferReason, setTransferReason] = useState('');
   const [newBedLabel, setNewBedLabel] = useState('');
+  const [newRoomLabel, setNewRoomLabel] = useState('');
   const [editingBedId, setEditingBedId] = useState<number | null>(null);
   const [editingBedLabel, setEditingBedLabel] = useState('');
+  const [editingRoomLabel, setEditingRoomLabel] = useState('');
   const [bedSearch, setBedSearch] = useState('');
   const [bedPickerOpen, setBedPickerOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastActionMessage, setLastActionMessage] = useState<string | null>(null);
 
   const [wardDrawerOpen, setWardDrawerOpen] = useState(false);
   const [wardFormData, setWardFormData] = useState<FacilityWardFormData>(getEmptyFormData(facilityId));
@@ -73,6 +78,10 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
   }, [optionsQuery.data]);
 
   const wardBedsQuery = useWardBeds(selectedWardId, facilityId);
+  const refetchWardBedsSafely = async () => {
+    if (!selectedWardId || !facilityId) return;
+    await wardBedsQuery.refetch();
+  };
 
   const selectedWard = useMemo(
     () => optionsQuery.data?.wards.find((w) => w.id === selectedWardId) ?? null,
@@ -132,9 +141,22 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
 
       showToast('success', response.message || 'Ward and bed assignment saved.', 4000);
       await optionsQuery.refetch();
-      await wardBedsQuery.refetch();
+      await refetchWardBedsSafely();
+      setLastActionMessage(response.message || 'Ward and bed assignment saved.');
     } catch (error: any) {
       showToast('error', error?.response?.data?.message || 'Failed to save ward assignment.', 5000);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await optionsQuery.refetch();
+      await refetchWardBedsSafely();
+      setLastActionMessage('Ward and bed data refreshed.');
+      showToast('success', 'Latest ward and bed data loaded.', 2500);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -172,14 +194,17 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
         wardId: selectedWardId,
         facilityId,
         bedLabel: newBedLabel.trim(),
+        roomLabel: newRoomLabel.trim() || undefined,
       });
       setNewBedLabel('');
+      setNewRoomLabel('');
       await Promise.all([
-        wardBedsQuery.refetch(),
+        refetchWardBedsSafely(),
         optionsQuery.refetch(),
         queryClient.invalidateQueries({ queryKey: nursingWardBedKeys.all }),
       ]);
       showToast('success', 'Bed created successfully.', 3000);
+      setLastActionMessage('Bed created successfully.');
     } catch (error: any) {
       const msg = error?.response?.data?.message || 'Failed to create bed.';
       showToast('error', msg.includes('Duplicate') ? 'Bed label already exists in this ward.' : msg, 5000);
@@ -194,14 +219,16 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
         facilityId,
         wardId: selectedWardId ?? undefined,
         bedLabel: editingBedLabel.trim() || undefined,
+        roomLabel: editingRoomLabel.trim() || undefined,
       });
       setEditingBedId(null);
       setEditingBedLabel('');
       await Promise.all([
-        wardBedsQuery.refetch(),
+        refetchWardBedsSafely(),
         optionsQuery.refetch(),
       ]);
       showToast('success', 'Bed updated successfully.', 3000);
+      setLastActionMessage('Bed details updated successfully.');
     } catch (error: any) {
       showToast('error', error?.response?.data?.message || 'Failed to update bed.', 5000);
     }
@@ -225,19 +252,26 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
           </p>
         </div>
         <button
-          onClick={() => optionsQuery.refetch()}
-          className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'}`}
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'}`}
         >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
+
+      {lastActionMessage && (
+        <div className={`rounded-lg border px-3 py-2 text-sm ${isDark ? 'border-emerald-700 bg-emerald-900/20 text-emerald-200' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+          {lastActionMessage}
+        </div>
+      )}
 
       <div className={`rounded-lg border p-3 ${isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
         <div className="text-sm font-medium mb-1">Current Location</div>
         <div className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
           {optionsQuery.data?.current_location?.ward_name
-            ? `${optionsQuery.data.current_location.ward_name} - Bed ${optionsQuery.data.current_location.bed_label ?? 'N/A'}`
+            ? `${optionsQuery.data.current_location.ward_name} - ${optionsQuery.data.current_location.room_label ? `Room ${optionsQuery.data.current_location.room_label} - ` : ''}Bed ${optionsQuery.data.current_location.bed_label ?? 'N/A'}`
             : 'Not yet assigned'}
         </div>
       </div>
@@ -328,6 +362,50 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
           </button>
         )}
 
+        {!!selectedBedId && (
+          <div className={`rounded-lg border p-3 ${isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
+            <div className="text-sm font-medium mb-2">Action on Selected Bed</div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedBedAction('assign')}
+                className={`px-3 py-1.5 rounded-full border text-sm cursor-pointer ${
+                  selectedBedAction === 'assign'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : isDark
+                      ? 'border-gray-700 hover:bg-gray-800'
+                      : 'border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Assign to Patient
+              </button>
+              <button
+                onClick={() => setSelectedBedAction('mark_available')}
+                className={`px-3 py-1.5 rounded-full border text-sm cursor-pointer ${
+                  selectedBedAction === 'mark_available'
+                    ? 'bg-emerald-600 text-white border-emerald-600'
+                    : isDark
+                      ? 'border-gray-700 hover:bg-gray-800'
+                      : 'border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Mark Available
+              </button>
+              <button
+                onClick={() => setSelectedBedAction('mark_maintenance')}
+                className={`px-3 py-1.5 rounded-full border text-sm cursor-pointer ${
+                  selectedBedAction === 'mark_maintenance'
+                    ? 'bg-amber-600 text-white border-amber-600'
+                    : isDark
+                      ? 'border-gray-700 hover:bg-gray-800'
+                      : 'border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Mark Maintenance
+              </button>
+            </div>
+          </div>
+        )}
+
         {admissionAction === 'transfer' && (
           <div>
             <label className="text-sm font-medium">Transfer Reason</label>
@@ -358,17 +436,25 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       {selectedWardId && (
         <div className={`rounded-lg border p-3 ${isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
           <div className="font-medium mb-2">Manage Beds in Ward</div>
-          <div className="flex gap-2 mb-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+            <input
+              value={newRoomLabel}
+              onChange={(e) => setNewRoomLabel(e.target.value)}
+              placeholder="Room (optional, e.g. R1)"
+              className={`rounded-lg border px-3 py-2 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
+            />
             <input
               value={newBedLabel}
               onChange={(e) => setNewBedLabel(e.target.value)}
               placeholder="New bed label (e.g. A-01)"
-              className={`flex-1 rounded-lg border px-3 py-2 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
+              className={`rounded-lg border px-3 py-2 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
             />
+          </div>
+          <div className="mb-3">
             <button
               onClick={handleCreateBed}
               disabled={!newBedLabel.trim() || createBedMutation.isPending}
-              className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               Add Bed
             </button>
@@ -384,18 +470,26 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                       onChange={(e) => setEditingBedLabel(e.target.value)}
                       className={`flex-1 rounded-lg border px-2 py-1 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
                     />
-                    <button onClick={handleUpdateBed} className="text-xs px-2 py-1 rounded bg-green-600 text-white">Save</button>
-                    <button onClick={() => setEditingBedId(null)} className="text-xs px-2 py-1 rounded border">Cancel</button>
+                    <input
+                      aria-label="Edit room label"
+                      value={editingRoomLabel}
+                      onChange={(e) => setEditingRoomLabel(e.target.value)}
+                      placeholder="Room"
+                      className={`w-24 rounded-lg border px-2 py-1 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
+                    />
+                    <button onClick={handleUpdateBed} className="text-xs px-2 py-1 rounded bg-green-600 text-white cursor-pointer">Save</button>
+                    <button onClick={() => setEditingBedId(null)} className="text-xs px-2 py-1 rounded border cursor-pointer">Cancel</button>
                   </>
                 ) : (
                   <>
-                    <span className="flex-1">{bed.bed_label}</span>
+                    <span className="flex-1">{bed.room_label ? `Room ${bed.room_label} - ` : ''}{bed.bed_label}</span>
                     <button
                       onClick={() => {
                         setEditingBedId(bed.id);
                         setEditingBedLabel(bed.bed_label);
+                        setEditingRoomLabel(bed.room_label ?? '');
                       }}
-                      className="text-xs px-2 py-1 rounded border"
+                      className="text-xs px-2 py-1 rounded border cursor-pointer"
                     >
                       Edit
                     </button>
@@ -408,12 +502,41 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       )}
 
       <button
-        onClick={handleAssign}
-        disabled={!canSubmit || assignMutation.isPending}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        onClick={async () => {
+          if (!selectedBedId || !facilityId) return;
+          if (selectedBedAction === 'mark_available' || selectedBedAction === 'mark_maintenance') {
+            await updateBedMutation.mutateAsync({
+              bedId: selectedBedId,
+              facilityId,
+              status: selectedBedAction === 'mark_available' ? 'available' : 'maintenance',
+            });
+            await optionsQuery.refetch();
+            await refetchWardBedsSafely();
+            showToast('success', 'Bed status updated successfully.', 3000);
+            setLastActionMessage(
+              selectedBedAction === 'mark_available'
+                ? 'Selected bed marked as available.'
+                : 'Selected bed marked for maintenance.'
+            );
+            return;
+          }
+          await handleAssign();
+        }}
+        disabled={(selectedBedAction === 'assign' && (!canSubmit || assignMutation.isPending)) || updateBedMutation.isPending}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
         <MoveRight className="w-4 h-4" />
-        {assignMutation.isPending ? 'Saving...' : 'Save Ward & Bed'}
+        {selectedBedAction === 'assign'
+          ? assignMutation.isPending
+            ? 'Saving...'
+            : 'Save Ward & Bed'
+          : selectedBedAction === 'mark_available'
+            ? updateBedMutation.isPending
+              ? 'Updating...'
+              : 'Set Bed Available'
+            : updateBedMutation.isPending
+              ? 'Updating...'
+              : 'Set Bed Maintenance'}
       </button>
 
       {bedPickerOpen && !!selectedWardId && (
@@ -465,6 +588,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                       onClick={() => {
                         if (!isBookable) return;
                         setSelectedBedId(bed.id);
+                        setSelectedBedAction('assign');
                       }}
                       className={`aspect-square rounded-lg border p-2 transition cursor-pointer ${
                         active
@@ -484,7 +608,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                     >
                       <div className="h-full flex flex-col">
                         <span className={`text-[10px] leading-none uppercase tracking-wide truncate ${active ? 'text-blue-100' : isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {bed.bed_label}
+                          {bed.room_label ? `R:${bed.room_label} • ` : ''}{bed.bed_label}
                         </span>
                         <span className="flex-1 flex items-center justify-center">
                           <span className={`text-sm font-semibold ${active ? 'text-white' : isDark ? 'text-gray-100' : 'text-gray-800'}`}>

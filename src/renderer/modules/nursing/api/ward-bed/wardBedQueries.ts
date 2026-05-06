@@ -47,6 +47,9 @@ export const useWardBeds = (wardId: number | null, facilityId: number | null) =>
     queryKey: nursingWardBedKeys.byWard(wardId ?? 0),
     enabled: Boolean(wardId && facilityId),
     queryFn: async () => {
+      if (!wardId || !facilityId) {
+        return [];
+      }
       const response = await axiosInstance.get<{ data: BedOption[] }>(`/wards/${wardId}/beds`, {
         params: { facility_id: facilityId },
       });
@@ -60,13 +63,16 @@ export const useCreateWardBed = () =>
       wardId,
       facilityId,
       bedLabel,
+      roomLabel,
     }: {
       wardId: number;
       facilityId: number;
       bedLabel: string;
+      roomLabel?: string;
     }) => {
       const response = await axiosInstance.post(`/wards/${wardId}/beds`, {
         facility_id: facilityId,
+        room_label: roomLabel,
         bed_label: bedLabel,
       });
       return response.data;
@@ -80,17 +86,20 @@ export const useUpdateWardBed = () =>
       facilityId,
       wardId,
       bedLabel,
+      roomLabel,
       status,
     }: {
       bedId: number;
       facilityId: number;
       wardId?: number;
       bedLabel?: string;
+      roomLabel?: string;
       status?: 'available' | 'occupied' | 'maintenance' | 'inactive';
     }) => {
       const response = await axiosInstance.patch(`/ward-beds/${bedId}`, {
         facility_id: facilityId,
         ward_id: wardId,
+        room_label: roomLabel,
         bed_label: bedLabel,
         status,
       });
