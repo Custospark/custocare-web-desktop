@@ -1,13 +1,29 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Building2, Check, CircleDot, Lock, PlusCircle, RefreshCw, X } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  BedDouble,
+  Building2,
+  Check,
+  CircleDot,
+  Clock,
+  Lock,
+  PlusCircle,
+  RefreshCw,
+  User,
+  UserPlus,
+  X,
+} from 'lucide-react';
 
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { getActiveFacilityId } from '../../../../app/store/utils/contextSelectors';
-import { selectActiveVisitUuid } from '../../../../app/store/slices/visitSlice';
+import {
+  selectActivePatient,
+  selectActiveVisitUuid,
+  updateActiveVisitPhase,
+} from '../../../../app/store/slices/visitSlice';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import { useConfirm } from '../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
-import { updateActiveVisitPhase } from '../../../../app/store/slices/visitSlice';
 import type { Visit } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { VisitPhase } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import {
@@ -38,6 +54,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
   const { confirm } = useConfirm();
   const facilityId = useAppSelector(getActiveFacilityId);
   const visitUuid = useAppSelector(selectActiveVisitUuid);
+  const activePatient = useAppSelector(selectActivePatient);
   const isDark = theme === 'dark';
 
   const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
@@ -112,6 +129,15 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
   );
   const currentAssignedBedId = optionsQuery.data?.current_location?.bed_id ?? null;
   const currentAssignedWardId = optionsQuery.data?.current_location?.ward_id ?? null;
+
+  const hasBedAssignment = !!(currentAssignedWardId && currentAssignedBedId);
+
+  const formatBedAssignmentTime = (iso?: string | null) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleString();
+  };
 
   const occupiedBedIds = useMemo(() => {
     const ids = new Set<number>();
@@ -507,7 +533,9 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
         <div>
           <h3 className="font-semibold text-lg">Ward & Bed Assignment</h3>
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Admit or assign/change bed; transfers run from the ward bed board (pick Transfer there).
+            {hasBedAssignment
+              ? 'Open a ward, then use Transfer on the bed board to move to another ward/bed.'
+              : 'Choose Admit or Assign, select a ward, then confirm on the bed board.'}
           </p>
         </div>
         <button
@@ -527,39 +555,112 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       )}
 
       <div className={`rounded-lg border p-3 ${isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
-        <div className="text-sm font-medium mb-1">Current Location</div>
-        <div className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-          {optionsQuery.data?.current_location?.ward_name
-            ? `${optionsQuery.data.current_location.ward_name} - ${optionsQuery.data.current_location.room_label ? `Room ${optionsQuery.data.current_location.room_label} - ` : ''}Bed ${optionsQuery.data.current_location.bed_label ?? 'N/A'}`
-            : 'Not yet assigned'}
-        </div>
+        <div className="text-sm font-medium mb-2">Current assignment</div>
+        {hasBedAssignment ? (
+          <div className="space-y-3">
+            <div className={`flex flex-wrap gap-x-4 gap-y-2 text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+              <span className="inline-flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 shrink-0 opacity-80" aria-hidden />
+                <span>{optionsQuery.data?.current_location?.ward_name ?? '—'}</span>
+              </span>
+              {optionsQuery.data?.current_location?.room_label ? (
+                <span className="inline-flex items-baseline gap-1">
+                  <span className={`text-xs uppercase tracking-wide ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Room</span>
+                  <span>{optionsQuery.data.current_location.room_label}</span>
+                </span>
+              ) : null}
+              <span className="inline-flex items-baseline gap-1">
+                <span className={`text-xs uppercase tracking-wide ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Bed</span>
+                <span>{optionsQuery.data?.current_location?.bed_label ?? '—'}</span>
+              </span>
+            </div>
+            <div
+              className={`grid gap-3 sm:grid-cols-2 text-sm border-t pt-3 ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
+            >
+              <div className="flex items-start gap-2 sm:col-span-2">
+                <User className="w-4 h-4 mt-0.5 shrink-0 opacity-80" aria-hidden />
+                <div className="min-w-0 flex-1 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <div className={`text-xs mb-0.5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Patient name</div>
+                    <div className={`font-medium truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                      {activePatient?.name?.trim() || '—'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className={`text-xs mb-0.5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Patient number</div>
+                    <div className="font-mono">{activePatient?.patient_number ?? '—'}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start gap-2 sm:col-span-2">
+                <Clock className="w-4 h-4 mt-0.5 shrink-0 opacity-80" aria-hidden />
+                <div>
+                  <div className={`text-xs mb-0.5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Bed assignment time</div>
+                  <div className={isDark ? 'text-gray-200' : 'text-gray-800'}>
+                    {formatBedAssignmentTime(optionsQuery.data?.current_location?.updated_at)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            Not assigned to a ward or bed yet. Use Admit or Assign below, then pick a ward and bed on the board.
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
         <div>
           <label className="text-sm font-medium mb-2 block">Action</label>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { key: 'admit', label: 'Admit' },
-              { key: 'assign_bed', label: 'Assign / Change Bed' },
-            ].map((action) => {
-              const active = admissionAction === action.key;
-              return (
+          <div className="flex flex-wrap gap-2 items-center">
+            {hasBedAssignment ? (
+              <div
+                className={`inline-flex items-center gap-2 px-3 py-2 rounded-full border text-sm ${
+                  isDark
+                    ? 'border-blue-500/80 bg-blue-950/50 text-blue-100'
+                    : 'border-blue-200 bg-blue-50 text-blue-900'
+                }`}
+                role="status"
+              >
+                <ArrowLeftRight className="w-4 h-4 shrink-0" aria-hidden />
+                <span className="font-medium">Transfer</span>
+                <span className={`text-xs font-normal ${isDark ? 'text-blue-200/90' : 'text-blue-800'}`}>
+                  Open a ward, then select Transfer on the bed board.
+                </span>
+              </div>
+            ) : (
+              <>
                 <button
-                  key={action.key}
-                  onClick={() => setAdmissionAction(action.key as 'admit' | 'assign_bed')}
-                  className={`px-3 py-2 rounded-full border text-sm transition cursor-pointer ${
-                    active
+                  type="button"
+                  onClick={() => setAdmissionAction('admit')}
+                  className={`inline-flex items-center gap-2 px-3 py-2 rounded-full border text-sm transition cursor-pointer ${
+                    admissionAction === 'admit'
                       ? 'bg-blue-600 text-white border-blue-600'
                       : isDark
                         ? 'border-gray-700 text-gray-200 hover:bg-gray-800'
                         : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  {action.label}
+                  <UserPlus className="w-4 h-4 shrink-0" aria-hidden />
+                  Admit
                 </button>
-              );
-            })}
+                <button
+                  type="button"
+                  onClick={() => setAdmissionAction('assign_bed')}
+                  className={`inline-flex items-center gap-2 px-3 py-2 rounded-full border text-sm transition cursor-pointer ${
+                    admissionAction === 'assign_bed'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : isDark
+                        ? 'border-gray-700 text-gray-200 hover:bg-gray-800'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <BedDouble className="w-4 h-4 shrink-0" aria-hidden />
+                  Assign / Change bed
+                </button>
+              </>
+            )}
           </div>
         </div>
 
