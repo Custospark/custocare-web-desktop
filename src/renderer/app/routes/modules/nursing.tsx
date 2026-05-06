@@ -10,6 +10,8 @@ import {
   TasksShiftsWorkspace,
   WardsPatientsWorkspace,
 } from '../../../modules/nursing/ui/NursingActionWorkspaces';
+import MRPatientSearch from '../../../modules/medical-records/ui/patients/views/MRPatientSearch';
+import MRPatientQueue from '../../../modules/medical-records/ui/patients/views/MRPatientQueue';
 
 const nursingTablePage = <P extends { theme: 'light' | 'dark' }>(
   Component: ComponentType<P>,
@@ -33,9 +35,18 @@ export const nursingRoutes = [
 
   <Route key="nursing-wards-patients" path="wards-patients" element={nursingTablePage(WardsPatientsWorkspace)}>
     <Route index element={<Navigate to={NURSING_ROUTES.WARDS_PATIENTS_SEARCH_PATIENT} replace />} />
-    <Route path="search-patient" element={nursingTablePage(NursingPlaceholderView, { title: 'Search Patient' })} />
-    <Route path="my-ward-patients" element={nursingTablePage(NursingPlaceholderView, { title: 'My Ward Patients' })} />
-    <Route path="new-patients-unassigned" element={nursingTablePage(NursingPlaceholderView, { title: 'New Patients (Unassigned)' })} />
+    <Route
+      path="search-patient"
+      element={nursingTablePage(MRPatientSearch, { intakeModule: 'nursing' })}
+    />
+    <Route
+      path="my-ward-patients"
+      element={nursingTablePage(NursingPlaceholderView, { title: 'My Ward Patients (To be implemented)' })}
+    />
+    <Route
+      path="new-patients-unassigned"
+      element={nursingTablePage(MRPatientQueue, { intakeModule: 'nursing' })}
+    />
   </Route>,
 
   <Route key="nursing-encounter" path="nursing-encounter" element={nursingTablePage(NursingEncounterWorkspace)}>

@@ -6,7 +6,6 @@ import { Stethoscope } from 'lucide-react';
 
 import PatientQueue from '../../../../pharmacy/ui/dispensing/dispensing-medication/views/PatientQueue';
 import { cn } from '../../../../../shared/utils/classNameUtils';
-import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
 import { type QueueVisitItem, VisitPhase } from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 
@@ -19,6 +18,10 @@ import {
   getStaffId,
   hasCompleteStaffContext
 } from '../../../../../app/store/utils/contextSelectors';
+import {
+  getPatientIntakeRoutes,
+  type PatientIntakeModule,
+} from '../../../../../app/routes/utils/patientIntakeRoutes';
 
 /* -------------------------------------------------------------------------- */
 /*                               TYPE DEFINITIONS                             */
@@ -29,17 +32,38 @@ type Theme = 'light' | 'dark';
 export interface MRPatientQueueProps {
   theme: Theme;
   className?: string;
+  intakeModule?: PatientIntakeModule;
 }
 
 /* -------------------------------------------------------------------------- */
 /*                              MAIN COMPONENT                                */
 /* -------------------------------------------------------------------------- */
 
-const MRPatientQueue: React.FC<MRPatientQueueProps> = ({ theme, className = '' }) => {
+const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
+  theme,
+  className = '',
+  intakeModule = 'medical-records',
+}) => {
+  const routes = getPatientIntakeRoutes(intakeModule);
+
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { showToast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
+  const queueTitle = intakeModule === 'nursing' ? 'Nursing Queue' : 'Patient Queue';
+  const queueDescription =
+    intakeModule === 'nursing'
+      ? 'Unassigned patients awaiting nursing intake and assignment'
+      : 'Patients requiring medical documentation and chart updates';
+  const actionButtonText =
+    intakeModule === 'nursing'
+      ? isProcessing
+        ? 'Opening...'
+        : 'Start Nursing Encounter'
+      : isProcessing
+        ? 'Loading...'
+        : 'Take Action';
+  const newPatientButtonText = intakeModule === 'nursing' ? 'Nursing Queue Intake' : 'New Patient';
 
   // Get staff context
   const facilityId = useAppSelector(getActiveFacilityId);
@@ -95,7 +119,7 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({ theme, className = '' }
       showToast('success', `Ready to care for ${visit.patient?.name || 'patient'}. Let's get started!`, 3000);
       
       // Navigate to action center
-      navigate(MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER);
+      navigate(routes.actionCenter);
     } catch (error) {
       console.error('Error setting active visit:', error);
       showToast('error', 'Failed to load patient data. Please try again.', 4000);
@@ -105,18 +129,18 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({ theme, className = '' }
   };
 
   const handleCreateNewPatient = () => {
-    navigate(MEDICAL_RECORDS_ROUTES.PATIENTS_REGISTER);
+    navigate(routes.register);
   };
 
   return (
     <div className={cn(className)}>
       <PatientQueue
-        title="Patient Queue"
-        description="Patients requiring medical documentation and chart updates"
+        title={queueTitle}
+        description={queueDescription}
         onTakeAction={handleTakeAction}
         onNewPatientRegistration={handleCreateNewPatient}
-        actionButtonText={isProcessing ? "Loading..." : "Take Action"}
-        newPatientButtonText="New Patient"
+        actionButtonText={actionButtonText}
+        newPatientButtonText={newPatientButtonText}
         newPatientButtonIcon={<Stethoscope className="w-4 h-4" />}
         showStats={true}
         allowPhaseFilter={true}

@@ -558,12 +558,16 @@ const handleTakeAction = useCallback(
           title={
             intakeModule === 'pharmacy'
               ? 'Patient search'
-              : 'Medical Records Patient Search'
+              : intakeModule === 'nursing'
+                ? 'Nursing Patient Search'
+                : 'Medical Records Patient Search'
           }
           subtitle={
             intakeModule === 'pharmacy'
               ? 'Find a patient to register a visit and begin pharmacy services'
-              : 'Search for patients to access medical records, documents, and history'
+              : intakeModule === 'nursing'
+                ? 'Search for patients to start nursing encounter workflow'
+                : 'Search for patients to access medical records, documents, and history'
           }
           placeholder="Search by patient number, name, phone, or national ID"
           filters={{ status: PatientStatus.ACTIVE }}

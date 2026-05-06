@@ -33,12 +33,29 @@ import {
 import { clearAll } from '../visit-action-center/billing-space';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
+import {
+  getPatientIntakeRoutes,
+  type PatientIntakeModule,
+} from '../../../../app/routes/utils/patientIntakeRoutes';
 
 interface MRVisitActionCenterProps {
   theme: 'light' | 'dark';
+  intakeModule?: PatientIntakeModule;
 }
 
-const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
+const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
+  theme,
+  intakeModule = 'medical-records',
+}) => {
+  const routes = getPatientIntakeRoutes(intakeModule);
+  const actionCenterRoutes = {
+    patientRecords: MEDICAL_RECORDS_ROUTES.PATIENT_RECORDS,
+    clinicalCare: MEDICAL_RECORDS_ROUTES.CLINICAL_CARE,
+    forwardPatient: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT,
+    patientBillingSpace: MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SPACE,
+    visitStatus: MEDICAL_RECORDS_ROUTES.VISIT_STATUS,
+  };
+
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { showToast } = useToast();
@@ -111,13 +128,13 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
       await new Promise(resolve => setTimeout(resolve, 300));
       
       // Navigate to patient queue
-      navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE);
+      navigate(routes.queue);
     } catch (error) {
       console.error('Error clearing patient data:', error);
       showToast('error', 'Failed to clear patient data. Please try again.', 4000);
       setIsNavigating(false);
       // Fallback navigation
-      navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE);
+      navigate(routes.queue);
     }
   };
 
@@ -158,7 +175,7 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
-              onClick={() => navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE)}
+              onClick={() => navigate(routes.queue)}
               className="cursor-pointer inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Users className="w-4 h-4" />
@@ -166,7 +183,7 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
             </button>
 
             <button
-              onClick={() => navigate(MEDICAL_RECORDS_ROUTES.PATIENTS_REGISTER)}
+              onClick={() => navigate(routes.register)}
               className={`cursor-pointer inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all ${
                 theme === 'dark'
                   ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-700'
@@ -178,7 +195,7 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
             </button>
 
             <button
-              onClick={() => navigate(MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH)}
+              onClick={() => navigate(routes.search)}
               className={`cursor-pointer inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-all ${
                 theme === 'dark'
                   ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-700'
@@ -221,20 +238,20 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
               title="Clinical Encounter Workflow"
               icon={<FileText className="w-6 h-6" />}
               theme={theme}
-              defaultActionTo={MEDICAL_RECORDS_ROUTES.PATIENT_RECORDS}
+              defaultActionTo={actionCenterRoutes.patientRecords}
               actions={[
           // EXISTING ACTIONS
             { 
               key: 'patient-records', 
               label: 'Patient Records', 
               icon: <User className="w-4 h-4" />, 
-              to: MEDICAL_RECORDS_ROUTES.PATIENT_RECORDS 
+              to: actionCenterRoutes.patientRecords
             },
               { 
                 key: 'clinical-care', 
                 label: 'Clinical Care', 
                 icon: <Stethoscope className="w-4 h-4" />, 
-                to: MEDICAL_RECORDS_ROUTES.CLINICAL_CARE 
+                to: actionCenterRoutes.clinicalCare
               },
 
               // { 
@@ -247,19 +264,19 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({ theme }) => {
                 key: 'forward-patient', 
                 label: 'Forward Patient', 
                 icon: <ArrowRight className="w-4 h-4" />, 
-                to: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT 
+                to: actionCenterRoutes.forwardPatient
               },
               { 
                 key: 'billing-space', 
                 label: 'Billing Space', 
                 icon: <Receipt className="w-4 h-4" />, 
-                to: MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SPACE
+                to: actionCenterRoutes.patientBillingSpace
               },
               { 
                 key: 'visit-status', 
                 label: 'Visit Status', 
                 icon: <Activity className="w-4 h-4" />, 
-                to: MEDICAL_RECORDS_ROUTES.VISIT_STATUS 
+                to: actionCenterRoutes.visitStatus
               },
             ]}
             />
