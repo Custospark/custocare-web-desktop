@@ -6,22 +6,17 @@ import {
   Building2,
   Check,
   CircleDot,
-  Clock,
   Lock,
   PlusCircle,
   RefreshCw,
-  User,
   UserPlus,
+  UserRound,
   X,
 } from 'lucide-react';
 
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { getActiveFacilityId } from '../../../../app/store/utils/contextSelectors';
-import {
-  selectActivePatient,
-  selectActiveVisitUuid,
-  updateActiveVisitPhase,
-} from '../../../../app/store/slices/visitSlice';
+import { selectActiveVisitUuid, updateActiveVisitPhase } from '../../../../app/store/slices/visitSlice';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import { useConfirm } from '../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import type { Visit } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
@@ -54,7 +49,6 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
   const { confirm } = useConfirm();
   const facilityId = useAppSelector(getActiveFacilityId);
   const visitUuid = useAppSelector(selectActiveVisitUuid);
-  const activePatient = useAppSelector(selectActivePatient);
   const isDark = theme === 'dark';
 
   const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
@@ -132,13 +126,6 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
 
   const hasBedAssignment = !!(currentAssignedWardId && currentAssignedBedId);
 
-  const formatBedAssignmentTime = (iso?: string | null) => {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleString();
-  };
-
   const occupiedBedIds = useMemo(() => {
     const ids = new Set<number>();
     (selectedWard?.occupied_bed_labels ?? []).forEach((bed) => {
@@ -190,13 +177,17 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
     !!selectedBedId && selectedBedIsOccupied && !canReleaseSelectedBed;
   const selectedBedIsMaintenance = selectedBed?.status === 'maintenance';
   const selectedBedIsInactive = selectedBed?.status === 'inactive';
-  /** Documented UX: inactive — none; other's occupied — none (cannot release/assign here); patient's occupied bed — Release + Transfer; maintenance — return to service; free bed — Assign + maintenance, or Transfer + maintenance if already assigned elsewhere. */
+  /** Patient's occupied bed → Release + Transfer. Other occupied whilst visit has assignment → Release (clears assignment only). Else free bed → Assign (+ maintenance); Transfer only applies when source is own bed chip flow. */
   const availableBedActions = useMemo(() => {
     if (!selectedBed) return [] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
     if (selectedBedIsInactive) return [] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
 
     if (canReleaseSelectedBed) {
       return ['transfer', 'mark_available'] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
+    }
+
+    if (occupiedByAnotherPatient && hasBedAssignment) {
+      return ['mark_available'] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
     }
 
     if (occupiedByAnotherPatient) {
@@ -208,11 +199,19 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
     }
 
     if (currentAssignedBedId && selectedBed.id !== currentAssignedBedId) {
-      return ['transfer', 'mark_maintenance'] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
+      return ['assign', 'mark_maintenance'] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
     }
 
     return ['assign', 'mark_maintenance'] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
-  }, [selectedBed, selectedBedIsInactive, selectedBedIsMaintenance, currentAssignedBedId, canReleaseSelectedBed, occupiedByAnotherPatient]);
+  }, [
+    selectedBed,
+    selectedBedIsInactive,
+    selectedBedIsMaintenance,
+    currentAssignedBedId,
+    canReleaseSelectedBed,
+    occupiedByAnotherPatient,
+    hasBedAssignment,
+  ]);
 
   const transferWard = useMemo(
     () => (optionsQuery.data?.wards ?? []).find((ward) => ward.id === transferWardId) ?? null,
@@ -478,13 +477,19 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       }
 
       if (selectedBedAction === 'mark_available' && selectedBedIsOccupied) {
-        if (!visitUuid || !canReleaseSelectedBed) {
-          showToast('error', 'Only the current patient assigned bed can be released.', 4000);
+        if (!visitUuid || !currentAssignedBedId) {
+          showToast('error', 'No ward/bed assignment to release for this visit.', 4000);
+          return;
+        }
+        const mayReleaseVisitBed =
+          canReleaseSelectedBed || (occupiedByAnotherPatient && hasBedAssignment);
+        if (!mayReleaseVisitBed) {
+          showToast('error', 'Only release this visit from an occupied bed when it has an assignment.', 4000);
           return;
         }
         const releaseResponse = await releaseMutation.mutateAsync({
           visitUuid,
-          bedId: selectedBedId,
+          bedId: currentAssignedBedId,
         });
         await optionsQuery.refetch();
         await refetchWardBedsSafely();
@@ -553,62 +558,6 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
           {lastActionMessage}
         </div>
       )}
-
-      <div className={`rounded-lg border p-3 ${isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
-        <div className="text-sm font-medium mb-2">Current assignment</div>
-        {hasBedAssignment ? (
-          <div className="space-y-3">
-            <div className={`flex flex-wrap gap-x-4 gap-y-2 text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-              <span className="inline-flex items-center gap-1.5">
-                <Building2 className="w-4 h-4 shrink-0 opacity-80" aria-hidden />
-                <span>{optionsQuery.data?.current_location?.ward_name ?? '—'}</span>
-              </span>
-              {optionsQuery.data?.current_location?.room_label ? (
-                <span className="inline-flex items-baseline gap-1">
-                  <span className={`text-xs uppercase tracking-wide ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Room</span>
-                  <span>{optionsQuery.data.current_location.room_label}</span>
-                </span>
-              ) : null}
-              <span className="inline-flex items-baseline gap-1">
-                <span className={`text-xs uppercase tracking-wide ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Bed</span>
-                <span>{optionsQuery.data?.current_location?.bed_label ?? '—'}</span>
-              </span>
-            </div>
-            <div
-              className={`grid gap-3 sm:grid-cols-2 text-sm border-t pt-3 ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
-            >
-              <div className="flex items-start gap-2 sm:col-span-2">
-                <User className="w-4 h-4 mt-0.5 shrink-0 opacity-80" aria-hidden />
-                <div className="min-w-0 flex-1 grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <div className={`text-xs mb-0.5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Patient name</div>
-                    <div className={`font-medium truncate ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                      {activePatient?.name?.trim() || '—'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className={`text-xs mb-0.5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Patient number</div>
-                    <div className="font-mono">{activePatient?.patient_number ?? '—'}</div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-start gap-2 sm:col-span-2">
-                <Clock className="w-4 h-4 mt-0.5 shrink-0 opacity-80" aria-hidden />
-                <div>
-                  <div className={`text-xs mb-0.5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Bed assignment time</div>
-                  <div className={isDark ? 'text-gray-200' : 'text-gray-800'}>
-                    {formatBedAssignmentTime(optionsQuery.data?.current_location?.updated_at)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Not assigned to a ward or bed yet. Use Admit or Assign below, then pick a ward and bed on the board.
-          </div>
-        )}
-      </div>
 
       <div className="space-y-4">
         <div>
@@ -815,9 +764,10 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
           >
             <div className="flex items-center justify-between gap-2 mb-2">
               <label className="text-sm font-medium block">{selectedWard?.name ?? 'Ward'} Bed Board</label>
-              <div className="text-xs flex items-center gap-3">
+              <div className="text-xs flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
                 <span className="inline-flex items-center gap-1"><CircleDot className="w-3.5 h-3.5 text-green-500" /> Free</span>
-                <span className="inline-flex items-center gap-1"><Lock className="w-3.5 h-3.5 text-red-500" /> Occupied</span>
+                <span className="inline-flex items-center gap-1"><UserRound className="w-3.5 h-3.5 text-blue-500" /> This patient</span>
+                <span className="inline-flex items-center gap-1"><Lock className="w-3.5 h-3.5 text-rose-500" /> Other patient</span>
               </div>
               <button onClick={() => setBedPickerOpen(false)} className="p-1.5 rounded-md border cursor-pointer" aria-label="Close">
                 <X className="w-4 h-4" />
@@ -831,7 +781,19 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
               onBedSearchChange={setBedSearch}
               onCreateBed={handleCreateBedFromModal}
               selectedBedId={selectedBedId}
+              selectedWardId={selectedWardId}
               currentAssignedBedId={currentAssignedBedId}
+              currentAssignedWardId={currentAssignedWardId}
+              currentPatientBed={
+                optionsQuery.data?.current_location?.patient_name != null ||
+                optionsQuery.data?.current_location?.patient_uuid
+                  ? {
+                      name: optionsQuery.data.current_location.patient_name ?? null,
+                      patientNumber: optionsQuery.data.current_location.patient_uuid ?? '—',
+                    }
+                  : null
+              }
+              assignmentUpdatedAt={optionsQuery.data?.current_location?.updated_at ?? null}
               occupiedBedIds={occupiedBedIds}
               occupiedBedMetaById={occupiedBedMetaById}
               formatOccupiedAt={formatOccupiedAt}
@@ -841,19 +803,28 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                   return;
                 }
                 setSelectedBedId(bed.id);
-                if (flags.isOccupied && currentAssignedBedId === bed.id) setSelectedBedAction('transfer');
-                else if (flags.isOccupied) {
-                  /* Occupied by another patient — no modal actions; hint only */
-                } else if (currentAssignedBedId && bed.id !== currentAssignedBedId && flags.isBookable) setSelectedBedAction('transfer');
-                else if (flags.isBookable) setSelectedBedAction('assign');
-                else if (flags.isMaintenance) setSelectedBedAction('mark_available');
+                if (flags.isOccupied && currentAssignedBedId === bed.id) {
+                  setSelectedBedAction('transfer');
+                } else if (flags.isOccupied && hasBedAssignment) {
+                  setSelectedBedAction('mark_available');
+                } else if (flags.isBookable) {
+                  setSelectedBedAction('assign');
+                } else if (flags.isMaintenance) {
+                  setSelectedBedAction('mark_available');
+                }
               }}
             />
             {!!selectedBedId && (
               <>
-                {occupiedByAnotherPatient && (
+                {occupiedByAnotherPatient && hasBedAssignment && (
                   <p className={`mt-3 text-xs ${isDark ? 'text-amber-200' : 'text-amber-800'}`}>
-                    This bed is occupied by another patient. Choose a free bed to assign or transfer the current visit.
+                    This bed is occupied by another patient. Use <span className="font-medium">Release current patient bed</span> to
+                    clear this visit&apos;s assignment, or select a free bed to assign.
+                  </p>
+                )}
+                {occupiedByAnotherPatient && !hasBedAssignment && (
+                  <p className={`mt-3 text-xs ${isDark ? 'text-amber-200' : 'text-amber-800'}`}>
+                    This bed is occupied by another patient. Select a free bed to assign this visit.
                   </p>
                 )}
                 {selectedBedAction === 'transfer' && (
@@ -934,14 +905,11 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                 isDark={isDark}
                 isBusy={assignMutation.isPending || updateBedMutation.isPending || releaseMutation.isPending}
                 isRefreshing={optionsQuery.isFetching}
-                actionHint={
-                  occupiedByAnotherPatient
-                    ? 'Actions are limited until you select an available bed.'
-                    : undefined
-                }
+                actionHint={undefined}
                 availableBedActions={availableBedActions}
                 selectedBedAction={selectedBedAction}
                 canReleaseCurrentPatientBed={canReleaseSelectedBed}
+                releaseCurrentBedFromOccupiedElsewhereHint={occupiedByAnotherPatient && hasBedAssignment}
                 selectedBedIsMaintenance={selectedBedIsMaintenance}
                 onSelectAction={setSelectedBedAction}
                 onContinue={() => executeSelectedBedAction(false)}

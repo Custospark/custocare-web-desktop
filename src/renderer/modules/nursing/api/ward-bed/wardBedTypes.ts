@@ -37,6 +37,9 @@ export interface CurrentWardLocation {
   bed_id: number | null;
   room_label: string | null;
   bed_label: string | null;
+  /** Patient on this visit (from server; avoids relying on client queue slice here) */
+  patient_name?: string | null;
+  patient_uuid?: string | null;
   admission_action: 'admit' | 'assign_bed' | 'transfer' | null;
   transfer_level?: 'ward' | 'room' | 'bed' | null;
   transfer_reason: string | null;
