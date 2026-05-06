@@ -9,6 +9,7 @@ export interface OccupiedBedLabel {
 export interface BedOption {
   id: number;
   bed_label: string;
+  status?: 'available' | 'occupied' | 'maintenance' | 'inactive';
 }
 
 export interface WardBedOption {
