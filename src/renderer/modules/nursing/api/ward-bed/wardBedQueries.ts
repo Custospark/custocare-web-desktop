@@ -42,6 +42,23 @@ export const useAssignWardBed = () =>
     },
   });
 
+export const useReleaseWardBed = () =>
+  useMutation({
+    mutationFn: async ({
+      visitUuid,
+      bedId,
+    }: {
+      visitUuid: string;
+      bedId?: number;
+    }) => {
+      const response = await axiosInstance.post<AssignWardBedApiResponse>(
+        `/visits/${visitUuid}/ward-bed-release`,
+        { bed_id: bedId }
+      );
+      return response.data;
+    },
+  });
+
 export const useWardBeds = (wardId: number | null, facilityId: number | null) =>
   useQuery({
     queryKey: nursingWardBedKeys.byWard(wardId ?? 0),

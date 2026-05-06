@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { BedDouble, Building2, Check, CircleDot, Lock, PlusCircle, RefreshCw, Search, X } from 'lucide-react';
+import { Building2, Check, CircleDot, Lock, PlusCircle, RefreshCw, X } from 'lucide-react';
 
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { getActiveFacilityId } from '../../../../app/store/utils/contextSelectors';
 import { selectActiveVisitUuid } from '../../../../app/store/slices/visitSlice';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
+import { useConfirm } from '../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { updateActiveVisitPhase } from '../../../../app/store/slices/visitSlice';
 import { VisitPhase } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import {
   useAssignWardBed,
   useCreateWardBed,
+  useReleaseWardBed,
   useUpdateWardBed,
   useWardBeds,
   useWardBedOptions,
@@ -21,6 +23,8 @@ import { WardType } from '../../../administration/admin-module/api/wards/wardTyp
 import WardFormDrawer from '../../../administration/admin-module/ui/clinical-space/ward-components/WardFormDrawer';
 import { getEmptyFormData } from '../../../administration/admin-module/ui/clinical-space/ward-components/ward.constants';
 import type { FacilityWardFormData } from '../../../administration/admin-module/ui/clinical-space/ward-components/ward.types';
+import BedActionPanel from './components/BedActionPanel';
+import BedBoardGrid from './components/BedBoardGrid';
 
 interface Props {
   theme: 'light' | 'dark';
@@ -30,6 +34,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
   const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
   const facilityId = useAppSelector(getActiveFacilityId);
   const visitUuid = useAppSelector(selectActiveVisitUuid);
   const isDark = theme === 'dark';
@@ -37,7 +42,8 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
   const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
   const [selectedBedId, setSelectedBedId] = useState<number | null>(null);
   const [admissionAction, setAdmissionAction] = useState<'admit' | 'assign_bed' | 'transfer'>('assign_bed');
-  const [selectedBedAction, setSelectedBedAction] = useState<'assign' | 'mark_available' | 'mark_maintenance'>('assign');
+  const [transferLevel, setTransferLevel] = useState<'ward' | 'room' | 'bed'>('bed');
+  const [selectedBedAction, setSelectedBedAction] = useState<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>('assign');
   const [transferReason, setTransferReason] = useState('');
   const [newBedLabel, setNewBedLabel] = useState('');
   const [newRoomLabel, setNewRoomLabel] = useState('');
@@ -51,9 +57,17 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
 
   const [wardDrawerOpen, setWardDrawerOpen] = useState(false);
   const [wardFormData, setWardFormData] = useState<FacilityWardFormData>(getEmptyFormData(facilityId));
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (typeof error === 'object' && error !== null) {
+      const maybeResponse = error as { response?: { data?: { message?: string } } };
+      return maybeResponse.response?.data?.message || fallback;
+    }
+    return fallback;
+  };
 
   const optionsQuery = useWardBedOptions(visitUuid);
   const assignMutation = useAssignWardBed();
+  const releaseMutation = useReleaseWardBed();
   const createBedMutation = useCreateWardBed();
   const updateBedMutation = useUpdateWardBed();
   const createWardMutation = useCreateWard({
@@ -74,6 +88,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
     setSelectedWardId(current.ward_id);
     setSelectedBedId(current.bed_id);
     setAdmissionAction(current.admission_action ?? 'assign_bed');
+    setTransferLevel(current.transfer_level ?? 'bed');
     setTransferReason(current.transfer_reason ?? '');
   }, [optionsQuery.data]);
 
@@ -87,6 +102,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
     () => optionsQuery.data?.wards.find((w) => w.id === selectedWardId) ?? null,
     [optionsQuery.data, selectedWardId]
   );
+  const currentAssignedBedId = optionsQuery.data?.current_location?.bed_id ?? null;
 
   const occupiedBedIds = useMemo(() => {
     const ids = new Set<number>();
@@ -131,12 +147,23 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
   const selectedBedIsMaintenance = selectedBed?.status === 'maintenance';
   const selectedBedIsInactive = selectedBed?.status === 'inactive';
   const availableBedActions = useMemo(() => {
-    if (!selectedBed) return [] as Array<'assign' | 'mark_available' | 'mark_maintenance'>;
-    if (selectedBedIsInactive) return [] as Array<'assign' | 'mark_available' | 'mark_maintenance'>;
-    if (selectedBedIsOccupied) return ['mark_available'] as Array<'assign' | 'mark_available' | 'mark_maintenance'>;
-    if (selectedBedIsMaintenance) return ['mark_maintenance'] as Array<'assign' | 'mark_available' | 'mark_maintenance'>;
-    return ['assign', 'mark_maintenance'] as Array<'assign' | 'mark_available' | 'mark_maintenance'>;
-  }, [selectedBed, selectedBedIsInactive, selectedBedIsMaintenance, selectedBedIsOccupied]);
+    if (!selectedBed) return [] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
+    if (selectedBedIsInactive) return [] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
+
+    if (selectedBedIsOccupied) {
+      return ['mark_available'] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
+    }
+
+    if (selectedBedIsMaintenance) {
+      return ['mark_available'] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
+    }
+
+    if (currentAssignedBedId && selectedBed.id !== currentAssignedBedId) {
+      return ['transfer'] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
+    }
+
+    return ['assign', 'mark_maintenance'] as Array<'assign' | 'transfer' | 'mark_available' | 'mark_maintenance'>;
+  }, [selectedBed, selectedBedIsInactive, selectedBedIsMaintenance, selectedBedIsOccupied, currentAssignedBedId]);
 
   useEffect(() => {
     if (!selectedBedId || availableBedActions.length === 0) return;
@@ -147,11 +174,11 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
 
   useEffect(() => {
     if (!selectedWard) return;
-    const stillValid = selectedWard.available_bed_list.some((bed) => bed.id === selectedBedId);
+    const stillValid = (wardBedsQuery.data ?? []).some((bed) => bed.id === selectedBedId);
     if (!stillValid) {
       setSelectedBedId(null);
     }
-  }, [selectedWard, selectedBedId]);
+  }, [selectedWard, selectedBedId, wardBedsQuery.data]);
 
   const canSubmit =
     !!visitUuid &&
@@ -172,6 +199,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
           bed_id: selectedBedId,
           admission_action: admissionAction,
           transfer_reason: admissionAction === 'transfer' ? transferReason.trim() : undefined,
+          transfer_level: admissionAction === 'transfer' ? transferLevel : undefined,
         },
       });
 
@@ -185,8 +213,8 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       await optionsQuery.refetch();
       await refetchWardBedsSafely();
       setLastActionMessage(response.message || 'Ward and bed assignment saved.');
-    } catch (error: any) {
-      showToast('error', error?.response?.data?.message || 'Failed to save ward assignment.', 5000);
+    } catch (error: unknown) {
+      showToast('error', getErrorMessage(error, 'Failed to save ward assignment.'), 5000);
     }
   };
 
@@ -255,8 +283,8 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       ]);
       showToast('success', 'Bed created successfully.', 3000);
       setLastActionMessage('Bed created successfully.');
-    } catch (error: any) {
-      const msg = error?.response?.data?.message || 'Failed to create bed.';
+    } catch (error: unknown) {
+      const msg = getErrorMessage(error, 'Failed to create bed.');
       showToast('error', msg.includes('Duplicate') ? 'Bed label already exists in this ward.' : msg, 5000);
     }
   };
@@ -279,8 +307,8 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       ]);
       showToast('success', 'Bed updated successfully.', 3000);
       setLastActionMessage('Bed details updated successfully.');
-    } catch (error: any) {
-      showToast('error', error?.response?.data?.message || 'Failed to update bed.', 5000);
+    } catch (error: unknown) {
+      showToast('error', getErrorMessage(error, 'Failed to update bed.'), 5000);
     }
   };
 
@@ -290,28 +318,91 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       showToast('error', 'Selected action is not valid for this bed status.', 4000);
       return;
     }
+    try {
+      setLastActionMessage('Processing bed action...');
+      if (selectedBedAction === 'assign') {
+        await handleAssign();
+        if (closeModal) setBedPickerOpen(false);
+        return;
+      }
 
-    if (selectedBedAction === 'assign') {
-      await handleAssign();
-      if (closeModal) setBedPickerOpen(false);
-      return;
-    }
+      if (selectedBedAction === 'transfer') {
+        if (!visitUuid || !selectedWardId) return;
+        const fromWard = optionsQuery.data?.current_location?.ward_name ?? 'Current Ward';
+        const fromBed = optionsQuery.data?.current_location?.bed_label ?? 'Current Bed';
+        const fromRoom = optionsQuery.data?.current_location?.room_label
+          ? `Room ${optionsQuery.data.current_location.room_label}`
+          : 'Unspecified Room';
+        const toWard = selectedWard?.name ?? 'Selected Ward';
+        const toRoom = selectedBed?.room_label ? `Room ${selectedBed.room_label}` : 'Unspecified Room';
+        const toBed = selectedBed?.bed_label ?? 'Selected Bed';
+        const approved = await confirm({
+          title: 'Confirm Patient Transfer',
+          message: `Transfer patient from ${fromWard} (${fromRoom} - ${fromBed}) to ${toWard} (${toRoom} - ${toBed})?`,
+          confirmText: 'Confirm Transfer',
+          cancelText: 'Cancel',
+          variant: 'warning',
+          theme,
+        });
+        if (!approved) {
+          setLastActionMessage(null);
+          return;
+        }
+        const response = await assignMutation.mutateAsync({
+          visitUuid,
+          payload: {
+            ward_id: selectedWardId,
+            bed_id: selectedBedId,
+            admission_action: 'transfer',
+            transfer_reason: transferReason.trim() || 'Transferred via nursing bed board.',
+            transfer_level: transferLevel,
+          },
+        });
+        dispatch(updateActiveVisitPhase({ phase: VisitPhase.TRANSFERRED }));
+        await optionsQuery.refetch();
+        await refetchWardBedsSafely();
+        const transferMsg = response.message || 'Patient transferred to selected bed.';
+        showToast('success', transferMsg, 4000);
+        setLastActionMessage(transferMsg);
+        if (closeModal) setBedPickerOpen(false);
+        return;
+      }
 
-    if (selectedBedAction === 'mark_available' || selectedBedAction === 'mark_maintenance') {
-      await updateBedMutation.mutateAsync({
-        bedId: selectedBedId,
-        facilityId,
-        status: selectedBedAction === 'mark_available' ? 'available' : 'maintenance',
-      });
-      await optionsQuery.refetch();
-      await refetchWardBedsSafely();
-      showToast('success', 'Bed status updated successfully.', 3000);
-      setLastActionMessage(
-        selectedBedAction === 'mark_available'
-          ? 'Selected bed marked as available.'
-          : 'Selected bed marked for maintenance.'
-      );
-      if (closeModal) setBedPickerOpen(false);
+      if (selectedBedAction === 'mark_available' && selectedBedIsOccupied) {
+        if (!visitUuid) return;
+        const releaseResponse = await releaseMutation.mutateAsync({
+          visitUuid,
+          bedId: selectedBedId,
+        });
+        await optionsQuery.refetch();
+        await refetchWardBedsSafely();
+        showToast('success', releaseResponse.message || 'Room/bed released successfully.', 3000);
+        setLastActionMessage(releaseResponse.message || 'Room/bed released successfully.');
+        if (closeModal) setBedPickerOpen(false);
+        return;
+      }
+
+      if (selectedBedAction === 'mark_available' || selectedBedAction === 'mark_maintenance') {
+        await updateBedMutation.mutateAsync({
+          bedId: selectedBedId,
+          facilityId,
+          status: selectedBedAction === 'mark_available' ? 'available' : 'maintenance',
+        });
+        await optionsQuery.refetch();
+        await refetchWardBedsSafely();
+        showToast('success', 'Bed status updated successfully.', 3000);
+        setLastActionMessage(
+          selectedBedAction === 'mark_available'
+            ? selectedBedIsOccupied
+              ? 'Room/bed released successfully.'
+              : 'Selected bed marked as available.'
+            : 'Selected bed marked for maintenance.'
+        );
+        if (closeModal) setBedPickerOpen(false);
+      }
+    } catch (error: unknown) {
+      showToast('error', getErrorMessage(error, 'Failed to complete selected bed action.'), 5000);
+      setLastActionMessage(null);
     }
   };
 
@@ -398,7 +489,14 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {(optionsQuery.data?.wards ?? []).map((ward) => {
+            {optionsQuery.isLoading
+              ? Array.from({ length: 6 }).map((_, idx) => (
+                <div
+                  key={`ward-skeleton-${idx}`}
+                  className={`h-20 rounded-xl border animate-pulse ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-100'}`}
+                />
+              ))
+              : (optionsQuery.data?.wards ?? []).map((ward) => {
               const active = selectedWardId === ward.id;
               return (
                 <button
@@ -425,7 +523,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                   </div>
                 </button>
               );
-            })}
+              })}
           </div>
         </div>
 
@@ -444,14 +542,29 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
         )}
 
         {admissionAction === 'transfer' && (
-          <div>
-            <label className="text-sm font-medium">Transfer Reason</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div>
+              <label className="text-sm font-medium">Transfer Scope</label>
+              <select
+                aria-label="Transfer scope"
+                value={transferLevel}
+                onChange={(e) => setTransferLevel(e.target.value as 'ward' | 'room' | 'bed')}
+                className={`mt-1 w-full rounded-lg border px-3 py-2 cursor-pointer ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
+              >
+                <option value="ward">Ward-level transfer</option>
+                <option value="room">Room-level transfer</option>
+                <option value="bed">Bed-level transfer</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Transfer Reason</label>
             <input
               value={transferReason}
               onChange={(e) => setTransferReason(e.target.value)}
               placeholder="Why this transfer is needed"
               className={`mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
             />
+            </div>
           </div>
         )}
       </div>
@@ -564,138 +677,48 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="mb-2">
-              <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-300 bg-white'}`}>
-                <Search className="w-4 h-4 opacity-70" />
-                <input
-                  value={bedSearch}
-                  onChange={(e) => setBedSearch(e.target.value)}
-                  placeholder="Search bed label..."
-                  className="w-full bg-transparent outline-none text-sm"
-                />
-              </div>
-            </div>
-            <div className={`rounded-xl border p-3 max-h-[55vh] overflow-auto ${isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
-              {filteredWardBeds.length === 0 ? (
-                <div className={`rounded-lg border border-dashed p-6 text-center ${isDark ? 'border-gray-700 bg-gray-900/40' : 'border-gray-300 bg-white'}`}>
-                  <BedDouble className={`w-7 h-7 mx-auto mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
-                  <div className="text-sm font-medium">No rooms or beds found in this ward</div>
-                  <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Create a room/bed first, then assign a patient from this board.
-                  </p>
-                  <button
-                    onClick={handleCreateBedFromModal}
-                    className="mt-3 px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 cursor-pointer text-xs"
-                  >
-                    Create Bed
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-7 gap-2">
-                  {filteredWardBeds.map((bed) => {
-                  const isOccupied = occupiedBedIds.has(bed.id) || bed.status === 'occupied';
-                  const isBookable = !isOccupied && bed.status !== 'maintenance' && bed.status !== 'inactive';
-                  const isMaintenance = bed.status === 'maintenance';
-                  const active = selectedBedId === bed.id;
-                  const isSelectable = bed.status !== 'inactive';
-                  const occupiedMeta = occupiedBedMetaById.get(bed.id);
-                  return (
-                    <button
-                      key={bed.id}
-                      onClick={() => {
-                        if (!isSelectable) return;
-                        if (selectedBedId === bed.id) {
-                          setSelectedBedId(null);
-                          return;
-                        }
-                        setSelectedBedId(bed.id);
-                        if (isOccupied) setSelectedBedAction('mark_available');
-                        else if (isBookable) setSelectedBedAction('assign');
-                        else if (isMaintenance) setSelectedBedAction('mark_maintenance');
-                      }}
-                      className={`aspect-square rounded-lg border p-2 transition cursor-pointer ${
-                        active
-                          ? 'border-blue-500 bg-blue-600 text-white shadow-sm'
-                          : isOccupied
-                            ? isDark
-                              ? 'border-red-800 bg-red-900/20 text-red-300 hover:bg-red-900/30'
-                              : 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
-                            : bed.status === 'maintenance' || bed.status === 'inactive'
-                              ? isDark
-                                ? 'border-yellow-800 bg-yellow-900/10 text-yellow-300'
-                                : 'border-yellow-200 bg-yellow-50 text-yellow-700'
-                              : isDark
-                                ? 'border-gray-700 hover:bg-gray-800'
-                                : 'border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="h-full flex flex-col">
-                        <span className={`text-[10px] leading-none uppercase tracking-wide truncate ${active ? 'text-blue-100' : isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {bed.room_label ? `R:${bed.room_label} • ` : ''}{bed.bed_label}
-                        </span>
-                        <span className="flex-1 flex items-center justify-center">
-                          {isOccupied ? (
-                            <Lock className={`w-4 h-4 ${active ? 'text-white' : 'text-red-500'}`} />
-                          ) : (
-                            <CircleDot className={`w-4 h-4 ${active ? 'text-white' : 'text-green-500'}`} />
-                          )}
-                        </span>
-                        {isOccupied && (
-                          <span className={`mt-1 text-[9px] leading-tight ${isDark ? 'text-red-300' : 'text-red-700'}`}>
-                            {(occupiedMeta?.patient_name ?? 'Occupied')}{occupiedMeta?.patient_uuid ? ` (${occupiedMeta.patient_uuid})` : ''}
-                            <br />
-                            {formatOccupiedAt(occupiedMeta?.occupied_at)}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                  })}
-                </div>
-              )}
-            </div>
+            <BedBoardGrid
+              isDark={isDark}
+              wardBedsLoading={wardBedsQuery.isLoading}
+              filteredWardBeds={filteredWardBeds}
+              bedSearch={bedSearch}
+              onBedSearchChange={setBedSearch}
+              onCreateBed={handleCreateBedFromModal}
+              selectedBedId={selectedBedId}
+              currentAssignedBedId={currentAssignedBedId}
+              occupiedBedIds={occupiedBedIds}
+              occupiedBedMetaById={occupiedBedMetaById}
+              formatOccupiedAt={formatOccupiedAt}
+              onSelectBed={(bed, flags) => {
+                if (selectedBedId === bed.id) {
+                  setSelectedBedId(null);
+                  return;
+                }
+                setSelectedBedId(bed.id);
+                if (flags.isOccupied) setSelectedBedAction('mark_available');
+                else if (currentAssignedBedId && bed.id !== currentAssignedBedId && flags.isBookable) setSelectedBedAction('transfer');
+                else if (flags.isBookable) setSelectedBedAction('assign');
+                else if (flags.isMaintenance) setSelectedBedAction('mark_available');
+              }}
+            />
             {!!selectedBedId && (
-              <div className={`mt-3 rounded-lg border p-3 ${isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'}`}>
-                <div className="text-xs font-medium mb-2">Action on selected bed</div>
-                {availableBedActions.length > 0 ? (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {availableBedActions.map((action) => (
-                      <button
-                        key={action}
-                        onClick={() => setSelectedBedAction(action)}
-                        className={`px-2.5 py-1 rounded-full text-xs border cursor-pointer ${
-                          selectedBedAction === action
-                            ? action === 'assign'
-                              ? 'bg-blue-600 text-white border-blue-600'
-                              : action === 'mark_available'
-                                ? 'bg-emerald-600 text-white border-emerald-600'
-                                : 'bg-amber-600 text-white border-amber-600'
-                            : isDark
-                              ? 'border-gray-700 hover:bg-gray-800'
-                              : 'border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        {action === 'assign' ? 'Assign' : action === 'mark_available' ? 'Mark Available' : 'Mark Maintenance'}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className={`text-xs mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    No valid actions for this bed in its current state.
-                  </p>
-                )}
-                <button
-                  onClick={() => executeSelectedBedAction(true)}
-                  disabled={
-                    availableBedActions.length === 0 ||
-                    (selectedBedAction === 'assign' && (!canSubmit || assignMutation.isPending)) ||
-                    updateBedMutation.isPending
-                  }
-                  className="px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-xs"
-                >
-                  Continue with Action
-                </button>
-              </div>
+              <BedActionPanel
+                theme={theme}
+                isDark={isDark}
+                isBusy={assignMutation.isPending || updateBedMutation.isPending || releaseMutation.isPending}
+                isRefreshing={optionsQuery.isFetching}
+                availableBedActions={availableBedActions}
+                selectedBedAction={selectedBedAction}
+                selectedBedIsOccupied={selectedBedIsOccupied}
+                onSelectAction={setSelectedBedAction}
+                onContinue={() => executeSelectedBedAction(false)}
+                continueDisabled={
+                  availableBedActions.length === 0 ||
+                  (selectedBedAction === 'assign' && (!canSubmit || assignMutation.isPending)) ||
+                  updateBedMutation.isPending ||
+                  releaseMutation.isPending
+                }
+              />
             )}
           </div>
         </div>

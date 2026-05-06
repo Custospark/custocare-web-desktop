@@ -38,6 +38,7 @@ export interface CurrentWardLocation {
   room_label: string | null;
   bed_label: string | null;
   admission_action: 'admit' | 'assign_bed' | 'transfer' | null;
+  transfer_level?: 'ward' | 'room' | 'bed' | null;
   transfer_reason: string | null;
   updated_at: string | null;
 }
@@ -57,6 +58,7 @@ export interface AssignWardBedPayload {
   ward_id: number;
   bed_id: number;
   admission_action: 'admit' | 'assign_bed' | 'transfer';
+  transfer_level?: 'ward' | 'room' | 'bed';
   transfer_reason?: string;
 }
 
