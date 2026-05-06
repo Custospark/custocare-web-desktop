@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { BedDouble, Building2, MoveRight, PlusCircle, RefreshCw } from 'lucide-react';
+import { BedDouble, Building2, Check, MoveRight, PlusCircle, RefreshCw } from 'lucide-react';
 
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { getActiveFacilityId } from '../../../../app/store/utils/contextSelectors';
@@ -76,6 +76,14 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
     () => optionsQuery.data?.wards.find((w) => w.id === selectedWardId) ?? null,
     [optionsQuery.data, selectedWardId]
   );
+
+  useEffect(() => {
+    if (!selectedWard) return;
+    const stillValid = selectedWard.available_bed_list.some((bed) => bed.id === selectedBedId);
+    if (!stillValid) {
+      setSelectedBedId(null);
+    }
+  }, [selectedWard, selectedBedId]);
 
   const canSubmit =
     !!visitUuid &&
@@ -214,63 +222,99 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="space-y-4">
         <div>
-          <label className="text-sm font-medium">Action</label>
-          <select
-            aria-label="Select ward and bed action"
-            value={admissionAction}
-            onChange={(e) => setAdmissionAction(e.target.value as 'admit' | 'assign_bed' | 'transfer')}
-            className={`mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
-          >
-            <option value="admit">Admit to Ward</option>
-            <option value="assign_bed">Assign / Change Bed</option>
-            <option value="transfer">Transfer Ward</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="text-sm font-medium">Ward</label>
-          <div className="mt-1 flex gap-2">
-            <select
-              aria-label="Select ward"
-              value={selectedWardId ?? ''}
-              onChange={(e) => setSelectedWardId(e.target.value ? Number(e.target.value) : null)}
-              className={`flex-1 rounded-lg border px-3 py-2 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
-            >
-              <option value="">Select ward...</option>
-              {(optionsQuery.data?.wards ?? []).map((ward) => (
-                <option key={ward.id} value={ward.id}>
-                  {ward.name} ({ward.available_beds} available)
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={handleCreateWard}
-              className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Ward
-            </button>
+          <label className="text-sm font-medium mb-2 block">Action</label>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: 'admit', label: 'Admit' },
+              { key: 'assign_bed', label: 'Assign / Change Bed' },
+              { key: 'transfer', label: 'Transfer' },
+            ].map((action) => {
+              const active = admissionAction === action.key;
+              return (
+                <button
+                  key={action.key}
+                  onClick={() => setAdmissionAction(action.key as 'admit' | 'assign_bed' | 'transfer')}
+                  className={`px-3 py-2 rounded-full border text-sm transition cursor-pointer ${
+                    active
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : isDark
+                        ? 'border-gray-700 text-gray-200 hover:bg-gray-800'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {action.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         <div>
-          <label className="text-sm font-medium">Bed</label>
-          <select
-            aria-label="Select bed"
-            value={selectedBedId ?? ''}
-            onChange={(e) => setSelectedBedId(e.target.value ? Number(e.target.value) : null)}
-            className={`mt-1 w-full rounded-lg border px-3 py-2 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
-          >
-            <option value="">Select bed...</option>
-            {(selectedWard?.available_bed_list ?? []).map((bed) => (
-              <option key={bed.id} value={bed.id}>
-                {bed.bed_label}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium">Select Ward</label>
+            <button
+              onClick={handleCreateWard}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 cursor-pointer text-sm"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Create Ward
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {(optionsQuery.data?.wards ?? []).map((ward) => {
+              const active = selectedWardId === ward.id;
+              return (
+                <button
+                  key={ward.id}
+                  onClick={() => setSelectedWardId(ward.id)}
+                  className={`text-left rounded-xl border p-3 transition cursor-pointer ${
+                    active
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : isDark
+                        ? 'border-gray-700 hover:bg-gray-800'
+                        : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium">{ward.name}</div>
+                    {active && <Check className="w-4 h-4 text-blue-600" />}
+                  </div>
+                  <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {ward.available_beds} beds available
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {!!selectedWardId && (
+          <div>
+            <label className="text-sm font-medium mb-2 block">Select Bed</label>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {(selectedWard?.available_bed_list ?? []).map((bed) => {
+                const active = selectedBedId === bed.id;
+                return (
+                  <button
+                    key={bed.id}
+                    onClick={() => setSelectedBedId(bed.id)}
+                    className={`rounded-lg border px-3 py-2 text-sm text-left transition cursor-pointer ${
+                      active
+                        ? 'border-blue-500 bg-blue-600 text-white'
+                        : isDark
+                          ? 'border-gray-700 hover:bg-gray-800'
+                          : 'border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {bed.bed_label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {admissionAction === 'transfer' && (
           <div>
