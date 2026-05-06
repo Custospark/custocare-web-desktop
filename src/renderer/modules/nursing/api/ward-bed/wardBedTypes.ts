@@ -2,8 +2,12 @@ import type { Visit } from '../../../pharmacy/api/dispensing/visit-queue/visitTy
 
 export interface OccupiedBedLabel {
   id?: number;
+  room_label?: string | null;
   bed_label: string;
-  visit_uuid: string;
+  visit_uuid?: string;
+  patient_uuid?: string | null;
+  patient_name?: string | null;
+  occupied_at?: string | null;
 }
 
 export interface BedOption {
