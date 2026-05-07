@@ -23,7 +23,7 @@ import {
 import { cn } from '../../../types/cn';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES} from '../../../../app/routes/routeConstants';
-import { logout } from '../../../../app/store/slices/authSlice';
+import { logoutClientSession } from '../../../../app/store/utils/logoutClientSession';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 // import { ADMINISTRATION_PLANS_SUBSCRIPTIONS_ROUTES } from '../../../../app/routes/constants/administration.paths';
@@ -217,8 +217,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         5000
       );
       
-      // 2. Then dispatch logout (clears auth state)
-      dispatch(logout());
+      // 2. Clear auth, facility context, and React Query cache (aligned with API logout)
+      logoutClientSession(dispatch);
       
       // 3. Finally navigate (redirects user)
       navigate(ROUTES.LANDING);

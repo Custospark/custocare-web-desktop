@@ -20,7 +20,7 @@ import { cn } from '../../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from '../../../../../app/store/hooks/useApp';
 import { toggleTheme } from '../../../../../app/store/slices/uiSlice';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
-import { logout } from '../../../../../app/store/slices/authSlice';
+import { logoutClientSession } from '../../../../../app/store/utils/logoutClientSession';
 import {
   switchCapability,
   switchFacility,
@@ -189,7 +189,7 @@ export const PortalSelector: React.FC = () => {
    * Handle logout
    */
   const handleLogout = useCallback((): void => {
-    dispatch(logout());
+    logoutClientSession(dispatch);
     showToast(
       'info',
       "You've been logged out successfully. Thank you for using Custocare — see you again soon!",

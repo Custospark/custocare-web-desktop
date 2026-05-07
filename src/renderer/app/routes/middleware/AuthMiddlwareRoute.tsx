@@ -12,7 +12,8 @@ import LoadingSkeleton from '../../../shared/components/Loading/LoadingSkeletons
  * - Uses `initializeAuth` to hydrate auth state from localStorage on mount.
  * - Shows a loading skeleton until initialization is complete.
  * - After initialization, checks for both token and user data.
- * - If not fully authenticated, redirects to login and cleans up stale localStorage.
+ * - If not fully authenticated, redirects to login (does not delete a valid
+ *   auth token when only cached profile JSON is missing — avoids wiping sessions).
  * 
  * Note: This middleware does NOT handle partial authentication states
  * (e.g., email verification or MFA flows) – those are managed by dedicated
@@ -42,12 +43,6 @@ function AuthMiddlewareRoute() {
   const isFullyAuthenticated = isAuthenticated && token && user;
 
   if (!isFullyAuthenticated) {
-    // Clean up any stale localStorage data if Redux says we're not authenticated
-    if (localStorage.getItem('authToken')) {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('authUser');
-    }
-
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
 

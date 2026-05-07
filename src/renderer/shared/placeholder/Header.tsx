@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { Menu, Bell, Settings, LogOut } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks/useApp';
 import { toggleSidebar } from '../../app/store/slices/uiSlice';
-import { logout } from '../../app/store/slices/authSlice';
+import { logoutClientSession } from '../../app/store/utils/logoutClientSession';
 import { ROUTES } from '../../app/routes/routeConstants';
 import { BrandName } from '../utils/BrandName';
 
@@ -17,7 +17,7 @@ function Header() {
   const { user } = useAppSelector((state) => state.auth);
 
   const handleLogout = () => {
-    dispatch(logout());
+    logoutClientSession(dispatch);
     navigate(ROUTES.LOGIN);
   };
 

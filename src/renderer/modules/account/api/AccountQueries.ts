@@ -31,6 +31,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { axiosInstance } from '../../../app/api/axiosConfig';
 import { useToast } from '../../../app/store/contexts/toast/useToast';
+import { logoutClientSession } from '../../../app/store/utils/logoutClientSession';
 
 import {
   loginStart,
@@ -52,7 +53,6 @@ import {
   resetPasswordSuccess,
   resetPasswordFailure,
   refreshUser,
-  logout as logoutAction,
 
   setPendingLogin,
   clearPendingLogin,
@@ -69,7 +69,7 @@ import {
   selectPasswordResetEmail,
 } from '../../../app/store/slices/authSlice';
 
-import { setUserContext, clearActiveContext } from '../../../app/store/slices/activeContextSlice';
+import { setUserContext } from '../../../app/store/slices/activeContextSlice';
 
 import type { UnifiedUserProfile } from '../../../shared/types/userTypes';
 import { ROUTES } from '../../administration/onboarding/routes/onboardingRouteConstants';
@@ -655,16 +655,14 @@ export const useLogout = (
     onSuccess: (data) => {
       if (data.success) showToast('success', data.message || 'Logged out.', 5000);
 
-      dispatch(logoutAction());
-      dispatch(clearActiveContext());
+      logoutClientSession(dispatch);
 
       navigate(ROUTES.HOME);
       callbacks.onSuccess?.(data);
     },
     onError: (error) => {
       // Clear client state anyway to avoid stuck sessions
-      dispatch(logoutAction());
-      dispatch(clearActiveContext());
+      logoutClientSession(dispatch);
 
       const msg = error.response?.data?.message || error.message || 'Logout failed.';
       showToast('error', msg, 8000);
