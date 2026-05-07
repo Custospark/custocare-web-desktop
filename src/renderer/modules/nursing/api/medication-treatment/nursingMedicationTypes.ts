@@ -136,3 +136,63 @@ export interface CreateNursingMedicationAdministrationApiResponse {
   message: string;
   data: NursingMedicationAdministration;
 }
+
+export type NursingTreatmentLogCategory =
+  | 'wound_care'
+  | 'dressing_change'
+  | 'physiotherapy'
+  | 'education'
+  | 'monitoring'
+  | 'comfort_measures'
+  | 'device_care'
+  | 'other';
+
+export interface NursingTreatmentLog {
+  id: number;
+  facility_id: number;
+  visit_id: number;
+  patient_id: number;
+  ward_id: number | null;
+  logged_by_user_id: number;
+  performed_at: string;
+  category: NursingTreatmentLogCategory;
+  title: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  visit?: NursingVisitBrief | null;
+  patient?: NursingPatientBrief | null;
+  ward?: Ward | null;
+  loggedBy?: NursingUserBrief | null;
+}
+
+export interface NursingTreatmentLogListResponse {
+  data: NursingTreatmentLog[];
+  meta: NursingMedicationDoseListMeta;
+}
+
+export interface NursingTreatmentLogQueryParams {
+  facilityId: number;
+  visit_id?: number;
+  category?: NursingTreatmentLogCategory | '';
+  from?: string;
+  to?: string;
+  page?: number;
+  per_page?: number;
+}
+
+export interface CreateNursingTreatmentLogPayload {
+  facility_id: number;
+  visit_id: number;
+  patient_id: number;
+  ward_id?: number | null;
+  performed_at: string;
+  category: NursingTreatmentLogCategory;
+  title: string;
+  notes?: string | null;
+}
+
+export interface CreateNursingTreatmentLogApiResponse {
+  message: string;
+  data: NursingTreatmentLog;
+}

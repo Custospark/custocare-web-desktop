@@ -20,6 +20,8 @@ import ShiftHandoverView from '../../../modules/nursing/ui/tasks-shifts/ShiftHan
 import TaskHistoryView from '../../../modules/nursing/ui/tasks-shifts/TaskHistoryView';
 import MedicationScheduleView from '../../../modules/nursing/ui/medication-treatment/MedicationScheduleView';
 import AdministerMedicationView from '../../../modules/nursing/ui/medication-treatment/AdministerMedicationView';
+import MissedMedicationsView from '../../../modules/nursing/ui/medication-treatment/MissedMedicationsView';
+import TreatmentLogView from '../../../modules/nursing/ui/medication-treatment/TreatmentLogView';
 
 const nursingTablePage = <P extends { theme: 'light' | 'dark' }>(
   Component: ComponentType<P>,
@@ -73,8 +75,8 @@ export const nursingRoutes = [
     <Route index element={<Navigate to={NURSING_ROUTES.MEDICATION_TREATMENT_MEDICATION_SCHEDULE} replace />} />
     <Route path="medication-schedule" element={nursingTablePage(MedicationScheduleView)} />
     <Route path="administer-medication" element={nursingTablePage(AdministerMedicationView)} />
-    <Route path="missed-medications" element={nursingTablePage(NursingPlaceholderView, { title: 'Missed Medications' })} />
-    <Route path="treatment-log" element={nursingTablePage(NursingPlaceholderView, { title: 'Treatment Log' })} />
+    <Route path="missed-medications" element={nursingTablePage(MissedMedicationsView)} />
+    <Route path="treatment-log" element={nursingTablePage(TreatmentLogView)} />
   </Route>,
 
   <Route key="nursing-tasks-shifts" path="tasks-shifts" element={nursingTablePage(TasksShiftsWorkspace)}>
