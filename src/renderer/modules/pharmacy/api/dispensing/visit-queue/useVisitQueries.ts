@@ -166,6 +166,23 @@ export const useGetVisitByUUID = (
 };
 
 /**
+ * Laravel's `boolean` rule accepts true/false, 0/1, "0"/"1" — not the strings
+ * "true"/"false". Axios serializes JS booleans in query strings as "true"/"false".
+ */
+function queueFiltersToQueryParams(filters: QueueFilters): Record<string, string | number> {
+  const params: Record<string, string | number> = {};
+  for (const [key, value] of Object.entries(filters)) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === 'boolean') {
+      params[key] = value ? 1 : 0;
+    } else {
+      params[key] = value as string | number;
+    }
+  }
+  return params;
+}
+
+/**
  * Fetches staff-specific queue visits.
  * 
  * @param filters - Queue filtering parameters
@@ -190,7 +207,7 @@ export const useGetMyQueue = (
       }
 
       const response = await axiosInstance.get<QueueResponse>('/visits/my-queue', {
-        params: filters,
+        params: queueFiltersToQueryParams(filters),
         headers: {
           'X-Facility-Id': facilityId.toString(),
         },
