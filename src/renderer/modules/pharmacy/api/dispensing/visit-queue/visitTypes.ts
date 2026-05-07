@@ -506,6 +506,15 @@ export interface QueueVisit {
  * Each row represents a VISIT (even if patient repeats).
  * This is what you use to "unpack" guest visits.
  */
+export interface WardAssignmentSummary {
+  ward_id: number | null;
+  ward_name?: string | null;
+  ward_code?: string | null;
+  bed_id: number | null;
+  bed_label?: string | null;
+  room_label?: string | null;
+}
+
 export interface QueueVisitItem {
   visit_id: number;
   visit_uuid: string;
@@ -527,6 +536,8 @@ export interface QueueVisitItem {
   visit_type: VisitType;
   status: VisitStatus;
   is_walk_in: boolean;
+  /** Present for ward-board / nursing ward patient lists */
+  ward_assignment?: WardAssignmentSummary;
 }
 
 

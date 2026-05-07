@@ -22,6 +22,7 @@ import AdministerMedicationView from '../../../modules/nursing/ui/medication-tre
 import MissedMedicationsView from '../../../modules/nursing/ui/medication-treatment/MissedMedicationsView';
 import TreatmentLogView from '../../../modules/nursing/ui/medication-treatment/TreatmentLogView';
 import NursingOverview from '../../../modules/nursing/ui/overview/NursingOverview';
+import MyWardPatientsView from '../../../modules/nursing/ui/wards-patients/MyWardPatientsView';
 
 const nursingTablePage = <P extends { theme: 'light' | 'dark' }>(
   Component: ComponentType<P>,
@@ -54,10 +55,7 @@ export const nursingRoutes = [
       path="search-patient"
       element={nursingTablePage(MRPatientSearch, { intakeModule: 'nursing' })}
     />
-    <Route
-      path="my-ward-patients"
-      element={nursingTablePage(NursingPlaceholderView, { title: 'My Ward Patients (To be implemented)' })}
-    />
+    <Route path="my-ward-patients" element={nursingTablePage(MyWardPatientsView)} />
     <Route
       path="new-patients-unassigned"
       element={nursingTablePage(MRPatientQueue, { intakeModule: 'nursing' })}

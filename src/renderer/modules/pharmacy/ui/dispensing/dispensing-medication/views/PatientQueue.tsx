@@ -17,6 +17,7 @@ import {
   Inbox,
   TrendingUp,
   Calendar,
+  BedDouble,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -69,6 +70,15 @@ export interface QueueVisitItem {
   visit_type: VisitType;
   status: VisitStatus;
   is_walk_in: boolean;
+
+  ward_assignment?: {
+    ward_id: number | null;
+    ward_name?: string | null;
+    ward_code?: string | null;
+    bed_id: number | null;
+    bed_label?: string | null;
+    room_label?: string | null;
+  };
 }
 
 export interface PatientQueueProps {
@@ -102,6 +112,13 @@ export interface PatientQueueProps {
 
   isLoading?: boolean;
   error?: Error | null;
+
+  /**
+   * When set (including empty array), disables `/visits/my-queue` and renders this list instead.
+   * Use with `onVisitsRefetch` for refresh.
+   */
+  visitsOverride?: QueueVisitItem[];
+  onVisitsRefetch?: () => void | Promise<unknown>;
 
   className?: string;
 }
@@ -311,6 +328,8 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   theme = 'light',
   isLoading: externalLoading,
   error: externalError,
+  visitsOverride,
+  onVisitsRefetch,
   className = '',
 }) => {
   const isDark = theme === 'dark';
@@ -340,27 +359,40 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     isRefetching,
     dataUpdatedAt,
   } = useGetMyQueue(filters, {
-    refetchInterval: refreshInterval > 0 ? refreshInterval : false,
-    refetchOnWindowFocus,
+    enabled: visitsOverride === undefined,
+    refetchInterval:
+      visitsOverride !== undefined ? false : refreshInterval > 0 ? refreshInterval : false,
+    refetchOnWindowFocus: visitsOverride !== undefined ? false : refetchOnWindowFocus,
   });
 
   useEffect(() => {
+    if (visitsOverride !== undefined) return;
     if (dataUpdatedAt) {
       setLastRefetchTime(new Date(dataUpdatedAt));
     }
-  }, [dataUpdatedAt]);
+  }, [dataUpdatedAt, visitsOverride]);
 
   const queueVisits = useMemo(() => {
+    if (visitsOverride !== undefined) {
+      const raw = visitsOverride;
+      if (!filterVisit) return raw;
+      return raw.filter(filterVisit);
+    }
     const raw = normalizeQueueVisits(queueData);
     if (!filterVisit) return raw;
     return raw.filter(filterVisit);
-  }, [queueData, filterVisit]);
+  }, [visitsOverride, queueData, filterVisit]);
 
-  const hasFetchedQueue = queueData !== undefined && queueData !== null;
+  const hasFetchedQueue =
+    visitsOverride !== undefined ? true : queueData !== undefined && queueData !== null;
   const error = externalError ?? (queryError instanceof Error ? queryError : null);
 
-  const isInitialLoading = !hasFetchedQueue && (externalLoading ?? queryLoading);
-  const isRefreshing = !isInitialLoading && (isRefetching || isManualRefreshing);
+  const isInitialLoading = visitsOverride !== undefined
+    ? (externalLoading ?? false)
+    : !hasFetchedQueue && (externalLoading ?? queryLoading);
+  const isRefreshing =
+    !isInitialLoading &&
+    (visitsOverride !== undefined ? isManualRefreshing : isRefetching || isManualRefreshing);
   const showBlockingError = !!error && !hasFetchedQueue;
   
   // Only show inline error if it hasn't been dismissed by the user
@@ -385,6 +417,10 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
           getPhaseDisplayName(visit.current_phase),
           getTypeDisplayName(visit.visit_type),
           visit.status ?? '',
+          visit.ward_assignment?.ward_name ?? '',
+          visit.ward_assignment?.ward_code ?? '',
+          visit.ward_assignment?.bed_label ?? '',
+          visit.ward_assignment?.room_label ?? '',
         ]
           .join(' ')
           .toLowerCase();
@@ -537,17 +573,22 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   );
 
   const handleManualRefresh = useCallback(async () => {
-    if (isManualRefreshing || isRefetching) return;
+    if (isManualRefreshing) return;
+    if (visitsOverride === undefined && isRefetching) return;
 
     try {
       setIsManualRefreshing(true);
-      await refetch();
-      // When manually refreshing, also reset the inline error dismissal so a new error can be shown
+      if (visitsOverride !== undefined && onVisitsRefetch) {
+        await onVisitsRefetch();
+      } else {
+        await refetch();
+      }
+      setLastRefetchTime(new Date());
       setIsInlineErrorDismissed(false);
     } finally {
       setIsManualRefreshing(false);
     }
-  }, [isManualRefreshing, isRefetching, refetch]);
+  }, [isManualRefreshing, isRefetching, refetch, visitsOverride, onVisitsRefetch]);
 
   const handleDismissInlineError = useCallback(() => {
     setIsInlineErrorDismissed(true);
@@ -705,6 +746,30 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                     </span>
                   )}
                 </div>
+
+                {visit.ward_assignment &&
+                  (visit.ward_assignment.ward_name ||
+                    visit.ward_assignment.bed_label ||
+                    visit.ward_assignment.room_label) && (
+                    <div
+                      className={cn(
+                        'mt-1 flex flex-wrap items-center gap-1 text-xs',
+                        isDark ? 'text-emerald-400/90' : 'text-emerald-700'
+                      )}
+                    >
+                      <BedDouble className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">
+                        {[
+                          visit.ward_assignment.ward_name || visit.ward_assignment.ward_code,
+                          [visit.ward_assignment.room_label, visit.ward_assignment.bed_label]
+                            .filter(Boolean)
+                            .join(' · '),
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    </div>
+                  )}
               </div>
             </div>
 
