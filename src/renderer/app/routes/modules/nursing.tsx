@@ -22,6 +22,7 @@ import MedicationScheduleView from '../../../modules/nursing/ui/medication-treat
 import AdministerMedicationView from '../../../modules/nursing/ui/medication-treatment/AdministerMedicationView';
 import MissedMedicationsView from '../../../modules/nursing/ui/medication-treatment/MissedMedicationsView';
 import TreatmentLogView from '../../../modules/nursing/ui/medication-treatment/TreatmentLogView';
+import NursingOverview from '../../../modules/nursing/ui/overview/NursingOverview';
 
 const nursingTablePage = <P extends { theme: 'light' | 'dark' }>(
   Component: ComponentType<P>,
@@ -37,7 +38,7 @@ export const nursingRoutes = [
 
   <Route key="nursing-intelligence" path="nursing-intelligence" element={nursingTablePage(NursingIntelligenceWorkspace)}>
     <Route index element={<Navigate to={NURSING_ROUTES.NURSING_INTELLIGENCE_WARD_OVERVIEW} replace />} />
-    <Route path="ward-overview" element={nursingTablePage(NursingPlaceholderView, { title: 'Ward Overview' })} />
+    <Route path="ward-overview" element={nursingTablePage(NursingOverview)} />
     <Route path="task-summary" element={nursingTablePage(NursingPlaceholderView, { title: 'Task Summary' })} />
     <Route path="medication-summary" element={nursingTablePage(NursingPlaceholderView, { title: 'Medication Summary' })} />
     <Route path="activity-trends" element={nursingTablePage(NursingPlaceholderView, { title: 'Activity Trends' })} />
