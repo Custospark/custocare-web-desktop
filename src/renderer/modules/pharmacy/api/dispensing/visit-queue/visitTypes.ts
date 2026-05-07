@@ -181,27 +181,6 @@ export interface AssignStaffToVisitParams {
 /*                              CORE DATA TYPES                               */
 /* -------------------------------------------------------------------------- */
 
-
-  export interface QueueMeta {
-  facility_id: number;
-  staff_id: number;
-  role_code: string | null;
-  filters: {
-    current_phase: VisitPhase | null;
-    department_id: number | null;
-    include_unassigned: boolean;
-  };
-  allowed_department_ids: number[] | null;
-
-  queue: QueueVisit[];           
-  queue_visits?: QueueVisitItem[];  
-
-  total_visits: number;
-  total_patients: number;
-}
-
-
-
 /**
  * Complete visit entity as returned by API
  */
@@ -363,6 +342,11 @@ export interface QueueFilters {
   limit?: number;
   facility_id?:number;
   staff_id?:number;
+  /**
+   * When true, `/visits/my-queue` returns only visits without `metadata.nursing_ward_bed.ward_id`.
+   * Used by nursing "New Patients (Unassigned)"; omit/false keeps legacy behaviour for other callers.
+   */
+  without_ward_assignment?: boolean;
 }
 
 /**
@@ -554,7 +538,8 @@ export interface QueueMeta {
   filters: {
     current_phase: VisitPhase | null;
     department_id: number | null;
-    include_unassigned: boolean;
+    include_unassigned?: boolean;
+    without_ward_assignment?: boolean;
   };
 
   allowed_department_ids: number[] | null;

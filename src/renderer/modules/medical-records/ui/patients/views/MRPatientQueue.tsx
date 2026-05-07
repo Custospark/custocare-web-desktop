@@ -1,5 +1,5 @@
 // components/medical-records/MRPatientQueue.tsx
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Stethoscope } from 'lucide-react';
@@ -50,10 +50,11 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
   const dispatch = useDispatch();
   const { showToast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
-  const queueTitle = intakeModule === 'nursing' ? 'Nursing Queue' : 'Patient Queue';
+  const queueTitle =
+    intakeModule === 'nursing' ? 'New Patients (Unassigned)' : 'Patient Queue';
   const queueDescription =
     intakeModule === 'nursing'
-      ? 'Unassigned patients awaiting nursing intake and assignment'
+      ? 'Visits without a ward assignment; counts match this list. Assign wards from bed board or ward workspace.'
       : 'Patients requiring medical documentation and chart updates';
   const actionButtonText =
     intakeModule === 'nursing'
@@ -132,6 +133,19 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
     navigate(routes.register);
   };
 
+  const initialFilters = useMemo(
+    () => ({
+      current_phase: VisitPhase.REGISTRATION,
+      department_id: undefined,
+      include_unassigned: true,
+      limit: 100,
+      ...(intakeModule === 'nursing'
+        ? { without_ward_assignment: true as const }
+        : {}),
+    }),
+    [intakeModule]
+  );
+
   return (
     <div className={cn(className)}>
       <PatientQueue
@@ -150,12 +164,7 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
         showNewPatientRegistration={true}
         theme={theme}
         className="cursor-default"
-        initialFilters={{
-          current_phase: VisitPhase.REGISTRATION,
-          department_id: undefined,
-          include_unassigned: true,
-          limit: 100,
-        }}
+        initialFilters={initialFilters}
       />
     </div>
   );
