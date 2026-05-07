@@ -7,7 +7,7 @@ import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import { useGetWards } from '../../../administration/admin-module/api/wards/wardQueries';
 import type { Ward } from '../../../administration/admin-module/api/wards/wardTypes';
 import { useGetVisitsByFacility } from '../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
-import { VisitStatus } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import { VisitStatus, type Visit } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import {
   useCreateNursingTreatmentLog,
   useNursingTreatmentLogs,
@@ -97,7 +97,10 @@ const TreatmentLogView: React.FC<Props> = ({ theme }) => {
   const visitPicklist = useMemo(() => {
     const byId = new Map<number, { id: number; visit_uuid: string; patient_id: number; patientName: string }>();
 
-    for (const v of [...asArray(activeVisitsQuery.data?.data), ...asArray(inProgressVisitsQuery.data?.data)]) {
+    for (const v of [
+      ...asArray<Visit>(activeVisitsQuery.data?.data),
+      ...asArray<Visit>(inProgressVisitsQuery.data?.data),
+    ]) {
       byId.set(v.id, {
         id: v.id,
         visit_uuid: v.visit_uuid,

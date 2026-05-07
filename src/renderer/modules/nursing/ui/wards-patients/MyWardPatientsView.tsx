@@ -16,6 +16,7 @@ import {
 import { getPatientIntakeRoutes } from '../../../../app/routes/utils/patientIntakeRoutes';
 import { useNursingWardPatients } from '../../api/ward-patients/useNursingWardPatients';
 import { useGetWards } from '../../../administration/admin-module/api/wards/wardQueries';
+import { WardStatus } from '../../../administration/admin-module/api/wards/wardTypes';
 import { cn } from '../../../../shared/utils/classNameUtils';
 
 type Theme = 'light' | 'dark';
@@ -54,7 +55,7 @@ const MyWardPatientsView: React.FC<MyWardPatientsViewProps> = ({ theme, classNam
   const wardFilters = useMemo(
     () => ({
       facility_id: Number(facilityId) || 0,
-      status: 'active' as const,
+      status: WardStatus.ACTIVE,
       per_page: 100,
     }),
     [facilityId]
