@@ -14,6 +14,7 @@ import MRPatientSearch from '../../../modules/medical-records/ui/patients/views/
 import MRPatientQueue from '../../../modules/medical-records/ui/patients/views/MRPatientQueue';
 import MRPatientRecords from '../../../modules/medical-records/ui/patients/views/MRPatientRecords';
 import NursingWardBedManagement from '../../../modules/nursing/ui/encounter/NursingWardBedManagement';
+import MyTasksView from '../../../modules/nursing/ui/tasks-shifts/MyTasksView';
 
 const nursingTablePage = <P extends { theme: 'light' | 'dark' }>(
   Component: ComponentType<P>,
@@ -73,7 +74,7 @@ export const nursingRoutes = [
 
   <Route key="nursing-tasks-shifts" path="tasks-shifts" element={nursingTablePage(TasksShiftsWorkspace)}>
     <Route index element={<Navigate to={NURSING_ROUTES.TASKS_SHIFTS_MY_TASKS} replace />} />
-    <Route path="my-tasks" element={nursingTablePage(NursingPlaceholderView, { title: 'My Tasks' })} />
+    <Route path="my-tasks" element={nursingTablePage(MyTasksView)} />
     <Route path="assign-task" element={nursingTablePage(NursingPlaceholderView, { title: 'Assign Task' })} />
     <Route path="shift-handover" element={nursingTablePage(NursingPlaceholderView, { title: 'Shift Handover' })} />
     <Route path="task-history" element={nursingTablePage(NursingPlaceholderView, { title: 'Task History' })} />

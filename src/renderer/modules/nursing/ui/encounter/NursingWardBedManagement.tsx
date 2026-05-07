@@ -894,7 +894,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       >
         <div className="font-medium flex items-center gap-2 mb-3">
           <MapPin className="w-4 h-4 shrink-0 opacity-90" aria-hidden />
-          Current visit placement
+          Current Patient placement
         </div>
         {optionsQuery.isLoading ? (
           <div className={`h-24 rounded-lg animate-pulse ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`} />
