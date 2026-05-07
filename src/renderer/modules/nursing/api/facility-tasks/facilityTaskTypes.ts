@@ -72,6 +72,15 @@ export interface MyFacilityTasksQueryParams {
   per_page?: number;
 }
 
+/** GET /facility-tasks — facility-wide task list (e.g. history / oversight). */
+export interface FacilityTasksListQueryParams {
+  facilityId: number;
+  status?: FacilityTaskStatus | '';
+  priority?: FacilityTaskPriority | '';
+  page?: number;
+  per_page?: number;
+}
+
 export interface UpdateFacilityTaskPayload {
   facility_id: number;
   title?: string;
@@ -88,6 +97,25 @@ export interface UpdateFacilityTaskPayload {
 }
 
 export interface UpdateFacilityTaskApiResponse {
+  message: string;
+  data: FacilityTask;
+}
+
+/** POST /facility-tasks — aligns with Laravel StoreFacilityTaskRequest */
+export interface CreateFacilityTaskPayload {
+  facility_id: number;
+  title: string;
+  description?: string | null;
+  category?: FacilityTaskCategory;
+  priority?: FacilityTaskPriority;
+  status?: FacilityTaskStatus;
+  due_at?: string | null;
+  assigned_to_user_id?: number | null;
+  ward_id?: number | null;
+  visit_uuid?: string | null;
+}
+
+export interface CreateFacilityTaskApiResponse {
   message: string;
   data: FacilityTask;
 }

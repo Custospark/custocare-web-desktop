@@ -708,7 +708,10 @@ export interface ForwardingStaff {
   employee_id: string;
   professional_title: string | null;
   global_role_level: string;
-  
+
+  /** When present, links to `users.id` for assignment payloads (e.g. facility_tasks.assigned_to_user_id). */
+  user_id?: number;
+
   // User information
   first_name: string;
   last_name: string;
