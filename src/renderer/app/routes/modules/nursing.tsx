@@ -5,7 +5,6 @@ import { SuspenseWrapper, WithThemeProp } from './shared/routeUtils';
 import {
   MedicationTreatmentWorkspace,
   NursingEncounterWorkspace,
-  NursingIntelligenceWorkspace,
   NursingPlaceholderView,
   TasksShiftsWorkspace,
   WardsPatientsWorkspace,
@@ -34,15 +33,20 @@ const nursingTablePage = <P extends { theme: 'light' | 'dark' }>(
 );
 
 export const nursingRoutes = [
-  <Route key="nursing-index" index element={<Navigate to={NURSING_ROUTES.NURSING_INTELLIGENCE_WARD_OVERVIEW} replace />} />,
+  <Route key="nursing-index" index element={<Navigate to={NURSING_ROUTES.OVERVIEW} replace />} />,
 
-  <Route key="nursing-intelligence" path="nursing-intelligence" element={nursingTablePage(NursingIntelligenceWorkspace)}>
-    <Route index element={<Navigate to={NURSING_ROUTES.NURSING_INTELLIGENCE_WARD_OVERVIEW} replace />} />
-    <Route path="ward-overview" element={nursingTablePage(NursingOverview)} />
-    <Route path="task-summary" element={nursingTablePage(NursingPlaceholderView, { title: 'Task Summary' })} />
-    <Route path="medication-summary" element={nursingTablePage(NursingPlaceholderView, { title: 'Medication Summary' })} />
-    <Route path="activity-trends" element={nursingTablePage(NursingPlaceholderView, { title: 'Activity Trends' })} />
-  </Route>,
+  <Route key="nursing-overview" path="overview" element={nursingTablePage(NursingOverview)} />,
+
+  <Route
+    key="nursing-intelligence-legacy"
+    path="nursing-intelligence"
+    element={<Navigate to={NURSING_ROUTES.OVERVIEW} replace />}
+  />,
+  <Route
+    key="nursing-intelligence-legacy-nested"
+    path="nursing-intelligence/*"
+    element={<Navigate to={NURSING_ROUTES.OVERVIEW} replace />}
+  />,
 
   <Route key="nursing-wards-patients" path="wards-patients" element={nursingTablePage(WardsPatientsWorkspace)}>
     <Route index element={<Navigate to={NURSING_ROUTES.WARDS_PATIENTS_SEARCH_PATIENT} replace />} />

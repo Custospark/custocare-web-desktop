@@ -4,9 +4,10 @@ import { ROUTES, NURSING_ROUTES } from '../../../app/routes/routeConstants';
 
 const NURSING_OPERATIONS = [
   {
-    id: 'nursing-intelligence',
+    id: 'overview',
     label: 'Nursing Intelligence',
     icon: <BrainCircuit className="w-4 h-4" />,
+    subtext: 'Volume, trends, and operational signals for nursing care',
   },
   {
     id: 'wards-patients',
@@ -36,7 +37,7 @@ const NursingModule = () => {
       contextTitle="Nursing"
       operations={NURSING_OPERATIONS}
       basePath={ROUTES.NURSING}
-      defaultOperationPath={NURSING_ROUTES.NURSING_INTELLIGENCE}
+      defaultOperationPath={NURSING_ROUTES.OVERVIEW}
     />
   );
 };

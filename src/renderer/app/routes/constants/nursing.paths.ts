@@ -1,17 +1,14 @@
 import { ROUTES } from "./shared.paths"; 
 export const NURSING_ROUTES = {
   ROOT: ROUTES.NURSING,
-  NURSING_INTELLIGENCE: `${ROUTES.NURSING}/nursing-intelligence`,
+  /** Nursing intelligence dashboard — same URL shape as Pharmacy `/pharmacy/overview` */
+  OVERVIEW: `${ROUTES.NURSING}/overview`,
+  /** @deprecated Use OVERVIEW */
+  NURSING_INTELLIGENCE: `${ROUTES.NURSING}/overview`,
   WARDS_PATIENTS: `${ROUTES.NURSING}/wards-patients`,
   NURSING_ENCOUNTER: `${ROUTES.NURSING}/nursing-encounter`,
   MEDICATION_TREATMENT: `${ROUTES.NURSING}/medication-treatment`,
   TASKS_SHIFTS: `${ROUTES.NURSING}/tasks-shifts`,
-
-  // Nursing Intelligence sub actions
-  NURSING_INTELLIGENCE_WARD_OVERVIEW: `${ROUTES.NURSING}/nursing-intelligence/ward-overview`,
-  NURSING_INTELLIGENCE_TASK_SUMMARY: `${ROUTES.NURSING}/nursing-intelligence/task-summary`,
-  NURSING_INTELLIGENCE_MEDICATION_SUMMARY: `${ROUTES.NURSING}/nursing-intelligence/medication-summary`,
-  NURSING_INTELLIGENCE_ACTIVITY_TRENDS: `${ROUTES.NURSING}/nursing-intelligence/activity-trends`,
 
   // Wards & Patients sub actions
   WARDS_PATIENTS_SEARCH_PATIENT: `${ROUTES.NURSING}/wards-patients/search-patient`,
@@ -38,7 +35,6 @@ export const NURSING_ROUTES = {
   TASKS_SHIFTS_TASK_HISTORY: `${ROUTES.NURSING}/tasks-shifts/task-history`,
 
   // Backward-compatible aliases for existing nursing keys.
-  OVERVIEW: `${ROUTES.NURSING}/nursing-intelligence`,
   WARDS: `${ROUTES.NURSING}/wards-patients`,
   PATIENTS: `${ROUTES.NURSING}/wards-patients/patients`,
   VITALS: `${ROUTES.NURSING}/nursing-encounter/vitals`,
