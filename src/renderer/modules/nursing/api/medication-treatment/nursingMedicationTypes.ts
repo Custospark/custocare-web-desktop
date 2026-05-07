@@ -80,3 +80,59 @@ export interface NursingMedicationScheduleQueryParams {
   page?: number;
   per_page?: number;
 }
+
+export type NursingMedicationAdministrationOutcome = 'given' | 'partial' | 'refused' | 'held' | 'omitted';
+
+export interface NursingMedicationAdministration {
+  id: number;
+  nursing_medication_dose_id: number | null;
+  facility_id: number;
+  visit_id: number;
+  prescription_item_id: number;
+  administered_by_user_id: number;
+  administered_at: string;
+  outcome: NursingMedicationAdministrationOutcome;
+  quantity_given: string | number | null;
+  quantity_unit: string | null;
+  notes: string | null;
+  refusal_or_omission_reason: string | null;
+  created_at: string;
+  updated_at: string;
+  visit?: NursingVisitBrief | null;
+  prescriptionItem?: NursingPrescriptionItemBrief | null;
+  administeredBy?: NursingUserBrief | null;
+  dose?: Pick<NursingMedicationDose, 'id' | 'scheduled_for' | 'status'> | null;
+}
+
+export interface NursingMedicationAdministrationListResponse {
+  data: NursingMedicationAdministration[];
+  meta: NursingMedicationDoseListMeta;
+}
+
+export interface NursingMedicationAdministrationQueryParams {
+  facilityId: number;
+  visit_id?: number;
+  outcome?: NursingMedicationAdministrationOutcome | '';
+  from?: string;
+  to?: string;
+  page?: number;
+  per_page?: number;
+}
+
+export interface CreateNursingMedicationAdministrationPayload {
+  facility_id: number;
+  visit_id: number;
+  prescription_item_id: number;
+  nursing_medication_dose_id?: number | null;
+  administered_at: string;
+  outcome: NursingMedicationAdministrationOutcome;
+  quantity_given?: number | null;
+  quantity_unit?: string | null;
+  notes?: string | null;
+  refusal_or_omission_reason?: string | null;
+}
+
+export interface CreateNursingMedicationAdministrationApiResponse {
+  message: string;
+  data: NursingMedicationAdministration;
+}
