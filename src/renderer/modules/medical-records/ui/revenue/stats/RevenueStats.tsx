@@ -133,7 +133,7 @@ export const RevenueStats: React.FC = () => {
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         <div className="min-w-0">
           <h1 className={cx('text-2xl sm:text-3xl font-bold', ui.text)}>
-            Billing Revenue Dashboard
+            Financial Intelligence
           </h1>
           <p className={cx('text-sm sm:text-base mt-1', ui.textSecondary)}>
             Revenue, collections, billing activity, payment mix, and leakage data
