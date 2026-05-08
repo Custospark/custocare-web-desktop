@@ -108,7 +108,7 @@ const FORM_REGISTRY: FormOption[] = [
   {
     id: 'allergies',
     label: 'Allergy',
-    icon: <AlertTriangle className="h-5 w-5" />,
+    icon: <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />,
     description: 'Document patient allergies, reactions, and severity levels for this visit',
     category: 'Clinical Assessment',
     component: AllergyForm,
@@ -117,7 +117,7 @@ const FORM_REGISTRY: FormOption[] = [
   {
     id: 'clinical-notes',
     label: 'Clinical Notes',
-    icon: <FileText className="h-5 w-5" />,
+    icon: <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />,
     description: 'Document symptoms, examination findings, and clinical observations',
     category: 'Documentation',
     component: ClinicalNotesForm,
@@ -126,7 +126,7 @@ const FORM_REGISTRY: FormOption[] = [
   {
     id: 'vitals',
     label: 'Vitals',
-    icon: <Heart className="h-5 w-5" />,
+    icon: <Heart className="h-5 w-5 text-rose-600 dark:text-rose-400" />,
     description: 'Record temperature, blood pressure, heart rate, and vital signs',
     category: 'Clinical Assessment',
     component: VitalsForm,
@@ -135,7 +135,7 @@ const FORM_REGISTRY: FormOption[] = [
   {
     id: 'diagnoses',
     label: 'Diagnosis',
-    icon: <Activity className="h-5 w-5" />,
+    icon: <Activity className="h-5 w-5 text-violet-600 dark:text-violet-400" />,
     description: 'Record primary and secondary diagnoses for this visit',
     category: 'Clinical Assessment',
     component: DiagnosisForm,
@@ -144,7 +144,7 @@ const FORM_REGISTRY: FormOption[] = [
   {
     id: 'consultations',
     label: 'Consultation',
-    icon: <Users className="h-5 w-5" />,
+    icon: <Users className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />,
     description: 'Document consultation notes, referrals, and specialist opinions',
     category: 'Referrals',
     component: ConsultationsForm,
@@ -153,7 +153,7 @@ const FORM_REGISTRY: FormOption[] = [
   {
     id: 'prescriptions',
     label: 'Prescription',
-    icon: <Pill className="h-5 w-5" />,
+    icon: <Pill className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />,
     description: 'Prescribe medications with dosage, frequency, and duration',
     category: 'Treatment',
     component: PrescriptionForm,
@@ -162,7 +162,7 @@ const FORM_REGISTRY: FormOption[] = [
   {
     id: 'lab-requests',
     label: 'Lab Request',
-    icon: <Microscope className="h-5 w-5" />,
+    icon: <Microscope className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />,
     description: 'Request laboratory tests and diagnostic investigations',
     category: 'Diagnostics',
     component: LabRequestForm,
@@ -171,7 +171,7 @@ const FORM_REGISTRY: FormOption[] = [
   {
     id: 'lab-results',
     label: 'Lab Result',
-    icon: <ClipboardList className="h-5 w-5" />,
+    icon: <ClipboardList className="h-5 w-5 text-purple-600 dark:text-purple-400" />,
     description: 'Review and document laboratory test results',
     category: 'Diagnostics',
     component: LabResultForm,
@@ -180,7 +180,7 @@ const FORM_REGISTRY: FormOption[] = [
   {
     id: 'clinical-template',
     label: 'Clinical Template',
-    icon: <FileText className="h-5 w-5" />,
+    icon: <FileText className="h-5 w-5 text-slate-600 dark:text-slate-400" />,
     description: 'Fill out a predefined clinical template for quick patient documentation',
     category: 'Documentation',
     component: ClinicalTemplateForm,
@@ -402,30 +402,30 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
     setSearchQuery('');
   }, []);
 
-  // Colors for theming
+  // Colors for theming with improved contrast
   const colors = {
     bg: {
-      primary: isDark ? 'bg-gray-900' : 'bg-gray-50',
-      card: isDark ? 'bg-gray-800/50' : 'bg-white',
-      hover: isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50',
-      input: isDark ? 'bg-gray-800' : 'bg-white',
-      selected: isDark ? 'bg-blue-900/20' : 'bg-blue-50',
+      primary: isDark ? 'bg-gray-950' : 'bg-gray-100',
+      card: isDark ? 'bg-gray-900' : 'bg-white',
+      hover: isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100',
+      input: isDark ? 'bg-gray-900' : 'bg-white',
+      selected: isDark ? 'bg-blue-900/30' : 'bg-blue-100',
     },
     text: {
       primary: isDark ? 'text-gray-100' : 'text-gray-900',
-      secondary: isDark ? 'text-gray-400' : 'text-gray-600',
-      tertiary: isDark ? 'text-gray-500' : 'text-gray-400',
+      secondary: isDark ? 'text-gray-300' : 'text-gray-700',
+      tertiary: isDark ? 'text-gray-400' : 'text-gray-600',
     },
     border: {
-      primary: isDark ? 'border-gray-700' : 'border-gray-200',
+      primary: isDark ? 'border-gray-800' : 'border-gray-300',
     },
   };
 
   const getStatusColor = (hasData: boolean) => {
     if (hasData) {
-      return isDark ? 'text-emerald-400 bg-emerald-900/20' : 'text-emerald-700 bg-emerald-50';
+      return isDark ? 'text-emerald-300 bg-emerald-950/40' : 'text-emerald-800 bg-emerald-100';
     }
-    return isDark ? 'text-amber-400 bg-amber-900/20' : 'text-amber-700 bg-amber-50';
+    return isDark ? 'text-amber-300 bg-amber-950/40' : 'text-amber-800 bg-amber-100';
   };
 
   // Check if visit is active
@@ -433,8 +433,8 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
     return (
       <div className={`h-full w-full p-6 ${colors.bg.primary}`}>
         <div className={`rounded-xl border p-12 text-center ${colors.border.primary} ${colors.bg.card}`}>
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/20">
-            <Clock className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950/40">
+            <Clock className="h-8 w-8 text-amber-700 dark:text-amber-400" />
           </div>
           <h3 className={`mb-2 text-lg font-semibold ${colors.text.primary}`}>
             No Active Visit Selected
@@ -451,11 +451,11 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
   if (!selectedForm) {
     return (
       <div className={`h-full w-full overflow-hidden p-4 sm:p-5 lg:p-6 ${colors.bg.primary}`}>
-        {/* Header - No close button, wrapper handles it */}
+        {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2">
-            <Stethoscope className={`h-6 w-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
-            <h2 className={`text-xl font-semibold ${colors.text.primary}`}>
+            <Stethoscope className={`h-6 w-6 ${isDark ? 'text-blue-400' : 'text-blue-700'}`} />
+            <h2 className={`text-xl font-bold ${colors.text.primary}`}>
               Latest Patient Visit
             </h2>
           </div>
@@ -473,14 +473,14 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
               placeholder="Search clinical documents..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`w-full rounded-xl py-2.5 pl-9 pr-10 text-sm outline-none transition-all ${colors.bg.input} ${colors.text.primary}`}
+              className={`w-full rounded-xl py-2.5 pl-9 pr-10 text-sm outline-none transition-all focus:ring-2 focus:ring-blue-500 ${colors.bg.input} ${colors.text.primary}`}
             />
             {searchQuery && (
               <button
                 onClick={clearSearch}
                 aria-label="Clear search"
                 title="Clear search"
-                className={`absolute right-3 rounded-full p-0.5 transition-colors ${colors.bg.hover}`}
+                className={`absolute right-3 cursor-pointer rounded-full p-0.5 transition-colors ${colors.bg.hover}`}
               >
                 <X className={`h-4 w-4 ${colors.text.tertiary}`} />
               </button>
@@ -490,12 +490,12 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
 
         {/* Results count */}
         <div className="mb-3 flex items-center justify-between">
-          <p className={`text-xs ${colors.text.tertiary}`}>
+          <p className={`text-xs font-medium ${colors.text.tertiary}`}>
             {filteredForms.length} clinical {filteredForms.length === 1 ? 'document' : 'documents'} available
           </p>
           <div className="flex items-center gap-1.5">
-            <div className={`h-1.5 w-1.5 rounded-full ${isDark ? 'bg-green-400' : 'bg-green-500'}`} />
-            <span className={`text-xs ${colors.text.tertiary}`}>Ready for documentation</span>
+            <div className={`h-1.5 w-1.5 rounded-full ${isDark ? 'bg-emerald-400' : 'bg-emerald-600'}`} />
+            <span className={`text-xs font-medium ${colors.text.tertiary}`}>Ready for documentation</span>
           </div>
         </div>
 
@@ -504,7 +504,7 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
           {filteredForms.length === 0 ? (
             <div className={`flex flex-col items-center justify-center rounded-xl border p-12 text-center ${colors.border.primary} ${colors.bg.card}`}>
               <FileSpreadsheet className={`mb-3 h-12 w-12 ${colors.text.tertiary}`} />
-              <h3 className={`mb-1 font-medium ${colors.text.primary}`}>
+              <h3 className={`mb-1 font-semibold ${colors.text.primary}`}>
                 No matching documents found
               </h3>
               <p className={`text-sm ${colors.text.secondary}`}>
@@ -523,13 +523,13 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
                   className={`group cursor-pointer rounded-xl border p-5 transition-all duration-200 ${colors.border.primary} ${colors.bg.card} ${colors.bg.hover} hover:shadow-lg hover:scale-[1.02]`}
                 >
                   <div className="mb-3 flex items-start justify-between">
-                    <div className={`rounded-lg p-2 ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'} group-hover:scale-105 transition-transform duration-200`}>
+                    <div className={`rounded-lg p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} group-hover:scale-105 transition-transform duration-200`}>
                       {form.icon}
                     </div>
                     <ChevronRight className={`h-5 w-5 ${colors.text.tertiary} opacity-0 transition-opacity group-hover:opacity-100`} />
                   </div>
                   
-                  <h3 className={`mb-1 font-semibold ${colors.text.primary}`}>
+                  <h3 className={`mb-1 font-semibold text-base ${colors.text.primary}`}>
                     {form.label}
                   </h3>
                   
@@ -537,13 +537,13 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
                     {form.description}
                   </p>
                   
-                  <span className={`inline-block text-xs px-2 py-0.5 rounded-full ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                  <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${isDark ? 'bg-gray-800 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
                     {form.category}
                   </span>
                   {form.statusInfo && (
                     <div className="mt-2">
                       <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(form.statusInfo.hasData)}`}
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${getStatusColor(form.statusInfo.hasData)}`}
                       >
                         {form.statusInfo.message}
                       </span>
@@ -555,10 +555,10 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
           )}
         </div>
 
-        {/* Coming Soon Section - Only show if there are unavailable forms */}
+        {/* Coming Soon Section */}
         {formsWithStatus.filter((f) => !f.isAvailable).length > 0 && (
           <div className={`mt-6 rounded-lg border border-dashed p-4 ${colors.border.primary} ${colors.bg.card}`}>
-            <p className={`text-xs ${colors.text.tertiary}`}>
+            <p className={`text-xs font-medium ${colors.text.tertiary}`}>
               📋 Additional clinical documents (Diagnosis, Vitals, Prescriptions, Lab Results) coming soon
             </p>
           </div>
@@ -575,20 +575,20 @@ export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) =
         <div className="flex items-center gap-3">
           <button
             onClick={handleBack}
-            className={`flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${colors.bg.hover} ${colors.text.secondary}`}
+            className={`flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${colors.bg.hover} ${colors.text.secondary} hover:${colors.text.primary}`}
           >
             <ChevronLeft className="h-4 w-4" />
             Back
           </button>
           <div className="h-6 w-px bg-gray-300 dark:bg-gray-700" />
           <div className="flex items-center gap-2">
-            <div className={`rounded-lg p-1.5 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+            <div className={`rounded-lg p-1.5 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
               {formsWithStatus.find((f) => f.id === selectedForm)?.icon}
             </div>
             <h2 className={`text-lg font-semibold ${colors.text.primary}`}>
               {formsWithStatus.find((f) => f.id === selectedForm)?.label}
             </h2>
-            <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${isDark ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+            <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-semibold ${isDark ? 'bg-blue-900/40 text-blue-300' : 'bg-blue-100 text-blue-800'}`}>
               Current Visit
             </span>
           </div>
