@@ -9,6 +9,8 @@ import BillingRevenueWorkspace from '../../../modules/billling/ui/revenue/Billin
 import MRPatientQueue from '../../../modules/medical-records/ui/patients/views/MRPatientQueue';
 import MRPatientWalkIn from '../../../modules/medical-records/ui/patients/views/MRPatientWalkIn';
 import MRBilling from '../../../modules/medical-records/ui/visit-action-center/billing-space/MRBilling';
+import ForwardPatient from '../../../modules/medical-records/ui/visit-action-center/ForwardPatient';
+import VisitStatus from '../../../modules/medical-records/ui/visit-action-center/VisitStatus';
 import { MRBillingReview } from '../../../modules/medical-records/ui/revenue/MRBillingReview';
 import RevenueStats from '../../../modules/medical-records/ui/revenue/stats/RevenueStats';
 import BillingInvoicesFromReceipts from '../../../modules/billling/ui/revenue/BillingInvoicesFromReceipts';
@@ -46,6 +48,28 @@ export const billingRoutes = [
 
   <Route key="billing-action-center" path="action-center" element={billingTablePage(BillingActionCenter)}>
     <Route index element={<Navigate to={BILLING_ROUTES.BILLING_SPACE} replace />} />
+    <Route
+      path="forward-patient"
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp
+            Component={ForwardPatient}
+            props={{ queueRedirectTo: BILLING_ROUTES.PATIENT_QUEUE }}
+          />
+        </SuspenseWrapper>
+      }
+    />
+    <Route
+      path="visit-status"
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp
+            Component={VisitStatus}
+            props={{ queueRedirectPath: BILLING_ROUTES.PATIENT_QUEUE }}
+          />
+        </SuspenseWrapper>
+      }
+    />
     <Route path="billing-space" element={billingTablePage(MRBilling)} />
   </Route>,
 

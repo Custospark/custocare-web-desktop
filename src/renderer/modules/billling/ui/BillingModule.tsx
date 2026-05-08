@@ -17,9 +17,9 @@ const BILLING_OPERATIONS = [
   },
   {
     id: 'action-center',
-    label: 'Charge Capture Center',
+    label: 'Billing Encounter',
     icon: <Workflow className="w-4 h-4" />,
-    subtext: 'Visit-based billing workspace powered by active visit context',
+    subtext: 'Patient context, billing actions, and encounter-level flow control',
   },
   {
     id: 'revenue',

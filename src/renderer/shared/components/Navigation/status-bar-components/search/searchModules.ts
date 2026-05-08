@@ -218,11 +218,11 @@ export const allModules: SearchableModule[] = [
   },
   {
     id: 'billing-action-center',
-    label: 'Charge Capture Center',
+    label: 'Billing Encounter',
     route: BILLING_ROUTES.BILLING_SPACE,
-    description: 'Visit-based billing workspace and payment entry',
+    description: 'Patient-context billing workspace for forward, status, and charge entry actions',
     moduleCode: 'billing',
-    keywords: ['charge capture', 'billing tray', 'payment entry', 'active visit'],
+    keywords: ['billing encounter', 'charge capture', 'billing tray', 'payment entry', 'visit status', 'forward patient'],
     category: 'Finance',
   },
   {

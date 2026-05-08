@@ -105,6 +105,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   onCancel,
   theme = 'light',
   currentStaffId,
+  queueRedirectTo = MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE,
 }) => {
   const isDark = theme === 'dark';
   const colors = useMemo(() => getForwardPatientColors(theme), [theme]);
@@ -160,7 +161,7 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
       console.log('[ForwardPatient] Staff assigned successfully', data);
       dispatch(clearPendingForwarding());
       dispatch(clearActiveVisit());
-      navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE);
+      navigate(queueRedirectTo);
       onSuccess?.();
     },
     onError: (error) => {

@@ -14,4 +14,5 @@ export interface ForwardPatientProps {
   onCancel?: () => void;
   theme?: 'light' | 'dark';
   currentStaffId?: number;
+  queueRedirectTo?: string;
 }

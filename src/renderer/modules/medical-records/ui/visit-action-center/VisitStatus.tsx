@@ -67,6 +67,7 @@ interface VisitStatusProps {
   readOnly?: boolean;
   compact?: boolean;
   visitUuid?: string;
+  queueRedirectPath?: string;
 }
 
 interface StatusOption {
@@ -92,7 +93,7 @@ type ActionInProgress = 'status' | 'cancel' | 'delete' | null;
 /*                                  CONSTANTS                                 */
 /* -------------------------------------------------------------------------- */
 
-const queueRedirectPath = MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE;
+const defaultQueueRedirectPath = MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE;
 
 const isTerminalStatus = (status: VisitStatusEnum): boolean =>
   status === VisitStatusEnum.CANCELLED ||
@@ -666,6 +667,7 @@ const VisitStatus: React.FC<VisitStatusProps> = ({
   readOnly = false,
   compact = false,
   visitUuid: propVisitUuid,
+  queueRedirectPath = defaultQueueRedirectPath,
 }) => {
   const isDark = theme === 'dark';
   const dispatch = useDispatch();
@@ -941,6 +943,8 @@ const VisitStatus: React.FC<VisitStatusProps> = ({
                     <button
                       type="button"
                       onClick={() => setError(null)}
+                      aria-label="Dismiss error"
+                      title="Dismiss error"
                       className={cn(
                         'rounded p-1 transition-colors',
                         isDark ? 'text-red-400 hover:bg-red-500/10' : 'text-red-600 hover:bg-red-100',
