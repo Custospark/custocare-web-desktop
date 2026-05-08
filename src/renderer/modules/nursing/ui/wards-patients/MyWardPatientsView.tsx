@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 
 import PatientQueue from '../../../pharmacy/ui/dispensing/dispensing-medication/views/PatientQueue';
 import type { QueueVisitItem } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
@@ -16,7 +17,7 @@ import {
 import { getPatientIntakeRoutes } from '../../../../app/routes/utils/patientIntakeRoutes';
 import { useNursingWardPatients } from '../../api/ward-patients/useNursingWardPatients';
 import { useGetWards } from '../../../administration/admin-module/api/wards/wardQueries';
-import { WardStatus } from '../../../administration/admin-module/api/wards/wardTypes';
+import type { Ward } from '../../../administration/admin-module/api/wards/wardTypes';
 import { cn } from '../../../../shared/utils/classNameUtils';
 
 type Theme = 'light' | 'dark';
@@ -26,18 +27,20 @@ export interface MyWardPatientsViewProps {
   className?: string;
 }
 
-function asWardList(raw: unknown): { id: number; name: string }[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .map((w) => {
-      if (!w || typeof w !== 'object') return null;
-      const o = w as { id?: unknown; name?: unknown };
-      const id = typeof o.id === 'number' ? o.id : Number(o.id);
-      const name = typeof o.name === 'string' ? o.name : '';
-      if (!Number.isFinite(id) || id <= 0 || !name) return null;
-      return { id, name };
-    })
-    .filter((x): x is { id: number; name: string } => x !== null);
+/** Same normalization as Assign Task / medication views — API must return an array of wards. */
+function asArray<T>(x: unknown): T[] {
+  return Array.isArray(x) ? (x as T[]) : [];
+}
+
+/** Match Ward & Bed encounter labels (name, code, building/floor). */
+function formatWardOptionLabel(w: Ward): string {
+  const primary = w.name?.trim() || `Ward #${w.id}`;
+  const code = w.code?.trim();
+  const meta = [w.building?.trim(), w.floor?.trim()].filter(Boolean).join(' · ');
+  if (code && meta) return `${primary} (${code}) — ${meta}`;
+  if (code) return `${primary} (${code})`;
+  if (meta) return `${primary} — ${meta}`;
+  return primary;
 }
 
 const MyWardPatientsView: React.FC<MyWardPatientsViewProps> = ({ theme, className = '' }) => {
@@ -48,28 +51,26 @@ const MyWardPatientsView: React.FC<MyWardPatientsViewProps> = ({ theme, classNam
   const [isProcessing, setIsProcessing] = useState(false);
   const [wardId, setWardId] = useState<number | ''>('');
 
-  const facilityId = useAppSelector(getActiveFacilityId);
+  const facilityId = useAppSelector(getActiveFacilityId) ?? 0;
   const staffId = useAppSelector(getStaffId);
   const hasCompleteStaff = useAppSelector(hasCompleteStaffContext);
 
-  const wardFilters = useMemo(
-    () => ({
-      facility_id: Number(facilityId) || 0,
-      status: WardStatus.ACTIVE,
-      per_page: 100,
-    }),
-    [facilityId]
-  );
+  /** Same filters as Assign Task / Treatment log — `GET /wards` by facility only (no extra filters that can empty the list). */
+  const wardFilters = useMemo(() => ({ facility_id: facilityId }), [facilityId]);
 
-  const wardsQuery = useGetWards(wardFilters, { enabled: Number(facilityId) > 0 });
-  const wards = useMemo(() => asWardList(wardsQuery.data), [wardsQuery.data]);
+  const wardsQuery = useGetWards(wardFilters, {
+    enabled: facilityId > 0,
+    staleTime: 1000 * 30,
+  });
+
+  const wards = useMemo(() => asArray<Ward>(wardsQuery.data), [wardsQuery.data]);
 
   const wardPatientsQuery = useNursingWardPatients(
     {
       ward_id: wardId === '' ? undefined : wardId,
       limit: 100,
     },
-    { enabled: Number(facilityId) > 0 }
+    { enabled: facilityId > 0 }
   );
 
   const visitsOverride = wardPatientsQuery.data?.meta.queue_visits ?? [];
@@ -145,10 +146,27 @@ const MyWardPatientsView: React.FC<MyWardPatientsViewProps> = ({ theme, classNam
             Limit the list to one ward, or show all ward-bed assignments for this facility.
           </p>
         </div>
-        <div className="flex flex-col gap-1 sm:w-72">
-          <label htmlFor="my-ward-filter" className="text-xs font-medium uppercase tracking-wide">
-            Ward
-          </label>
+        <div className="flex flex-col gap-1 sm:w-80">
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor="my-ward-filter" className="text-xs font-medium uppercase tracking-wide">
+              Ward
+            </label>
+            <button
+              type="button"
+              onClick={() => wardsQuery.refetch()}
+              disabled={wardsQuery.isFetching || facilityId <= 0}
+              className={cn(
+                'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium',
+                isDark
+                  ? 'text-cyan-400 hover:bg-white/10 disabled:opacity-40'
+                  : 'text-blue-600 hover:bg-gray-100 disabled:opacity-40'
+              )}
+              title="Refresh ward list"
+            >
+              <RefreshCw className={cn('h-3.5 w-3.5', wardsQuery.isFetching && 'animate-spin')} />
+              Wards
+            </button>
+          </div>
           <select
             id="my-ward-filter"
             aria-label="Filter ward patients by ward"
@@ -157,18 +175,28 @@ const MyWardPatientsView: React.FC<MyWardPatientsViewProps> = ({ theme, classNam
               const v = e.target.value;
               setWardId(v === '' ? '' : Number(v));
             }}
+            disabled={facilityId <= 0 || wardsQuery.isLoading}
             className={cn(
               'rounded-lg border px-3 py-2 text-sm',
-              isDark ? 'border-gray-600 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-900'
+              isDark ? 'border-gray-600 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-900',
+              (facilityId <= 0 || wardsQuery.isLoading) && 'cursor-not-allowed opacity-70'
             )}
           >
-            <option value="">All wards</option>
+            <option value="">{wardsQuery.isLoading ? 'Loading wards…' : 'All wards'}</option>
             {wards.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.name}
+                {formatWardOptionLabel(w)}
               </option>
             ))}
           </select>
+          {wardsQuery.error && (
+            <p className="text-xs text-red-500" role="alert">
+              Could not load wards. Use refresh or check your connection.
+            </p>
+          )}
+          {!wardsQuery.isLoading && !wardsQuery.error && facilityId > 0 && wards.length === 0 && (
+            <p className="text-xs opacity-80">No wards found for this facility. Add wards in administration.</p>
+          )}
         </div>
       </div>
 
