@@ -147,11 +147,11 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
   if (!patientNumericId) {
     return (
       <div className="p-6">
-        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
+        <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-100 p-4 text-sm text-amber-900 dark:border-amber-800/40 dark:bg-amber-950/40 dark:text-amber-100">
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
           <div>
             <p className="font-semibold">No active patient</p>
-            <p className="mt-1 text-amber-800/90 dark:text-amber-200/90">
+            <p className="mt-1 text-amber-800 dark:text-amber-200">
               Open a patient visit in Medical Records to view continuity-of-care history.
             </p>
           </div>
@@ -161,15 +161,15 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
   }
 
   return (
-    <div className="p-6 text-slate-900 dark:text-slate-100">
+    <div className="p-6 text-gray-900 dark:text-gray-100">
       <div className="no-print mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold">Medical History</h2>
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            Cross-facility clinical documentation for continuity of care (same data source as clinical form previews).
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            Cross-facility clinical documentation for continuity of care.
           </p>
           {filteredPayload ? (
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
               {[
                 `Visits: ${filteredPayload.visits.length}`,
                 `Allergies: ${filteredPayload.allergies.length}`,
@@ -185,7 +185,7 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
             type="button"
             onClick={onRefresh}
             disabled={historyQuery.isFetching}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-400 bg-white px-4 py-2 text-sm font-medium text-gray-800 shadow-sm transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
           >
             <RefreshCcw className={`h-4 w-4 ${historyQuery.isFetching ? 'animate-spin' : ''}`} />
             {historyQuery.isFetching ? 'Refreshing…' : 'Refresh'}
@@ -194,7 +194,7 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
             type="button"
             onClick={onPrint}
             disabled={!filteredPayload}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Printer className="h-4 w-4" />
             Print / PDF
@@ -215,10 +215,10 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
             key={key}
             type="button"
             onClick={() => setTimeRange(key)}
-            className={`rounded-lg px-3 py-1 text-sm transition-colors ${
+            className={`cursor-pointer rounded-lg px-3 py-1 text-sm transition-colors ${
               timeRange === key
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                ? 'bg-blue-700 text-white'
+                : 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
             }`}
           >
             {formatText(label)}
@@ -228,13 +228,13 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
 
       <div className="no-print mb-6">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             placeholder="Search across allergies, medications, notes, labs…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800"
+            className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-4 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
           />
         </div>
       </div>
@@ -242,11 +242,11 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
       {historyQuery.isLoading ? (
         <LoadingSkeleton variant="list" theme={theme} message="Loading medical history…" />
       ) : historyQuery.isError ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-200">
+        <div className="rounded-xl border border-red-300 bg-red-100 p-4 text-sm text-red-900 dark:border-red-800/40 dark:bg-red-950/40 dark:text-red-200">
           {(historyQuery.error as Error)?.message || 'Unable to load medical history.'}
         </div>
       ) : filteredPayload ? (
-        <div ref={printRef} className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+        <div ref={printRef} className="rounded-xl border border-gray-300 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
           <MedicalHistoryPreviewDocument history={filteredPayload} />
         </div>
       ) : null}
