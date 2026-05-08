@@ -75,6 +75,7 @@ export interface MyFacilityTasksQueryParams {
 /** GET /facility-tasks — facility-wide task list (e.g. history / oversight). */
 export interface FacilityTasksListQueryParams {
   facilityId: number;
+  visit_uuid?: string;
   status?: FacilityTaskStatus | '';
   priority?: FacilityTaskPriority | '';
   page?: number;

@@ -48,11 +48,20 @@ export function useMyFacilityTasks(params: MyFacilityTasksQueryParams & { enable
  * Use for task history / oversight; differs from `useMyFacilityTasks` which uses `/facility-tasks/my`.
  */
 export function useFacilityTasks(params: FacilityTasksListQueryParams & { enabled?: boolean }) {
-  const { facilityId, status, priority, page = 1, per_page = 20, enabled = true } = params;
+  const {
+    facilityId,
+    visit_uuid,
+    status,
+    priority,
+    page = 1,
+    per_page = 20,
+    enabled = true,
+  } = params;
   const queryEnabled = enabled && facilityId > 0;
 
   return useQuery({
     queryKey: facilityTaskKeys.facility(facilityId, {
+      visit_uuid: visit_uuid ?? '',
       status: status ?? '',
       priority: priority ?? '',
       page,
@@ -62,6 +71,7 @@ export function useFacilityTasks(params: FacilityTasksListQueryParams & { enable
       const response = await axiosInstance.get<FacilityTasksListResponse>('/facility-tasks', {
         params: {
           facility_id: facilityId,
+          ...(visit_uuid ? { visit_uuid } : {}),
           ...(status ? { status } : {}),
           ...(priority ? { priority } : {}),
           page,

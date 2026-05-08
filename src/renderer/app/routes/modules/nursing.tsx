@@ -5,7 +5,6 @@ import { SuspenseWrapper, WithThemeProp } from './shared/routeUtils';
 import {
   MedicationTreatmentWorkspace,
   NursingEncounterWorkspace,
-  NursingPlaceholderView,
   TasksShiftsWorkspace,
   WardsPatientsWorkspace,
 } from '../../../modules/nursing/ui/NursingActionWorkspaces';
@@ -13,6 +12,9 @@ import MRPatientSearch from '../../../modules/medical-records/ui/patients/views/
 import MRPatientQueue from '../../../modules/medical-records/ui/patients/views/MRPatientQueue';
 import MRPatientRecords from '../../../modules/medical-records/ui/patients/views/MRPatientRecords';
 import NursingWardBedManagement from '../../../modules/nursing/ui/encounter/NursingWardBedManagement';
+import NursingEncounterTasksView from '../../../modules/nursing/ui/encounter/NursingEncounterTasksView';
+import NursingEncounterMedsView from '../../../modules/nursing/ui/encounter/NursingEncounterMedsView';
+import NursingEncounterNotesView from '../../../modules/nursing/ui/encounter/NursingEncounterNotesView';
 import MyTasksView from '../../../modules/nursing/ui/tasks-shifts/MyTasksView';
 import AssignTaskView from '../../../modules/nursing/ui/tasks-shifts/AssignTaskView';
 import ShiftHandoverView from '../../../modules/nursing/ui/tasks-shifts/ShiftHandoverView';
@@ -69,9 +71,9 @@ export const nursingRoutes = [
       element={nursingTablePage(MRPatientRecords, { presentation: 'nursing' })}
     />
     <Route path="ward-bed" element={nursingTablePage(NursingWardBedManagement)} />
-    <Route path="tasks" element={nursingTablePage(NursingPlaceholderView, { title: 'Tasks' })} />
-    <Route path="meds" element={nursingTablePage(NursingPlaceholderView, { title: 'Meds' })} />
-    <Route path="notes" element={nursingTablePage(NursingPlaceholderView, { title: 'Notes' })} />
+    <Route path="tasks" element={nursingTablePage(NursingEncounterTasksView)} />
+    <Route path="meds" element={nursingTablePage(NursingEncounterMedsView)} />
+    <Route path="notes" element={nursingTablePage(NursingEncounterNotesView)} />
   </Route>,
 
   <Route key="nursing-medication-treatment" path="medication-treatment" element={nursingTablePage(MedicationTreatmentWorkspace)}>
