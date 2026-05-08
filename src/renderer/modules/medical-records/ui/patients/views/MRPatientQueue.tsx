@@ -51,11 +51,17 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
   const { showToast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const queueTitle =
-    intakeModule === 'nursing' ? 'New Patients (Unassigned)' : 'Patient Queue';
+    intakeModule === 'nursing'
+      ? 'New Patients (Unassigned)'
+      : intakeModule === 'billing'
+        ? 'Billing Queue'
+        : 'Patient Queue';
   const queueDescription =
     intakeModule === 'nursing'
       ? 'Visits without a ward assignment; counts match this list. Assign wards from bed board or ward workspace.'
-      : 'Patients requiring medical documentation and chart updates';
+      : intakeModule === 'billing'
+        ? 'Visits ready for billing capture and payment processing'
+        : 'Patients requiring medical documentation and chart updates';
   const actionButtonText =
     intakeModule === 'nursing'
       ? isProcessing
@@ -64,7 +70,12 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
       : isProcessing
         ? 'Loading...'
         : 'Take Action';
-  const newPatientButtonText = intakeModule === 'nursing' ? 'Nursing Queue Intake' : 'New Patient';
+  const newPatientButtonText =
+    intakeModule === 'nursing'
+      ? 'Nursing Queue Intake'
+      : intakeModule === 'billing'
+        ? 'Express Intake'
+        : 'New Patient';
 
   // Get staff context
   const facilityId = useAppSelector(getActiveFacilityId);
@@ -117,7 +128,13 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
       
       
       // Show success message
-      showToast('success', `Ready to care for ${visit.patient?.name || 'patient'}. Let's get started!`, 3000);
+      showToast(
+        'success',
+        intakeModule === 'billing'
+          ? `Billing queue ready for ${visit.patient?.name || 'patient'}.`
+          : `Ready to care for ${visit.patient?.name || 'patient'}. Let's get started!`,
+        3000
+      );
       
       // Navigate to action center
       navigate(routes.actionCenter);

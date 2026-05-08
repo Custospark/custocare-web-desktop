@@ -30,7 +30,7 @@ export const billingRoutes = [
       path="queue"
       element={
         <SuspenseWrapper variant="table">
-          <WithThemeProp Component={MRPatientQueue} props={{ intakeModule: 'medical-records' }} />
+          <WithThemeProp Component={MRPatientQueue} props={{ intakeModule: 'billing' }} />
         </SuspenseWrapper>
       }
     />
@@ -38,7 +38,7 @@ export const billingRoutes = [
       path="walk-in"
       element={
         <SuspenseWrapper variant="table">
-          <WithThemeProp Component={MRPatientWalkIn} props={{ intakeModule: 'medical-records' }} />
+          <WithThemeProp Component={MRPatientWalkIn} props={{ intakeModule: 'billing' }} />
         </SuspenseWrapper>
       }
     />
