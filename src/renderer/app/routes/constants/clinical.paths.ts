@@ -2,6 +2,30 @@ import { ROUTES } from "./shared.paths";
 export const CLINICAL_ROUTES = {
   ROOT: ROUTES.CLINICAL,
   OVERVIEW: `${ROUTES.CLINICAL}/overview`,
+  PATIENTS: `${ROUTES.CLINICAL}/patients`,
+  VISIT_ACTION_CENTER: `${ROUTES.CLINICAL}/visit-action-center`,
+  REVENUE_INTEGRITY: `${ROUTES.CLINICAL}/revenue`,
+
+  // Revenue nested actions
+  BILLING_CYCLE_REVIEW: `${ROUTES.CLINICAL}/revenue/billing-cycle/review`,
+  BILLING_STATS: `${ROUTES.CLINICAL}/revenue/billing-stats`,
+
+  // Patient registry nested actions
+  PATIENTS_SEARCH: `${ROUTES.CLINICAL}/patients/search`,
+  PATIENTS_REGISTER: `${ROUTES.CLINICAL}/patients/register`,
+  WALKIN_PATIENT: `${ROUTES.CLINICAL}/patients/walk-in`,
+  PATIENT_QUEUE: `${ROUTES.CLINICAL}/patients/queue`,
+
+  // Visit action center nested actions
+  FORWARD_PATIENT: `${ROUTES.CLINICAL}/visit-action-center/forward-patient`,
+  GET_COMPLAINTS: `${ROUTES.CLINICAL}/visit-action-center/get-complaints`,
+  VISIT_STATUS: `${ROUTES.CLINICAL}/visit-action-center/visit-status`,
+  PATIENT_HISTORY: `${ROUTES.CLINICAL}/visit-action-center/patient-history`,
+  PATIENT_BILLING_SPACE: `${ROUTES.CLINICAL}/visit-action-center/billing-space`,
+  CLINICAL_CARE: `${ROUTES.CLINICAL}/visit-action-center/clinical-care`,
+  PATIENT_RECORDS: `${ROUTES.CLINICAL}/visit-action-center/patient-records`,
+
+  // Legacy clinical module aliases
   DIAGNOSIS: `${ROUTES.CLINICAL}/diagnosis`,
   APPOINTMENTS: `${ROUTES.CLINICAL}/appointments`,
   VITALS: `${ROUTES.CLINICAL}/vitals`,

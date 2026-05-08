@@ -19,7 +19,7 @@ import {
   Stethoscope,
 } from 'lucide-react';
 import { type RootState } from '../../../../app/store/rootReducer';
-import { MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
+import { CLINICAL_ROUTES, MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
 import { 
   selectActivePatient,
@@ -48,13 +48,22 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
   intakeModule = 'medical-records',
 }) => {
   const routes = getPatientIntakeRoutes(intakeModule);
-  const actionCenterRoutes = {
-    patientRecords: MEDICAL_RECORDS_ROUTES.PATIENT_RECORDS,
-    clinicalCare: MEDICAL_RECORDS_ROUTES.CLINICAL_CARE,
-    forwardPatient: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT,
-    patientBillingSpace: MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SPACE,
-    visitStatus: MEDICAL_RECORDS_ROUTES.VISIT_STATUS,
-  };
+  const actionCenterRoutes =
+    intakeModule === 'clinical'
+      ? {
+          patientRecords: CLINICAL_ROUTES.PATIENT_RECORDS,
+          clinicalCare: CLINICAL_ROUTES.CLINICAL_CARE,
+          forwardPatient: CLINICAL_ROUTES.FORWARD_PATIENT,
+          patientBillingSpace: CLINICAL_ROUTES.PATIENT_BILLING_SPACE,
+          visitStatus: CLINICAL_ROUTES.VISIT_STATUS,
+        }
+      : {
+          patientRecords: MEDICAL_RECORDS_ROUTES.PATIENT_RECORDS,
+          clinicalCare: MEDICAL_RECORDS_ROUTES.CLINICAL_CARE,
+          forwardPatient: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT,
+          patientBillingSpace: MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SPACE,
+          visitStatus: MEDICAL_RECORDS_ROUTES.VISIT_STATUS,
+        };
 
   const navigate = useNavigate();
   const dispatch = useDispatch();

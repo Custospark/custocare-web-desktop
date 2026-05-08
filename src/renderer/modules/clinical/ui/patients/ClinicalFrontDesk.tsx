@@ -1,0 +1,47 @@
+import React from 'react';
+import { Search, UserPlus, ListOrdered, PersonStanding } from 'lucide-react';
+import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
+import { CLINICAL_ROUTES } from '../../../../app/routes/routeConstants';
+
+interface ClinicalFrontDeskProps {
+  theme: 'light' | 'dark';
+}
+
+const ClinicalFrontDesk: React.FC<ClinicalFrontDeskProps> = ({ theme }) => {
+  return (
+    <BaseActionWorkspace
+      title="Patient Registry Management"
+      icon={<PersonStanding className="w-6 h-6" />}
+      theme={theme}
+      defaultActionTo={CLINICAL_ROUTES.PATIENTS_SEARCH}
+      actions={[
+        {
+          key: 'patient_search',
+          label: 'Search Patient',
+          icon: <Search className="w-4 h-4" />,
+          to: CLINICAL_ROUTES.PATIENTS_SEARCH,
+        },
+        {
+          key: 'patient_create',
+          label: 'New Patient',
+          icon: <UserPlus className="w-4 h-4" />,
+          to: CLINICAL_ROUTES.PATIENTS_REGISTER,
+        },
+        {
+          key: 'patient_queue',
+          label: 'Patient Queue',
+          icon: <ListOrdered className="w-4 h-4" />,
+          to: CLINICAL_ROUTES.PATIENT_QUEUE,
+        },
+        {
+          key: 'walk_in_patient',
+          label: 'Walk-In Patient',
+          icon: <PersonStanding className="w-4 h-4" />,
+          to: CLINICAL_ROUTES.WALKIN_PATIENT,
+        },
+      ]}
+    />
+  );
+};
+
+export default ClinicalFrontDesk;

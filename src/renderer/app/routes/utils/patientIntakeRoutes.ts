@@ -1,7 +1,13 @@
-import { BILLING_ROUTES, MEDICAL_RECORDS_ROUTES, NURSING_ROUTES, PHARMACY_ROUTES } from '../routeConstants';
+import {
+  BILLING_ROUTES,
+  CLINICAL_ROUTES,
+  MEDICAL_RECORDS_ROUTES,
+  NURSING_ROUTES,
+  PHARMACY_ROUTES,
+} from '../routeConstants';
 
 /** Which module shell hosts patient intake (search / register / walk-in). */
-export type PatientIntakeModule = 'medical-records' | 'pharmacy' | 'nursing' | 'billing';
+export type PatientIntakeModule = 'medical-records' | 'pharmacy' | 'nursing' | 'billing' | 'clinical';
 
 export function getPatientIntakeRoutes(module: PatientIntakeModule) {
   if (module === 'pharmacy') {
@@ -29,6 +35,15 @@ export function getPatientIntakeRoutes(module: PatientIntakeModule) {
       walkIn: BILLING_ROUTES.WALKIN_PATIENT,
       queue: BILLING_ROUTES.PATIENT_QUEUE,
       actionCenter: BILLING_ROUTES.BILLING_SPACE,
+    } as const;
+  }
+  if (module === 'clinical') {
+    return {
+      search: CLINICAL_ROUTES.PATIENTS_SEARCH,
+      register: CLINICAL_ROUTES.PATIENTS_REGISTER,
+      walkIn: CLINICAL_ROUTES.WALKIN_PATIENT,
+      queue: CLINICAL_ROUTES.PATIENT_QUEUE,
+      actionCenter: CLINICAL_ROUTES.VISIT_ACTION_CENTER,
     } as const;
   }
   return {

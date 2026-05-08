@@ -24,6 +24,7 @@ import {
 } from '../../../../../../app/store/slices/visitSlice';
 import {
   BILLING_ROUTES,
+  CLINICAL_ROUTES,
   MEDICAL_RECORDS_ROUTES,
   PHARMACY_ROUTES,
 } from '../../../../../../app/routes/routeConstants';
@@ -103,6 +104,12 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
       return {
         queue: PHARMACY_ROUTES.PATIENT_QUEUE,
         forward: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT,
+      } as const;
+    }
+    if (pathname.startsWith('/clinical')) {
+      return {
+        queue: CLINICAL_ROUTES.PATIENT_QUEUE,
+        forward: CLINICAL_ROUTES.FORWARD_PATIENT,
       } as const;
     }
     return {

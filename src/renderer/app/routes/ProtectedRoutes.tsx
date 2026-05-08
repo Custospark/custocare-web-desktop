@@ -9,6 +9,7 @@ import { accountRoutes } from './modules/account';
 import { onboardingAndDashboardRoutes } from './modules/shared/OnboardingAndDashboard';
 import { pharmacyRoutes } from './modules/pharmacy';
 import { billingRoutes } from './modules/billing';
+import { clinicalRoutes } from './modules/clinical';
 import { medicalRecordsRoutes } from './modules/medical-records';
 import { nursingRoutes } from './modules/nursing';
 import { clinicalSpaceManagementRoutes } from './modules/adminstration/clinicalspace';
@@ -21,7 +22,7 @@ import FacilitySettings from '../../modules/administration/admin-module/ui/facil
 import ClinicalSpaceManagement from '../../modules/administration/admin-module/ui/clinical-space/ClinicalSpaceManagement';
 import { ADMIN_ROUTES, ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from './constants/administration.paths';
 import LoadingRedirect from '../../shared/components/Loading/LoadingRedirect';
-import { MEDICAL_RECORDS_ROUTES } from './routeConstants';
+import { CLINICAL_ROUTES, MEDICAL_RECORDS_ROUTES } from './routeConstants';
 import FacilityAdminBillingCycle from '../../modules/billling/ui/billling/FacilityAdminBillingCycle';
 import { facilityAdminBillingCycleRoutes } from './modules/adminstration/billing-cycle.routes';
 
@@ -90,11 +91,24 @@ export const ProtectedRoutes = () => [
             key="clinical"
             path={ROUTES.CLINICAL}
             element={
-              <SuspenseWrapper variant="dashboard">
+              <SuspenseWrapper variant="table">
                 <WithThemeProp Component={ClinicalModule} />
               </SuspenseWrapper>
             }
-          />
+          >
+            <Route
+              index
+              element={
+                <LoadingRedirect
+                  to={CLINICAL_ROUTES.PATIENTS_SEARCH}
+                  replace
+                  variant="table"
+                  message="Loading Clinical Workspace..."
+                />
+              }
+            />
+            {clinicalRoutes}
+          </Route>
 
           {/* Laboratory Module */}
           <Route
