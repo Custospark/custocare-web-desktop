@@ -1,21 +1,41 @@
-import { LayoutDashboard, DollarSign, FileText, CreditCard } from 'lucide-react';
+import { LayoutDashboard, ListOrdered, Workflow, Receipt } from 'lucide-react';
 import { BaseModuleWorkspace } from '../../../shared/components/workspace/BaseModuleWorkspace';
 import { ROUTES, BILLING_ROUTES } from '../../../app/routes/routeConstants';
 
 const BILLING_OPERATIONS = [
-  { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
-  { id: 'invoices', label: 'Invoices', icon: <FileText className="w-4 h-4" /> },
-  { id: 'payments', label: 'Payments', icon: <CreditCard className="w-4 h-4" /> },
-  { id: 'claims', label: 'Insurance Claims', icon: <DollarSign className="w-4 h-4" /> },
+  {
+    id: 'overview',
+    label: 'Financial Intelligence',
+    icon: <LayoutDashboard className="w-4 h-4" />,
+    subtext: 'Track billing trends, collections, and operational performance',
+  },
+  {
+    id: 'patients',
+    label: 'Billing Intake',
+    icon: <ListOrdered className="w-4 h-4" />,
+    subtext: 'Select queue visits or quick-start walk-ins for billing',
+  },
+  {
+    id: 'action-center',
+    label: 'Charge Capture Center',
+    icon: <Workflow className="w-4 h-4" />,
+    subtext: 'Visit-based billing workspace powered by active visit context',
+  },
+  {
+    id: 'revenue',
+    label: 'Receipts, Invoices & Reconciliation',
+    icon: <Receipt className="w-4 h-4" />,
+    subtext: 'Manage receipts, derive invoices, and run reconciliation',
+  },
 ];
 
 const BillingModule = () => {
   return (
     <BaseModuleWorkspace
-      contextTitle="Billing & Insurance"
+      contextTitle="Billing Operations"
       operations={BILLING_OPERATIONS}
       basePath={ROUTES.BILLING}
-      defaultOperationPath={BILLING_ROUTES.OVERVIEW}
+      defaultOperationPath={BILLING_ROUTES.PATIENT_QUEUE}
     />
   );
 };

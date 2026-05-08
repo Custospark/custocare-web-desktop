@@ -9,6 +9,7 @@ import React, {
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Briefcase,
+  Receipt,
   FileText,
   Globe,
   HeartPulse,
@@ -212,6 +213,19 @@ const menuConfig: MenuItem[] = useMemo(
       glowColor: 'from-rose-500 to-orange-400',
       moduleCode: 'pharmacy',
       category: 'clinical',
+      allowedCapabilities: ['staff'],
+    },
+    {
+      id: 'billing',
+      label: 'Billing',
+      icon: <Receipt className="w-5 h-5" />,
+      href: ROUTES.BILLING,
+      route: ROUTES.BILLING,
+      description: 'Billing intake, charge capture, receipts, invoices, and reconciliation',
+      stats: 'Finance',
+      glowColor: 'from-amber-500 to-orange-400',
+      moduleCode: 'billing',
+      category: 'finance',
       allowedCapabilities: ['staff'],
     },
     // =====================================================

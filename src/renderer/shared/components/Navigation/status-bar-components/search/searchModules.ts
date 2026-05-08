@@ -1,6 +1,6 @@
 // search/searchModules.ts
 // NOTE: import paths are one level deeper than the original SearchBar.tsx
-import { ACCOUNT_ROUTES, ROUTES }       from '../../../../../app/routes/routeConstants';
+import { ACCOUNT_ROUTES, BILLING_ROUTES, ROUTES }       from '../../../../../app/routes/routeConstants';
 import { PLATFORM_ADMIN_ROUTES} from '../../../../../app/routes/constants/platform-administration.paths';
 import { MEDICAL_RECORDS_ROUTES }        from '../../../../../app/routes/routeConstants';
 import {
@@ -198,15 +198,60 @@ export const allModules: SearchableModule[] = [
   // ══════════════════════════════════════════════════════════════════════════
   // FINANCE
   // ══════════════════════════════════════════════════════════════════════════
-  // {
-  //   id: 'billing',
-  //   label: 'Billing & Finance',
-  //   route: ROUTES.BILLING,
-  //   description: 'Invoices & payments',
-  //   moduleCode: 'billing',
-  //   keywords: ['billing', 'finance', 'invoices', 'payments', 'accounts'],
-  //   category: 'Finance',
-  // },
+  {
+    id: 'billing',
+    label: 'Billing Operations',
+    route: ROUTES.BILLING,
+    description: 'Billing intake, charge capture, receipts, invoices, and reconciliation',
+    moduleCode: 'billing',
+    keywords: ['billing', 'finance', 'payments', 'receipts', 'invoices', 'reconciliation'],
+    category: 'Finance',
+  },
+  {
+    id: 'billing-queue',
+    label: 'Billing Queue',
+    route: BILLING_ROUTES.PATIENT_QUEUE,
+    description: 'Queue of visits ready for billing operations',
+    moduleCode: 'billing',
+    keywords: ['billing queue', 'queue', 'patient billing', 'charge capture'],
+    category: 'Finance',
+  },
+  {
+    id: 'billing-action-center',
+    label: 'Charge Capture Center',
+    route: BILLING_ROUTES.BILLING_SPACE,
+    description: 'Visit-based billing workspace and payment entry',
+    moduleCode: 'billing',
+    keywords: ['charge capture', 'billing tray', 'payment entry', 'active visit'],
+    category: 'Finance',
+  },
+  {
+    id: 'billing-reconciliation',
+    label: 'Receipts & Reconciliation',
+    route: BILLING_ROUTES.RECEIPTS_RECONCILIATION,
+    description: 'Review receipts and perform reconciliation',
+    moduleCode: 'billing',
+    keywords: ['receipts', 'reconciliation', 'billing review'],
+    category: 'Finance',
+  },
+  {
+    id: 'billing-invoices',
+    label: 'Invoices',
+    route: BILLING_ROUTES.INVOICES,
+    description: 'Invoice records derived from receipts',
+    moduleCode: 'billing',
+    keywords: ['invoices', 'receipt-derived invoices', 'billing documents'],
+    category: 'Finance',
+  },
+  {
+    id: 'billing-intelligence',
+    label: 'Financial Intelligence',
+    route: BILLING_ROUTES.INTELLIGENCE,
+    description: 'Financial analytics and revenue statistics',
+    moduleCode: 'billing',
+    keywords: ['financial intelligence', 'billing intelligence', 'billing stats', 'revenue analytics'],
+    category: 'Finance',
+  },
 
   // ══════════════════════════════════════════════════════════════════════════
   // ADMINISTRATION

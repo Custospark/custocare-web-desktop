@@ -1,25 +1,35 @@
 import { ROUTES } from "./shared.paths"; 
 export const BILLING_ROUTES = {
-    ROOT: ROUTES.BILLING,
-    OVERVIEW: `${ROUTES.BILLING}/overview`,
-    INVOICES: `${ROUTES.BILLING}/invoices`,
-    PAYMENTS: `${ROUTES.BILLING}/payments`,
-    CLAIMS: `${ROUTES.BILLING}/claims`,
+  ROOT: ROUTES.BILLING,
+  OVERVIEW: `${ROUTES.BILLING}/overview`,
+  PATIENTS: `${ROUTES.BILLING}/patients`,
+  ACTION_CENTER: `${ROUTES.BILLING}/action-center`,
+  REVENUE: `${ROUTES.BILLING}/revenue`,
 
-    // Invoices nested actions
-    INVOICES_CREATE: `${ROUTES.BILLING}/invoices/create`,
-    INVOICES_SEARCH: `${ROUTES.BILLING}/invoices/search`,
-    INVOICES_DRAFT: `${ROUTES.BILLING}/invoices/draft`,
-    INVOICES_PENDING: `${ROUTES.BILLING}/invoices/pending`,
-    
-    // Payments nested actions
-    PAYMENTS_RECEIVE: `${ROUTES.BILLING}/payments/receive`,
-    PAYMENTS_HISTORY: `${ROUTES.BILLING}/payments/history`,
-    PAYMENTS_RECONCILE: `${ROUTES.BILLING}/payments/reconcile`,
-    
-    // Claims nested actions
-    CLAIMS_SUBMIT: `${ROUTES.BILLING}/claims/submit`,
-    CLAIMS_TRACK: `${ROUTES.BILLING}/claims/track`,
-    CLAIMS_APPROVED: `${ROUTES.BILLING}/claims/approved`,
-    CLAIMS_DENIED: `${ROUTES.BILLING}/claims/denied`,
+  // Patient registry nested actions
+  PATIENT_QUEUE: `${ROUTES.BILLING}/patients/queue`,
+  WALKIN_PATIENT: `${ROUTES.BILLING}/patients/walk-in`,
+
+  // Action center nested actions
+  BILLING_SPACE: `${ROUTES.BILLING}/action-center/billing-space`,
+
+  // Revenue nested actions
+  RECEIPTS_RECONCILIATION: `${ROUTES.BILLING}/revenue/receipts-reconciliation`,
+  INVOICES: `${ROUTES.BILLING}/revenue/invoices`,
+  INTELLIGENCE: `${ROUTES.BILLING}/revenue/intelligence`,
+
+  // Legacy aliases kept for compatibility
+  PAYMENTS: `${ROUTES.BILLING}/revenue/receipts-reconciliation`,
+  CLAIMS: `${ROUTES.BILLING}/revenue/invoices`,
+  INVOICES_CREATE: `${ROUTES.BILLING}/revenue/invoices`,
+  INVOICES_SEARCH: `${ROUTES.BILLING}/revenue/invoices`,
+  INVOICES_DRAFT: `${ROUTES.BILLING}/revenue/invoices`,
+  INVOICES_PENDING: `${ROUTES.BILLING}/revenue/invoices`,
+  PAYMENTS_RECEIVE: `${ROUTES.BILLING}/action-center/billing-space`,
+  PAYMENTS_HISTORY: `${ROUTES.BILLING}/revenue/receipts-reconciliation`,
+  PAYMENTS_RECONCILE: `${ROUTES.BILLING}/revenue/receipts-reconciliation`,
+  CLAIMS_SUBMIT: `${ROUTES.BILLING}/revenue/invoices`,
+  CLAIMS_TRACK: `${ROUTES.BILLING}/revenue/invoices`,
+  CLAIMS_APPROVED: `${ROUTES.BILLING}/revenue/invoices`,
+  CLAIMS_DENIED: `${ROUTES.BILLING}/revenue/invoices`,
   } as const;

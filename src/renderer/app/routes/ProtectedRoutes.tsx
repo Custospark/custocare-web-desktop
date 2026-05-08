@@ -8,6 +8,7 @@ import { ProtectedThemeOutlet, SuspenseWrapper, WithThemeProp } from './modules/
 import { accountRoutes } from './modules/account';
 import { onboardingAndDashboardRoutes } from './modules/shared/OnboardingAndDashboard';
 import { pharmacyRoutes } from './modules/pharmacy';
+import { billingRoutes } from './modules/billing';
 import { medicalRecordsRoutes } from './modules/medical-records';
 import { nursingRoutes } from './modules/nursing';
 import { clinicalSpaceManagementRoutes } from './modules/adminstration/clinicalspace';
@@ -124,11 +125,13 @@ export const ProtectedRoutes = () => [
             key="billing-module"
             path={ROUTES.BILLING}
             element={
-              <SuspenseWrapper variant="dashboard">
+              <SuspenseWrapper variant="table">
                 <WithThemeProp Component={BillingModule} />
               </SuspenseWrapper>
             }
-          />
+          >
+            {billingRoutes}
+          </Route>
 
           {/* Administration Module */}
           <Route
