@@ -14,7 +14,7 @@ import {
   FilePlus2,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { formatCurrency } from '../billing-types';
 import {
@@ -22,7 +22,11 @@ import {
   selectActiveVisit,
   selectActiveVisitId,
 } from '../../../../../../app/store/slices/visitSlice';
-import { MEDICAL_RECORDS_ROUTES } from '../../../../../../app/routes/routeConstants';
+import {
+  BILLING_ROUTES,
+  MEDICAL_RECORDS_ROUTES,
+  PHARMACY_ROUTES,
+} from '../../../../../../app/routes/routeConstants';
 import {
   clearPendingForwarding,
   selectPendingForwarding,
@@ -65,6 +69,7 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
 }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ---------------------------------------------------------------------------
   // Redux selectors
@@ -86,6 +91,25 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
 
   const isDark = theme === 'dark';
   const isPersistedBalanceSyncing = billingState.optimisticPersistedBalanceDelta !== 0;
+  const moduleRoutes = useMemo(() => {
+    const pathname = location.pathname;
+    if (pathname.startsWith('/billing')) {
+      return {
+        queue: BILLING_ROUTES.PATIENT_QUEUE,
+        forward: BILLING_ROUTES.FORWARD_PATIENT,
+      } as const;
+    }
+    if (pathname.startsWith('/pharmacy')) {
+      return {
+        queue: PHARMACY_ROUTES.PATIENT_QUEUE,
+        forward: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT,
+      } as const;
+    }
+    return {
+      queue: MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE,
+      forward: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT,
+    } as const;
+  }, [location.pathname]);
 
   // ---------------------------------------------------------------------------
   // Derived values
@@ -232,7 +256,7 @@ const buildPendingBillingPayload = useCallback((): BillingSubmissionPayload | nu
       if (!pendingForwarding?.visitId || !pendingForwarding?.assignedStaffId) {
         // No forwarding target, just clear billing data and go to forward patient forward page
         clearBillingDataOnly();
-        navigate(MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT);
+        navigate(moduleRoutes.forward);
         return true;
       }
 
@@ -245,13 +269,13 @@ const buildPendingBillingPayload = useCallback((): BillingSubmissionPayload | nu
 
       // FORWARD: Clear billing data and  active visit
       clearBillingDataAndVisit();
-      navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE);
+      navigate(moduleRoutes.queue);
       return true;
     } catch (error) {
       console.error('Failed to complete forward action:', error);
       return false;
     }
-  }, [billingMutation, assignMutation, pendingForwarding, navigate, buildPendingBillingPayload,clearBillingDataOnly,clearBillingDataAndVisit]);
+  }, [billingMutation, assignMutation, pendingForwarding, navigate, buildPendingBillingPayload, clearBillingDataOnly, clearBillingDataAndVisit, moduleRoutes.forward, moduleRoutes.queue]);
 
   /**
    * Action: SAVE & EXIT
@@ -269,13 +293,13 @@ const buildPendingBillingPayload = useCallback((): BillingSubmissionPayload | nu
       
       // SAVE & EXIT: Clear EVERYTHING (billing + visit)
       clearBillingDataAndVisit();
-      navigate(MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE);
+      navigate(moduleRoutes.queue);
       return true;
     } catch (error) {
       console.error('Failed to complete save & exit action:', error);
       return false;
     }
-  }, [billingMutation, navigate, buildPendingBillingPayload, clearBillingDataAndVisit]);
+  }, [billingMutation, navigate, buildPendingBillingPayload, clearBillingDataAndVisit, moduleRoutes.queue]);
 /**
  * Action: PROCEED (to payment)
  * - DOES NOT persist billing data

@@ -13,8 +13,12 @@ import {
   Expand,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { MEDICAL_RECORDS_ROUTES } from '../../../../../app/routes/routeConstants';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  BILLING_ROUTES,
+  MEDICAL_RECORDS_ROUTES,
+  PHARMACY_ROUTES,
+} from '../../../../../app/routes/routeConstants';
 import {
   clearActiveVisit,
   selectActiveVisitInfo,
@@ -54,6 +58,7 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
 }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { confirm } = useConfirm();
 
   const theme = useSelector(selectTheme);
@@ -87,7 +92,12 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
    */
   const closeFlowInProgressRef = useRef(false);
 
-  const QUEUE_ROUTE = MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE;
+  const QUEUE_ROUTE = React.useMemo(() => {
+    const pathname = location.pathname;
+    if (pathname.startsWith('/billing')) return BILLING_ROUTES.PATIENT_QUEUE;
+    if (pathname.startsWith('/pharmacy')) return PHARMACY_ROUTES.PATIENT_QUEUE;
+    return MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE;
+  }, [location.pathname]);
 
   const colors = {
     bg: {
