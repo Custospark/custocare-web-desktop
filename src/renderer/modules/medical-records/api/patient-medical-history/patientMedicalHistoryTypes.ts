@@ -97,6 +97,7 @@ export interface MedicalHistoryPrescription {
   special_instructions: string | null;
   created_at: string | null;
   occurred_at: string | null;
+  clinician: { id: number; name: string | null } | null;
   items: MedicalHistoryPrescriptionItem[];
 }
 
@@ -115,6 +116,7 @@ export interface MedicalHistoryClinicalNote {
   noted_at: string | null;
   created_at: string | null;
   occurred_at: string | null;
+  clinician: { id: number; name: string | null } | null;
 }
 
 export interface MedicalHistoryVital {
@@ -136,6 +138,7 @@ export interface MedicalHistoryVital {
   measured_at: string | null;
   created_at: string | null;
   occurred_at: string | null;
+  clinician: { id: number; name: string | null } | null;
 }
 
 export interface MedicalHistoryDiagnosis {
@@ -151,6 +154,7 @@ export interface MedicalHistoryDiagnosis {
   onset_date: string | null;
   created_at: string | null;
   occurred_at: string | null;
+  clinician: { id: number; name: string | null } | null;
 }
 
 export interface MedicalHistoryConsultation {
@@ -192,7 +196,33 @@ export interface MedicalHistoryLabRequest {
   requested_at: string | null;
   completed_at: string | null;
   occurred_at: string | null;
+  clinician: { id: number; name: string | null } | null;
   items: MedicalHistoryLabItem[];
+}
+
+export interface MedicalHistoryLabResult {
+  id: number;
+  result_uuid: string;
+  visit_id: number | null;
+  facility_id: number | null;
+  facility: FacilitySnapshot | null;
+  lab_request_id: number | null;
+  lab_request_item_id: number | null;
+  test_name: string | null;
+  field_name: string | null;
+  value: string | null;
+  unit: string | null;
+  numeric_value: string | null;
+  flag: string | null;
+  reference_min: string | null;
+  reference_max: string | null;
+  interpretation: string | null;
+  comments: string | null;
+  recorded_at: string | null;
+  verified_at: string | null;
+  occurred_at: string | null;
+  clinician: { id: number | null; name: string | null } | null;
+  verified_by: { id: number | null; name: string | null } | null;
 }
 
 export interface PatientMedicalHistoryPayload {
@@ -206,6 +236,7 @@ export interface PatientMedicalHistoryPayload {
   diagnoses: MedicalHistoryDiagnosis[];
   consultations: MedicalHistoryConsultation[];
   lab_requests: MedicalHistoryLabRequest[];
+  lab_results: MedicalHistoryLabResult[];
   generated_at: string;
 }
 

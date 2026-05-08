@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useReactToPrint } from 'react-to-print';
-import { Printer, Search, AlertCircle } from 'lucide-react';
+import { Printer, Search, AlertCircle, RefreshCcw } from 'lucide-react';
 import { selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
 import { usePatientMedicalHistory } from '../../../api/patient-medical-history/patientMedicalHistoryQueries';
 import type { PatientMedicalHistoryPayload } from '../../../api/patient-medical-history/patientMedicalHistoryTypes';
@@ -13,6 +13,15 @@ interface MedicalHistoryProps {
 }
 
 type TimeRange = 'all' | 'year' | '6months' | 'month';
+
+const formatText = (text: string): string =>
+  text
+    .replace(/[,-]/g, ' ')
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 const toTimestamp = (value?: string | null): number => {
   if (!value) return 0;
@@ -83,6 +92,9 @@ function filterMedicalHistoryPayload(
     lab_requests: data.lab_requests.filter(
       (l) => dateOk(l.occurred_at, l.requested_at) && shallowContainsSearch(l, search)
     ),
+    lab_results: data.lab_results.filter(
+      (r) => dateOk(r.occurred_at, r.recorded_at, r.verified_at) && shallowContainsSearch(r, search)
+    ),
   };
 }
 
@@ -128,6 +140,10 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
     void handlePrint?.();
   }, [handlePrint]);
 
+  const onRefresh = useCallback(() => {
+    void historyQuery.refetch();
+  }, [historyQuery]);
+
   if (!patientNumericId) {
     return (
       <div className="p-6">
@@ -145,23 +161,45 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 text-slate-900 dark:text-slate-100">
       <div className="no-print mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold">Medical History</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
             Cross-facility clinical documentation for continuity of care (same data source as clinical form previews).
           </p>
+          {filteredPayload ? (
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {[
+                `Visits: ${filteredPayload.visits.length}`,
+                `Allergies: ${filteredPayload.allergies.length}`,
+                `Medications: ${filteredPayload.prescriptions.length}`,
+                `Lab Requests: ${filteredPayload.lab_requests.length}`,
+                `Lab Results: ${filteredPayload.lab_results.length}`,
+              ].join(' · ')}
+            </p>
+          ) : null}
         </div>
-        <button
-          type="button"
-          onClick={onPrint}
-          disabled={!filteredPayload}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Printer className="h-4 w-4" />
-          Print / PDF
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={historyQuery.isFetching}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          >
+            <RefreshCcw className={`h-4 w-4 ${historyQuery.isFetching ? 'animate-spin' : ''}`} />
+            {historyQuery.isFetching ? 'Refreshing…' : 'Refresh'}
+          </button>
+          <button
+            type="button"
+            onClick={onPrint}
+            disabled={!filteredPayload}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Printer className="h-4 w-4" />
+            Print / PDF
+          </button>
+        </div>
       </div>
 
       <div className="no-print mb-6 flex flex-wrap gap-2 border-b pb-4">
@@ -183,7 +221,7 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
                 : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
             }`}
           >
-            {label}
+            {formatText(label)}
           </button>
         ))}
       </div>

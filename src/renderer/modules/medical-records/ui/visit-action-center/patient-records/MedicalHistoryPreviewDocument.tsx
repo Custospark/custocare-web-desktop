@@ -70,6 +70,20 @@ function vitalSummary(v: PatientMedicalHistoryPayload['vitals'][0]): string {
   return parts.length ? parts.join(' · ') : 'Vitals recorded';
 }
 
+const formatText = (text?: string | null): string =>
+  (text ?? '')
+    .replace(/[,-]/g, ' ')
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const renderClinician = (name?: string | null): string => {
+  if (!name) return 'Dr. Not specified';
+  return name;
+};
+
 export interface MedicalHistoryPreviewDocumentProps {
   history: PatientMedicalHistoryPayload;
 }
@@ -141,6 +155,7 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
       diagnoses: history.diagnoses.length,
       consultations: history.consultations.length,
       labs: history.lab_requests.length,
+      labResults: history.lab_results.length,
     }),
     [history]
   );
@@ -221,7 +236,7 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
           value={
             <span className="text-right">
               Visits {counts.visits} · Allergies {counts.allergies} · Rx {counts.prescriptions} · Notes {counts.notes} ·
-              Vitals {counts.vitals} · Dx {counts.diagnoses} · Consults {counts.consultations} · Labs {counts.labs}
+              Vitals {counts.vitals} · Dx {counts.diagnoses} · Consults {counts.consultations} · Lab Requests {counts.labs} · Lab Results {counts.labResults}
             </span>
           }
         />
@@ -321,8 +336,11 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
                   <div>
                     <p className="text-sm font-semibold text-slate-900">{rx.prescription_number}</p>
                     <p className="text-xs text-slate-500">
-                      {formatDate(rx.prescription_date ?? rx.occurred_at ?? rx.created_at)} · {rx.status ?? '—'} ·{' '}
-                      {rx.prescription_type ?? '—'}
+                      {formatDate(rx.prescription_date ?? rx.occurred_at ?? rx.created_at)} · {formatText(rx.status) || '—'} ·{' '}
+                      {formatText(rx.prescription_type) || '—'}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {renderClinician(rx.clinician?.name)} · {formatDateTime(rx.occurred_at ?? rx.created_at)}
                     </p>
                   </div>
                   <div className="text-right">
@@ -351,9 +369,10 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
                           <td className="border border-slate-200 px-2 py-1">
                             {[it.frequency, it.duration_value != null ? `${it.duration_value} ${it.duration_unit ?? ''}` : null]
                               .filter(Boolean)
+                              .map((value) => formatText(String(value)))
                               .join(' · ') || '—'}
                           </td>
-                          <td className="border border-slate-200 px-2 py-1">{it.route ?? '—'}</td>
+                          <td className="border border-slate-200 px-2 py-1">{formatText(it.route) || '—'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -383,6 +402,7 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
                     <p className="text-xs text-slate-500">
                       {formatDateTime(n.occurred_at ?? n.noted_at ?? n.created_at)}
                     </p>
+                    <p className="text-xs text-slate-500">{renderClinician(n.clinician?.name)}</p>
                   </div>
                   <FacilityCell facility={n.facility} />
                 </div>
@@ -409,6 +429,7 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
                 <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold">Time</th>
                 <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold">Facility</th>
                 <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold">Measurements</th>
+                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold">Clinician</th>
               </tr>
             </thead>
             <tbody>
@@ -421,6 +442,7 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
                     <FacilityCell facility={v.facility} />
                   </td>
                   <td className="border border-slate-200 px-2 py-2 text-xs">{vitalSummary(v)}</td>
+                  <td className="border border-slate-200 px-2 py-2 text-xs text-slate-600">{renderClinician(v.clinician?.name)}</td>
                 </tr>
               ))}
             </tbody>
@@ -452,6 +474,7 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
                   <td className="border border-slate-200 px-2 py-2 text-xs font-medium">
                     {d.diagnosis_description ?? '—'}
                     <div className="font-normal text-slate-500">{d.clinical_status ?? ''}</div>
+                    <div className="font-normal text-slate-500">{renderClinician(d.clinician?.name)}</div>
                   </td>
                   <td className="border border-slate-200 px-2 py-2 text-xs">{d.diagnosis_code ?? '—'}</td>
                   <td className="border border-slate-200 px-2 py-2">
@@ -483,8 +506,11 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
                   <div>
                     <p className="text-sm font-semibold">{c.clinical_question ?? 'Consultation'}</p>
                     <p className="text-xs text-slate-500">
-                      {formatDateTime(c.occurred_at ?? c.requested_at)} · {c.request_status ?? '—'} ·{' '}
-                      {c.priority ?? '—'}
+                      {formatDateTime(c.occurred_at ?? c.requested_at)} · {formatText(c.request_status) || '—'} ·{' '}
+                      {formatText(c.priority) || '—'}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Requested by {renderClinician(c.requesting_staff?.name)} · Consultant {renderClinician(c.consultant_staff?.name)}
                     </p>
                   </div>
                   <FacilityCell facility={c.facility} />
@@ -513,9 +539,10 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
                   <div>
                     <p className="text-sm font-semibold">Request {lab.request_uuid.slice(0, 8)}…</p>
                     <p className="text-xs text-slate-500">
-                      {formatDateTime(lab.occurred_at ?? lab.requested_at)} · {lab.status ?? '—'} ·{' '}
-                      {lab.priority ?? '—'}
+                      {formatDateTime(lab.occurred_at ?? lab.requested_at)} · {formatText(lab.status) || '—'} ·{' '}
+                      {formatText(lab.priority) || '—'}
                     </p>
+                    <p className="text-xs text-slate-500">{renderClinician(lab.clinician?.name)}</p>
                   </div>
                   <FacilityCell facility={lab.facility} />
                 </div>
@@ -533,6 +560,58 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
               </div>
             ))}
           </div>
+        )}
+      </section>
+
+      {/* Lab results */}
+      <section className="mt-8 print:mt-6 print:break-inside-avoid">
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
+          <FlaskConical className="h-4 w-4 text-cyan-700" />
+          Laboratory results
+        </h3>
+        {history.lab_results.length === 0 ? (
+          <p className="text-sm text-slate-500">No laboratory results.</p>
+        ) : (
+          <table className="w-full border-collapse border border-slate-200 text-sm">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold">Test</th>
+                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold">Result</th>
+                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold">Flag</th>
+                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold">Facility</th>
+                <th className="border border-slate-200 px-2 py-2 text-left text-xs font-semibold">Clinician / time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.lab_results.map((res) => (
+                <tr key={res.id} className="align-top">
+                  <td className="border border-slate-200 px-2 py-2 text-xs font-medium">
+                    {res.test_name ?? 'Lab Test'}
+                    {res.field_name ? <div className="font-normal text-slate-500">{res.field_name}</div> : null}
+                  </td>
+                  <td className="border border-slate-200 px-2 py-2 text-xs">
+                    {res.value ?? '—'} {res.unit ?? ''}
+                    {res.reference_min || res.reference_max ? (
+                      <div className="text-slate-500">
+                        Ref: {res.reference_min ?? '—'} - {res.reference_max ?? '—'}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="border border-slate-200 px-2 py-2 text-xs">{formatText(res.flag) || '—'}</td>
+                  <td className="border border-slate-200 px-2 py-2">
+                    <FacilityCell facility={res.facility} />
+                  </td>
+                  <td className="border border-slate-200 px-2 py-2 text-xs text-slate-600">
+                    {renderClinician(res.clinician?.name)}
+                    <div>{formatDateTime(res.occurred_at ?? res.recorded_at)}</div>
+                    {res.verified_by?.name ? (
+                      <div className="text-slate-500">Verified: {renderClinician(res.verified_by?.name)}</div>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </section>
 
