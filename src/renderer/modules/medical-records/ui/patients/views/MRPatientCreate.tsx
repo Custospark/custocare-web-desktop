@@ -30,6 +30,67 @@ interface MRPatientCreateProps {
   intakeModule?: PatientIntakeModule;
 }
 
+const getCreateModuleCopy = (module: PatientIntakeModule) => {
+  if (module === 'pharmacy') {
+    return {
+      subtitle: 'Create a record so you can start visits and dispensing from pharmacy',
+      chiefComplaint: 'Pharmacy visit',
+      encounterWorkflow: ' medication encounter workflow',
+      infoTitle: 'Pharmacy Information',
+      infoDescription:
+        'New patients can proceed to medication encounter and dispensing workflow after registration.',
+    };
+  }
+  if (module === 'laboratory') {
+    return {
+      subtitle: 'Create a record so you can start visits, diagnostics, and lab billing workflow',
+      chiefComplaint: 'Laboratory visit',
+      encounterWorkflow: ' laboratory encounter workflow',
+      infoTitle: 'Laboratory Information',
+      infoDescription:
+        'New patients can proceed to lab requests, results capture, and laboratory billing after registration.',
+    };
+  }
+  if (module === 'clinical') {
+    return {
+      subtitle: 'Create a new patient record for clinical consultation and care planning',
+      chiefComplaint: 'Clinical consultation',
+      encounterWorkflow: ' clinical encounter workflow',
+      infoTitle: 'Clinical Information',
+      infoDescription:
+        'New patients can proceed to clinical notes, diagnosis, and treatment planning after registration.',
+    };
+  }
+  if (module === 'nursing') {
+    return {
+      subtitle: 'Create a patient record for nursing assessments and ward workflow',
+      chiefComplaint: 'Nursing consultation',
+      encounterWorkflow: ' nursing encounter workflow',
+      infoTitle: 'Nursing Information',
+      infoDescription:
+        'New patients can proceed to nursing triage, assessments, and care workflow after registration.',
+    };
+  }
+  if (module === 'billing') {
+    return {
+      subtitle: 'Create a patient record for billing intake and payment workflow',
+      chiefComplaint: 'Billing visit',
+      encounterWorkflow: ' billing encounter workflow',
+      infoTitle: 'Billing Information',
+      infoDescription:
+        'New patients can proceed to billing queue, charge capture, and payment workflow after registration.',
+    };
+  }
+  return {
+    subtitle: 'Create a new patient record for medical documentation and history tracking',
+    chiefComplaint: 'Initial medical records visit',
+    encounterWorkflow: ' clinical encounter workflow',
+    infoTitle: 'Medical Records Information',
+    infoDescription:
+      'New patients will have a complete medical record created. You can add visit notes, upload documents, and manage appointments after registration.',
+  };
+};
+
 // Processing overlay component
 const VisitProcessingOverlay: React.FC<{ 
   theme: 'light' | 'dark'; 
@@ -165,6 +226,7 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({
   const hasCompleteStaff = useAppSelector(hasCompleteStaffContext);
   
   const createVisitMutation = useCreateVisit();
+  const moduleCopy = useMemo(() => getCreateModuleCopy(intakeModule), [intakeModule]);
 
   const handleSuccess = useCallback(
     (patient: PatientSearchResult) => {
@@ -229,11 +291,7 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({
           facility_id: facilityId,
           patient_id: patient.id,
           visit_type: VisitType.OUTPATIENT,
-          chief_complaints: intakeModule === 'pharmacy'
-            ? ['Pharmacy visit']
-            : intakeModule === 'laboratory'
-              ? ['Laboratory visit']
-              : ['Initial medical records visit'],
+          chief_complaints: [moduleCopy.chiefComplaint],
           arrived_at: formattedDateTime,
           registered_at: formattedDateTime,
           current_phase: VisitPhase.REGISTRATION,
@@ -353,13 +411,7 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({
         <PatientCreate
           theme={theme}
           title="Register new patient"
-          subtitle={
-            intakeModule === 'pharmacy'
-              ? 'Create a record so you can start visits and dispensing from pharmacy'
-              : intakeModule === 'laboratory'
-                ? 'Create a record so you can start visits, diagnostics, and lab billing workflow'
-              : 'Create a new patient record for medical documentation and history tracking'
-          }
+          subtitle={moduleCopy.subtitle}
           onSuccess={handleSuccess}
           onProceed={handleProceed}
           onCancel={handleCancel}
@@ -376,11 +428,7 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({
           >
             <div className={cn('text-sm flex-1', theme === 'dark' ? 'text-gray-300' : 'text-gray-700')}>
               After registration, you will see a confirmation with the patient number. Continue to the
-              {intakeModule === 'pharmacy'
-                ? ' medication encounter workflow'
-                : intakeModule === 'laboratory'
-                  ? ' laboratory encounter workflow'
-                  : ' clinical encounter workflow'}, or return to search.
+              {moduleCopy.encounterWorkflow}, or return to search.
             </div>
             <div className="flex items-center gap-2 text-blue-600 flex-shrink-0">
               <ClipboardList className="w-4 h-4" />
@@ -399,12 +447,10 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({
               <FileText className={cn('w-5 h-5 mt-0.5', theme === 'dark' ? 'text-blue-400' : 'text-blue-600')} />
               <div>
                 <h4 className={cn('font-medium mb-1', theme === 'dark' ? 'text-blue-300' : 'text-blue-800')}>
-                  {intakeModule === 'laboratory' ? 'Laboratory Information' : 'Medical Records Information'}
+                  {moduleCopy.infoTitle}
                 </h4>
                 <p className={cn('text-sm', theme === 'dark' ? 'text-blue-400/90' : 'text-blue-700')}>
-                  {intakeModule === 'laboratory'
-                    ? 'New patients can proceed to lab requests, results capture, and laboratory billing after registration.'
-                    : 'New patients will have a complete medical record created. You can add visit notes, upload documents, and manage appointments after registration.'}
+                  {moduleCopy.infoDescription}
                   The patient number will be displayed in the confirmation modal for easy reference.
                 </p>
               </div>

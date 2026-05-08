@@ -32,6 +32,73 @@ interface MRPatientSearchProps {
   intakeModule?: PatientIntakeModule;
 }
 
+const getSearchModuleCopy = (module: PatientIntakeModule) => {
+  if (module === 'pharmacy') {
+    return {
+      title: 'Pharmacy Patient Search',
+      subtitle: 'Find a patient to register a visit and begin pharmacy services',
+      chiefComplaint: 'Pharmacy visit',
+      quickActionTitle: 'Pharmacy intake',
+      quickActionLabel: 'Start medication encounter',
+      quickActionDescription:
+        'Create an outpatient visit and open the medication workflow for this patient.',
+    };
+  }
+  if (module === 'laboratory') {
+    return {
+      title: 'Laboratory Patient Search',
+      subtitle: 'Find a patient to register a visit and begin laboratory services',
+      chiefComplaint: 'Laboratory visit',
+      quickActionTitle: 'Laboratory intake',
+      quickActionLabel: 'Start laboratory encounter',
+      quickActionDescription:
+        'Create an outpatient visit and open the laboratory workflow for this patient.',
+    };
+  }
+  if (module === 'clinical') {
+    return {
+      title: 'Clinical Patient Search',
+      subtitle: 'Search for patients to start clinical encounter workflow',
+      chiefComplaint: 'Clinical consultation',
+      quickActionTitle: 'Clinical intake',
+      quickActionLabel: 'Start clinical encounter',
+      quickActionDescription:
+        'Create an outpatient visit and open the clinical encounter workflow for this patient.',
+    };
+  }
+  if (module === 'nursing') {
+    return {
+      title: 'Nursing Patient Search',
+      subtitle: 'Search for patients to start nursing encounter workflow',
+      chiefComplaint: 'Nursing consultation',
+      quickActionTitle: 'Nursing intake',
+      quickActionLabel: 'Start nursing encounter',
+      quickActionDescription:
+        'Create an outpatient visit and open the nursing workflow for this patient.',
+    };
+  }
+  if (module === 'billing') {
+    return {
+      title: 'Billing Patient Search',
+      subtitle: 'Search for patients to start billing encounter workflow',
+      chiefComplaint: 'Billing visit',
+      quickActionTitle: 'Billing intake',
+      quickActionLabel: 'Start billing encounter',
+      quickActionDescription:
+        'Create an outpatient visit and open the billing encounter workflow for this patient.',
+    };
+  }
+  return {
+    title: 'Medical Records Patient Search',
+    subtitle: 'Search for patients to access medical records, documents, and history',
+    chiefComplaint: 'Medical records consultation',
+    quickActionTitle: 'Medical Records Quick Actions',
+    quickActionLabel: 'Create visit and open action center',
+    quickActionDescription:
+      'Create an outpatient visit and open the medical records action center for this patient.',
+  };
+};
+
 // Processing overlay component (reused from MRPatientCreate)
 const VisitProcessingOverlay: React.FC<{ 
   theme: 'light' | 'dark'; 
@@ -157,6 +224,7 @@ const MRPatientSearch: React.FC<MRPatientSearchProps> = ({
   const { showToast } = useToast();
   const isDark = theme === 'dark';
   const routes = useMemo(() => getPatientIntakeRoutes(intakeModule), [intakeModule]);
+  const moduleCopy = useMemo(() => getSearchModuleCopy(intakeModule), [intakeModule]);
 
   const [selectedPatient, setSelectedPatient] = useState<PatientSearchResult | null>(null);
   const [processingStage, setProcessingStage] = useState<'creating' | 'saving' | 'redirecting' | null>(null);
@@ -231,11 +299,7 @@ const handleTakeAction = useCallback(
         facility_id: facilityId,
         patient_id: patient.id,
         visit_type: VisitType.OUTPATIENT,
-        chief_complaints: intakeModule === 'pharmacy'
-          ? ['Pharmacy visit']
-          : intakeModule === 'laboratory'
-            ? ['Laboratory visit']
-            : ['Medical records consultation'],
+        chief_complaints: [moduleCopy.chiefComplaint],
         arrived_at: formattedDateTime,
         registered_at: formattedDateTime,
         current_phase: VisitPhase.REGISTRATION,
@@ -348,8 +412,7 @@ const handleTakeAction = useCallback(
   const renderQuickActions = () => {
     if (!selectedPatient) return null;
 
-    if (intakeModule === 'pharmacy' || intakeModule === 'laboratory') {
-      const isLab = intakeModule === 'laboratory';
+    if (intakeModule === 'pharmacy' || intakeModule === 'laboratory' || intakeModule === 'clinical' || intakeModule === 'billing' || intakeModule === 'nursing') {
       return (
         <div
           className={cn(
@@ -361,7 +424,7 @@ const handleTakeAction = useCallback(
           <div className="mb-4 flex items-center gap-3">
             <FileText className={cn('h-5 w-5', isDark ? 'text-blue-300' : 'text-blue-700')} />
             <div className={cn('font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
-              {isLab ? 'Laboratory intake' : 'Pharmacy intake'}
+              {moduleCopy.quickActionTitle}
             </div>
           </div>
           <div
@@ -379,12 +442,10 @@ const handleTakeAction = useCallback(
               />
               <div className="min-w-0 flex-1">
                 <div className={cn('mb-1 font-medium', isDark ? 'text-blue-200' : 'text-blue-900')}>
-                  {isLab ? 'Start laboratory encounter' : 'Start medication encounter'}
+                  {moduleCopy.quickActionLabel}
                 </div>
                 <div className={cn('text-sm', isDark ? 'text-blue-300' : 'text-blue-700')}>
-                  {isLab
-                    ? 'Create an outpatient visit and open the laboratory workflow for this patient.'
-                    : 'Create an outpatient visit and open the medication workflow for this patient.'}
+                  {moduleCopy.quickActionDescription}
                 </div>
               </div>
             </div>
@@ -561,24 +622,8 @@ const handleTakeAction = useCallback(
       <div className={cn(className)}>
         <PatientSearch
           theme={theme}
-          title={
-            intakeModule === 'pharmacy'
-              ? 'Patient search'
-              : intakeModule === 'laboratory'
-                ? 'Laboratory Patient Search'
-              : intakeModule === 'nursing'
-                ? 'Nursing Patient Search'
-                : 'Medical Records Patient Search'
-          }
-          subtitle={
-            intakeModule === 'pharmacy'
-              ? 'Find a patient to register a visit and begin pharmacy services'
-              : intakeModule === 'laboratory'
-                ? 'Find a patient to register a visit and begin laboratory services'
-              : intakeModule === 'nursing'
-                ? 'Search for patients to start nursing encounter workflow'
-                : 'Search for patients to access medical records, documents, and history'
-          }
+          title={moduleCopy.title}
+          subtitle={moduleCopy.subtitle}
           placeholder="Search by patient number, name, phone, or national ID"
           filters={{ status: PatientStatus.ACTIVE }}
           onPatientSelect={setSelectedPatient}
