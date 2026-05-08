@@ -162,7 +162,7 @@ const menuConfig: MenuItem[] = useMemo(
       label: 'Medical Records',
       icon: <FileText className="w-5 h-5" />,
       href: MEDICAL_RECORDS_ROUTES.OVERVIEW,
-      route: MEDICAL_RECORDS_ROUTES.OVERVIEW,
+      route: ROUTES.MEDICAL_RECORDS,
       description: 'Medical Records, Patient Registration & workflows',
       stats: 'Patients in Care',
       glowColor: 'from-purple-500 to-pink-400',
@@ -176,7 +176,7 @@ const menuConfig: MenuItem[] = useMemo(
       label: 'Nursing',
       icon: <Syringe className="w-5 h-5" />,
       href: NURSING_ROUTES.OVERVIEW,
-      route: NURSING_ROUTES.OVERVIEW,
+      route: ROUTES.NURSING,
       description: 'Nursing assessments, vitals, and clinical notes',
       stats: 'Care',
       glowColor: 'from-blue-500 to-cyan-400',
@@ -189,7 +189,7 @@ const menuConfig: MenuItem[] = useMemo(
       label: 'Clinical',
       icon: <Stethoscope className="w-5 h-5" />,
       href: CLINICAL_ROUTES.OVERVIEW,
-      route: CLINICAL_ROUTES.OVERVIEW,
+      route: ROUTES.CLINICAL,
       description: 'Doctor consultations: Notes, Diagnosis, Prescriptions',
       stats: 'Consultation',
       shortcut: '⌘C',
@@ -203,7 +203,7 @@ const menuConfig: MenuItem[] = useMemo(
       label: 'Laboratory',
       icon: <Microscope className="w-5 h-5" />,
       href: LABORATORY_ROUTES.OVERVIEW,
-      route: LABORATORY_ROUTES.OVERVIEW,
+      route: ROUTES.LABORATORY,
       description: 'Lab requests, sample tracking, and results',
       stats: 'Diagnostics',
       glowColor: 'from-purple-500 to-indigo-400',
@@ -216,7 +216,7 @@ const menuConfig: MenuItem[] = useMemo(
       label: 'Pharmacy',
       icon: <Pill className="w-5 h-5" />,
       href: PHARMACY_ROUTES.OVERVIEW,
-      route: PHARMACY_ROUTES.OVERVIEW,
+      route: ROUTES.PHARMACY,
       description: 'Prescription fulfillment and medication management',
       stats: 'Dispensing',
       glowColor: 'from-rose-500 to-orange-400',
@@ -229,7 +229,7 @@ const menuConfig: MenuItem[] = useMemo(
       label: 'Billing',
       icon: <Receipt className="w-5 h-5" />,
       href: BILLING_ROUTES.INTELLIGENCE,
-      route: BILLING_ROUTES.INTELLIGENCE,
+      route: ROUTES.BILLING,
       description: 'Billing intake, charge capture, receipts, invoices, and reconciliation',
       stats: 'Finance',
       glowColor: 'from-amber-500 to-orange-400',
@@ -243,7 +243,7 @@ const menuConfig: MenuItem[] = useMemo(
       label: 'Facility Governance',
       icon: <MonitorCheckIcon className="w-5 h-5" />,
       href: ADMIN_ROUTES.OVERVIEW,
-      route: ADMIN_ROUTES.OVERVIEW,
+      route: ROUTES.ADMINISTRATION,
       description:
         'Configure facilities, manage workforce access, services, and operational controls',
       stats: 'Governance',
@@ -406,28 +406,13 @@ const menuConfig: MenuItem[] = useMemo(
   }, [location.pathname, activeItemId, scrollPageContentToTop]);
 
   useEffect(() => {
-    if (activeItemRef.current && navContainerRef.current) {
-      const container = navContainerRef.current;
-      const activeElement = activeItemRef.current;
+    if (!activeItemRef.current) return;
 
-      const containerRect = container.getBoundingClientRect();
-      const activeRect = activeElement.getBoundingClientRect();
-
-      const isAboveViewport = activeRect.top < containerRect.top;
-      const isBelowViewport = activeRect.bottom > containerRect.bottom;
-
-      if (isAboveViewport) {
-        container.scrollTo({
-          top: container.scrollTop - (containerRect.top - activeRect.top) - 20,
-          behavior: 'smooth',
-        });
-      } else if (isBelowViewport) {
-        container.scrollTo({
-          top: container.scrollTop + (activeRect.bottom - containerRect.bottom) + 20,
-          behavior: 'smooth',
-        });
-      }
-    }
+    activeItemRef.current.scrollIntoView({
+      block: 'nearest',
+      inline: 'nearest',
+      behavior: 'smooth',
+    });
   }, [activeItemId]);
 
   const handleNavigation = useCallback(
