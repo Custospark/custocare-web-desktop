@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '../../../types/cn';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../../app/store/rootReducer';
 
 export interface ExpandableItemProps {
   label: string;
   icon?: React.ReactNode;
   badge?: string | number;
+  active?: boolean;
   defaultOpen?: boolean;
   isOpen?: boolean;
   onToggle?: (isOpen: boolean) => void;
@@ -43,6 +46,7 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
   label,
   icon,
   badge,
+  active = false,
   defaultOpen = false,
   isOpen,
   onToggle,
@@ -52,6 +56,7 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
   className,
   disabled = false,
 }) => {
+  const theme = useSelector((state: RootState) => state.ui.theme);
   const generatedId = useId();
   const regionId = `${generatedId}-region`;
   const buttonId = `${generatedId}-button`;
@@ -80,11 +85,11 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
 
   useEffect(() => {
     if (open) {
-      setIsRendered(true);
-      requestAnimationFrame(() => {
+      const rafId = requestAnimationFrame(() => {
+        setIsRendered(true);
         if (contentRef.current) setMaxHeight(contentRef.current.scrollHeight);
       });
-      return;
+      return () => cancelAnimationFrame(rafId);
     }
 
     if (contentRef.current) {
@@ -149,6 +154,41 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
 
   const ariaLiveMessage = useMemo(() => `${label} ${open ? 'expanded' : 'collapsed'}`, [label, open]);
 
+  // Theme-aware color classes matching QuickActionsSidebar
+  const borderClass = theme === 'dark' ? 'border-gray-700' : 'border-gray-200';
+  const hoverBgClass = theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100';
+  const textClass = theme === 'dark' ? 'text-gray-100' : 'text-gray-900';
+  const iconClass = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
+  const activeIconClass = theme === 'dark' ? 'text-cyan-400' : 'text-blue-600';
+  
+  // Active state colors (matching QuickActionsSidebar)
+  const activeBgClass = theme === 'dark'
+    ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40'
+    : 'bg-blue-500/20 ring-2 ring-blue-500/40';
+  const activeTextClass = theme === 'dark' ? 'text-cyan-300' : 'text-blue-700';
+  const activeShadowClass = theme === 'dark'
+    ? 'shadow-lg shadow-cyan-500/30'
+    : 'shadow-lg shadow-blue-500/30';
+
+  // Focus ring colors
+  const focusRingClass = theme === 'dark'
+    ? 'focus:ring-cyan-500/50'
+    : 'focus:ring-blue-500/50';
+
+  // Badge colors with blue background
+  const getBadgeClasses = () => {
+    if (active && !disabled) {
+      return theme === 'dark'
+        ? 'bg-cyan-500/40 text-cyan-200 ring-1 ring-cyan-400/50'
+        : 'bg-blue-500/40 text-blue-800 ring-1 ring-blue-400/50';
+    }
+    
+    // Default badge with blue background
+    return theme === 'dark'
+      ? 'bg-blue-600/30 text-blue-200 ring-1 ring-blue-500/40'
+      : 'bg-blue-100 text-blue-800 ring-1 ring-blue-300';
+  };
+
   return (
     <div className={cn('rounded-xl', className)}>
       <button
@@ -162,19 +202,50 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
         className={cn(
           'w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl border',
           'transition-all duration-200 ease-out',
-          'focus:outline-none focus:ring-2 focus:ring-offset-1',
-          disabled && 'opacity-60 cursor-not-allowed',
+          'focus:outline-none focus:ring-2 focus:ring-offset-0',
+          disabled && 'opacity-50 cursor-not-allowed',
           !disabled && 'cursor-pointer',
-          'bg-transparent hover:shadow-sm',
-          'dark:hover:bg-gray-800/60 dark:border-gray-700/40 dark:text-gray-200 dark:focus:ring-cyan-500/40',
-          'hover:bg-gray-50 border-gray-200 text-gray-800 focus:ring-blue-500/40',
+          
+          // Active state (when this expandable item is "active"/selected)
+          active && !disabled
+            ? [
+                activeBgClass,
+                activeTextClass,
+                activeShadowClass,
+                borderClass,
+              ]
+            : [
+                // Inactive state - clean and minimal like QuickActionsSidebar
+                'bg-transparent',
+                borderClass,
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-700',
+                hoverBgClass,
+              ],
+          focusRingClass,
         )}
       >
         <span className="flex items-center gap-2 min-w-0">
-          {icon && <span className="shrink-0">{icon}</span>}
-          <span className="text-sm font-semibold truncate">{label}</span>
+          {icon && (
+            <span className={cn(
+              'shrink-0 transition-colors',
+              active && !disabled
+                ? activeIconClass
+                : iconClass
+            )}>
+              {icon}
+            </span>
+          )}
+          <span className={cn(
+            'text-sm font-semibold truncate',
+            active && !disabled ? activeTextClass : textClass
+          )}>
+            {label}
+          </span>
           {badge !== undefined && badge !== null && (
-            <span className="text-xs font-medium rounded-full px-1.5 py-0.5 bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+            <span className={cn(
+              'text-xs font-bold rounded-full px-1.5 py-0.5 transition-all duration-200',
+              getBadgeClasses()
+            )}>
               {badge}
             </span>
           )}
@@ -184,6 +255,7 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
           className={cn(
             'w-4 h-4 shrink-0 transition-transform duration-200 ease-out',
             open && 'rotate-90',
+            active && !disabled ? activeIconClass : iconClass
           )}
           aria-hidden="true"
         />
@@ -197,7 +269,13 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
         className={cn('overflow-hidden transition-[max-height] duration-200 ease-out')}
         style={{ maxHeight: isRendered ? `${maxHeight}px` : '0px' }}
       >
-        <div ref={contentRef} className="mt-1.5 pl-4 pr-1 space-y-1 border-l border-gray-200 dark:border-gray-700/60">
+        <div 
+          ref={contentRef} 
+          className={cn(
+            'mt-1.5 pl-4 pr-1 space-y-1 border-l transition-colors',
+            theme === 'dark' ? 'border-gray-800' : 'border-gray-200'
+          )}
+        >
           {isRendered ? children : null}
         </div>
       </div>

@@ -31,12 +31,20 @@ export const LaboratoryRevenueTrendChart: React.FC<LaboratoryRevenueTrendChartPr
     );
   }
 
+  const formatTooltipValue = (value: unknown): [string, string] => {
+    const raw = Array.isArray(value) ? value[0] : value;
+    const numeric = typeof raw === 'number' ? raw : Number(raw ?? 0);
+    return [new Intl.NumberFormat().format(Number.isFinite(numeric) ? numeric : 0), 'Revenue'];
+  };
+
   return (
     <div className={`rounded-xl border p-6 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <TrendingUp className={isDark ? 'text-emerald-400' : 'text-emerald-600'} />
-          <h2 className="text-lg font-semibold">Laboratory revenue trend</h2>
+          <h2 className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+            Laboratory revenue trend
+          </h2>
         </div>
         <span className={`rounded px-2 py-1 text-xs ${isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
           Last {trend?.days ?? 14} days
@@ -46,31 +54,56 @@ export const LaboratoryRevenueTrendChart: React.FC<LaboratoryRevenueTrendChartPr
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#e5e7eb'} />
-            <XAxis dataKey="date" stroke={isDark ? '#9ca3af' : '#6b7280'} style={{ fontSize: '12px' }} />
-            <YAxis stroke={isDark ? '#9ca3af' : '#6b7280'} style={{ fontSize: '12px' }} />
+            <XAxis 
+              dataKey="date" 
+              stroke={isDark ? '#9ca3af' : '#6b7280'} 
+              style={{ fontSize: '12px' }}
+              tick={{ fill: isDark ? '#9ca3af' : '#6b7280' }}
+            />
+            <YAxis 
+              stroke={isDark ? '#9ca3af' : '#6b7280'} 
+              style={{ fontSize: '12px' }}
+              tick={{ fill: isDark ? '#9ca3af' : '#6b7280' }}
+              tickFormatter={(value) => new Intl.NumberFormat().format(value)}
+            />
             <Tooltip
               contentStyle={{
                 backgroundColor: isDark ? '#1f2937' : '#ffffff',
                 border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`,
                 borderRadius: '8px',
+                color: isDark ? '#f3f4f6' : '#111827',
               }}
-              formatter={(value: number) => [new Intl.NumberFormat().format(value), 'Revenue']}
+              labelStyle={{
+                color: isDark ? '#9ca3af' : '#6b7280',
+              }}
+              formatter={formatTooltipValue}
+              labelFormatter={(label) => `Date: ${label}`}
             />
-            <Line type="monotone" dataKey="revenue" stroke={isDark ? '#34d399' : '#059669'} strokeWidth={2.5} dot={false} />
+            <Line 
+              type="monotone" 
+              dataKey="revenue" 
+              stroke={isDark ? '#34d399' : '#059669'} 
+              strokeWidth={2.5} 
+              dot={false}
+              activeDot={{ r: 6, fill: isDark ? '#34d399' : '#059669' }}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
       <div className={`mt-4 grid grid-cols-2 gap-4 border-t pt-4 ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
         <div>
-          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Total revenue</p>
-          <p className="mt-1 text-lg font-semibold">{new Intl.NumberFormat().format(trend?.total_revenue ?? 0)}</p>
+          <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Total revenue</p>
+          <p className={`mt-1 text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+            {new Intl.NumberFormat().format(trend?.total_revenue ?? 0)}
+          </p>
         </div>
         <div>
-          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Avg daily revenue</p>
-          <p className="mt-1 text-lg font-semibold">{new Intl.NumberFormat().format(trend?.avg_daily_revenue ?? 0)}</p>
+          <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Avg daily revenue</p>
+          <p className={`mt-1 text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+            {new Intl.NumberFormat().format(trend?.avg_daily_revenue ?? 0)}
+          </p>
         </div>
       </div>
     </div>
   );
 };
-

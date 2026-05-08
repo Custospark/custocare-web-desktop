@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { cn } from '../../../types/cn';
 import ExpandableItem from './ExpandableItem';
 
@@ -47,6 +47,40 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   navContainerRef,
   activeItemRef,
 }) => {
+  const OPEN_PARENT_STORAGE_KEY = 'sidebar-collapsible-open-parent';
+  const nestedItems = useMemo(() => Object.values(groupedMenuItems).flat(), [groupedMenuItems]);
+
+  const isParentOrChildActive = (item: MenuItem) =>
+    isRouteActive(item.route) || (item.operations?.some((operation) => isRouteActive(operation.route)) ?? false);
+
+  const activeParentId = useMemo(
+    () => nestedItems.find((item) => isParentOrChildActive(item))?.id ?? null,
+    [nestedItems, isRouteActive],
+  );
+
+  const [openParentId, setOpenParentId] = useState<string | null>(activeParentId);
+
+  useEffect(() => {
+    if (!enableNestedNavigation) return;
+    const savedParentId = localStorage.getItem(OPEN_PARENT_STORAGE_KEY);
+    if (activeParentId) {
+      setOpenParentId(activeParentId);
+      return;
+    }
+    if (savedParentId && nestedItems.some((item) => item.id === savedParentId)) {
+      setOpenParentId(savedParentId);
+    }
+  }, [activeParentId, enableNestedNavigation, nestedItems]);
+
+  useEffect(() => {
+    if (!enableNestedNavigation) return;
+    if (!openParentId) {
+      localStorage.removeItem(OPEN_PARENT_STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(OPEN_PARENT_STORAGE_KEY, openParentId);
+  }, [enableNestedNavigation, openParentId]);
+
   const renderMenuItem = (item: MenuItem) => {
     const isActive = isRouteActive(item.route);
     const isHovered = activeHover === item.id;
@@ -199,11 +233,11 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
           'border border-transparent',
           isOperationActive
             ? isDark
-              ? 'bg-blue-500/15 text-cyan-300 border-blue-500/40'
-              : 'bg-blue-100 text-blue-700 border-blue-300'
+              ? 'bg-linear-to-r from-blue-600/35 to-cyan-600/30 text-white border-cyan-400/70 font-semibold'
+              : 'bg-linear-to-r from-blue-100 to-cyan-100 text-blue-700 border-blue-300'
             : isDark
-            ? 'text-gray-300 hover:bg-gray-800/50 hover:border-gray-700/40'
-            : 'text-gray-700 hover:bg-gray-100/70 hover:border-gray-200/70',
+            ? 'text-gray-100 hover:bg-gray-700/60 hover:border-gray-600/60'
+            : 'text-gray-700 hover:bg-gray-100/50 hover:border-gray-200/50',
         )}
         aria-current={isOperationActive ? 'page' : undefined}
       >
@@ -227,7 +261,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                     <p
                       className={cn(
                         'text-xs font-bold uppercase tracking-wider px-2',
-                        isDark ? 'text-gray-500' : 'text-gray-400',
+                        isDark ? 'text-gray-400' : 'text-gray-500',
                       )}
                     >
                       {categoryNames[category]}
@@ -238,10 +272,22 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                           key={item.id}
                           label={item.label}
                           icon={item.icon}
+                          active={isParentOrChildActive(item)}
                           badge={item.operations?.length}
-                          defaultOpen={isRouteActive(item.route)}
-                          persistState
-                          storageKey={`sidebar-module-${item.id}`}
+                          isOpen={openParentId === item.id}
+                          onToggle={(nextOpen) => {
+                            if (nextOpen) {
+                              setOpenParentId(item.id);
+                              return;
+                            }
+
+                            if (isParentOrChildActive(item)) {
+                              setOpenParentId(item.id);
+                              return;
+                            }
+
+                            setOpenParentId(null);
+                          }}
                           className="px-1"
                         >
                           {(item.operations ?? []).map((operation) => renderOperationItem(operation))}
@@ -254,7 +300,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                     <p
                       className={cn(
                         'text-xs font-bold uppercase tracking-wider px-2',
-                        isDark ? 'text-gray-500' : 'text-gray-400',
+                        isDark ? 'text-gray-400' : 'text-gray-500',
                       )}
                     >
                       {categoryNames[category]}

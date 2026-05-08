@@ -53,7 +53,11 @@ export const LaboratoryTopServicesChart: React.FC<LaboratoryTopServicesChartProp
                 border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`,
                 borderRadius: '8px',
               }}
-              formatter={(value: number) => [new Intl.NumberFormat().format(value), 'Revenue']}
+              formatter={(value: unknown) => {
+                const raw = Array.isArray(value) ? value[0] : value;
+                const numeric = typeof raw === 'number' ? raw : Number(raw ?? 0);
+                return [new Intl.NumberFormat().format(Number.isFinite(numeric) ? numeric : 0), 'Revenue'];
+              }}
             />
             <Bar dataKey="revenue" fill={isDark ? '#60a5fa' : '#2563eb'} radius={[0, 4, 4, 0]} />
           </BarChart>
