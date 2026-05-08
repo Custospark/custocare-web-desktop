@@ -2,7 +2,18 @@ import React, { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import type { RootState } from '../../app/store/store';
-import { ROUTES, MEDICAL_RECORDS_ROUTES, CLINICAL_ROUTES } from '../../app/routes/routeConstants';
+import {
+  ROUTES,
+  MEDICAL_RECORDS_ROUTES,
+  CLINICAL_ROUTES,
+  NURSING_ROUTES,
+  LABORATORY_ROUTES,
+  PHARMACY_ROUTES,
+  BILLING_ROUTES,
+  ACCOUNT_ROUTES,
+  PATIENT_PORTAL_ROUTES,
+} from '../../app/routes/routeConstants';
+import { ADMIN_ROUTES } from '../../app/routes/constants/administration.paths';
 import { PLATFORM_ADMIN_ROUTES } from '../../app/routes/constants/platform-administration.paths';
 import { 
   selectAccessibleModuleCodes,
@@ -34,15 +45,15 @@ const MODULE_PRIORITY = [
 // Module to route mapping
 const MODULE_ROUTES: Record<string, string> = {
   medical_records: MEDICAL_RECORDS_ROUTES.OVERVIEW,
-  clinical: CLINICAL_ROUTES.OVERVIEW || ROUTES.CLINICAL,
-  nursing: ROUTES.NURSING,
-  laboratory: ROUTES.LABORATORY,
-  pharmacy: ROUTES.PHARMACY,
-  billing: ROUTES.BILLING,
-  administration: ROUTES.ADMINISTRATION,
+  clinical: CLINICAL_ROUTES.OVERVIEW,
+  nursing: NURSING_ROUTES.OVERVIEW,
+  laboratory: LABORATORY_ROUTES.OVERVIEW,
+  pharmacy: PHARMACY_ROUTES.OVERVIEW,
+  billing: BILLING_ROUTES.INTELLIGENCE,
+  administration: ADMIN_ROUTES.OVERVIEW,
   platform_administration: PLATFORM_ADMIN_ROUTES.PLATFORM_FACILITY_GOVERNANCE,
-  patient_dashboard: ROUTES.PATIENT_DASHBOARD,
-  account: ROUTES.ACCOUNT,
+  patient_dashboard: PATIENT_PORTAL_ROUTES.OVERVIEW,
+  account: ACCOUNT_ROUTES.SETTINGS_PROFILE,
 };
 
 export const Dashboard: React.FC = () => {

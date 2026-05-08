@@ -101,10 +101,10 @@ export const ProtectedRoutes = () => [
               index
               element={
                 <LoadingRedirect
-                  to={CLINICAL_ROUTES.PATIENTS_SEARCH}
+                  to={CLINICAL_ROUTES.OVERVIEW}
                   replace
                   variant="table"
-                  message="Loading Clinical Workspace..."
+                  message="Loading Clinical Intelligence..."
                 />
               }
             />
@@ -125,10 +125,10 @@ export const ProtectedRoutes = () => [
               index
               element={
                 <LoadingRedirect
-                  to={LABORATORY_ROUTES.PATIENT_QUEUE}
+                  to={LABORATORY_ROUTES.OVERVIEW}
                   replace
                   variant="table"
-                  message="Loading Laboratory Workspace..."
+                  message="Loading Laboratory Intelligence..."
                 />
               }
             />

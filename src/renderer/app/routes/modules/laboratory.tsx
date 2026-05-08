@@ -22,7 +22,7 @@ export const laboratoryRoutes = [
   <Route
     key="laboratory-index"
     index
-    element={<Navigate to={LABORATORY_ROUTES.PATIENT_QUEUE} replace />}
+    element={<Navigate to={LABORATORY_ROUTES.OVERVIEW} replace />}
   />,
 
   <Route

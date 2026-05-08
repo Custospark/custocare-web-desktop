@@ -3,7 +3,18 @@ import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { getAccessibleModuleCodes, isInPatientMode } from './contextSelectors';
-import { ROUTES } from '../../routes/routeConstants';
+import {
+  ROUTES,
+  MEDICAL_RECORDS_ROUTES,
+  NURSING_ROUTES,
+  CLINICAL_ROUTES,
+  LABORATORY_ROUTES,
+  PHARMACY_ROUTES,
+  BILLING_ROUTES,
+  ACCOUNT_ROUTES,
+  PATIENT_PORTAL_ROUTES,
+} from '../../routes/routeConstants';
+import { ADMIN_ROUTES } from '../../routes/constants/administration.paths';
 
 /**
  * ============================================================================
@@ -36,14 +47,15 @@ export const useAutoDashboardRedirect = () => {
 
     // Map module codes to routes
     const moduleRouteMap: Record<string, string> = {
-      medical_records: ROUTES.MEDICAL_RECORDS,
-      nursing: ROUTES.NURSING,
-      clinical: ROUTES.CLINICAL,
-      laboratory: ROUTES.LABORATORY,
-      pharmacy: ROUTES.PHARMACY,
-      billing: ROUTES.BILLING,
-      administration: ROUTES.ADMINISTRATION,
-      account: ROUTES.ACCOUNT,
+      medical_records: MEDICAL_RECORDS_ROUTES.OVERVIEW,
+      nursing: NURSING_ROUTES.OVERVIEW,
+      clinical: CLINICAL_ROUTES.OVERVIEW,
+      laboratory: LABORATORY_ROUTES.OVERVIEW,
+      pharmacy: PHARMACY_ROUTES.OVERVIEW,
+      billing: BILLING_ROUTES.INTELLIGENCE,
+      administration: ADMIN_ROUTES.OVERVIEW,
+      patient_dashboard: PATIENT_PORTAL_ROUTES.OVERVIEW,
+      account: ACCOUNT_ROUTES.SETTINGS_PROFILE,
     };
 
     const targetRoute = moduleRouteMap[firstModuleCode];
@@ -78,14 +90,15 @@ export const getDefaultDashboardRoute = (
   const firstModuleCode = accessibleModuleCodes[0];
 
   const moduleRouteMap: Record<string, string> = {
-    medical_records: ROUTES.MEDICAL_RECORDS,
-    nursing: ROUTES.NURSING,
-    clinical: ROUTES.CLINICAL,
-    laboratory: ROUTES.LABORATORY,
-    pharmacy: ROUTES.PHARMACY,
-    billing: ROUTES.BILLING,
-    administration: ROUTES.ADMINISTRATION,
-    account: ROUTES.ACCOUNT,
+    medical_records: MEDICAL_RECORDS_ROUTES.OVERVIEW,
+    nursing: NURSING_ROUTES.OVERVIEW,
+    clinical: CLINICAL_ROUTES.OVERVIEW,
+    laboratory: LABORATORY_ROUTES.OVERVIEW,
+    pharmacy: PHARMACY_ROUTES.OVERVIEW,
+    billing: BILLING_ROUTES.INTELLIGENCE,
+    administration: ADMIN_ROUTES.OVERVIEW,
+    patient_dashboard: PATIENT_PORTAL_ROUTES.OVERVIEW,
+    account: ACCOUNT_ROUTES.SETTINGS_PROFILE,
   };
 
   return moduleRouteMap[firstModuleCode] || ROUTES.DASHBOARD;

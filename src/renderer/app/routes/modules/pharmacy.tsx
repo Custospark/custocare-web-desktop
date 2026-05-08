@@ -39,7 +39,7 @@ export const pharmacyRoutes = [
   <Route
     key="pharmacy-index"
     index
-    element={<Navigate to={PHARMACY_ROUTES.PATIENT_QUEUE} replace />}
+    element={<Navigate to={PHARMACY_ROUTES.OVERVIEW} replace />}
   />,
 
   <Route
