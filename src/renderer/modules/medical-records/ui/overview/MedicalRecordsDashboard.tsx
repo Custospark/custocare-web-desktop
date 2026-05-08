@@ -21,7 +21,6 @@ import DashboardMetricsGrid from './medical-records-dashboard/DashboardMetricsGr
 import DashboardTrendsSection from './medical-records-dashboard/DashboardTrendsSection';
 import DashboardDemographicsSection from './medical-records-dashboard/DashboardDemographicsSection';
 import DashboardOperationsSection from './medical-records-dashboard//DashboardOperationsSection';
-import DashboardInsightsSection from './medical-records-dashboard/DashboardInsightsSection';
 
 // Import the enterprise-grade loading skeleton
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
@@ -41,6 +40,8 @@ interface ThemeRootState {
   };
 }
 
+type IntelligenceMode = 'patient' | 'clinical';
+
 // ============================================
 // ADJUSTMENT 1: Added UI theme object matching Revenue Stats pattern
 // ============================================
@@ -57,7 +58,11 @@ interface DashboardUi {
   tooltipText: string;
 }
 
-function MedicalRecordsDashboard() {
+interface MedicalRecordsDashboardProps {
+  mode?: IntelligenceMode;
+}
+
+function MedicalRecordsDashboard({ mode = 'patient' }: MedicalRecordsDashboardProps) {
   const theme = useSelector((state: ThemeRootState) => state.ui?.theme ?? 'light');
   const isDark = theme === 'dark';
 
@@ -94,6 +99,17 @@ function MedicalRecordsDashboard() {
   } = useDashboardOverview(appliedParams);
 
   const dashboard = response?.data;
+  const intelligenceNoun = mode === 'clinical' ? 'Clinical' : 'Patient';
+  const analyticsBadgeLabel = mode === 'clinical' ? 'Clinical Analytics' : 'Patient Analytics';
+  const intelligenceSubtitle =
+    mode === 'clinical'
+      ? 'Clinical visibility into patient volume, trends, demographics, care flow, and retention.'
+      : 'Clean visibility into patient volume, trends, demographics, care flow, and retention.';
+  const insightsTitle = mode === 'clinical' ? 'Clinical Insights' : 'Patient Insights';
+  const insightsDescription =
+    mode === 'clinical'
+      ? 'Top visit types and most treated conditions from existing clinical analytics.'
+      : 'Top visit types and most treated conditions from existing clinical analytics.';
 
   const trendSeries = useMemo(() => {
     const daily = dashboard?.patient_trends.daily ?? [];
@@ -159,14 +175,6 @@ function MedicalRecordsDashboard() {
         .sort((a, b) => b.count - a.count)
         .slice(0, 6),
     [dashboard?.visit_types.most_treated_conditions]
-  );
-
-  const topServices = useMemo(
-    () =>
-      [...(dashboard?.revenue.top_paying_services ?? [])]
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 6),
-    [dashboard?.revenue.top_paying_services]
   );
 
   const peakDay = useMemo(() => {
@@ -281,7 +289,7 @@ function MedicalRecordsDashboard() {
                 <Workflow className="h-8 w-8" />
               </div>
               <h2 className={cn('text-2xl font-bold', ui.text)}>
-                No Clinical Intelligence Insights available.
+                {`No ${intelligenceNoun} Intelligence insights available.`}
               </h2>
               <p className={cn('mt-2 text-sm', ui.textSecondary)}>
                 {response?.message || 'No analytics payload was returned for the selected period.'}
@@ -346,6 +354,9 @@ function MedicalRecordsDashboard() {
         <DashboardHeader
           isDark={isDark}
           dashboard={dashboard}
+          intelligenceTitle={`${intelligenceNoun} Intelligence`}
+          intelligenceSubtitle={intelligenceSubtitle}
+          analyticsBadgeLabel={analyticsBadgeLabel}
           selectedPeriod={selectedPeriod}
           customFrom={customFrom}
           customTo={customTo}
@@ -385,16 +396,45 @@ function MedicalRecordsDashboard() {
           />
         </div>
 
-        <DashboardInsightsSection
-          isDark={isDark}
-          visitTypes={visitTypes}
-          topConditions={topConditions}
-          revenue={dashboard.revenue}
-          topServices={topServices}
-          alerts={dashboard.alerts ?? []}
-          kpi={dashboard.kpi}
-          largestAgeGroup={largestAgeGroup}
-        />
+        {/* Keep Patient Intelligence clean and patient-focused. */}
+        <section className={cn(ui.surface, ui.border, 'border rounded-2xl p-5 sm:p-6')}>
+          <h3 className={cn('text-lg font-semibold', ui.text)}>{insightsTitle}</h3>
+          <p className={cn('mt-1 text-sm', ui.textSecondary)}>
+            {insightsDescription}
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className={cn('rounded-xl border p-4', ui.border)}>
+              <p className={cn('text-sm font-medium', ui.text)}>Top Visit Types</p>
+              <div className="mt-3 space-y-2">
+                {visitTypes.length ? (
+                  visitTypes.slice(0, 5).map((item) => (
+                    <div key={item.type} className="flex items-center justify-between text-sm">
+                      <span className={ui.textSecondary}>{item.type}</span>
+                      <span className={cn('font-semibold', ui.text)}>{formatNumber(item.count)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className={cn('text-sm', ui.textMuted)}>No visit type data available.</p>
+                )}
+              </div>
+            </div>
+            <div className={cn('rounded-xl border p-4', ui.border)}>
+              <p className={cn('text-sm font-medium', ui.text)}>Most Treated Conditions</p>
+              <div className="mt-3 space-y-2">
+                {topConditions.length ? (
+                  topConditions.slice(0, 5).map((item) => (
+                    <div key={item.condition} className="flex items-center justify-between text-sm">
+                      <span className={ui.textSecondary}>{item.condition}</span>
+                      <span className={cn('font-semibold', ui.text)}>{formatNumber(item.count)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className={cn('text-sm', ui.textMuted)}>No condition data available.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

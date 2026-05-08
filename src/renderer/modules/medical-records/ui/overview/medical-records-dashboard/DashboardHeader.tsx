@@ -16,6 +16,9 @@ import {
 interface DashboardHeaderProps {
   isDark: boolean;
   dashboard: DashboardResponse['data'];
+  intelligenceTitle?: string;
+  intelligenceSubtitle?: string;
+  analyticsBadgeLabel?: string;
   selectedPeriod: DashboardPeriod;
   customFrom: string;
   customTo: string;
@@ -30,6 +33,9 @@ interface DashboardHeaderProps {
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   isDark,
   selectedPeriod,
+  intelligenceTitle = 'Patient Intelligence',
+  intelligenceSubtitle = 'Clean visibility into patient volume, trends, demographics, care flow, and retention.',
+  analyticsBadgeLabel = 'Patient Analytics',
   customFrom,
   customTo,
   onCustomFromChange,
@@ -62,16 +68,15 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         <div className="max-w-3xl">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em]">
           <span className={cn('h-2 w-2 rounded-full', isFetching ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500')} />
-            Patient Analytics
+            {analyticsBadgeLabel}
           </div>
 
           <h1 className={cn('text-3xl font-bold tracking-tight md:text-4xl', isDark ? 'text-white' : 'text-slate-950')}>
-            Clinical Intelligence
+            {intelligenceTitle}
           </h1>
 
           <p className={cn('mt-3 max-w-2xl text-sm md:text-base', isDark ? 'text-slate-400' : 'text-slate-600')}>
-            Executive-grade visibility into patient volume, care flow, retention, demographics,
-            visit composition, and revenue performance.
+            {intelligenceSubtitle}
           </p>
 
           {/* <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -158,6 +163,8 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                       type="date"
                       value={customFrom}
                       onChange={(e) => onCustomFromChange(e.target.value)}
+                      aria-label="Custom range start date"
+                      title="Custom range start date"
                       className={cn(
                         'rounded-2xl border px-4 py-3 text-sm outline-none transition-all',
                         isDark
@@ -170,6 +177,8 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                       type="date"
                       value={customTo}
                       onChange={(e) => onCustomToChange(e.target.value)}
+                      aria-label="Custom range end date"
+                      title="Custom range end date"
                       className={cn(
                         'rounded-2xl border px-4 py-3 text-sm outline-none transition-all',
                         isDark

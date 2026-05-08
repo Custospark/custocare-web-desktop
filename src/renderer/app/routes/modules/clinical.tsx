@@ -24,7 +24,7 @@ export const clinicalRoutes = [
     path={CLINICAL_ROUTES.OVERVIEW}
     element={
       <SuspenseWrapper variant="table">
-        <MedicalRecordsDashboard />
+        <MedicalRecordsDashboard mode="clinical" />
       </SuspenseWrapper>
     }
   />,
