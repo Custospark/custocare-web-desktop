@@ -6,6 +6,7 @@ import LabResultForm from '../LabResultForm';
 interface LabResultFocusProps {
   theme?: 'light' | 'dark';
   requestUuid?: string | null;
+  cancelTo?: string;
 }
 
 interface LabResultLocationState {
@@ -17,6 +18,7 @@ interface LabResultLocationState {
 export const LabResultFocus: React.FC<LabResultFocusProps> = ({
   theme = 'light',
   requestUuid,
+  cancelTo = MEDICAL_RECORDS_ROUTES.CLINICAL_CARE,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -39,7 +41,7 @@ export const LabResultFocus: React.FC<LabResultFocusProps> = ({
     null;
 
   const handleCancel = () => {
-    navigate(MEDICAL_RECORDS_ROUTES.CLINICAL_CARE);
+    navigate(cancelTo);
   };
 
   return (

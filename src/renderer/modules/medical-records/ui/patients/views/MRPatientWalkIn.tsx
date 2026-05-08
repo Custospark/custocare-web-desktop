@@ -85,6 +85,8 @@ const MRPatientWalkIn: React.FC<MRPatientWalkInProps> = ({
               <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
                 {intakeModule === 'pharmacy'
                   ? 'Patient is ready for pharmacy services'
+                  : intakeModule === 'laboratory'
+                    ? 'Patient is ready for laboratory services'
                   : 'Patient is ready for clinical care'}
               </p>
               <p className={`mt-2 text-sm font-medium ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
@@ -110,7 +112,11 @@ const MRPatientWalkIn: React.FC<MRPatientWalkInProps> = ({
               ) : (
                 <>
                   <FileText className="w-5 h-5" />
-                  {intakeModule === 'pharmacy' ? 'Proceed to medication workflow' : 'Proceed to action center'}
+                  {intakeModule === 'pharmacy'
+                    ? 'Proceed to medication workflow'
+                    : intakeModule === 'laboratory'
+                      ? 'Proceed to laboratory workflow'
+                      : 'Proceed to action center'}
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}

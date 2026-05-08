@@ -2,7 +2,7 @@ import React from 'react';
 import { Route } from 'react-router-dom';
 import AuthMiddlewareRoute from './middleware/AuthMiddlwareRoute';
 import Layout from '../../shared/components/Navigation/Layout';
-import { ROUTES, ACCOUNT_ROUTES } from './routeConstants';
+import { ROUTES, ACCOUNT_ROUTES, LABORATORY_ROUTES } from './routeConstants';
 import { PLATFORM_ADMIN_ROUTES } from './constants/platform-administration.paths';
 import { ProtectedThemeOutlet, SuspenseWrapper, WithThemeProp } from './modules/shared/routeUtils';
 import { accountRoutes } from './modules/account';
@@ -10,6 +10,7 @@ import { onboardingAndDashboardRoutes } from './modules/shared/OnboardingAndDash
 import { pharmacyRoutes } from './modules/pharmacy';
 import { billingRoutes } from './modules/billing';
 import { clinicalRoutes } from './modules/clinical';
+import { laboratoryRoutes } from './modules/laboratory';
 import { medicalRecordsRoutes } from './modules/medical-records';
 import { nursingRoutes } from './modules/nursing';
 import { clinicalSpaceManagementRoutes } from './modules/adminstration/clinicalspace';
@@ -115,11 +116,24 @@ export const ProtectedRoutes = () => [
             key="laboratory"
             path={ROUTES.LABORATORY}
             element={
-              <SuspenseWrapper variant="dashboard">
+              <SuspenseWrapper variant="table">
                 <WithThemeProp Component={LaboratoryModule} />
               </SuspenseWrapper>
             }
-          />
+          >
+            <Route
+              index
+              element={
+                <LoadingRedirect
+                  to={LABORATORY_ROUTES.PATIENT_QUEUE}
+                  replace
+                  variant="table"
+                  message="Loading Laboratory Workspace..."
+                />
+              }
+            />
+            {laboratoryRoutes}
+          </Route>
 
           {/* Pharmacy Module */}
           <Route

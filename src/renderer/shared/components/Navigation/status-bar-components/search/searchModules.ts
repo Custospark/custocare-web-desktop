@@ -1,6 +1,6 @@
 // search/searchModules.ts
 // NOTE: import paths are one level deeper than the original SearchBar.tsx
-import { ACCOUNT_ROUTES, BILLING_ROUTES, ROUTES }       from '../../../../../app/routes/routeConstants';
+import { ACCOUNT_ROUTES, BILLING_ROUTES, LABORATORY_ROUTES, ROUTES }       from '../../../../../app/routes/routeConstants';
 import { PLATFORM_ADMIN_ROUTES} from '../../../../../app/routes/constants/platform-administration.paths';
 import { MEDICAL_RECORDS_ROUTES }        from '../../../../../app/routes/routeConstants';
 import {
@@ -195,6 +195,51 @@ export const allModules: SearchableModule[] = [
   //   keywords: ['pharmacy', 'medication', 'drugs', 'dispensing', 'prescriptions'],
   //   category: 'Clinical',
   // },
+  {
+    id: 'laboratory',
+    label: 'Laboratory Services',
+    route: ROUTES.LABORATORY,
+    description: 'Laboratory queue, requests, results capture, and billable diagnostics workflow',
+    moduleCode: 'laboratory',
+    keywords: ['laboratory', 'lab', 'diagnostics', 'results', 'lab requests', 'specimens'],
+    category: 'Clinical',
+  },
+  {
+    id: 'laboratory-queue',
+    label: 'Laboratory Queue',
+    route: LABORATORY_ROUTES.PATIENT_QUEUE,
+    description: 'Visits queued for laboratory workflow and diagnostics',
+    moduleCode: 'laboratory',
+    keywords: ['laboratory queue', 'lab queue', 'diagnostic queue', 'patients'],
+    category: 'Clinical',
+  },
+  {
+    id: 'laboratory-action-center',
+    label: 'Lab Encounter Center',
+    route: LABORATORY_ROUTES.ACTION_CENTER_REQUEST,
+    description: 'Patient-context lab request, results, and billing workspace',
+    moduleCode: 'laboratory',
+    keywords: ['lab encounter', 'lab request', 'lab result', 'diagnostics workflow', 'lab billing'],
+    category: 'Clinical',
+  },
+  {
+    id: 'laboratory-catalog',
+    label: 'Laboratory Catalog',
+    route: LABORATORY_ROUTES.CATALOG_SERVICES,
+    description: 'Manage billable laboratory services and inventory items',
+    moduleCode: 'laboratory',
+    keywords: ['service catalog', 'inventory catalog', 'lab catalog', 'billable items'],
+    category: 'Clinical',
+  },
+  {
+    id: 'laboratory-receipts',
+    label: 'Laboratory Receipts',
+    route: LABORATORY_ROUTES.RECEIPTS,
+    description: 'Review laboratory billing charges and receipts',
+    moduleCode: 'laboratory',
+    keywords: ['lab receipts', 'lab billing', 'diagnostic charges', 'payments'],
+    category: 'Clinical',
+  },
 
   // ══════════════════════════════════════════════════════════════════════════
   // FINANCE

@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
 import { Route } from 'react-router-dom';
 import { FOCUS_MODE_ROUTES } from './focusModeRouteConstants';
+import { LABORATORY_ROUTES } from '../../../../app/routes/routeConstants';
 import FocusedModeLayout from '../../../../shared/components/Navigation/FocusedModeLayout';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 import ClinicalTemplateFocus from '../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/ClinicalTemplateFocus';
@@ -136,6 +137,28 @@ export const FocusModeRoutes = ({ theme = 'light', patientName }: FocusModeRoute
       <FocusedModeLayout title={withPatientTitle('Laboratory Test Results')}>
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <LabResultFocus theme={theme} />
+        </Suspense>
+      </FocusedModeLayout>
+    }
+  />,
+  <Route
+    key="laboratory-module-lab-request-focus"
+    path={FOCUS_MODE_ROUTES.LABORATORY_REQUEST_FOCUS}
+    element={
+      <FocusedModeLayout title={withPatientTitle('Laboratory Request')}>
+        <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+          <LabRequestFocus theme={theme} cancelTo={LABORATORY_ROUTES.ACTION_CENTER_REQUEST} />
+        </Suspense>
+      </FocusedModeLayout>
+    }
+  />,
+  <Route
+    key="laboratory-module-lab-result-focus"
+    path={FOCUS_MODE_ROUTES.LABORATORY_RESULT_FOCUS}
+    element={
+      <FocusedModeLayout title={withPatientTitle('Laboratory Test Results')}>
+        <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
+          <LabResultFocus theme={theme} cancelTo={LABORATORY_ROUTES.ACTION_CENTER_RESULTS} />
         </Suspense>
       </FocusedModeLayout>
     }

@@ -231,8 +231,11 @@ const handleTakeAction = useCallback(
         facility_id: facilityId,
         patient_id: patient.id,
         visit_type: VisitType.OUTPATIENT,
-        chief_complaints:
-          intakeModule === 'pharmacy' ? ['Pharmacy visit'] : ['Medical records consultation'],
+        chief_complaints: intakeModule === 'pharmacy'
+          ? ['Pharmacy visit']
+          : intakeModule === 'laboratory'
+            ? ['Laboratory visit']
+            : ['Medical records consultation'],
         arrived_at: formattedDateTime,
         registered_at: formattedDateTime,
         current_phase: VisitPhase.REGISTRATION,
@@ -345,7 +348,8 @@ const handleTakeAction = useCallback(
   const renderQuickActions = () => {
     if (!selectedPatient) return null;
 
-    if (intakeModule === 'pharmacy') {
+    if (intakeModule === 'pharmacy' || intakeModule === 'laboratory') {
+      const isLab = intakeModule === 'laboratory';
       return (
         <div
           className={cn(
@@ -357,7 +361,7 @@ const handleTakeAction = useCallback(
           <div className="mb-4 flex items-center gap-3">
             <FileText className={cn('h-5 w-5', isDark ? 'text-blue-300' : 'text-blue-700')} />
             <div className={cn('font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
-              Pharmacy intake
+              {isLab ? 'Laboratory intake' : 'Pharmacy intake'}
             </div>
           </div>
           <div
@@ -375,10 +379,12 @@ const handleTakeAction = useCallback(
               />
               <div className="min-w-0 flex-1">
                 <div className={cn('mb-1 font-medium', isDark ? 'text-blue-200' : 'text-blue-900')}>
-                  Start medication encounter
+                  {isLab ? 'Start laboratory encounter' : 'Start medication encounter'}
                 </div>
                 <div className={cn('text-sm', isDark ? 'text-blue-300' : 'text-blue-700')}>
-                  Create an outpatient visit and open the medication workflow for this patient.
+                  {isLab
+                    ? 'Create an outpatient visit and open the laboratory workflow for this patient.'
+                    : 'Create an outpatient visit and open the medication workflow for this patient.'}
                 </div>
               </div>
             </div>
@@ -558,6 +564,8 @@ const handleTakeAction = useCallback(
           title={
             intakeModule === 'pharmacy'
               ? 'Patient search'
+              : intakeModule === 'laboratory'
+                ? 'Laboratory Patient Search'
               : intakeModule === 'nursing'
                 ? 'Nursing Patient Search'
                 : 'Medical Records Patient Search'
@@ -565,6 +573,8 @@ const handleTakeAction = useCallback(
           subtitle={
             intakeModule === 'pharmacy'
               ? 'Find a patient to register a visit and begin pharmacy services'
+              : intakeModule === 'laboratory'
+                ? 'Find a patient to register a visit and begin laboratory services'
               : intakeModule === 'nursing'
                 ? 'Search for patients to start nursing encounter workflow'
                 : 'Search for patients to access medical records, documents, and history'

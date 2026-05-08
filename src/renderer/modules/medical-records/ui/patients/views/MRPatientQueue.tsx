@@ -55,12 +55,16 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
       ? 'New Patients (Unassigned)'
       : intakeModule === 'billing'
         ? 'Billing Queue'
+        : intakeModule === 'laboratory'
+          ? 'Laboratory Queue'
         : 'Patient Queue';
   const queueDescription =
     intakeModule === 'nursing'
       ? 'Visits without a ward assignment; counts match this list. Assign wards from bed board or ward workspace.'
       : intakeModule === 'billing'
         ? 'Visits ready for billing capture and payment processing'
+        : intakeModule === 'laboratory'
+          ? 'Visits ready for laboratory diagnostics, test requests, and results workflow'
         : 'Patients requiring medical documentation and chart updates';
   const actionButtonText =
     intakeModule === 'nursing'
@@ -75,6 +79,8 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
       ? 'Nursing Queue Intake'
       : intakeModule === 'billing'
         ? 'Express Intake'
+        : intakeModule === 'laboratory'
+          ? 'Lab Express Intake'
         : 'New Patient';
 
   // Get staff context
@@ -132,6 +138,8 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
         'success',
         intakeModule === 'billing'
           ? `Billing queue ready for ${visit.patient?.name || 'patient'}.`
+          : intakeModule === 'laboratory'
+            ? `Laboratory queue ready for ${visit.patient?.name || 'patient'}.`
           : `Ready to care for ${visit.patient?.name || 'patient'}. Let's get started!`,
         3000
       );

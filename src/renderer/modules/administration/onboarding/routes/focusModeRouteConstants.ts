@@ -25,4 +25,8 @@ export const FOCUS_MODE_ROUTES = {
   PRESCRIPTION_REPORT_FOCUS: '/reports-focus/prescription',
   LAB_REPORT_FOCUS: '/reports-focus/lab',
   FULL_MEDICAL_REPORT_FOCUS: '/reports-focus/full-medical',
+
+  // Laboratory module focus routes (outside Layout)
+  LABORATORY_REQUEST_FOCUS: '/laboratory-focus/lab-request',
+  LABORATORY_RESULT_FOCUS: '/laboratory-focus/lab-result',
 } as const;

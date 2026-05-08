@@ -6,13 +6,17 @@ import { MEDICAL_RECORDS_ROUTES } from '../../../../../../app/routes/routeConsta
 
 interface LabRequestFocusProps {
   theme?: 'light' | 'dark';
+  cancelTo?: string;
 }
 
-export const LabRequestFocus: React.FC<LabRequestFocusProps> = ({ theme = 'light' }) => {
+export const LabRequestFocus: React.FC<LabRequestFocusProps> = ({
+  theme = 'light',
+  cancelTo = MEDICAL_RECORDS_ROUTES.CLINICAL_CARE,
+}) => {
   const navigate = useNavigate();
 
   const handleCancel = () => {
-    navigate(MEDICAL_RECORDS_ROUTES.CLINICAL_CARE);
+    navigate(cancelTo);
   };
 
   const handleSuccess = () => {

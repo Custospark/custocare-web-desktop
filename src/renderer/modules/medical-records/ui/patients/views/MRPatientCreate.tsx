@@ -229,8 +229,11 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({
           facility_id: facilityId,
           patient_id: patient.id,
           visit_type: VisitType.OUTPATIENT,
-          chief_complaints:
-            intakeModule === 'pharmacy' ? ['Pharmacy visit'] : ['Initial medical records visit'],
+          chief_complaints: intakeModule === 'pharmacy'
+            ? ['Pharmacy visit']
+            : intakeModule === 'laboratory'
+              ? ['Laboratory visit']
+              : ['Initial medical records visit'],
           arrived_at: formattedDateTime,
           registered_at: formattedDateTime,
           current_phase: VisitPhase.REGISTRATION,
@@ -353,6 +356,8 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({
           subtitle={
             intakeModule === 'pharmacy'
               ? 'Create a record so you can start visits and dispensing from pharmacy'
+              : intakeModule === 'laboratory'
+                ? 'Create a record so you can start visits, diagnostics, and lab billing workflow'
               : 'Create a new patient record for medical documentation and history tracking'
           }
           onSuccess={handleSuccess}
@@ -371,7 +376,11 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({
           >
             <div className={cn('text-sm flex-1', theme === 'dark' ? 'text-gray-300' : 'text-gray-700')}>
               After registration, you will see a confirmation with the patient number. Continue to the
-              {intakeModule === 'pharmacy' ? ' medication encounter workflow' : ' clinical encounter workflow'}, or return to search.
+              {intakeModule === 'pharmacy'
+                ? ' medication encounter workflow'
+                : intakeModule === 'laboratory'
+                  ? ' laboratory encounter workflow'
+                  : ' clinical encounter workflow'}, or return to search.
             </div>
             <div className="flex items-center gap-2 text-blue-600 flex-shrink-0">
               <ClipboardList className="w-4 h-4" />
@@ -390,11 +399,12 @@ const MRPatientCreate: React.FC<MRPatientCreateProps> = ({
               <FileText className={cn('w-5 h-5 mt-0.5', theme === 'dark' ? 'text-blue-400' : 'text-blue-600')} />
               <div>
                 <h4 className={cn('font-medium mb-1', theme === 'dark' ? 'text-blue-300' : 'text-blue-800')}>
-                  Medical Records Information
+                  {intakeModule === 'laboratory' ? 'Laboratory Information' : 'Medical Records Information'}
                 </h4>
                 <p className={cn('text-sm', theme === 'dark' ? 'text-blue-400/90' : 'text-blue-700')}>
-                  New patients will have a complete medical record created. 
-                  You can add visit notes, upload documents, and manage appointments after registration.
+                  {intakeModule === 'laboratory'
+                    ? 'New patients can proceed to lab requests, results capture, and laboratory billing after registration.'
+                    : 'New patients will have a complete medical record created. You can add visit notes, upload documents, and manage appointments after registration.'}
                   The patient number will be displayed in the confirmation modal for easy reference.
                 </p>
               </div>
