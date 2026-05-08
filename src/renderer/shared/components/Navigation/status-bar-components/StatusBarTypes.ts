@@ -31,6 +31,8 @@ export interface StatusBarProps {
   sidebarPosition: 'left' | 'right';
   isTransitioning: boolean;
   onToggleSidebarPosition: () => void;
+  enableNestedNavigation: boolean;
+  onToggleNestedNavigation: () => void;
   onToggleTheme: () => void;
   appVersion: string;
   unreadCount: number;

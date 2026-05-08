@@ -7,6 +7,7 @@ import type{ LayoutThemeClasses, SidebarPosition } from './LayoutTypes';
 interface LayoutSidebarSectionProps {
   mobileSidebarOpen: boolean;
   sidebarOpen: boolean;
+  enableNestedNavigation: boolean;
   sidebarPosition: SidebarPosition;
   isTransitioning: boolean;
   topPaddingPx: number;
@@ -20,6 +21,7 @@ interface LayoutSidebarSectionProps {
 export const LayoutSidebarSection: React.FC<LayoutSidebarSectionProps> = ({
   mobileSidebarOpen,
   sidebarOpen,
+  enableNestedNavigation,
   sidebarPosition,
   isTransitioning,
   topPaddingPx,
@@ -75,6 +77,7 @@ export const LayoutSidebarSection: React.FC<LayoutSidebarSectionProps> = ({
           isOpen={mobileSidebarOpen}
           onClose={onCloseMobileSidebar}
           collapsed={!sidebarOpen}
+          enableNestedNavigation={enableNestedNavigation}
           onToggleCollapse={onToggleSidebar}
           theme={theme}
         />

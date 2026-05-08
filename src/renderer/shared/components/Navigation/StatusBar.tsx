@@ -21,6 +21,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   sidebarPosition,
   isTransitioning,
   onToggleSidebarPosition,
+  enableNestedNavigation,
+  onToggleNestedNavigation,
   appVersion,
   onNotificationClick,
 }) => {
@@ -60,6 +62,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
           sidebarPosition={sidebarPosition}
           isTransitioning={isTransitioning}
           onToggleSidebarPosition={onToggleSidebarPosition}
+          enableNestedNavigation={enableNestedNavigation}
+          onToggleNestedNavigation={onToggleNestedNavigation}
           onNotificationClick={onNotificationClick}
         />
       </div>

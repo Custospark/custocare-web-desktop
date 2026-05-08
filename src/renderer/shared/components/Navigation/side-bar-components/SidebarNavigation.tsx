@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../../types/cn';
+import ExpandableItem from './ExpandableItem';
 
 interface MenuItem {
   id: string;
@@ -8,6 +9,11 @@ interface MenuItem {
   href: string;
   route: string;
   description: string;
+  operations?: Array<{
+    id: string;
+    label: string;
+    route: string;
+  }>;
   stats?: string;
   shortcut?: string;
 }
@@ -18,6 +24,7 @@ interface SidebarNavigationProps {
   groupedMenuItems: Record<string, MenuItem[]>;
   currentMenuItems: MenuItem[];
   categoryNames: Record<string, string>;
+  enableNestedNavigation?: boolean;
   activeHover: string | null;
   setActiveHover: React.Dispatch<React.SetStateAction<string | null>>;
   isRouteActive: (route: string) => boolean;
@@ -32,6 +39,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   groupedMenuItems,
   currentMenuItems,
   categoryNames,
+  enableNestedNavigation = false,
   activeHover,
   setActiveHover,
   isRouteActive,
@@ -178,6 +186,32 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
     );
   };
 
+  const renderOperationItem = (operation: NonNullable<MenuItem['operations']>[number]) => {
+    const isOperationActive = isRouteActive(operation.route);
+
+    return (
+      <a
+        key={operation.id}
+        href={operation.route}
+        onClick={(e) => handleNavigation(e, operation.route)}
+        className={cn(
+          'flex items-center rounded-lg px-2.5 py-2 text-sm transition-all duration-200',
+          'border border-transparent',
+          isOperationActive
+            ? isDark
+              ? 'bg-blue-500/15 text-cyan-300 border-blue-500/40'
+              : 'bg-blue-100 text-blue-700 border-blue-300'
+            : isDark
+            ? 'text-gray-300 hover:bg-gray-800/50 hover:border-gray-700/40'
+            : 'text-gray-700 hover:bg-gray-100/70 hover:border-gray-200/70',
+        )}
+        aria-current={isOperationActive ? 'page' : undefined}
+      >
+        {operation.label}
+      </a>
+    );
+  };
+
   return (
     <nav
       ref={navContainerRef}
@@ -188,15 +222,46 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
           ([category, items]) =>
             items.length > 0 && (
               <div key={category} className="space-y-2">
-                <p
-                  className={cn(
-                    'text-xs font-bold uppercase tracking-wider px-2',
-                    isDark ? 'text-gray-500' : 'text-gray-400',
-                  )}
-                >
-                  {categoryNames[category]}
-                </p>
-                <div className="space-y-1.5">{items.map((item) => renderMenuItem(item))}</div>
+                {enableNestedNavigation ? (
+                  <>
+                    <p
+                      className={cn(
+                        'text-xs font-bold uppercase tracking-wider px-2',
+                        isDark ? 'text-gray-500' : 'text-gray-400',
+                      )}
+                    >
+                      {categoryNames[category]}
+                    </p>
+                    <div className="space-y-1.5">
+                      {items.map((item) => (
+                        <ExpandableItem
+                          key={item.id}
+                          label={item.label}
+                          icon={item.icon}
+                          badge={item.operations?.length}
+                          defaultOpen={isRouteActive(item.route)}
+                          persistState
+                          storageKey={`sidebar-module-${item.id}`}
+                          className="px-1"
+                        >
+                          {(item.operations ?? []).map((operation) => renderOperationItem(operation))}
+                        </ExpandableItem>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p
+                      className={cn(
+                        'text-xs font-bold uppercase tracking-wider px-2',
+                        isDark ? 'text-gray-500' : 'text-gray-400',
+                      )}
+                    >
+                      {categoryNames[category]}
+                    </p>
+                    <div className="space-y-1.5">{items.map((item) => renderMenuItem(item))}</div>
+                  </>
+                )}
               </div>
             ),
         )

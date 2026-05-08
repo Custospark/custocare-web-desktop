@@ -46,6 +46,7 @@ export interface Operation {
 
 const MOBILE_BREAKPOINT = 1024;
 const LS_KEY_DOCK = 'custocare.quickActionsDockSide';
+const LS_KEY_NESTED_NAV = 'sidebar-nested-navigation';
 const CONTENT_SCROLL_ATTR = 'data-app-scroll-container';
 
 function safeGetDockSide(): DockSide {
@@ -57,6 +58,11 @@ function safeGetDockSide(): DockSide {
 function safeSetDockSide(side: DockSide) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(LS_KEY_DOCK, side);
+}
+
+function safeGetNestedNavEnabled(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(LS_KEY_NESTED_NAV) === 'true';
 }
 
 function useIsMobile(breakpoint = MOBILE_BREAKPOINT) {
@@ -101,6 +107,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
   const navigationState = useSelector((state: RootState) => state.moduleNavigation.current);
 
   const [dockSide, setDockSide] = useState<DockSide>(() => safeGetDockSide());
+  const [nestedNavigationEnabled, setNestedNavigationEnabled] = useState<boolean>(() => safeGetNestedNavEnabled());
   const [collapsedSide, setCollapsedSide] = useState<boolean>(initialCollapsedSide);
   const [collapsedUp, setCollapsedUp] = useState<boolean>(initialCollapsedUp);
 
@@ -199,6 +206,18 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
   /**
    * Lock body scroll when the mobile quick actions drawer is open.
    */
+  useEffect(() => {
+    const syncNestedMode = () => setNestedNavigationEnabled(safeGetNestedNavEnabled());
+
+    window.addEventListener('storage', syncNestedMode);
+    window.addEventListener('custocare:nested-navigation-toggle', syncNestedMode as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', syncNestedMode);
+      window.removeEventListener('custocare:nested-navigation-toggle', syncNestedMode as EventListener);
+    };
+  }, []);
+
   useEffect(() => {
     if (!isMobile || !mobileOpen) return;
 
@@ -302,7 +321,9 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
     </LayoutMainContent>
   );
 
-  if (hideSidebar) {
+  const shouldHideOperationsSidebar = hideSidebar || nestedNavigationEnabled;
+
+  if (shouldHideOperationsSidebar) {
     return (
       <div className={cn('w-full h-full min-h-0 flex flex-col overflow-hidden', className)}>
         {renderMainContent()}

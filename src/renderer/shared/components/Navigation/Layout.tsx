@@ -39,6 +39,7 @@ import { useSearchKeyboard } from './status-bar-components/search/hooks/useSearc
 interface LocalLayoutState {
   mobileSidebarOpen: boolean;
   sidebarPosition: SidebarPosition;
+  enableNestedNavigation: boolean;
   isTransitioning: boolean;
 }
 
@@ -49,6 +50,11 @@ const loadSidebarPosition = (): SidebarPosition => {
 
 const saveSidebarPosition = (position: SidebarPosition): void => {
   localStorage.setItem(STORAGE_KEYS.SIDEBAR_POSITION, position);
+};
+
+const loadNestedNavigation = (): boolean => {
+  const saved = localStorage.getItem(STORAGE_KEYS.SIDEBAR_NESTED);
+  return saved === 'true';
 };
 
 export const Layout: React.FC = () => {
@@ -70,6 +76,7 @@ export const Layout: React.FC = () => {
   const [localState, setLocalState] = useState<LocalLayoutState>({
     mobileSidebarOpen: false,
     sidebarPosition: loadSidebarPosition(),
+    enableNestedNavigation: loadNestedNavigation(),
     isTransitioning: false,
   });
 
@@ -150,6 +157,15 @@ export const Layout: React.FC = () => {
     }, ANIMATION_CONFIG.duration.slow);
   }, []);
 
+  const handleToggleNestedNavigation = useCallback(() => {
+    setLocalState((prev) => {
+      const next = !prev.enableNestedNavigation;
+      localStorage.setItem(STORAGE_KEYS.SIDEBAR_NESTED, String(next));
+      window.dispatchEvent(new CustomEvent('custocare:nested-navigation-toggle', { detail: next }));
+      return { ...prev, enableNestedNavigation: next };
+    });
+  }, []);
+
   // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => {
     const handleResize = () => {
@@ -209,6 +225,8 @@ export const Layout: React.FC = () => {
         sidebarOpen={sidebarOpen}
         isTransitioning={localState.isTransitioning}
         onToggleSidebarPosition={handleToggleSidebarPosition}
+        enableNestedNavigation={localState.enableNestedNavigation}
+        onToggleNestedNavigation={handleToggleNestedNavigation}
         onToggleTheme={handleToggleTheme}
         onToggleMobileSidebar={handleToggleMobileSidebar}
         collapseIcon={collapseIcon}
@@ -223,6 +241,7 @@ export const Layout: React.FC = () => {
         <LayoutSidebarSection
           mobileSidebarOpen={localState.mobileSidebarOpen}
           sidebarOpen={sidebarOpen}
+          enableNestedNavigation={localState.enableNestedNavigation}
           sidebarPosition={localState.sidebarPosition}
           isTransitioning={localState.isTransitioning}
           topPaddingPx={topPaddingPx}

@@ -32,6 +32,8 @@ export interface LayoutTopBarsProps {
   isTransitioning: boolean;
 
   onToggleSidebarPosition: () => void;
+  enableNestedNavigation: boolean;
+  onToggleNestedNavigation: () => void;
   onToggleTheme: () => void;
   onToggleMobileSidebar: () => void;
 
@@ -58,6 +60,8 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
   sidebarOpen,
   isTransitioning,
   onToggleSidebarPosition,
+  enableNestedNavigation,
+  onToggleNestedNavigation,
   onToggleTheme,
   onToggleMobileSidebar,
   collapseIcon,
@@ -82,6 +86,8 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
         sidebarPosition={sidebarPosition}
         isTransitioning={isTransitioning}
         onToggleSidebarPosition={onToggleSidebarPosition}
+        enableNestedNavigation={enableNestedNavigation}
+        onToggleNestedNavigation={onToggleNestedNavigation}
         onToggleTheme={onToggleTheme}
         appVersion={appVersion}
         unreadCount={3}
@@ -155,7 +161,14 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
 
           {/* Navbar content */}
           <div className={cn('flex-1', sidebarPosition === 'right' && 'text-right')}>
-            <Navbar theme={theme} onThemeToggle={onToggleTheme} onMenuClick={onToggleMobileSidebar} />
+            <Navbar
+              theme={theme}
+              onThemeToggle={onToggleTheme}
+              onMenuClick={onToggleMobileSidebar}
+              onToggleSidebar={onToggleSidebar}
+              onToggleSidebarPosition={onToggleSidebarPosition}
+              sidebarOpen={sidebarOpen}
+            />
           </div>
 
         </div>

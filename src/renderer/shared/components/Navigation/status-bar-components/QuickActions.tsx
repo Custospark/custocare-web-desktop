@@ -1,6 +1,6 @@
 // components/statusbar/QuickActions.tsx
 import React, { useMemo, useCallback, useRef } from 'react';
-import { Settings, Sun, Moon, PanelRight, Mail } from 'lucide-react';
+import { Settings, Sun, Moon, PanelRight, Mail, ChevronsUpDown } from 'lucide-react';
 import { cn } from '../../../utils/classNameUtils';
 import { useNavigate } from 'react-router-dom';
 import { ACCOUNT_ROUTES } from '../../../../app/routes/routeConstants';
@@ -19,6 +19,8 @@ export type SidebarPosition = 'left' | 'right';
 interface QuickActionsProps {
   sidebarPosition: SidebarPosition;
   onToggleSidebarPosition: () => void; // External handler
+  enableNestedNavigation: boolean;
+  onToggleNestedNavigation: () => void;
   isTransitioning: boolean;
   onNotificationClick?: () => void;
 }
@@ -61,6 +63,8 @@ function useDebouncedCallback<T extends (...args: any[]) => void>(
 export const QuickActions: React.FC<QuickActionsProps> = ({
   sidebarPosition,
   onToggleSidebarPosition,
+  enableNestedNavigation,
+  onToggleNestedNavigation,
   isTransitioning,
   onNotificationClick,
 }) => {
@@ -211,6 +215,29 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
+      </button>
+
+      {/* 1b. Nested sidebar mode toggle (near inbox as requested) */}
+      <button
+        onClick={onToggleNestedNavigation}
+        aria-label={enableNestedNavigation ? 'Disable nested sidebar' : 'Enable nested sidebar'}
+        title={enableNestedNavigation ? 'Use classic sidebar' : 'Use nested collapsible sidebar'}
+        className={cn(
+          'p-2 sm:p-1.5 rounded-lg',
+          'transition-all duration-300 ease-in-out',
+          'hover:scale-105 active:scale-95',
+          'focus:outline-none focus:ring-2 focus:ring-offset-1',
+          'cursor-pointer',
+          enableNestedNavigation
+            ? theme === 'dark'
+              ? 'text-cyan-300 bg-cyan-500/10 focus:ring-cyan-500/50'
+              : 'text-blue-700 bg-blue-100/70 focus:ring-blue-500/50'
+            : theme === 'dark'
+            ? 'text-gray-400 hover:text-cyan-400 hover:bg-gray-800/60 focus:ring-cyan-500/50'
+            : 'text-gray-600 hover:text-blue-600 hover:bg-gray-100/80 focus:ring-blue-500/50'
+        )}
+      >
+        <ChevronsUpDown className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
       </button>
 
       {/* 2. THEME TOGGLE - Frequently used, personal preference */}

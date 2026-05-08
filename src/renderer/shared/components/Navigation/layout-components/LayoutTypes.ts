@@ -13,6 +13,7 @@ export interface LayoutThemeClasses {
 export const STORAGE_KEYS = {
   SIDEBAR_POSITION: 'sidebar-position',
   SIDEBAR_OPEN: 'sidebar-open',
+  SIDEBAR_NESTED: 'sidebar-nested-navigation',
   THEME: 'app-theme',
   TOP_BARS_VISIBLE: 'layout-topbars-visible',
 } as const;

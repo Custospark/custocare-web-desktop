@@ -62,6 +62,11 @@ interface MenuItem {
   href: string;
   route: string;
   description: string;
+  operations?: Array<{
+    id: string;
+    label: string;
+    route: string;
+  }>;
   stats?: string;
   shortcut?: string;
   glowColor?: string;
@@ -72,6 +77,7 @@ interface MenuItem {
 
 interface SidebarExtendedProps extends SidebarProps {
   collapsed: boolean;
+  enableNestedNavigation?: boolean;
   onToggleCollapse: () => void; // currently unused, kept for API compatibility
 }
 
@@ -81,6 +87,7 @@ export const Sidebar: React.FC<SidebarExtendedProps> = ({
   isOpen,
   onClose,
   collapsed,
+  enableNestedNavigation = false,
   className,
   theme = 'dark',
 }) => {
@@ -164,6 +171,13 @@ const menuConfig: MenuItem[] = useMemo(
       href: MEDICAL_RECORDS_ROUTES.OVERVIEW,
       route: ROUTES.MEDICAL_RECORDS,
       description: 'Medical Records, Patient Registration & workflows',
+      operations: [
+        { id: 'mr-overview', label: 'Patient Intelligence', route: MEDICAL_RECORDS_ROUTES.OVERVIEW },
+        { id: 'mr-queue', label: 'Patient Queue', route: MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE },
+        { id: 'mr-search', label: 'Search Patient', route: MEDICAL_RECORDS_ROUTES.PATIENTS_SEARCH },
+        { id: 'mr-register', label: 'Register Patient', route: MEDICAL_RECORDS_ROUTES.PATIENTS_REGISTER },
+        { id: 'mr-walkin', label: 'Walk-In', route: MEDICAL_RECORDS_ROUTES.WALKIN_PATIENT },
+      ],
       stats: 'Patients in Care',
       glowColor: 'from-purple-500 to-pink-400',
       moduleCode: 'medical_records',
@@ -178,6 +192,12 @@ const menuConfig: MenuItem[] = useMemo(
       href: NURSING_ROUTES.OVERVIEW,
       route: ROUTES.NURSING,
       description: 'Nursing assessments, vitals, and clinical notes',
+      operations: [
+        { id: 'nur-overview', label: 'Nursing Intelligence', route: NURSING_ROUTES.OVERVIEW },
+        { id: 'nur-my-ward', label: 'My Ward Patients', route: NURSING_ROUTES.WARDS_PATIENTS_MY_WARD_PATIENTS },
+        { id: 'nur-unassigned', label: 'New Patients Unassigned', route: NURSING_ROUTES.WARDS_PATIENTS_NEW_PATIENTS_UNASSIGNED },
+        { id: 'nur-patient-search', label: 'Search Patient', route: NURSING_ROUTES.WARDS_PATIENTS_SEARCH_PATIENT },
+      ],
       stats: 'Care',
       glowColor: 'from-blue-500 to-cyan-400',
       moduleCode: 'nursing',
@@ -191,6 +211,12 @@ const menuConfig: MenuItem[] = useMemo(
       href: CLINICAL_ROUTES.OVERVIEW,
       route: ROUTES.CLINICAL,
       description: 'Doctor consultations: Notes, Diagnosis, Prescriptions',
+      operations: [
+        { id: 'cl-overview', label: 'Clinical Intelligence', route: CLINICAL_ROUTES.OVERVIEW },
+        { id: 'cl-queue', label: 'Patient Queue', route: CLINICAL_ROUTES.PATIENT_QUEUE },
+        { id: 'cl-search', label: 'Search Patient', route: CLINICAL_ROUTES.PATIENTS_SEARCH },
+        { id: 'cl-register', label: 'Register Patient', route: CLINICAL_ROUTES.PATIENTS_REGISTER },
+      ],
       stats: 'Consultation',
       shortcut: '⌘C',
       glowColor: 'from-emerald-500 to-teal-400',
@@ -205,6 +231,12 @@ const menuConfig: MenuItem[] = useMemo(
       href: LABORATORY_ROUTES.OVERVIEW,
       route: ROUTES.LABORATORY,
       description: 'Lab requests, sample tracking, and results',
+      operations: [
+        { id: 'lab-overview', label: 'Laboratory Intelligence', route: LABORATORY_ROUTES.OVERVIEW },
+        { id: 'lab-queue', label: 'Laboratory Queue', route: LABORATORY_ROUTES.PATIENT_QUEUE },
+        { id: 'lab-request', label: 'Lab Request', route: LABORATORY_ROUTES.ACTION_CENTER_REQUEST },
+        { id: 'lab-results', label: 'Lab Results', route: LABORATORY_ROUTES.ACTION_CENTER_RESULTS },
+      ],
       stats: 'Diagnostics',
       glowColor: 'from-purple-500 to-indigo-400',
       moduleCode: 'laboratory',
@@ -218,6 +250,12 @@ const menuConfig: MenuItem[] = useMemo(
       href: PHARMACY_ROUTES.OVERVIEW,
       route: ROUTES.PHARMACY,
       description: 'Prescription fulfillment and medication management',
+      operations: [
+        { id: 'ph-overview', label: 'Pharmacy Intelligence', route: PHARMACY_ROUTES.OVERVIEW },
+        { id: 'ph-queue', label: 'Pharmacy Queue', route: PHARMACY_ROUTES.PATIENT_QUEUE },
+        { id: 'ph-dispense', label: 'Dispensing', route: PHARMACY_ROUTES.ACTION_CENTER_DISPENSING },
+        { id: 'ph-prescription-review', label: 'Prescription Review', route: PHARMACY_ROUTES.ACTION_CENTER_PRESCRIPTION_REVIEW },
+      ],
       stats: 'Dispensing',
       glowColor: 'from-rose-500 to-orange-400',
       moduleCode: 'pharmacy',
@@ -231,6 +269,13 @@ const menuConfig: MenuItem[] = useMemo(
       href: BILLING_ROUTES.INTELLIGENCE,
       route: ROUTES.BILLING,
       description: 'Billing intake, charge capture, receipts, invoices, and reconciliation',
+      operations: [
+        { id: 'bill-intelligence', label: 'Financial Intelligence', route: BILLING_ROUTES.INTELLIGENCE },
+        { id: 'bill-queue', label: 'Billing Queue', route: BILLING_ROUTES.PATIENT_QUEUE },
+        { id: 'bill-encounter', label: 'Billing Encounter', route: BILLING_ROUTES.BILLING_SPACE },
+        { id: 'bill-receipts', label: 'Receipts & Reconciliation', route: BILLING_ROUTES.RECEIPTS_RECONCILIATION },
+        { id: 'bill-invoices', label: 'Invoices', route: BILLING_ROUTES.INVOICES },
+      ],
       stats: 'Finance',
       glowColor: 'from-amber-500 to-orange-400',
       moduleCode: 'billing',
@@ -246,6 +291,12 @@ const menuConfig: MenuItem[] = useMemo(
       route: ROUTES.ADMINISTRATION,
       description:
         'Configure facilities, manage workforce access, services, and operational controls',
+      operations: [
+        { id: 'adm-overview', label: 'Facility Intelligence', route: ADMIN_ROUTES.OVERVIEW },
+        { id: 'adm-team', label: 'Workforce Administration', route: ADMIN_ROUTES.TEAM },
+        { id: 'adm-services', label: 'Service Catalog', route: ADMIN_ROUTES.SERVICE_CATALOG },
+        { id: 'adm-inventory', label: 'Inventory', route: ADMIN_ROUTES.INVENTORY },
+      ],
       stats: 'Governance',
       glowColor: 'from-slate-600 to-slate-500',
       moduleCode: 'administration',
@@ -517,6 +568,7 @@ const menuConfig: MenuItem[] = useMemo(
         groupedMenuItems={groupedMenuItems}
         currentMenuItems={currentMenuItems}
         categoryNames={categoryNames}
+        enableNestedNavigation={enableNestedNavigation}
         activeHover={activeHover}
         setActiveHover={setActiveHover}
         isRouteActive={isRouteActive}
