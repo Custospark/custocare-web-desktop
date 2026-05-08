@@ -9,6 +9,7 @@ import MRPatientSearch from '../../../modules/medical-records/ui/patients/views/
 import MRPatientCreate from '../../../modules/medical-records/ui/patients/views/MRPatientCreate';
 import MRPatientQueue from '../../../modules/medical-records/ui/patients/views/MRPatientQueue';
 import MRPatientWalkIn from '../../../modules/medical-records/ui/patients/views/MRPatientWalkIn';
+import MRPatientRecords from '../../../modules/medical-records/ui/patients/views/MRPatientRecords';
 import LaboratoryActionCenter from '../../../modules/laboratory/ui/action-center/LaboratoryActionCenter';
 import LabFocusLauncher from '../../../modules/laboratory/ui/action-center/LabFocusLauncher';
 import MRBilling from '../../../modules/medical-records/ui/visit-action-center/billing-space/MRBilling';
@@ -88,6 +89,14 @@ export const laboratoryRoutes = [
     }
   >
     <Route index element={<Navigate to={LABORATORY_ROUTES.ACTION_CENTER_REQUEST} replace />} />
+    <Route
+      path="patient-info"
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={MRPatientRecords} props={{ presentation: 'laboratory' }} />
+        </SuspenseWrapper>
+      }
+    />
     <Route
       path="lab-request"
       element={

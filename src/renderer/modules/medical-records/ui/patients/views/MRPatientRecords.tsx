@@ -12,7 +12,7 @@ import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clin
 import { useGetActiveVisitDiagnoses } from '../../../api/diagnosis/diagnosisQueries';
 import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
 
-export type MRPatientRecordsPresentation = 'clinical-encounter' | 'nursing';
+export type MRPatientRecordsPresentation = 'clinical-encounter' | 'nursing' | 'laboratory';
 
 interface MRPatientRecordsProps {
   theme?: 'light' | 'dark';
@@ -194,6 +194,25 @@ const presentationCopy: Record<
       'No active visit is selected. Current-visit views may be limited. Select or continue a visit from the queue when ready.',
     visitBadgeActive: 'This visit',
     visitBadgeInactive: 'No active visit',
+  },
+  laboratory: {
+    pageTitle: 'Patient Info',
+    pageSubtitle: 'Review current visit context and full medical history for safe diagnostics',
+    latestVisitTitle: 'Current Visit',
+    latestVisitDescription:
+      'Open current encounter context, review ongoing notes, and inspect active visit details before processing lab work',
+    medicalHistoryTitle: 'Medical History',
+    medicalHistoryDescription:
+      'Inspect historical diagnoses, prior labs, allergies, and treatment patterns to guide laboratory interpretation',
+    lifetimeBadge: 'Patient History',
+    summaryHeading: 'Laboratory Context',
+    statVisitLabel: 'Current Visit Status',
+    statAllergiesLabel: 'Known Allergies',
+    statModeLabel: 'Exploration Mode',
+    alertNoVisit:
+      'No active visit selected. You can still review historical records, but visit-scoped context may be limited.',
+    visitBadgeActive: 'Current',
+    visitBadgeInactive: 'No Active Visit',
   },
 };
 

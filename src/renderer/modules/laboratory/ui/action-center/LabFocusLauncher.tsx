@@ -67,7 +67,7 @@ const LabFocusLauncher: React.FC<LabFocusLauncherProps> = ({
                 key={form.key}
                 type="button"
                 onClick={() => navigate(form.focusPath)}
-                className={`group flex w-full items-center justify-between rounded-xl border p-4 transition-all ${
+                className={`group flex w-full cursor-pointer items-center justify-between rounded-xl border p-4 transition-all ${
                   isDark
                     ? 'border-gray-700 bg-gray-900/50 hover:bg-gray-700/40'
                     : 'border-gray-200 bg-gray-50 hover:bg-blue-50'
@@ -82,6 +82,13 @@ const LabFocusLauncher: React.FC<LabFocusLauncherProps> = ({
                     isDark ? 'text-gray-400' : 'text-gray-500'
                   }`}
                 />
+                <span
+                  className={`ml-3 rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                    isDark ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white'
+                  }`}
+                >
+                  Open Form
+                </span>
               </button>
             ))}
             {normalizedForms.length === 0 && (

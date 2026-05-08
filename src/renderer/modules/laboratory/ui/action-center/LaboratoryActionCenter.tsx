@@ -13,6 +13,7 @@ import {
   ArrowLeftRight,
   FlaskConical,
   FileCheck2,
+  FileText,
   Receipt,
   Search,
 } from 'lucide-react';
@@ -172,6 +173,13 @@ const LaboratoryActionCenter: React.FC<LaboratoryActionCenterProps> = ({ theme }
               theme={theme}
               defaultActionTo={LABORATORY_ROUTES.ACTION_CENTER_REQUEST}
               actions={[
+                {
+                  key: 'patient-info',
+                  label: 'Patient info',
+                  icon: <FileText className="h-4 w-4" />,
+                  to: LABORATORY_ROUTES.ACTION_CENTER_PATIENT_INFO,
+                  description: 'Current visit and medical history options for deeper clinical context',
+                },
                 {
                   key: 'lab-request',
                   label: 'Lab request form',
