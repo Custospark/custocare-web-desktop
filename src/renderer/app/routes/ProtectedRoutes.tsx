@@ -66,7 +66,7 @@ export const ProtectedRoutes = () => [
                   to={MEDICAL_RECORDS_ROUTES.OVERVIEW} 
                   replace 
                   variant="table" 
-                  message="Loading Clinical Intelligence..." 
+                  message="Loading Patient Intelligence..." 
                 />
               } 
             />

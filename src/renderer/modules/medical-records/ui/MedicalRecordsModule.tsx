@@ -14,7 +14,7 @@ import { ROUTES, MEDICAL_RECORDS_ROUTES } from '../../../app/routes/routeConstan
 const MEDICAL_RECORDS_OPERATIONS = [
   { 
     id: 'overview', 
-    label: 'Clinical Intelligence', 
+    label: 'Patient Intelligence', 
     icon: <LayoutDashboard className="w-4 h-4" /> 
   },
 
@@ -26,7 +26,7 @@ const MEDICAL_RECORDS_OPERATIONS = [
 
   { 
     id: 'visit-action-center', 
-    label: 'Clinical Encounter Workflow', 
+    label: 'Patient Encounter Hub', 
     icon: <Workflow className="w-4 h-4" /> 
   },
   {  

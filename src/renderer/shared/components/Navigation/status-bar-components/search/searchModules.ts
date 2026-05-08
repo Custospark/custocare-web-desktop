@@ -52,13 +52,14 @@ export const allModules: SearchableModule[] = [
   },
  {
   id: 'medical-records-dashboard',
-  label: 'Clinical Intelligence',
+  label: 'Patient Intelligence',
   route: MEDICAL_RECORDS_ROUTES.OVERVIEW,
   description: 'Executive-grade visibility into patient volume, care flow, retention, demographics, visit composition, and revenue performance.',
   moduleCode: 'medical_records',
   keywords: [
     // Core
     'patient analytics',
+    'patient intelligence',
     'clinical intelligence',
     
     // Metrics
