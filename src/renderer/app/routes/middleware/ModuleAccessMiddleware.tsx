@@ -102,6 +102,7 @@ const UNRESTRICTED_ROUTES: readonly string[] = [
   ROUTES.DASHBOARD,
   ROUTES.ACCOUNT,
   ROUTES.PATIENT_DASHBOARD,
+  ROUTES.CUSTOCARE_HUB,
   '/onboarding',
   '/settings',
   '/profile',
@@ -132,6 +133,7 @@ const BYPASS_ROUTES: readonly string[] = [
 const PATIENT_ACCESSIBLE_ROUTES: readonly string[] = [
   ROUTES.PATIENT_DASHBOARD,
   ROUTES.ACCOUNT,
+  ROUTES.CUSTOCARE_HUB,
   '/settings',
   '/profile',
   '/patient',

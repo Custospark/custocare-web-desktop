@@ -14,6 +14,7 @@ export { PHARMACY_ROUTES } from "./constants/pharmacy.paths";
 export { BILLING_ROUTES } from "./constants/billing.paths";
 export { ACCOUNT_ROUTES } from "./constants/account.paths";
 export { PATIENT_PORTAL_ROUTES } from "./constants/patient-portal.paths";
+export { CUSTOCARE_HUB_ROUTES, custocareHubOperationPath, custocareHubActionPath } from "./constants/custocare-hub.paths";
 
 
 

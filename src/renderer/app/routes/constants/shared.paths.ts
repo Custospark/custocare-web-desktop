@@ -53,6 +53,9 @@ export const ROUTES = {
   ACCOUNT: '/account',
   PLATFORM_ADMINISTRATION: '/platform-admin',
   SYSTEM_SETTINGS: '/system-settings',
+
+  /** Knowledge base, documentation, training, and support (always available) */
+  CUSTOCARE_HUB: '/custocare-hub',
 } as const;
 
 

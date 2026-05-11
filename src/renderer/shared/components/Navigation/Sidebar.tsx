@@ -19,6 +19,7 @@ import {
   Stethoscope,    // for CLINICAL  
   Microscope,     // for LABORATORY
   Pill,           // for PHARMACY
+  LibraryBig,     // for Custocare Hub
 } from 'lucide-react';
 import { type SidebarProps } from '../../types/index';
 import { cn } from '../../types/cn';
@@ -32,7 +33,11 @@ import {
   PATIENT_PORTAL_ROUTES,
   PHARMACY_ROUTES,
   BILLING_ROUTES,
+  CUSTOCARE_HUB_ROUTES,
+  custocareHubOperationPath,
+  custocareHubActionPath,
 } from '../../../app/routes/routeConstants';
+import { CUSTOCARE_HUB_MODULE_OPERATIONS } from '../../../modules/custocare-hub/config/hubConfig';
 import { ADMIN_ROUTES } from '../../../app/routes/constants/administration.paths';
 import { PLATFORM_ADMIN_ROUTES } from '../../../app/routes/constants/platform-administration.paths';
 import { useAppSelector } from '../../../app/store/hooks/useApp';
@@ -340,6 +345,27 @@ const menuConfig: MenuItem[] = useMemo(
       allowedCapabilities: ['super_admin'],
     },
     {
+      id: 'custocare-hub',
+      label: 'Custocare Hub',
+      icon: <LibraryBig className="w-5 h-5" />,
+      href: CUSTOCARE_HUB_ROUTES.OVERVIEW,
+      route: ROUTES.CUSTOCARE_HUB,
+      description: 'Documentation, learning, resources, community, and support',
+      operations: CUSTOCARE_HUB_MODULE_OPERATIONS.map((op) => ({
+        id: `hub-${op.id}`,
+        label: op.label,
+        route:
+          op.usesHorizontalActions && op.actions[0]
+            ? custocareHubActionPath(op.id, op.actions[0].pathSegment)
+            : custocareHubOperationPath(op.id),
+      })),
+      stats: 'Hub',
+      glowColor: 'from-sky-500 to-indigo-400',
+      moduleCode: 'custocare_hub',
+      category: 'system',
+      allowedCapabilities: ['patient', 'staff', 'super_admin'],
+    },
+    {
       id: 'account',
       label: 'Account',
       icon: <UserCog className="w-5 h-5" />,
@@ -365,6 +391,10 @@ const menuConfig: MenuItem[] = useMemo(
     if (!activeCapability) return [];
 
     return menuConfig.filter((item) => {
+      if (item.id === 'custocare-hub') {
+        return item.allowedCapabilities.includes(activeCapability);
+      }
+
       if (!item.allowedCapabilities.includes(activeCapability)) return false;
 
       if (activeCapability === 'staff') {

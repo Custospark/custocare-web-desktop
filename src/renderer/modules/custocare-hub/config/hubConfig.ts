@@ -1,0 +1,106 @@
+export interface HubHorizontalAction {
+  key: string;
+  label: string;
+  pathSegment: string;
+}
+
+export interface HubModuleOperation {
+  id: string;
+  routeKey: string;
+  label: string;
+  /** When false, the operation is a single page (e.g. Overview) with no BaseActionWorkspace strip */
+  usesHorizontalActions: boolean;
+  /** Horizontal workspace actions (max 4 per operation for clarity) */
+  actions: readonly HubHorizontalAction[];
+}
+
+export const CUSTOCARE_HUB_MODULE_OPERATIONS: readonly HubModuleOperation[] = [
+  {
+    id: 'overview',
+    routeKey: 'OVERVIEW',
+    label: 'Overview',
+    usesHorizontalActions: false,
+    actions: [],
+  },
+  {
+    id: 'documentation',
+    routeKey: 'DOCUMENTATION',
+    label: 'Documentation',
+    usesHorizontalActions: true,
+    actions: [
+      { key: 'browse_docs', label: 'Browse Docs', pathSegment: 'browse-docs' },
+      { key: 'search_documentation', label: 'Search Documentation', pathSegment: 'search-documentation' },
+      { key: 'create_article', label: 'Create Article', pathSegment: 'create-article' },
+      { key: 'mr_patient_registration', label: 'Patient Registration Guide', pathSegment: 'patient-registration-guide' },
+    ],
+  },
+  {
+    id: 'learning-center',
+    routeKey: 'LEARNING_CENTER',
+    label: 'Learning Center',
+    usesHorizontalActions: true,
+    actions: [
+      { key: 'watch_tutorials', label: 'Watch Tutorials', pathSegment: 'watch-tutorials' },
+      { key: 'start_training', label: 'Start Training', pathSegment: 'start-training' },
+      { key: 'getting_started', label: 'Getting Started', pathSegment: 'getting-started' },
+      { key: 'track_progress', label: 'Track Progress', pathSegment: 'track-progress' },
+    ],
+  },
+  {
+    id: 'resources',
+    routeKey: 'RESOURCES',
+    label: 'Resources',
+    usesHorizontalActions: true,
+    actions: [
+      { key: 'browse_resources', label: 'Browse Resources', pathSegment: 'browse-resources' },
+      { key: 'download_files', label: 'Download Files', pathSegment: 'download-files' },
+      { key: 'upload_resource', label: 'Upload Resource', pathSegment: 'upload-resource' },
+      { key: 'view_sops', label: 'View SOPs', pathSegment: 'view-sops' },
+    ],
+  },
+  {
+    id: 'community',
+    routeKey: 'COMMUNITY',
+    label: 'Community',
+    usesHorizontalActions: true,
+    actions: [
+      { key: 'view_discussions', label: 'View Discussions', pathSegment: 'view-discussions' },
+      { key: 'create_post', label: 'Create Post', pathSegment: 'create-post' },
+      { key: 'feature_ideas', label: 'Feature Ideas', pathSegment: 'feature-ideas' },
+      { key: 'product_updates', label: 'Product Updates', pathSegment: 'product-updates' },
+    ],
+  },
+  {
+    id: 'support-center',
+    routeKey: 'SUPPORT_CENTER',
+    label: 'Support Center',
+    usesHorizontalActions: true,
+    actions: [
+      { key: 'search_help', label: 'Search Help', pathSegment: 'search-help' },
+      { key: 'open_ticket', label: 'Open Ticket', pathSegment: 'open-ticket' },
+      { key: 'track_ticket', label: 'Track Ticket', pathSegment: 'track-ticket' },
+      { key: 'view_faqs', label: 'View FAQs', pathSegment: 'view-faqs' },
+    ],
+  },
+  {
+    id: 'feedback-requests',
+    routeKey: 'FEEDBACK_REQUESTS',
+    label: 'Feedback & Requests',
+    usesHorizontalActions: true,
+    actions: [
+      { key: 'submit_feedback', label: 'Submit Feedback', pathSegment: 'submit-feedback' },
+      { key: 'request_feature', label: 'Request Feature', pathSegment: 'request-feature' },
+      { key: 'vote_feature', label: 'Vote Feature', pathSegment: 'vote-feature' },
+      { key: 'track_request_status', label: 'Track Request Status', pathSegment: 'track-request-status' },
+    ],
+  },
+] as const;
+
+export function getHubModuleOperation(operationId: string): HubModuleOperation | undefined {
+  return CUSTOCARE_HUB_MODULE_OPERATIONS.find((op) => op.id === operationId);
+}
+
+export function getHubAction(operationId: string, pathSegment: string): HubHorizontalAction | undefined {
+  const op = getHubModuleOperation(operationId);
+  return op?.actions.find((a) => a.pathSegment === pathSegment);
+}

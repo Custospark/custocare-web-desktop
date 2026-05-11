@@ -13,6 +13,7 @@ import { clinicalRoutes } from './modules/clinical';
 import { laboratoryRoutes } from './modules/laboratory';
 import { medicalRecordsRoutes } from './modules/medical-records';
 import { nursingRoutes } from './modules/nursing';
+import { custocareHubRoutes } from './modules/custocare-hub';
 import { clinicalSpaceManagementRoutes } from './modules/adminstration/clinicalspace';
 import { facilitySettingsRoutes } from './modules/adminstration/facility-settings';
 import { platformAdminRoutes } from './modules/PlatformAdministration';
@@ -23,7 +24,7 @@ import FacilitySettings from '../../modules/administration/admin-module/ui/facil
 import ClinicalSpaceManagement from '../../modules/administration/admin-module/ui/clinical-space/ClinicalSpaceManagement';
 import { ADMIN_ROUTES, ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from './constants/administration.paths';
 import LoadingRedirect from '../../shared/components/Loading/LoadingRedirect';
-import { CLINICAL_ROUTES, MEDICAL_RECORDS_ROUTES } from './routeConstants';
+import { CLINICAL_ROUTES, MEDICAL_RECORDS_ROUTES, CUSTOCARE_HUB_ROUTES } from './routeConstants';
 import FacilityAdminBillingCycle from '../../modules/billling/ui/billling/FacilityAdminBillingCycle';
 import { facilityAdminBillingCycleRoutes } from './modules/adminstration/billing-cycle.routes';
 
@@ -42,6 +43,7 @@ const LaboratoryModule = React.lazy(() => import('../../modules/laboratory/ui/La
 const BillingModule = React.lazy(() => import('../../modules/billling/ui/BillingModule'));
 const ModuleAccessMiddleware = React.lazy(() => import('./middleware/ModuleAccessMiddleware'));
 const PlatformAdministrationModule = React.lazy(() => import('../../modules/platform-administration/PlatformAdministrationModule'));
+const CustocareHubModule = React.lazy(() => import('../../modules/custocare-hub/ui/CustocareHubModule'));
 
 export const ProtectedRoutes = () => [
   <Route key="protected-routes" element={<AuthMiddlewareRoute />}>
@@ -233,6 +235,30 @@ export const ProtectedRoutes = () => [
             >
               {plansSubscriptionsRoutes}
             </Route>      
+          </Route>
+
+          {/* Custocare Hub — documentation, training, community (always available) */}
+          <Route
+            key="custocare-hub"
+            path={ROUTES.CUSTOCARE_HUB}
+            element={
+              <SuspenseWrapper variant="table">
+                <WithThemeProp Component={CustocareHubModule} />
+              </SuspenseWrapper>
+            }
+          >
+            <Route
+              index
+              element={
+                <LoadingRedirect
+                  to={CUSTOCARE_HUB_ROUTES.OVERVIEW}
+                  replace
+                  variant="table"
+                  message="Loading Custocare Hub..."
+                />
+              }
+            />
+            {custocareHubRoutes}
           </Route>
 
           {/* Account Module */}
