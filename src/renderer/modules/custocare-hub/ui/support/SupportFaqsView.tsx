@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { HelpCircle, Loader2, Search } from 'lucide-react';
 import { cn } from '../../../../shared/utils/classNameUtils';
 import { usePublishedSupportFaqs } from '../../api/support/useSupportFaqQueries';

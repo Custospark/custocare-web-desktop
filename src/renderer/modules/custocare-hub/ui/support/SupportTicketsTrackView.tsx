@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Loader2, Search } from 'lucide-react';
 import { imperativeToast } from '../../../../app/store/contexts/toast/imperativeToast';
 import { cn } from '../../../../shared/utils/classNameUtils';

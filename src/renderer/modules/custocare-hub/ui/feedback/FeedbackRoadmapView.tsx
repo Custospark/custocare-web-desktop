@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { Heart, Loader2 } from 'lucide-react';
 import { imperativeToast } from '../../../../app/store/contexts/toast/imperativeToast';
 import { cn } from '../../../../shared/utils/classNameUtils';
