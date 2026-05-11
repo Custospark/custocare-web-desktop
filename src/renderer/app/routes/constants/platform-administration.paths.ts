@@ -14,4 +14,7 @@ export const PLATFORM_ADMIN_ROUTES = {
   USERS: '/platform-admin/users',
   USERS_PERMISSIONS: '/platform-admin/users/permissions',
   USERS_USER_STATS: '/platform-admin/users/user-stats',
+
+  // Documentation routes
+  API_DOCS: '/platform-admin/api-docs',
 } as const;

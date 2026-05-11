@@ -7,6 +7,7 @@
 import { 
   Users, 
   Building2,
+  BookOpenText,
 } from 'lucide-react';
 import { BaseModuleWorkspace } from '../../shared/components/workspace/BaseModuleWorkspace';
 import { ROUTES } from '../../app/routes/routeConstants';
@@ -25,6 +26,12 @@ const PLATFORM_ADMIN_OPERATIONS = [
     label: 'User Administration', 
     icon: <Users className="w-4 h-4" />,
     description: 'Manage users, roles, and permissions globally'
+  },
+  {
+    id: 'api-docs',
+    label: 'API Documentation',
+    icon: <BookOpenText className="w-4 h-4" />,
+    description: 'Explore backend API endpoints by module, auth, and route metadata',
   },
 ];
 

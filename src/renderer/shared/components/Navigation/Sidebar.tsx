@@ -34,6 +34,7 @@ import {
   BILLING_ROUTES,
 } from '../../../app/routes/routeConstants';
 import { ADMIN_ROUTES } from '../../../app/routes/constants/administration.paths';
+import { PLATFORM_ADMIN_ROUTES } from '../../../app/routes/constants/platform-administration.paths';
 import { useAppSelector } from '../../../app/store/hooks/useApp';
 import {
   selectAccessibleModuleCodes,
@@ -326,6 +327,11 @@ const menuConfig: MenuItem[] = useMemo(
       route: ROUTES.PLATFORM_ADMINISTRATION,
       description:
         'Global platform settings, system configuration, user management across all facilities',
+      operations: [
+        { id: 'pa-facilities', label: 'Facility Management', route: PLATFORM_ADMIN_ROUTES.FACILITIES },
+        { id: 'pa-users', label: 'User Administration', route: PLATFORM_ADMIN_ROUTES.USERS },
+        { id: 'pa-api-docs', label: 'API Documentation', route: PLATFORM_ADMIN_ROUTES.API_DOCS },
+      ],
       stats: 'Platform',
       shortcut: '⌘P',
       glowColor: 'from-slate-600 to-slate-500',

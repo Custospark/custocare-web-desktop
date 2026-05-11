@@ -37,6 +37,9 @@ const FacilitySubscriptions = React.lazy(() => import("../../../modules/platform
 const UserAdministration = React.lazy(() => import("../../../modules/platform-administration/user-management/UserAdministration"));
 const UserPermissions = React.lazy(() => import("../../../modules/platform-administration/user-management/UserPermissions"));
 const UserStats = React.lazy(() => import("../../../modules/platform-administration/user-management/UserStats"));
+const ApiDocumentationPage = React.lazy(
+  () => import("../../../modules/documentation/api-docs/ApiDocumentationPage")
+);
 
 // ============================================================================
 // PLATFORM ADMIN ROUTES CONFIGURATION
@@ -138,6 +141,16 @@ export const platformAdminRoutes = [
         }
       />
     </Route>
+
+    <Route
+      key="platform-admin-api-docs"
+      path={PLATFORM_ADMIN_ROUTES.API_DOCS}
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={ApiDocumentationPage} />
+        </SuspenseWrapper>
+      }
+    />
   </Route>
 ];
 
