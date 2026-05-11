@@ -46,6 +46,7 @@ import type {
   UpdateMessageRequest,
   MessageBodyType,
   MessagePriority,
+  RecipientInput,
 } from '../../../api/messages/MessageTypes';
 import type {
   ComposeMessage,
@@ -70,8 +71,11 @@ const formatFileSize = (bytes: number): string => {
 const validateEmail = (email: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-const validatePhone = (phone: string) =>
-  /^\+?[\d\s\-().]{7,20}$/.test(phone.trim());
+/** Matches backend {@link PatientController} / MessageService phone normalization for hashing. */
+export const normalizePhoneInput = (raw: string): string => {
+  const trimmed = raw.trim();
+  return trimmed.replace(/(?!^\+)[^\d]/g, '');
+};
 
 /**
  * htmlToPlainText
@@ -140,7 +144,10 @@ export const saveStoredContacts = (contacts: StoredContact[]): void => {
 
 export const recordContactUse = (recipient: Recipient): void => {
   const contacts = loadStoredContacts();
-  const existing = contacts.find(c => c.email && c.email === recipient.email);
+  const existing = contacts.find(c =>
+    (recipient.email && c.email === recipient.email) ||
+    (recipient.phone && c.phone && normalizePhoneInput(c.phone) === normalizePhoneInput(recipient.phone)),
+  );
   if (existing) {
     existing.useCount += 1;
     existing.lastUsed = Date.now();
@@ -149,7 +156,7 @@ export const recordContactUse = (recipient: Recipient): void => {
     contacts.push({
       id: `c_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       name: recipient.name || '',
-      email: recipient.email,
+      email: recipient.email || '',
       phone: recipient.phone,
       useCount: 1,
       lastUsed: Date.now(),
@@ -302,6 +309,18 @@ export const useComposeState = ({
     return bodyType;
   }, [message.body, bodyType]);
 
+  const mapRecipientForApi = useCallback((r: Recipient): RecipientInput | null => {
+    if (r.contactType === 'phone' && r.phone) {
+      const normalized = normalizePhoneInput(r.phone);
+      if (normalized.length < 7) return null;
+      return { name: r.name || null, phone: normalized };
+    }
+    if (r.email && validateEmail(r.email)) {
+      return { name: r.name || null, email: r.email };
+    }
+    return null;
+  }, []);
+
   const buildPayload = useCallback(
     (saveDraftFlag?: boolean): StoreMessageRequest => ({
       save_draft: saveDraftFlag,
@@ -315,22 +334,16 @@ export const useComposeState = ({
       body:       getApiBody(),
       body_type:  getApiBodyType(),
       priority:   message.priority as MessagePriority,
-      to: message.to
-        .filter(r => r.email && validateEmail(r.email))
-        .map(r => ({ name: r.name, email: r.email })),
-      cc: message.cc
-        .filter(r => r.email && validateEmail(r.email))
-        .map(r => ({ name: r.name, email: r.email })),
-      bcc: message.bcc
-        .filter(r => r.email && validateEmail(r.email))
-        .map(r => ({ name: r.name, email: r.email })),
+      to: message.to.map(mapRecipientForApi).filter((x): x is RecipientInput => x !== null),
+      cc: message.cc.map(mapRecipientForApi).filter((x): x is RecipientInput => x !== null),
+      bcc: message.bcc.map(mapRecipientForApi).filter((x): x is RecipientInput => x !== null),
       labels:               message.labels,
       scheduled_send_at:    message.scheduledSend?.toISOString() ?? null,
       read_receipt:         message.readReceipt,
       delivery_confirmation: message.deliveryConfirmation,
       parent_id:            replyTo ? parseInt(replyTo.id, 10) : null,
     }),
-    [message, getApiBody, getApiBodyType, replyTo],
+    [message, getApiBody, getApiBodyType, replyTo, mapRecipientForApi],
   );
 
   const buildUpdatePayload = useCallback((): UpdateMessageRequest => ({
@@ -338,20 +351,14 @@ export const useComposeState = ({
     body:       getApiBody(),       // same fix — strip HTML before API call
     body_type:  getApiBodyType(),
     priority:   message.priority as MessagePriority,
-    to: message.to
-      .filter(r => r.email && validateEmail(r.email))
-      .map(r => ({ name: r.name, email: r.email })),
-    cc: message.cc
-      .filter(r => r.email && validateEmail(r.email))
-      .map(r => ({ name: r.name, email: r.email })),
-    bcc: message.bcc
-      .filter(r => r.email && validateEmail(r.email))
-      .map(r => ({ name: r.name, email: r.email })),
+    to: message.to.map(mapRecipientForApi).filter((x): x is RecipientInput => x !== null),
+    cc: message.cc.map(mapRecipientForApi).filter((x): x is RecipientInput => x !== null),
+    bcc: message.bcc.map(mapRecipientForApi).filter((x): x is RecipientInput => x !== null),
     labels:               message.labels,
     scheduled_send_at:    message.scheduledSend?.toISOString() ?? null,
     read_receipt:         message.readReceipt,
     delivery_confirmation: message.deliveryConfirmation,
-  }), [message, getApiBody, getApiBodyType]);
+  }), [message, getApiBody, getApiBodyType, mapRecipientForApi]);
 
   /* ── validation ───────────────────────────────────────────── */
   const validateMessage = useCallback((): boolean => {
@@ -360,10 +367,12 @@ export const useComposeState = ({
     if (allRecipients.length === 0)
       errors.recipients = 'Add at least one recipient';
     allRecipients.forEach(r => {
-      if (r.contactType === 'email' && !validateEmail(r.email))
+      if (r.contactType === 'phone') {
+        const digits = normalizePhoneInput(r.phone || '');
+        if (digits.length < 7) errors[`phone_${r.id}`] = 'Enter a valid phone number';
+      } else if (!validateEmail(r.email)) {
         errors[`email_${r.id}`] = 'Invalid email';
-      if (r.contactType === 'phone' && r.phone && !validatePhone(r.phone))
-        errors[`phone_${r.id}`] = 'Invalid phone';
+      }
     });
     if (!message.subject.trim()) errors.subject = 'Subject is required';
     // Strip HTML tags when checking if body is empty (rich editor stores HTML)
@@ -468,17 +477,25 @@ export const useComposeState = ({
       const trimmed = input.trim();
       if (!trimmed) return;
 
-      const isPhone = validatePhone(trimmed) && !validateEmail(trimmed);
+      const asEmail = validateEmail(trimmed);
+      const normalizedPhone = normalizePhoneInput(trimmed);
+      const isPhone = !asEmail && normalizedPhone.length >= 7;
+
       const newR: Recipient = isPhone
         ? {
             id: `r_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-            name: name || trimmed, email: '', phone: trimmed,
-            contactType: 'phone', isValid: true,
+            name: name || trimmed,
+            email: '',
+            phone: trimmed,
+            contactType: 'phone',
+            isValid: normalizedPhone.length >= 7,
           }
         : {
             id: `r_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-            name: name || trimmed.split('@')[0], email: trimmed,
-            contactType: 'email', isValid: validateEmail(trimmed),
+            name: name || trimmed.split('@')[0],
+            email: trimmed,
+            contactType: 'email',
+            isValid: asEmail,
           };
 
       setMessage(prev => ({ ...prev, [type]: [...prev[type], newR] }));
@@ -658,6 +675,6 @@ export const useComposeState = ({
     handleMaximize,
     handleRestore,
     validateEmail,
-    validatePhone,
+    normalizePhoneInput,
   };
 };

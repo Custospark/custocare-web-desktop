@@ -1,9 +1,9 @@
 /**
  * ============================================================================
- * COMPOSE RECIPIENTS COMPONENT - EMAIL ONLY
+ * COMPOSE RECIPIENTS — EMAIL OR PHONE
  * ============================================================================
  * Features:
- *  - Email recipient input only (phone support to be added later)
+ *  - Recipients by email or phone (internal users resolved on the API by hash)
  *  - In-memory / localStorage auto-suggestions (frequency-ranked)
  *  - CC / BCC toggleable rows
  *  - Paste handling (comma/semicolon separated)
@@ -15,7 +15,7 @@ import React, {
   useState, useCallback, useRef, useMemo,
 } from 'react';
 import {
-  X, AlertCircle, Mail,
+  X, AlertCircle, Mail, Phone,
 } from 'lucide-react';
 import type { Recipient, StoredContact } from './composeTypes';
 import { cn } from '../../../../../shared/types/cn';
@@ -26,9 +26,12 @@ import { loadStoredContacts } from './useComposeState';
 const filterContacts = (query: string, contacts: StoredContact[]): StoredContact[] => {
   if (!query || query.length < 1) return [];
   const q = query.toLowerCase();
+  const qDigits = q.replace(/\D/g, '');
   return contacts
     .filter(c =>
       c.email?.toLowerCase().includes(q) ||
+      c.phone?.toLowerCase().includes(q) ||
+      (qDigits.length >= 3 && c.phone?.replace(/\D/g, '').includes(qDigits)) ||
       c.name?.toLowerCase().includes(q),
     )
     .sort((a, b) => b.useCount - a.useCount)
@@ -44,10 +47,14 @@ interface RecipientChipProps {
 
 const RecipientChip: React.FC<RecipientChipProps> = ({ recipient, isDark, onRemove }) => {
   const isInvalid = !recipient.isValid;
+  const isPhone = recipient.contactType === 'phone';
+  const primaryLabel = isPhone
+    ? (recipient.name && recipient.name !== recipient.phone ? recipient.name : recipient.phone || '')
+    : (recipient.name && recipient.name !== recipient.email ? recipient.name : recipient.email);
 
   return (
     <span
-      title={recipient.email}
+      title={isPhone ? (recipient.phone || '') : recipient.email}
       className={cn(
         'inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-sm group max-w-[200px] border',
         isInvalid
@@ -61,14 +68,14 @@ const RecipientChip: React.FC<RecipientChipProps> = ({ recipient, isDark, onRemo
     >
       {isInvalid ? (
         <AlertCircle className="w-3 h-3 shrink-0" />
+      ) : isPhone ? (
+        <Phone className="w-3 h-3 shrink-0" />
       ) : (
         <Mail className="w-3 h-3 shrink-0" />
       )}
 
       <span className="truncate">
-        {recipient.name && recipient.name !== recipient.email
-          ? recipient.name
-          : recipient.email}
+        {primaryLabel}
       </span>
 
       <button
@@ -111,7 +118,11 @@ const SuggestionItem: React.FC<SuggestionItemProps> = ({
         isDark ? 'bg-gray-600 text-gray-200' : 'bg-gray-200 text-gray-700',
       )}
     >
-      {contact.name ? contact.name[0].toUpperCase() : contact.email[0]?.toUpperCase() ?? '?'}
+      {contact.name
+        ? contact.name[0].toUpperCase()
+        : ((contact.email?.[0]
+          ?? (contact.phone ? contact.phone.replace(/\D/g, '')[0] : undefined))
+          ?? '?').toUpperCase()}
     </div>
 
     <div className="min-w-0">
@@ -119,7 +130,7 @@ const SuggestionItem: React.FC<SuggestionItemProps> = ({
         <div className="font-medium truncate">{contact.name}</div>
       )}
       <div className={cn('truncate', isDark ? 'text-gray-400' : 'text-gray-500')}>
-        {contact.email}
+        {contact.email || contact.phone || ''}
       </div>
     </div>
 
@@ -201,7 +212,7 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
       if ((e.key === 'Enter' || e.key === 'Tab') && highlightIdx >= 0) {
         e.preventDefault();
         const s = suggestions[highlightIdx];
-        commit(s.email, s.name);
+        commit(s.email || s.phone || '', s.name);
         return;
       }
     }
@@ -223,7 +234,7 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
   };
 
   const placeholder = recipients.length === 0
-    ? `Add ${label} recipients (email addresses)`
+    ? `Add ${label} — email or phone`
     : '';
 
   return (
@@ -256,17 +267,18 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
         ))}
 
         <div className="relative flex items-center flex-1 min-w-[180px]">
-          <Mail 
+          <Mail
             className={cn(
               'mr-1 w-4 h-4 shrink-0',
               isDark ? 'text-blue-400' : 'text-blue-500',
             )}
           />
-          
+
           <input
             ref={inputRef}
-            type="email"
-            inputMode="email"
+            type="text"
+            inputMode="text"
+            autoComplete="off"
             value={inputValue}
             onChange={e => handleChange(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -293,7 +305,7 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
                   isDark ? 'text-gray-400 border-gray-700' : 'text-gray-500 border-gray-100',
                 )}
               >
-                <Mail className="w-3 h-3" /> Email Suggestions
+                <Mail className="w-3 h-3" /> Suggestions
               </div>
               {suggestions.map((s, i) => (
                 <SuggestionItem
@@ -301,7 +313,7 @@ const RecipientRow: React.FC<RecipientRowProps> = ({
                   contact={s}
                   isDark={isDark}
                   isHighlighted={i === highlightIdx}
-                  onSelect={() => commit(s.email, s.name)}
+                  onSelect={() => commit(s.email || s.phone || '', s.name)}
                 />
               ))}
             </div>

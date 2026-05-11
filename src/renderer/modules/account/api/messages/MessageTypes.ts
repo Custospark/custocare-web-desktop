@@ -143,6 +143,8 @@ export interface MessageRecipient {
   user_id: number | null;
   name: string | null;
   email: string;
+  /** Present when recipient was addressed by phone; decrypted display value when available. */
+  phone?: string | null;
   type: RecipientType;
   delivery_status: RecipientDeliveryStatus;
   delivered_at: string | null;
@@ -293,11 +295,13 @@ export type GetMessagesResponse = LaravelPaginator<MessageStateWithMessage>;
 
 /**
  * Recipient input payload used by store/update endpoints:
- * to.*.name, to.*.email, cc.*..., bcc.*...
+ * to.*.name, to.*.email | to.*.phone, cc.*..., bcc.*...
+ * Backend resolves {@link User} by email_hash or phone_hash (normalized digits, same as patient flows).
  */
 export interface RecipientInput {
   name?: string | null;
-  email: string;
+  email?: string | null;
+  phone?: string | null;
 }
 
 export interface StoreMessageRequest {
