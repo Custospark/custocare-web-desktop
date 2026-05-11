@@ -1,5 +1,5 @@
 // components/medical-records/MRVisitActionCenter.tsx
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { type RootState } from '../../../../app/store/rootReducer';
 import { CLINICAL_ROUTES, MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
+import { FOCUS_MODE_ROUTES } from '../../../../app/routes/utils/forwardPatientFocus';
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
 import { 
   selectActivePatient,
@@ -53,17 +54,29 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
       ? {
           patientRecords: CLINICAL_ROUTES.PATIENT_RECORDS,
           clinicalCare: CLINICAL_ROUTES.CLINICAL_CARE,
-          forwardPatient: CLINICAL_ROUTES.FORWARD_PATIENT,
           patientBillingSpace: CLINICAL_ROUTES.PATIENT_BILLING_SPACE,
           visitStatus: CLINICAL_ROUTES.VISIT_STATUS,
         }
       : {
           patientRecords: MEDICAL_RECORDS_ROUTES.PATIENT_RECORDS,
           clinicalCare: MEDICAL_RECORDS_ROUTES.CLINICAL_CARE,
-          forwardPatient: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT,
           patientBillingSpace: MEDICAL_RECORDS_ROUTES.PATIENT_BILLING_SPACE,
           visitStatus: MEDICAL_RECORDS_ROUTES.VISIT_STATUS,
         };
+
+  const forwardPatientNavigateState = useMemo(
+    () =>
+      intakeModule === 'clinical'
+        ? {
+            cancelTo: CLINICAL_ROUTES.PATIENT_RECORDS,
+            queueRedirectTo: CLINICAL_ROUTES.PATIENT_QUEUE,
+          }
+        : {
+            cancelTo: MEDICAL_RECORDS_ROUTES.PATIENT_RECORDS,
+            queueRedirectTo: MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE,
+          },
+    [intakeModule]
+  );
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -273,7 +286,8 @@ const MRVisitActionCenter: React.FC<MRVisitActionCenterProps> = ({
                 key: 'forward-patient', 
                 label: 'Forward Patient', 
                 icon: <ArrowRight className="w-4 h-4" />, 
-                to: actionCenterRoutes.forwardPatient
+                to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
+                navigateState: forwardPatientNavigateState,
               },
               { 
                 key: 'billing-space', 

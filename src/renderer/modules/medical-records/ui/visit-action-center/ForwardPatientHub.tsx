@@ -3,7 +3,8 @@ import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, ArrowRight, UserPlus } from 'lucide-react';
 
-import { FOCUS_MODE_ROUTES } from '../../../administration/onboarding/routes/focusModeRouteConstants';
+import { FOCUS_MODE_ROUTES } from '../../../../app/routes/utils/forwardPatientFocus';
+import { MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
 import {
   selectActiveVisit,
   selectActiveVisitId,
@@ -26,7 +27,12 @@ export const ForwardPatientHub: React.FC<ForwardPatientHubProps> = ({ theme = 'l
   const colors = useMemo(() => getForwardPatientColors(theme), [theme]);
 
   const handleOpenForwardFocus = () => {
-    navigate(FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS);
+    navigate(FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS, {
+      state: {
+        cancelTo: MEDICAL_RECORDS_ROUTES.PATIENT_RECORDS,
+        queueRedirectTo: MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE,
+      },
+    });
   };
 
   if (!visitId || !activeVisit) {

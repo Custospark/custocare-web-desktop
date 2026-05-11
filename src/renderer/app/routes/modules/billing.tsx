@@ -9,7 +9,7 @@ import BillingRevenueWorkspace from '../../../modules/billling/ui/revenue/Billin
 import MRPatientQueue from '../../../modules/medical-records/ui/patients/views/MRPatientQueue';
 import MRPatientWalkIn from '../../../modules/medical-records/ui/patients/views/MRPatientWalkIn';
 import MRBilling from '../../../modules/medical-records/ui/visit-action-center/billing-space/MRBilling';
-import ForwardPatient from '../../../modules/medical-records/ui/visit-action-center/ForwardPatient';
+import RedirectToForwardPatientFocus from '../../../modules/medical-records/ui/visit-action-center/RedirectToForwardPatientFocus';
 import VisitStatus from '../../../modules/medical-records/ui/visit-action-center/VisitStatus';
 import { MRBillingReview } from '../../../modules/medical-records/ui/revenue/MRBillingReview';
 import RevenueStats from '../../../modules/medical-records/ui/revenue/stats/RevenueStats';
@@ -53,8 +53,11 @@ export const billingRoutes = [
       element={
         <SuspenseWrapper variant="table">
           <WithThemeProp
-            Component={ForwardPatient}
-            props={{ queueRedirectTo: BILLING_ROUTES.PATIENT_QUEUE }}
+            Component={RedirectToForwardPatientFocus}
+            props={{
+              cancelTo: BILLING_ROUTES.BILLING_SPACE,
+              queueRedirectTo: BILLING_ROUTES.PATIENT_QUEUE,
+            }}
           />
         </SuspenseWrapper>
       }

@@ -35,6 +35,7 @@ import {
   formatVisitStageLabel,
   formatVisitStatusLabel,
 } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import { FOCUS_MODE_ROUTES } from '../../../../app/routes/utils/forwardPatientFocus';
 
 interface PharmacyActionCenterProps {
   theme: 'light' | 'dark';
@@ -196,7 +197,11 @@ const PharmacyActionCenter: React.FC<PharmacyActionCenterProps> = ({ theme }) =>
                   key: 'forward-patient',
                   label: 'Forward Patient',
                   icon: <ArrowRight className="h-4 w-4" />,
-                  to: PHARMACY_ROUTES.ACTION_CENTER_FORWARD_PATIENT,
+                  to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
+                  navigateState: {
+                    cancelTo: PHARMACY_ROUTES.ACTION_CENTER_DISPENSING,
+                    queueRedirectTo: PHARMACY_ROUTES.PATIENT_QUEUE,
+                  },
                   description: 'Send this patient to another team queue or a specific staff member',
                 },
                 {

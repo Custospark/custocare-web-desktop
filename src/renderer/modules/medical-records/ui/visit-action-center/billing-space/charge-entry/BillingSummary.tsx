@@ -25,9 +25,11 @@ import {
 import {
   BILLING_ROUTES,
   CLINICAL_ROUTES,
+  LABORATORY_ROUTES,
   MEDICAL_RECORDS_ROUTES,
   PHARMACY_ROUTES,
 } from '../../../../../../app/routes/routeConstants';
+import { FOCUS_MODE_ROUTES } from '../../../../../../app/routes/utils/forwardPatientFocus';
 import {
   clearPendingForwarding,
   selectPendingForwarding,
@@ -100,24 +102,50 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
     if (pathname.startsWith('/billing')) {
       return {
         queue: BILLING_ROUTES.PATIENT_QUEUE,
-        forward: BILLING_ROUTES.FORWARD_PATIENT,
+        forwardTo: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
+        forwardState: {
+          cancelTo: BILLING_ROUTES.BILLING_SPACE,
+          queueRedirectTo: BILLING_ROUTES.PATIENT_QUEUE,
+        },
       } as const;
     }
     if (pathname.startsWith('/pharmacy')) {
       return {
         queue: PHARMACY_ROUTES.PATIENT_QUEUE,
-        forward: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT,
+        forwardTo: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
+        forwardState: {
+          cancelTo: PHARMACY_ROUTES.ACTION_CENTER_DISPENSING,
+          queueRedirectTo: PHARMACY_ROUTES.PATIENT_QUEUE,
+        },
+      } as const;
+    }
+    if (pathname.startsWith('/laboratory')) {
+      return {
+        queue: LABORATORY_ROUTES.PATIENT_QUEUE,
+        forwardTo: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
+        forwardState: {
+          cancelTo: LABORATORY_ROUTES.ACTION_CENTER_REQUEST,
+          queueRedirectTo: LABORATORY_ROUTES.PATIENT_QUEUE,
+        },
       } as const;
     }
     if (pathname.startsWith('/clinical')) {
       return {
         queue: CLINICAL_ROUTES.PATIENT_QUEUE,
-        forward: CLINICAL_ROUTES.FORWARD_PATIENT,
+        forwardTo: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
+        forwardState: {
+          cancelTo: CLINICAL_ROUTES.PATIENT_RECORDS,
+          queueRedirectTo: CLINICAL_ROUTES.PATIENT_QUEUE,
+        },
       } as const;
     }
     return {
       queue: MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE,
-      forward: MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT,
+      forwardTo: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
+      forwardState: {
+        cancelTo: MEDICAL_RECORDS_ROUTES.PATIENT_RECORDS,
+        queueRedirectTo: MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE,
+      },
     } as const;
   }, [location.pathname]);
 
@@ -274,7 +302,7 @@ const buildPendingBillingPayload = useCallback((): BillingSubmissionPayload | nu
       if (!pendingForwarding?.visitId || (!hasStaffTarget && !hasWorkflowTarget)) {
         // No forwarding target, just clear billing data and go to forward patient forward page
         clearBillingDataOnly();
-        navigate(moduleRoutes.forward);
+        navigate(moduleRoutes.forwardTo, { state: moduleRoutes.forwardState });
         return true;
       }
 
@@ -305,7 +333,18 @@ const buildPendingBillingPayload = useCallback((): BillingSubmissionPayload | nu
       console.error('Failed to complete forward action:', error);
       return false;
     }
-  }, [billingMutation, assignMutation, pendingForwarding, navigate, buildPendingBillingPayload, clearBillingDataOnly, clearBillingDataAndVisit, moduleRoutes.forward, moduleRoutes.queue]);
+  }, [
+    billingMutation,
+    assignMutation,
+    pendingForwarding,
+    navigate,
+    buildPendingBillingPayload,
+    clearBillingDataOnly,
+    clearBillingDataAndVisit,
+    moduleRoutes.forwardTo,
+    moduleRoutes.forwardState,
+    moduleRoutes.queue,
+  ]);
 
   /**
    * Action: SAVE & EXIT

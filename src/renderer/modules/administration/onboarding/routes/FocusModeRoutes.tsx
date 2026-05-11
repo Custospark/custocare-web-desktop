@@ -1,7 +1,8 @@
 import React, { Suspense } from 'react';
 import { Route } from 'react-router-dom';
+import { ForwardPatientFocusRouteShell } from '../../../medical-records/ui/visit-action-center/ForwardPatientFocusRouteShell';
 import { FOCUS_MODE_ROUTES } from './focusModeRouteConstants';
-import { LABORATORY_ROUTES, MEDICAL_RECORDS_ROUTES } from '../../../../app/routes/routeConstants';
+import { LABORATORY_ROUTES } from '../../../../app/routes/routeConstants';
 import FocusedModeLayout from '../../../../shared/components/Navigation/FocusedModeLayout';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 import ClinicalTemplateFocus from '../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/ClinicalTemplateFocus';
@@ -24,12 +25,6 @@ const LabRequestFocus = React.lazy(
 );
 const LabResultFocus = React.lazy(
   () => import('../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/LabResultFocus')
-);
-const ForwardPatientFocus = React.lazy(
-  () =>
-    import(
-      '../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/ForwardPatientFocus'
-    )
 );
 const LatestVisit = React.lazy(
   () => import('../../../medical-records/ui/visit-action-center/patient-records/LatestVisit')
@@ -150,16 +145,7 @@ export const FocusModeRoutes = ({ theme = 'light', patientName }: FocusModeRoute
   <Route
     key="forward-patient-focus"
     path={FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS}
-    element={
-      <FocusedModeLayout
-        title={withPatientTitle('Forward Patient')}
-        onClose={MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT}
-      >
-        <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
-          <ForwardPatientFocus theme={theme} cancelTo={MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT} />
-        </Suspense>
-      </FocusedModeLayout>
-    }
+    element={<ForwardPatientFocusRouteShell theme={theme} withPatientTitle={withPatientTitle} />}
   />,
   <Route
     key="laboratory-module-lab-request-focus"

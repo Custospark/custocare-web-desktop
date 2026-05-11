@@ -34,6 +34,7 @@ import {
   formatVisitStageLabel,
   formatVisitStatusLabel,
 } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import { FOCUS_MODE_ROUTES } from '../../../../app/routes/utils/forwardPatientFocus';
 
 const NursingEncounterWorkspace: React.FC<NursingWorkspaceProps> = ({ theme }) => {
   const navigate = useNavigate();
@@ -225,7 +226,11 @@ const NursingEncounterWorkspace: React.FC<NursingWorkspaceProps> = ({ theme }) =
                   key: 'forward-patient',
                   label: 'Forward Patient',
                   icon: <ArrowRight className="w-4 h-4" />,
-                  to: NURSING_ROUTES.NURSING_ENCOUNTER_FORWARD_PATIENT,
+                  to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
+                  navigateState: {
+                    cancelTo: NURSING_ROUTES.NURSING_ENCOUNTER_PATIENT_INFO,
+                    queueRedirectTo: NURSING_ROUTES.WARDS_PATIENTS_NEW_PATIENTS_UNASSIGNED,
+                  },
                   description: 'Send this patient to another team queue or a specific staff member',
                 },
                 { key: 'tasks', label: 'Tasks', icon: <ClipboardList className="w-4 h-4" />, to: NURSING_ROUTES.NURSING_ENCOUNTER_TASKS },

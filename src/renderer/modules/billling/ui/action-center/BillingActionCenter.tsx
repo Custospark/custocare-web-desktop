@@ -30,6 +30,7 @@ import {
   formatVisitStageLabel,
   formatVisitStatusLabel,
 } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import { FOCUS_MODE_ROUTES } from '../../../../app/routes/utils/forwardPatientFocus';
 
 interface BillingActionCenterProps {
   theme: 'light' | 'dark';
@@ -177,7 +178,11 @@ const BillingActionCenter: React.FC<BillingActionCenterProps> = ({ theme }) => {
                   key: 'forward-patient',
                   label: 'Forward Patient',
                   icon: <ArrowRight className="h-4 w-4" />,
-                  to: BILLING_ROUTES.FORWARD_PATIENT,
+                  to: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
+                  navigateState: {
+                    cancelTo: BILLING_ROUTES.BILLING_SPACE,
+                    queueRedirectTo: BILLING_ROUTES.PATIENT_QUEUE,
+                  },
                 },
               ]}
             />

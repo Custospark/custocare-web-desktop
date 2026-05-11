@@ -1,17 +1,19 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ForwardPatient } from '../../ForwardPatient';
-import { MEDICAL_RECORDS_ROUTES } from '../../../../../../app/routes/routeConstants';
 
-interface ForwardPatientFocusProps {
+export interface ForwardPatientFocusFormProps {
   theme?: 'light' | 'dark';
-  cancelTo?: string;
+  cancelTo: string;
+  queueRedirectTo: string;
 }
 
-export const ForwardPatientFocus: React.FC<ForwardPatientFocusProps> = ({
+/** Forward Patient form (FocusedModeLayout lives in the route table). */
+export function ForwardPatientFocusForm({
   theme = 'light',
-  cancelTo = MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT,
-}) => {
+  cancelTo,
+  queueRedirectTo,
+}: ForwardPatientFocusFormProps) {
   const navigate = useNavigate();
 
   const handleCancel = () => {
@@ -22,9 +24,7 @@ export const ForwardPatientFocus: React.FC<ForwardPatientFocusProps> = ({
     <ForwardPatient
       theme={theme}
       onCancel={handleCancel}
-      queueRedirectTo={MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE}
+      queueRedirectTo={queueRedirectTo}
     />
   );
-};
-
-export default ForwardPatientFocus;
+}

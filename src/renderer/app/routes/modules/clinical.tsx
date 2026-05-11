@@ -11,7 +11,7 @@ import MRPatientWalkIn from '../../../modules/medical-records/ui/patients/views/
 import MRVisitActionCenter from '../../../modules/medical-records/ui/visit-action-center/MRVisitActionCenter';
 import MRPatientRecords from '../../../modules/medical-records/ui/patients/views/MRPatientRecords';
 import MRClinicalCare from '../../../modules/medical-records/ui/patients/views/MRClinicalCare';
-import ForwardPatient from '../../../modules/medical-records/ui/visit-action-center/ForwardPatient';
+import RedirectToForwardPatientFocus from '../../../modules/medical-records/ui/visit-action-center/RedirectToForwardPatientFocus';
 import VisitStatus from '../../../modules/medical-records/ui/visit-action-center/VisitStatus';
 import MRBilling from '../../../modules/medical-records/ui/visit-action-center/billing-space/MRBilling';
 import ClinicalBillingCycle from '../../../modules/clinical/ui/revenue/ClinicalBillingCycle';
@@ -103,7 +103,13 @@ export const clinicalRoutes = [
       path="forward-patient"
       element={
         <SuspenseWrapper variant="table">
-          <WithThemeProp Component={ForwardPatient} props={{ queueRedirectTo: CLINICAL_ROUTES.PATIENT_QUEUE }} />
+          <WithThemeProp
+            Component={RedirectToForwardPatientFocus}
+            props={{
+              cancelTo: CLINICAL_ROUTES.PATIENT_RECORDS,
+              queueRedirectTo: CLINICAL_ROUTES.PATIENT_QUEUE,
+            }}
+          />
         </SuspenseWrapper>
       }
     />

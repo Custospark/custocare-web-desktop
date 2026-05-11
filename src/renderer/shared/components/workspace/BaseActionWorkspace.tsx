@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useEffect, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, type NavigateOptions } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Crown, FlaskConical, Sparkles, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -12,6 +12,9 @@ export interface ActionConfig<TActionId extends string> {
   icon?: React.ReactNode;
   to: string;
   description?: string;
+
+  /** When set, navigation uses `navigate(to, { state })` (e.g. Forward Patient focus mode). */
+  navigateState?: NavigateOptions['state'];
 
   // existing
   disabled?: boolean;
@@ -162,7 +165,11 @@ export function BaseActionWorkspace<TActionId extends string>({
 
       const to = action.to;
       if (!to || location.pathname === to || location.pathname.startsWith(to + '/')) return;
-      navigate(to);
+      if (action.navigateState !== undefined) {
+        navigate(to, { state: action.navigateState });
+      } else {
+        navigate(to);
+      }
     },
     [navigate, location.pathname, onRequestUpgrade]
   );

@@ -17,7 +17,7 @@ import PharmacyPatientQueue from '../../../modules/pharmacy/ui/patients/views/Ph
 import PharmacyActionCenter from '../../../modules/pharmacy/ui/action-center/PharmacyActionCenter';
 import PharmacyDispenseMedication from '../../../modules/pharmacy/ui/action-center/PharmacyDispenseMedication';
 import PharmacyPrescriptionNotesPage from '../../../modules/pharmacy/ui/action-center/PharmacyPrescriptionNotesPage';
-import ForwardPatient from '../../../modules/medical-records/ui/visit-action-center/ForwardPatient';
+import RedirectToForwardPatientFocus from '../../../modules/medical-records/ui/visit-action-center/RedirectToForwardPatientFocus';
 
 const pharmacyTablePage = (Component: ComponentType<ThemeProp>) => (
   <SuspenseWrapper variant="table">
@@ -89,8 +89,11 @@ export const pharmacyRoutes = [
       element={
         <SuspenseWrapper variant="table">
           <WithThemeProp
-            Component={ForwardPatient}
-            props={{ queueRedirectTo: PHARMACY_ROUTES.PATIENT_QUEUE }}
+            Component={RedirectToForwardPatientFocus}
+            props={{
+              cancelTo: PHARMACY_ROUTES.ACTION_CENTER_DISPENSING,
+              queueRedirectTo: PHARMACY_ROUTES.PATIENT_QUEUE,
+            }}
           />
         </SuspenseWrapper>
       }

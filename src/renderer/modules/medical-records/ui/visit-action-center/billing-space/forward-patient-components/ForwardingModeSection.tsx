@@ -79,7 +79,7 @@ export const ForwardingModeSection: React.FC<ForwardingModeSectionProps> = ({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className={`text-sm font-semibold ${colors.text.primary}`}>Where should this visit go next?</h3>
+        <h3 className={`text-sm font-semibold ${colors.text.primary}`}>Where should this patient go next?</h3>
         <p className={`mt-1 text-xs ${colors.text.secondary}`}>
           Default is a team queue. You can switch to one person if you already know who should take
           it.
