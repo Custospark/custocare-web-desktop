@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, Route, type RouteObject } from 'react-router-dom';
-import { WithThemeProp, SuspenseWrapper } from './shared/routeUtils';
+import { WithThemeProp, SuspenseWrapper, type ThemeProp } from './shared/routeUtils';
 import { BILLING_ROUTES } from '../routeConstants';
 
 import BillingFrontDesk from '../../../modules/billling/ui/patients/BillingFrontDesk';
@@ -15,7 +15,7 @@ import { MRBillingReview } from '../../../modules/medical-records/ui/revenue/MRB
 import RevenueStats from '../../../modules/medical-records/ui/revenue/stats/RevenueStats';
 import BillingInvoicesFromReceipts from '../../../modules/billling/ui/revenue/BillingInvoicesFromReceipts';
 
-const billingTablePage = (Component: React.ComponentType<{ theme: 'light' | 'dark' }>): RouteObject['element'] => (
+const billingTablePage = <P extends ThemeProp,>(Component: React.ComponentType<P>): RouteObject['element'] => (
   <SuspenseWrapper variant="table">
     <WithThemeProp Component={Component} />
   </SuspenseWrapper>

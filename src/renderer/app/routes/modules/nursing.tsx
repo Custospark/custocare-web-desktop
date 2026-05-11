@@ -1,7 +1,7 @@
 import { type ComponentType } from 'react';
 import { Navigate, Route } from 'react-router-dom';
 import { NURSING_ROUTES } from '../routeConstants';
-import { SuspenseWrapper, WithThemeProp } from './shared/routeUtils';
+import { SuspenseWrapper, WithThemeProp, type ThemeProp } from './shared/routeUtils';
 import {
   MedicationTreatmentWorkspace,
   NursingEncounterWorkspace,
@@ -27,7 +27,7 @@ import TreatmentLogView from '../../../modules/nursing/ui/medication-treatment/T
 import NursingOverview from '../../../modules/nursing/ui/overview/NursingOverview';
 import MyWardPatientsView from '../../../modules/nursing/ui/wards-patients/MyWardPatientsView';
 
-const nursingTablePage = <P extends { theme: 'light' | 'dark' }>(
+const nursingTablePage = <P extends ThemeProp,>(
   Component: ComponentType<P>,
   props?: Omit<P, 'theme'>
 ) => (

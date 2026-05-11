@@ -405,7 +405,7 @@ export const StaffSelectionSection: React.FC<StaffSelectionSectionProps> = ({
         </div>
       )}
 
-      {errors.assigned_staff_id && (
+      {'assigned_staff_id' in errors && errors.assigned_staff_id && (
         <p className="mt-2 text-sm text-red-500 flex items-center gap-1">
           <AlertCircle className="w-4 h-4" />
           {errors.assigned_staff_id.message}

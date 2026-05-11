@@ -1,10 +1,10 @@
 import React, { useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { ThemeProp } from '../../../../app/routes/modules/shared/routeUtils';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 import { FOCUS_MODE_ROUTES } from '../../../../app/routes/utils/forwardPatientFocus';
 
-export interface RedirectToForwardPatientFocusProps {
-  theme?: 'light' | 'dark';
+export interface RedirectToForwardPatientFocusProps extends ThemeProp {
   cancelTo: string;
   queueRedirectTo: string;
 }
@@ -14,7 +14,7 @@ export interface RedirectToForwardPatientFocusProps {
  * passing cancel + queue targets via `location.state`.
  */
 export const RedirectToForwardPatientFocus: React.FC<RedirectToForwardPatientFocusProps> = ({
-  theme = 'light',
+  theme,
   cancelTo,
   queueRedirectTo,
 }) => {

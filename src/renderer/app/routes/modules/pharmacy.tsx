@@ -19,7 +19,7 @@ import PharmacyDispenseMedication from '../../../modules/pharmacy/ui/action-cent
 import PharmacyPrescriptionNotesPage from '../../../modules/pharmacy/ui/action-center/PharmacyPrescriptionNotesPage';
 import RedirectToForwardPatientFocus from '../../../modules/medical-records/ui/visit-action-center/RedirectToForwardPatientFocus';
 
-const pharmacyTablePage = (Component: ComponentType<ThemeProp>) => (
+const pharmacyTablePage = <P extends ThemeProp,>(Component: ComponentType<P>) => (
   <SuspenseWrapper variant="table">
     <WithThemeProp Component={Component} />
   </SuspenseWrapper>

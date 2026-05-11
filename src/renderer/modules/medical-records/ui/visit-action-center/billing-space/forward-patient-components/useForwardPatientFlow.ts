@@ -237,7 +237,8 @@ export const useForwardPatientFlow = ({
 
       debugLog('Submitting forward patient form', {
         visitId,
-        selectedStaffId: formData.assigned_staff_id,
+        selectedStaffId:
+          formData.forwarding_mode === 'staff' ? formData.assigned_staff_id : undefined,
         effectiveHasProvidedServices,
         shouldHideServicesQuestion,
       });

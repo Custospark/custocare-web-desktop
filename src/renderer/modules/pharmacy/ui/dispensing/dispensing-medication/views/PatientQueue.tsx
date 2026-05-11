@@ -88,6 +88,9 @@ export interface QueueVisitItem {
     bed_label?: string | null;
     room_label?: string | null;
   };
+
+  /** Set on completed-work lists (encounter end time). */
+  discharged_at?: string | null;
 }
 
 export interface PatientQueueProps {

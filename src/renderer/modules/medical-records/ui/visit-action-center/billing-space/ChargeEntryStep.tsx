@@ -50,6 +50,7 @@ import { useConfirm } from '../../../../../shared/components/Feedback/ConfirmDia
 import { SearchBar } from './charge-entry/SearchBar';
 import { ChargeItemsList } from './charge-entry/ChargeItemsList';
 import { BillingSummary } from './charge-entry/BillingSummary';
+import { getBillingSummaryColors } from './billing-summary-step/billingSummaryTheme';
 import LineItemHistoryModal from '../../revenue/billing-review/components/receipt-action-modals/LineItemHistoryModal';
 
 interface ChargeEntryStepProps {
@@ -323,6 +324,8 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
       warningBadge: isDark ? 'bg-rose-500/15 text-rose-300' : 'bg-rose-50 text-rose-700',
     },
   };
+
+  const billingSummaryColors = useMemo(() => getBillingSummaryColors(isDark), [isDark]);
 
   /**
    * Unified subtotal shown in the charge entry page.
@@ -972,7 +975,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
           isReadOnly={isReadOnly}
           isDisabledProceed={isDisabledProceed}
           theme={theme}
-          colors={colors}
+          colors={billingSummaryColors}
           onProceedToBilling={handleProceedToBilling}
         />
       </div>

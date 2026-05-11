@@ -13,7 +13,7 @@ const forwardStaffSchema = z.object({
 const forwardWorkflowSchema = z.object({
   forwarding_mode: z.literal('workflow'),
   care_delivery_workflow: z.nativeEnum(CareDeliveryWorkflow, {
-    errorMap: () => ({ message: 'Please select where to send this patient' }),
+    message: 'Please select where to send this patient',
   }),
   note: noteField,
 });
