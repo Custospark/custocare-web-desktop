@@ -1,9 +1,27 @@
 import * as z from 'zod';
 
-export const forwardPatientSchema = z.object({
+import { CareDeliveryWorkflow } from '../../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+
+const noteField = z.string().max(500, 'Note cannot exceed 500 characters').optional();
+
+const forwardStaffSchema = z.object({
+  forwarding_mode: z.literal('staff'),
   assigned_staff_id: z.number().min(1, 'Please select a staff member'),
-  note: z.string().max(500, 'Note cannot exceed 500 characters').optional(),
+  note: noteField,
 });
+
+const forwardWorkflowSchema = z.object({
+  forwarding_mode: z.literal('workflow'),
+  care_delivery_workflow: z.nativeEnum(CareDeliveryWorkflow, {
+    errorMap: () => ({ message: 'Please select where to send this patient' }),
+  }),
+  note: noteField,
+});
+
+export const forwardPatientSchema = z.discriminatedUnion('forwarding_mode', [
+  forwardStaffSchema,
+  forwardWorkflowSchema,
+]);
 
 export type ForwardPatientFormData = z.infer<typeof forwardPatientSchema>;
 

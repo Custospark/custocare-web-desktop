@@ -9,7 +9,7 @@ import MRPatientSearch from '../../../modules/medical-records/ui/patients/views/
 import MRPatientCreate from '../../../modules/medical-records/ui/patients/views/MRPatientCreate';
 import MRPatientQueue from '../../../modules/medical-records/ui/patients/views/MRPatientQueue';
 import MRPatientWalkIn from '../../../modules/medical-records/ui/patients/views/MRPatientWalkIn';
-import ForwardPatient from "../../../modules/medical-records/ui/visit-action-center/ForwardPatient";
+import { ForwardPatientHub } from "../../../modules/medical-records/ui/visit-action-center/ForwardPatientHub";
 import PatientComplaints from "../../../modules/medical-records/ui/visit-action-center/PatientComplaints";
 import VisitStatus from "../../../modules/medical-records/ui/visit-action-center/VisitStatus";
 import MRBilling from "../../../modules/medical-records/ui/visit-action-center/billing-space/MRBilling";
@@ -82,7 +82,7 @@ export const medicalRecordsRoutes = [
       } />
     <Route path={MEDICAL_RECORDS_ROUTES.FORWARD_PATIENT} element={
         <SuspenseWrapper variant="table">
-          <WithThemeProp Component={ForwardPatient} />
+          <WithThemeProp Component={ForwardPatientHub} />
         </SuspenseWrapper>
       } />
     <Route path={MEDICAL_RECORDS_ROUTES.GET_COMPLAINTS} element={

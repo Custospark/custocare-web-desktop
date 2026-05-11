@@ -1,7 +1,22 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { Activity, ArrowLeftRight, BedDouble, Calendar, ClipboardList, Clock, Pill, Search, Shield, Stethoscope, User, Users } from 'lucide-react';
+import {
+  Activity,
+  ArrowLeftRight,
+  ArrowRight,
+  BedDouble,
+  Calendar,
+  ClipboardList,
+  Clock,
+  FileText,
+  Pill,
+  Search,
+  Shield,
+  Stethoscope,
+  User,
+  Users,
+} from 'lucide-react';
 import { BaseActionWorkspace } from '../../../../shared/components/workspace/BaseActionWorkspace';
 import { NURSING_ROUTES } from '../../../../app/routes/routeConstants';
 import type { NursingWorkspaceProps } from './NursingWorkspace.types';
@@ -15,12 +30,23 @@ import {
 import { clearAll } from '../../../medical-records/ui/visit-action-center/billing-space';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
+import {
+  formatVisitStageLabel,
+  formatVisitStatusLabel,
+} from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 
 const NursingEncounterWorkspace: React.FC<NursingWorkspaceProps> = ({ theme }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { showToast } = useToast();
   const [isNavigating, setIsNavigating] = useState(false);
+  /** Tick so wait-time math does not call `Date.now()` during render (react-hooks/purity). */
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const patient = useSelector((state: RootState) => selectActivePatient(state));
   const visitInfo = useSelector((state: RootState) => selectActiveVisitInfo(state));
@@ -30,8 +56,7 @@ const NursingEncounterWorkspace: React.FC<NursingWorkspaceProps> = ({ theme }) =
     if (!arrivedAt) return 'N/A';
     try {
       const arrivalTime = new Date(arrivedAt).getTime();
-      const now = Date.now();
-      const diffMinutes = Math.floor((now - arrivalTime) / (1000 * 60));
+      const diffMinutes = Math.floor((nowMs - arrivalTime) / (1000 * 60));
       if (diffMinutes < 60) return `${diffMinutes} min`;
       const hours = Math.floor(diffMinutes / 60);
       const minutes = diffMinutes % 60;
@@ -148,6 +173,20 @@ const NursingEncounterWorkspace: React.FC<NursingWorkspaceProps> = ({ theme }) =
                       <div className="text-xs font-medium truncate">{visitInfo?.acuity || 'N/A'}</div>
                     </div>
                   </div>
+                  <div className="flex items-start gap-2">
+                    <FileText className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} />
+                    <div className="min-w-0">
+                      <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Visit stage</div>
+                      <div className="text-xs font-medium truncate">{formatVisitStageLabel(visitInfo?.phase)}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <ClipboardList className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} />
+                    <div className="min-w-0">
+                      <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Visit status</div>
+                      <div className="text-xs font-medium truncate">{formatVisitStatusLabel(visitInfo?.status)}</div>
+                    </div>
+                  </div>
                 </div>
                 {patient?.requires_isolation && (
                   <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium ${
@@ -182,6 +221,13 @@ const NursingEncounterWorkspace: React.FC<NursingWorkspaceProps> = ({ theme }) =
               actions={[
                 { key: 'patient-info', label: 'Patient Info', icon: <ClipboardList className="w-4 h-4" />, to: NURSING_ROUTES.NURSING_ENCOUNTER_PATIENT_INFO },
                 { key: 'ward-bed', label: 'Ward & Bed', icon: <BedDouble className="w-4 h-4" />, to: NURSING_ROUTES.NURSING_ENCOUNTER_WARD_BED },
+                {
+                  key: 'forward-patient',
+                  label: 'Forward Patient',
+                  icon: <ArrowRight className="w-4 h-4" />,
+                  to: NURSING_ROUTES.NURSING_ENCOUNTER_FORWARD_PATIENT,
+                  description: 'Send this patient to another team queue or a specific staff member',
+                },
                 { key: 'tasks', label: 'Tasks', icon: <ClipboardList className="w-4 h-4" />, to: NURSING_ROUTES.NURSING_ENCOUNTER_TASKS },
                 { key: 'meds', label: 'Meds', icon: <Pill className="w-4 h-4" />, to: NURSING_ROUTES.NURSING_ENCOUNTER_MEDS },
                 { key: 'notes', label: 'Notes', icon: <Activity className="w-4 h-4" />, to: NURSING_ROUTES.NURSING_ENCOUNTER_NOTES },

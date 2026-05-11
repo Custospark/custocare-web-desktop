@@ -43,21 +43,24 @@ import {
   selectDisplayBillingData,
 } from '../billingSlice';
 import { useAssignStaffToVisit } from '../../../../../pharmacy/api/dispensing/visit-queue/useVisitQueries';
+import { CARE_DELIVERY_WORKFLOW_LABELS } from '../../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { useSubmitBilling } from '../../../../api/billable-items/BillableItemsQueries';
 import type { BillingSubmissionPayload } from '../../../../api/billable-items/BillingItemsTypes';
 import { PaymentStatus } from '../../../../api/billing-review/BillingReviewTypes';
+import type { BillingSummaryColors } from '../billing-summary-step/billingSummaryTheme';
 
 interface BillingSummaryProps {
   subtotal: number;
   isReadOnly: boolean;
   isDisabledProceed: boolean;
   theme: 'light' | 'dark';
-  colors: any;
+  colors: BillingSummaryColors;
   onProceedToBilling: () => void;
   activeOption?: 'payment' | 'save' | 'forward' | 'default';
 }
 
-type BillingAction = 'save' | 'forward' | null;
+/** UI loading discriminator; `proceed` is only used while opening payment (not dispatched via runAction). */
+type BillingAction = 'save' | 'forward' | 'proceed' | null;
 
 export const BillingSummary: React.FC<BillingSummaryProps> = ({
   subtotal,
@@ -260,19 +263,39 @@ const buildPendingBillingPayload = useCallback((): BillingSubmissionPayload | nu
       await billingMutation.mutateAsync(payload);
       
       // After successful persistence, perform forwarding
-      if (!pendingForwarding?.visitId || !pendingForwarding?.assignedStaffId) {
+      const forwardKind = pendingForwarding?.forwardingKind ?? 'staff';
+      const hasStaffTarget =
+        forwardKind === 'staff' &&
+        pendingForwarding?.assignedStaffId != null &&
+        pendingForwarding.assignedStaffId > 0;
+      const hasWorkflowTarget =
+        forwardKind === 'workflow' && pendingForwarding?.careDeliveryWorkflow != null;
+
+      if (!pendingForwarding?.visitId || (!hasStaffTarget && !hasWorkflowTarget)) {
         // No forwarding target, just clear billing data and go to forward patient forward page
         clearBillingDataOnly();
         navigate(moduleRoutes.forward);
         return true;
       }
 
-      await assignMutation.mutateAsync({
-        data: {
-          visit_id: pendingForwarding.visitId,
-          assigned_staff_id: pendingForwarding.assignedStaffId,
-        },
-      });
+      if (hasWorkflowTarget) {
+        await assignMutation.mutateAsync({
+          data: {
+            visit_id: pendingForwarding.visitId,
+            forwarding_kind: 'workflow',
+            care_delivery_workflow: pendingForwarding.careDeliveryWorkflow!,
+            assigned_staff_id: null,
+          },
+        });
+      } else {
+        await assignMutation.mutateAsync({
+          data: {
+            visit_id: pendingForwarding.visitId,
+            forwarding_kind: 'staff',
+            assigned_staff_id: pendingForwarding.assignedStaffId!,
+          },
+        });
+      }
 
       // FORWARD: Clear billing data and  active visit
       clearBillingDataAndVisit();
@@ -322,7 +345,7 @@ const handleProceedAction = useCallback(() => {
   // Unified action dispatcher
   // ---------------------------------------------------------------------------
   const runAction = useCallback(
-    async (action: Exclude<BillingAction, null>) => {
+    async (action: 'save' | 'forward') => {
       if (
         isReadOnly ||
         currentAction !== null ||
@@ -394,7 +417,7 @@ const handleProceedAction = useCallback(() => {
       e.stopPropagation();
 
       if (!isDisabledProceed && currentAction === null) {
-        setCurrentAction('proceed' as any); // Use a temporary loading state
+        setCurrentAction('proceed');
         try {
           await handleProceedAction();
         } finally {
@@ -468,7 +491,7 @@ const handleProceedAction = useCallback(() => {
   const TipIcon = workflowTip.icon;
 
   const renderButtonContent = (
-    action: BillingAction | 'proceed',
+    action: Exclude<BillingAction, null>,
     defaultIcon: React.ReactNode,
     defaultText: string,
     loadingText: string
@@ -631,21 +654,43 @@ const handleProceedAction = useCallback(() => {
           )}
 
           {/* Forwarding info */}
-          {pendingForwarding?.assignedStaffName && showForwardOption && (
-            <div
-              className={`rounded-lg border p-3 ${
-                isDark
-                  ? 'border-blue-800 bg-blue-900/30 text-blue-200'
-                  : 'border-blue-200 bg-blue-50 text-blue-800'
-              }`}
-            >
-              <p className="text-xs">
-                <ArrowRightCircle className="w-3 h-3 inline mr-1" />
-                Patient will be forwarded to{' '}
-                <span className="font-semibold">{pendingForwarding.assignedStaffName}</span>
-                {pendingForwarding.note ? ` • Note: ${pendingForwarding.note}` : ''}
-              </p>
-            </div>
+          {showForwardOption && pendingForwarding && (
+            <>
+              {(pendingForwarding.forwardingKind ?? 'staff') === 'workflow' &&
+              pendingForwarding.careDeliveryWorkflow ? (
+                <div
+                  className={`rounded-lg border p-3 ${
+                    isDark
+                      ? 'border-emerald-800 bg-emerald-900/30 text-emerald-200'
+                      : 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                  }`}
+                >
+                  <p className="text-xs">
+                    <ArrowRightCircle className="w-3 h-3 inline mr-1" />
+                    Visit will be queued for{' '}
+                    <span className="font-semibold">
+                      {CARE_DELIVERY_WORKFLOW_LABELS[pendingForwarding.careDeliveryWorkflow]}
+                    </span>
+                    {pendingForwarding.note ? ` • Note: ${pendingForwarding.note}` : ''}
+                  </p>
+                </div>
+              ) : pendingForwarding.assignedStaffName ? (
+                <div
+                  className={`rounded-lg border p-3 ${
+                    isDark
+                      ? 'border-blue-800 bg-blue-900/30 text-blue-200'
+                      : 'border-blue-200 bg-blue-50 text-blue-800'
+                  }`}
+                >
+                  <p className="text-xs">
+                    <ArrowRightCircle className="w-3 h-3 inline mr-1" />
+                    Patient will be forwarded to{' '}
+                    <span className="font-semibold">{pendingForwarding.assignedStaffName}</span>
+                    {pendingForwarding.note ? ` • Note: ${pendingForwarding.note}` : ''}
+                  </p>
+                </div>
+              ) : null}
+            </>
           )}
 
           {/* Helpful note when no draft exists */}

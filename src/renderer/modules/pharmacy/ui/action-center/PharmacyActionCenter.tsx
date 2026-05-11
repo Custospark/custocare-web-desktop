@@ -15,6 +15,7 @@ import {
   List,
   Search,
   ArrowLeftRight,
+  ArrowRight,
   ClipboardList,
 } from 'lucide-react';
 
@@ -30,6 +31,10 @@ import {
 import { clearAll } from '../../../medical-records/ui/visit-action-center/billing-space';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
+import {
+  formatVisitStageLabel,
+  formatVisitStatusLabel,
+} from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 
 interface PharmacyActionCenterProps {
   theme: 'light' | 'dark';
@@ -188,6 +193,13 @@ const PharmacyActionCenter: React.FC<PharmacyActionCenterProps> = ({ theme }) =>
                   description: 'All medications prescribed for this visit — open dispense to fulfill',
                 },
                 {
+                  key: 'forward-patient',
+                  label: 'Forward Patient',
+                  icon: <ArrowRight className="h-4 w-4" />,
+                  to: PHARMACY_ROUTES.ACTION_CENTER_FORWARD_PATIENT,
+                  description: 'Send this patient to another team queue or a specific staff member',
+                },
+                {
                   key: 'prescription-review',
                   label: 'Review prescriptions',
                   icon: <ClipboardList className="h-4 w-4" />,
@@ -317,6 +329,22 @@ const PharmacyPatientInfoCard: React.FC<PharmacyPatientInfoCardProps> = ({
             <div className="min-w-0">
               <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Wait time</div>
               <div className="truncate text-xs font-semibold">{calculateWaitTime(visitInfo.arrivedAt)}</div>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <List className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+            <div className="min-w-0">
+              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Visit stage</div>
+              <div className="truncate text-xs font-medium">{formatVisitStageLabel(visitInfo.phase)}</div>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <ClipboardList className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+            <div className="min-w-0">
+              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Visit status</div>
+              <div className="truncate text-xs font-medium">{formatVisitStatusLabel(visitInfo.status)}</div>
             </div>
           </div>
         </div>

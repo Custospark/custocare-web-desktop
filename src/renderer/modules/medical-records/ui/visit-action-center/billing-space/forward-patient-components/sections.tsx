@@ -1,6 +1,9 @@
 export { ForwardPatientHeader } from './ForwardPatientHeader';
 export type { HeaderProps } from './ForwardPatientHeader';
 
+export { ForwardingModeSection } from './ForwardingModeSection';
+export type { ForwardingModeSectionProps } from './ForwardingModeSection';
+
 export { StaffSearchFilters } from './StaffSearchFilters';
 export type { SearchFiltersProps } from './StaffSearchFilters';
 

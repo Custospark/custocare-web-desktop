@@ -15,6 +15,7 @@ import NursingWardBedManagement from '../../../modules/nursing/ui/encounter/Nurs
 import NursingEncounterTasksView from '../../../modules/nursing/ui/encounter/NursingEncounterTasksView';
 import NursingEncounterMedsView from '../../../modules/nursing/ui/encounter/NursingEncounterMedsView';
 import NursingEncounterNotesView from '../../../modules/nursing/ui/encounter/NursingEncounterNotesView';
+import ForwardPatient from '../../../modules/medical-records/ui/visit-action-center/ForwardPatient';
 import MyTasksView from '../../../modules/nursing/ui/tasks-shifts/MyTasksView';
 import AssignTaskView from '../../../modules/nursing/ui/tasks-shifts/AssignTaskView';
 import ShiftHandoverView from '../../../modules/nursing/ui/tasks-shifts/ShiftHandoverView';
@@ -66,6 +67,17 @@ export const nursingRoutes = [
 
   <Route key="nursing-encounter" path="nursing-encounter" element={nursingTablePage(NursingEncounterWorkspace)}>
     <Route index element={<Navigate to={NURSING_ROUTES.NURSING_ENCOUNTER_PATIENT_INFO} replace />} />
+    <Route
+      path="forward-patient"
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp
+            Component={ForwardPatient}
+            props={{ queueRedirectTo: NURSING_ROUTES.WARDS_PATIENTS_NEW_PATIENTS_UNASSIGNED }}
+          />
+        </SuspenseWrapper>
+      }
+    />
     <Route
       path="patient-info"
       element={nursingTablePage(MRPatientRecords, { presentation: 'nursing' })}

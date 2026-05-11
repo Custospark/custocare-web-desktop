@@ -16,6 +16,7 @@ export const NURSING_ROUTES = {
   WARDS_PATIENTS_NEW_PATIENTS_UNASSIGNED: `${ROUTES.NURSING}/wards-patients/new-patients-unassigned`,
 
   // Nursing Encounter sub actions
+  NURSING_ENCOUNTER_FORWARD_PATIENT: `${ROUTES.NURSING}/nursing-encounter/forward-patient`,
   NURSING_ENCOUNTER_PATIENT_INFO: `${ROUTES.NURSING}/nursing-encounter/patient-info`,
   NURSING_ENCOUNTER_WARD_BED: `${ROUTES.NURSING}/nursing-encounter/ward-bed`,
   NURSING_ENCOUNTER_TASKS: `${ROUTES.NURSING}/nursing-encounter/tasks`,

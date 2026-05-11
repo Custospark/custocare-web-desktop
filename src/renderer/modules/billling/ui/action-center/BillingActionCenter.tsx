@@ -7,7 +7,6 @@ import {
   Calendar,
   Clock,
   FileText,
-  Search,
   User,
   UserPlus,
   Users,
@@ -27,6 +26,10 @@ import {
 import { clearAll } from '../../../medical-records/ui/visit-action-center/billing-space';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
+import {
+  formatVisitStageLabel,
+  formatVisitStatusLabel,
+} from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 
 interface BillingActionCenterProps {
   theme: 'light' | 'dark';
@@ -158,12 +161,6 @@ const BillingActionCenter: React.FC<BillingActionCenterProps> = ({ theme }) => {
               defaultActionTo={BILLING_ROUTES.BILLING_SPACE}
               actions={[
                 {
-                  key: 'forward-patient',
-                  label: 'Forward Patient',
-                  icon: <ArrowRight className="h-4 w-4" />,
-                  to: BILLING_ROUTES.FORWARD_PATIENT,
-                },
-                {
                   key: 'billing-space',
                   label: 'Charge Entry Workspace',
                   icon: <Receipt className="h-4 w-4" />,
@@ -175,6 +172,12 @@ const BillingActionCenter: React.FC<BillingActionCenterProps> = ({ theme }) => {
                   label: 'Visit Status',
                   icon: <Activity className="h-4 w-4" />,
                   to: BILLING_ROUTES.VISIT_STATUS,
+                },
+                {
+                  key: 'forward-patient',
+                  label: 'Forward Patient',
+                  icon: <ArrowRight className="h-4 w-4" />,
+                  to: BILLING_ROUTES.FORWARD_PATIENT,
                 },
               ]}
             />
@@ -299,6 +302,22 @@ const BillingPatientInfoCard: React.FC<BillingPatientInfoCardProps> = ({
             <div className="min-w-0">
               <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Wait time</div>
               <div className="truncate text-xs font-semibold">{calculateWaitTime(visitInfo.arrivedAt)}</div>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <FileText className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+            <div className="min-w-0">
+              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Visit stage</div>
+              <div className="truncate text-xs font-medium">{formatVisitStageLabel(visitInfo.phase)}</div>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <Receipt className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+            <div className="min-w-0">
+              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Visit status</div>
+              <div className="truncate text-xs font-medium">{formatVisitStatusLabel(visitInfo.status)}</div>
             </div>
           </div>
         </div>

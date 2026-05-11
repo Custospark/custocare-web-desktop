@@ -199,10 +199,19 @@ export const useForwardPatientFlow = ({
         return;
       }
 
-      const request: AssignStaffToVisitRequest = {
-        visit_id: visitId as number,
-        assigned_staff_id: formData.assigned_staff_id,
-      };
+      const request: AssignStaffToVisitRequest =
+        formData.forwarding_mode === 'workflow'
+          ? {
+              visit_id: visitId as number,
+              forwarding_kind: 'workflow',
+              care_delivery_workflow: formData.care_delivery_workflow,
+              assigned_staff_id: null,
+            }
+          : {
+              visit_id: visitId as number,
+              forwarding_kind: 'staff',
+              assigned_staff_id: formData.assigned_staff_id,
+            };
 
       try {
         debugLog('Proceeding with direct forward without billing', request);

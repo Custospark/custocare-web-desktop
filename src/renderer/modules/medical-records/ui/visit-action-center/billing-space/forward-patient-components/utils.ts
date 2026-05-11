@@ -1,4 +1,5 @@
 import {
+  type CareDeliveryWorkflow,
   type ForwardingStaff,
   StaffPresenceStatus,
 } from  '../../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
@@ -15,6 +16,8 @@ export interface PendingForwardingLike {
   patientName?: string;
   assignedStaffId?: number;
   assignedStaffName?: string;
+  forwardingKind?: 'staff' | 'workflow';
+  careDeliveryWorkflow?: CareDeliveryWorkflow | null;
   note?: string;
   hasProvidedServices?: boolean | null;
 }
@@ -131,13 +134,31 @@ export const buildForwardingPayload = ({
   pendingForwarding?: PendingForwardingLike | null;
   formData: ForwardPatientFormData;
   effectiveHasProvidedServices: boolean;
-}) => ({
-  visitId,
-  patientId: derivedPatientId,
-  patientName: derivedPatientName || '',
-  assignedStaffId: formData.assigned_staff_id,
-  assignedStaffName:
-    selectedStaff?.full_name || pendingForwarding?.assignedStaffName || '',
-  note: formData.note?.trim() || '',
-  hasProvidedServices: effectiveHasProvidedServices,
-});
+}) => {
+  if (formData.forwarding_mode === 'workflow') {
+    return {
+      visitId,
+      patientId: derivedPatientId,
+      patientName: derivedPatientName || '',
+      assignedStaffId: null as number | null,
+      assignedStaffName: '',
+      forwardingKind: 'workflow' as const,
+      careDeliveryWorkflow: formData.care_delivery_workflow,
+      note: formData.note?.trim() || '',
+      hasProvidedServices: effectiveHasProvidedServices,
+    };
+  }
+
+  return {
+    visitId,
+    patientId: derivedPatientId,
+    patientName: derivedPatientName || '',
+    assignedStaffId: formData.assigned_staff_id,
+    assignedStaffName:
+      selectedStaff?.full_name || pendingForwarding?.assignedStaffName || '',
+    forwardingKind: 'staff' as const,
+    careDeliveryWorkflow: null as CareDeliveryWorkflow | null,
+    note: formData.note?.trim() || '',
+    hasProvidedServices: effectiveHasProvidedServices,
+  };
+};

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Loader2 } from 'lucide-react';
@@ -27,6 +27,8 @@ import {
 import { useGetBillableItems } from '../../api/billable-items/BillableItemsQueries';
 
 import {
+  CareDeliveryWorkflow,
+  DEFAULT_ENCOUNTER_WORKFLOW_STAGE,
   type StaffForwardingFilters,
   type ForwardingStaff,
   type StaffPresenceStatus,
@@ -59,6 +61,7 @@ import { useForwardPatientFlow } from './billing-space/forward-patient-component
 
 import {
   ForwardPatientHeader,
+  ForwardingModeSection,
   SelectedStaffSummary,
   ServicesDecisionSection,
   StaffSearchFilters,
@@ -82,6 +85,8 @@ const transformPendingForwardingForUtils = (
   patientName: string;
   assignedStaffId?: number;
   assignedStaffName: string;
+  forwardingKind?: 'staff' | 'workflow';
+  careDeliveryWorkflow?: CareDeliveryWorkflow | null;
   note: string;
   hasProvidedServices: boolean;
   createdAt?: number;
@@ -93,6 +98,8 @@ const transformPendingForwardingForUtils = (
     assignedStaffName: forwarding.assignedStaffName,
     note: forwarding.note,
     hasProvidedServices: forwarding.hasProvidedServices,
+    forwardingKind: forwarding.forwardingKind ?? 'workflow',
+    careDeliveryWorkflow: forwarding.careDeliveryWorkflow ?? null,
     ...(forwarding.visitId !== null && { visitId: forwarding.visitId }),
     ...(forwarding.patientId !== null && { patientId: forwarding.patientId }),
     ...(forwarding.assignedStaffId !== null && { assignedStaffId: forwarding.assignedStaffId }),
@@ -130,6 +137,27 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(10);
 
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    control,
+    getValues,
+    reset,
+    formState: { errors, isValid, isSubmitting },
+  } = useForm<ForwardPatientFormData>({
+    resolver: zodResolver(forwardPatientSchema),
+    mode: 'onChange',
+    defaultValues: {
+      forwarding_mode: 'workflow',
+      care_delivery_workflow: DEFAULT_ENCOUNTER_WORKFLOW_STAGE,
+      note: '',
+    },
+  });
+
+  const forwardMode = useWatch({ control, name: 'forwarding_mode' }) ?? 'workflow';
+
   const initialFilters: StaffForwardingFilters = useMemo(
     () => ({
       exclude_current_staff: !!currentStaffId,
@@ -144,7 +172,9 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     isFetching: isFetchingStaff,
     isError: isStaffError,
     refetch: refetchStaff,
-  } = useGetStaffForForwarding(initialFilters);
+  } = useGetStaffForForwarding(initialFilters, {
+    enabled: forwardMode === 'staff' && visitId != null,
+  });
 
   const {
     refetch: refetchBillableItems,
@@ -169,23 +199,15 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     },
   });
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    reset,
-    formState: { errors, isValid, isSubmitting },
-  } = useForm<ForwardPatientFormData>({
-    resolver: zodResolver(forwardPatientSchema),
-    mode: 'onChange',
-    defaultValues: {
-      assigned_staff_id: 0,
-      note: '',
-    },
+  const assignedStaffIdWatched = useWatch({
+    control,
+    name: 'assigned_staff_id',
+    defaultValue: 0,
   });
-
-  const selectedStaffId = watch('assigned_staff_id');
+  const selectedStaffId =
+    forwardMode === 'staff' && typeof assignedStaffIdWatched === 'number'
+      ? assignedStaffIdWatched
+      : 0;
 
   const staffMembers: ForwardingStaff[] = useMemo(() => {
     if (!staffData?.data?.staff || !Array.isArray(staffData.data.staff)) return [];
@@ -284,10 +306,30 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   }, [searchTerm]);
 
   useEffect(() => {
-    reset({
-      assigned_staff_id: sameVisitPending ? pendingForwarding?.assignedStaffId ?? 0 : 0,
-      note: sameVisitPending ? pendingForwarding?.note ?? '' : '',
-    });
+    const pendingKind = pendingForwarding?.forwardingKind ?? 'workflow';
+    if (sameVisitPending && pendingKind === 'workflow' && pendingForwarding?.careDeliveryWorkflow) {
+      reset({
+        forwarding_mode: 'workflow',
+        care_delivery_workflow: pendingForwarding.careDeliveryWorkflow,
+        note: pendingForwarding.note ?? '',
+      });
+    } else if (
+      sameVisitPending &&
+      pendingKind === 'staff' &&
+      pendingForwarding?.assignedStaffId
+    ) {
+      reset({
+        forwarding_mode: 'staff',
+        assigned_staff_id: pendingForwarding.assignedStaffId,
+        note: pendingForwarding.note ?? '',
+      });
+    } else {
+      reset({
+        forwarding_mode: 'workflow',
+        care_delivery_workflow: DEFAULT_ENCOUNTER_WORKFLOW_STAGE,
+        note: sameVisitPending ? pendingForwarding?.note ?? '' : '',
+      });
+    }
 
     setHasProvidedServices(
       sameVisitPending ? pendingForwarding?.hasProvidedServices ?? null : null
@@ -312,14 +354,17 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
     (status: StaffFilterStatus) => {
       setFilterStatus(status);
       setCurrentPage(1);
-      setValue('assigned_staff_id', 0, { shouldValidate: true });
+      if (getValues('forwarding_mode') === 'staff') {
+        setValue('assigned_staff_id', 0, { shouldValidate: true });
+      }
     },
-    [setValue]
+    [setValue, getValues]
   );
 
   const handleStaffSelect = useCallback(
     (staffId: number, canReceive: boolean) => {
       if (!canReceive) return;
+      setValue('forwarding_mode', 'staff', { shouldValidate: true });
       setValue('assigned_staff_id', staffId, { shouldValidate: true });
     },
     [setValue]
@@ -392,16 +437,20 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
   }
 
   const submitButtonLabel =
-    shouldHideServicesQuestion || hasProvidedServices === true
-      ? 'Add Items/Services & Forward'
-      : 'Forward Patient';
+    forwardMode === 'workflow'
+      ? shouldHideServicesQuestion || hasProvidedServices === true
+        ? 'Add Items/Services & queue visit'
+        : 'Send to team queue'
+      : shouldHideServicesQuestion || hasProvidedServices === true
+        ? 'Add Items/Services & Forward'
+        : 'Forward Patient';
 
   const isSubmitDisabled =
     !isValid ||
     assignMutation.isPending ||
     isSubmitting ||
     isOpeningBillingTray ||
-    !selectedStaffId ||
+    (forwardMode === 'staff' && !selectedStaffId) ||
     (!shouldHideServicesQuestion && hasProvidedServices === null);
 
   return (
@@ -417,52 +466,58 @@ export const ForwardPatient: React.FC<ForwardPatientProps> = ({
 
       <div className="p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <StaffSearchFilters
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            clientSideSearchTerm={clientSideSearchTerm}
-            filteredCount={filteredStaff.length}
-            colors={colors}
-            filterStatus={filterStatus}
-            onFilterChange={handleFilterChange}
-            clearSearch={clearSearch}
-            hasLoadedInitialData={hasLoadedInitialData}
-            isDark={isDark}
-            onRefresh={handleRefreshStaff}
-            isRefreshing={Boolean(isFetchingStaff && hasLoadedInitialData)}
-          />
+          <ForwardingModeSection isDark={isDark} colors={colors} watch={watch} reset={reset} />
 
-          <StaffSelectionSection
-            isLoadingStaff={isLoadingStaff}
-            isStaffError={isStaffError}
-            filteredStaff={filteredStaff}
-            paginatedStaff={paginatedStaff}
-            searchTerm={searchTerm}
-            hasLoadedInitialData={hasLoadedInitialData}
-            clearSearch={clearSearch}
-            onRefresh={handleRefreshStaff}
-            selectedStaffId={selectedStaffId}
-            handleStaffSelect={handleStaffSelect}
-            colors={colors}
-            isDark={isDark}
-            getStatusInfo={getStaffStatusInfo}
-            errors={errors}
-            summaryData={summaryData}
-            clientSideSearchTerm={clientSideSearchTerm}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-            pageSizeOptions={STAFF_PAGE_SIZE_OPTIONS}
-          />
+          {forwardMode === 'staff' && (
+            <>
+              <StaffSearchFilters
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                clientSideSearchTerm={clientSideSearchTerm}
+                filteredCount={filteredStaff.length}
+                colors={colors}
+                filterStatus={filterStatus}
+                onFilterChange={handleFilterChange}
+                clearSearch={clearSearch}
+                hasLoadedInitialData={hasLoadedInitialData}
+                isDark={isDark}
+                onRefresh={handleRefreshStaff}
+                isRefreshing={Boolean(isFetchingStaff && hasLoadedInitialData)}
+              />
 
-          {selectedStaff && (
-            <SelectedStaffSummary
-              selectedStaff={selectedStaff}
-              colors={colors}
-              getStatusInfo={getStaffStatusInfo}
-            />
+              <StaffSelectionSection
+                isLoadingStaff={isLoadingStaff}
+                isStaffError={isStaffError}
+                filteredStaff={filteredStaff}
+                paginatedStaff={paginatedStaff}
+                searchTerm={searchTerm}
+                hasLoadedInitialData={hasLoadedInitialData}
+                clearSearch={clearSearch}
+                onRefresh={handleRefreshStaff}
+                selectedStaffId={selectedStaffId}
+                handleStaffSelect={handleStaffSelect}
+                colors={colors}
+                isDark={isDark}
+                getStatusInfo={getStaffStatusInfo}
+                errors={errors}
+                summaryData={summaryData}
+                clientSideSearchTerm={clientSideSearchTerm}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+                pageSizeOptions={STAFF_PAGE_SIZE_OPTIONS}
+              />
+
+              {selectedStaff && (
+                <SelectedStaffSummary
+                  selectedStaff={selectedStaff}
+                  colors={colors}
+                  getStatusInfo={getStaffStatusInfo}
+                />
+              )}
+            </>
           )}
 
           <ServicesDecisionSection

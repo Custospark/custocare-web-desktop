@@ -29,7 +29,12 @@ import type {
   VisitType,
   VisitStatus,
 } from '../../../../api/dispensing/visit-queue/visitTypes';
-import { ACUITY_SCORE_DESCRIPTIONS } from '../../../../api/dispensing/visit-queue/visitTypes';
+import {
+  ACUITY_SCORE_DESCRIPTIONS,
+  CARE_DELIVERY_WORKFLOW_LABELS,
+  CareDeliveryWorkflow,
+  ENCOUNTER_WORKFLOW_STAGE_ORDER,
+} from '../../../../api/dispensing/visit-queue/visitTypes';
 import LoadingSkeleton from '../../../../../../shared/components/Loading/LoadingSkeletons';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 
@@ -70,6 +75,7 @@ export interface QueueVisitItem {
   visit_type: VisitType;
   status: VisitStatus;
   is_walk_in: boolean;
+  care_delivery_workflow?: CareDeliveryWorkflow | null;
 
   ward_assignment?: {
     ward_id: number | null;
@@ -100,6 +106,8 @@ export interface PatientQueueProps {
   newPatientButtonIcon?: React.ReactNode;
 
   showStats?: boolean;
+  /** When true, staff can switch which team queue the list loads from (API `care_delivery_workflow`). */
+  showWorkflowStageFilter?: boolean;
   allowPhaseFilter?: boolean;
   allowDepartmentFilter?: boolean;
   showUnassignedToggle?: boolean;
@@ -321,6 +329,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   newPatientButtonText = 'New Patient',
   newPatientButtonIcon = <UserPlus className="w-4 h-4" />,
   showStats = true,
+  showWorkflowStageFilter = false,
   showSearch = true,
   showNewPatientRegistration = true,
   refreshInterval = 30000,
@@ -339,10 +348,22 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   const [lastRefetchTime, setLastRefetchTime] = useState<Date>(new Date());
   const [isInlineErrorDismissed, setIsInlineErrorDismissed] = useState(false);
 
-  const [filters] = useState<QueueFilters>({
-    ...initialFilters,
-    include_unassigned: initialFilters.include_unassigned ?? false,
-  });
+  const baselineQueueFilters = useMemo((): QueueFilters => {
+    return {
+      ...initialFilters,
+      include_unassigned: initialFilters.include_unassigned ?? false,
+    };
+  }, [initialFilters]);
+
+  const [queryFilters, setQueryFilters] = useState<QueueFilters>(baselineQueueFilters);
+
+  useEffect(() => {
+    setQueryFilters(baselineQueueFilters);
+  }, [baselineQueueFilters]);
+
+  const workflowStageChanged =
+    showWorkflowStageFilter &&
+    queryFilters.care_delivery_workflow !== baselineQueueFilters.care_delivery_workflow;
 
   const [filterState, setFilterState] = useState<FilterState>({
     searchTerm: '',
@@ -358,7 +379,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     refetch,
     isRefetching,
     dataUpdatedAt,
-  } = useGetMyQueue(filters, {
+  } = useGetMyQueue(queryFilters, {
     enabled: visitsOverride === undefined,
     refetchInterval:
       visitsOverride !== undefined ? false : refreshInterval > 0 ? refreshInterval : false,
@@ -417,6 +438,9 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
           getPhaseDisplayName(visit.current_phase),
           getTypeDisplayName(visit.visit_type),
           visit.status ?? '',
+          visit.care_delivery_workflow
+            ? CARE_DELIVERY_WORKFLOW_LABELS[visit.care_delivery_workflow] ?? ''
+            : '',
           visit.ward_assignment?.ward_name ?? '',
           visit.ward_assignment?.ward_code ?? '',
           visit.ward_assignment?.bed_label ?? '',
@@ -523,7 +547,8 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
       filterBy: 'all',
       showFilters: false,
     });
-  }, []);
+    setQueryFilters(baselineQueueFilters);
+  }, [baselineQueueFilters]);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setFilterState((prev) => ({ ...prev, searchTerm: e.target.value }));
@@ -608,7 +633,8 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   const hasActiveFilters =
     filterState.searchTerm !== '' ||
     filterState.sortBy !== 'wait_time_desc' ||
-    filterState.filterBy !== 'all';
+    filterState.filterBy !== 'all' ||
+    workflowStageChanged;
 
   const renderVisitRow = (visit: QueueVisitItem) => {
     const patient = visit.patient;
@@ -785,6 +811,20 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                 >
                   {getPhaseDisplayName(visit.current_phase)}
                 </div>
+
+                {visit.care_delivery_workflow && (
+                  <div
+                    className={cn(
+                      'rounded-lg border px-3 py-1.5 text-xs font-medium whitespace-nowrap',
+                      isDark
+                        ? 'bg-teal-900/30 text-teal-200 border-teal-800/50'
+                        : 'bg-teal-50 text-teal-900 border-teal-200'
+                    )}
+                    title="Care delivery queue"
+                  >
+                    {CARE_DELIVERY_WORKFLOW_LABELS[visit.care_delivery_workflow]}
+                  </div>
+                )}
 
                 <div
                   className="rounded-lg border px-3 py-1.5 text-xs font-medium whitespace-nowrap"
@@ -1091,6 +1131,42 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
               icon={<TrendingUp className="h-6 w-6" />}
               tone="orange"
             />
+          </div>
+        )}
+
+        {showWorkflowStageFilter && (
+          <div
+            className={cn(
+              'rounded-xl border-2 p-4',
+              isDark ? 'border-gray-700/50 bg-gray-800/40' : 'border-gray-200 bg-white'
+            )}
+          >
+            <label
+              htmlFor="queue-workflow-stage"
+              className={cn('mb-2 block text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-800')}
+            >
+              Team queue (visit stage)
+            </label>
+            <select
+              id="queue-workflow-stage"
+              value={queryFilters.care_delivery_workflow ?? CareDeliveryWorkflow.MEDICAL_RECORDS}
+              onChange={(e) => {
+                const v = e.target.value as CareDeliveryWorkflow;
+                setQueryFilters((prev) => ({ ...prev, care_delivery_workflow: v }));
+              }}
+              className={cn(
+                'w-full max-w-md cursor-pointer appearance-none rounded-lg border-2 px-3 py-2.5 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:w-auto sm:min-w-[240px]',
+                isDark
+                  ? 'border-gray-600 bg-gray-900 text-white hover:bg-gray-800'
+                  : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
+              )}
+            >
+              {ENCOUNTER_WORKFLOW_STAGE_ORDER.map((wf) => (
+                <option key={wf} value={wf}>
+                  {CARE_DELIVERY_WORKFLOW_LABELS[wf]}
+                </option>
+              ))}
+            </select>
           </div>
         )}
 

@@ -84,6 +84,96 @@ export enum VisitPhase {
 }
 
 /**
+ * Care-delivery / module queue bucket for forwarding and queue filtering.
+ * Persisted on visits (`care_delivery_workflow`) and sent with assign-staff when forwarding to a module queue.
+ */
+export enum CareDeliveryWorkflow {
+  REGISTRATION = 'registration',
+  TRIAGE = 'triage',
+  /** Front desk & chart — queues as “Medical records” in the UI */
+  MEDICAL_RECORDS = 'medical_records',
+  CLINICAL = 'clinical',
+  LABORATORY = 'laboratory',
+  PHARMACY = 'pharmacy',
+  BILLING = 'billing',
+  NURSING = 'nursing',
+  IMAGING = 'imaging',
+}
+
+/** Default visit phase applied when a visit is placed in a workflow bucket (backend should mirror this mapping). */
+export const CARE_DELIVERY_WORKFLOW_TARGET_PHASE: Record<CareDeliveryWorkflow, VisitPhase> = {
+  [CareDeliveryWorkflow.REGISTRATION]: VisitPhase.REGISTRATION,
+  [CareDeliveryWorkflow.TRIAGE]: VisitPhase.WAITING_TRIAGE,
+  [CareDeliveryWorkflow.MEDICAL_RECORDS]: VisitPhase.REGISTRATION,
+  [CareDeliveryWorkflow.CLINICAL]: VisitPhase.WAITING_PROVIDER,
+  [CareDeliveryWorkflow.LABORATORY]: VisitPhase.DIAGNOSTIC_TESTS,
+  [CareDeliveryWorkflow.PHARMACY]: VisitPhase.TREATMENT,
+  [CareDeliveryWorkflow.BILLING]: VisitPhase.BILLING,
+  [CareDeliveryWorkflow.NURSING]: VisitPhase.OBSERVATION,
+  [CareDeliveryWorkflow.IMAGING]: VisitPhase.PROCEDURES,
+};
+
+/** Short labels for queues, badges, and filters (user-facing). */
+export const CARE_DELIVERY_WORKFLOW_LABELS: Record<CareDeliveryWorkflow, string> = {
+  [CareDeliveryWorkflow.REGISTRATION]: 'Registration',
+  [CareDeliveryWorkflow.TRIAGE]: 'Triage',
+  [CareDeliveryWorkflow.MEDICAL_RECORDS]: 'Medical records',
+  [CareDeliveryWorkflow.CLINICAL]: 'Doctor visit',
+  [CareDeliveryWorkflow.LABORATORY]: 'Laboratory',
+  [CareDeliveryWorkflow.PHARMACY]: 'Pharmacy',
+  [CareDeliveryWorkflow.BILLING]: 'Billing',
+  [CareDeliveryWorkflow.NURSING]: 'Nursing',
+  [CareDeliveryWorkflow.IMAGING]: 'Imaging',
+};
+
+/** Full enum order (e.g. admin / legacy). */
+export const CARE_DELIVERY_WORKFLOW_ORDER: CareDeliveryWorkflow[] = [
+  CareDeliveryWorkflow.REGISTRATION,
+  CareDeliveryWorkflow.TRIAGE,
+  CareDeliveryWorkflow.MEDICAL_RECORDS,
+  CareDeliveryWorkflow.CLINICAL,
+  CareDeliveryWorkflow.LABORATORY,
+  CareDeliveryWorkflow.PHARMACY,
+  CareDeliveryWorkflow.BILLING,
+  CareDeliveryWorkflow.NURSING,
+  CareDeliveryWorkflow.IMAGING,
+];
+
+/**
+ * Stages offered when sending a visit to another team (forward / workflow).
+ * Order is intentional for the forward picker UI.
+ */
+export const ENCOUNTER_WORKFLOW_STAGE_ORDER: CareDeliveryWorkflow[] = [
+  CareDeliveryWorkflow.MEDICAL_RECORDS,
+  CareDeliveryWorkflow.CLINICAL,
+  CareDeliveryWorkflow.PHARMACY,
+  CareDeliveryWorkflow.LABORATORY,
+  CareDeliveryWorkflow.NURSING,
+  CareDeliveryWorkflow.BILLING,
+];
+
+export const DEFAULT_ENCOUNTER_WORKFLOW_STAGE: CareDeliveryWorkflow =
+  ENCOUNTER_WORKFLOW_STAGE_ORDER[0] ?? CareDeliveryWorkflow.MEDICAL_RECORDS;
+
+/** One-line hint under each stage in the forward picker */
+export const ENCOUNTER_WORKFLOW_STAGE_HINTS: Partial<Record<CareDeliveryWorkflow, string>> = {
+  [CareDeliveryWorkflow.MEDICAL_RECORDS]: 'Check-in, registration, chart prep',
+  [CareDeliveryWorkflow.CLINICAL]: 'Exam, diagnosis, orders',
+  [CareDeliveryWorkflow.PHARMACY]: 'Medications & counseling',
+  [CareDeliveryWorkflow.LABORATORY]: 'Tests & results',
+  [CareDeliveryWorkflow.NURSING]: 'Vitals, tasks, bedside care',
+  [CareDeliveryWorkflow.BILLING]: 'Charges & payment',
+};
+
+/** Readable visit.stage line from API `current_phase` */
+export const formatVisitStageLabel = (phase: string | null | undefined): string =>
+  phase ? phase.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
+
+/** Readable visit status from API `status` */
+export const formatVisitStatusLabel = (status: string | null | undefined): string =>
+  status ? status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
+
+/**
  * Mode of arrival enumeration
  * Describes how the patient arrived at the facility
  */
@@ -165,9 +255,18 @@ export enum PaymentStatus {
 }
 
 
+export type VisitForwardingKind = 'staff' | 'workflow';
+
+/**
+ * POST /visits/assign-staff
+ * - `staff` (default): assign visit to a specific staff member (existing behaviour).
+ * - `workflow`: route visit to a module queue; clears direct staff assignment; sets `care_delivery_workflow` + target phase on server.
+ */
 export interface AssignStaffToVisitRequest {
   visit_id: number;
-  assigned_staff_id: number;
+  forwarding_kind?: VisitForwardingKind;
+  assigned_staff_id?: number | null;
+  care_delivery_workflow?: CareDeliveryWorkflow;
 }
 
 export type AssignStaffToVisitResponse = VisitResponse;
@@ -225,6 +324,8 @@ export interface Visit {
   // Current state
   current_department_id: number | null;
   current_phase: VisitPhase;
+  /** Module queue bucket when visit is routed without a named assignee */
+  care_delivery_workflow?: CareDeliveryWorkflow | null;
   status: VisitStatus;
   
   // Staff assignment
@@ -342,6 +443,11 @@ export interface QueueFilters {
   limit?: number;
   facility_id?:number;
   staff_id?:number;
+  /**
+   * Filter by care-delivery bucket (visits explicitly routed to a module queue).
+   * Backend should return visits assigned to the current staff OR visits in this workflow for the facility.
+   */
+  care_delivery_workflow?: CareDeliveryWorkflow;
   /**
    * When true, `/visits/my-queue` returns only visits without `metadata.nursing_ward_bed.ward_id`.
    * Used by nursing "New Patients (Unassigned)"; omit/false keeps legacy behaviour for other callers.
@@ -483,6 +589,7 @@ export interface QueueVisit {
 
   visit_type: VisitType;
   status: VisitStatus;
+  care_delivery_workflow?: CareDeliveryWorkflow | null;
 }
 
 /**
@@ -520,6 +627,8 @@ export interface QueueVisitItem {
   visit_type: VisitType;
   status: VisitStatus;
   is_walk_in: boolean;
+  /** Present when visit is routed to a module queue (see {@link CareDeliveryWorkflow}). */
+  care_delivery_workflow?: CareDeliveryWorkflow | null;
   /** Present for ward-board / nursing ward patient lists */
   ward_assignment?: WardAssignmentSummary;
 }
@@ -540,6 +649,7 @@ export interface QueueMeta {
     department_id: number | null;
     include_unassigned?: boolean;
     without_ward_assignment?: boolean;
+    care_delivery_workflow?: CareDeliveryWorkflow | null;
   };
 
   allowed_department_ids: number[] | null;

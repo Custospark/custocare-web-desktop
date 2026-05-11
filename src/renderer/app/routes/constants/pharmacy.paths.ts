@@ -14,6 +14,7 @@ export const PHARMACY_ROUTES = {
 
   /** Visit-scoped workspace (mirrors MR visit-action-center) */
   ACTION_CENTER: `${ROUTES.PHARMACY}/action-center`,
+  ACTION_CENTER_FORWARD_PATIENT: `${ROUTES.PHARMACY}/action-center/forward-patient`,
   ACTION_CENTER_DISPENSING: `${ROUTES.PHARMACY}/action-center/dispensing`,
   ACTION_CENTER_PRESCRIPTION_SEARCH: `${ROUTES.PHARMACY}/action-center/prescription-search`,
   /** Visit-scoped Rx needing pharmacist review (from former desk; uses active visit in slice) */

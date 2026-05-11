@@ -29,4 +29,7 @@ export const FOCUS_MODE_ROUTES = {
   // Laboratory module focus routes (outside Layout)
   LABORATORY_REQUEST_FOCUS: '/laboratory-focus/lab-request',
   LABORATORY_RESULT_FOCUS: '/laboratory-focus/lab-result',
+
+  /** Medical Records — forward patient workflow (full-screen focus) */
+  FORWARD_PATIENT_FOCUS: '/medical-records-focus/forward-patient',
 } as const;

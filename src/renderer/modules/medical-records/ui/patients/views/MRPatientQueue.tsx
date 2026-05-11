@@ -6,7 +6,10 @@ import { Stethoscope } from 'lucide-react';
 
 import PatientQueue from '../../../../pharmacy/ui/dispensing/dispensing-medication/views/PatientQueue';
 import { cn } from '../../../../../shared/utils/classNameUtils';
-import { type QueueVisitItem, VisitPhase } from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import {
+  CareDeliveryWorkflow,
+  type QueueVisitItem,
+} from '../../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 
 // Import Redux actions and selectors
@@ -158,18 +161,26 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
     navigate(routes.register);
   };
 
-  const initialFilters = useMemo(
-    () => ({
-      current_phase: VisitPhase.REGISTRATION,
+  const initialFilters = useMemo(() => {
+    const workflowByModule: Record<PatientIntakeModule, CareDeliveryWorkflow> = {
+      'medical-records': CareDeliveryWorkflow.MEDICAL_RECORDS,
+      nursing: CareDeliveryWorkflow.NURSING,
+      billing: CareDeliveryWorkflow.BILLING,
+      laboratory: CareDeliveryWorkflow.LABORATORY,
+      clinical: CareDeliveryWorkflow.CLINICAL,
+      pharmacy: CareDeliveryWorkflow.PHARMACY,
+    };
+
+    const care_delivery_workflow = workflowByModule[intakeModule];
+
+    return {
       department_id: undefined,
       include_unassigned: true,
       limit: 100,
-      ...(intakeModule === 'nursing'
-        ? { without_ward_assignment: true as const }
-        : {}),
-    }),
-    [intakeModule]
-  );
+      care_delivery_workflow,
+      ...(intakeModule === 'nursing' ? { without_ward_assignment: true as const } : {}),
+    };
+  }, [intakeModule]);
 
   return (
     <div className={cn(className)}>
@@ -182,8 +193,9 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
         newPatientButtonText={newPatientButtonText}
         newPatientButtonIcon={<Stethoscope className="w-4 h-4" />}
         showStats={true}
-        allowPhaseFilter={true}
-        allowDepartmentFilter={true}
+        showWorkflowStageFilter={true}
+        allowPhaseFilter={false}
+        allowDepartmentFilter={false}
         showUnassignedToggle={true}
         showSearch={true}
         showNewPatientRegistration={true}

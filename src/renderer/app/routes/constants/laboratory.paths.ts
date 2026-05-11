@@ -9,6 +9,7 @@ export const LABORATORY_ROUTES = {
   WALKIN_PATIENT: `${ROUTES.LABORATORY}/patients/walk-in`,
 
   ACTION_CENTER: `${ROUTES.LABORATORY}/action-center`,
+  ACTION_CENTER_FORWARD_PATIENT: `${ROUTES.LABORATORY}/action-center/forward-patient`,
   ACTION_CENTER_PATIENT_INFO: `${ROUTES.LABORATORY}/action-center/patient-info`,
   ACTION_CENTER_REQUEST: `${ROUTES.LABORATORY}/action-center/lab-request`,
   ACTION_CENTER_RESULTS: `${ROUTES.LABORATORY}/action-center/lab-results`,

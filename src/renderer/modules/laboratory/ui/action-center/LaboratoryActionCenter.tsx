@@ -11,6 +11,7 @@ import {
   Users,
   UserPlus,
   ArrowLeftRight,
+  ArrowRight,
   FlaskConical,
   FileCheck2,
   FileText,
@@ -30,6 +31,10 @@ import {
 import { clearAll } from '../../../medical-records/ui/visit-action-center/billing-space';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
+import {
+  formatVisitStageLabel,
+  formatVisitStatusLabel,
+} from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
 
 interface LaboratoryActionCenterProps {
   theme: 'light' | 'dark';
@@ -188,6 +193,13 @@ const LaboratoryActionCenter: React.FC<LaboratoryActionCenterProps> = ({ theme }
                   description: 'Create and manage laboratory test requests for this visit',
                 },
                 {
+                  key: 'forward-patient',
+                  label: 'Forward Patient',
+                  icon: <ArrowRight className="h-4 w-4" />,
+                  to: LABORATORY_ROUTES.ACTION_CENTER_FORWARD_PATIENT,
+                  description: 'Send this patient to another team queue or a specific staff member',
+                },
+                {
                   key: 'lab-results',
                   label: 'Lab results form',
                   icon: <FileCheck2 className="h-4 w-4" />,
@@ -324,6 +336,22 @@ const LaboratoryPatientInfoCard: React.FC<LaboratoryPatientInfoCardProps> = ({
             <div className="min-w-0">
               <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Wait time</div>
               <div className="truncate text-xs font-semibold">{calculateWaitTime(visitInfo.arrivedAt)}</div>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <FileText className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+            <div className="min-w-0">
+              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Visit stage</div>
+              <div className="truncate text-xs font-medium">{formatVisitStageLabel(visitInfo.phase)}</div>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <FileCheck2 className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+            <div className="min-w-0">
+              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Visit status</div>
+              <div className="truncate text-xs font-medium">{formatVisitStatusLabel(visitInfo.status)}</div>
             </div>
           </div>
         </div>

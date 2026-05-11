@@ -17,6 +17,7 @@ import LaboratoryCatalogWorkspace from '../../../modules/laboratory/ui/catalog/L
 import { AdminServiceCatalog } from '../../../modules/administration/admin-module/ui/service-catalog-ui/AdminServiceCatalog';
 import { AdminInventoryItem } from '../../../modules/administration/admin-module/ui/inventory/AdminInventoryItems';
 import { MRBillingReview } from '../../../modules/medical-records/ui/revenue/MRBillingReview';
+import ForwardPatient from '../../../modules/medical-records/ui/visit-action-center/ForwardPatient';
 
 export const laboratoryRoutes = [
   <Route
@@ -89,6 +90,17 @@ export const laboratoryRoutes = [
     }
   >
     <Route index element={<Navigate to={LABORATORY_ROUTES.ACTION_CENTER_REQUEST} replace />} />
+    <Route
+      path="forward-patient"
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp
+            Component={ForwardPatient}
+            props={{ queueRedirectTo: LABORATORY_ROUTES.PATIENT_QUEUE }}
+          />
+        </SuspenseWrapper>
+      }
+    />
     <Route
       path="patient-info"
       element={

@@ -5,7 +5,10 @@ import { UserPlus } from 'lucide-react';
 import PatientQueue from './PatientQueue';
 import { cn } from '../../../../../../shared/utils/classNameUtils';
 import { PHARMACY_ROUTES } from '../../../../../../app/routes/routeConstants';
-import type { QueueVisitItem } from '../../../../api/dispensing/visit-queue/visitTypes';
+import {
+  CareDeliveryWorkflow,
+  type QueueVisitItem,
+} from '../../../../api/dispensing/visit-queue/visitTypes';
 
 /* -------------------------------------------------------------------------- */
 /*                               TYPE DEFINITIONS                             */
@@ -62,6 +65,7 @@ const DispensingQueue: React.FC<DispensingQueueProps> = ({ theme, className = ''
           department_id: undefined,
           include_unassigned: false,
           limit: 50,
+          care_delivery_workflow: CareDeliveryWorkflow.PHARMACY,
         }}
       />
     </div>

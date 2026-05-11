@@ -9,7 +9,6 @@ import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertTriangle,
-  ArrowLeft,
   Loader2,
   Lock,
   Maximize2,
@@ -22,7 +21,6 @@ import {
 import { type RootState } from '../../../../app/store/rootReducer';
 import { store } from '../../../../app/store/store';
 import { axiosInstance } from '../../../../app/api/axiosConfig';
-import { PHARMACY_ROUTES } from '../../../../app/routes/routeConstants';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import { cn } from '../../../../shared/utils/classNameUtils';
 import { useConfirm } from '../../../../shared/components/Feedback/ConfirmDialog/ConfirmContext';

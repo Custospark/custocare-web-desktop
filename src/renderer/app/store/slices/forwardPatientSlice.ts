@@ -1,11 +1,19 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
+import type { CareDeliveryWorkflow } from '../../../modules/pharmacy/api/dispensing/visit-queue/visitTypes';
+
+export type PendingForwardingKind = 'staff' | 'workflow';
+
 export interface PendingPatientForwarding {
   visitId: number | null;
   patientId: number | null;
   patientName: string;
+  /** Present when forwarding to a specific staff member */
   assignedStaffId: number | null;
   assignedStaffName: string;
+  /** When forwarding to a team queue instead of a named staff member */
+  forwardingKind?: PendingForwardingKind;
+  careDeliveryWorkflow?: CareDeliveryWorkflow | null;
   note: string;
   hasProvidedServices: boolean;
   createdAt: number | null;
@@ -44,6 +52,8 @@ const forwardPatientSlice = createSlice({
           patientName: '',
           assignedStaffId: null,
           assignedStaffName: '',
+          forwardingKind: 'workflow',
+          careDeliveryWorkflow: null,
           note: '',
           hasProvidedServices: false,
           createdAt: Date.now(),

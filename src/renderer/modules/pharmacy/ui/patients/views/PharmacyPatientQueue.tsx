@@ -6,7 +6,11 @@ import { Pill } from 'lucide-react';
 import PatientQueue from '../../dispensing/dispensing-medication/views/PatientQueue';
 import { cn } from '../../../../../shared/utils/classNameUtils';
 import { PHARMACY_ROUTES } from '../../../../../app/routes/routeConstants';
-import { type QueueVisitItem } from '../../../api/dispensing/visit-queue/visitTypes';
+import {
+  CareDeliveryWorkflow,
+  type QueueFilters,
+  type QueueVisitItem,
+} from '../../../api/dispensing/visit-queue/visitTypes';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import { useGetPrescriptions } from '../../../../medical-records/api/prescription/PrescriptionQueries';
 import { PrescriptionStatus } from '../../../../medical-records/api/prescription/PrescriptionTypes';
@@ -135,6 +139,15 @@ const PharmacyPatientQueue: React.FC<PharmacyPatientQueueProps> = ({ theme, clas
     navigate(PHARMACY_ROUTES.PATIENTS_REGISTER);
   };
 
+  const queueApiFilters = useMemo(
+    (): QueueFilters => ({
+      include_unassigned: true,
+      limit: 100,
+      care_delivery_workflow: CareDeliveryWorkflow.PHARMACY,
+    }),
+    []
+  );
+
   return (
     <div className={cn(className)}>
       <PatientQueue
@@ -159,10 +172,7 @@ const PharmacyPatientQueue: React.FC<PharmacyPatientQueueProps> = ({ theme, clas
           !rxReady &&
           (activeRxQuery.isLoading || partialRxQuery.isLoading)
         }
-        initialFilters={{
-          include_unassigned: true,
-          limit: 100,
-        }}
+        initialFilters={queueApiFilters}
       />
     </div>
   );
