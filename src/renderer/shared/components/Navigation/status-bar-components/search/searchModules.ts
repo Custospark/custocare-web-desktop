@@ -2,6 +2,7 @@ import {
   ACCOUNT_ROUTES,
   BILLING_ROUTES,
   CLINICAL_ROUTES,
+  CUSTOCARE_HUB_ROUTES,
   LABORATORY_ROUTES,
   MEDICAL_RECORDS_ROUTES,
   NURSING_ROUTES,
@@ -24,6 +25,11 @@ export const allModules: SearchableModule[] = [
 
   // Staff Portal
   { id: 'staff-dashboard', label: 'Staff Portal', route: ROUTES.STAFF_DASHBOARD, description: 'Staff workspace entry and capability selection.', moduleCode: 'staff_dashboard', keywords: ['staff portal', 'staff dashboard', 'workspace', 'employee', 'switch workspace'], category: 'Administration' },
+
+  // Custocare Hub (Community workspace is not exposed in navigation or search)
+  { id: 'hub-learning-center', label: 'Custocare Hub — Learning Center', route: CUSTOCARE_HUB_ROUTES.LEARNING_CENTER, description: 'Tutorials, training paths, and getting started guides.', moduleCode: 'custocare_hub', keywords: ['custocare hub', 'learning center', 'training', 'tutorials', 'getting started', 'hub training'], category: 'Custocare Hub' },
+  { id: 'hub-support-center', label: 'Custocare Hub — Support Center', route: CUSTOCARE_HUB_ROUTES.SUPPORT_CENTER, description: 'Help articles, FAQs, and support tickets.', moduleCode: 'custocare_hub', keywords: ['custocare hub support', 'help center', 'open ticket', 'hub faq', 'search help'], category: 'Custocare Hub' },
+  { id: 'hub-feedback-requests', label: 'Custocare Hub — Feedback & requests', route: CUSTOCARE_HUB_ROUTES.FEEDBACK_REQUESTS, description: 'Submit feedback, request features, and track status.', moduleCode: 'custocare_hub', keywords: ['feature request', 'product feedback', 'vote feature', 'hub feedback'], category: 'Custocare Hub' },
 
   // Medical Records
   { id: 'mr-intelligence', label: 'Patient Intelligence', route: MEDICAL_RECORDS_ROUTES.OVERVIEW, description: 'Patient analytics, demographics, flow, and clinical performance.', moduleCode: 'medical_records', keywords: ['patient intelligence', 'medical records overview', 'patient analytics', 'clinical dashboard', 'care flow', 'demographics', 'patient statistics'], category: 'Clinical' },
@@ -131,4 +137,5 @@ export const allModules: SearchableModule[] = [
   { id: 'shortcut-pharmacy-root', label: 'Pharmacy', route: PHARMACY_ROUTES.OVERVIEW, description: 'Jump to Pharmacy intelligence page.', moduleCode: 'pharmacy', keywords: ['pharmacy', 'dispensing', 'medications'], category: 'Clinical' },
   { id: 'shortcut-billing-root', label: 'Billing', route: BILLING_ROUTES.INTELLIGENCE, description: 'Jump to Financial intelligence page.', moduleCode: 'billing', keywords: ['billing', 'finance', 'financial intelligence'], category: 'Finance' },
   { id: 'shortcut-admin-root', label: 'Administration', route: ADMIN_ROUTES.OVERVIEW, description: 'Jump to Facility intelligence page.', moduleCode: 'administration', keywords: ['administration', 'facility governance', 'admin overview'], category: 'Administration' },
+  { id: 'shortcut-custocare-hub-root', label: 'Custocare Hub', route: CUSTOCARE_HUB_ROUTES.LEARNING_CENTER, description: 'Jump to the Custocare Hub learning workspace.', moduleCode: 'custocare_hub', keywords: ['custocare hub', 'hub', 'help', 'documentation hub'], category: 'Custocare Hub' },
 ];

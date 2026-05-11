@@ -4,12 +4,18 @@ import CustocareHubOverview from '../../../modules/custocare-hub/ui/CustocareHub
 import HubOperationWorkspace from '../../../modules/custocare-hub/ui/HubOperationWorkspace';
 import HubActionPanel from '../../../modules/custocare-hub/ui/HubActionPanel';
 import { CUSTOCARE_HUB_MODULE_OPERATIONS } from '../../../modules/custocare-hub/config/hubConfig';
+import { CUSTOCARE_HUB_ROUTES } from '../constants/custocare-hub.paths';
 
 const hubOperationsWithActions = CUSTOCARE_HUB_MODULE_OPERATIONS.filter(
   (op) => op.usesHorizontalActions && op.actions.length > 0,
 );
 
 export const custocareHubRoutes = [
+  <Route
+    key="hub-community-legacy"
+    path="community/*"
+    element={<Navigate to={CUSTOCARE_HUB_ROUTES.LEARNING_CENTER} replace />}
+  />,
   <Route
     key="hub-overview"
     path="overview"

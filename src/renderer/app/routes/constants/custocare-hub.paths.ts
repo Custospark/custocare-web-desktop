@@ -21,7 +21,8 @@ export const CUSTOCARE_HUB_ROUTES = {
   OVERVIEW: `${root}/overview`,
   // Future (match commented operations in hubConfig): DOCUMENTATION, RESOURCES
   LEARNING_CENTER: defaultOperationEntryPath('learning-center'),
-  COMMUNITY: defaultOperationEntryPath('community'),
+  /** Removed from hub nav; bookmarks may still use `/custocare-hub/community` — handled by a route redirect. */
+  COMMUNITY_LEGACY_REDIRECT: `${root}/community`,
   SUPPORT_CENTER: defaultOperationEntryPath('support-center'),
   FEEDBACK_REQUESTS: defaultOperationEntryPath('feedback-requests'),
 } as const;

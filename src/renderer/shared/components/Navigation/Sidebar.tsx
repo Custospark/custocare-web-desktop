@@ -307,7 +307,7 @@ const menuConfig: MenuItem[] = useMemo(
       icon: <Compass className="w-5 h-5" />,
       href: CUSTOCARE_HUB_ROUTES.LEARNING_CENTER,
       route: ROUTES.CUSTOCARE_HUB,
-      description: 'Documentation, learning, resources, community, and support',
+      description: 'Learning, support, and product feedback',
       operations: CUSTOCARE_HUB_SIDEBAR_NESTED_OPERATIONS,
       stats: 'Hub',
       glowColor: 'from-sky-500 to-indigo-400',

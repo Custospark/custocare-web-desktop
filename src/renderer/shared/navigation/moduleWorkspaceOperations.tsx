@@ -26,7 +26,6 @@ import {
   MapIcon,
   MessageCircleMore,
   MessageSquareHeart,
-  MessagesSquare,
   Package,
   Pill,
   Receipt,
@@ -517,7 +516,6 @@ export const PLATFORM_ADMINISTRATION_SIDEBAR_NESTED_OPERATIONS = mapWorkspaceToS
 
 const HUB_ICON_BY_ID: Record<string, React.ReactNode> = {
   'learning-center': <GraduationCap className="w-4 h-4" />,
-  community: <MessagesSquare className="w-4 h-4" />,
   'support-center': <LifeBuoy className="w-4 h-4" />,
   'feedback-requests': <MessageSquareHeart className="w-4 h-4" />,
 };

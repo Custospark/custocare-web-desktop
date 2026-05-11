@@ -237,7 +237,7 @@ export const ProtectedRoutes = () => [
             </Route>      
           </Route>
 
-          {/* Custocare Hub — documentation, training, community (always available) */}
+          {/* Custocare Hub — learning, support, and feedback (always available) */}
           <Route
             key="custocare-hub"
             path={ROUTES.CUSTOCARE_HUB}

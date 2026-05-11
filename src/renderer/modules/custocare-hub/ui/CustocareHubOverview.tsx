@@ -20,7 +20,7 @@ const OVERVIEW_ACTIONS: { label: string; description: string; icon: ReactNode }[
   },
   {
     label: 'Announcements',
-    description: 'Product and community announcements',
+    description: 'Product announcements and release notes',
     icon: <Megaphone className="w-5 h-5" />,
   },
 ];
