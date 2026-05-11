@@ -26,7 +26,7 @@ const BillingRevenueWorkspace: React.FC<BillingRevenueWorkspaceProps> = ({ theme
           label: 'Invoices',
           icon: <FileText className="h-4 w-4" />,
           to: BILLING_ROUTES.INVOICES,
-          description: 'Invoice-ready view derived from receipt records',
+          description: 'Receipts, invoices & reconciliation — preview and print from receipt data',
         },
       ]}
     />

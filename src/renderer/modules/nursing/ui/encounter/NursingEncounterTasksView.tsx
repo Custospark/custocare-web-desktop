@@ -133,8 +133,7 @@ const NursingEncounterTasksView: React.FC<Props> = ({ theme }) => {
             Visit tasks
           </h2>
           <p className={cn('text-sm mt-0.5', isDark ? 'text-gray-400' : 'text-gray-600')}>
-            Facility tasks linked to this visit ({activeVisit?.patient?.name?.trim() || 'patient'}). Backend:{' '}
-            <code className="text-xs">GET /facility-tasks?visit_uuid=…</code>
+            Facility tasks linked to this patient ({activeVisit?.patient?.name?.trim() || 'patient'}).
           </p>
         </div>
         <button

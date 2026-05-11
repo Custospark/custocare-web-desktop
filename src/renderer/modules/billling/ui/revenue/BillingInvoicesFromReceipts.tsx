@@ -1,6 +1,9 @@
-import React, { useMemo } from 'react';
-import { AlertCircle, FileText } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { AlertCircle, Eye, FileText } from 'lucide-react';
 import { useGetBillingReview } from '../../../medical-records/api/billing-review/BillingReviewQueries';
+import type { BillingReviewItem } from '../../../medical-records/api/billing-review/BillingReviewTypes';
+import { BillingInvoicePreviewModal } from './BillingInvoicePreviewModal';
+import { invoiceNumberFromBillingItem } from './billingInvoiceFromReceiptUtils';
 
 interface BillingInvoicesFromReceiptsProps {
   theme: 'light' | 'dark';
@@ -14,18 +17,21 @@ const BillingInvoicesFromReceipts: React.FC<BillingInvoicesFromReceiptsProps> = 
     sort_order: 'desc',
   });
 
+  const [previewItem, setPreviewItem] = useState<BillingReviewItem | null>(null);
+
   const invoiceRows = useMemo(
     () =>
       (data?.data.items ?? []).map((item) => ({
+        item,
         id: item.visit_uuid,
-        invoiceNumber: item.receipt_number ? `INV-${item.receipt_number}` : `INV-${item.visit_uuid.slice(0, 8)}`,
-        receiptNumber: item.receipt_number || 'N/A',
+        invoiceNumber: invoiceNumberFromBillingItem(item),
+        receiptNumber: item.receipt_number || '—',
         patient: item.patient_name || 'Unknown',
         patientNumber: item.patient_number || 'N/A',
         amount: item.billing_data?.grandTotal ?? 0,
         status: item.billing_status || 'pending',
       })),
-    [data]
+    [data],
   );
 
   if (isLoading) {
@@ -51,10 +57,13 @@ const BillingInvoicesFromReceipts: React.FC<BillingInvoicesFromReceiptsProps> = 
       <div className={`rounded-xl border p-4 ${isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'}`}>
         <div className="flex items-center gap-2">
           <FileText className="h-5 w-5 text-blue-500" />
-          <h2 className="text-lg font-semibold">Invoices Derived From Receipts</h2>
+          <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Receipts, invoices & reconciliation
+          </h2>
         </div>
         <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-          Generated invoice references from issued receipt transactions for quick follow-up.
+          Invoices below are derived from issued receipt data. Use Preview to open a printable document (same receipt
+          layout as billing review), then Print from the preview header — same flow as medical form preview and print.
         </p>
       </div>
 
@@ -68,25 +77,42 @@ const BillingInvoicesFromReceipts: React.FC<BillingInvoicesFromReceiptsProps> = 
                 <th className="px-4 py-3 text-left">Patient</th>
                 <th className="px-4 py-3 text-left">Amount</th>
                 <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-right">Preview</th>
               </tr>
             </thead>
             <tbody>
               {invoiceRows.map((row) => (
                 <tr key={row.id} className={isDark ? 'border-t border-gray-800' : 'border-t border-gray-100'}>
-                  <td className="px-4 py-3 font-medium">{row.invoiceNumber}</td>
-                  <td className="px-4 py-3">{row.receiptNumber}</td>
+                  <td className="px-4 py-3 font-medium font-mono text-xs sm:text-sm">{row.invoiceNumber}</td>
+                  <td className="px-4 py-3 font-mono text-xs sm:text-sm">{row.receiptNumber}</td>
                   <td className="px-4 py-3">
                     <div>{row.patient}</div>
                     <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{row.patientNumber}</div>
                   </td>
                   <td className="px-4 py-3 font-semibold">{row.amount.toLocaleString()}</td>
                   <td className="px-4 py-3 capitalize">{row.status.replace(/_/g, ' ')}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewItem(row.item)}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                        isDark ? 'bg-gray-800 text-gray-100 hover:bg-gray-700' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                      }`}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      Preview
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {previewItem ? (
+        <BillingInvoicePreviewModal item={previewItem} theme={theme} onClose={() => setPreviewItem(null)} />
+      ) : null}
     </div>
   );
 };
