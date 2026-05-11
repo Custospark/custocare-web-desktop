@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Circle } from 'lucide-react';
 import { cn } from '../../../types/cn';
 import ExpandableItem from './ExpandableItem';
 
@@ -13,6 +14,9 @@ interface MenuItem {
     id: string;
     label: string;
     route: string;
+    icon?: React.ReactNode;
+    description?: string;
+    subtext?: string;
   }>;
   stats?: string;
   shortcut?: string;
@@ -220,16 +224,22 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
     );
   };
 
+  const operationTooltip = (operation: NonNullable<MenuItem['operations']>[number]) =>
+    operation.description || operation.subtext || operation.label;
+
   const renderOperationItem = (operation: NonNullable<MenuItem['operations']>[number]) => {
     const isOperationActive = isRouteActive(operation.route);
+    const glyph = operation.icon ?? <Circle className="w-3.5 h-3.5 opacity-50" aria-hidden />;
 
     return (
       <a
         key={operation.id}
         href={operation.route}
+        title={operationTooltip(operation)}
+        aria-label={operation.label}
         onClick={(e) => handleNavigation(e, operation.route)}
         className={cn(
-          'flex items-center rounded-lg px-2.5 py-2 text-sm transition-all duration-200',
+          'flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm transition-all duration-200',
           'border border-transparent',
           isOperationActive
             ? isDark
@@ -241,7 +251,20 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         )}
         aria-current={isOperationActive ? 'page' : undefined}
       >
-        {operation.label}
+        <span
+          className={cn(
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors',
+            isDark ? 'border-gray-700/60 bg-gray-800/50 text-gray-300' : 'border-gray-200 bg-gray-50 text-gray-600',
+            isOperationActive &&
+              (isDark
+                ? 'border-cyan-500/50 bg-cyan-950/40 text-cyan-200'
+                : 'border-blue-300 bg-white text-blue-700'),
+          )}
+          aria-hidden
+        >
+          {glyph}
+        </span>
+        <span className="min-w-0 flex-1 truncate leading-snug">{operation.label}</span>
       </a>
     );
   };
@@ -307,19 +330,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                     </p>
                     <div className="space-y-2">
                       {items.map((item) => (
-                        <div key={item.id} className="space-y-1">
-                          {renderMenuItem(item)}
-                          {(item.operations ?? []).length > 0 ? (
-                            <div
-                              className={cn(
-                                'ml-2 space-y-0.5 border-l py-0.5 pl-3',
-                                isDark ? 'border-gray-700/70' : 'border-gray-200',
-                              )}
-                            >
-                              {(item.operations ?? []).map((operation) => renderOperationItem(operation))}
-                            </div>
-                          ) : null}
-                        </div>
+                        <div key={item.id}>{renderMenuItem(item)}</div>
                       ))}
                     </div>
                   </>

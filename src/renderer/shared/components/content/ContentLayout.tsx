@@ -16,6 +16,7 @@ import { cn } from '../../utils/classNameUtils';
 import { LayoutMainContent } from './LayoutMainContent';
 import { QuickActionsSidebar, type DockSide } from './QuickActionsSidebar';
 import { type BadgeSpec } from '../../utils/Badge';
+import { STORAGE_KEYS } from '../Navigation/layout-components/LayoutTypes';
 
 export interface ContentLayoutProps {
   operations: Operation[];
@@ -46,7 +47,8 @@ export interface Operation {
 
 const MOBILE_BREAKPOINT = 1024;
 const LS_KEY_DOCK = 'custocare.quickActionsDockSide';
-const LS_KEY_NESTED_NAV = 'sidebar-nested-navigation';
+/** Same key as `Layout` / `STORAGE_KEYS.SIDEBAR_NESTED` — collapsible nav and Quick Actions are mutually exclusive on desktop. */
+const LS_KEY_NESTED_NAV = STORAGE_KEYS.SIDEBAR_NESTED;
 const CONTENT_SCROLL_ATTR = 'data-app-scroll-container';
 
 function safeGetDockSide(): DockSide {
@@ -321,6 +323,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
     </LayoutMainContent>
   );
 
+  /** Nested (collapsible) primary nav replaces module Quick Actions — never show both. */
   const shouldHideOperationsSidebar = hideSidebar || nestedNavigationEnabled;
 
   if (shouldHideOperationsSidebar) {

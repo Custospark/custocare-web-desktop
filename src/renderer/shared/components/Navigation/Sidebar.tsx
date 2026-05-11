@@ -9,37 +9,44 @@ import React, {
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Briefcase,
-  Receipt,
   FileText,
   Globe,
   HeartPulse,
+  LibraryBig,
+  Microscope,
   MonitorCheckIcon,
+  Pill,
+  Receipt,
+  Stethoscope,
+  Syringe,
   UserCog,
-  Syringe,        // for NURSING
-  Stethoscope,    // for CLINICAL  
-  Microscope,     // for LABORATORY
-  Pill,           // for PHARMACY
-  LibraryBig,     // for Custocare Hub
 } from 'lucide-react';
 import { type SidebarProps } from '../../types/index';
 import { cn } from '../../types/cn';
 import { ROUTES } from '../../../app/routes/routeConstants';
 import {
-  ACCOUNT_ROUTES,
   MEDICAL_RECORDS_ROUTES,
   CLINICAL_ROUTES,
   NURSING_ROUTES,
   LABORATORY_ROUTES,
-  PATIENT_PORTAL_ROUTES,
   PHARMACY_ROUTES,
   BILLING_ROUTES,
   CUSTOCARE_HUB_ROUTES,
-  custocareHubOperationPath,
-  custocareHubActionPath,
 } from '../../../app/routes/routeConstants';
-import { CUSTOCARE_HUB_MODULE_OPERATIONS } from '../../../modules/custocare-hub/config/hubConfig';
 import { ADMIN_ROUTES } from '../../../app/routes/constants/administration.paths';
-import { PLATFORM_ADMIN_ROUTES } from '../../../app/routes/constants/platform-administration.paths';
+import {
+  ACCOUNT_BASE_SIDEBAR_NESTED_OPERATIONS,
+  ADMINISTRATION_SIDEBAR_NESTED_OPERATIONS,
+  BILLING_SIDEBAR_NESTED_OPERATIONS,
+  CLINICAL_SIDEBAR_NESTED_OPERATIONS,
+  CUSTOCARE_HUB_SIDEBAR_NESTED_OPERATIONS,
+  LABORATORY_SIDEBAR_NESTED_OPERATIONS,
+  MEDICAL_RECORDS_SIDEBAR_NESTED_OPERATIONS,
+  NURSING_SIDEBAR_NESTED_OPERATIONS,
+  PATIENT_PORTAL_SIDEBAR_NESTED_OPERATIONS,
+  PHARMACY_SIDEBAR_NESTED_OPERATIONS,
+  PLATFORM_ADMINISTRATION_SIDEBAR_NESTED_OPERATIONS,
+} from '../../navigation/moduleWorkspaceOperations';
 import { useAppSelector } from '../../../app/store/hooks/useApp';
 import {
   selectAccessibleModuleCodes,
@@ -74,6 +81,9 @@ interface MenuItem {
     id: string;
     label: string;
     route: string;
+    icon?: React.ReactNode;
+    description?: string;
+    subtext?: string;
   }>;
   stats?: string;
   shortcut?: string;
@@ -151,14 +161,7 @@ const menuConfig: MenuItem[] = useMemo(
       href: ROUTES.PATIENT_DASHBOARD,
       route: ROUTES.PATIENT_DASHBOARD,
       description: 'Personal health overview',
-      operations: [
-        { id: 'pp-overview', label: 'Overview', route: PATIENT_PORTAL_ROUTES.OVERVIEW },
-        { id: 'pp-health', label: 'My Health', route: PATIENT_PORTAL_ROUTES.HEALTH },
-        { id: 'pp-records', label: 'Medical Records', route: PATIENT_PORTAL_ROUTES.RECORDS },
-        { id: 'pp-results', label: 'Test Results', route: PATIENT_PORTAL_ROUTES.TEST_RESULTS },
-        { id: 'pp-appointments', label: 'Appointments', route: PATIENT_PORTAL_ROUTES.APPOINTMENTS },
-        { id: 'pp-medications', label: 'Medications', route: PATIENT_PORTAL_ROUTES.MEDICATIONS },
-      ],
+      operations: PATIENT_PORTAL_SIDEBAR_NESTED_OPERATIONS,
       stats: 'Health',
       shortcut: '⌘1',
       glowColor: 'from-emerald-500 to-teal-400',
@@ -187,12 +190,7 @@ const menuConfig: MenuItem[] = useMemo(
       href: MEDICAL_RECORDS_ROUTES.OVERVIEW,
       route: ROUTES.MEDICAL_RECORDS,
       description: 'Medical Records, Patient Registration & workflows',
-      operations: [
-        { id: 'mr-overview', label: 'Patient Intelligence', route: MEDICAL_RECORDS_ROUTES.OVERVIEW },
-        { id: 'mr-patients', label: 'Patient Registry Management', route: MEDICAL_RECORDS_ROUTES.PATIENTS },
-        { id: 'mr-encounter', label: 'Patient Encounter Hub', route: MEDICAL_RECORDS_ROUTES.VISIT_ACTION_CENTER },
-        { id: 'mr-revenue', label: 'Billing & Reconciliation', route: MEDICAL_RECORDS_ROUTES.REVENUE_INTEGRITY },
-      ],
+      operations: MEDICAL_RECORDS_SIDEBAR_NESTED_OPERATIONS,
       stats: 'Patients in Care',
       glowColor: 'from-purple-500 to-pink-400',
       moduleCode: 'medical_records',
@@ -207,13 +205,7 @@ const menuConfig: MenuItem[] = useMemo(
       href: NURSING_ROUTES.OVERVIEW,
       route: ROUTES.NURSING,
       description: 'Nursing assessments, vitals, and clinical notes',
-      operations: [
-        { id: 'nur-overview', label: 'Nursing Intelligence', route: NURSING_ROUTES.OVERVIEW },
-        { id: 'nur-wards-patients', label: 'Wards & Patients', route: NURSING_ROUTES.WARDS_PATIENTS },
-        { id: 'nur-encounter', label: 'Nursing Encounter', route: NURSING_ROUTES.NURSING_ENCOUNTER },
-        { id: 'nur-medication-treatment', label: 'Medication & Treatment', route: NURSING_ROUTES.MEDICATION_TREATMENT },
-        { id: 'nur-tasks-shifts', label: 'Tasks & Shifts', route: NURSING_ROUTES.TASKS_SHIFTS },
-      ],
+      operations: NURSING_SIDEBAR_NESTED_OPERATIONS,
       stats: 'Care',
       glowColor: 'from-blue-500 to-cyan-400',
       moduleCode: 'nursing',
@@ -227,12 +219,7 @@ const menuConfig: MenuItem[] = useMemo(
       href: CLINICAL_ROUTES.OVERVIEW,
       route: ROUTES.CLINICAL,
       description: 'Doctor consultations: Notes, Diagnosis, Prescriptions',
-      operations: [
-        { id: 'cl-overview', label: 'Clinical Intelligence', route: CLINICAL_ROUTES.OVERVIEW },
-        { id: 'cl-patients', label: 'Patient Registry Management', route: CLINICAL_ROUTES.PATIENTS },
-        { id: 'cl-encounter', label: 'Clinical Encounter Workflow', route: CLINICAL_ROUTES.VISIT_ACTION_CENTER },
-        { id: 'cl-revenue', label: 'Billing & Reconciliation', route: CLINICAL_ROUTES.REVENUE_INTEGRITY },
-      ],
+      operations: CLINICAL_SIDEBAR_NESTED_OPERATIONS,
       stats: 'Consultation',
       shortcut: '⌘C',
       glowColor: 'from-emerald-500 to-teal-400',
@@ -247,13 +234,7 @@ const menuConfig: MenuItem[] = useMemo(
       href: LABORATORY_ROUTES.OVERVIEW,
       route: ROUTES.LABORATORY,
       description: 'Lab requests, sample tracking, and results',
-      operations: [
-        { id: 'lab-overview', label: 'Laboratory Intelligence', route: LABORATORY_ROUTES.OVERVIEW },
-        { id: 'lab-patients', label: 'Lab Intake', route: LABORATORY_ROUTES.PATIENTS },
-        { id: 'lab-action-center', label: 'Lab Encounter Center', route: LABORATORY_ROUTES.ACTION_CENTER },
-        { id: 'lab-catalog', label: 'Service & Inventory Catalog', route: LABORATORY_ROUTES.CATALOG },
-        { id: 'lab-receipts', label: 'Billing & Receipts', route: LABORATORY_ROUTES.RECEIPTS },
-      ],
+      operations: LABORATORY_SIDEBAR_NESTED_OPERATIONS,
       stats: 'Diagnostics',
       glowColor: 'from-purple-500 to-indigo-400',
       moduleCode: 'laboratory',
@@ -267,13 +248,7 @@ const menuConfig: MenuItem[] = useMemo(
       href: PHARMACY_ROUTES.OVERVIEW,
       route: ROUTES.PHARMACY,
       description: 'Prescription fulfillment and medication management',
-      operations: [
-        { id: 'ph-overview', label: 'Pharmacy Intelligence', route: PHARMACY_ROUTES.OVERVIEW },
-        { id: 'ph-patients', label: 'Queue & Patient Intake', route: PHARMACY_ROUTES.PATIENTS },
-        { id: 'ph-action-center', label: 'Medication Encounter Center', route: PHARMACY_ROUTES.ACTION_CENTER },
-        { id: 'ph-inventory', label: 'Stock & Catalog', route: PHARMACY_ROUTES.INVENTORY },
-        { id: 'ph-receipts', label: 'Billing & Receipts', route: PHARMACY_ROUTES.RECEIPTS },
-      ],
+      operations: PHARMACY_SIDEBAR_NESTED_OPERATIONS,
       stats: 'Dispensing',
       glowColor: 'from-rose-500 to-orange-400',
       moduleCode: 'pharmacy',
@@ -287,12 +262,7 @@ const menuConfig: MenuItem[] = useMemo(
       href: BILLING_ROUTES.INTELLIGENCE,
       route: ROUTES.BILLING,
       description: 'Billing intake, charge capture, receipts, invoices, and reconciliation',
-      operations: [
-        { id: 'bill-intelligence', label: 'Financial Intelligence', route: BILLING_ROUTES.INTELLIGENCE },
-        { id: 'bill-patients', label: 'Billing Intake', route: BILLING_ROUTES.PATIENTS },
-        { id: 'bill-action-center', label: 'Billing Encounter', route: BILLING_ROUTES.ACTION_CENTER },
-        { id: 'bill-revenue', label: 'Receipts, Invoices & Reconciliation', route: BILLING_ROUTES.REVENUE },
-      ],
+      operations: BILLING_SIDEBAR_NESTED_OPERATIONS,
       stats: 'Finance',
       glowColor: 'from-amber-500 to-orange-400',
       moduleCode: 'billing',
@@ -308,16 +278,7 @@ const menuConfig: MenuItem[] = useMemo(
       route: ROUTES.ADMINISTRATION,
       description:
         'Configure facilities, manage workforce access, services, and operational controls',
-      operations: [
-        { id: 'adm-overview', label: 'Facility Intelligence', route: ADMIN_ROUTES.OVERVIEW },
-        { id: 'adm-facility-setup', label: 'Clinical Departments', route: ADMIN_ROUTES.FACILITY_SETUP },
-        { id: 'adm-clinical-space', label: 'Clinical Space Management', route: '/administration/clinical-space-management' },
-        { id: 'adm-services', label: 'Clinical & Billing Services', route: ADMIN_ROUTES.SERVICE_CATALOG },
-        { id: 'adm-inventory', label: 'Supply & Inventory Management', route: ADMIN_ROUTES.INVENTORY },
-        { id: 'adm-team', label: 'Workforce Administration', route: ADMIN_ROUTES.TEAM },
-        { id: 'adm-revenue-cycle', label: 'Revenue Cycle Management', route: ADMIN_ROUTES.BILLING_CYCLE },
-        { id: 'adm-settings', label: 'Enterprise Facility Settings', route: ADMIN_ROUTES.FACILITY_SETTINGS },
-      ],
+      operations: ADMINISTRATION_SIDEBAR_NESTED_OPERATIONS,
       stats: 'Governance',
       glowColor: 'from-slate-600 to-slate-500',
       moduleCode: 'administration',
@@ -332,15 +293,7 @@ const menuConfig: MenuItem[] = useMemo(
       route: ROUTES.PLATFORM_ADMINISTRATION,
       description:
         'Global platform settings, system configuration, user management across all facilities',
-      operations: [
-        { id: 'pa-facilities', label: 'Facility Management', route: PLATFORM_ADMIN_ROUTES.FACILITIES },
-        { id: 'pa-users', label: 'User Administration', route: PLATFORM_ADMIN_ROUTES.USERS },
-        { id: 'pa-api-docs', label: 'API Documentation', route: PLATFORM_ADMIN_ROUTES.API_DOCS },
-        { id: 'pa-learning-materials', label: 'Learning Materials', route: PLATFORM_ADMIN_ROUTES.LEARNING_MATERIALS },
-        { id: 'pa-hub-feedback', label: 'Hub feedback & requests', route: PLATFORM_ADMIN_ROUTES.HUB_FEEDBACK },
-        { id: 'pa-hub-support-faqs', label: 'Support Center FAQs', route: PLATFORM_ADMIN_ROUTES.HUB_SUPPORT_FAQS },
-        { id: 'pa-hub-support-tickets', label: 'Support tickets', route: PLATFORM_ADMIN_ROUTES.HUB_SUPPORT_TICKETS },
-      ],
+      operations: PLATFORM_ADMINISTRATION_SIDEBAR_NESTED_OPERATIONS,
       stats: 'Platform',
       shortcut: '⌘P',
       glowColor: 'from-slate-600 to-slate-500',
@@ -355,14 +308,7 @@ const menuConfig: MenuItem[] = useMemo(
       href: CUSTOCARE_HUB_ROUTES.LEARNING_CENTER,
       route: ROUTES.CUSTOCARE_HUB,
       description: 'Documentation, learning, resources, community, and support',
-      operations: CUSTOCARE_HUB_MODULE_OPERATIONS.map((op) => ({
-        id: `hub-${op.id}`,
-        label: op.label,
-        route:
-          op.usesHorizontalActions && op.actions[0]
-            ? custocareHubActionPath(op.id, op.actions[0].pathSegment)
-            : custocareHubOperationPath(op.id),
-      })),
+      operations: CUSTOCARE_HUB_SIDEBAR_NESTED_OPERATIONS,
       stats: 'Hub',
       glowColor: 'from-sky-500 to-indigo-400',
       moduleCode: 'custocare_hub',
@@ -376,11 +322,7 @@ const menuConfig: MenuItem[] = useMemo(
       href: ROUTES.ACCOUNT,
       route: ROUTES.ACCOUNT,
       description: 'Manage your profile, security, and preferences',
-      operations: [
-        { id: 'acc-settings', label: 'Account Center', route: ACCOUNT_ROUTES.SETTINGS_PROFILE },
-        { id: 'acc-messages', label: 'Message Center', route: ACCOUNT_ROUTES.MESSAGES },
-        { id: 'acc-invitations', label: 'Access & Invitations', route: ACCOUNT_ROUTES.INVITATIONS },
-      ],
+      operations: ACCOUNT_BASE_SIDEBAR_NESTED_OPERATIONS,
       stats: 'User Settings',
       glowColor: 'from-emerald-500 to-teal-400',
       moduleCode: 'account',

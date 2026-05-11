@@ -15,6 +15,8 @@ export type ModuleOperation = Omit<ContentOperation, 'badge'> & {
   badges?: (BadgeSpec | string)[];
   disabledReason?: string;
   badge?: string | number | BadgeSpec | BadgeSpec[]; // Now properly overrides
+  /** Optional short line under the label in module chrome (not all surfaces render it). */
+  subtext?: string;
 };
 
 export interface ModuleWorkspaceProps {
