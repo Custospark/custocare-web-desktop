@@ -9,7 +9,9 @@ import { LearningCenterMaterialsView } from './learning/LearningCenterMaterialsV
 import { FeedbackMyRequestsView } from './feedback/FeedbackMyRequestsView';
 import { FeedbackRoadmapView } from './feedback/FeedbackRoadmapView';
 import { FeedbackSubmitForm } from './feedback/FeedbackSubmitForm';
-import { SupportFaqsView, SupportTicketsPlaceholder } from './support/SupportFaqsView';
+import { SupportFaqsView } from './support/SupportFaqsView';
+import { SupportTicketsOpenView } from './support/SupportTicketsOpenView';
+import { SupportTicketsTrackView } from './support/SupportTicketsTrackView';
 
 const FEEDBACK_REQUEST_PATH_SEGMENTS = new Set([
   'submit-feedback',
@@ -109,7 +111,11 @@ export function HubActionPanel({ theme }: HubActionPanelProps) {
       return <SupportFaqsView theme={effectiveTheme} variant="search" />;
     }
     if (actionKey === 'open-ticket' || actionKey === 'track-ticket') {
-      return <SupportTicketsPlaceholder theme={effectiveTheme} actionKey={actionKey} />;
+      return actionKey === 'open-ticket' ? (
+        <SupportTicketsOpenView theme={effectiveTheme} />
+      ) : (
+        <SupportTicketsTrackView theme={effectiveTheme} />
+      );
     }
   }
 

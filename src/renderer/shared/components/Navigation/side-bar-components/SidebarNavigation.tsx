@@ -305,7 +305,23 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                     >
                       {categoryNames[category]}
                     </p>
-                    <div className="space-y-1.5">{items.map((item) => renderMenuItem(item))}</div>
+                    <div className="space-y-2">
+                      {items.map((item) => (
+                        <div key={item.id} className="space-y-1">
+                          {renderMenuItem(item)}
+                          {(item.operations ?? []).length > 0 ? (
+                            <div
+                              className={cn(
+                                'ml-2 space-y-0.5 border-l py-0.5 pl-3',
+                                isDark ? 'border-gray-700/70' : 'border-gray-200',
+                              )}
+                            >
+                              {(item.operations ?? []).map((operation) => renderOperationItem(operation))}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
                   </>
                 )}
               </div>

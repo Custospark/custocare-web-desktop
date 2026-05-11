@@ -11,6 +11,7 @@ import {
   GraduationCap,
   MessageSquareHeart,
   CircleHelp,
+  Ticket,
 } from 'lucide-react';
 import { BaseModuleWorkspace } from '../../shared/components/workspace/BaseModuleWorkspace';
 import { ROUTES } from '../../app/routes/routeConstants';
@@ -53,6 +54,12 @@ const PLATFORM_ADMIN_OPERATIONS = [
     label: 'Support Center FAQs',
     icon: <CircleHelp className="w-4 h-4" />,
     description: 'Author questions and answers shown in the Custocare Hub Support Center',
+  },
+  {
+    id: 'hub-support-tickets',
+    label: 'Support tickets',
+    icon: <Ticket className="w-4 h-4" />,
+    description: 'Handle support tickets opened from the Custocare Hub Support Center',
   },
 ];
 
