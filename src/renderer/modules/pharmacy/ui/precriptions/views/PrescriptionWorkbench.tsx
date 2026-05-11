@@ -42,6 +42,7 @@ import type { RootState } from '../../../../../app/store/store';
 import { getActiveFacilityId } from '../../../../../app/store/utils/contextSelectors';
 import { axiosInstance } from '../../../../../app/api/axiosConfig';
 import { PHARMACY_ROUTES } from '../../../../../app/routes/routeConstants';
+import { FOCUS_MODE_ROUTES } from '../../../../administration/onboarding/routes/focusModeRouteConstants';
 import { PharmacyPrescriptionReportModal } from '../../action-center/PharmacyPrescriptionReportModal';
 
 type WorkbenchMode = 'queue' | 'search' | 'review' | 'flagged' | 'approved' | 'create';
@@ -350,11 +351,13 @@ export const PrescriptionWorkbench: React.FC<PrescriptionWorkbenchProps> = ({
   };
 
   const openDispenseWorkspace = () => {
-    navigate(PHARMACY_ROUTES.ACTION_CENTER_DISPENSING);
+    navigate(PHARMACY_ROUTES.ACTION_CENTER_DISPENSING, {
+      state: { openDispenseFocus: true },
+    });
   };
 
-  const openPrescriptionNotes = (prescriptionId: number) => {
-    navigate(`${PHARMACY_ROUTES.ACTION_CENTER_PRESCRIPTION_NOTES}/${prescriptionId}`);
+  const openPrescriptionNotes = (_prescriptionId: number) => {
+    navigate(FOCUS_MODE_ROUTES.PRESCRIPTION_FOCUS);
   };
 
   if (mode !== 'create' && scope === 'facility' && !activeFacilityId) {
@@ -425,33 +428,6 @@ export const PrescriptionWorkbench: React.FC<PrescriptionWorkbenchProps> = ({
           />
         </div>
       </div>
-
-      {(isVisitMedicationList || isVisitReview) && activeVisitId != null && (
-        <div
-          className={`flex flex-col gap-2 rounded-lg border px-3 py-2.5 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-1 ${
-            isDark ? 'border-gray-700 bg-gray-800/80 text-gray-200' : 'border-slate-200 bg-slate-50 text-slate-800'
-          }`}
-        >
-          <span className="font-semibold">
-            Patient:{' '}
-            <span className="font-normal opacity-90">{activePatient?.name ?? '—'}</span>
-          </span>
-          <span className="font-semibold">
-            Visit:{' '}
-            <span className="font-mono text-xs font-normal opacity-90">#{activeVisitId}</span>
-          </span>
-          <span className="font-semibold">
-            Prescriptions (this visit):{' '}
-            <span className="font-normal">{filteredByMode.length}</span>
-          </span>
-          {isVisitMedicationList && (
-            <span className="font-semibold">
-              Medication lines:{' '}
-              <span className="font-normal">{visitMedicationRows.length}</span>
-            </span>
-          )}
-        </div>
-      )}
 
       {isVisitMedicationList && (
         <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
@@ -592,15 +568,17 @@ export const PrescriptionWorkbench: React.FC<PrescriptionWorkbenchProps> = ({
                             <Eye className="h-3.5 w-3.5 shrink-0" aria-hidden />
                             Document
                           </button>
-                          <button
-                            type="button"
-                            onClick={openDispenseWorkspace}
-                            className="inline-flex cursor-pointer items-center justify-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
-                            title="Open dispense & billing for this visit"
-                          >
-                            <Pill className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                            Dispense
-                          </button>
+                          {rx.status !== PrescriptionStatus.FULLY_DISPENSED && canBeDispensed(rx) && (
+                            <button
+                              type="button"
+                              onClick={openDispenseWorkspace}
+                              className="inline-flex cursor-pointer items-center justify-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                              title="Open dispense & billing for this visit"
+                            >
+                              <Pill className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                              Dispense
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -806,14 +784,17 @@ export const PrescriptionWorkbench: React.FC<PrescriptionWorkbenchProps> = ({
                     <Download className="h-4 w-4" aria-hidden />
                     PDF
                   </button>
-                  <button
-                    type="button"
-                    onClick={openDispenseWorkspace}
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
-                  >
-                    <Pill className="h-4 w-4" aria-hidden />
-                    Dispense
-                  </button>
+                  {selectedForReviewDetail.status !== PrescriptionStatus.FULLY_DISPENSED &&
+                    canBeDispensed(selectedForReviewDetail) && (
+                      <button
+                        type="button"
+                        onClick={openDispenseWorkspace}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+                      >
+                        <Pill className="h-4 w-4" aria-hidden />
+                        Dispense
+                      </button>
+                    )}
                 </div>
 
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>

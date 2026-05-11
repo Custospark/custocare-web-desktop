@@ -4,7 +4,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -238,6 +238,7 @@ type PersistedAction = 'increase' | 'decrease' | 'remove';
 const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({ theme }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useToast();
   const { confirm } = useConfirm();
   const queryClient = useQueryClient();
@@ -1079,6 +1080,14 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
   }, [confirm, dispenseFocusOpen, draftChargeItems.length, isReadOnly, theme]);
 
   useEffect(() => {
+    const state = location.state as { openDispenseFocus?: boolean } | null;
+    if (state?.openDispenseFocus) {
+      setDispenseFocusOpen(true);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.pathname, location.state, navigate]);
+
+  useEffect(() => {
     if (!dispenseFocusOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') void requestCloseFocus();
@@ -1134,18 +1143,7 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
   if (!dispenseFocusOpen) {
     return (
       <div className="space-y-6">
-        <button
-          type="button"
-          onClick={() => navigate(PHARMACY_ROUTES.ACTION_CENTER)}
-          className={cn(
-            'inline-flex items-center gap-2 text-sm font-medium',
-            isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
-          )}
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to workflow
-        </button>
-
+       
         <div
           className={cn(
             'mx-auto max-w-lg rounded-2xl border px-8 py-10 text-center shadow-sm',
