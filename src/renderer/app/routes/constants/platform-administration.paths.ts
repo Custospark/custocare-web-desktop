@@ -23,4 +23,7 @@ export const PLATFORM_ADMIN_ROUTES = {
 
   /** Custocare Hub user feedback & feature requests */
   HUB_FEEDBACK: '/platform-admin/hub-feedback',
+
+  /** Custocare Hub Support Center FAQs (Q&A for all users) */
+  HUB_SUPPORT_FAQS: '/platform-admin/hub-support-faqs',
 } as const;

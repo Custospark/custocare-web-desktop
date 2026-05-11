@@ -9,6 +9,7 @@ import { LearningCenterMaterialsView } from './learning/LearningCenterMaterialsV
 import { FeedbackMyRequestsView } from './feedback/FeedbackMyRequestsView';
 import { FeedbackRoadmapView } from './feedback/FeedbackRoadmapView';
 import { FeedbackSubmitForm } from './feedback/FeedbackSubmitForm';
+import { SupportFaqsView, SupportTicketsPlaceholder } from './support/SupportFaqsView';
 
 const FEEDBACK_REQUEST_PATH_SEGMENTS = new Set([
   'submit-feedback',
@@ -16,6 +17,8 @@ const FEEDBACK_REQUEST_PATH_SEGMENTS = new Set([
   'vote-feature',
   'track-request-status',
 ]);
+
+const SUPPORT_CENTER_PATH_SEGMENTS = new Set(['search-help', 'view-faqs', 'open-ticket', 'track-ticket']);
 
 export interface HubActionPanelProps extends ThemeProp {}
 
@@ -93,6 +96,20 @@ export function HubActionPanel({ theme }: HubActionPanelProps) {
     }
     if (actionKey === 'track-request-status') {
       return <FeedbackMyRequestsView theme={effectiveTheme} />;
+    }
+  }
+
+  const isSupportCenter = operationId === 'support-center' && SUPPORT_CENTER_PATH_SEGMENTS.has(actionKey);
+
+  if (isSupportCenter) {
+    if (actionKey === 'view-faqs') {
+      return <SupportFaqsView theme={effectiveTheme} variant="browse" />;
+    }
+    if (actionKey === 'search-help') {
+      return <SupportFaqsView theme={effectiveTheme} variant="search" />;
+    }
+    if (actionKey === 'open-ticket' || actionKey === 'track-ticket') {
+      return <SupportTicketsPlaceholder theme={effectiveTheme} actionKey={actionKey} />;
     }
   }
 

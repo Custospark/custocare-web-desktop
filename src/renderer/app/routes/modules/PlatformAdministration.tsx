@@ -46,6 +46,9 @@ const LearningMaterialsAdminPage = React.lazy(
 const HubFeedbackAdminPage = React.lazy(
   () => import("../../../modules/platform-administration/hub-feedback/HubFeedbackAdminPage")
 );
+const HubSupportFaqsAdminPage = React.lazy(
+  () => import("../../../modules/platform-administration/hub-support-faqs/HubSupportFaqsAdminPage")
+);
 
 // ============================================================================
 // PLATFORM ADMIN ROUTES CONFIGURATION
@@ -174,6 +177,16 @@ export const platformAdminRoutes = [
       element={
         <SuspenseWrapper variant="table">
           <WithThemeProp Component={HubFeedbackAdminPage} />
+        </SuspenseWrapper>
+      }
+    />
+
+    <Route
+      key="platform-admin-hub-support-faqs"
+      path={PLATFORM_ADMIN_ROUTES.HUB_SUPPORT_FAQS}
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={HubSupportFaqsAdminPage} />
         </SuspenseWrapper>
       }
     />

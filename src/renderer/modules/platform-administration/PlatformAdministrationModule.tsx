@@ -10,6 +10,7 @@ import {
   BookOpenText,
   GraduationCap,
   MessageSquareHeart,
+  CircleHelp,
 } from 'lucide-react';
 import { BaseModuleWorkspace } from '../../shared/components/workspace/BaseModuleWorkspace';
 import { ROUTES } from '../../app/routes/routeConstants';
@@ -46,6 +47,12 @@ const PLATFORM_ADMIN_OPERATIONS = [
     label: 'Hub feedback & requests',
     icon: <MessageSquareHeart className="w-4 h-4" />,
     description: 'Review feedback and feature requests submitted from the Custocare Hub',
+  },
+  {
+    id: 'hub-support-faqs',
+    label: 'Support Center FAQs',
+    icon: <CircleHelp className="w-4 h-4" />,
+    description: 'Author questions and answers shown in the Custocare Hub Support Center',
   },
 ];
 
