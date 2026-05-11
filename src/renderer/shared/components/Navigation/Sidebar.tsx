@@ -336,6 +336,7 @@ const menuConfig: MenuItem[] = useMemo(
         { id: 'pa-facilities', label: 'Facility Management', route: PLATFORM_ADMIN_ROUTES.FACILITIES },
         { id: 'pa-users', label: 'User Administration', route: PLATFORM_ADMIN_ROUTES.USERS },
         { id: 'pa-api-docs', label: 'API Documentation', route: PLATFORM_ADMIN_ROUTES.API_DOCS },
+        { id: 'pa-learning-materials', label: 'Learning Materials', route: PLATFORM_ADMIN_ROUTES.LEARNING_MATERIALS },
       ],
       stats: 'Platform',
       shortcut: '⌘P',

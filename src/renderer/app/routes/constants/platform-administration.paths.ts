@@ -17,4 +17,7 @@ export const PLATFORM_ADMIN_ROUTES = {
 
   // Documentation routes
   API_DOCS: '/platform-admin/api-docs',
+
+  /** Platform-managed Custocare Hub learning videos & assets */
+  LEARNING_MATERIALS: '/platform-admin/learning-materials',
 } as const;

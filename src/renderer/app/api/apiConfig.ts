@@ -23,9 +23,24 @@ export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   'http://127.0.0.1:8000/api'; // safe fallback
 
-export const STORAGE_BASE_URL =
-  import.meta.env.VITE_STORAGE_BASE_URL ||
-  'http://127.0.0.1:8000'; // safe fallback
+/** Origin of the Laravel app (where `/storage/...` is served). */
+function storageOriginFromApiBase(apiBase: string): string {
+  try {
+    return new URL(apiBase).origin;
+  } catch {
+    return 'http://127.0.0.1:8000';
+  }
+}
+
+const rawStorageEnv = (import.meta.env.VITE_STORAGE_BASE_URL as string | undefined)?.trim();
+
+/**
+ * Public disk files are at `{origin}/storage/...`. Prefer `VITE_STORAGE_BASE_URL` when set;
+ * otherwise derive the origin from `VITE_API_BASE_URL` so thumbnails work when only the API URL is configured.
+ */
+export const STORAGE_BASE_URL = (
+  rawStorageEnv ? rawStorageEnv.replace(/\/+$/, '') : storageOriginFromApiBase(API_BASE_URL)
+) as string;
 
 export const API_TIMEOUT = parseInt(
   import.meta.env.VITE_API_TIMEOUT || '30000',

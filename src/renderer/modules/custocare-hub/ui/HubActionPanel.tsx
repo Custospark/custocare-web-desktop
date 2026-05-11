@@ -4,6 +4,8 @@ import type { ProtectedOutletContext } from '../../../app/routes/modules/shared/
 import { custocareHubActionPath, custocareHubOperationPath } from '../../../app/routes/constants/custocare-hub.paths';
 import { ROUTES } from '../../../app/routes/routeConstants';
 import { getHubAction, getHubModuleOperation } from '../config/hubConfig';
+import { LEARNING_CENTER_CATEGORIES } from '../api/learning/learningMaterialTypes';
+import { LearningCenterMaterialsView } from './learning/LearningCenterMaterialsView';
 
 export interface HubActionPanelProps extends ThemeProp {}
 
@@ -42,6 +44,14 @@ export function HubActionPanel({ theme }: HubActionPanelProps) {
       return <Navigate to={custocareHubActionPath(operationId, first.pathSegment)} replace />;
     }
     return <Navigate to={custocareHubOperationPath('overview')} replace />;
+  }
+
+  const isLearningCenter =
+    operationId === 'learning-center' &&
+    LEARNING_CENTER_CATEGORIES.some((c) => c.value === actionKey);
+
+  if (isLearningCenter) {
+    return <LearningCenterMaterialsView theme={effectiveTheme} category={actionKey} />;
   }
 
   return (

@@ -8,6 +8,7 @@ import {
   Users, 
   Building2,
   BookOpenText,
+  GraduationCap,
 } from 'lucide-react';
 import { BaseModuleWorkspace } from '../../shared/components/workspace/BaseModuleWorkspace';
 import { ROUTES } from '../../app/routes/routeConstants';
@@ -32,6 +33,12 @@ const PLATFORM_ADMIN_OPERATIONS = [
     label: 'API Documentation',
     icon: <BookOpenText className="w-4 h-4" />,
     description: 'Explore backend API endpoints by module, auth, and route metadata',
+  },
+  {
+    id: 'learning-materials',
+    label: 'Learning Materials',
+    icon: <GraduationCap className="w-4 h-4" />,
+    description: 'Publish hub learning videos, thumbnails, and descriptions for all users',
   },
 ];
 

@@ -40,6 +40,9 @@ const UserStats = React.lazy(() => import("../../../modules/platform-administrat
 const ApiDocumentationPage = React.lazy(
   () => import("../../../modules/documentation/api-docs/ApiDocumentationPage")
 );
+const LearningMaterialsAdminPage = React.lazy(
+  () => import("../../../modules/platform-administration/learning-materials/LearningMaterialsAdminPage")
+);
 
 // ============================================================================
 // PLATFORM ADMIN ROUTES CONFIGURATION
@@ -148,6 +151,16 @@ export const platformAdminRoutes = [
       element={
         <SuspenseWrapper variant="table">
           <WithThemeProp Component={ApiDocumentationPage} />
+        </SuspenseWrapper>
+      }
+    />
+
+    <Route
+      key="platform-admin-learning-materials"
+      path={PLATFORM_ADMIN_ROUTES.LEARNING_MATERIALS}
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={LearningMaterialsAdminPage} />
         </SuspenseWrapper>
       }
     />
