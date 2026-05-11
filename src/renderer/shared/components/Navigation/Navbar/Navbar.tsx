@@ -19,9 +19,6 @@ import {
   Briefcase,
   UserCheck,
   Menu,
-  PanelsLeftRight,
-  PanelRightClose,
-  PanelRightOpen,
 } from 'lucide-react';
 import { cn } from '../../../types/cn';
 import { useNavigate } from 'react-router-dom';
@@ -57,9 +54,6 @@ export interface NavbarProps {
   theme: 'light' | 'dark';
   onMenuClick?: () => void;
   onThemeToggle?: () => void;
-  onToggleSidebar?: () => void;
-  onToggleSidebarPosition?: () => void;
-  sidebarOpen?: boolean;
   className?: string;
 }
 
@@ -81,9 +75,6 @@ interface ContextOption {
 export const Navbar: React.FC<NavbarProps> = ({
   theme = 'dark',
   onMenuClick,
-  onToggleSidebar,
-  onToggleSidebarPosition,
-  sidebarOpen = true,
   className,
 }) => {
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
@@ -364,45 +355,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       />
     </div>
   )}
-
-  {/* Sidebar controls (desktop): keep current behavior as default */}
-  <div className="hidden lg:flex items-center gap-2">
-    <button
-      type="button"
-      onClick={onToggleSidebar}
-      disabled={!onToggleSidebar}
-      aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-      title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-      className={cn(
-        'flex items-center justify-center w-9 h-9 rounded-lg transition-colors',
-        'focus:outline-none focus:ring-2 focus:ring-offset-2',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
-        isDark
-          ? 'bg-gray-800/80 hover:bg-gray-700/80 text-gray-300 border border-gray-700/50 focus:ring-cyan-500/40'
-          : 'bg-gray-100/80 hover:bg-gray-200/80 text-gray-700 border border-gray-300/50 focus:ring-blue-500/40'
-      )}
-    >
-      {sidebarOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
-    </button>
-
-    <button
-      type="button"
-      onClick={onToggleSidebarPosition}
-      disabled={!onToggleSidebarPosition}
-      aria-label="Move sidebar to opposite side"
-      title="Move sidebar left/right"
-      className={cn(
-        'flex items-center justify-center w-9 h-9 rounded-lg transition-colors',
-        'focus:outline-none focus:ring-2 focus:ring-offset-2',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
-        isDark
-          ? 'bg-gray-800/80 hover:bg-gray-700/80 text-gray-300 border border-gray-700/50 focus:ring-cyan-500/40'
-          : 'bg-gray-100/80 hover:bg-gray-200/80 text-gray-700 border border-gray-300/50 focus:ring-blue-500/40'
-      )}
-    >
-      <PanelsLeftRight className="w-4 h-4" />
-    </button>
-  </div>
 
   {/* Staff presence */}
   {inStaffMode && activeFacilityId && (

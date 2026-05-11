@@ -1,5 +1,6 @@
 // LayoutTopBars.tsx
 import React, { useMemo } from 'react';
+import { PanelsLeftRight } from 'lucide-react';
 import { cn } from '../../types/cn';
 import Navbar from './Navbar/Navbar';
 import {
@@ -124,24 +125,24 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
               'transition-all duration-300 ease-out',
               'focus:outline-none focus:ring-2 focus:ring-offset-2',
               'backdrop-blur-md overflow-hidden',
-              'group hover:scale-110 active:scale-95',
-              'shadow-lg hover:shadow-xl',
+              'group hover:scale-105 active:scale-95',
+              'shadow-md hover:shadow-lg',
               'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
               sidebarPosition === 'left' ? 'mr-4' : 'ml-4',
               theme === 'dark'
                 ? [
-                    'bg-gradient-to-br from-gray-900/60 via-gray-900/70 to-gray-900/60',
-                    'hover:from-gray-900/70 hover:via-cyan-800/50 hover:to-gray-900/70',
-                    'text-gray-400 hover:text-blue-400',
+                    'bg-gradient-to-br from-gray-900/50 via-gray-900/60 to-gray-900/50',
+                    'hover:from-gray-900/60 hover:via-gray-900/65 hover:to-gray-900/60',
+                    'text-gray-400 hover:text-gray-300',
                     'focus:ring-cyan-500/50 focus:ring-offset-gray-950',
-                    'ring-1 ring-gray-700/40 hover:ring-blue-500/50',
+                    'ring-1 ring-gray-700/35 hover:ring-cyan-500/35',
                   ].join(' ')
                 : [
-                    'bg-gradient-to-br from-white/70 via-white/80 to-white/70',
-                    'hover:from-white/80 hover:via-blue-100/50 hover:to-white/80',
-                    'text-gray-600 hover:text-blue-600',
+                    'bg-gradient-to-br from-white/70 via-white/75 to-white/70',
+                    'hover:from-white/80 hover:via-white/85 hover:to-white/80',
+                    'text-gray-600 hover:text-gray-700',
                     'focus:ring-blue-500/50 focus:ring-offset-white',
-                    'ring-1 ring-gray-300/40 hover:ring-blue-500/50',
+                    'ring-1 ring-gray-300/35 hover:ring-blue-400/35',
                   ].join(' ')
             )}
           >
@@ -150,7 +151,53 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
             </div>
             <div
               className={cn(
-                'absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100',
+                'absolute inset-0 rounded-xl opacity-0 group-hover:opacity-30',
+                'transition-opacity duration-300',
+                'bg-gradient-to-r',
+                themeClasses.accent,
+                'mix-blend-overlay'
+              )}
+            />
+          </button>
+
+          <button
+            onClick={onToggleSidebarPosition}
+            aria-label="Move sidebar to opposite side"
+            title="Move sidebar left/right"
+            disabled={isTransitioning}
+            className={cn(
+              'hidden lg:flex items-center justify-center relative cursor-pointer',
+              'h-9 w-9 p-2 rounded-xl',
+              'transition-all duration-300 ease-out',
+              'focus:outline-none focus:ring-2 focus:ring-offset-2',
+              'backdrop-blur-md overflow-hidden',
+              'group hover:scale-105 active:scale-95',
+              'shadow-md hover:shadow-lg',
+              'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
+              sidebarPosition === 'left' ? 'mr-4' : 'ml-4',
+              theme === 'dark'
+                ? [
+                    'bg-gradient-to-br from-gray-900/50 via-gray-900/60 to-gray-900/50',
+                    'hover:from-gray-900/60 hover:via-gray-900/65 hover:to-gray-900/60',
+                    'text-gray-400 hover:text-gray-300',
+                    'focus:ring-cyan-500/50 focus:ring-offset-gray-950',
+                    'ring-1 ring-gray-700/35 hover:ring-cyan-500/35',
+                  ].join(' ')
+                : [
+                    'bg-gradient-to-br from-white/70 via-white/75 to-white/70',
+                    'hover:from-white/80 hover:via-white/85 hover:to-white/80',
+                    'text-gray-600 hover:text-gray-700',
+                    'focus:ring-blue-500/50 focus:ring-offset-white',
+                    'ring-1 ring-gray-300/35 hover:ring-blue-400/35',
+                  ].join(' ')
+            )}
+          >
+            <div className={cn('transition-all duration-300 ease-out', 'group-hover:scale-110')}>
+              <PanelsLeftRight className="w-4 h-4" />
+            </div>
+            <div
+              className={cn(
+                'absolute inset-0 rounded-xl opacity-0 group-hover:opacity-30',
                 'transition-opacity duration-300',
                 'bg-gradient-to-r',
                 themeClasses.accent,
@@ -165,9 +212,6 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
               theme={theme}
               onThemeToggle={onToggleTheme}
               onMenuClick={onToggleMobileSidebar}
-              onToggleSidebar={onToggleSidebar}
-              onToggleSidebarPosition={onToggleSidebarPosition}
-              sidebarOpen={sidebarOpen}
             />
           </div>
 
