@@ -1230,8 +1230,8 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
           </button>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5">
-          <div className="mx-auto max-w-[1800px] space-y-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+          <div className="mx-auto max-w-[1760px] space-y-5 lg:space-y-6">
             {prescriptionAllergyConflicts.length > 0 && !prescriptionConflictBannerHidden && (
               <div
                 className={cn(
@@ -1348,9 +1348,9 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
               </div>
             )}
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-6">
               {/* Rx alignment */}
-              <section className={cn('lg:col-span-3 min-h-0 rounded-xl border p-4', panelBg)}>
+              <section className={cn('lg:col-span-3 min-h-0 rounded-xl border p-4 lg:p-5', panelBg)}>
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Pill className={cn('h-5 w-5', isDark ? 'text-emerald-400' : 'text-emerald-600')} />
@@ -1451,7 +1451,7 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
 
               {/* Charge entry cluster */}
               <div className="lg:col-span-9 flex min-h-0 flex-col">
-                <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:gap-6">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-7">
                   <motion.div
                     variants={containerVariants}
                     initial="hidden"
@@ -1459,7 +1459,7 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
                     className="lg:col-span-8 flex min-h-0 flex-col"
                     ref={containerRef}
                   >
-                    <div className="mb-3 space-y-2">
+                    <div className="mb-4 space-y-2.5">
                       <AnimatePresence>
                         {isReadOnly && (
                           <motion.div
@@ -1487,8 +1487,8 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
                     </div>
 
                     <div
-                      className={`sticky top-0 z-30 pb-3 ${colors.bg.primary} transition-all duration-200 ${
-                        isSearchSticky ? 'bg-opacity-95 pt-1 backdrop-blur-sm' : ''
+                      className={`sticky top-0 z-30 mb-4 rounded-xl px-2 py-2 ${colors.bg.primary} transition-all duration-200 ${
+                        isSearchSticky ? 'bg-opacity-95 shadow-sm backdrop-blur-sm' : ''
                       }`}
                     >
                       <SearchBar
@@ -1544,7 +1544,7 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
                   <div className="lg:col-span-4 min-h-0 lg:sticky lg:top-4 self-start">
                     <div
                       className={cn(
-                        'space-y-4 rounded-xl border p-4 sm:p-5',
+                        'space-y-5 rounded-xl border p-4 sm:p-5 lg:p-6',
                         colors.border.primary,
                         colors.bg.secondary
                       )}

@@ -45,11 +45,11 @@ export const ChargeItemsList: React.FC<ChargeItemsListProps> = ({
       {/* Items header */}
       <motion.div
         variants={itemVariants}
-        className={`sticky top-12 z-20 ${colors.bg.primary} pb-2 transition-all duration-200 ${
-          isSearchSticky ? 'pt-2 bg-opacity-95 backdrop-blur-sm' : ''
+        className={`sticky top-16 z-20 mb-3 rounded-xl px-2 py-2 ${colors.bg.primary} transition-all duration-200 ${
+          isSearchSticky ? 'bg-opacity-95 shadow-sm backdrop-blur-sm' : ''
         }`}
       >
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 px-1 sm:px-2">
           <h3 className="text-base sm:text-lg font-bold">
             <span className="bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
               Selected items
@@ -76,7 +76,7 @@ export const ChargeItemsList: React.FC<ChargeItemsListProps> = ({
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               onClick={onClearAll}
-              className={`flex items-center gap-2 px-3 py-2 ${
+              className={`flex items-center gap-2 px-3.5 py-2 ${
                 isDark 
                   ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' 
                   : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
