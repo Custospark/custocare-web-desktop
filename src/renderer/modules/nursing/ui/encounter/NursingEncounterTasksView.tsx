@@ -13,6 +13,7 @@ import type {
   UpdateFacilityTaskPayload,
 } from '../../api/facility-tasks/facilityTaskTypes';
 import { cn } from '../../../../shared/utils/classNameUtils';
+import { getNursingEncounterChrome } from './nursingEncounterChrome';
 
 interface Props {
   theme: 'light' | 'dark';
@@ -22,10 +23,10 @@ const PRIORITY_STYLES: Record<
   FacilityTaskPriority,
   { label: string; classLight: string; classDark: string }
 > = {
-  low: { label: 'Low', classLight: 'bg-slate-100 text-slate-700', classDark: 'bg-slate-800/80 text-slate-200' },
-  normal: { label: 'Normal', classLight: 'bg-blue-50 text-blue-800', classDark: 'bg-blue-950/50 text-blue-200' },
-  high: { label: 'High', classLight: 'bg-amber-50 text-amber-900', classDark: 'bg-amber-950/40 text-amber-100' },
-  urgent: { label: 'Urgent', classLight: 'bg-rose-50 text-rose-900', classDark: 'bg-rose-950/40 text-rose-100' },
+  low: { label: 'Low', classLight: 'bg-slate-100 text-slate-800', classDark: 'bg-slate-800 text-slate-100' },
+  normal: { label: 'Normal', classLight: 'bg-blue-50 text-blue-900', classDark: 'bg-blue-950/70 text-blue-100' },
+  high: { label: 'High', classLight: 'bg-amber-50 text-amber-950', classDark: 'bg-amber-950/55 text-amber-50' },
+  urgent: { label: 'Urgent', classLight: 'bg-rose-50 text-rose-950', classDark: 'bg-rose-950/55 text-rose-50' },
 };
 
 const STATUS_LABEL: Record<FacilityTaskStatus, string> = {
@@ -51,7 +52,8 @@ function formatDue(iso: string | null): { text: string; overdue: boolean } {
 }
 
 const NursingEncounterTasksView: React.FC<Props> = ({ theme }) => {
-  const isDark = theme === 'dark';
+  const chrome = getNursingEncounterChrome(theme);
+  const { isDark } = chrome;
   const facilityId = useAppSelector(getActiveFacilityId) ?? 0;
   const activeVisit = useAppSelector(selectActiveVisit);
   const visitUuid = activeVisit?.visit_uuid ?? '';
@@ -90,32 +92,23 @@ const NursingEncounterTasksView: React.FC<Props> = ({ theme }) => {
     }
   };
 
-  const cardShell = isDark ? 'border-gray-700 bg-gray-900/60' : 'border-gray-200 bg-white';
-
-  const emptyVisit = useMemo(
-    () => (
-      <div
-        className={cn(
-          'rounded-xl border p-6 text-sm',
-          isDark ? 'border-gray-700 bg-gray-900 text-gray-300' : 'border-gray-200 bg-white text-gray-600'
-        )}
-      >
-        Open a nursing encounter from <strong>Wards &amp; Patients</strong> or <strong>My ward patients</strong> so a visit is active in the workspace. Tasks listed here are scoped to{' '}
-        <code className="text-xs">facility_tasks.visit_uuid</code>.
+  const emptyVisit = useMemo(() => {
+    const c = getNursingEncounterChrome(theme);
+    return (
+      <div className={c.emptyPanel}>
+        <p className={cn(c.body)}>
+          Open a nursing encounter from <strong className={c.heading}>Wards &amp; Patients</strong> or{' '}
+          <strong className={c.heading}>My ward patients</strong> so a visit is active in the workspace. Tasks listed here are scoped to{' '}
+          <code className={c.code}>facility_tasks.visit_uuid</code>.
+        </p>
       </div>
-    ),
-    [isDark]
-  );
+    );
+  }, [theme]);
 
   if (!facilityId) {
     return (
-      <div
-        className={cn(
-          'rounded-xl border p-6 text-sm',
-          isDark ? 'border-gray-700 bg-gray-900 text-gray-300' : 'border-gray-200 bg-white text-gray-600'
-        )}
-      >
-        Select an active facility first.
+      <div className={chrome.emptyPanel}>
+        <p className={chrome.body}>Select an active facility first.</p>
       </div>
     );
   }
@@ -125,75 +118,70 @@ const NursingEncounterTasksView: React.FC<Props> = ({ theme }) => {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className={cn('text-lg font-semibold flex items-center gap-2', isDark ? 'text-white' : 'text-gray-900')}>
-            <ListTodo className="w-5 h-5 opacity-90" aria-hidden />
+    <div className="space-y-5">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <h2 className={cn('flex items-center gap-2 text-lg font-semibold tracking-tight', chrome.heading)}>
+            <ListTodo className="h-5 w-5 shrink-0 opacity-90" aria-hidden />
             Visit tasks
           </h2>
-          <p className={cn('text-sm mt-0.5', isDark ? 'text-gray-400' : 'text-gray-600')}>
+          <p className={cn('text-sm leading-snug', chrome.subhead)}>
             Facility tasks linked to this patient ({activeVisit?.patient?.name?.trim() || 'patient'}).
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => query.refetch()}
-          disabled={busy}
-          className={cn(
-            'inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer disabled:opacity-50',
-            isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
-          )}
-        >
-          <RefreshCw className={cn('w-4 h-4', busy ? 'animate-spin' : '')} />
+        <button type="button" onClick={() => query.refetch()} disabled={busy} className={cn(chrome.btnSecondary, 'shrink-0 cursor-pointer')}>
+          <RefreshCw className={cn('h-4 w-4 shrink-0', busy ? 'animate-spin' : '')} aria-hidden />
           Refresh
         </button>
-      </div>
+      </header>
 
-      <div className={cn('rounded-xl border divide-y', cardShell)}>
+      <div className={cn(chrome.card, 'divide-y', chrome.divide)}>
         {tasks.length === 0 && !query.isLoading ? (
-          <div className={cn('p-6 text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
-            No tasks are assigned to this visit yet. Create tasks from <strong>Tasks &amp; Shifts → Assign task</strong> with this visit selected.
+          <div className={cn('p-6 text-sm leading-relaxed', chrome.muted)}>
+            No tasks are assigned to this visit yet. Create tasks from <strong className={chrome.body}>Tasks &amp; Shifts → Assign task</strong> with this visit selected.
           </div>
         ) : (
           tasks.map((task) => {
             const due = formatDue(task.due_at);
             const ps = PRIORITY_STYLES[task.priority];
             return (
-              <div key={task.id} className={cn('p-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between')}>
-                <div className="min-w-0 space-y-1">
+              <div key={task.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="min-w-0 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>{task.title}</span>
+                    <span className={cn('font-medium', chrome.rowTitle)}>{task.title}</span>
                     <span
                       className={cn(
-                        'text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full',
+                        'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
                         isDark ? ps.classDark : ps.classLight
                       )}
                     >
                       {ps.label}
                     </span>
-                    <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
-                      {STATUS_LABEL[task.status]}
-                    </span>
+                    <span className={cn('text-xs font-medium', chrome.subtle)}>{STATUS_LABEL[task.status]}</span>
                   </div>
                   {task.description ? (
-                    <p className={cn('text-sm line-clamp-2', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                      {task.description}
-                    </p>
+                    <p className={cn('line-clamp-2 text-sm leading-relaxed', chrome.body)}>{task.description}</p>
                   ) : null}
-                  <p className={cn('text-xs', due.overdue ? 'text-rose-400' : isDark ? 'text-gray-500' : 'text-gray-500')}>
+                  <p
+                    className={cn(
+                      'text-xs font-medium',
+                      due.overdue ? (isDark ? 'text-rose-300' : 'text-rose-700') : chrome.subtle
+                    )}
+                  >
                     Due: {due.text}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2 shrink-0">
+                <div className="flex shrink-0 flex-wrap gap-2">
                   {task.status === 'pending' ? (
                     <button
                       type="button"
                       onClick={() => patchTask(task, { status: 'in_progress' })}
                       disabled={busy}
                       className={cn(
-                        'px-3 py-1.5 rounded-lg text-xs font-medium border cursor-pointer disabled:opacity-50',
-                        isDark ? 'border-blue-600 text-blue-300 hover:bg-blue-950/40' : 'border-blue-300 text-blue-700 hover:bg-blue-50'
+                        'cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50',
+                        isDark
+                          ? 'border-sky-600/80 bg-slate-950 text-sky-100 hover:bg-sky-950/50'
+                          : 'border-sky-400 bg-white text-sky-900 hover:bg-sky-50'
                       )}
                     >
                       Start
@@ -205,8 +193,10 @@ const NursingEncounterTasksView: React.FC<Props> = ({ theme }) => {
                       onClick={() => patchTask(task, { status: 'completed' })}
                       disabled={busy}
                       className={cn(
-                        'px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer disabled:opacity-50',
-                        isDark ? 'bg-emerald-900/40 text-emerald-200 border border-emerald-700' : 'bg-emerald-600 text-white'
+                        'cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50',
+                        isDark
+                          ? 'border border-emerald-700/80 bg-emerald-950/50 text-emerald-100 hover:bg-emerald-950'
+                          : 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700'
                       )}
                     >
                       Complete
@@ -220,7 +210,7 @@ const NursingEncounterTasksView: React.FC<Props> = ({ theme }) => {
       </div>
 
       {meta && meta.last_page > 1 ? (
-        <div className={cn('flex items-center justify-between text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
+        <div className={cn('flex flex-wrap items-center justify-between gap-3 text-sm', chrome.muted)}>
           <span>
             Page {meta.current_page} of {meta.last_page}
           </span>
@@ -229,7 +219,7 @@ const NursingEncounterTasksView: React.FC<Props> = ({ theme }) => {
               type="button"
               disabled={meta.current_page <= 1 || busy}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1 rounded-lg border cursor-pointer disabled:opacity-40"
+              className={cn(chrome.btnPaging, 'cursor-pointer')}
             >
               Previous
             </button>
@@ -237,7 +227,7 @@ const NursingEncounterTasksView: React.FC<Props> = ({ theme }) => {
               type="button"
               disabled={meta.current_page >= meta.last_page || busy}
               onClick={() => setPage((p) => p + 1)}
-              className="px-3 py-1 rounded-lg border cursor-pointer disabled:opacity-40"
+              className={cn(chrome.btnPaging, 'cursor-pointer')}
             >
               Next
             </button>
@@ -245,9 +235,7 @@ const NursingEncounterTasksView: React.FC<Props> = ({ theme }) => {
         </div>
       ) : null}
 
-      {query.isLoading ? (
-        <p className={cn('text-sm', isDark ? 'text-gray-500' : 'text-gray-500')}>Loading tasks…</p>
-      ) : null}
+      {query.isLoading ? <p className={cn('text-sm', chrome.muted)}>Loading tasks…</p> : null}
     </div>
   );
 };

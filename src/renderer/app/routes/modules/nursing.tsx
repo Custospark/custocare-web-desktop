@@ -11,11 +11,11 @@ import {
 import MRPatientSearch from '../../../modules/medical-records/ui/patients/views/MRPatientSearch';
 import MRPatientQueue from '../../../modules/medical-records/ui/patients/views/MRPatientQueue';
 import MRPatientRecords from '../../../modules/medical-records/ui/patients/views/MRPatientRecords';
-import NursingWardBedManagement from '../../../modules/nursing/ui/encounter/NursingWardBedManagement';
 import NursingEncounterTasksView from '../../../modules/nursing/ui/encounter/NursingEncounterTasksView';
 import NursingEncounterMedsView from '../../../modules/nursing/ui/encounter/NursingEncounterMedsView';
 import NursingEncounterNotesView from '../../../modules/nursing/ui/encounter/NursingEncounterNotesView';
 import RedirectToForwardPatientFocus from '../../../modules/medical-records/ui/visit-action-center/RedirectToForwardPatientFocus';
+import RedirectToNursingWardBedFocus from '../../../modules/nursing/ui/encounter/RedirectToNursingWardBedFocus';
 import MyTasksView from '../../../modules/nursing/ui/tasks-shifts/MyTasksView';
 import AssignTaskView from '../../../modules/nursing/ui/tasks-shifts/AssignTaskView';
 import ShiftHandoverView from '../../../modules/nursing/ui/tasks-shifts/ShiftHandoverView';
@@ -85,7 +85,14 @@ export const nursingRoutes = [
       path="patient-info"
       element={nursingTablePage(MRPatientRecords, { presentation: 'nursing' })}
     />
-    <Route path="ward-bed" element={nursingTablePage(NursingWardBedManagement)} />
+    <Route
+      path="ward-bed"
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={RedirectToNursingWardBedFocus} />
+        </SuspenseWrapper>
+      }
+    />
     <Route path="tasks" element={nursingTablePage(NursingEncounterTasksView)} />
     <Route path="meds" element={nursingTablePage(NursingEncounterMedsView)} />
     <Route path="notes" element={nursingTablePage(NursingEncounterNotesView)} />

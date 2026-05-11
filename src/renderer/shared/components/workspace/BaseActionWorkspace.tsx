@@ -13,6 +13,13 @@ export interface ActionConfig<TActionId extends string> {
   to: string;
   description?: string;
 
+  /**
+   * When `to` is a focus URL (or any path outside this outlet), set this to the embedded child route
+   * under this workspace so the tab stays selected after returning from focus mode and the default-tab
+   * guard does not redirect away.
+   */
+  activeWhenPath?: string;
+
   /** When set, navigation uses `navigate(to, { state })` (e.g. Forward Patient focus mode). */
   navigateState?: NavigateOptions['state'];
 
@@ -49,6 +56,13 @@ interface BaseActionWorkspaceProps<TActionId extends string> {
 }
 
 const cx = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
+
+function pathnameMatchesAction<T extends string>(pathname: string, action: ActionConfig<T>): boolean {
+  if (pathname === action.to || pathname.startsWith(`${action.to}/`)) return true;
+  const alt = action.activeWhenPath;
+  if (alt && (pathname === alt || pathname.startsWith(`${alt}/`))) return true;
+  return false;
+}
 
 function buildStatusBadges(status: FeatureStatus | undefined): BadgeSpec[] {
   if (!status) return [];
@@ -116,7 +130,7 @@ export function BaseActionWorkspace<TActionId extends string>({
   const iconColor = 'text-blue-500';
 
   const activeAction = useMemo(
-    () => actions?.find((a) => location.pathname === a.to || location.pathname.startsWith(a.to + '/')),
+    () => actions?.find((a) => pathnameMatchesAction(location.pathname, a)),
     [actions, location.pathname]
   );
 
@@ -127,8 +141,7 @@ export function BaseActionWorkspace<TActionId extends string>({
       additionalWorkflowPathPrefixes?.some((prefix) => location.pathname.startsWith(prefix)) ?? false;
 
     const isOnAnyAction =
-      onWorkflowSubpath ||
-      actions.some((a) => location.pathname === a.to || location.pathname.startsWith(a.to + '/'));
+      onWorkflowSubpath || actions.some((a) => pathnameMatchesAction(location.pathname, a));
 
     if (!isOnAnyAction && defaultActionTo) {
       const defaultAction = actions.find((a) => a.to === defaultActionTo);
@@ -164,7 +177,9 @@ export function BaseActionWorkspace<TActionId extends string>({
       if (effectiveDisabled) return;
 
       const to = action.to;
-      if (!to || location.pathname === to || location.pathname.startsWith(to + '/')) return;
+      if (!to) return;
+      const alreadyAtDestination = location.pathname === to || location.pathname.startsWith(`${to}/`);
+      if (alreadyAtDestination) return;
       if (action.navigateState !== undefined) {
         navigate(to, { state: action.navigateState });
       } else {

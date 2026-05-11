@@ -32,4 +32,10 @@ export const FOCUS_MODE_ROUTES = {
 
   /** Medical Records — forward patient workflow (full-screen focus) */
   FORWARD_PATIENT_FOCUS: '/medical-records-focus/forward-patient',
+
+  /** Nursing module — encounter tabs (full-screen focus, same shell as other focus workflows) */
+  NURSING_WARD_BED_FOCUS: '/nursing-focus/ward-bed',
+  NURSING_TASKS_FOCUS: '/nursing-focus/tasks',
+  NURSING_MEDS_FOCUS: '/nursing-focus/meds',
+  NURSING_NOTES_FOCUS: '/nursing-focus/notes',
 } as const;

@@ -699,7 +699,7 @@ export const FocusedModeLayout: React.FC<FocusedModeLayoutProps> = ({
           <div className="lg:col-span-8 xl:col-span-9">
             <div
               className={cn(
-                'overflow-hidden rounded-xl border shadow-sm',
+                'overflow-hidden rounded-xl border p-5 shadow-sm sm:p-6 lg:p-8',
                 border.card,
                 bg.card
               )}

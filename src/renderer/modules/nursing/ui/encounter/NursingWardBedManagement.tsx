@@ -35,6 +35,8 @@ import BedActionPanel from './components/BedActionPanel';
 import BedBoardGrid from './components/BedBoardGrid';
 import WardBedPickerModalHeader from './components/WardBedPickerModalHeader';
 import { useNursingWardFormDrawer } from './ward-drawer/useNursingWardFormDrawer';
+import { cn } from '../../../../shared/utils/classNameUtils';
+import { getNursingEncounterChrome } from './nursingEncounterChrome';
 
 interface Props {
   theme: 'light' | 'dark';
@@ -71,11 +73,11 @@ function PaginationBar({
 }) {
   return (
     <div
-      className={`flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg border px-3 py-2 text-xs ${
-        isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-200 bg-gray-50'
+      className={`flex flex-col gap-2 rounded-lg border px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between ${
+        isDark ? 'border-slate-600/90 bg-slate-950/75' : 'border-slate-200 bg-slate-50'
       }`}
     >
-      <span className={`tabular-nums ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      <span className={`tabular-nums ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
         {totalItems === 0 ? (
           'No results'
         ) : (
@@ -87,15 +89,17 @@ function PaginationBar({
         )}
       </span>
       <div className="flex flex-wrap items-center gap-2 justify-end">
-        <label htmlFor={`${idPrefix}-page-size`} className={`${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+        <label htmlFor={`${idPrefix}-page-size`} className={isDark ? 'text-slate-400' : 'text-slate-600'}>
           Per page
         </label>
         <select
           id={`${idPrefix}-page-size`}
           value={pageSize}
           onChange={(e) => onPageSizeChange(Number(e.target.value))}
-          className={`rounded-md border px-2 py-1 text-xs cursor-pointer ${
-            isDark ? 'bg-gray-900 border-gray-600 text-gray-200' : 'bg-white border-gray-300 text-gray-800'
+          className={`cursor-pointer rounded-md border px-2 py-1 text-xs ${
+            isDark
+              ? 'border-slate-600 bg-slate-950 text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30'
+              : 'border-slate-300 bg-white text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/25'
           }`}
         >
           {pageSizeOptions.map((n) => (
@@ -110,13 +114,15 @@ function PaginationBar({
             aria-label="Previous page"
             disabled={page <= 1 || totalItems === 0}
             onClick={() => onPageChange(page - 1)}
-            className={`p-1 rounded-md border disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
-              isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-100'
+            className={`cursor-pointer rounded-md border p-1 disabled:cursor-not-allowed disabled:opacity-40 ${
+              isDark
+                ? 'border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-slate-50'
+                : 'border-slate-300 text-slate-700 hover:bg-slate-100'
             }`}
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="h-4 w-4" />
           </button>
-          <span className={`min-w-[4.5rem] text-center tabular-nums ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+          <span className={`min-w-[4.5rem] text-center tabular-nums ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
             {totalItems === 0 ? '—' : `${page} / ${totalPages}`}
           </span>
           <button
@@ -124,11 +130,13 @@ function PaginationBar({
             aria-label="Next page"
             disabled={page >= totalPages || totalItems === 0}
             onClick={() => onPageChange(page + 1)}
-            className={`p-1 rounded-md border disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
-              isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-100'
+            className={`cursor-pointer rounded-md border p-1 disabled:cursor-not-allowed disabled:opacity-40 ${
+              isDark
+                ? 'border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-slate-50'
+                : 'border-slate-300 text-slate-700 hover:bg-slate-100'
             }`}
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -144,6 +152,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
   const facilityId = useAppSelector(getActiveFacilityId);
   const visitUuid = useAppSelector(selectActiveVisitUuid);
   const isDark = theme === 'dark';
+  const chrome = getNursingEncounterChrome(theme);
 
   const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
   const [selectedBedId, setSelectedBedId] = useState<number | null>(null);
@@ -718,36 +727,37 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
 
   if (!visitUuid) {
     return (
-      <div className="rounded-xl border p-6">
-        Select a patient from nursing queue first to assign ward and bed.
+      <div className={chrome.emptyPanel}>
+        <p className={cn(chrome.body, 'leading-relaxed')}>Select a patient from nursing queue first to assign ward and bed.</p>
       </div>
     );
   }
 
   return (
-    <div className={`rounded-xl border p-5 space-y-4 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-lg">Ward & Bed Assignment</h3>
-          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <h3 className={cn('text-lg font-semibold tracking-tight', chrome.heading)}>Ward & Bed Assignment</h3>
+          <p className={cn('text-sm leading-relaxed', chrome.subhead)}>
             {hasBedAssignment
               ? 'Open a ward, then use Transfer on the bed board to move to another ward/bed.'
               : 'Choose Admit or Assign, select a ward, then confirm on the bed board.'}
           </p>
         </div>
         <button
+          type="button"
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'}`}
+          className={cn(chrome.btnSecondary, 'shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60')}
         >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          <RefreshCw className={cn('h-4 w-4 shrink-0', isRefreshing ? 'animate-spin' : '')} aria-hidden />
+          {isRefreshing ? 'Refreshing…' : 'Refresh'}
         </button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div>
-          <label className="text-sm font-medium mb-2 block">Action</label>
+          <label className={cn('mb-2 block text-sm font-semibold', chrome.body)}>Action</label>
           <div className="flex flex-wrap gap-2 items-center">
             {hasBedAssignment ? (
               <div
@@ -773,8 +783,8 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                     admissionAction === 'admit'
                       ? 'bg-blue-600 text-white border-blue-600'
                       : isDark
-                        ? 'border-gray-700 text-gray-200 hover:bg-gray-800'
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                        ? 'border-slate-600 text-slate-100 hover:bg-slate-800'
+                        : 'border-slate-300 text-slate-800 hover:bg-slate-50'
                   }`}
                 >
                   <UserPlus className="w-4 h-4 shrink-0" aria-hidden />
@@ -787,8 +797,8 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                     admissionAction === 'assign_bed'
                       ? 'bg-blue-600 text-white border-blue-600'
                       : isDark
-                        ? 'border-gray-700 text-gray-200 hover:bg-gray-800'
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                        ? 'border-slate-600 text-slate-100 hover:bg-slate-800'
+                        : 'border-slate-300 text-slate-800 hover:bg-slate-50'
                   }`}
                 >
                   <BedDouble className="w-4 h-4 shrink-0" aria-hidden />
@@ -800,8 +810,8 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
         </div>
 
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium">Select Ward</label>
+          <div className="mb-2 flex items-center justify-between">
+            <label className={cn('text-sm font-semibold', chrome.body)}>Select Ward</label>
             <button
               onClick={handleCreateWard}
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 cursor-pointer text-sm"
@@ -810,13 +820,19 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
               Create Ward
             </button>
           </div>
-          <div className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 ${isDark ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-white'}`}>
-            <Search className="w-4 h-4 shrink-0 opacity-70" aria-hidden />
+          <div
+            className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 ${
+              isDark ? 'border-slate-600/90 bg-slate-950/60' : 'border-slate-200 bg-white'
+            }`}
+          >
+            <Search className={`h-4 w-4 shrink-0 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} aria-hidden />
             <input
               value={wardSearch}
               onChange={(e) => setWardSearch(e.target.value)}
               placeholder="Search wards by name, code, building, or floor…"
-              className={`min-w-0 flex-1 bg-transparent outline-none text-sm ${isDark ? 'placeholder:text-gray-500' : 'placeholder:text-gray-400'}`}
+              className={`min-w-0 flex-1 bg-transparent text-sm outline-none ${
+                isDark ? 'text-slate-100 placeholder:text-slate-500' : 'text-slate-900 placeholder:text-slate-400'
+              }`}
               aria-label="Search wards"
             />
           </div>
@@ -838,13 +854,13 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
               ? Array.from({ length: 6 }).map((_, idx) => (
                 <div
                   key={`ward-skeleton-${idx}`}
-                  className={`h-20 rounded-xl border animate-pulse ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-100'}`}
+                  className={`h-20 animate-pulse rounded-xl border ${isDark ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-100'}`}
                 />
               ))
               : wardPaging.total === 0 ? (
                 <div
-                  className={`col-span-full rounded-xl border px-4 py-8 text-center text-sm ${
-                    isDark ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-600'
+                  className={`col-span-full rounded-xl border px-4 py-8 text-center text-sm leading-relaxed ${
+                    isDark ? 'border-slate-600 text-slate-400' : 'border-slate-200 text-slate-600'
                   }`}
                 >
                   No wards match your search. Adjust the filter or clear the search field.
@@ -861,19 +877,25 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                         setBedSearch('');
                         setBedPickerOpen(true);
                       }}
-                      className={`text-left rounded-xl border p-3 transition cursor-pointer ${
+                      className={`cursor-pointer rounded-xl border p-3 text-left transition ${
                         active
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          ? isDark
+                            ? 'border-sky-500 bg-sky-950/40 ring-1 ring-sky-500/40'
+                            : 'border-blue-500 bg-blue-50'
                           : isDark
-                            ? 'border-gray-700 hover:bg-gray-800'
-                            : 'border-gray-200 hover:bg-gray-50'
+                            ? 'border-slate-600 hover:bg-slate-800/90'
+                            : 'border-slate-200 hover:bg-slate-50'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="font-medium">{ward.name}</div>
-                        {active && <Check className="w-4 h-4 shrink-0 text-blue-600" />}
+                        <div className={cn('font-semibold', active && isDark ? 'text-slate-50' : active ? 'text-slate-900' : isDark ? 'text-slate-100' : 'text-slate-900')}>
+                          {ward.name}
+                        </div>
+                        {active && (
+                          <Check className={`h-4 w-4 shrink-0 ${isDark ? 'text-sky-400' : 'text-blue-600'}`} />
+                        )}
                       </div>
-                      <div className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <div className={cn('mt-1 text-xs', isDark ? 'text-slate-400' : 'text-slate-600')}>
                         {ward.available_beds} beds available
                         {(ward.building || ward.floor) && (
                           <span className="block truncate opacity-90">
@@ -890,62 +912,56 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       </div>
 
       <div
-        className={`rounded-lg border p-4 text-sm ${isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}
+        className={`rounded-xl border p-4 text-sm ${
+          isDark ? 'border-slate-600/90 bg-slate-950/70' : 'border-slate-200 bg-slate-50/90'
+        }`}
       >
-        <div className="font-medium flex items-center gap-2 mb-3">
-          <MapPin className="w-4 h-4 shrink-0 opacity-90" aria-hidden />
+        <div className={cn('mb-3 flex items-center gap-2 font-semibold', chrome.heading)}>
+          <MapPin className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
           Current Patient placement
         </div>
         {optionsQuery.isLoading ? (
-          <div className={`h-24 rounded-lg animate-pulse ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`} />
+          <div className={`h-24 animate-pulse rounded-lg ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
         ) : !hasBedAssignment ? (
-          <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+          <p className={cn('leading-relaxed', chrome.subhead)}>
             No ward or bed is assigned to this visit yet. Select a ward and bed below to place this patient.
           </p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <div className={`text-xs font-medium uppercase tracking-wide ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                Patient
-              </div>
-              <div className="mt-0.5 font-medium text-base">{currentLocation?.patient_name?.trim() || '—'}</div>
+              <div className={cn('text-xs font-semibold uppercase tracking-wide', chrome.muted)}>Patient</div>
+              <div className={cn('mt-1 text-base font-semibold', chrome.rowTitle)}>{currentLocation?.patient_name?.trim() || '—'}</div>
               {currentLocation?.patient_uuid?.trim() ? (
-                <div className={`mt-1 font-mono text-xs break-all ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {currentLocation.patient_uuid}
-                </div>
+                <div className={cn('mt-1 break-all font-mono text-xs', chrome.subhead)}>{currentLocation.patient_uuid}</div>
               ) : null}
             </div>
             <div>
-              <div className={`text-xs font-medium uppercase tracking-wide ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                Ward
-              </div>
-              <div className="mt-0.5 font-medium">{currentLocation?.ward_name ?? '—'}</div>
+              <div className={cn('text-xs font-semibold uppercase tracking-wide', chrome.muted)}>Ward</div>
+              <div className={cn('mt-1 font-semibold', chrome.rowTitle)}>{currentLocation?.ward_name ?? '—'}</div>
               {(placementWardMeta?.building || placementWardMeta?.floor) && (
-                <div className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <div className={cn('mt-1 text-xs', chrome.subhead)}>
                   {[placementWardMeta.building, placementWardMeta.floor].filter(Boolean).join(' · ')}
                 </div>
               )}
             </div>
             <div className="sm:col-span-2 lg:col-span-1">
-              <div className={`text-xs font-medium uppercase tracking-wide ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                Room & bed
-              </div>
-              <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <div className={cn('text-xs font-semibold uppercase tracking-wide', chrome.muted)}>Room & bed</div>
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 {currentLocation?.room_label ? (
-                  <span className="font-medium">Room {currentLocation.room_label}</span>
+                  <span className={cn('font-semibold', chrome.rowTitle)}>Room {currentLocation.room_label}</span>
                 ) : (
-                  <span className={isDark ? 'text-gray-500' : 'text-gray-500'}>Room —</span>
+                  <span className={chrome.muted}>Room —</span>
                 )}
-                <span className={isDark ? 'text-gray-600' : 'text-gray-300'} aria-hidden>
+                <span className={cn(isDark ? 'text-slate-600' : 'text-slate-300')} aria-hidden>
                   ·
                 </span>
                 {currentLocation?.bed_label ? (
-                  <span className="font-medium">Bed {currentLocation.bed_label}</span>
+                  <span className={cn('font-semibold', chrome.rowTitle)}>Bed {currentLocation.bed_label}</span>
                 ) : (
-                  <span className={isDark ? 'text-gray-500' : 'text-gray-500'}>Bed —</span>
+                  <span className={chrome.muted}>Bed —</span>
                 )}
               </div>
-              <div className={`mt-2 inline-flex items-center gap-1.5 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <div className={cn('mt-2 inline-flex items-center gap-1.5 text-xs', chrome.subhead)}>
                 <Clock className="w-3.5 h-3.5 shrink-0" aria-hidden />
                 <span>Updated {formatPlacementTime(currentLocation?.updated_at)}</span>
               </div>
@@ -955,21 +971,29 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
       </div>
 
       {selectedWardId && (
-        <div className={`rounded-lg border p-3 ${isDark ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
-          <div className="font-medium mb-2">Manage Beds in Ward</div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+        <div className={`rounded-xl border p-4 ${isDark ? 'border-slate-600/90 bg-slate-950/70' : 'border-slate-200 bg-slate-50/90'}`}>
+          <div className={cn('mb-3 font-semibold', chrome.heading)}>Manage Beds in Ward</div>
+          <div className="mb-3 grid grid-cols-1 gap-2 md:grid-cols-2">
             <input
               value={newRoomLabel}
               onChange={(e) => setNewRoomLabel(e.target.value)}
               placeholder="Room (optional, e.g. R1)"
-              className={`rounded-lg border px-3 py-2 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
+              className={`rounded-lg border px-3 py-2 text-sm ${
+                isDark
+                  ? 'border-slate-600 bg-slate-950 text-slate-100 placeholder:text-slate-500'
+                  : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400'
+              }`}
             />
             <input
               id="new-bed-label-input"
               value={newBedLabel}
               onChange={(e) => setNewBedLabel(e.target.value)}
               placeholder="New bed label (e.g. A-01)"
-              className={`rounded-lg border px-3 py-2 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
+              className={`rounded-lg border px-3 py-2 text-sm ${
+                isDark
+                  ? 'border-slate-600 bg-slate-950 text-slate-100 placeholder:text-slate-500'
+                  : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400'
+              }`}
             />
           </div>
           <div className="mb-3">
@@ -981,13 +1005,19 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
               Add Bed
             </button>
           </div>
-          <div className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 ${isDark ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-white'}`}>
-            <Search className="w-4 h-4 shrink-0 opacity-70" aria-hidden />
+          <div
+            className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 ${
+              isDark ? 'border-slate-600/90 bg-slate-950/60' : 'border-slate-200 bg-white'
+            }`}
+          >
+            <Search className={`h-4 w-4 shrink-0 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} aria-hidden />
             <input
               value={manageBedSearch}
               onChange={(e) => setManageBedSearch(e.target.value)}
               placeholder="Search beds by label or room…"
-              className={`min-w-0 flex-1 bg-transparent outline-none text-sm ${isDark ? 'placeholder:text-gray-500' : 'placeholder:text-gray-400'}`}
+              className={`min-w-0 flex-1 bg-transparent text-sm outline-none ${
+                isDark ? 'text-slate-100 placeholder:text-slate-500' : 'text-slate-900 placeholder:text-slate-400'
+              }`}
               aria-label="Search beds in ward"
             />
           </div>
@@ -1006,7 +1036,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
           />
           <div className="space-y-2 max-h-44 overflow-auto">
             {manageBedsPaging.total === 0 ? (
-              <p className={`text-sm py-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className={cn('py-2 text-sm leading-relaxed', chrome.subhead)}>
                 {(wardBedsQuery.data ?? []).length === 0
                   ? 'No beds defined for this ward yet. Add one above.'
                   : 'No beds match your search.'}
@@ -1020,28 +1050,60 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                       aria-label="Edit bed label"
                       value={editingBedLabel}
                       onChange={(e) => setEditingBedLabel(e.target.value)}
-                      className={`flex-1 rounded-lg border px-2 py-1 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
+                      className={`flex-1 rounded-lg border px-2 py-1 text-sm ${
+                        isDark
+                          ? 'border-slate-600 bg-slate-950 text-slate-100'
+                          : 'border-slate-300 bg-white text-slate-900'
+                      }`}
                     />
                     <input
                       aria-label="Edit room label"
                       value={editingRoomLabel}
                       onChange={(e) => setEditingRoomLabel(e.target.value)}
                       placeholder="Room"
-                      className={`w-24 rounded-lg border px-2 py-1 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
+                      className={`w-24 rounded-lg border px-2 py-1 text-sm ${
+                        isDark
+                          ? 'border-slate-600 bg-slate-950 text-slate-100 placeholder:text-slate-500'
+                          : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400'
+                      }`}
                     />
-                    <button onClick={handleUpdateBed} className="text-xs px-2 py-1 rounded bg-green-600 text-white cursor-pointer">Save</button>
-                    <button onClick={() => setEditingBedId(null)} className="text-xs px-2 py-1 rounded border cursor-pointer">Cancel</button>
+                    <button
+                      type="button"
+                      onClick={handleUpdateBed}
+                      className="cursor-pointer rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingBedId(null)}
+                      className={`cursor-pointer rounded border px-2 py-1 text-xs font-medium ${
+                        isDark
+                          ? 'border-slate-600 text-slate-200 hover:bg-slate-800'
+                          : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      Cancel
+                    </button>
                   </>
                 ) : (
                   <>
-                    <span className="flex-1">{bed.room_label ? `Room ${bed.room_label} - ` : ''}{bed.bed_label}</span>
+                    <span className={cn('flex-1 text-sm font-medium', chrome.rowTitle)}>
+                      {bed.room_label ? `Room ${bed.room_label} - ` : ''}
+                      {bed.bed_label}
+                    </span>
                     <button
+                      type="button"
                       onClick={() => {
                         setEditingBedId(bed.id);
                         setEditingBedLabel(bed.bed_label);
                         setEditingRoomLabel(bed.room_label ?? '');
                       }}
-                      className="text-xs px-2 py-1 rounded border cursor-pointer"
+                      className={`cursor-pointer rounded border px-2 py-1 text-xs font-medium ${
+                        isDark
+                          ? 'border-slate-600 text-slate-200 hover:bg-slate-800'
+                          : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                      }`}
                     >
                       Edit
                     </button>
@@ -1062,8 +1124,10 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
             aria-label="Close bed picker"
           />
           <div
-            className={`absolute left-1/2 top-1/2 w-[92vw] max-w-5xl -translate-x-1/2 -translate-y-1/2 rounded-2xl border p-4 ${
-              isDark ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'
+            className={`absolute left-1/2 top-1/2 w-[92vw] max-w-5xl -translate-x-1/2 -translate-y-1/2 rounded-2xl border p-4 shadow-xl ${
+              isDark
+                ? 'border-slate-600 bg-slate-950 text-slate-100'
+                : 'border-slate-200 bg-white text-slate-900 shadow-slate-200/50'
             }`}
             role="dialog"
             aria-modal="true"
@@ -1148,9 +1212,13 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                   </p>
                 )}
                 {selectedBedAction === 'transfer' && (
-                  <div className={`mt-3 rounded-lg border p-3 space-y-3 ${isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'}`}>
+                  <div
+                    className={`mt-3 space-y-3 rounded-lg border p-3 ${
+                      isDark ? 'border-slate-600 bg-slate-950/90' : 'border-slate-200 bg-white'
+                    }`}
+                  >
                     <div>
-                      <div className="text-xs font-medium mb-2">Transfer Destination</div>
+                      <div className={cn('mb-2 text-xs font-semibold', chrome.subhead)}>Transfer Destination</div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <select
                           aria-label="Transfer ward"
@@ -1161,7 +1229,11 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                             setTransferRoomLabel('');
                             setTransferBedId(null);
                           }}
-                          className={`rounded-lg border px-2 py-2 text-xs cursor-pointer ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
+                          className={`cursor-pointer rounded-lg border px-2 py-2 text-xs ${
+                            isDark
+                              ? 'border-slate-600 bg-slate-950 text-slate-100'
+                              : 'border-slate-300 bg-white text-slate-900'
+                          }`}
                         >
                           <option value="">Select ward</option>
                           {(optionsQuery.data?.wards ?? []).map((ward) => (
@@ -1175,7 +1247,11 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                             setTransferRoomLabel(e.target.value);
                             setTransferBedId(null);
                           }}
-                          className={`rounded-lg border px-2 py-2 text-xs cursor-pointer ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
+                          className={`cursor-pointer rounded-lg border px-2 py-2 text-xs ${
+                            isDark
+                              ? 'border-slate-600 bg-slate-950 text-slate-100'
+                              : 'border-slate-300 bg-white text-slate-900'
+                          }`}
                         >
                           <option value="">Any room</option>
                           {transferRoomOptions.map((room) => (
@@ -1195,7 +1271,11 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                               setTransferRoomLabel(nextBed.room_label ?? transferRoomLabel);
                             }
                           }}
-                          className={`rounded-lg border px-2 py-2 text-xs cursor-pointer ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
+                          className={`cursor-pointer rounded-lg border px-2 py-2 text-xs ${
+                            isDark
+                              ? 'border-slate-600 bg-slate-950 text-slate-100'
+                              : 'border-slate-300 bg-white text-slate-900'
+                          }`}
                         >
                           <option value="">Select bed</option>
                           {transferBedOptions.map((bed) => (
@@ -1207,7 +1287,7 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                       </div>
                     </div>
                     <div>
-                      <label htmlFor="modal-transfer-reason" className="text-xs font-medium block mb-1">
+                      <label htmlFor="modal-transfer-reason" className={cn('mb-1 block text-xs font-semibold', chrome.subhead)}>
                         Transfer reason
                       </label>
                       <input
@@ -1215,7 +1295,11 @@ const NursingWardBedManagement: React.FC<Props> = ({ theme }) => {
                         value={transferReason}
                         onChange={(e) => setTransferReason(e.target.value)}
                         placeholder="Why this transfer is needed"
-                        className={`w-full rounded-lg border px-3 py-2 text-sm ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
+                        className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                          isDark
+                            ? 'border-slate-600 bg-slate-950 text-slate-100 placeholder:text-slate-500'
+                            : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400'
+                        }`}
                       />
                     </div>
                   </div>

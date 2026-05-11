@@ -2,7 +2,11 @@ import React, { Suspense } from 'react';
 import { Route } from 'react-router-dom';
 import { ForwardPatientFocusRouteShell } from '../../../medical-records/ui/visit-action-center/ForwardPatientFocusRouteShell';
 import { FOCUS_MODE_ROUTES } from './focusModeRouteConstants';
-import { LABORATORY_ROUTES } from '../../../../app/routes/routeConstants';
+import { LABORATORY_ROUTES, NURSING_ROUTES } from '../../../../app/routes/routeConstants';
+import NursingWardBedManagement from '../../../nursing/ui/encounter/NursingWardBedManagement';
+import NursingEncounterTasksView from '../../../nursing/ui/encounter/NursingEncounterTasksView';
+import NursingEncounterMedsView from '../../../nursing/ui/encounter/NursingEncounterMedsView';
+import NursingEncounterNotesView from '../../../nursing/ui/encounter/NursingEncounterNotesView';
 import FocusedModeLayout from '../../../../shared/components/Navigation/FocusedModeLayout';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
 import ClinicalTemplateFocus from '../../../medical-records/ui/visit-action-center/clinical-forms/form-wrappers/ClinicalTemplateFocus';
@@ -188,6 +192,42 @@ export const FocusModeRoutes = ({ theme = 'light', patientName }: FocusModeRoute
         <Suspense fallback={<LoadingSkeleton variant="dashboard" />}>
           <MedicalHistory theme={theme} />
         </Suspense>
+      </FocusedModeLayout>
+    }
+  />,
+  <Route
+    key="nursing-encounter-ward-bed-focus"
+    path={FOCUS_MODE_ROUTES.NURSING_WARD_BED_FOCUS}
+    element={
+      <FocusedModeLayout title={withPatientTitle('Ward & Bed')} onClose={NURSING_ROUTES.NURSING_ENCOUNTER_PATIENT_INFO}>
+        <NursingWardBedManagement theme={theme} />
+      </FocusedModeLayout>
+    }
+  />,
+  <Route
+    key="nursing-encounter-tasks-focus"
+    path={FOCUS_MODE_ROUTES.NURSING_TASKS_FOCUS}
+    element={
+      <FocusedModeLayout title={withPatientTitle('Tasks')} onClose={NURSING_ROUTES.NURSING_ENCOUNTER_TASKS}>
+        <NursingEncounterTasksView theme={theme} />
+      </FocusedModeLayout>
+    }
+  />,
+  <Route
+    key="nursing-encounter-meds-focus"
+    path={FOCUS_MODE_ROUTES.NURSING_MEDS_FOCUS}
+    element={
+      <FocusedModeLayout title={withPatientTitle('Meds')} onClose={NURSING_ROUTES.NURSING_ENCOUNTER_MEDS}>
+        <NursingEncounterMedsView theme={theme} />
+      </FocusedModeLayout>
+    }
+  />,
+  <Route
+    key="nursing-encounter-notes-focus"
+    path={FOCUS_MODE_ROUTES.NURSING_NOTES_FOCUS}
+    element={
+      <FocusedModeLayout title={withPatientTitle('Notes')} onClose={NURSING_ROUTES.NURSING_ENCOUNTER_NOTES}>
+        <NursingEncounterNotesView theme={theme} />
       </FocusedModeLayout>
     }
   />,

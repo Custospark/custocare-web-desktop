@@ -10,6 +10,7 @@ import type {
   NursingMedicationDoseStatus,
 } from '../../api/medication-treatment/nursingMedicationTypes';
 import { cn } from '../../../../shared/utils/classNameUtils';
+import { getNursingEncounterChrome } from './nursingEncounterChrome';
 
 interface Props {
   theme: 'light' | 'dark';
@@ -41,19 +42,20 @@ function medLabel(d: NursingMedicationDose): string {
 
 function statusPillClass(isDark: boolean, status: NursingMedicationDoseStatus): string {
   if (status === 'administered') {
-    return isDark ? 'bg-emerald-900/40 text-emerald-200' : 'bg-emerald-50 text-emerald-800';
+    return isDark ? 'bg-emerald-950/60 text-emerald-100 ring-1 ring-emerald-800/60' : 'bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200';
   }
   if (status === 'missed') {
-    return isDark ? 'bg-rose-900/30 text-rose-200' : 'bg-rose-50 text-rose-800';
+    return isDark ? 'bg-rose-950/55 text-rose-50 ring-1 ring-rose-800/50' : 'bg-rose-50 text-rose-900 ring-1 ring-rose-200';
   }
   if (status === 'skipped') {
-    return isDark ? 'bg-amber-900/30 text-amber-200' : 'bg-amber-50 text-amber-800';
+    return isDark ? 'bg-amber-950/50 text-amber-50 ring-1 ring-amber-800/50' : 'bg-amber-50 text-amber-950 ring-1 ring-amber-200';
   }
-  return isDark ? 'bg-blue-900/30 text-blue-200' : 'bg-blue-50 text-blue-800';
+  return isDark ? 'bg-blue-950/60 text-blue-100 ring-1 ring-blue-800/50' : 'bg-blue-50 text-blue-900 ring-1 ring-blue-200';
 }
 
 const NursingEncounterMedsView: React.FC<Props> = ({ theme }) => {
-  const isDark = theme === 'dark';
+  const chrome = getNursingEncounterChrome(theme);
+  const { isDark } = chrome;
   const facilityId = useAppSelector(getActiveFacilityId) ?? 0;
   const activeVisit = useAppSelector(selectActiveVisit);
   const visitId = activeVisit?.visit_id;
@@ -75,63 +77,49 @@ const NursingEncounterMedsView: React.FC<Props> = ({ theme }) => {
   const meta = query.data?.meta;
   const busy = query.isFetching;
 
-  const cardShell = isDark ? 'border-gray-700 bg-gray-900/60' : 'border-gray-200 bg-white';
+  const selectClass = isDark
+    ? 'max-w-xs rounded-lg border border-slate-600 bg-slate-950 px-2 py-2 text-sm text-slate-100 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30'
+    : 'max-w-xs rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/25';
 
   if (!facilityId) {
     return (
-      <div
-        className={cn(
-          'rounded-xl border p-6 text-sm',
-          isDark ? 'border-gray-700 bg-gray-900 text-gray-300' : 'border-gray-200 bg-white text-gray-600'
-        )}
-      >
-        Select an active facility first.
+      <div className={chrome.emptyPanel}>
+        <p className={chrome.body}>Select an active facility first.</p>
       </div>
     );
   }
 
   if (!visitId) {
     return (
-      <div
-        className={cn(
-          'rounded-xl border p-6 text-sm',
-          isDark ? 'border-gray-700 bg-gray-900 text-gray-300' : 'border-gray-200 bg-white text-gray-600'
-        )}
-      >
-        Open a patient encounter so a visit is active. Scheduled doses load from{' '}
-        <code className="text-xs">GET /nursing/medication-doses?visit_id=…</code>.
+      <div className={chrome.emptyPanel}>
+        <p className={cn(chrome.body, 'leading-relaxed')}>
+          Open a patient encounter so a visit is active. Scheduled doses load from{' '}
+          <code className={chrome.code}>GET /nursing/medication-doses?visit_id=…</code>.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className={cn('text-lg font-semibold flex items-center gap-2', isDark ? 'text-white' : 'text-gray-900')}>
-            <Pill className="w-5 h-5 opacity-90" aria-hidden />
+    <div className="space-y-5">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <h2 className={cn('flex items-center gap-2 text-lg font-semibold tracking-tight', chrome.heading)}>
+            <Pill className="h-5 w-5 shrink-0 opacity-90" aria-hidden />
             Visit medications (MAR)
           </h2>
-          <p className={cn('text-sm mt-0.5', isDark ? 'text-gray-400' : 'text-gray-600')}>
+          <p className={cn('text-sm leading-snug', chrome.subhead)}>
             Nursing medication doses for {activeVisit?.patient?.name?.trim() || 'this visit'}.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => query.refetch()}
-          disabled={busy}
-          className={cn(
-            'inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm cursor-pointer disabled:opacity-50',
-            isDark ? 'border-gray-600 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
-          )}
-        >
-          <RefreshCw className={cn('w-4 h-4', busy ? 'animate-spin' : '')} />
+        <button type="button" onClick={() => query.refetch()} disabled={busy} className={cn(chrome.btnSecondary, 'shrink-0 cursor-pointer')}>
+          <RefreshCw className={cn('h-4 w-4 shrink-0', busy ? 'animate-spin' : '')} aria-hidden />
           Refresh
         </button>
-      </div>
+      </header>
 
-      <div className={cn('rounded-xl border p-3', cardShell)}>
-        <label htmlFor="enc-med-status" className={cn('block text-xs mb-2', isDark ? 'text-gray-400' : 'text-gray-600')}>
+      <div className={chrome.filterPanel}>
+        <label htmlFor="enc-med-status" className={cn('mb-2 block text-xs font-semibold uppercase tracking-wide', chrome.muted)}>
           Filter by dose status
         </label>
         <select
@@ -141,10 +129,7 @@ const NursingEncounterMedsView: React.FC<Props> = ({ theme }) => {
             setStatusFilter((e.target.value as NursingMedicationDoseStatus | '') || '');
             setPage(1);
           }}
-          className={cn(
-            'rounded-lg border px-2 py-1.5 text-sm max-w-xs',
-            isDark ? 'bg-gray-950 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
-          )}
+          className={selectClass}
         >
           <option value="">All</option>
           <option value="pending">Pending</option>
@@ -154,24 +139,24 @@ const NursingEncounterMedsView: React.FC<Props> = ({ theme }) => {
         </select>
       </div>
 
-      <div className={cn('rounded-xl border divide-y', cardShell)}>
+      <div className={cn(chrome.card, 'divide-y', chrome.divide)}>
         {doses.length === 0 && !query.isLoading ? (
-          <div className={cn('p-6 text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
+          <div className={cn('p-6 text-sm leading-relaxed', chrome.muted)}>
             No scheduled doses for this visit. Orders may still be pending pharmacy / MAR build-out.
           </div>
         ) : (
           doses.map((d) => (
-            <div key={d.id} className="p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+            <div key={d.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
               <div className="min-w-0">
-                <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>{medLabel(d)}</p>
-                <p className={cn('text-xs mt-1', isDark ? 'text-gray-500' : 'text-gray-500')}>
+                <p className={cn('font-semibold leading-snug', chrome.rowTitle)}>{medLabel(d)}</p>
+                <p className={cn('mt-1.5 text-xs leading-relaxed', chrome.subtle)}>
                   Scheduled {formatWhen(d.scheduled_for)}
                   {d.schedule_notes ? ` · ${d.schedule_notes}` : ''}
                 </p>
               </div>
               <span
                 className={cn(
-                  'text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full shrink-0',
+                  'shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide',
                   statusPillClass(isDark, d.status)
                 )}
               >
@@ -183,7 +168,7 @@ const NursingEncounterMedsView: React.FC<Props> = ({ theme }) => {
       </div>
 
       {meta && meta.last_page > 1 ? (
-        <div className={cn('flex items-center justify-between text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
+        <div className={cn('flex flex-wrap items-center justify-between gap-3 text-sm', chrome.muted)}>
           <span>
             Page {meta.current_page} of {meta.last_page}
           </span>
@@ -192,7 +177,7 @@ const NursingEncounterMedsView: React.FC<Props> = ({ theme }) => {
               type="button"
               disabled={meta.current_page <= 1 || busy}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1 rounded-lg border cursor-pointer disabled:opacity-40"
+              className={cn(chrome.btnPaging, 'cursor-pointer')}
             >
               Previous
             </button>
@@ -200,7 +185,7 @@ const NursingEncounterMedsView: React.FC<Props> = ({ theme }) => {
               type="button"
               disabled={meta.current_page >= meta.last_page || busy}
               onClick={() => setPage((p) => p + 1)}
-              className="px-3 py-1 rounded-lg border cursor-pointer disabled:opacity-40"
+              className={cn(chrome.btnPaging, 'cursor-pointer')}
             >
               Next
             </button>
@@ -208,9 +193,7 @@ const NursingEncounterMedsView: React.FC<Props> = ({ theme }) => {
         </div>
       ) : null}
 
-      {query.isLoading ? (
-        <p className={cn('text-sm', isDark ? 'text-gray-500' : 'text-gray-500')}>Loading doses…</p>
-      ) : null}
+      {query.isLoading ? <p className={cn('text-sm', chrome.muted)}>Loading doses…</p> : null}
     </div>
   );
 };
