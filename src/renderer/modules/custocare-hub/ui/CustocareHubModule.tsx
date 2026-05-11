@@ -1,24 +1,12 @@
 import type { ReactNode } from 'react';
-import {
-  LayoutDashboard,
-  BookOpen,
-  GraduationCap,
-  FolderOpen,
-  MessagesSquare,
-  LifeBuoy,
-  MessageSquareHeart,
-  LibraryBig,
-} from 'lucide-react';
+import { GraduationCap, MessagesSquare, LifeBuoy, MessageSquareHeart, LibraryBig } from 'lucide-react';
 import { BaseModuleWorkspace } from '../../../shared/components/workspace/BaseModuleWorkspace';
-import { ROUTES } from '../../../app/routes/routeConstants';
+import { ROUTES, CUSTOCARE_HUB_ROUTES } from '../../../app/routes/routeConstants';
 import type { ThemeProp } from '../../../app/routes/modules/shared/routeUtils';
 import { CUSTOCARE_HUB_MODULE_OPERATIONS } from '../config/hubConfig';
 
 const HUB_ICONS: Record<string, ReactNode> = {
-  overview: <LayoutDashboard className="w-4 h-4" />,
-  documentation: <BookOpen className="w-4 h-4" />,
   'learning-center': <GraduationCap className="w-4 h-4" />,
-  resources: <FolderOpen className="w-4 h-4" />,
   community: <MessagesSquare className="w-4 h-4" />,
   'support-center': <LifeBuoy className="w-4 h-4" />,
   'feedback-requests': <MessageSquareHeart className="w-4 h-4" />,
@@ -36,7 +24,7 @@ const CustocareHubModule = (_props: ThemeProp) => {
       contextTitle="Custocare Hub"
       operations={HUB_OPERATIONS}
       basePath={ROUTES.CUSTOCARE_HUB}
-      defaultOperationPath={`${ROUTES.CUSTOCARE_HUB}/overview`}
+      defaultOperationPath={CUSTOCARE_HUB_ROUTES.LEARNING_CENTER}
     />
   );
 };

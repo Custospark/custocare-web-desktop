@@ -17,10 +17,10 @@ function defaultOperationEntryPath(operationId: string): string {
 }
 
 export const CUSTOCARE_HUB_ROUTES = {
+  /** Legacy route; `/custocare-hub/overview` still registered — hidden from hub nav for now */
   OVERVIEW: `${root}/overview`,
-  DOCUMENTATION: defaultOperationEntryPath('documentation'),
+  // Future (match commented operations in hubConfig): DOCUMENTATION, RESOURCES
   LEARNING_CENTER: defaultOperationEntryPath('learning-center'),
-  RESOURCES: defaultOperationEntryPath('resources'),
   COMMUNITY: defaultOperationEntryPath('community'),
   SUPPORT_CENTER: defaultOperationEntryPath('support-center'),
   FEEDBACK_REQUESTS: defaultOperationEntryPath('feedback-requests'),

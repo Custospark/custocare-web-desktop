@@ -15,6 +15,7 @@ export interface HubModuleOperation {
 }
 
 export const CUSTOCARE_HUB_MODULE_OPERATIONS: readonly HubModuleOperation[] = [
+  /* Future: overview landing (single page, no action strip)
   {
     id: 'overview',
     routeKey: 'OVERVIEW',
@@ -22,6 +23,8 @@ export const CUSTOCARE_HUB_MODULE_OPERATIONS: readonly HubModuleOperation[] = [
     usesHorizontalActions: false,
     actions: [],
   },
+  */
+  /* Future: documentation workspace
   {
     id: 'documentation',
     routeKey: 'DOCUMENTATION',
@@ -34,18 +37,20 @@ export const CUSTOCARE_HUB_MODULE_OPERATIONS: readonly HubModuleOperation[] = [
       { key: 'mr_patient_registration', label: 'Patient Registration Guide', pathSegment: 'patient-registration-guide' },
     ],
   },
+  */
   {
     id: 'learning-center',
     routeKey: 'LEARNING_CENTER',
     label: 'Learning Center',
     usesHorizontalActions: true,
     actions: [
+      { key: 'getting_started', label: 'Getting Started', pathSegment: 'getting-started' },
       { key: 'watch_tutorials', label: 'Watch Tutorials', pathSegment: 'watch-tutorials' },
       { key: 'start_training', label: 'Start Training', pathSegment: 'start-training' },
-      { key: 'getting_started', label: 'Getting Started', pathSegment: 'getting-started' },
       { key: 'track_progress', label: 'Track Progress', pathSegment: 'track-progress' },
     ],
   },
+  /* Future: resources workspace
   {
     id: 'resources',
     routeKey: 'RESOURCES',
@@ -58,6 +63,7 @@ export const CUSTOCARE_HUB_MODULE_OPERATIONS: readonly HubModuleOperation[] = [
       { key: 'view_sops', label: 'View SOPs', pathSegment: 'view-sops' },
     ],
   },
+  */
   {
     id: 'community',
     routeKey: 'COMMUNITY',

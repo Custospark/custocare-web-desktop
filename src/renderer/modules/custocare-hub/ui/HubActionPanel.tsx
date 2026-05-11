@@ -1,7 +1,7 @@
 import { Navigate, useLocation, useOutletContext, useParams } from 'react-router-dom';
 import type { ThemeProp } from '../../../app/routes/modules/shared/routeUtils';
 import type { ProtectedOutletContext } from '../../../app/routes/modules/shared/routeUtils';
-import { custocareHubActionPath, custocareHubOperationPath } from '../../../app/routes/constants/custocare-hub.paths';
+import { CUSTOCARE_HUB_ROUTES, custocareHubActionPath, custocareHubOperationPath } from '../../../app/routes/constants/custocare-hub.paths';
 import { ROUTES } from '../../../app/routes/routeConstants';
 import { getHubAction, getHubModuleOperation } from '../config/hubConfig';
 import { LEARNING_CENTER_CATEGORIES } from '../api/learning/learningMaterialTypes';
@@ -50,7 +50,7 @@ export function HubActionPanel({ theme }: HubActionPanelProps) {
   const action = operationId && actionKey ? getHubAction(operationId, actionKey) : undefined;
 
   if (!operationId || !op?.usesHorizontalActions) {
-    return <Navigate to={custocareHubOperationPath('overview')} replace />;
+    return <Navigate to={CUSTOCARE_HUB_ROUTES.LEARNING_CENTER} replace />;
   }
 
   if (!actionKey || !action) {
@@ -58,7 +58,7 @@ export function HubActionPanel({ theme }: HubActionPanelProps) {
     if (first) {
       return <Navigate to={custocareHubActionPath(operationId, first.pathSegment)} replace />;
     }
-    return <Navigate to={custocareHubOperationPath('overview')} replace />;
+    return <Navigate to={CUSTOCARE_HUB_ROUTES.LEARNING_CENTER} replace />;
   }
 
   const isLearningCenter =

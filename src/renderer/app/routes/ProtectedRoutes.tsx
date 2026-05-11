@@ -251,7 +251,7 @@ export const ProtectedRoutes = () => [
               index
               element={
                 <LoadingRedirect
-                  to={CUSTOCARE_HUB_ROUTES.OVERVIEW}
+                  to={CUSTOCARE_HUB_ROUTES.LEARNING_CENTER}
                   replace
                   variant="table"
                   message="Loading Custocare Hub..."

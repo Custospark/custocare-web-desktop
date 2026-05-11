@@ -1,6 +1,6 @@
 import { Navigate, useParams } from 'react-router-dom';
 import { getHubModuleOperation } from '../config/hubConfig';
-import { custocareHubOperationPath } from '../../../app/routes/constants/custocare-hub.paths';
+import { CUSTOCARE_HUB_ROUTES } from '../../../app/routes/constants/custocare-hub.paths';
 
 /**
  * Redirects `/custocare-hub/:operationId` to the first horizontal action for that operation.
@@ -10,7 +10,7 @@ export function HubOperationIndexRedirect() {
   const op = operationId ? getHubModuleOperation(operationId) : undefined;
 
   if (!op?.usesHorizontalActions || !op.actions[0]) {
-    return <Navigate to={custocareHubOperationPath('overview')} replace />;
+    return <Navigate to={CUSTOCARE_HUB_ROUTES.LEARNING_CENTER} replace />;
   }
 
   return <Navigate to={op.actions[0].pathSegment} replace />;

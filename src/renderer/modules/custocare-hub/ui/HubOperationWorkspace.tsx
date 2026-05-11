@@ -3,7 +3,7 @@ import { FileText, LibraryBig } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { BaseActionWorkspace, type ActionConfig } from '../../../shared/components/workspace/BaseActionWorkspace';
 import type { ThemeProp } from '../../../app/routes/modules/shared/routeUtils';
-import { custocareHubActionPath, custocareHubOperationPath } from '../../../app/routes/constants/custocare-hub.paths';
+import { CUSTOCARE_HUB_ROUTES, custocareHubActionPath } from '../../../app/routes/constants/custocare-hub.paths';
 import { getHubModuleOperation } from '../config/hubConfig';
 
 export interface HubOperationWorkspaceProps extends ThemeProp {
@@ -14,7 +14,7 @@ export function HubOperationWorkspace({ theme, operationId }: HubOperationWorksp
   const config = getHubModuleOperation(operationId);
 
   if (!config?.usesHorizontalActions || config.actions.length === 0) {
-    return <Navigate to={custocareHubOperationPath('overview')} replace />;
+    return <Navigate to={CUSTOCARE_HUB_ROUTES.LEARNING_CENTER} replace />;
   }
 
   const actions: ActionConfig<string>[] = useMemo(
