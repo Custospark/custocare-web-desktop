@@ -173,6 +173,7 @@ const PharmacyPatientQueue: React.FC<PharmacyPatientQueueProps> = ({ theme, clas
           (activeRxQuery.isLoading || partialRxQuery.isLoading)
         }
         initialFilters={queueApiFilters}
+        showCompletedWorkTab
       />
     </div>
   );

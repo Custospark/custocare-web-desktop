@@ -67,6 +67,7 @@ const DispensingQueue: React.FC<DispensingQueueProps> = ({ theme, className = ''
           limit: 50,
           care_delivery_workflow: CareDeliveryWorkflow.PHARMACY,
         }}
+        showCompletedWorkTab
       />
     </div>
   );

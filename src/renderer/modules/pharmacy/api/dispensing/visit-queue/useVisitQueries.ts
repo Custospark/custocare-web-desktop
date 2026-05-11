@@ -29,6 +29,8 @@ import type {
   DeleteVisitParams,
   DischargeVisitParams,
   EndClinicalCareParams,
+  MyCompletedWorkFilters,
+  MyCompletedWorkResponse,
   QueueFilters,
   QueueResponse,
   RegisterVisitParams,
@@ -93,6 +95,8 @@ export const visitKeys = {
   details: () => [...visitKeys.all, 'detail'] as const,
   detail: (uuid: VisitUUID) => [...visitKeys.details(), uuid] as const,
   queue: (filters: QueueFilters) => [...visitKeys.all, 'queue', filters] as const,
+  completedWork: (filters: MyCompletedWorkFilters) =>
+    [...visitKeys.all, 'my-completed-work', filters] as const,
   byFacility: (facilityId: number, filters: Partial<VisitFilters>) => 
     [...visitKeys.all, 'facility', facilityId, filters] as const,
   byPatient: (patientId: number, filters: Partial<VisitFilters>) => 
@@ -218,6 +222,45 @@ export const useGetMyQueue = (
     staleTime: 5000,                      // Data fresh for 5 seconds
     refetchInterval: 5000,               // Refetch every 5 seconds
     refetchIntervalInBackground: true,   // Keep refetching even when tab is inactive
+    ...options,
+  });
+};
+
+function completedWorkFiltersToParams(filters: MyCompletedWorkFilters): Record<string, string | number> {
+  return {
+    date_preset: filters.date_preset,
+    limit: filters.limit ?? 100,
+  };
+}
+
+/**
+ * Completed facility visits (`status = completed`) for the discharge/end date window.
+ * `X-Facility-Id` is set on every request (see `axiosConfig` interceptor). Not scoped by workflow or staff.
+ */
+export const useGetMyCompletedWork = (
+  filters: MyCompletedWorkFilters,
+  options?: Omit<
+    UseQueryOptions<MyCompletedWorkResponse, AxiosError<ApiErrorResponse>, MyCompletedWorkResponse, ReturnType<typeof visitKeys.completedWork>>,
+    'queryKey' | 'queryFn'
+  >
+) => {
+  const facilityId = useSelector((state: RootState) => getActiveFacilityId(state));
+  const staffId = useSelector((state: RootState) => getStaffId(state));
+
+  return useQuery({
+    queryKey: visitKeys.completedWork(filters),
+    queryFn: async () => {
+      if (!facilityId) {
+        throw new Error('No active facility selected');
+      }
+
+      const response = await axiosInstance.get<MyCompletedWorkResponse>('/visits/my-completed-work', {
+        params: completedWorkFiltersToParams(filters),
+      });
+      return response.data;
+    },
+    enabled: !!facilityId && !!staffId,
+    staleTime: 60_000,
     ...options,
   });
 };

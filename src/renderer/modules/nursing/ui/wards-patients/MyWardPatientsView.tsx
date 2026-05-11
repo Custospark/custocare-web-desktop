@@ -156,7 +156,7 @@ const MyWardPatientsView: React.FC<MyWardPatientsViewProps> = ({ theme, classNam
               onClick={() => wardsQuery.refetch()}
               disabled={wardsQuery.isFetching || facilityId <= 0}
               className={cn(
-                'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium',
+                'inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium disabled:cursor-not-allowed',
                 isDark
                   ? 'text-cyan-400 hover:bg-white/10 disabled:opacity-40'
                   : 'text-blue-600 hover:bg-gray-100 disabled:opacity-40'
@@ -177,7 +177,7 @@ const MyWardPatientsView: React.FC<MyWardPatientsViewProps> = ({ theme, classNam
             }}
             disabled={facilityId <= 0 || wardsQuery.isLoading}
             className={cn(
-              'rounded-lg border px-3 py-2 text-sm',
+              'cursor-pointer rounded-lg border px-3 py-2 text-sm appearance-none',
               isDark ? 'border-gray-600 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-900',
               (facilityId <= 0 || wardsQuery.isLoading) && 'cursor-not-allowed opacity-70'
             )}
@@ -226,6 +226,7 @@ const MyWardPatientsView: React.FC<MyWardPatientsViewProps> = ({ theme, classNam
         initialFilters={{
           limit: 100,
         }}
+        showCompletedWorkTab
       />
     </div>
   );

@@ -631,6 +631,36 @@ export interface QueueVisitItem {
   care_delivery_workflow?: CareDeliveryWorkflow | null;
   /** Present for ward-board / nursing ward patient lists */
   ward_assignment?: WardAssignmentSummary;
+  /** Set on completed-work lists (encounter end time). */
+  discharged_at?: string | null;
+}
+
+/** Date window for `/visits/my-completed-work` (`status = completed` facility encounters). */
+export type CompletedWorkDatePreset = 'today' | 'this_week' | 'this_month';
+
+export interface MyCompletedWorkFilters {
+  date_preset: CompletedWorkDatePreset;
+  limit?: number;
+}
+
+export interface MyCompletedWorkMeta {
+  facility_id: number;
+  staff_id: number;
+  role_code: string | null;
+  filters: {
+    date_preset: CompletedWorkDatePreset;
+    date_from: string;
+    date_to: string;
+  };
+  queue_visits: QueueVisitItem[];
+  total_visits: number;
+  total_patients: number;
+}
+
+export interface MyCompletedWorkResponse {
+  success: boolean;
+  data: unknown[];
+  meta: MyCompletedWorkMeta;
 }
 
 

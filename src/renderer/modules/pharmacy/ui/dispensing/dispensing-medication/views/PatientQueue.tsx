@@ -18,11 +18,14 @@ import {
   TrendingUp,
   Calendar,
   BedDouble,
+  CheckCircle2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { useGetMyQueue } from '../../../../api/dispensing/visit-queue/useVisitQueries';
+import { useGetMyCompletedWork, useGetMyQueue } from '../../../../api/dispensing/visit-queue/useVisitQueries';
 import type {
+  CompletedWorkDatePreset,
+  MyCompletedWorkFilters,
   QueueFilters,
   VisitPhase,
   QueueResponse,
@@ -127,6 +130,11 @@ export interface PatientQueueProps {
    */
   visitsOverride?: QueueVisitItem[];
   onVisitsRefetch?: () => void | Promise<unknown>;
+
+  /**
+   * Adds "Active visits" (same as my-queue: `active` / `in_progress`) vs "Completed visits" (`/visits/my-completed-work`, `status = completed`).
+   */
+  showCompletedWorkTab?: boolean;
 
   className?: string;
 }
@@ -268,7 +276,7 @@ const StatCard: React.FC<StatCardProps> = ({ theme, title, value, badge, icon, t
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        'group relative overflow-hidden rounded-xl border-2 p-5 transition-all duration-300 cursor-pointer transform hover:-translate-y-1',
+        'group relative overflow-hidden rounded-xl border-2 p-5 transition-all duration-300 cursor-default transform hover:-translate-y-1',
         isDark ? styles.cardDark : styles.cardLight
       )}
     >
@@ -317,8 +325,8 @@ const StatCard: React.FC<StatCardProps> = ({ theme, title, value, badge, icon, t
 /* -------------------------------------------------------------------------- */
 
 const PatientQueue: React.FC<PatientQueueProps> = ({
-  title = 'Patient Queue',
-  description = 'Patients waiting for service',
+  title = '',
+  description = '',
   initialFilters = {},
   filterVisit,
   onVisitSelect,
@@ -339,6 +347,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   error: externalError,
   visitsOverride,
   onVisitsRefetch,
+  showCompletedWorkTab = false,
   className = '',
 }) => {
   const isDark = theme === 'dark';
@@ -347,6 +356,8 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   const [selectedVisitUuid, setSelectedVisitUuid] = useState<string | null>(null);
   const [lastRefetchTime, setLastRefetchTime] = useState<Date>(new Date());
   const [isInlineErrorDismissed, setIsInlineErrorDismissed] = useState(false);
+  const [queueMainTab, setQueueMainTab] = useState<'active' | 'completed'>('active');
+  const [completedDatePreset, setCompletedDatePreset] = useState<CompletedWorkDatePreset>('this_week');
 
   const baselineQueueFilters = useMemo((): QueueFilters => {
     return {
@@ -372,6 +383,15 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     showFilters: false,
   });
 
+  const completedFilters = useMemo((): MyCompletedWorkFilters => {
+    return {
+      date_preset: completedDatePreset,
+      limit: baselineQueueFilters.limit ?? 100,
+    };
+  }, [completedDatePreset, baselineQueueFilters.limit]);
+
+  const isCompletedTab = showCompletedWorkTab && queueMainTab === 'completed';
+
   const {
     data: queueData,
     isLoading: queryLoading,
@@ -382,18 +402,42 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
   } = useGetMyQueue(queryFilters, {
     enabled: visitsOverride === undefined,
     refetchInterval:
-      visitsOverride !== undefined ? false : refreshInterval > 0 ? refreshInterval : false,
+      visitsOverride !== undefined
+        ? false
+        : refreshInterval > 0
+          ? refreshInterval
+          : false,
     refetchOnWindowFocus: visitsOverride !== undefined ? false : refetchOnWindowFocus,
   });
 
+  const {
+    data: completedData,
+    isLoading: completedLoading,
+    error: completedError,
+    refetch: refetchCompleted,
+    isRefetching: completedRefetching,
+    dataUpdatedAt: completedDataUpdatedAt,
+  } = useGetMyCompletedWork(completedFilters, {
+    enabled: showCompletedWorkTab && isCompletedTab,
+    refetchInterval: false,
+    refetchOnWindowFocus: true,
+  });
+
   useEffect(() => {
+    if (isCompletedTab) {
+      if (completedDataUpdatedAt) {
+        setLastRefetchTime(new Date(completedDataUpdatedAt));
+      }
+      return;
+    }
     if (visitsOverride !== undefined) return;
     if (dataUpdatedAt) {
       setLastRefetchTime(new Date(dataUpdatedAt));
     }
-  }, [dataUpdatedAt, visitsOverride]);
+  }, [dataUpdatedAt, completedDataUpdatedAt, visitsOverride, isCompletedTab]);
 
-  const queueVisits = useMemo(() => {
+  /** Active / in-progress queue only (stats + “active” tab). */
+  const activeQueueVisits = useMemo(() => {
     if (visitsOverride !== undefined) {
       const raw = visitsOverride;
       if (!filterVisit) return raw;
@@ -404,16 +448,44 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     return raw.filter(filterVisit);
   }, [visitsOverride, queueData, filterVisit]);
 
-  const hasFetchedQueue =
-    visitsOverride !== undefined ? true : queueData !== undefined && queueData !== null;
-  const error = externalError ?? (queryError instanceof Error ? queryError : null);
+  /** Rows shown in the list (completed history vs active queue). */
+  const queueVisits = useMemo(() => {
+    if (isCompletedTab) {
+      const raw = Array.isArray(completedData?.meta?.queue_visits)
+        ? (completedData!.meta.queue_visits as QueueVisitItem[])
+        : [];
+      return raw;
+    }
+    return activeQueueVisits;
+  }, [isCompletedTab, completedData, activeQueueVisits]);
 
-  const isInitialLoading = visitsOverride !== undefined
-    ? (externalLoading ?? false)
-    : !hasFetchedQueue && (externalLoading ?? queryLoading);
+  const hasFetchedQueue = isCompletedTab
+    ? completedData !== undefined && completedData !== null
+    : visitsOverride !== undefined
+      ? true
+      : queueData !== undefined && queueData !== null;
+  const error =
+    externalError ??
+    (isCompletedTab
+      ? completedError instanceof Error
+        ? completedError
+        : null
+      : queryError instanceof Error
+        ? queryError
+        : null);
+
+  const isInitialLoading = isCompletedTab
+    ? !hasFetchedQueue && completedLoading
+    : visitsOverride !== undefined
+      ? (externalLoading ?? false)
+      : !hasFetchedQueue && (externalLoading ?? queryLoading);
   const isRefreshing =
     !isInitialLoading &&
-    (visitsOverride !== undefined ? isManualRefreshing : isRefetching || isManualRefreshing);
+    (isCompletedTab
+      ? completedRefetching || isManualRefreshing
+      : visitsOverride !== undefined
+        ? isManualRefreshing
+        : isRefetching || isManualRefreshing);
   const showBlockingError = !!error && !hasFetchedQueue;
   
   // Only show inline error if it hasn't been dismissed by the user
@@ -469,6 +541,15 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
         break;
     }
 
+    if (isCompletedTab) {
+      filtered.sort((a, b) => {
+        const da = a.discharged_at ? new Date(a.discharged_at).getTime() : 0;
+        const db = b.discharged_at ? new Date(b.discharged_at).getTime() : 0;
+        return db - da;
+      });
+      return filtered;
+    }
+
     filtered.sort((a, b) => {
       switch (filterState.sortBy) {
         case 'wait_time_asc': {
@@ -501,12 +582,24 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     });
 
     return filtered;
-  }, [queueVisits, filterState]);
+  }, [queueVisits, filterState, isCompletedTab]);
+
+  const statsSourceVisits = isCompletedTab ? queueVisits : activeQueueVisits;
 
   const queueStats = useMemo(() => {
-    if (queueVisits.length === 0) return null;
+    if (statsSourceVisits.length === 0) {
+      if (!hasFetchedQueue) return null;
+      return {
+        totalVisits: 0,
+        averageWaitTime: 0,
+        overdueCount: 0,
+        isolationCount: 0,
+        walkInCount: 0,
+        highAcuityCount: 0,
+      };
+    }
 
-    const waitTimes = queueVisits
+    const waitTimes = statsSourceVisits
       .map((visit) => calculateWaitTime(visit.waiting_since))
       .filter((value): value is number => value !== null);
 
@@ -515,26 +608,26 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
         ? Math.round(waitTimes.reduce((sum, time) => sum + time, 0) / waitTimes.length)
         : 0;
 
-    const overdueCount = queueVisits.filter((visit) =>
+    const overdueCount = statsSourceVisits.filter((visit) =>
       isVisitOverdue(visit.acuity_score, visit.waiting_since)
     ).length;
 
-    const isolationCount = queueVisits.filter(
+    const isolationCount = statsSourceVisits.filter(
       (visit) => visit.patient?.requires_isolation
     ).length;
 
-    const walkInCount = queueVisits.filter((visit) => visit.is_walk_in).length;
-    const highAcuityCount = queueVisits.filter((visit) => visit.acuity_score >= 4).length;
+    const walkInCount = statsSourceVisits.filter((visit) => visit.is_walk_in).length;
+    const highAcuityCount = statsSourceVisits.filter((visit) => visit.acuity_score >= 4).length;
 
     return {
-      totalVisits: queueVisits.length,
+      totalVisits: statsSourceVisits.length,
       averageWaitTime,
       overdueCount,
       isolationCount,
       walkInCount,
       highAcuityCount,
     };
-  }, [queueVisits]);
+  }, [statsSourceVisits, hasFetchedQueue]);
 
   const handleClearSearch = useCallback(() => {
     setFilterState((prev) => ({ ...prev, searchTerm: '' }));
@@ -599,11 +692,14 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
 
   const handleManualRefresh = useCallback(async () => {
     if (isManualRefreshing) return;
-    if (visitsOverride === undefined && isRefetching) return;
+    if (!isCompletedTab && visitsOverride === undefined && isRefetching) return;
+    if (isCompletedTab && completedRefetching) return;
 
     try {
       setIsManualRefreshing(true);
-      if (visitsOverride !== undefined && onVisitsRefetch) {
+      if (isCompletedTab) {
+        await refetchCompleted();
+      } else if (visitsOverride !== undefined && onVisitsRefetch) {
         await onVisitsRefetch();
       } else {
         await refetch();
@@ -613,7 +709,16 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
     } finally {
       setIsManualRefreshing(false);
     }
-  }, [isManualRefreshing, isRefetching, refetch, visitsOverride, onVisitsRefetch]);
+  }, [
+    isManualRefreshing,
+    isRefetching,
+    completedRefetching,
+    isCompletedTab,
+    refetch,
+    refetchCompleted,
+    visitsOverride,
+    onVisitsRefetch,
+  ]);
 
   const handleDismissInlineError = useCallback(() => {
     setIsInlineErrorDismissed(true);
@@ -841,22 +946,48 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                   </div>
                 </div>
 
-                <div
-                  className={cn(
-                    'flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all',
-                    overdue
-                      ? isDark
-                        ? 'bg-red-900/30 text-red-300 border-red-800/50'
-                        : 'bg-red-100 text-red-800 border-red-200'
-                      : isDark
-                        ? 'bg-gray-700 text-gray-300 border-gray-600'
-                        : 'bg-gray-100 text-gray-700 border-gray-200'
-                  )}
-                >
-                  <Clock className="h-3 w-3" />
-                  {formatWaitTime(waitTime)}
-                  {overdue && <AlertCircle className="ml-1 h-3 w-3" />}
-                </div>
+                {isCompletedTab && visit.discharged_at ? (
+                  <div
+                    className={cn(
+                      'flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium whitespace-nowrap',
+                      isDark
+                        ? 'bg-slate-800 text-slate-200 border-slate-600'
+                        : 'bg-slate-50 text-slate-800 border-slate-200'
+                    )}
+                  >
+                    <Calendar className="h-3 w-3" />
+                    Ended {new Date(visit.discharged_at).toLocaleString()}
+                  </div>
+                ) : isCompletedTab ? (
+                  <div
+                    className={cn(
+                      'flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium whitespace-nowrap capitalize',
+                      isDark
+                        ? 'bg-slate-800 text-slate-200 border-slate-600'
+                        : 'bg-slate-50 text-slate-800 border-slate-200'
+                    )}
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    {visit.status?.replace(/_/g, ' ') ?? 'Completed'}
+                  </div>
+                ) : (
+                  <div
+                    className={cn(
+                      'flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all',
+                      overdue
+                        ? isDark
+                          ? 'bg-red-900/30 text-red-300 border-red-800/50'
+                          : 'bg-red-100 text-red-800 border-red-200'
+                        : isDark
+                          ? 'bg-gray-700 text-gray-300 border-gray-600'
+                          : 'bg-gray-100 text-gray-700 border-gray-200'
+                    )}
+                  >
+                    <Clock className="h-3 w-3" />
+                    {formatWaitTime(waitTime)}
+                    {overdue && <AlertCircle className="ml-1 h-3 w-3" />}
+                  </div>
+                )}
               </div>
 
               <motion.button
@@ -909,7 +1040,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
             )}
           />
 
-          <div className="relative p-4 sm:p-5 md:p-6">
+          <div className="relative space-y-4 p-4 sm:p-5 md:p-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex min-w-0 items-start gap-3 sm:items-center">
                 <div
@@ -930,11 +1061,13 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="flex flex-wrap items-center gap-2 truncate text-lg font-bold sm:text-xl md:text-2xl">
-                      {title}
-                    </h1>
+                    {title.trim() ? (
+                      <h1 className="flex flex-wrap items-center gap-2 truncate text-lg font-bold sm:text-xl md:text-2xl">
+                        {title}
+                      </h1>
+                    ) : null}
 
-                    {queueStats && (
+                    {(isCompletedTab || queueStats) && (
                       <span
                         className={cn(
                           'whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-medium sm:px-2.5 sm:py-1 sm:text-xs md:text-sm',
@@ -943,24 +1076,31 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                             : 'bg-blue-100 text-blue-700 border border-blue-200'
                         )}
                       >
-                        {queueStats.totalVisits} total
+                        {queueStats
+                          ? queueStats.totalVisits
+                          : isCompletedTab
+                            ? queueVisits.length
+                            : activeQueueVisits.length}{' '}
+                        total
                       </span>
                     )}
                   </div>
 
-                  <p
-                    className={cn(
-                      'mt-0.5 truncate text-xs sm:mt-1 sm:text-sm',
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    )}
-                  >
-                    {description}
-                  </p>
+                  {description.trim() ? (
+                    <p
+                      className={cn(
+                        'mt-0.5 truncate text-xs sm:mt-1 sm:text-sm',
+                        isDark ? 'text-gray-400' : 'text-gray-600'
+                      )}
+                    >
+                      {description}
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end sm:gap-3">
-                {showNewPatientRegistration && onNewPatientRegistration && (
+                {showNewPatientRegistration && onNewPatientRegistration && !isCompletedTab && (
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -1018,6 +1158,100 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                 </div>
               </div>
             </div>
+
+            {showCompletedWorkTab && (
+              <div
+                className={cn(
+                  'flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between',
+                  isDark ? 'border-gray-700/50' : 'border-gray-200'
+                )}
+              >
+                <div
+                  className={cn(
+                    'inline-flex rounded-lg p-1',
+                    isDark ? 'bg-gray-900/80' : 'bg-gray-100'
+                  )}
+                  role="tablist"
+                  aria-label="Active vs completed visits"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={queueMainTab === 'active'}
+                    onClick={() => setQueueMainTab('active')}
+                    className={cn(
+                      'cursor-pointer rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                      queueMainTab === 'active'
+                        ? isDark
+                          ? 'bg-gray-700 text-white shadow'
+                          : 'bg-white text-gray-900 shadow'
+                        : isDark
+                          ? 'text-gray-400 hover:text-gray-200'
+                          : 'text-gray-600 hover:text-gray-900'
+                    )}
+                  >
+                    Active visits
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={queueMainTab === 'completed'}
+                    onClick={() => setQueueMainTab('completed')}
+                    className={cn(
+                      'inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                      queueMainTab === 'completed'
+                        ? isDark
+                          ? 'bg-emerald-900/50 text-emerald-100 shadow'
+                          : 'bg-emerald-50 text-emerald-900 shadow'
+                        : isDark
+                          ? 'text-gray-400 hover:text-gray-200'
+                          : 'text-gray-600 hover:text-gray-900'
+                    )}
+                  >
+                    <CheckCircle2 className="h-4 w-4" aria-hidden />
+                    Completed visits
+                  </button>
+                </div>
+
+                {queueMainTab === 'completed' && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={cn(
+                        'mr-1 text-xs font-medium uppercase tracking-wide',
+                        isDark ? 'text-gray-500' : 'text-gray-500'
+                      )}
+                    >
+                      Period
+                    </span>
+                    {(
+                      [
+                        { id: 'today' as const, label: 'Today' },
+                        { id: 'this_week' as const, label: 'This week' },
+                        { id: 'this_month' as const, label: 'This month' },
+                      ] as const
+                    ).map(({ id, label }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setCompletedDatePreset(id)}
+                        className={cn(
+                          'cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
+                          completedDatePreset === id
+                            ? isDark
+                              ? 'border-emerald-500/60 bg-emerald-900/30 text-emerald-100'
+                              : 'border-emerald-500 bg-emerald-50 text-emerald-900'
+                            : isDark
+                              ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                              : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                        )}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -1093,12 +1327,12 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Stats */}
+        {/* Stats reflect the list for the selected tab (active queue vs completed). */}
         {showStats && queueStats && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               theme={theme}
-              title="Active Visits"
+              title={isCompletedTab ? 'Completed visits' : 'Active visits'}
               value={queueStats.totalVisits}
               badge="Total"
               icon={<Inbox className="h-6 w-6" />}
@@ -1107,7 +1341,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
 
             <StatCard
               theme={theme}
-              title="Wait Time"
+              title="Wait time"
               value={formatWaitTime(queueStats.averageWaitTime)}
               badge="Average"
               icon={<Clock className="h-6 w-6" />}
@@ -1116,7 +1350,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
 
             <StatCard
               theme={theme}
-              title="Overdue Visits"
+              title="Overdue visits"
               value={queueStats.overdueCount}
               badge={queueStats.overdueCount > 0 ? 'Action needed' : 'On track'}
               icon={<AlertCircle className="h-6 w-6" />}
@@ -1134,7 +1368,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
           </div>
         )}
 
-        {showWorkflowStageFilter && (
+        {showWorkflowStageFilter && !isCompletedTab && (
           <div
             className={cn(
               'rounded-xl border-2 p-4',
@@ -1145,7 +1379,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
               htmlFor="queue-workflow-stage"
               className={cn('mb-2 block text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-800')}
             >
-              Team queue (visit stage)
+              Team queue (workflow)
             </label>
             <select
               id="queue-workflow-stage"
@@ -1223,7 +1457,7 @@ const PatientQueue: React.FC<PatientQueueProps> = ({
                         onFocus={() => setIsSearchFocused(true)}
                         onBlur={() => setIsSearchFocused(false)}
                         className={cn(
-                          'w-full border-transparent py-2.5 pl-10 pr-10 text-sm transition-colors placeholder:text-sm focus:outline-none focus:ring-0',
+                          'w-full cursor-text border-transparent py-2.5 pl-10 pr-10 text-sm transition-colors placeholder:text-sm focus:outline-none focus:ring-0',
                           isDark
                             ? 'bg-gray-900 text-white placeholder-gray-500'
                             : 'bg-white text-gray-900 placeholder-gray-400'

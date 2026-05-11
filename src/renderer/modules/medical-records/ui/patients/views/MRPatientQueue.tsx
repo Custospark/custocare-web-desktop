@@ -60,7 +60,7 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
         ? 'Billing Queue'
         : intakeModule === 'laboratory'
           ? 'Laboratory Queue'
-        : 'Patient Queue';
+          : 'Patient Queue';
   const queueDescription =
     intakeModule === 'nursing'
       ? 'Visits without a ward assignment; counts match this list. Assign wards from bed board or ward workspace.'
@@ -68,7 +68,7 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
         ? 'Visits ready for billing capture and payment processing'
         : intakeModule === 'laboratory'
           ? 'Visits ready for laboratory diagnostics, test requests, and results workflow'
-        : 'Patients requiring medical documentation and chart updates';
+          : 'Patients requiring medical documentation and chart updates';
   const actionButtonText =
     intakeModule === 'nursing'
       ? isProcessing
@@ -202,6 +202,7 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
         theme={theme}
         className="cursor-default"
         initialFilters={initialFilters}
+        showCompletedWorkTab
       />
     </div>
   );
