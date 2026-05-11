@@ -20,7 +20,7 @@ import {
   Heart,
   LayoutDashboard,
   Layers,
-  LibraryBig,
+  Compass,
   LifeBuoy,
   ListOrdered,
   MapIcon,
@@ -526,13 +526,13 @@ export const CUSTOCARE_HUB_WORKSPACE_OPERATIONS: ModuleOperation[] = CUSTOCARE_H
   (op) => ({
     id: op.id,
     label: op.label,
-    icon: HUB_ICON_BY_ID[op.id] ?? <LibraryBig className="w-4 h-4" />,
+    icon: HUB_ICON_BY_ID[op.id] ?? <Compass className="w-4 h-4" />,
   }),
 );
 
 export const CUSTOCARE_HUB_SIDEBAR_NESTED_OPERATIONS: SidebarNestedOperation[] =
   CUSTOCARE_HUB_MODULE_OPERATIONS.map((op) => {
-    const glyph = HUB_ICON_BY_ID[op.id] ?? <LibraryBig className="w-4 h-4" />;
+    const glyph = HUB_ICON_BY_ID[op.id] ?? <Compass className="w-4 h-4" />;
     const defaultAction = op.usesHorizontalActions && op.actions[0];
     const description = defaultAction ? `${op.label}: ${defaultAction.label}` : op.label;
     return {

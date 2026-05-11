@@ -12,7 +12,7 @@ import {
   FileText,
   Globe,
   HeartPulse,
-  LibraryBig,
+  Compass,
   Microscope,
   MonitorCheckIcon,
   Pill,
@@ -304,7 +304,7 @@ const menuConfig: MenuItem[] = useMemo(
     {
       id: 'custocare-hub',
       label: 'Custocare Hub',
-      icon: <LibraryBig className="w-5 h-5" />,
+      icon: <Compass className="w-5 h-5" />,
       href: CUSTOCARE_HUB_ROUTES.LEARNING_CENTER,
       route: ROUTES.CUSTOCARE_HUB,
       description: 'Documentation, learning, resources, community, and support',

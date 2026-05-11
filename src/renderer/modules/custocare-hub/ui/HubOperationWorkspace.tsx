@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { FileText, LibraryBig } from 'lucide-react';
+import { Compass, FileText } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { BaseActionWorkspace, type ActionConfig } from '../../../shared/components/workspace/BaseActionWorkspace';
 import type { ThemeProp } from '../../../app/routes/modules/shared/routeUtils';
@@ -33,7 +33,7 @@ export function HubOperationWorkspace({ theme, operationId }: HubOperationWorksp
   return (
     <BaseActionWorkspace
       title={config.label}
-      icon={<LibraryBig className="w-6 h-6" />}
+      icon={<Compass className="w-6 h-6" />}
       theme={theme}
       actions={actions}
       defaultActionTo={defaultActionTo}
