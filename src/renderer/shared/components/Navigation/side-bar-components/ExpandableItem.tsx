@@ -17,6 +17,8 @@ export interface ExpandableItemProps {
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;
+  /** When true, module title can wrap (wider nested sidebar). */
+  allowMultilineLabel?: boolean;
 }
 
 const TRANSITION_MS = 240;
@@ -55,6 +57,7 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
   children,
   className,
   disabled = false,
+  allowMultilineLabel = false,
 }) => {
   const theme = useSelector((state: RootState) => state.ui.theme);
   const generatedId = useId();
@@ -200,7 +203,8 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
         aria-expanded={open}
         aria-controls={regionId}
         className={cn(
-          'w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl border',
+          'w-full flex justify-between gap-3 px-3 py-2 rounded-xl border',
+          allowMultilineLabel ? 'items-start' : 'items-center',
           'transition-all duration-200 ease-out',
           'focus:outline-none focus:ring-2 focus:ring-offset-0',
           disabled && 'opacity-50 cursor-not-allowed',
@@ -224,10 +228,16 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
           focusRingClass,
         )}
       >
-        <span className="flex items-center gap-2 min-w-0">
+        <span
+          className={cn(
+            'flex gap-2 min-w-0 flex-1',
+            allowMultilineLabel ? 'items-start' : 'items-center',
+          )}
+        >
           {icon && (
             <span className={cn(
               'shrink-0 transition-colors',
+              allowMultilineLabel && 'mt-0.5',
               active && !disabled
                 ? activeIconClass
                 : iconClass
@@ -235,15 +245,19 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
               {icon}
             </span>
           )}
-          <span className={cn(
-            'text-sm font-semibold truncate',
-            active && !disabled ? activeTextClass : textClass
-          )}>
+          <span
+            className={cn(
+              'min-w-0 flex-1 text-sm font-semibold text-left',
+              allowMultilineLabel ? 'break-words whitespace-normal' : 'truncate',
+              active && !disabled ? activeTextClass : textClass,
+            )}
+          >
             {label}
           </span>
           {badge !== undefined && badge !== null && (
             <span className={cn(
-              'text-xs font-bold rounded-full px-1.5 py-0.5 transition-all duration-200',
+              'shrink-0 text-xs font-bold rounded-full px-1.5 py-0.5 transition-all duration-200',
+              allowMultilineLabel && 'mt-0.5',
               getBadgeClasses()
             )}>
               {badge}
@@ -254,6 +268,7 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
         <ChevronRight
           className={cn(
             'w-4 h-4 shrink-0 transition-transform duration-200 ease-out',
+            allowMultilineLabel && 'mt-1',
             open && 'rotate-90',
             active && !disabled ? activeIconClass : iconClass
           )}

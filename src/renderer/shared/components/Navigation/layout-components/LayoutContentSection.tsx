@@ -7,20 +7,29 @@ import type { LayoutThemeClasses, SidebarPosition } from './LayoutTypes';
 
 interface LayoutContentSectionProps {
   sidebarOpen: boolean;
+  enableNestedNavigation: boolean;
   sidebarPosition: SidebarPosition;
   themeClasses: LayoutThemeClasses;
 }
 
 export const LayoutContentSection: React.FC<LayoutContentSectionProps> = ({
   sidebarOpen,
+  enableNestedNavigation,
   sidebarPosition,
   themeClasses,
 }) => {
   const isLeft = sidebarPosition === 'left';
-  
-  const contentMargin = isLeft 
-    ? (sidebarOpen ? 'lg:ml-70' : 'lg:ml-20') 
-    : (sidebarOpen ? 'lg:mr-70' : 'lg:mr-20');
+
+  const expandedMainMargin = sidebarOpen && enableNestedNavigation ? 'lg:ml-80' : 'lg:ml-70';
+  const expandedMainMarginRight = sidebarOpen && enableNestedNavigation ? 'lg:mr-80' : 'lg:mr-70';
+
+  const contentMargin = isLeft
+    ? sidebarOpen
+      ? expandedMainMargin
+      : 'lg:ml-20'
+    : sidebarOpen
+      ? expandedMainMarginRight
+      : 'lg:mr-20';
 
   return (
     <div

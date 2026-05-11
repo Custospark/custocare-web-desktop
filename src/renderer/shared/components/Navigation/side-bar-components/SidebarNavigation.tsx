@@ -239,7 +239,8 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         aria-label={operation.label}
         onClick={(e) => handleNavigation(e, operation.route)}
         className={cn(
-          'flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm transition-all duration-200',
+          'flex gap-2.5 rounded-lg px-2 py-2 text-sm transition-all duration-200',
+          enableNestedNavigation ? 'items-start' : 'items-center',
           'border border-transparent',
           isOperationActive
             ? isDark
@@ -254,6 +255,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         <span
           className={cn(
             'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors',
+            enableNestedNavigation && 'mt-0.5',
             isDark ? 'border-gray-700/60 bg-gray-800/50 text-gray-300' : 'border-gray-200 bg-gray-50 text-gray-600',
             isOperationActive &&
               (isDark
@@ -264,7 +266,14 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         >
           {glyph}
         </span>
-        <span className="min-w-0 flex-1 truncate leading-snug">{operation.label}</span>
+        <span
+          className={cn(
+            'min-w-0 flex-1 leading-snug',
+            enableNestedNavigation ? 'break-words whitespace-normal' : 'truncate',
+          )}
+        >
+          {operation.label}
+        </span>
       </a>
     );
   };
@@ -295,6 +304,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                           key={item.id}
                           label={item.label}
                           icon={item.icon}
+                          allowMultilineLabel
                           active={isParentOrChildActive(item)}
                           badge={item.operations?.length}
                           isOpen={openParentId === item.id}

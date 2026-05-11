@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- data module: operation specs with inline icon elements, not Fast Refresh roots */
 /**
  * Canonical module workspace operations (Quick Actions / BaseModuleWorkspace) and
  * matching nested-sidebar child rows. Icons and labels must stay in sync — import

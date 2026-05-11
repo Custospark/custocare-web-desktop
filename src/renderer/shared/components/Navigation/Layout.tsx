@@ -113,13 +113,22 @@ export const Layout: React.FC = () => {
 
   const navbarPositionClasses = useMemo(() => {
     const isLeft = localState.sidebarPosition === 'left';
+    const nestedWide = sidebarOpen && localState.enableNestedNavigation;
     return {
       navbarPosition: isLeft
-        ? (sidebarOpen ? 'left-0 lg:left-70' : 'left-0 lg:left-20')
-        : (sidebarOpen ? 'right-0 lg:right-70' : 'right-0 lg:right-20'),
+        ? sidebarOpen
+          ? nestedWide
+            ? 'left-0 lg:left-80'
+            : 'left-0 lg:left-70'
+          : 'left-0 lg:left-20'
+        : sidebarOpen
+          ? nestedWide
+            ? 'right-0 lg:right-80'
+            : 'right-0 lg:right-70'
+          : 'right-0 lg:right-20',
       navbarFull: isLeft ? 'right-0' : 'left-0',
     };
-  }, [localState.sidebarPosition, sidebarOpen]);
+  }, [localState.sidebarPosition, localState.enableNestedNavigation, sidebarOpen]);
 
   const topPaddingPx = useMemo(() => TOP_BARS_TOTAL_H, []);
 
@@ -254,6 +263,7 @@ export const Layout: React.FC = () => {
 
         <LayoutContentSection
           sidebarOpen={sidebarOpen}
+          enableNestedNavigation={localState.enableNestedNavigation}
           sidebarPosition={localState.sidebarPosition}
           themeClasses={themeClasses}
         />

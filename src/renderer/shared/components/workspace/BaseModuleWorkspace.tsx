@@ -67,7 +67,6 @@ export function BaseModuleWorkspace({
   contextTitle,
   operations,
   basePath,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   currentTier = 'essential',
   onRequestUpgrade,
   moduleDisabledReason,

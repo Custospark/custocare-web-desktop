@@ -1,9 +1,10 @@
+import React from 'react';
 import { BaseModuleWorkspace } from '../../../shared/components/workspace/BaseModuleWorkspace';
 import { CUSTOCARE_HUB_WORKSPACE_OPERATIONS } from '../../../shared/navigation/moduleWorkspaceOperations';
 import { ROUTES, CUSTOCARE_HUB_ROUTES } from '../../../app/routes/routeConstants';
 import type { ThemeProp } from '../../../app/routes/modules/shared/routeUtils';
 
-const CustocareHubModule = (_props: ThemeProp) => {
+const CustocareHubModule: React.FC<ThemeProp> = () => {
   return (
     <BaseModuleWorkspace
       contextTitle="Custocare Hub"

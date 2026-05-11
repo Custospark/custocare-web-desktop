@@ -33,10 +33,12 @@ export const LayoutSidebarSection: React.FC<LayoutSidebarSectionProps> = ({
 }) => {
   const isLeft = sidebarPosition === 'left';
 
+  /** Nested mode needs more room so operation labels can wrap without truncating. */
   const positionClasses = {
     sidebarPosition: isLeft ? 'left-0' : 'right-0',
     sidebarBorder: isLeft ? 'border-r' : 'border-l',
-    sidebarWidth: sidebarOpen ? 'lg:w-70' : 'lg:w-20',
+    sidebarWidth:
+      !sidebarOpen ? 'lg:w-20' : enableNestedNavigation ? 'lg:w-80' : 'lg:w-70',
     sidebarTransformMobile: mobileSidebarOpen
       ? 'translate-x-0'
       : isLeft
