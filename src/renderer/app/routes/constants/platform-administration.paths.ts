@@ -20,4 +20,7 @@ export const PLATFORM_ADMIN_ROUTES = {
 
   /** Platform-managed Custocare Hub learning videos & assets */
   LEARNING_MATERIALS: '/platform-admin/learning-materials',
+
+  /** Custocare Hub user feedback & feature requests */
+  HUB_FEEDBACK: '/platform-admin/hub-feedback',
 } as const;

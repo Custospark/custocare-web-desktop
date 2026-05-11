@@ -6,6 +6,16 @@ import { ROUTES } from '../../../app/routes/routeConstants';
 import { getHubAction, getHubModuleOperation } from '../config/hubConfig';
 import { LEARNING_CENTER_CATEGORIES } from '../api/learning/learningMaterialTypes';
 import { LearningCenterMaterialsView } from './learning/LearningCenterMaterialsView';
+import { FeedbackMyRequestsView } from './feedback/FeedbackMyRequestsView';
+import { FeedbackRoadmapView } from './feedback/FeedbackRoadmapView';
+import { FeedbackSubmitForm } from './feedback/FeedbackSubmitForm';
+
+const FEEDBACK_REQUEST_PATH_SEGMENTS = new Set([
+  'submit-feedback',
+  'request-feature',
+  'vote-feature',
+  'track-request-status',
+]);
 
 export interface HubActionPanelProps extends ThemeProp {}
 
@@ -52,6 +62,38 @@ export function HubActionPanel({ theme }: HubActionPanelProps) {
 
   if (isLearningCenter) {
     return <LearningCenterMaterialsView theme={effectiveTheme} category={actionKey} />;
+  }
+
+  const isFeedbackRequests =
+    operationId === 'feedback-requests' && FEEDBACK_REQUEST_PATH_SEGMENTS.has(actionKey);
+
+  if (isFeedbackRequests) {
+    if (actionKey === 'submit-feedback') {
+      return (
+        <FeedbackSubmitForm
+          theme={effectiveTheme}
+          defaultCategory="feedback"
+          heading="Submit feedback"
+          description="Tell us what is working well, what is confusing, or what we should improve. Your message goes directly to the Custocare platform team."
+        />
+      );
+    }
+    if (actionKey === 'request-feature') {
+      return (
+        <FeedbackSubmitForm
+          theme={effectiveTheme}
+          defaultCategory="feature_request"
+          heading="Request a feature"
+          description="Describe the capability you need. Optionally list your idea on the public roadmap so others can support it with votes."
+        />
+      );
+    }
+    if (actionKey === 'vote-feature') {
+      return <FeedbackRoadmapView theme={effectiveTheme} />;
+    }
+    if (actionKey === 'track-request-status') {
+      return <FeedbackMyRequestsView theme={effectiveTheme} />;
+    }
   }
 
   return (

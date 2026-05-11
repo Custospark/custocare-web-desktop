@@ -9,6 +9,7 @@ import {
   Building2,
   BookOpenText,
   GraduationCap,
+  MessageSquareHeart,
 } from 'lucide-react';
 import { BaseModuleWorkspace } from '../../shared/components/workspace/BaseModuleWorkspace';
 import { ROUTES } from '../../app/routes/routeConstants';
@@ -39,6 +40,12 @@ const PLATFORM_ADMIN_OPERATIONS = [
     label: 'Learning Materials',
     icon: <GraduationCap className="w-4 h-4" />,
     description: 'Publish hub learning videos, thumbnails, and descriptions for all users',
+  },
+  {
+    id: 'hub-feedback',
+    label: 'Hub feedback & requests',
+    icon: <MessageSquareHeart className="w-4 h-4" />,
+    description: 'Review feedback and feature requests submitted from the Custocare Hub',
   },
 ];
 
