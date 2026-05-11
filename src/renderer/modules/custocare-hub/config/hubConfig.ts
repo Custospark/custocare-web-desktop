@@ -64,7 +64,7 @@ export const CUSTOCARE_HUB_MODULE_OPERATIONS: readonly HubModuleOperation[] = [
     ],
   },
   */
-  /* Community workspace — disabled for now
+  /* Community workspace */
   {
     id: 'community',
     routeKey: 'COMMUNITY',
@@ -77,7 +77,6 @@ export const CUSTOCARE_HUB_MODULE_OPERATIONS: readonly HubModuleOperation[] = [
       { key: 'product_updates', label: 'Product Updates', pathSegment: 'product-updates' },
     ],
   },
-  */
   {
     id: 'support-center',
     routeKey: 'SUPPORT_CENTER',

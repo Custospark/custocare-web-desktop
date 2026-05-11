@@ -67,13 +67,13 @@ export function LearningCenterMaterialsView({ theme, category }: LearningCenterM
             return (
             <li key={m.uuid}>
               <article
-                className={`flex h-full flex-col overflow-hidden rounded-xl border transition-shadow ${isDark ? 'border-gray-700 bg-gray-900/50 hover:border-cyan-500/40 hover:shadow-lg hover:shadow-cyan-500/10' : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'}`}
+                className={`flex h-full flex-col overflow-hidden rounded-xl border transition-shadow ${isDark ? 'border-gray-700 bg-gray-900/50 hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10' : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'}`}
               >
                 <a
                   href={m.video_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="relative block aspect-video w-full overflow-hidden bg-black/5 outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="relative block aspect-video w-full cursor-pointer overflow-hidden bg-black/5 outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-blue-500"
                   aria-label={`Watch video: ${m.title}`}
                 >
                   {thumbSrc ? (
@@ -126,7 +126,7 @@ export function LearningCenterMaterialsView({ theme, category }: LearningCenterM
                       href={m.video_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`inline-flex items-center gap-2 text-sm font-semibold ${isDark ? 'text-cyan-400 hover:text-cyan-300' : 'text-blue-600 hover:text-blue-700'}`}
+                      className={`inline-flex cursor-pointer items-center gap-2 text-sm font-semibold ${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}
                     >
                       Open video
                       <ExternalLink className="h-4 w-4" aria-hidden />

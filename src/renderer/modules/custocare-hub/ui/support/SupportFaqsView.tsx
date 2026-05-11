@@ -33,7 +33,7 @@ export function SupportFaqsView({ theme, variant }: SupportFaqsViewProps) {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className={cn('rounded-xl p-2.5', isDark ? 'bg-cyan-500/15 text-cyan-300' : 'bg-blue-50 text-blue-600')}>
+          <div className={cn('rounded-xl p-2.5', isDark ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-50 text-blue-600')}>
             <HelpCircle className="h-7 w-7 shrink-0" aria-hidden />
           </div>
           <div>
@@ -65,7 +65,7 @@ export function SupportFaqsView({ theme, variant }: SupportFaqsViewProps) {
           type="button"
           onClick={() => void refetch()}
           className={cn(
-            'inline-flex shrink-0 items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-semibold',
+            'inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-semibold',
             isDark ? 'border-gray-600 text-gray-200 hover:bg-gray-800' : 'border-gray-300 text-gray-800 hover:bg-gray-50',
           )}
         >
@@ -114,7 +114,7 @@ export function SupportFaqsView({ theme, variant }: SupportFaqsViewProps) {
                 name="custocare-hub-faq"
                 className={cn(
                   'group rounded-xl border transition-colors',
-                  isDark ? 'border-gray-800 bg-gray-900/40 open:border-cyan-900/50' : 'border-gray-200 bg-white open:border-blue-200',
+                  isDark ? 'border-gray-800 bg-gray-900/40 open:border-blue-900/50' : 'border-gray-200 bg-white open:border-blue-200',
                 )}
               >
                 <summary

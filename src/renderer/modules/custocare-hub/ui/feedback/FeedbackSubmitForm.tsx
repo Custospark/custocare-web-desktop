@@ -92,7 +92,7 @@ export function FeedbackSubmitForm({ theme, defaultCategory, heading, descriptio
             <label className={cn('flex items-start gap-2 text-sm', isDark ? 'text-gray-300' : 'text-gray-700')}>
               <input
                 type="checkbox"
-                className="mt-0.5"
+                className="mt-0.5 cursor-pointer"
                 checked={includeInRoadmap}
                 onChange={(e) => setIncludeInRoadmap(e.target.checked)}
               />
@@ -108,8 +108,8 @@ export function FeedbackSubmitForm({ theme, defaultCategory, heading, descriptio
               disabled={createMut.isPending}
               onClick={() => void onSubmit()}
               className={cn(
-                'inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-60',
-                isDark ? 'bg-cyan-600 text-white hover:bg-cyan-500' : 'bg-blue-600 text-white hover:bg-blue-700',
+                'inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-60',
+                isDark ? 'bg-blue-600 text-white hover:bg-blue-500' : 'bg-blue-600 text-white hover:bg-blue-700',
               )}
             >
               {createMut.isPending ? (

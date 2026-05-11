@@ -26,8 +26,9 @@ export const allModules: SearchableModule[] = [
   // Staff Portal
   { id: 'staff-dashboard', label: 'Staff Portal', route: ROUTES.STAFF_DASHBOARD, description: 'Staff workspace entry and capability selection.', moduleCode: 'staff_dashboard', keywords: ['staff portal', 'staff dashboard', 'workspace', 'employee', 'switch workspace'], category: 'Administration' },
 
-  // Custocare Hub (Community workspace is not exposed in navigation or search)
+  // Custocare Hub
   { id: 'hub-learning-center', label: 'Custocare Hub — Learning Center', route: CUSTOCARE_HUB_ROUTES.LEARNING_CENTER, description: 'Tutorials, training paths, and getting started guides.', moduleCode: 'custocare_hub', keywords: ['custocare hub', 'learning center', 'training', 'tutorials', 'getting started', 'hub training'], category: 'Custocare Hub' },
+  { id: 'hub-community', label: 'Custocare Hub — Community', route: CUSTOCARE_HUB_ROUTES.COMMUNITY, description: 'Discussions, feature ideas, product updates, and community posts.', moduleCode: 'custocare_hub', keywords: ['custocare hub community', 'hub discussions', 'community posts', 'feature ideas hub', 'product updates hub'], category: 'Custocare Hub' },
   { id: 'hub-support-center', label: 'Custocare Hub — Support Center', route: CUSTOCARE_HUB_ROUTES.SUPPORT_CENTER, description: 'Help articles, FAQs, and support tickets.', moduleCode: 'custocare_hub', keywords: ['custocare hub support', 'help center', 'open ticket', 'hub faq', 'search help'], category: 'Custocare Hub' },
   { id: 'hub-feedback-requests', label: 'Custocare Hub — Feedback & requests', route: CUSTOCARE_HUB_ROUTES.FEEDBACK_REQUESTS, description: 'Submit feedback, request features, and track status.', moduleCode: 'custocare_hub', keywords: ['feature request', 'product feedback', 'vote feature', 'hub feedback'], category: 'Custocare Hub' },
 
@@ -116,6 +117,7 @@ export const allModules: SearchableModule[] = [
   { id: 'platform-admin-users', label: 'Platform Administration - Users', route: PLATFORM_ADMIN_ROUTES.USERS, description: 'Manage global users and access.', moduleCode: 'platform_administration', keywords: ['platform users', 'global users', 'access management', 'user governance'], category: 'Platform Administration', requiredCapability: 'super_admin' },
   { id: 'platform-admin-plans', label: 'Platform Plans & Subscriptions', route: PLATFORM_ADMIN_ROUTES.FACILITIES_PLANS, description: 'Platform-wide plans and subscription controls.', moduleCode: 'platform_administration', keywords: ['platform plans', 'subscriptions', 'global pricing', 'plan management'], category: 'Platform Administration', requiredCapability: 'super_admin' },
   { id: 'platform-admin-hub-support-tickets', label: 'Hub support tickets', route: PLATFORM_ADMIN_ROUTES.HUB_SUPPORT_TICKETS, description: 'Review and resolve Custocare Hub support tickets.', moduleCode: 'platform_administration', keywords: ['hub tickets', 'support tickets', 'custocare hub support', 'helpdesk'], category: 'Platform Administration', requiredCapability: 'super_admin' },
+  { id: 'platform-admin-hub-product-updates', label: 'Hub product updates', route: PLATFORM_ADMIN_ROUTES.HUB_PRODUCT_UPDATES, description: 'Publish read-only product announcements for Custocare Hub Community.', moduleCode: 'platform_administration', keywords: ['hub product updates', 'custocare announcements', 'community product updates'], category: 'Platform Administration', requiredCapability: 'super_admin' },
 
   // Account
   { id: 'account-profile', label: 'My Profile', route: ACCOUNT_ROUTES.SETTINGS_PROFILE, description: 'Update account identity and profile details.', moduleCode: 'account', keywords: ['my profile', 'account profile', 'personal details', 'update profile'], category: 'Account' },

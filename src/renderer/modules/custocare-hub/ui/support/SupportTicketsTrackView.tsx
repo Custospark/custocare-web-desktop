@@ -84,7 +84,7 @@ export function SupportTicketsTrackView({ theme }: SupportTicketsTrackViewProps)
               onClick={() => onSubmit()}
               disabled={isLoading}
               className={cn(
-                'inline-flex shrink-0 items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-semibold disabled:opacity-60',
+                'inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-semibold disabled:opacity-60',
                 isDark ? 'border-gray-600 text-gray-200 hover:bg-gray-800' : 'border-gray-300 text-gray-800 hover:bg-gray-50',
               )}
             >
@@ -96,7 +96,7 @@ export function SupportTicketsTrackView({ theme }: SupportTicketsTrackViewProps)
               onClick={() => void refetch()}
               disabled={!lookupRef || isLoading}
               className={cn(
-                'inline-flex shrink-0 items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-semibold disabled:opacity-60',
+                'inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-semibold disabled:opacity-60',
                 isDark ? 'border-gray-600 text-gray-200 hover:bg-gray-800' : 'border-gray-300 text-gray-800 hover:bg-gray-50',
               )}
             >
@@ -165,7 +165,7 @@ export function SupportTicketsTrackView({ theme }: SupportTicketsTrackViewProps)
             <div
               className={cn(
                 'rounded-xl border p-4',
-                isDark ? 'border-cyan-900/50 bg-cyan-950/30 text-cyan-100' : 'border-blue-100 bg-blue-50 text-blue-900',
+                isDark ? 'border-blue-900/50 bg-blue-950/30 text-blue-100' : 'border-blue-100 bg-blue-50 text-blue-900',
               )}
             >
               <p className="font-semibold">Team reply</p>

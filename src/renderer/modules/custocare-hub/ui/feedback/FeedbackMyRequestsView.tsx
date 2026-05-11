@@ -48,7 +48,7 @@ export function FeedbackMyRequestsView({ theme }: FeedbackMyRequestsViewProps) {
           {error?.response?.data?.message ?? error?.message ?? 'Could not load your submissions.'}
           <button
             type="button"
-            className={cn('ml-3 underline', isDark ? 'text-cyan-300' : 'text-blue-700')}
+            className={cn('ml-3 cursor-pointer underline', isDark ? 'text-blue-300' : 'text-blue-700')}
             onClick={() => void refetch()}
           >
             Retry
@@ -93,7 +93,7 @@ export function FeedbackMyRequestsView({ theme }: FeedbackMyRequestsViewProps) {
                 <div
                   className={cn(
                     'mt-3 rounded-lg border px-3 py-2 text-sm',
-                    isDark ? 'border-cyan-900/50 bg-cyan-950/30 text-cyan-100' : 'border-blue-100 bg-blue-50 text-blue-900',
+                    isDark ? 'border-blue-900/50 bg-blue-950/30 text-blue-100' : 'border-blue-100 bg-blue-50 text-blue-900',
                   )}
                 >
                   <span className="font-semibold">Team reply: </span>

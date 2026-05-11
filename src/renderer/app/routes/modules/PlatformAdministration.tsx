@@ -52,6 +52,9 @@ const HubSupportFaqsAdminPage = React.lazy(
 const HubSupportTicketsAdminPage = React.lazy(
   () => import("../../../modules/platform-administration/hub-support-tickets/HubSupportTicketsAdminPage")
 );
+const HubProductUpdatesAdminPage = React.lazy(
+  () => import("../../../modules/platform-administration/hub-product-updates/HubProductUpdatesAdminPage")
+);
 
 // ============================================================================
 // PLATFORM ADMIN ROUTES CONFIGURATION
@@ -200,6 +203,16 @@ export const platformAdminRoutes = [
       element={
         <SuspenseWrapper variant="table">
           <WithThemeProp Component={HubSupportTicketsAdminPage} />
+        </SuspenseWrapper>
+      }
+    />
+
+    <Route
+      key="platform-admin-hub-product-updates"
+      path={PLATFORM_ADMIN_ROUTES.HUB_PRODUCT_UPDATES}
+      element={
+        <SuspenseWrapper variant="table">
+          <WithThemeProp Component={HubProductUpdatesAdminPage} />
         </SuspenseWrapper>
       }
     />

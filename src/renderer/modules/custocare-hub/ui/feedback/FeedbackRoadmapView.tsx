@@ -60,7 +60,7 @@ export function FeedbackRoadmapView({ theme }: FeedbackRoadmapViewProps) {
           {error?.response?.data?.message ?? error?.message ?? 'Could not load roadmap.'}
           <button
             type="button"
-            className={cn('ml-3 underline', isDark ? 'text-cyan-300' : 'text-blue-700')}
+            className={cn('ml-3 cursor-pointer underline', isDark ? 'text-blue-300' : 'text-blue-700')}
             onClick={() => void refetch()}
           >
             Retry
@@ -97,13 +97,13 @@ export function FeedbackRoadmapView({ theme }: FeedbackRoadmapViewProps) {
                 disabled={row.voted_by_you || voteMut.isPending}
                 onClick={() => void onVote(row.uuid)}
                 className={cn(
-                  'inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold',
+                  'inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold',
                   row.voted_by_you
                     ? isDark
                       ? 'border-gray-700 text-gray-500'
                       : 'border-gray-200 text-gray-500'
                     : isDark
-                      ? 'border-cyan-800 text-cyan-200 hover:bg-cyan-950/50'
+                      ? 'border-blue-800 text-blue-200 hover:bg-blue-950/50'
                       : 'border-blue-200 text-blue-800 hover:bg-blue-50',
                   (row.voted_by_you || voteMut.isPending) && 'opacity-70',
                 )}

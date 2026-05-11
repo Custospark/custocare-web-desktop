@@ -14,7 +14,7 @@ export const custocareHubRoutes = [
   <Route
     key="hub-community-legacy"
     path="community/*"
-    element={<Navigate to={CUSTOCARE_HUB_ROUTES.LEARNING_CENTER} replace />}
+    element={<Navigate to={CUSTOCARE_HUB_ROUTES.COMMUNITY} replace />}
   />,
   <Route
     key="hub-overview"

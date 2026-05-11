@@ -24,6 +24,7 @@ import {
   LifeBuoy,
   ListOrdered,
   MapIcon,
+  Megaphone,
   MessageCircleMore,
   MessageSquareHeart,
   Package,
@@ -33,6 +34,7 @@ import {
   Stethoscope,
   Ticket,
   Users,
+  UsersRound,
   Workflow,
 } from 'lucide-react';
 import { FaBuilding } from 'react-icons/fa';
@@ -494,6 +496,12 @@ export const PLATFORM_ADMINISTRATION_MODULE_OPERATIONS: ModuleOperation[] = [
     icon: <Ticket className="w-4 h-4" />,
     description: 'Handle support tickets opened from the Custocare Hub Support Center',
   },
+  {
+    id: 'hub-product-updates',
+    label: 'Hub product updates',
+    icon: <Megaphone className="w-4 h-4" />,
+    description: 'Publish read-only announcements shown under Custocare Hub → Community → Product updates',
+  },
 ];
 
 const PLATFORM_ADMIN_NESTED_ROUTES: Record<string, string> = {
@@ -504,6 +512,7 @@ const PLATFORM_ADMIN_NESTED_ROUTES: Record<string, string> = {
   'hub-feedback': PLATFORM_ADMIN_ROUTES.HUB_FEEDBACK,
   'hub-support-faqs': PLATFORM_ADMIN_ROUTES.HUB_SUPPORT_FAQS,
   'hub-support-tickets': PLATFORM_ADMIN_ROUTES.HUB_SUPPORT_TICKETS,
+  'hub-product-updates': PLATFORM_ADMIN_ROUTES.HUB_PRODUCT_UPDATES,
 };
 
 export const PLATFORM_ADMINISTRATION_SIDEBAR_NESTED_OPERATIONS = mapWorkspaceToSidebar(
@@ -516,6 +525,7 @@ export const PLATFORM_ADMINISTRATION_SIDEBAR_NESTED_OPERATIONS = mapWorkspaceToS
 
 const HUB_ICON_BY_ID: Record<string, React.ReactNode> = {
   'learning-center': <GraduationCap className="w-4 h-4" />,
+  community: <UsersRound className="w-4 h-4" />,
   'support-center': <LifeBuoy className="w-4 h-4" />,
   'feedback-requests': <MessageSquareHeart className="w-4 h-4" />,
 };

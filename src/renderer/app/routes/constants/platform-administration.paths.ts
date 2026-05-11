@@ -29,4 +29,7 @@ export const PLATFORM_ADMIN_ROUTES = {
 
   /** Custocare Hub Support Center tickets (submitted by users) */
   HUB_SUPPORT_TICKETS: '/platform-admin/hub-support-tickets',
+
+  /** Custocare Hub Community — product updates (read-only in hub; authored here) */
+  HUB_PRODUCT_UPDATES: '/platform-admin/hub-product-updates',
 } as const;

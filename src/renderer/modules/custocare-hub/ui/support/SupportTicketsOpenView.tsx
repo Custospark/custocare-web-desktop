@@ -87,7 +87,7 @@ export function SupportTicketsOpenView({ theme }: SupportTicketsOpenViewProps) {
             <span className={cn('mb-1 block text-xs font-medium', isDark ? 'text-gray-400' : 'text-gray-600')}>Category</span>
             <select
               className={cn(
-                'w-full rounded-lg border px-3 py-2 text-sm',
+                'w-full cursor-pointer rounded-lg border px-3 py-2 text-sm',
                 isDark ? 'border-gray-700 bg-gray-950 text-gray-100' : 'border-gray-300 bg-white text-gray-900',
               )}
               value={category}
@@ -105,7 +105,7 @@ export function SupportTicketsOpenView({ theme }: SupportTicketsOpenViewProps) {
             <span className={cn('mb-1 block text-xs font-medium', isDark ? 'text-gray-400' : 'text-gray-600')}>Priority</span>
             <select
               className={cn(
-                'w-full rounded-lg border px-3 py-2 text-sm',
+                'w-full cursor-pointer rounded-lg border px-3 py-2 text-sm',
                 isDark ? 'border-gray-700 bg-gray-950 text-gray-100' : 'border-gray-300 bg-white text-gray-900',
               )}
               value={priority}
@@ -154,8 +154,8 @@ export function SupportTicketsOpenView({ theme }: SupportTicketsOpenViewProps) {
               disabled={createMut.isPending}
               onClick={() => void onSubmit()}
               className={cn(
-                'inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-60',
-                isDark ? 'bg-cyan-600 text-white hover:bg-cyan-500' : 'bg-blue-600 text-white hover:bg-blue-700',
+                'inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-60',
+                isDark ? 'bg-blue-600 text-white hover:bg-blue-500' : 'bg-blue-600 text-white hover:bg-blue-700',
               )}
             >
               {createMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Plus className="h-4 w-4" aria-hidden />}
@@ -169,16 +169,16 @@ export function SupportTicketsOpenView({ theme }: SupportTicketsOpenViewProps) {
         <div
           className={cn(
             'rounded-xl border p-4',
-            isDark ? 'border-cyan-900/50 bg-cyan-950/30 text-cyan-100' : 'border-blue-100 bg-blue-50 text-blue-900',
+            isDark ? 'border-blue-900/50 bg-blue-950/30 text-blue-100' : 'border-blue-100 bg-blue-50 text-blue-900',
           )}
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="font-semibold">Ticket created</p>
-            <p className={cn('text-xs', isDark ? 'text-cyan-100' : 'text-blue-900')}>
+            <p className={cn('text-xs', isDark ? 'text-blue-100' : 'text-blue-900')}>
               Ref: <span className="font-mono">{createdTicket.uuid}</span>
             </p>
           </div>
-          <p className={cn('mt-2 whitespace-pre-wrap text-sm leading-relaxed', isDark ? 'text-cyan-100' : 'text-blue-900')}>
+          <p className={cn('mt-2 whitespace-pre-wrap text-sm leading-relaxed', isDark ? 'text-blue-100' : 'text-blue-900')}>
             {createdTicket.subject}
           </p>
         </div>

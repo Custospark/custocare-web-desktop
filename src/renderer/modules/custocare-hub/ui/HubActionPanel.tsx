@@ -12,6 +12,9 @@ import { FeedbackSubmitForm } from './feedback/FeedbackSubmitForm';
 import { SupportFaqsView } from './support/SupportFaqsView';
 import { SupportTicketsOpenView } from './support/SupportTicketsOpenView';
 import { SupportTicketsTrackView } from './support/SupportTicketsTrackView';
+import { CommunityChannelView } from './community/CommunityChannelView';
+import { CommunityCreatePostView } from './community/CommunityCreatePostView';
+import { hubCommunityChannelFromActionKey } from '../api/community/hubCommunityChannelMap';
 
 const FEEDBACK_REQUEST_PATH_SEGMENTS = new Set([
   'submit-feedback',
@@ -21,6 +24,8 @@ const FEEDBACK_REQUEST_PATH_SEGMENTS = new Set([
 ]);
 
 const SUPPORT_CENTER_PATH_SEGMENTS = new Set(['search-help', 'view-faqs', 'open-ticket', 'track-ticket']);
+
+const COMMUNITY_PATH_SEGMENTS = new Set(['view-discussions', 'create-post', 'feature-ideas', 'product-updates']);
 
 export interface HubActionPanelProps extends ThemeProp {}
 
@@ -115,6 +120,40 @@ export function HubActionPanel({ theme }: HubActionPanelProps) {
         <SupportTicketsOpenView theme={effectiveTheme} />
       ) : (
         <SupportTicketsTrackView theme={effectiveTheme} />
+      );
+    }
+  }
+
+  const isCommunity = operationId === 'community' && COMMUNITY_PATH_SEGMENTS.has(actionKey);
+
+  if (isCommunity) {
+    if (actionKey === 'create-post') {
+      return <CommunityCreatePostView theme={effectiveTheme} suggestedChannel={null} />;
+    }
+
+    const channel = hubCommunityChannelFromActionKey(actionKey);
+    if (channel) {
+      let heading = 'Community';
+      let description = '';
+      if (channel === 'discussion') {
+        heading = 'Discussions';
+        description = 'Ask questions, share tips, and connect with other Custocare users.';
+      } else if (channel === 'feature_idea') {
+        heading = 'Feature ideas';
+        description =
+          'Brainstorm with the community. For formal product requests tracked by the team, use Feedback & Requests.';
+      } else if (channel === 'product_update') {
+        heading = 'Product updates';
+        description =
+          'Official announcements from Custocare. These posts are published by platform administrators and are read-only here.';
+      }
+      return (
+        <CommunityChannelView
+          theme={effectiveTheme}
+          channel={channel}
+          heading={heading}
+          description={description}
+        />
       );
     }
   }

@@ -44,13 +44,13 @@ export function CustocareHubOverview({ theme }: ThemeProp) {
           <li key={item.label}>
             <button
               type="button"
-              className={`w-full text-left rounded-xl border p-4 transition-colors ${
+              className={`w-full cursor-pointer text-left rounded-xl border p-4 transition-colors ${
                 isDark
-                  ? 'border-gray-700 bg-gray-900/60 hover:border-cyan-500/40 hover:bg-gray-800/80'
+                  ? 'border-gray-700 bg-gray-900/60 hover:border-blue-500/40 hover:bg-gray-800/80'
                   : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50'
               }`}
             >
-              <div className={`flex items-start gap-3 ${isDark ? 'text-cyan-300' : 'text-blue-600'}`}>
+              <div className={`flex items-start gap-3 ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
                 {item.icon}
                 <div className="min-w-0">
                   <div className={`font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{item.label}</div>
