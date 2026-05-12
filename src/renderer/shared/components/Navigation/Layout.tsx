@@ -32,9 +32,14 @@ import { useNetworkStatus } from '../../../app/store/hooks/seNetworkStatus';
 // useSearchKeyboard is a module-level singleton — this instance shares state
 // with every other call site (e.g. the trigger button in SearchBar).
 import { SearchModal } from './status-bar-components/search/SearchModal';
-import { useSearchKeyboard } from './status-bar-components/search/hooks/useSearchKeyboard';
+import {
+  useSearchKeyboard,
+  isSearchModalOpen,
+} from './status-bar-components/search/hooks/useSearchKeyboard';
+import { isEditableEventTarget } from '../../keyboard/editableTarget';
 
 // ─────────────────────────────────────────────────────────────────────────────
+
 
 interface LocalLayoutState {
   mobileSidebarOpen: boolean;
@@ -133,38 +138,51 @@ export const Layout: React.FC = () => {
   const topPaddingPx = useMemo(() => TOP_BARS_TOTAL_H, []);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleToggleSidebar = useCallback(() => {
-    setLocalState(prev => ({ ...prev, isTransitioning: true }));
-    dispatch(toggleSidebar());
+  const scheduleTransitionEnd = useCallback(() => {
     if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
     transitionTimeoutRef.current = setTimeout(() => {
-      setLocalState(prev => ({ ...prev, isTransitioning: false }));
+      setLocalState((prev) => ({ ...prev, isTransitioning: false }));
     }, ANIMATION_CONFIG.duration.slow);
-  }, [dispatch]);
+  }, []);
+
+  const moveSidebarTo = useCallback(
+    (position: SidebarPosition) => {
+      setLocalState((prev) => {
+        if (prev.sidebarPosition === position) return prev;
+        saveSidebarPosition(position);
+        return { ...prev, sidebarPosition: position, isTransitioning: true };
+      });
+      scheduleTransitionEnd();
+    },
+    [scheduleTransitionEnd],
+  );
+
+  const handleToggleSidebarPosition = useCallback(() => {
+    setLocalState((prev) => {
+      const next: SidebarPosition = prev.sidebarPosition === 'left' ? 'right' : 'left';
+      saveSidebarPosition(next);
+      return { ...prev, sidebarPosition: next, isTransitioning: true };
+    });
+    scheduleTransitionEnd();
+  }, [scheduleTransitionEnd]);
+
+  const handleToggleSidebar = useCallback(() => {
+    setLocalState((prev) => ({ ...prev, isTransitioning: true }));
+    dispatch(toggleSidebar());
+    scheduleTransitionEnd();
+  }, [dispatch, scheduleTransitionEnd]);
 
   const handleToggleMobileSidebar = useCallback(() => {
-    setLocalState(prev => ({ ...prev, mobileSidebarOpen: !prev.mobileSidebarOpen }));
+    setLocalState((prev) => ({ ...prev, mobileSidebarOpen: !prev.mobileSidebarOpen }));
   }, []);
 
   const handleCloseMobileSidebar = useCallback(() => {
-    setLocalState(prev => ({ ...prev, mobileSidebarOpen: false }));
+    setLocalState((prev) => ({ ...prev, mobileSidebarOpen: false }));
   }, []);
 
   const handleToggleTheme = useCallback(() => {
     dispatch(toggleTheme());
   }, [dispatch]);
-
-  const handleToggleSidebarPosition = useCallback(() => {
-    setLocalState(prev => {
-      const next: SidebarPosition = prev.sidebarPosition === 'left' ? 'right' : 'left';
-      saveSidebarPosition(next);
-      return { ...prev, sidebarPosition: next, isTransitioning: true };
-    });
-    if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
-    transitionTimeoutRef.current = setTimeout(() => {
-      setLocalState(prev => ({ ...prev, isTransitioning: false }));
-    }, ANIMATION_CONFIG.duration.slow);
-  }, []);
 
   const handleToggleNestedNavigation = useCallback(() => {
     setLocalState((prev) => {
@@ -174,6 +192,40 @@ export const Layout: React.FC = () => {
       return { ...prev, enableNestedNavigation: next };
     });
   }, []);
+
+  /** Desktop: ⌘/Ctrl+B toggle sidebar; ⌘/Ctrl+Shift+←/→ dock left/right. */
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (typeof window !== 'undefined' && window.innerWidth < 1024) return;
+      if (isSearchModalOpen()) return;
+      if (isEditableEventTarget(e.target)) return;
+
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod || e.altKey) return;
+
+      if (!e.shiftKey && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        handleToggleSidebar();
+        return;
+      }
+
+      if (e.shiftKey) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          moveSidebarTo('left');
+          return;
+        }
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          moveSidebarTo('right');
+          return;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [handleToggleSidebar, moveSidebarTo]);
 
   // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => {

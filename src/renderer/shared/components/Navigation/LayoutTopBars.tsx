@@ -11,6 +11,11 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { ACCOUNT_ROUTES } from '../../../app/routes/routeConstants';
 import StatusBar from './StatusBar';
+import {
+  dockSidebarLeftShortcut,
+  dockSidebarRightShortcut,
+  togglePrimarySidebarShortcut,
+} from '../../keyboard/layoutShortcutLabels';
 
 export interface LayoutTopBarsThemeClasses {
   backdrop: string;
@@ -117,7 +122,11 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
             onClick={onToggleSidebar}
             aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
             aria-expanded={sidebarOpen}
-            title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+            title={
+              sidebarOpen
+                ? `Collapse sidebar (${togglePrimarySidebarShortcut()})`
+                : `Expand sidebar (${togglePrimarySidebarShortcut()})`
+            }
             disabled={isTransitioning}
             className={cn(
               'hidden lg:flex items-center justify-center relative cursor-pointer',
@@ -163,7 +172,7 @@ export const LayoutTopBars: React.FC<LayoutTopBarsProps> = ({
           <button
             onClick={onToggleSidebarPosition}
             aria-label="Move sidebar to opposite side"
-            title="Move sidebar left/right"
+            title={`Move sidebar: ${dockSidebarLeftShortcut()} left · ${dockSidebarRightShortcut()} right (click to flip sides)`}
             disabled={isTransitioning}
             className={cn(
               'hidden lg:flex items-center justify-center relative cursor-pointer',

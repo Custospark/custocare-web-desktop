@@ -4,6 +4,7 @@ import { Settings, Sun, Moon, PanelRight, Mail, ChevronsUpDown } from 'lucide-re
 import { cn } from '../../../utils/classNameUtils';
 import { useNavigate } from 'react-router-dom';
 import { ACCOUNT_ROUTES } from '../../../../app/routes/routeConstants';
+import { dockSidebarLeftShortcut, dockSidebarRightShortcut } from '../../../keyboard/layoutShortcutLabels';
 
 // Import Redux hooks and actions
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
@@ -282,7 +283,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       <button
         onClick={onToggleSidebarPosition}
         aria-label={`Move sidebar to ${sidebarPosition === 'left' ? 'right' : 'left'}`}
-        title={`Move sidebar to ${sidebarPosition === 'left' ? 'right' : 'left'}`}
+        title={`Move sidebar (${dockSidebarLeftShortcut()} left · ${dockSidebarRightShortcut()} right, or click to flip)`}
         disabled={isTransitioning}
         className={cn(
           'hidden lg:flex items-center justify-center px-2 py-1.5 rounded-lg',

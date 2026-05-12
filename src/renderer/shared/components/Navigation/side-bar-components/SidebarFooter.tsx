@@ -2,6 +2,11 @@ import React from 'react';
 import { Bell, HeadphonesIcon, Users } from 'lucide-react';
 import { cn } from '../../../types/cn';
 import { moduleSwitcherShortcutLegend, workspaceShortcutRangeLegend } from '../../../keyboard/workspaceShortcutLabels';
+import {
+  dockSidebarLeftShortcut,
+  dockSidebarRightShortcut,
+  togglePrimarySidebarShortcut,
+} from '../../../keyboard/layoutShortcutLabels';
 
 interface SidebarFooterProps {
   collapsed: boolean;
@@ -115,6 +120,11 @@ const SidebarFooter: React.FC<SidebarFooterProps> = ({
                 </>
               )}
               <span className="font-semibold">{workspaceShortcutRangeLegend()}</span> workspace
+              <span className="block mt-1">
+                <span className="font-semibold">{togglePrimarySidebarShortcut()}</span> sidebar ·{' '}
+                <span className="font-semibold">{dockSidebarLeftShortcut()}</span>/
+                <span className="font-semibold">{dockSidebarRightShortcut()}</span> dock
+              </span>
             </p>
           </div>
         </div>
