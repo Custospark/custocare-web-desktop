@@ -18,7 +18,7 @@ import { QuickActionsSidebar, type DockSide } from './QuickActionsSidebar';
 import { useWorkspaceSectionKeyboardShortcuts } from '../../hooks/useWorkspaceSectionKeyboardShortcuts';
 import { workspaceShortcutLabelForDigit } from '../../keyboard/workspaceShortcutLabels';
 import { type BadgeSpec } from '../../utils/Badge';
-import { STORAGE_KEYS } from '../Navigation/layout-components/LayoutTypes';
+import { readNestedSidebarPreference } from '../Navigation/layout-components/LayoutTypes';
 
 export interface ContentLayoutProps {
   operations: Operation[];
@@ -51,8 +51,6 @@ export interface Operation {
 
 const MOBILE_BREAKPOINT = 1024;
 const LS_KEY_DOCK = 'custocare.quickActionsDockSide';
-/** Same key as `Layout` / `STORAGE_KEYS.SIDEBAR_NESTED` — collapsible nav and Quick Actions are mutually exclusive on desktop. */
-const LS_KEY_NESTED_NAV = STORAGE_KEYS.SIDEBAR_NESTED;
 const CONTENT_SCROLL_ATTR = 'data-app-scroll-container';
 
 function safeGetDockSide(): DockSide {
@@ -67,8 +65,7 @@ function safeSetDockSide(side: DockSide) {
 }
 
 function safeGetNestedNavEnabled(): boolean {
-  if (typeof window === 'undefined') return false;
-  return window.localStorage.getItem(LS_KEY_NESTED_NAV) === 'true';
+  return readNestedSidebarPreference();
 }
 
 function useIsMobile(breakpoint = MOBILE_BREAKPOINT) {

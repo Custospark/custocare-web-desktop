@@ -24,6 +24,7 @@ import {
   ANIMATION_CONFIG,
   TOP_BARS_TOTAL_H,
   NAVBAR_H,
+  readNestedSidebarPreference,
 } from './layout-components/LayoutTypes';
 import { useNetworkStatus } from '../../../app/store/hooks/seNetworkStatus';
 
@@ -57,10 +58,7 @@ const saveSidebarPosition = (position: SidebarPosition): void => {
   localStorage.setItem(STORAGE_KEYS.SIDEBAR_POSITION, position);
 };
 
-const loadNestedNavigation = (): boolean => {
-  const saved = localStorage.getItem(STORAGE_KEYS.SIDEBAR_NESTED);
-  return saved === 'true';
-};
+const loadNestedNavigation = (): boolean => readNestedSidebarPreference();
 
 export const Layout: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();

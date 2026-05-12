@@ -167,14 +167,12 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
   const iconClass = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
   const activeIconClass = theme === 'dark' ? 'text-cyan-400' : 'text-blue-600';
   
-  // Active state colors (matching QuickActionsSidebar)
+  // Active state — subtle elevation for nested sidebar (avoid heavy colored glows)
   const activeBgClass = theme === 'dark'
-    ? 'bg-cyan-500/20 ring-2 ring-cyan-500/40'
-    : 'bg-blue-500/20 ring-2 ring-blue-500/40';
+    ? 'bg-cyan-500/15 ring-1 ring-cyan-500/35'
+    : 'bg-blue-500/15 ring-1 ring-blue-500/35';
   const activeTextClass = theme === 'dark' ? 'text-cyan-300' : 'text-blue-700';
-  const activeShadowClass = theme === 'dark'
-    ? 'shadow-lg shadow-cyan-500/30'
-    : 'shadow-lg shadow-blue-500/30';
+  const activeShadowClass = theme === 'dark' ? 'shadow-sm shadow-black/25' : 'shadow-sm shadow-gray-900/10';
 
   // Focus ring colors
   const focusRingClass = theme === 'dark'
@@ -294,7 +292,7 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
         <div 
           ref={contentRef} 
           className={cn(
-            'mt-1.5 pl-4 pr-1 space-y-1 border-l transition-colors',
+            'mt-1.5 pl-4 pr-1 py-0.5 space-y-1.5 border-l transition-colors',
             theme === 'dark' ? 'border-gray-800' : 'border-gray-200'
           )}
         >

@@ -256,6 +256,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         className={cn(
           'flex gap-2.5 rounded-lg px-2 py-2 text-sm transition-all duration-200',
           enableNestedNavigation ? 'items-start' : 'items-center',
+          enableNestedNavigation && isOperationActive && 'my-2',
           'border border-transparent',
           isOperationActive
             ? isDark
