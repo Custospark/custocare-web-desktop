@@ -53,6 +53,9 @@ interface BaseActionWorkspaceProps<TActionId extends string> {
 
   /** Child routes under the same workspace (e.g. `/action-center/prescription-notes/:id`) — do not redirect to default tab */
   additionalWorkflowPathPrefixes?: readonly string[];
+
+  /** Merged into {@link Outlet} context (e.g. `messageInboxPath` for compose redirect when embedded outside Account). */
+  outletContextExtras?: Record<string, unknown>;
 }
 
 const cx = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
@@ -119,6 +122,7 @@ export function BaseActionWorkspace<TActionId extends string>({
   testId,
   'aria-label': ariaLabel,
   additionalWorkflowPathPrefixes,
+  outletContextExtras,
 }: BaseActionWorkspaceProps<TActionId>) {
   const isDark = theme === 'dark';
   const navigate = useNavigate();
@@ -397,7 +401,7 @@ export function BaseActionWorkspace<TActionId extends string>({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <Outlet context={{ theme, defaultActionTo }} />
+        <Outlet context={{ theme, defaultActionTo, ...(outletContextExtras ?? {}) }} />
       </motion.div>
     </motion.div>
   );

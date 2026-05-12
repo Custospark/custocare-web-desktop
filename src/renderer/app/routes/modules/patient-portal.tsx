@@ -1,12 +1,19 @@
 import React from "react";
 import { Navigate, Outlet, Route } from "react-router-dom";
 import { PATIENT_PORTAL_ROUTES } from "../routeConstants";
-import { PlaceholderPanel, SuspenseWrapper } from "./shared/routeUtils";
+import { PlaceholderPanel, SuspenseWrapper, WithThemeProp } from "./shared/routeUtils";
 import PatientPortalMedicalHistoryShell from "../../../modules/patient-portal/ui/medical-history/PatientPortalMedicalHistoryShell";
 import {
   PatientPortalMedicalHistoryFullPage,
   PatientPortalMedicalHistoryLatestPage,
 } from "../../../modules/patient-portal/ui/medical-history/PatientPortalMedicalHistoryPages";
+import { PatientPortalDownloadsReportsPage } from "../../../modules/patient-portal/ui/downloads/PatientPortalDownloadsReportsPage";
+import Message from "../../../modules/account/ui/message/Message";
+import Inbox from "../../../modules/account/ui/message/Inbox";
+import Sent from "../../../modules/account/ui/message/Sent";
+import Draft from "../../../modules/account/ui/message/Draft";
+import Trash from "../../../modules/account/ui/message/Trash";
+import Compose from "../../../modules/account/ui/message/Compose";
 
 function pp(title: string) {
   return (
@@ -97,20 +104,113 @@ export const patientPortalRoutes = [
     <Route path="cancel" element={pp("Cancel appointment")} />
   </Route>,
 
-  <Route key="pp-notifications" path="notifications" element={<Outlet />}>
-    <Route index element={pp("Notifications")} />
-    <Route path="all" element={pp("All notifications")} />
-    <Route path="unread" element={pp("Unread")} />
-    <Route path="settings" element={pp("Notification settings")} />
+  <Route
+    key="pp-notifications"
+    path="notifications"
+    element={
+      <SuspenseWrapper variant="dashboard">
+        <WithThemeProp
+          Component={Message}
+          props={{
+            messageRoutes: {
+              inbox: PATIENT_PORTAL_ROUTES.NOTIFICATIONS_INBOX,
+              sent: PATIENT_PORTAL_ROUTES.NOTIFICATIONS_SENT,
+              draft: PATIENT_PORTAL_ROUTES.NOTIFICATIONS_DRAFT,
+              trash: PATIENT_PORTAL_ROUTES.NOTIFICATIONS_TRASH,
+              compose: PATIENT_PORTAL_ROUTES.NOTIFICATIONS_COMPOSE,
+            },
+          }}
+        />
+      </SuspenseWrapper>
+    }
+  >
+    <Route index element={<Navigate to={PATIENT_PORTAL_ROUTES.NOTIFICATIONS_INBOX} replace />} />
+    <Route
+      path="inbox"
+      element={
+        <SuspenseWrapper variant="dashboard">
+          <WithThemeProp Component={Inbox} />
+        </SuspenseWrapper>
+      }
+    />
+    <Route
+      path="sent"
+      element={
+        <SuspenseWrapper variant="dashboard">
+          <WithThemeProp Component={Sent} />
+        </SuspenseWrapper>
+      }
+    />
+    <Route
+      path="draft"
+      element={
+        <SuspenseWrapper variant="dashboard">
+          <WithThemeProp Component={Draft} />
+        </SuspenseWrapper>
+      }
+    />
+    <Route
+      path="trash"
+      element={
+        <SuspenseWrapper variant="dashboard">
+          <WithThemeProp Component={Trash} />
+        </SuspenseWrapper>
+      }
+    />
+    <Route
+      path="compose"
+      element={
+        <SuspenseWrapper variant="dashboard">
+          <WithThemeProp Component={Compose} />
+        </SuspenseWrapper>
+      }
+    />
   </Route>,
+  <Route
+    key="pp-notifications-legacy-all"
+    path="notifications/all"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.NOTIFICATIONS_INBOX} replace />}
+  />,
+  <Route
+    key="pp-notifications-legacy-unread"
+    path="notifications/unread"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.NOTIFICATIONS_INBOX} replace />}
+  />,
+  <Route
+    key="pp-notifications-legacy-settings"
+    path="notifications/settings"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.NOTIFICATIONS_INBOX} replace />}
+  />,
 
-  <Route key="pp-downloads" path="downloads-reports" element={<Outlet />}>
-    <Route index element={pp("Downloads & reports")} />
-    <Route path="all" element={pp("All downloads")} />
-    <Route path="medical" element={pp("Medical documents")} />
-    <Route path="laboratory" element={pp("Laboratory downloads")} />
-    <Route path="billing" element={pp("Billing documents")} />
-  </Route>,
+  <Route
+    key="pp-downloads"
+    path="downloads-reports"
+    element={
+      <SuspenseWrapper variant="dashboard">
+        <PatientPortalDownloadsReportsPage />
+      </SuspenseWrapper>
+    }
+  />,
+  <Route
+    key="pp-downloads-legacy-all"
+    path="downloads-reports/all"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.DOWNLOADS} replace />}
+  />,
+  <Route
+    key="pp-downloads-legacy-medical"
+    path="downloads-reports/medical"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.DOWNLOADS} replace />}
+  />,
+  <Route
+    key="pp-downloads-legacy-lab"
+    path="downloads-reports/laboratory"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.DOWNLOADS} replace />}
+  />,
+  <Route
+    key="pp-downloads-legacy-billing"
+    path="downloads-reports/billing"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.DOWNLOADS} replace />}
+  />,
 
   <Route key="pp-records" path="records" element={<Outlet />}>
     <Route index element={pp("Records")} />

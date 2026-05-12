@@ -9,8 +9,17 @@ const toTimestamp = (value?: string | null): number => {
 /** Pick the visit with the most recent clinical timeline signal. */
 export function pickLatestVisitId(visits: PatientMedicalHistoryPayload['visits']): number | null {
   if (!visits?.length) return null;
+  const sorted = sortVisitsNewestFirst(visits);
+  return sorted[0]?.id ?? null;
+}
+
+/** Newest-first by occurred_at / arrived_at / discharged_at (same ranking as {@link pickLatestVisitId}). */
+export function sortVisitsNewestFirst(
+  visits: PatientMedicalHistoryPayload['visits']
+): PatientMedicalHistoryPayload['visits'] {
+  if (!visits?.length) return [];
   const scored = visits.map((v) => ({
-    id: v.id,
+    v,
     t: Math.max(
       toTimestamp(v.occurred_at),
       toTimestamp(v.arrived_at),
@@ -18,7 +27,7 @@ export function pickLatestVisitId(visits: PatientMedicalHistoryPayload['visits']
     ),
   }));
   scored.sort((a, b) => b.t - a.t);
-  return scored[0]?.id ?? null;
+  return scored.map((row) => row.v);
 }
 
 /** Narrow aggregate payload to a single visit (read-only report scope). */

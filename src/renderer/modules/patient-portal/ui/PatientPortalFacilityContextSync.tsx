@@ -1,39 +1,33 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useLocation } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../app/store/store';
-import {
-  setPatientPortalVisitFacilityContext,
-  type PatientPortalFacilitySnapshot,
-} from '../../../app/store/slices/activeContextSlice';
+import { setPatientPortalVisitFacilityContext } from '../../../app/store/slices/activeContextSlice';
 import { getPatientId } from '../../../app/store/utils/contextSelectors';
 import { usePatientLatestVisitContext } from '../../medical-records/api/patient-medical-history/patientMedicalHistoryQueries';
-import type { FacilitySnapshot } from '../../medical-records/api/patient-medical-history/patientMedicalHistoryTypes';
-
-function toPortalFacilitySnapshot(f: FacilitySnapshot | null | undefined): PatientPortalFacilitySnapshot | null {
-  if (!f?.id || !f.name) return null;
-  return {
-    id: f.id,
-    uuid: f.uuid,
-    code: f.code,
-    name: f.name,
-  };
-}
+import { toPatientPortalFacilitySnapshot } from '../utils/patientPortalFacilitySnapshot';
 
 /**
  * Keeps Redux + localStorage patient-portal facility/visit in sync with GET …/latest-visit-context
  * so axios can attach X-Facility-Id like staff sessions.
+ *
+ * Skipped on **Downloads & reports** — that screen sets visit/facility from the visit the patient selects.
  */
 export function PatientPortalFacilityContextSync() {
   const dispatch = useDispatch<AppDispatch>();
+  const location = useLocation();
   const patientId = useSelector((state: RootState) => getPatientId(state));
   const numericId = patientId ?? 0;
 
+  const isDownloadsReportsRoute = location.pathname.includes('/downloads-reports');
+
   const query = usePatientLatestVisitContext(numericId, {
-    enabled: numericId > 0,
+    enabled: numericId > 0 && !isDownloadsReportsRoute,
   });
 
   useEffect(() => {
     if (!patientId) return;
+    if (isDownloadsReportsRoute) return;
     if (query.isPending) return;
     if (query.isError) return;
 
@@ -55,8 +49,8 @@ export function PatientPortalFacilityContextSync() {
     const facilityId =
       payload.facility_id ?? payload.visit?.facility_id ?? payload.facility?.id ?? null;
     const facility =
-      toPortalFacilitySnapshot(payload.facility ?? undefined) ??
-      toPortalFacilitySnapshot(payload.visit?.facility ?? undefined);
+      toPatientPortalFacilitySnapshot(payload.facility ?? undefined) ??
+      toPatientPortalFacilitySnapshot(payload.visit?.facility ?? undefined);
 
     dispatch(
       setPatientPortalVisitFacilityContext({
@@ -65,7 +59,7 @@ export function PatientPortalFacilityContextSync() {
         facility,
       })
     );
-  }, [dispatch, patientId, query.data, query.isPending, query.isError]);
+  }, [dispatch, patientId, query.data, query.isPending, query.isError, isDownloadsReportsRoute]);
 
   return null;
 }

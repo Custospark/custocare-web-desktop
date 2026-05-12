@@ -25,6 +25,13 @@ export const PATIENT_PORTAL_ROUTES = {
   BILLING: `${PP}/billing-payments`,
   APPOINTMENTS: `${PP}/appointments`,
   NOTIFICATIONS: `${PP}/notifications`,
+  /** Message Center (same shell as Account → Messages) */
+  NOTIFICATIONS_INBOX: `${PP}/notifications/inbox`,
+  NOTIFICATIONS_SENT: `${PP}/notifications/sent`,
+  NOTIFICATIONS_DRAFT: `${PP}/notifications/draft`,
+  NOTIFICATIONS_TRASH: `${PP}/notifications/trash`,
+  NOTIFICATIONS_COMPOSE: `${PP}/notifications/compose`,
+
   DOWNLOADS: `${PP}/downloads-reports`,
 
   // ─── Legacy / alternate names (same URLs where applicable) ───────────────
@@ -62,7 +69,7 @@ export const PATIENT_PORTAL_ROUTES = {
   BILLING_HISTORY: `${PP}/billing-payments/history`,
   BILLING_INVOICES: `${PP}/billing-payments/invoices`,
 
-  // ─── Notifications ───────────────────────────────────────────────────────
+  // ─── Notifications / Message Center ───────────────────────────────────────
   NOTIFICATIONS_ALL: `${PP}/notifications/all`,
   NOTIFICATIONS_UNREAD: `${PP}/notifications/unread`,
   NOTIFICATIONS_SETTINGS: `${PP}/notifications/settings`,

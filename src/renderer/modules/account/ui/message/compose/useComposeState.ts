@@ -32,7 +32,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ACCOUNT_ROUTES } from '../../../../../app/routes/routeConstants';
 import {
   useStoreMessage,
@@ -176,6 +176,8 @@ export const useComposeState = ({
   draft,
 }: ComposeProps) => {
   const navigate = useNavigate();
+  const outlet = useOutletContext<{ messageInboxPath?: string }>();
+  const messageInboxPath = outlet.messageInboxPath ?? ACCOUNT_ROUTES.MESSAGES_INBOX;
 
   /* ── API mutations ─────────────────────────────────────────── */
   const storeMessage     = useStoreMessage();
@@ -442,7 +444,7 @@ export const useComposeState = ({
       setIsSending(false);
       [...message.to, ...message.cc, ...message.bcc].forEach(recordContactUse);
       onSend?.(message);
-      navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
+      navigate(messageInboxPath);
     };
 
     if (draftMessageId) {
@@ -458,7 +460,7 @@ export const useComposeState = ({
     } else {
       storeMessage.mutate(buildPayload(false), { onSuccess, onError: rollback });
     }
-  }, [message, draftMessageId, validateMessage, buildPayload, buildUpdatePayload, storeMessage, updateMessage, sendDraft, onSend, navigate]);
+  }, [message, draftMessageId, validateMessage, buildPayload, buildUpdatePayload, storeMessage, updateMessage, sendDraft, onSend, navigate, messageInboxPath]);
 
   /* ── schedule send ────────────────────────────────────────── */
   const handleScheduleSend = useCallback(() => {
@@ -621,16 +623,16 @@ export const useComposeState = ({
     if (hasContent) {
       setShowDiscardConfirm(true);
     } else {
-      navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
+      navigate(messageInboxPath);
       onClose?.();
     }
-  }, [message, navigate, onClose]);
+  }, [message, navigate, onClose, messageInboxPath]);
 
   const handleConfirmDiscard = useCallback(() => {
     setShowDiscardConfirm(false);
-    navigate(ACCOUNT_ROUTES.MESSAGES_INBOX);
+    navigate(messageInboxPath);
     onClose?.();
-  }, [navigate, onClose]);
+  }, [navigate, onClose, messageInboxPath]);
 
   /* ── window control ───────────────────────────────────────── */
   const handleMinimize = useCallback(() => setWindowState('minimized'), []);
