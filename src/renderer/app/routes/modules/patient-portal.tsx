@@ -12,6 +12,7 @@ import { PatientPortalMedicationsLatestPage } from "../../../modules/patient-por
 import { PatientPortalLaboratoryResultsLatestPage } from "../../../modules/patient-portal/ui/laboratory/PatientPortalLaboratoryResultsLatest";
 import { PatientPortalAppointmentsLatestPage } from "../../../modules/patient-portal/ui/appointments/PatientPortalAppointmentsLatest";
 import { PatientPortalAppointmentSchedulePage } from "../../../modules/patient-portal/ui/appointments/PatientPortalAppointmentSchedulePage";
+import { PatientPortalBillingPaymentsPage } from "../../../modules/patient-portal/ui/billing/PatientPortalBillingPaymentsPage";
 import Message from "../../../modules/account/ui/message/Message";
 import Inbox from "../../../modules/account/ui/message/Inbox";
 import Sent from "../../../modules/account/ui/message/Sent";
@@ -136,13 +137,35 @@ export const patientPortalRoutes = [
     element={<Navigate to={PATIENT_PORTAL_ROUTES.LABORATORY_RESULTS} replace />}
   />,
 
-  <Route key="pp-billing" path="billing-payments" element={<Outlet />}>
-    <Route index element={pp("Billing & payments")} />
-    <Route path="overview" element={pp("Billing overview")} />
-    <Route path="payments" element={pp("Payments")} />
-    <Route path="history" element={pp("Payment history")} />
-    <Route path="invoices" element={pp("Invoices")} />
-  </Route>,
+  <Route
+    key="pp-billing"
+    path="billing-payments"
+    element={
+      <SuspenseWrapper variant="dashboard">
+        <PatientPortalBillingPaymentsPage />
+      </SuspenseWrapper>
+    }
+  />,
+  <Route
+    key="pp-billing-legacy-overview"
+    path="billing-payments/overview"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.BILLING} replace />}
+  />,
+  <Route
+    key="pp-billing-legacy-payments"
+    path="billing-payments/payments"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.BILLING} replace />}
+  />,
+  <Route
+    key="pp-billing-legacy-history"
+    path="billing-payments/history"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.BILLING} replace />}
+  />,
+  <Route
+    key="pp-billing-legacy-invoices"
+    path="billing-payments/invoices"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.BILLING} replace />}
+  />,
 
   <Route key="pp-appointments" path="appointments" element={<ForwardThemeOutlet />}>
     <Route
