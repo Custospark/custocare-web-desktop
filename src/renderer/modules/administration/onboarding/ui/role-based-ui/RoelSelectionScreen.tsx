@@ -25,7 +25,7 @@ import {
   CheckCircle2,
   Sun,
   Moon,
-  ChevronLeft,
+  ChevronLeft,Heart,
 } from 'lucide-react';
 import { cn } from '../../../../../shared/types/cn';
 import { useAppDispatch, useAppSelector } from  '../../../../../app/store/hooks/useApp';
@@ -54,21 +54,21 @@ const ROLES = [
       'Reduced administrative burden'
     ]
   },
-  // {
-  //   id: 'patient',
-  //   title: 'Patient',
-  //   subtitle: 'Individuals Receiving Care',
-  //   description:
-  //     'Experience seamless, coordinated care across visits, departments, and healthcare facilities.',
-  //   icon: Heart,
-  //   gradient: 'from-emerald-600 to-teal-600',
-  //   route: ROUTES.PATIENT_ONBOARDING,
-  //   benefits: [
-  //     'Continuity of care across facilities',
-  //     'Accurate, centralized health records',
-  //     'Safer, more coordinated care'
-  //   ]
-  // },
+  {
+    id: 'patient',
+    title: 'Patient',
+    subtitle: 'Individuals Receiving Care',
+    description:
+      'Experience seamless, coordinated care across visits, departments, and healthcare facilities.',
+    icon: Heart,
+    gradient: 'from-emerald-600 to-teal-600',
+    route: ROUTES.PATIENT_ONBOARDING,
+    benefits: [
+      'Continuity of care across facilities',
+      'Accurate, centralized health records',
+      'Safer, more coordinated care'
+    ]
+  },
   {
     id: 'facility-owner',
     title: 'Healthcare Facility',

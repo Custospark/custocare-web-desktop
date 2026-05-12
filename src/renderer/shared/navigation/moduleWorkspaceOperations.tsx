@@ -17,7 +17,6 @@ import {
   DoorOpen,
   FileText,
   GraduationCap,
-  Heart,
   LayoutDashboard,
   Layers,
   Compass,
@@ -36,6 +35,10 @@ import {
   Users,
   UsersRound,
   Workflow,
+  Download,
+  Bell,
+  FlaskConical,
+  CreditCard,
 } from 'lucide-react';
 import { FaBuilding } from 'react-icons/fa';
 
@@ -129,25 +132,29 @@ export const MEDICAL_RECORDS_SIDEBAR_NESTED_OPERATIONS = mapWorkspaceToSidebar(
 );
 
 // ─── Patient portal ─────────────────────────────────────────────────────────
+// REPLACED with new operations as requested
 
 export const PATIENT_PORTAL_MODULE_OPERATIONS: ModuleOperation[] = [
-  { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
-  { id: 'health', label: 'My Health', icon: <Heart className="w-4 h-4" /> },
-  { id: 'records', label: 'Medical Records', icon: <FileText className="w-4 h-4" /> },
-  { id: 'test_results', label: 'Test Results', icon: <Stethoscope className="w-4 h-4" /> },
-  { id: 'appointments', label: 'Appointments', icon: <Calendar className="w-4 h-4" /> },
+  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+  { id: 'medical-history', label: 'Medical History', icon: <FileText className="w-4 h-4" /> },
   { id: 'medications', label: 'Medications', icon: <Pill className="w-4 h-4" /> },
+  { id: 'laboratory-results', label: 'Laboratory Results', icon: <FlaskConical className="w-4 h-4" /> },
+  { id: 'billing-payments', label: 'Billing & Payments', icon: <CreditCard className="w-4 h-4" /> },
+  { id: 'appointments', label: 'Appointments', icon: <Calendar className="w-4 h-4" /> },
+  { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
+  { id: 'downloads-reports', label: 'Downloads & Reports', icon: <Download className="w-4 h-4" /> },
 ];
 
 const PATIENT_PORTAL_NESTED_ROUTES: Record<string, string> = {
-  overview: PATIENT_PORTAL_ROUTES.OVERVIEW,
-  health: PATIENT_PORTAL_ROUTES.HEALTH,
-  records: PATIENT_PORTAL_ROUTES.RECORDS,
-  test_results: PATIENT_PORTAL_ROUTES.TEST_RESULTS,
-  appointments: PATIENT_PORTAL_ROUTES.APPOINTMENTS,
+  dashboard: PATIENT_PORTAL_ROUTES.DASHBOARD,
+  'medical-history': PATIENT_PORTAL_ROUTES.MEDICAL_HISTORY,
   medications: PATIENT_PORTAL_ROUTES.MEDICATIONS,
+  'laboratory-results': PATIENT_PORTAL_ROUTES.LABORATORY_RESULTS,
+  'billing-payments': PATIENT_PORTAL_ROUTES.BILLING,
+  appointments: PATIENT_PORTAL_ROUTES.APPOINTMENTS,
+  notifications: PATIENT_PORTAL_ROUTES.NOTIFICATIONS,
+  'downloads-reports': PATIENT_PORTAL_ROUTES.DOWNLOADS,
 };
-
 export const PATIENT_PORTAL_SIDEBAR_NESTED_OPERATIONS = mapWorkspaceToSidebar(
   PATIENT_PORTAL_MODULE_OPERATIONS,
   PATIENT_PORTAL_NESTED_ROUTES,

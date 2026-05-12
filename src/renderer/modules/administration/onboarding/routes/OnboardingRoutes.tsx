@@ -4,6 +4,7 @@ import { Route } from 'react-router-dom';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons'; 
 import LoadingScreen from '../../../../shared/components/Loading/LoadingScreen';
 import { ROUTES } from './onboardingRouteConstants';
+import { patientPortalRoutes } from '../../../../app/routes/modules/patient-portal';
 
 // Lazy load auth pages
 const LoginPage = React.lazy(() => import('../ui/auth/Login'));
@@ -170,7 +171,9 @@ export const OnboardingRoutes = () => [
           <PatientPortalModule />
         </Suspense>
       }
-    />
+    >
+      {patientPortalRoutes}
+    </Route>
     <Route
       key="staff-dashboard"
       path={ROUTES.STAFF_DASHBOARD}

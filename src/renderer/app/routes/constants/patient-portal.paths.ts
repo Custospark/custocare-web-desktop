@@ -1,40 +1,76 @@
-import { ROUTES } from "./shared.paths"; 
+import { ROUTES } from "./shared.paths";
+
+/** Base path for the patient portal (`/dashboard/patient`). */
+const PP = ROUTES.PATIENT_DASHBOARD;
+
+/**
+ * Patient Portal routes. Top-level segments match `PATIENT_PORTAL_MODULE_OPERATIONS` ids
+ * so URLs stay in sync with {@link BaseModuleWorkspace} (`${basePath}/${operationId}`).
+ */
 export const PATIENT_PORTAL_ROUTES = {
-  ROOT: ROUTES.PATIENT_DASHBOARD,
-  OVERVIEW: `${ROUTES.PATIENT_DASHBOARD}/overview`,
-  HEALTH: `${ROUTES.PATIENT_DASHBOARD}/health`,
-  RECORDS: `${ROUTES.PATIENT_DASHBOARD}/records`,
-  TEST_RESULTS: `${ROUTES.PATIENT_DASHBOARD}/test-results`,
-  APPOINTMENTS: `${ROUTES.PATIENT_DASHBOARD}/appointments`,
-  MEDICATIONS: `${ROUTES.PATIENT_DASHBOARD}/medications`,
+  ROOT: PP,
 
-  // Health nested actions
-  HEALTH_SUMMARY: `${ROUTES.PATIENT_DASHBOARD}/health/summary`,
-  HEALTH_VITALS: `${ROUTES.PATIENT_DASHBOARD}/health/vitals`,
-  HEALTH_CONDITIONS: `${ROUTES.PATIENT_DASHBOARD}/health/conditions`,
-  HEALTH_ALLERGIES: `${ROUTES.PATIENT_DASHBOARD}/health/allergies`,
+  /** Landing — same URL as {@link PATIENT_PORTAL_ROUTES.DASHBOARD} */
+  OVERVIEW: `${PP}/dashboard`,
+  DASHBOARD: `${PP}/dashboard`,
 
-  // Records nested actions
-  RECORDS_VIEW: `${ROUTES.PATIENT_DASHBOARD}/records/view`,
-  RECORDS_DOWNLOAD: `${ROUTES.PATIENT_DASHBOARD}/records/download`,
-  RECORDS_SHARE: `${ROUTES.PATIENT_DASHBOARD}/records/share`,
-  RECORDS_REQUEST: `${ROUTES.PATIENT_DASHBOARD}/records/request`,
+  MEDICAL_HISTORY: `${PP}/medical-history`,
+  MEDICATIONS: `${PP}/medications`,
+  LABORATORY_RESULTS: `${PP}/laboratory-results`,
+  BILLING: `${PP}/billing-payments`,
+  APPOINTMENTS: `${PP}/appointments`,
+  NOTIFICATIONS: `${PP}/notifications`,
+  DOWNLOADS: `${PP}/downloads-reports`,
 
-  // Test Results nested actions
-  TEST_RESULTS_VIEW: `${ROUTES.PATIENT_DASHBOARD}/test-results/view`,
-  TEST_RESULTS_HISTORY: `${ROUTES.PATIENT_DASHBOARD}/test-results/history`,
-  TEST_RESULTS_COMPARE: `${ROUTES.PATIENT_DASHBOARD}/test-results/compare`,
-  TEST_RESULTS_EXPLAIN: `${ROUTES.PATIENT_DASHBOARD}/test-results/explain`,
+  // ─── Legacy / alternate names (same URLs where applicable) ───────────────
+  HEALTH: `${PP}/medical-history`,
+  RECORDS: `${PP}/records`,
+  TEST_RESULTS: `${PP}/laboratory-results`,
 
-  // Appointments nested actions
-  APPOINTMENTS_UPCOMING: `${ROUTES.PATIENT_DASHBOARD}/appointments/upcoming`,
-  APPOINTMENTS_PAST: `${ROUTES.PATIENT_DASHBOARD}/appointments/past`,
-  APPOINTMENTS_SCHEDULE: `${ROUTES.PATIENT_DASHBOARD}/appointments/schedule`,
-  APPOINTMENTS_CANCEL: `${ROUTES.PATIENT_DASHBOARD}/appointments/cancel`,
+  // ─── Medical history ─────────────────────────────────────────────────────
+  HEALTH_SUMMARY: `${PP}/medical-history/summary`,
+  HEALTH_VITALS: `${PP}/medical-history/vitals`,
+  HEALTH_CONDITIONS: `${PP}/medical-history/conditions`,
+  HEALTH_ALLERGIES: `${PP}/medical-history/allergies`,
 
-  // Medications nested actions
-  MEDICATIONS_CURRENT: `${ROUTES.PATIENT_DASHBOARD}/medications/current`,
-  MEDICATIONS_HISTORY: `${ROUTES.PATIENT_DASHBOARD}/medications/history`,
-  MEDICATIONS_REFILL: `${ROUTES.PATIENT_DASHBOARD}/medications/refill`,
-  MEDICATIONS_INTERACTIONS: `${ROUTES.PATIENT_DASHBOARD}/medications/interactions`,
+  // ─── Records ─────────────────────────────────────────────────────────────
+  RECORDS_VIEW: `${PP}/records/view`,
+  RECORDS_DOWNLOAD: `${PP}/records/download`,
+  RECORDS_SHARE: `${PP}/records/share`,
+  RECORDS_REQUEST: `${PP}/records/request`,
+
+  // ─── Laboratory / test results ───────────────────────────────────────────
+  TEST_RESULTS_VIEW: `${PP}/laboratory-results/view`,
+  TEST_RESULTS_HISTORY: `${PP}/laboratory-results/history`,
+  TEST_RESULTS_COMPARE: `${PP}/laboratory-results/compare`,
+  TEST_RESULTS_EXPLAIN: `${PP}/laboratory-results/explain`,
+
+  // ─── Appointments ────────────────────────────────────────────────────────
+  APPOINTMENTS_UPCOMING: `${PP}/appointments/upcoming`,
+  APPOINTMENTS_PAST: `${PP}/appointments/past`,
+  APPOINTMENTS_SCHEDULE: `${PP}/appointments/schedule`,
+  APPOINTMENTS_CANCEL: `${PP}/appointments/cancel`,
+
+  // ─── Medications ───────────────────────────────────────────────────────────
+  MEDICATIONS_CURRENT: `${PP}/medications/current`,
+  MEDICATIONS_HISTORY: `${PP}/medications/history`,
+  MEDICATIONS_REFILL: `${PP}/medications/refill`,
+  MEDICATIONS_INTERACTIONS: `${PP}/medications/interactions`,
+
+  // ─── Billing ─────────────────────────────────────────────────────────────
+  BILLING_OVERVIEW: `${PP}/billing-payments/overview`,
+  BILLING_PAYMENTS: `${PP}/billing-payments/payments`,
+  BILLING_HISTORY: `${PP}/billing-payments/history`,
+  BILLING_INVOICES: `${PP}/billing-payments/invoices`,
+
+  // ─── Notifications ───────────────────────────────────────────────────────
+  NOTIFICATIONS_ALL: `${PP}/notifications/all`,
+  NOTIFICATIONS_UNREAD: `${PP}/notifications/unread`,
+  NOTIFICATIONS_SETTINGS: `${PP}/notifications/settings`,
+
+  // ─── Downloads ─────────────────────────────────────────────────────────────
+  DOWNLOADS_ALL: `${PP}/downloads-reports/all`,
+  DOWNLOADS_MEDICAL: `${PP}/downloads-reports/medical`,
+  DOWNLOADS_LABORATORY: `${PP}/downloads-reports/laboratory`,
+  DOWNLOADS_BILLING: `${PP}/downloads-reports/billing`,
 } as const;

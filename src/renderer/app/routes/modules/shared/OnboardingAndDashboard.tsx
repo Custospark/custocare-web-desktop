@@ -4,6 +4,7 @@ import { Route } from 'react-router-dom';
 import { SuspenseWrapper } from "./routeUtils";
 import { ROUTES } from "../../routeConstants";
 import PatientPortalModule from '../../../../modules/patient-portal/ui/PatientPortalModule';
+import { patientPortalRoutes } from "../patient-portal";
 const Dashboard = React.lazy(() => import('../../../../shared/pages/Dashboard'));
 const FacilityOnboardingModule = React.lazy(
   () => import('../../../../shared/features/facilities/FacilityOnboardingModule'));
@@ -30,7 +31,9 @@ export const onboardingAndDashboardRoutes = [
         <PatientPortalModule />
       </SuspenseWrapper>
     }
-  />,
+  >
+    {patientPortalRoutes}
+  </Route>,
   <Route
     key="facilities"
     path={ROUTES.FACILITIES}

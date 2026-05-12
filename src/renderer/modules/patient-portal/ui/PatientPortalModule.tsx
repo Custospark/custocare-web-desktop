@@ -8,7 +8,7 @@ const PatientPortalModule = () => {
       contextTitle="Patient Portal"
       operations={PATIENT_PORTAL_MODULE_OPERATIONS}
       basePath={ROUTES.PATIENT_DASHBOARD}
-      defaultOperationPath={PATIENT_PORTAL_ROUTES.OVERVIEW}
+      defaultOperationPath={PATIENT_PORTAL_ROUTES.DASHBOARD}
     />
   );
 };

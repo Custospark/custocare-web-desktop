@@ -1,31 +1,8 @@
-{
-  "rightSidebar": {
-    "item": "Nursing",
-    "onClick": {
-      "horizontalActions": [
-        {
-          "name": "Nursing Intelligence",
-          "horizontal": ["Ward Overview", "Task Summary", "Medication Summary", "Activity Trends"]
-        },
-        {
-          "name": "Wards & Patients",
-          "horizontal": ["Search Patient", "My Ward Patients", "New Patients (Unassigned)"]
-        },
-        {
-          "name": "Nursing Encounter",
-          "horizontal": ["Patient Info", "Ward & Bed", "Tasks", "Meds", "Notes"]
-        },
-        {
-          "name": "Medication & Treatment",
-          "horizontal": ["Medication Schedule", "Administer Medication", "Missed Medications", "Treatment Log"]
-        },
-        {
-          "name": "Tasks & Shifts",
-          "horizontal": ["My Tasks", "Assign Task", "Shift Handover", "Task History"]
-        }
-      ]
-    }
-  }
-}
-
-Allow nurse to admit patient to a ward, assign/change bed, or transfer patient to another ward. Display current location and available wards/beds. Record reason for transfer if applicable.
+Dashboard
+Medical History
+Medications
+Laboratory Results
+Billing & Payments
+Appointments
+Notifications
+Downloads & Reports
