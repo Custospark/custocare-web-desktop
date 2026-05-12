@@ -34,6 +34,8 @@ export interface ContentLayoutProps {
   headerTitle?: string;
   defaultOperation?: string;
   contextTitle?: string;
+  /** Shown under module contextTitle in Quick Actions (e.g. resolved facility for patient portal). */
+  contextSubtitle?: string;
   isLoading?: boolean;
   renderExtraContent?: () => React.ReactNode;
 }
@@ -100,6 +102,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
   sidebarFooter,
   headerTitle,
   contextTitle,
+  contextSubtitle,
   isLoading = false,
   renderExtraContent,
 }) => {
@@ -410,6 +413,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
                 sidebarHeader={sidebarHeader}
                 sidebarFooter={sidebarFooter}
                 contextTitle={contextTitle}
+                contextSubtitle={contextSubtitle}
               />
             )}
 
@@ -431,6 +435,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
                 sidebarHeader={sidebarHeader}
                 sidebarFooter={sidebarFooter}
                 contextTitle={contextTitle}
+                contextSubtitle={contextSubtitle}
               />
             )}
           </div>
@@ -516,6 +521,16 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
                           {contextTitle}
                         </p>
                       )}
+                      {contextSubtitle ? (
+                        <p
+                          className={cn(
+                            'text-[11px] mt-0.5 truncate font-medium',
+                            theme === 'dark' ? 'text-cyan-400/90' : 'text-blue-700',
+                          )}
+                        >
+                          {contextSubtitle}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 )}

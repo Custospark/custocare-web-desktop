@@ -1,11 +1,21 @@
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { axiosInstance } from '../../../../app/api/axiosConfig';
-import type { PatientMedicalHistoryApiResponse, PatientMedicalHistoryPayload } from './patientMedicalHistoryTypes';
+import type {
+  PatientLatestVisitContextApiResponse,
+  PatientLatestVisitContextPayload,
+  PatientMedicalHistoryApiResponse,
+  PatientMedicalHistoryPayload,
+} from './patientMedicalHistoryTypes';
 
 export const patientMedicalHistoryKeys = {
   all: () => ['patient-medical-history'] as const,
   detail: (patientId: number) => [...patientMedicalHistoryKeys.all(), patientId] as const,
+};
+
+export const patientLatestVisitContextKeys = {
+  all: () => ['patient-latest-visit-context'] as const,
+  detail: (patientId: number) => [...patientLatestVisitContextKeys.all(), patientId] as const,
 };
 
 export function usePatientMedicalHistory(
@@ -25,6 +35,33 @@ export function usePatientMedicalHistory(
       );
       if (!data.success || !data.data) {
         throw new Error(data.message || 'Failed to load patient medical history');
+      }
+      return data.data;
+    },
+    enabled: (enabledOption ?? true) && patientId > 0,
+    staleTime: 60_000,
+    ...queryOptions,
+  });
+}
+
+/** Backend-resolved latest visit + facility (patient portal has no staff facility / active visit context). */
+export function usePatientLatestVisitContext(
+  patientId: number,
+  options?: Omit<
+    UseQueryOptions<PatientLatestVisitContextPayload | null, AxiosError, PatientLatestVisitContextPayload | null>,
+    'queryKey' | 'queryFn'
+  > & { enabled?: boolean }
+) {
+  const { enabled: enabledOption, ...queryOptions } = options ?? {};
+
+  return useQuery({
+    queryKey: patientLatestVisitContextKeys.detail(patientId),
+    queryFn: async () => {
+      const { data } = await axiosInstance.get<PatientLatestVisitContextApiResponse>(
+        `/patients/${patientId}/latest-visit-context`
+      );
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to load latest visit context');
       }
       return data.data;
     },

@@ -245,3 +245,19 @@ export interface PatientMedicalHistoryApiResponse {
   message?: string;
   data: PatientMedicalHistoryPayload;
 }
+
+/** GET /patients/{id}/latest-visit-context — server-resolved visit + facility for patient portal. */
+export interface PatientLatestVisitContextPayload {
+  visit: MedicalHistoryVisit;
+  facility_id: number | null;
+  facility: FacilitySnapshot | null;
+  patient: MedicalHistoryPatientSummary;
+  generated_at: string;
+}
+
+export interface PatientLatestVisitContextApiResponse {
+  success: boolean;
+  message?: string;
+  /** Null when the patient has no visits on file. */
+  data: PatientLatestVisitContextPayload | null;
+}

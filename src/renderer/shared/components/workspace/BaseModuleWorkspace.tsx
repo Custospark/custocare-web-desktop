@@ -21,6 +21,8 @@ export type ModuleOperation = Omit<ContentOperation, 'badge'> & {
 
 export interface ModuleWorkspaceProps {
   contextTitle: string;
+  /** Optional second line under module name (e.g. patient portal resolved facility). */
+  contextSubtitle?: string;
   operations: ModuleOperation[];
   basePath: string;
   defaultOperationPath: string;
@@ -65,6 +67,7 @@ function normalizeCustomBadges(badges: ModuleOperation['badges']): BadgeSpec[] {
 
 export function BaseModuleWorkspace({
   contextTitle,
+  contextSubtitle,
   operations,
   basePath,
   currentTier = 'essential',
@@ -181,6 +184,7 @@ export function BaseModuleWorkspace({
       onOperationChange={onOperationChange}
       defaultOperation={fallbackOperation as string}
       contextTitle={contextTitle}
+      contextSubtitle={contextSubtitle}
     >
       <OutletWrapper theme={theme} />
     </ContentLayout>

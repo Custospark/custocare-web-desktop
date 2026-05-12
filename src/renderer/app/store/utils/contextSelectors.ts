@@ -17,11 +17,12 @@
  */
 
 import type { RootState } from '../store';
-import type { 
-  StaffCapability, 
+import type {
+  StaffCapability,
   PatientCapability,
   StaffFacilityAssignment,
-  BackendModule 
+  BackendModule,
+  PatientPortalFacilitySnapshot,
 } from '../slices/activeContextSlice';
 
 // ============================================================================
@@ -411,6 +412,18 @@ export const getPatientUuid=(state:RootState):string | null =>{
 export const getPatientPrimaryFacilityId = (state: RootState): number | null => {
   return state.activeContext.capabilities.patient?.primary_facility_id ?? null;
 };
+
+/** Server-resolved latest visit id for patient portal (GET …/latest-visit-context). */
+export const getPatientPortalResolvedVisitId = (state: RootState): number | null =>
+  state.activeContext.patientPortalResolvedVisitId;
+
+/** Facility id for patient portal API headers (parallel to staff activeFacilityId). */
+export const getPatientPortalResolvedFacilityId = (state: RootState): number | null =>
+  state.activeContext.patientPortalResolvedFacilityId;
+
+export const getPatientPortalResolvedFacilitySnapshot = (
+  state: RootState,
+): PatientPortalFacilitySnapshot | null => state.activeContext.patientPortalResolvedFacility;
 
 /**
  * Get the patient's medical record number (MRN)

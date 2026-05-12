@@ -59,13 +59,33 @@ axiosInstance.interceptors.request.use(
     }
 
     // ---------------- Context Headers ----------------
-    const { activeFacilityId, isPatient, isStaffWithFacility, capabilities } =
-      state.activeContext;
+    const {
+      activeFacilityId,
+      isPatient,
+      isStaffWithFacility,
+      capabilities,
+      patientPortalResolvedFacilityId,
+    } = state.activeContext;
 
     const fallbackFacilityId = localStorage.getItem('activeFacilityId');
-    const resolvedFacilityId = (isStaffWithFacility && activeFacilityId)
-      ? String(activeFacilityId)
-      : (fallbackFacilityId || null);
+    const patientPortalFacilityFromStorage = localStorage.getItem('patientPortalResolvedFacilityId');
+
+    let resolvedFacilityId: string | null = null;
+    if (isStaffWithFacility && activeFacilityId) {
+      resolvedFacilityId = String(activeFacilityId);
+    } else if (
+      isPatient &&
+      (patientPortalResolvedFacilityId != null ||
+        (patientPortalFacilityFromStorage && patientPortalFacilityFromStorage !== ''))
+    ) {
+      /** Patient portal: facility comes from server-resolved latest visit (Redux + mirrored localStorage). */
+      resolvedFacilityId = String(
+        patientPortalResolvedFacilityId ?? patientPortalFacilityFromStorage,
+      );
+    }
+    if (!resolvedFacilityId && fallbackFacilityId) {
+      resolvedFacilityId = fallbackFacilityId;
+    }
 
     if (resolvedFacilityId) {
       config.headers['X-Active-Facility-Id'] = resolvedFacilityId;

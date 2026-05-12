@@ -11,11 +11,11 @@ import {
   X,
 } from 'lucide-react';
 import type { RootState } from '../../../../app/store/rootReducer';
+import { getPatientId } from '../../../../app/store/utils/contextSelectors';
 import {
-  getPatientId,
-  getPatientPrimaryFacilityId,
-} from '../../../../app/store/utils/contextSelectors';
-import { usePatientMedicalHistory } from '../../../medical-records/api/patient-medical-history/patientMedicalHistoryQueries';
+  usePatientLatestVisitContext,
+  usePatientMedicalHistory,
+} from '../../../medical-records/api/patient-medical-history/patientMedicalHistoryQueries';
 import type { PatientMedicalHistoryPayload } from '../../../medical-records/api/patient-medical-history/patientMedicalHistoryTypes';
 import {
   filterMedicalHistoryPayloadByVisitId,
@@ -33,6 +33,11 @@ import {
 } from '../../../medical-records/ui/visit-action-center/clinical-forms/clinical-reports/launchers';
 import type { ClinicalReportPortalContext } from '../../../medical-records/ui/visit-action-center/clinical-forms/clinical-reports/launchers/clinicalReportPortalContext';
 import LoadingSkeleton from '../../../../shared/components/Loading/LoadingSkeletons';
+import {
+  PATIENT_PORTAL_REPORT_EMPTY_HINT,
+  PATIENT_PORTAL_REPORT_ROW_DESCRIPTION,
+  patientPortalReportBadge,
+} from './patientPortalLatestVisitReports.messages';
 
 interface ActionItem {
   key: string;
@@ -65,16 +70,6 @@ interface ReportModalState {
   action: 'preview' | 'print' | 'download';
 }
 
-const getStatusInfo = (hasData: boolean, documentedNoun: string, ctaVerb: string) => ({
-  hasData,
-  message: hasData ? `${documentedNoun} documented - review/update` : `Not documented - ${ctaVerb}`,
-});
-
-const getReportStatusInfo = (hasData: boolean, reportNoun: string, ctaHint: string) => ({
-  hasData,
-  message: hasData ? `${reportNoun} ready - view report` : `No report data yet - ${ctaHint}`,
-});
-
 function visitScopedPayload(data: PatientMedicalHistoryPayload): PatientMedicalHistoryPayload | null {
   if (!data.visits.length) return null;
   const latestId = pickLatestVisitId(data.visits);
@@ -82,35 +77,24 @@ function visitScopedPayload(data: PatientMedicalHistoryPayload): PatientMedicalH
   return filterMedicalHistoryPayloadByVisitId(data, latestId);
 }
 
-function buildModuleStatusFromScoped(scoped: PatientMedicalHistoryPayload) {
-  return {
-    allergies: getStatusInfo(scoped.allergies.length > 0, 'Allergy profile', 'capture allergy history'),
-    clinicalNotes: getStatusInfo(scoped.clinical_notes.length > 0, 'Clinical note', 'document SOAP notes'),
-    vitals: getStatusInfo(scoped.vitals.length > 0, 'Vital signs', 'record vitals'),
-    diagnoses: getStatusInfo(scoped.diagnoses.length > 0, 'Diagnosis', 'add a diagnosis'),
-    consultations: getStatusInfo(scoped.consultations.length > 0, 'Consultation', 'add consultation notes'),
-    prescriptions: getStatusInfo(scoped.prescriptions.length > 0, 'Prescription', 'enter prescription orders'),
-    labRequests: getStatusInfo(scoped.lab_requests.length > 0, 'Lab request', 'order lab tests'),
-    labResults: getStatusInfo(scoped.lab_results.length > 0, 'Lab result', 'enter lab results'),
-    clinicalTemplates: getStatusInfo(scoped.clinical_notes.length > 0, 'Clinical template', 'complete template notes'),
-  };
-}
-
 export interface PatientPortalLatestVisitClinicalProps {
   theme?: 'light' | 'dark';
 }
 
 /**
- * Mirrors Patient Encounter Hub → Clinical Care → **Reports**: same list and report preview modals,
- * using patient id from context plus latest visit (and facility when present) from continuity-of-care data.
+ * Patient portal latest visit — same report preview modals as Clinical Care, with visit/facility ids
+ * resolved on the server (`latest-visit-context`) plus continuity-of-care data for availability.
  */
 export function PatientPortalLatestVisitClinical({ theme = 'light' }: PatientPortalLatestVisitClinicalProps) {
   const isDark = theme === 'dark';
   const patientId = useSelector((state: RootState) => getPatientId(state));
-  const primaryFacilityId = useSelector((state: RootState) => getPatientPrimaryFacilityId(state));
   const numericId = patientId ?? 0;
 
   const historyQuery = usePatientMedicalHistory(numericId, {
+    enabled: numericId > 0,
+  });
+
+  const latestVisitContextQuery = usePatientLatestVisitContext(numericId, {
     enabled: numericId > 0,
   });
 
@@ -126,14 +110,31 @@ export function PatientPortalLatestVisitClinical({ theme = 'light' }: PatientPor
 
   const portalContext = useMemo((): ClinicalReportPortalContext | null => {
     if (!patientId || !latestVisitMeta) return null;
+    const resolved = latestVisitContextQuery.data;
+    const visitId = resolved?.visit?.id ?? latestVisitMeta.id;
+    const facilityId =
+      resolved?.facility_id ??
+      resolved?.visit?.facility_id ??
+      latestVisitMeta.facility_id ??
+      latestVisitMeta.facility?.id ??
+      null;
+    const patientDisplayName =
+      historyQuery.data?.patient?.full_name ?? resolved?.patient?.full_name ?? null;
     return {
       patientId,
-      visitId: latestVisitMeta.id,
-      facilityId:
-        latestVisitMeta.facility_id ?? latestVisitMeta.facility?.id ?? primaryFacilityId ?? null,
-      patientDisplayName: historyQuery.data?.patient?.full_name ?? null,
+      visitId,
+      facilityId,
+      patientDisplayName,
     };
-  }, [patientId, latestVisitMeta, primaryFacilityId, historyQuery.data?.patient?.full_name]);
+  }, [
+    patientId,
+    latestVisitMeta,
+    latestVisitContextQuery.data,
+    historyQuery.data?.patient?.full_name,
+  ]);
+
+  const headerFacility = latestVisitContextQuery.data?.facility ?? latestVisitMeta?.facility ?? null;
+  const headerVisit = latestVisitContextQuery.data?.visit ?? latestVisitMeta;
 
   const [reportModal, setReportModal] = useState<ReportModalState>({
     isOpen: false,
@@ -142,9 +143,18 @@ export function PatientPortalLatestVisitClinical({ theme = 'light' }: PatientPor
   });
   const [searchQuery, setSearchQuery] = useState('');
 
-  const moduleStatus = useMemo(() => {
+  const availability = useMemo(() => {
     if (!scoped) return null;
-    return buildModuleStatusFromScoped(scoped);
+    return {
+      allergies: scoped.allergies.length > 0,
+      clinicalNotes: scoped.clinical_notes.length > 0,
+      vitals: scoped.vitals.length > 0,
+      diagnoses: scoped.diagnoses.length > 0,
+      consultations: scoped.consultations.length > 0,
+      prescriptions: scoped.prescriptions.length > 0,
+      labRequests: scoped.lab_requests.length > 0,
+      labResults: scoped.lab_results.length > 0,
+    };
   }, [scoped]);
 
   const openReport = useCallback((module: ReportModalModule, action: 'preview' | 'print' | 'download' = 'preview') => {
@@ -164,19 +174,19 @@ export function PatientPortalLatestVisitClinical({ theme = 'light' }: PatientPor
   }, []);
 
   const reportOptions: ActionItem[] = useMemo(() => {
-    if (!moduleStatus) return [];
+    if (!availability) return [];
     return [
       {
         key: 'allergy-report',
         label: 'Allergy Report',
         icon: <FileOutput className="w-5 h-5" />,
-        description: 'Complete allergy documentation for this patient',
+        description: PATIENT_PORTAL_REPORT_ROW_DESCRIPTION.allergy,
         category: 'Clinical',
         actionPrefix: 'View',
-        statusInfo: getReportStatusInfo(
-          moduleStatus.allergies.hasData,
+        statusInfo: patientPortalReportBadge(
+          availability.allergies,
           'Allergy report',
-          'record allergy details first'
+          PATIENT_PORTAL_REPORT_EMPTY_HINT.allergies
         ),
         handler: () => openReport('allergies', 'preview'),
       },
@@ -184,13 +194,13 @@ export function PatientPortalLatestVisitClinical({ theme = 'light' }: PatientPor
         key: 'clinical-notes-report',
         label: 'Clinical Notes Report',
         icon: <FileOutput className="w-5 h-5" />,
-        description: 'Complete clinical notes documentation',
+        description: PATIENT_PORTAL_REPORT_ROW_DESCRIPTION.clinicalNotes,
         category: 'Documentation',
         actionPrefix: 'View',
-        statusInfo: getReportStatusInfo(
-          moduleStatus.clinicalNotes.hasData,
+        statusInfo: patientPortalReportBadge(
+          availability.clinicalNotes,
           'Clinical notes report',
-          'document clinical notes first'
+          PATIENT_PORTAL_REPORT_EMPTY_HINT.clinicalNotes
         ),
         handler: () => openReport('clinical-notes', 'preview'),
       },
@@ -198,13 +208,13 @@ export function PatientPortalLatestVisitClinical({ theme = 'light' }: PatientPor
         key: 'vitals-report',
         label: 'Vitals Report',
         icon: <FileOutput className="w-5 h-5" />,
-        description: 'Vital signs summary report',
+        description: PATIENT_PORTAL_REPORT_ROW_DESCRIPTION.vitals,
         category: 'Clinical',
         actionPrefix: 'View',
-        statusInfo: getReportStatusInfo(
-          moduleStatus.vitals.hasData,
+        statusInfo: patientPortalReportBadge(
+          availability.vitals,
           'Vitals report',
-          'record vitals first'
+          PATIENT_PORTAL_REPORT_EMPTY_HINT.vitals
         ),
         handler: () => openReport('vitals', 'preview'),
       },
@@ -212,13 +222,13 @@ export function PatientPortalLatestVisitClinical({ theme = 'light' }: PatientPor
         key: 'diagnosis-report',
         label: 'Diagnosis Report',
         icon: <FileOutput className="w-5 h-5" />,
-        description: 'Diagnosis documentation report',
+        description: PATIENT_PORTAL_REPORT_ROW_DESCRIPTION.diagnoses,
         category: 'Clinical',
         actionPrefix: 'View',
-        statusInfo: getReportStatusInfo(
-          moduleStatus.diagnoses.hasData,
+        statusInfo: patientPortalReportBadge(
+          availability.diagnoses,
           'Diagnosis report',
-          'add diagnosis entries first'
+          PATIENT_PORTAL_REPORT_EMPTY_HINT.diagnoses
         ),
         handler: () => openReport('diagnoses', 'preview'),
       },
@@ -226,13 +236,13 @@ export function PatientPortalLatestVisitClinical({ theme = 'light' }: PatientPor
         key: 'consultation-report',
         label: 'Consultation Report',
         icon: <FileOutput className="w-5 h-5" />,
-        description: 'Consultation notes and recommendations',
+        description: PATIENT_PORTAL_REPORT_ROW_DESCRIPTION.consultations,
         category: 'Clinical',
         actionPrefix: 'View',
-        statusInfo: getReportStatusInfo(
-          moduleStatus.consultations.hasData,
+        statusInfo: patientPortalReportBadge(
+          availability.consultations,
           'Consultation report',
-          'capture consultation notes first'
+          PATIENT_PORTAL_REPORT_EMPTY_HINT.consultations
         ),
         handler: () => openReport('consultations', 'preview'),
       },
@@ -240,13 +250,13 @@ export function PatientPortalLatestVisitClinical({ theme = 'light' }: PatientPor
         key: 'prescription-report',
         label: 'Prescription Report',
         icon: <FileOutput className="w-5 h-5" />,
-        description: 'Printable prescription document',
+        description: PATIENT_PORTAL_REPORT_ROW_DESCRIPTION.prescriptions,
         category: 'Treatment',
         actionPrefix: 'View',
-        statusInfo: getReportStatusInfo(
-          moduleStatus.prescriptions.hasData,
+        statusInfo: patientPortalReportBadge(
+          availability.prescriptions,
           'Prescription report',
-          'enter prescription orders first'
+          PATIENT_PORTAL_REPORT_EMPTY_HINT.prescriptions
         ),
         handler: () => openReport('prescriptions', 'preview'),
       },
@@ -254,13 +264,13 @@ export function PatientPortalLatestVisitClinical({ theme = 'light' }: PatientPor
         key: 'lab-request-report',
         label: 'Lab Request Report',
         icon: <FileOutput className="w-5 h-5" />,
-        description: 'Laboratory request document',
+        description: PATIENT_PORTAL_REPORT_ROW_DESCRIPTION.labRequests,
         category: 'Diagnostics',
         actionPrefix: 'View',
-        statusInfo: getReportStatusInfo(
-          moduleStatus.labRequests.hasData,
+        statusInfo: patientPortalReportBadge(
+          availability.labRequests,
           'Lab request report',
-          'create a lab request first'
+          PATIENT_PORTAL_REPORT_EMPTY_HINT.labRequests
         ),
         handler: () => openReport('lab-requests', 'preview'),
       },
@@ -268,18 +278,18 @@ export function PatientPortalLatestVisitClinical({ theme = 'light' }: PatientPor
         key: 'lab-results-report',
         label: 'Lab Results Report',
         icon: <FileOutput className="w-5 h-5" />,
-        description: 'Laboratory test results report',
+        description: PATIENT_PORTAL_REPORT_ROW_DESCRIPTION.labResults,
         category: 'Diagnostics',
         actionPrefix: 'View',
-        statusInfo: getReportStatusInfo(
-          moduleStatus.labResults.hasData,
+        statusInfo: patientPortalReportBadge(
+          availability.labResults,
           'Lab results report',
-          'enter lab results first'
+          PATIENT_PORTAL_REPORT_EMPTY_HINT.labResults
         ),
         handler: () => openReport('lab-results', 'preview'),
       },
     ];
-  }, [moduleStatus, openReport]);
+  }, [availability, openReport]);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return reportOptions;
@@ -362,7 +372,7 @@ export function PatientPortalLatestVisitClinical({ theme = 'light' }: PatientPor
     );
   }
 
-  if (!scoped || !latestVisitMeta || !moduleStatus) {
+  if (!scoped || !latestVisitMeta || !availability) {
     return (
       <div className={`h-full w-full p-6 ${colors.bg.primary}`}>
         <div className={`rounded-xl border p-12 text-center ${colors.border.primary} ${colors.bg.secondary}`}>
@@ -384,7 +394,8 @@ export function PatientPortalLatestVisitClinical({ theme = 'light' }: PatientPor
           <div>
             <h2 className={`text-xl font-bold ${colors.text.primary}`}>Reports — latest visit</h2>
             <p className={`mt-1 text-sm ${colors.text.secondary}`}>
-              Same report previews as Clinical Care in the encounter hub, scoped to your most recent visit.
+              View printable summaries from your most recent hospital visit. Visit and facility details come from your
+              record — not from a facility you select here.
             </p>
           </div>
         </div>
@@ -396,15 +407,15 @@ export function PatientPortalLatestVisitClinical({ theme = 'light' }: PatientPor
             <Building2 className={`mt-0.5 h-5 w-5 shrink-0 ${colors.text.tertiary}`} />
             <div>
               <p className={`text-sm font-semibold ${colors.text.primary}`}>
-                {latestVisitMeta.facility?.name ?? 'Hospital visit'}
-                {latestVisitMeta.facility?.code ? (
-                  <span className={`font-normal ${colors.text.secondary}`}> ({latestVisitMeta.facility.code})</span>
+                {headerFacility?.name ?? 'Hospital visit'}
+                {headerFacility?.code ? (
+                  <span className={`font-normal ${colors.text.secondary}`}> ({headerFacility.code})</span>
                 ) : null}
               </p>
               <p className={`text-xs ${colors.text.tertiary}`}>
-                Visit ID {latestVisitMeta.id}
-                {latestVisitMeta.visit_uuid ? (
-                  <span className={`ml-1 font-mono ${colors.text.tertiary}`}>· {latestVisitMeta.visit_uuid}</span>
+                Visit ID {headerVisit?.id ?? '—'}
+                {headerVisit?.visit_uuid ? (
+                  <span className={`ml-1 font-mono ${colors.text.tertiary}`}>· {headerVisit.visit_uuid}</span>
                 ) : null}
               </p>
             </div>

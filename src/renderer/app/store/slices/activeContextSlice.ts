@@ -200,6 +200,17 @@ export interface UserContext {
   facility_roles: FacilityRole[];
 }
 
+/**
+ * Facility snapshot from GET /patients/{id}/latest-visit-context (patient portal has no staff facility picker).
+ * Stored so axios can send X-Facility-Id like staff sessions.
+ */
+export interface PatientPortalFacilitySnapshot {
+  id: number;
+  uuid: string;
+  code: string | null;
+  name: string;
+}
+
 // ============================================================================
 // STATE
 // ============================================================================
@@ -213,6 +224,11 @@ interface ActiveContextState {
   // Active selections
   activeCapability: string | null;
   activeFacilityId: number | null;
+
+  /** Patient portal: latest visit facility resolved server-side (not the same as staff activeFacilityId). */
+  patientPortalResolvedVisitId: number | null;
+  patientPortalResolvedFacilityId: number | null;
+  patientPortalResolvedFacility: PatientPortalFacilitySnapshot | null;
 
   // Derived state
   availableCapabilities: string[];
@@ -228,6 +244,51 @@ interface ActiveContextState {
   error: string | null;
 }
 
+const LS_PATIENT_PORTAL_FACILITY_ID = 'patientPortalResolvedFacilityId';
+const LS_PATIENT_PORTAL_VISIT_ID = 'patientPortalResolvedVisitId';
+const LS_PATIENT_PORTAL_FACILITY_JSON = 'patientPortalResolvedFacilityJson';
+
+export function clearPatientPortalFacilityStorage(): void {
+  try {
+    localStorage.removeItem(LS_PATIENT_PORTAL_FACILITY_ID);
+    localStorage.removeItem(LS_PATIENT_PORTAL_VISIT_ID);
+    localStorage.removeItem(LS_PATIENT_PORTAL_FACILITY_JSON);
+  } catch {
+    /* ignore */
+  }
+}
+
+function readPatientPortalFacilityFromStorage(): Pick<
+  ActiveContextState,
+  'patientPortalResolvedVisitId' | 'patientPortalResolvedFacilityId' | 'patientPortalResolvedFacility'
+> {
+  try {
+    const fidRaw = localStorage.getItem(LS_PATIENT_PORTAL_FACILITY_ID);
+    const vidRaw = localStorage.getItem(LS_PATIENT_PORTAL_VISIT_ID);
+    const jsonRaw = localStorage.getItem(LS_PATIENT_PORTAL_FACILITY_JSON);
+    const facilityId = fidRaw ? parseInt(fidRaw, 10) : NaN;
+    const visitId = vidRaw ? parseInt(vidRaw, 10) : NaN;
+    let facility: PatientPortalFacilitySnapshot | null = null;
+    if (jsonRaw) {
+      const parsed = JSON.parse(jsonRaw) as PatientPortalFacilitySnapshot;
+      if (parsed && typeof parsed.id === 'number' && typeof parsed.name === 'string') {
+        facility = parsed;
+      }
+    }
+    return {
+      patientPortalResolvedVisitId: Number.isFinite(visitId) ? visitId : null,
+      patientPortalResolvedFacilityId: Number.isFinite(facilityId) ? facilityId : null,
+      patientPortalResolvedFacility: facility,
+    };
+  } catch {
+    return {
+      patientPortalResolvedVisitId: null,
+      patientPortalResolvedFacilityId: null,
+      patientPortalResolvedFacility: null,
+    };
+  }
+}
+
 // ============================================================================
 // INITIAL STATE
 // ============================================================================
@@ -239,6 +300,9 @@ const loadInitialState = (): ActiveContextState => {
     facilityRoles: [],
     activeCapability: null,
     activeFacilityId: null,
+    patientPortalResolvedVisitId: null,
+    patientPortalResolvedFacilityId: null,
+    patientPortalResolvedFacility: null,
     availableCapabilities: [],
     isPatient: false,
     isStaff: false,
@@ -294,6 +358,13 @@ const loadInitialState = (): ActiveContextState => {
           ? parseInt(storedFacilityId, 10)
           : primaryFacility.facility_id;
       }
+    }
+
+    if (baseState.isPatient) {
+      const pp = readPatientPortalFacilityFromStorage();
+      baseState.patientPortalResolvedVisitId = pp.patientPortalResolvedVisitId;
+      baseState.patientPortalResolvedFacilityId = pp.patientPortalResolvedFacilityId;
+      baseState.patientPortalResolvedFacility = pp.patientPortalResolvedFacility;
     }
   } catch (error) {
     console.error('Error loading state from localStorage:', error);
@@ -375,6 +446,13 @@ const activeContextSlice = createSlice({
         localStorage.removeItem('activeFacilityId');
       }
 
+      if (capability === 'staff') {
+        state.patientPortalResolvedVisitId = null;
+        state.patientPortalResolvedFacilityId = null;
+        state.patientPortalResolvedFacility = null;
+        clearPatientPortalFacilityStorage();
+      }
+
       if (capability === 'staff' && state.isStaffWithFacility) {
         const staffCapability = state.capabilities.staff;
         if (staffCapability && staffCapability.facilities.length > 0) {
@@ -424,6 +502,9 @@ const activeContextSlice = createSlice({
         facilityRoles: [],
         activeCapability: null,
         activeFacilityId: null,
+        patientPortalResolvedVisitId: null,
+        patientPortalResolvedFacilityId: null,
+        patientPortalResolvedFacility: null,
         availableCapabilities: [],
         isPatient: false,
         isStaff: false,
@@ -437,6 +518,40 @@ const activeContextSlice = createSlice({
       localStorage.removeItem('userContext');
       localStorage.removeItem('activeCapability');
       localStorage.removeItem('activeFacilityId');
+      clearPatientPortalFacilityStorage();
+    },
+
+    /**
+     * Patient portal: persist server-resolved latest visit + facility so axios can send X-Facility-Id
+     * (mirrors staff facility context without using activeFacilityId).
+     */
+    setPatientPortalVisitFacilityContext: (
+      state,
+      action: PayloadAction<{
+        visitId: number | null;
+        facilityId: number | null;
+        facility: PatientPortalFacilitySnapshot | null;
+      }>,
+    ) => {
+      const { visitId, facilityId, facility } = action.payload;
+      state.patientPortalResolvedVisitId = visitId;
+      state.patientPortalResolvedFacilityId = facilityId;
+      state.patientPortalResolvedFacility = facility;
+      if (facilityId != null && Number.isFinite(facilityId)) {
+        localStorage.setItem(LS_PATIENT_PORTAL_FACILITY_ID, String(facilityId));
+      } else {
+        localStorage.removeItem(LS_PATIENT_PORTAL_FACILITY_ID);
+      }
+      if (visitId != null && Number.isFinite(visitId)) {
+        localStorage.setItem(LS_PATIENT_PORTAL_VISIT_ID, String(visitId));
+      } else {
+        localStorage.removeItem(LS_PATIENT_PORTAL_VISIT_ID);
+      }
+      if (facility) {
+        localStorage.setItem(LS_PATIENT_PORTAL_FACILITY_JSON, JSON.stringify(facility));
+      } else {
+        localStorage.removeItem(LS_PATIENT_PORTAL_FACILITY_JSON);
+      }
     },
 
     /** Set loading state */
@@ -644,6 +759,7 @@ export const {
   switchCapability,
   switchFacility,
   clearActiveContext,
+  setPatientPortalVisitFacilityContext,
   setLoading,
   setError,
   clearError,

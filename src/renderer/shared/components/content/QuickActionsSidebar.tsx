@@ -73,6 +73,8 @@ export interface QuickActionsSidebarProps {
   onToggleCollapsedUp: () => void;
 
   contextTitle?: string;
+  /** Second line under contextTitle (e.g. patient portal resolved facility / visit). */
+  contextSubtitle?: string;
   sidebarHeader?: React.ReactNode;
   sidebarFooter?: React.ReactNode;
 
@@ -164,6 +166,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
   onToggleCollapsedSide,
   onToggleCollapsedUp,
   contextTitle,
+  contextSubtitle,
   sidebarHeader,
   sidebarFooter,
   onClose,
@@ -446,6 +449,17 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                 {contextTitle}
               </p>
             )}
+            {contextSubtitle ? (
+              <p
+                className={cn(
+                  'text-[11px] mt-0.5 truncate font-medium',
+                  theme === 'dark' ? 'text-cyan-400/90' : 'text-blue-700',
+                )}
+                title={contextSubtitle}
+              >
+                {contextSubtitle}
+              </p>
+            ) : null}
             <p
               className={cn('text-[10px] mt-1 font-mono', theme === 'dark' ? 'text-gray-500' : 'text-gray-400')}
             >
@@ -455,7 +469,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
         )}
       </div>
     );
-  }, [collapsedSide, contextTitle, sidebarHeader, theme]);
+  }, [collapsedSide, contextSubtitle, contextTitle, sidebarHeader, theme]);
 
   const compactHeaderNode = useMemo(
     () => (
