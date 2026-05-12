@@ -20,6 +20,11 @@ function setGlobal(open: boolean): void {
   subscribers.forEach((fn) => fn(open));
 }
 
+/** For other shortcuts (e.g. workspace Alt+digits) to defer while search is open. */
+export function isSearchModalOpen(): boolean {
+  return globalIsOpen;
+}
+
 // Register the ⌘K / Ctrl+K listener exactly once when the module is first
 // imported (SSR-safe guard via typeof window check).
 if (typeof window !== 'undefined') {

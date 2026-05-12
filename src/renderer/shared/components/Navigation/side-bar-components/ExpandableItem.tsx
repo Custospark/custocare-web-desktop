@@ -19,6 +19,8 @@ export interface ExpandableItemProps {
   disabled?: boolean;
   /** When true, module title can wrap (wider nested sidebar). */
   allowMultilineLabel?: boolean;
+  /** Optional shortcut hint shown before the chevron (e.g. module jump ⌘1). */
+  headerAside?: React.ReactNode;
 }
 
 const TRANSITION_MS = 240;
@@ -58,6 +60,7 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
   className,
   disabled = false,
   allowMultilineLabel = false,
+  headerAside,
 }) => {
   const theme = useSelector((state: RootState) => state.ui.theme);
   const generatedId = useId();
@@ -264,6 +267,10 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
             </span>
           )}
         </span>
+
+        {headerAside != null ? (
+          <span className="shrink-0 mr-0.5 flex items-center">{headerAside}</span>
+        ) : null}
 
         <ChevronRight
           className={cn(

@@ -86,7 +86,6 @@ interface MenuItem {
     subtext?: string;
   }>;
   stats?: string;
-  shortcut?: string;
   glowColor?: string;
   moduleCode: string;
   category?: 'clinical' | 'admin' | 'patient' | 'system' | 'finance' | 'platform';
@@ -163,7 +162,6 @@ const menuConfig: MenuItem[] = useMemo(
       description: 'Personal health overview',
       operations: PATIENT_PORTAL_SIDEBAR_NESTED_OPERATIONS,
       stats: 'Health',
-      shortcut: '⌘1',
       glowColor: 'from-emerald-500 to-teal-400',
       moduleCode: 'patient_dashboard',
       category: 'patient',
@@ -177,7 +175,6 @@ const menuConfig: MenuItem[] = useMemo(
       route: ROUTES.STAFF_DASHBOARD,
       description: 'Staff workspace',
       stats: 'Portal',
-      shortcut: '⌘1',
       glowColor: 'from-purple-500 to-pink-400',
       moduleCode: 'staff_dashboard',
       category: 'admin',
@@ -221,7 +218,6 @@ const menuConfig: MenuItem[] = useMemo(
       description: 'Doctor consultations: Notes, Diagnosis, Prescriptions',
       operations: CLINICAL_SIDEBAR_NESTED_OPERATIONS,
       stats: 'Consultation',
-      shortcut: '⌘C',
       glowColor: 'from-emerald-500 to-teal-400',
       moduleCode: 'clinical',
       category: 'clinical',
@@ -295,7 +291,6 @@ const menuConfig: MenuItem[] = useMemo(
         'Global platform settings, system configuration, user management across all facilities',
       operations: PLATFORM_ADMINISTRATION_SIDEBAR_NESTED_OPERATIONS,
       stats: 'Platform',
-      shortcut: '⌘P',
       glowColor: 'from-slate-600 to-slate-500',
       moduleCode: 'platform_administration',
       category: 'platform',

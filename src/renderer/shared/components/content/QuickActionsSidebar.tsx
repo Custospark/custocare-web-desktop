@@ -18,6 +18,7 @@ import {
   Crown,
 } from 'lucide-react';
 import { cn } from '../../utils/classNameUtils';
+import { workspaceShortcutLabelForDigit, workspaceShortcutRangeLegend } from '../../keyboard/workspaceShortcutLabels';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { hasTier, tierLabel, type FeatureStatus, type PlanTier } from '../../entitlements/entitlements';
@@ -445,6 +446,11 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                 {contextTitle}
               </p>
             )}
+            <p
+              className={cn('text-[10px] mt-1 font-mono', theme === 'dark' ? 'text-gray-500' : 'text-gray-400')}
+            >
+              {workspaceShortcutRangeLegend()} workspace
+            </p>
           </div>
         )}
       </div>
@@ -564,7 +570,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
   const compactOperations = useMemo(
     () => (
       <div className="flex-1 flex flex-col items-center py-2 gap-2 overflow-auto">
-        {operations.map((operation) => {
+        {operations.map((operation, opIndex) => {
           const isActive = operation.id === activeOperation;
 
           const upgradeTier = getUpgradeTier(operation);
@@ -574,6 +580,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
           const isDisabledUI = isHardDisabled || isGated;
 
           const badgeData = getEffectiveBadge(operation);
+          const digitHint = opIndex < 9 ? workspaceShortcutLabelForDigit(opIndex + 1) : null;
 
           return (
             <div key={operation.id} className="relative">
@@ -581,7 +588,11 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                 type="button"
                 onClick={() => handleOperationClick(operation)}
                 disabled={isHardDisabled || isGated}
-                title={getEffectiveTitle(operation)}
+                title={
+                  digitHint
+                    ? `${digitHint} — ${getEffectiveTitle(operation)}`
+                    : getEffectiveTitle(operation)
+                }
                 aria-label={operation.label}
                 aria-disabled={isDisabledUI}
                 className={cn(
@@ -829,9 +840,9 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
               </button>
 
               {!collapsedSide && (
-                <div className="flex flex-col">
+                <div className="flex flex-col gap-0.5">
                   <span className={cn('text-xs font-mono', theme === 'dark' ? 'text-gray-500' : 'text-gray-400')}>
-                    Press ⌘K or Ctrl+K to search for anything
+                    {workspaceShortcutRangeLegend()} sections · ⌘K / Ctrl+K search
                   </span>
                 </div>
               )}
@@ -874,6 +885,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                     const isDisabledUI = isHardDisabled || isGated;
 
                     const badgeData = getEffectiveBadge(operation);
+                    const digitHint = index < 9 ? workspaceShortcutLabelForDigit(index + 1) : null;
 
                     return (
                       <li key={operation.id} className="relative">
@@ -908,7 +920,11 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                               aria-label={operation.description || operation.label}
                               aria-current={isActive ? 'page' : undefined}
                               aria-disabled={isDisabledUI}
-                              title={getEffectiveTitle(operation)}
+                              title={
+                                digitHint
+                                  ? `${digitHint} — ${getEffectiveTitle(operation)}`
+                                  : getEffectiveTitle(operation)
+                              }
                               className={cn(
                                 'w-full flex items-center gap-3 px-3.5 py-2.5 relative z-10 cursor-pointer',
                                 'text-sm font-medium transition-all duration-200',
@@ -971,6 +987,19 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
 
                                 {/* Render multiple badges if present (for custom badges array) */}
                                 {Array.isArray(operation.badge) && renderMultipleBadges(operation.badge)}
+
+                                {digitHint && (
+                                  <kbd
+                                    className={cn(
+                                      'shrink-0 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold border',
+                                      theme === 'dark'
+                                        ? 'border-gray-600 bg-gray-800/80 text-gray-300'
+                                        : 'border-gray-200 bg-gray-50 text-gray-600',
+                                    )}
+                                  >
+                                    {digitHint}
+                                  </kbd>
+                                )}
                               </div>
 
                               {isActive && (

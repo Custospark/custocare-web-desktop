@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Circle } from 'lucide-react';
 import { cn } from '../../../types/cn';
 import ExpandableItem from './ExpandableItem';
+import { moduleSwitcherLabelForSlot, workspaceShortcutLabelForDigit } from '../../../keyboard/workspaceShortcutLabels';
 
 interface MenuItem {
   id: string;
@@ -19,7 +20,6 @@ interface MenuItem {
     subtext?: string;
   }>;
   stats?: string;
-  shortcut?: string;
 }
 
 interface SidebarNavigationProps {
@@ -88,6 +88,13 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   const renderMenuItem = (item: MenuItem) => {
     const isActive = isRouteActive(item.route);
     const isHovered = activeHover === item.id;
+    const moduleSlot = currentMenuItems.findIndex((x) => x.id === item.id);
+    const moduleShortcutDisplay =
+      moduleSlot >= 0 && moduleSlot < 9 ? moduleSwitcherLabelForSlot(moduleSlot + 1) : null;
+
+    const collapsedTitle = [item.label, item.description, moduleShortcutDisplay]
+      .filter(Boolean)
+      .join(' · ');
 
     return (
       <a
@@ -116,7 +123,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         )}
         onMouseEnter={() => setActiveHover(item.id)}
         onMouseLeave={() => setActiveHover(null)}
-        title={collapsed ? `${item.label} • ${item.description}` : undefined}
+        title={collapsed ? collapsedTitle : undefined}
         aria-current={isActive ? 'page' : undefined}
       >
         {isActive && !collapsed && (
@@ -205,7 +212,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                 </span>
               )}
 
-              {item.shortcut && (
+              {moduleShortcutDisplay && (
                 <kbd
                   className={cn(
                     'px-1.5 py-0.5 text-xs rounded border font-mono',
@@ -213,8 +220,9 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                       ? 'bg-gray-800 text-gray-400 border-gray-700'
                       : 'bg-gray-100 text-gray-600 border-gray-300',
                   )}
+                  title="Jump to this module from anywhere (order matches sidebar)"
                 >
-                  {item.shortcut}
+                  {moduleShortcutDisplay}
                 </kbd>
               )}
             </div>
@@ -227,15 +235,22 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   const operationTooltip = (operation: NonNullable<MenuItem['operations']>[number]) =>
     operation.description || operation.subtext || operation.label;
 
-  const renderOperationItem = (operation: NonNullable<MenuItem['operations']>[number]) => {
+  const renderOperationItem = (
+    operation: NonNullable<MenuItem['operations']>[number],
+    opIndex: number,
+    _parentItem: MenuItem,
+  ) => {
     const isOperationActive = isRouteActive(operation.route);
+    const wsHint = opIndex < 9 ? workspaceShortcutLabelForDigit(opIndex + 1) : null;
+    const tipBase = operationTooltip(operation);
+    const tip = wsHint ? `${tipBase} · ${wsHint}` : tipBase;
     const glyph = operation.icon ?? <Circle className="w-3.5 h-3.5 opacity-50" aria-hidden />;
 
     return (
       <a
         key={operation.id}
         href={operation.route}
-        title={operationTooltip(operation)}
+        title={tip}
         aria-label={operation.label}
         onClick={(e) => handleNavigation(e, operation.route)}
         className={cn(
@@ -268,11 +283,30 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         </span>
         <span
           className={cn(
-            'min-w-0 flex-1 leading-snug',
-            enableNestedNavigation ? 'break-words whitespace-normal' : 'truncate',
+            'min-w-0 flex-1 flex gap-2 items-start justify-between',
+            enableNestedNavigation ? '' : 'items-center',
           )}
         >
-          {operation.label}
+          <span
+            className={cn(
+              'min-w-0 leading-snug',
+              enableNestedNavigation ? 'break-words whitespace-normal' : 'truncate',
+            )}
+          >
+            {operation.label}
+          </span>
+          {wsHint && (
+            <kbd
+              className={cn(
+                'shrink-0 px-1.5 py-0.5 text-[10px] rounded border font-mono',
+                isDark
+                  ? 'bg-gray-800/90 text-gray-300 border-gray-600'
+                  : 'bg-gray-50 text-gray-600 border-gray-200',
+              )}
+            >
+              {wsHint}
+            </kbd>
+          )}
         </span>
       </a>
     );
@@ -299,7 +333,25 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                       {categoryNames[category]}
                     </p>
                     <div className="space-y-1.5">
-                      {items.map((item) => (
+                      {items.map((item) => {
+                        const moduleSlot = currentMenuItems.findIndex((x) => x.id === item.id);
+                        const moduleShortcutDisplay =
+                          moduleSlot >= 0 && moduleSlot < 9 ? moduleSwitcherLabelForSlot(moduleSlot + 1) : null;
+                        const headerAside = moduleShortcutDisplay ? (
+                          <kbd
+                            className={cn(
+                              'px-1.5 py-0.5 text-[10px] rounded border font-mono shrink-0',
+                              isDark
+                                ? 'bg-gray-800 text-gray-400 border-gray-700'
+                                : 'bg-gray-100 text-gray-600 border-gray-300',
+                            )}
+                            title={`${moduleShortcutDisplay}: jump to this module (sidebar order)`}
+                          >
+                            {moduleShortcutDisplay}
+                          </kbd>
+                        ) : undefined;
+
+                        return (
                         <ExpandableItem
                           key={item.id}
                           label={item.label}
@@ -308,6 +360,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                           active={isParentOrChildActive(item)}
                           badge={item.operations?.length}
                           isOpen={openParentId === item.id}
+                          headerAside={headerAside}
                           onToggle={(nextOpen) => {
                             if (nextOpen) {
                               setOpenParentId(item.id);
@@ -323,9 +376,12 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                           }}
                           className="px-1"
                         >
-                          {(item.operations ?? []).map((operation) => renderOperationItem(operation))}
+                          {(item.operations ?? []).map((operation, opIndex) =>
+                            renderOperationItem(operation, opIndex, item),
+                          )}
                         </ExpandableItem>
-                      ))}
+                        );
+                      })}
                     </div>
                   </>
                 ) : (

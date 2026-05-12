@@ -32,7 +32,7 @@ export function CommunityCreatePostView({ theme, suggestedChannel }: CommunityCr
   const isDark = theme === 'dark';
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const channelFromQuery = searchParams.get('channel') as HubCommunityChannel | null;
+  const channelFromQuery = searchParams.get('channel');
 
   const initialChannel = useMemo((): 'discussion' | 'feature_idea' => {
     const q = channelFromQuery;
