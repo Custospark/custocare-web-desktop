@@ -1,6 +1,12 @@
+import React from "react";
 import { Navigate, Outlet, Route } from "react-router-dom";
 import { PATIENT_PORTAL_ROUTES } from "../routeConstants";
 import { PlaceholderPanel, SuspenseWrapper } from "./shared/routeUtils";
+import PatientPortalMedicalHistoryShell from "../../../modules/patient-portal/ui/medical-history/PatientPortalMedicalHistoryShell";
+import {
+  PatientPortalMedicalHistoryFullPage,
+  PatientPortalMedicalHistoryLatestPage,
+} from "../../../modules/patient-portal/ui/medical-history/PatientPortalMedicalHistoryPages";
 
 function pp(title: string) {
   return (
@@ -27,12 +33,36 @@ export const patientPortalRoutes = [
 
   <Route key="pp-dashboard" path="dashboard" element={pp("Dashboard")} />,
 
-  <Route key="pp-medical-history" path="medical-history" element={<Outlet />}>
-    <Route index element={pp("Medical history")} />
-    <Route path="summary" element={pp("Health summary")} />
-    <Route path="vitals" element={pp("Vitals")} />
-    <Route path="conditions" element={pp("Conditions")} />
-    <Route path="allergies" element={pp("Allergies")} />
+  <Route
+    key="pp-medical-history"
+    path="medical-history"
+    element={
+      <SuspenseWrapper variant="dashboard">
+        <PatientPortalMedicalHistoryShell />
+      </SuspenseWrapper>
+    }
+  >
+    <Route index element={<Navigate to="latest-visit" replace />} />
+    <Route
+      path="latest-visit"
+      element={
+        <SuspenseWrapper variant="dashboard">
+          <PatientPortalMedicalHistoryLatestPage />
+        </SuspenseWrapper>
+      }
+    />
+    <Route
+      path="full"
+      element={
+        <SuspenseWrapper variant="dashboard">
+          <PatientPortalMedicalHistoryFullPage />
+        </SuspenseWrapper>
+      }
+    />
+    <Route path="summary" element={<Navigate to="../full" replace />} />
+    <Route path="vitals" element={<Navigate to="../full" replace />} />
+    <Route path="conditions" element={<Navigate to="../full" replace />} />
+    <Route path="allergies" element={<Navigate to="../full" replace />} />
   </Route>,
 
   <Route key="pp-medications" path="medications" element={<Outlet />}>

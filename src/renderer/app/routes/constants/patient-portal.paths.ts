@@ -15,6 +15,11 @@ export const PATIENT_PORTAL_ROUTES = {
   DASHBOARD: `${PP}/dashboard`,
 
   MEDICAL_HISTORY: `${PP}/medical-history`,
+  /** Default landing for Medical history operation (redirects to latest visit). */
+  MEDICAL_HISTORY_INDEX: `${PP}/medical-history`,
+  MEDICAL_HISTORY_LATEST_VISIT: `${PP}/medical-history/latest-visit`,
+  MEDICAL_HISTORY_FULL: `${PP}/medical-history/full`,
+
   MEDICATIONS: `${PP}/medications`,
   LABORATORY_RESULTS: `${PP}/laboratory-results`,
   BILLING: `${PP}/billing-payments`,
@@ -26,12 +31,6 @@ export const PATIENT_PORTAL_ROUTES = {
   HEALTH: `${PP}/medical-history`,
   RECORDS: `${PP}/records`,
   TEST_RESULTS: `${PP}/laboratory-results`,
-
-  // ─── Medical history ─────────────────────────────────────────────────────
-  HEALTH_SUMMARY: `${PP}/medical-history/summary`,
-  HEALTH_VITALS: `${PP}/medical-history/vitals`,
-  HEALTH_CONDITIONS: `${PP}/medical-history/conditions`,
-  HEALTH_ALLERGIES: `${PP}/medical-history/allergies`,
 
   // ─── Records ─────────────────────────────────────────────────────────────
   RECORDS_VIEW: `${PP}/records/view`,

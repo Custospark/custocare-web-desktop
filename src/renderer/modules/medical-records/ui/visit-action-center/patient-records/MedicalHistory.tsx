@@ -4,15 +4,28 @@ import { motion } from 'framer-motion';
 import { useReactToPrint } from 'react-to-print';
 import { Activity, Printer, Search, User, RefreshCw } from 'lucide-react';
 import { selectActiveVisitPatientId } from '../../../../../app/store/slices/visitSlice';
+import { getPatientId } from '../../../../../app/store/utils/contextSelectors';
+import type { RootState } from '../../../../../app/store/rootReducer';
 import { usePatientMedicalHistory } from '../../../api/patient-medical-history/patientMedicalHistoryQueries';
 import type { PatientMedicalHistoryPayload } from '../../../api/patient-medical-history/patientMedicalHistoryTypes';
+import {
+  filterMedicalHistoryPayloadByVisitId,
+  pickLatestVisitId,
+} from '../../../api/patient-medical-history/patientMedicalHistoryVisitFilter';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 import { cn } from '../../../../../shared/utils/classNameUtils';
 import { getAllergiesTheme } from '../clinical-forms/allergies-form-components/allergiesForm.utils';
 import { MedicalHistoryPreviewDocument } from './MedicalHistoryPreviewDocument';
 
+export type MedicalHistoryAudience = 'staff_active_visit' | 'patient_portal';
+export type MedicalHistoryScope = 'full' | 'latest_visit';
+
 interface MedicalHistoryProps {
   theme?: 'light' | 'dark';
+  /** Staff: active visit patient. Patient portal: Redux patient capability id. */
+  audience?: MedicalHistoryAudience;
+  /** Full aggregate vs read-only report for the most recent hospital visit only. */
+  scope?: MedicalHistoryScope;
 }
 
 type TimeRange = 'all' | 'year' | '6months' | 'month';
@@ -101,23 +114,73 @@ function filterMedicalHistoryPayload(
   };
 }
 
-export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' }) => {
+export const MedicalHistory: React.FC<MedicalHistoryProps> = ({
+  theme = 'light',
+  audience = 'staff_active_visit',
+  scope = 'full',
+}) => {
   const isDark = theme === 'dark';
   const colors = getAllergiesTheme(theme);
-  const patientId = useSelector(selectActiveVisitPatientId);
-  const patientNumericId = patientId ? Number(patientId) : 0;
+  const staffPatientId = useSelector(selectActiveVisitPatientId);
+  const portalPatientId = useSelector((state: RootState) => getPatientId(state));
+
+  const patientNumericId = useMemo(() => {
+    if (audience === 'patient_portal') {
+      return portalPatientId ?? 0;
+    }
+    return staffPatientId ? Number(staffPatientId) : 0;
+  }, [audience, portalPatientId, staffPatientId]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
+
+  const isPortalLatest = audience === 'patient_portal' && scope === 'latest_visit';
+  const showFilters = audience === 'staff_active_visit' || (audience === 'patient_portal' && scope === 'full');
 
   const historyQuery = usePatientMedicalHistory(patientNumericId, {
     enabled: !!patientNumericId,
   });
 
-  const filteredPayload = useMemo(() => {
+  const scopedPayload = useMemo(() => {
     if (!historyQuery.data) return null;
-    return filterMedicalHistoryPayload(historyQuery.data, timeRange, searchQuery);
-  }, [historyQuery.data, timeRange, searchQuery]);
+    if (scope !== 'latest_visit') return historyQuery.data;
+    if (!historyQuery.data.visits.length) {
+      return {
+        ...historyQuery.data,
+        visits: [],
+        allergies: [],
+        prescriptions: [],
+        clinical_notes: [],
+        vitals: [],
+        diagnoses: [],
+        consultations: [],
+        lab_requests: [],
+        lab_results: [],
+      };
+    }
+    const latestId = pickLatestVisitId(historyQuery.data.visits);
+    if (latestId == null) {
+      return {
+        ...historyQuery.data,
+        visits: [],
+        allergies: [],
+        prescriptions: [],
+        clinical_notes: [],
+        vitals: [],
+        diagnoses: [],
+        consultations: [],
+        lab_requests: [],
+        lab_results: [],
+      };
+    }
+    return filterMedicalHistoryPayloadByVisitId(historyQuery.data, latestId);
+  }, [historyQuery.data, scope]);
+
+  const filteredPayload = useMemo(() => {
+    if (!scopedPayload) return null;
+    if (!showFilters) return scopedPayload;
+    return filterMedicalHistoryPayload(scopedPayload, timeRange, searchQuery);
+  }, [scopedPayload, timeRange, searchQuery, showFilters]);
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -126,8 +189,9 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
       historyQuery.data?.patient.full_name?.toLowerCase().replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-') ||
       'patient';
     const day = new Date().toISOString().split('T')[0];
-    return `${name}_medical-history_${day}`;
-  }, [historyQuery.data?.patient.full_name]);
+    const suffix = scope === 'latest_visit' ? 'latest-visit' : 'medical-history';
+    return `${name}_${suffix}_${day}`;
+  }, [historyQuery.data?.patient.full_name, scope]);
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -149,6 +213,25 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
     void historyQuery.refetch();
   }, [historyQuery]);
 
+  const headerTitle = useMemo(() => {
+    if (audience === 'patient_portal') {
+      const displayName = historyQuery.data?.patient.full_name?.trim();
+      if (displayName) return `Medical history — ${displayName}`;
+      return 'Medical history';
+    }
+    return 'Medical History';
+  }, [audience, historyQuery.data?.patient.full_name]);
+
+  const headerSubtitle = useMemo(() => {
+    if (audience === 'patient_portal' && scope === 'latest_visit') {
+      return 'Read-only report for your most recent hospital visit. Facility names appear on each record.';
+    }
+    if (audience === 'patient_portal') {
+      return 'Your personal health record across facilities (read-only).';
+    }
+    return 'Cross-facility clinical documentation for continuity of care.';
+  }, [audience, scope]);
+
   if (!patientNumericId) {
     return (
       <div className="p-6">
@@ -156,9 +239,13 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
           <div className={cn('mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full', colors.bg.muted)}>
             <User className={cn('h-6 w-6', colors.text.secondary)} />
           </div>
-          <h2 className={cn('mb-2 text-lg font-semibold', colors.text.primary)}>No active patient selected</h2>
+          <h2 className={cn('mb-2 text-lg font-semibold', colors.text.primary)}>
+            {audience === 'patient_portal' ? 'Patient profile unavailable' : 'No active patient selected'}
+          </h2>
           <p className={cn('text-sm', colors.text.secondary)}>
-            Open a patient visit in Medical Records to view continuity-of-care history.
+            {audience === 'patient_portal'
+              ? 'We could not resolve your patient record from your account. Try signing out and back in, or contact support.'
+              : 'Open a patient visit in Medical Records to view continuity-of-care history.'}
           </p>
         </div>
       </div>
@@ -178,6 +265,26 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
     );
   }
 
+  const latestVisitEmpty =
+    isPortalLatest && historyQuery.data && !historyQuery.data.visits.length;
+
+  if (latestVisitEmpty) {
+    return (
+      <div className="p-6">
+        <div className={cn('rounded-xl border p-6 text-center', colors.border.primary, colors.bg.card)}>
+          <h2 className={cn('mb-2 text-lg font-semibold', colors.text.primary)}>No visit report yet</h2>
+          <p className={cn('text-sm', colors.text.secondary)}>
+            We do not have a hospital visit on file to show as your latest visit. When you have an encounter, your
+            read-only visit summary will appear here.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const previewLetterhead =
+    audience === 'patient_portal' ? ('patient_portal_personal' as const) : ('staff_viewing_facility' as const);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }}
@@ -185,7 +292,6 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
       exit={{ opacity: 0, y: -14 }}
       className={cn('min-h-0 p-6', colors.bg.page)}
     >
-      {/* Header — same structure as AllergiesHeader (clinical-forms) */}
       <section
         className={cn('no-print mb-6 rounded-2xl border p-5 sm:p-6', colors.border.primary, colors.bg.card)}
       >
@@ -195,22 +301,31 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
               <Activity className={cn('h-6 w-6', isDark ? 'text-blue-300' : 'text-blue-600')} />
             </div>
             <div>
-              <h2 className={cn('text-xl font-semibold', colors.text.primary)}>Medical History</h2>
-              <p className={cn('mt-1 text-sm', colors.text.secondary)}>
-                Cross-facility clinical documentation for continuity of care.
-              </p>
+              <h2 className={cn('text-xl font-semibold', colors.text.primary)}>{headerTitle}</h2>
+              <p className={cn('mt-1 text-sm', colors.text.secondary)}>{headerSubtitle}</p>
               {filteredPayload ? (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold',
-                      colors.state.infoSoft,
-                      colors.state.info
-                    )}
-                  >
-                    <Search className="h-3.5 w-3.5" />
-                    Filtered view
-                  </span>
+                  {showFilters ? (
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold',
+                        colors.state.infoSoft,
+                        colors.state.info
+                      )}
+                    >
+                      <Search className="h-3.5 w-3.5" />
+                      Filtered view
+                    </span>
+                  ) : (
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold',
+                        isDark ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-700'
+                      )}
+                    >
+                      Read-only report
+                    </span>
+                  )}
                   <span
                     className={cn(
                       'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold',
@@ -273,58 +388,61 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
         </div>
       </section>
 
-      {/* Filters + search — card shell like form sections */}
-      <section
-        className={cn('no-print mb-6 rounded-2xl border p-4 sm:p-5', colors.border.primary, colors.bg.card)}
-      >
-        <div className={cn('mb-4 flex flex-wrap gap-2 border-b pb-4', colors.border.primary)}>
-          {(
-            [
-              ['all', 'All time'],
-              ['year', 'Last year'],
-              ['6months', '6 months'],
-              ['month', 'Last month'],
-            ] as const
-          ).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setTimeRange(key)}
+      {showFilters ? (
+        <section
+          className={cn('no-print mb-6 rounded-2xl border p-4 sm:p-5', colors.border.primary, colors.bg.card)}
+        >
+          <div className={cn('mb-4 flex flex-wrap gap-2 border-b pb-4', colors.border.primary)}>
+            {(
+              [
+                ['all', 'All time'],
+                ['year', 'Last year'],
+                ['6months', '6 months'],
+                ['month', 'Last month'],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTimeRange(key)}
+                className={cn(
+                  'cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
+                  timeRange === key
+                    ? 'bg-blue-600 text-white shadow-sm hover:bg-blue-700'
+                    : cn(
+                        'border',
+                        colors.border.primary,
+                        colors.text.primary,
+                        colors.bg.subtle,
+                        colors.bg.hover
+                      )
+                )}
+              >
+                {formatText(label)}
+              </button>
+            ))}
+          </div>
+          <div className="relative">
+            <Search
+              className={cn('pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2', colors.text.tertiary)}
+            />
+            <input
+              type="text"
+              placeholder="Search across allergies, medications, notes, labs…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className={cn(
-                'cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium transition-all',
-                timeRange === key
-                  ? 'bg-blue-600 text-white shadow-sm hover:bg-blue-700'
-                  : cn(
-                      'border',
-                      colors.border.primary,
-                      colors.text.primary,
-                      colors.bg.subtle,
-                      colors.bg.hover
-                    )
+                'w-full rounded-lg border py-2 pl-9 pr-4 text-sm outline-none transition-colors',
+                colors.border.primary,
+                colors.bg.input,
+                colors.text.primary,
+                colors.border.focus,
+                'focus:ring-2 focus:ring-blue-500/25'
               )}
-            >
-              {formatText(label)}
-            </button>
-          ))}
-        </div>
-        <div className="relative">
-          <Search className={cn('pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2', colors.text.tertiary)} />
-          <input
-            type="text"
-            placeholder="Search across allergies, medications, notes, labs…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={cn(
-              'w-full rounded-lg border py-2 pl-9 pr-4 text-sm outline-none transition-colors',
-              colors.border.primary,
-              colors.bg.input,
-              colors.text.primary,
-              colors.border.focus,
-              'focus:ring-2 focus:ring-blue-500/25'
-            )}
-          />
-        </div>
-      </section>
+            />
+          </div>
+        </section>
+      ) : null}
 
       {historyQuery.isError ? (
         <div
@@ -338,7 +456,6 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
           {(historyQuery.error as Error)?.message || 'Unable to load medical history.'}
         </div>
       ) : filteredPayload ? (
-        /* Mat + document: padded non-white canvas so the white sheet reads with clear space (AllergiesPreviewModal pattern). */
         <div
           ref={printRef}
           className={cn(
@@ -348,7 +465,7 @@ export const MedicalHistory: React.FC<MedicalHistoryProps> = ({ theme = 'light' 
             'print:border-0 print:bg-white print:p-4 print:shadow-none'
           )}
         >
-          <MedicalHistoryPreviewDocument history={filteredPayload} />
+          <MedicalHistoryPreviewDocument history={filteredPayload} letterheadVariant={previewLetterhead} />
         </div>
       ) : null}
     </motion.div>

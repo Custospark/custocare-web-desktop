@@ -83,11 +83,18 @@ const renderClinician = (name?: string | null): string => {
   return name;
 };
 
+export type MedicalHistoryLetterheadVariant = 'staff_viewing_facility' | 'patient_portal_personal';
+
 export interface MedicalHistoryPreviewDocumentProps {
   history: PatientMedicalHistoryPayload;
+  /** Staff letterhead uses active facility; patient portal uses the patient's name (personal copy). */
+  letterheadVariant?: MedicalHistoryLetterheadVariant;
 }
 
-export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocumentProps> = ({ history }) => {
+export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocumentProps> = ({
+  history,
+  letterheadVariant = 'staff_viewing_facility',
+}) => {
   const activeFacilityId = useSelector((state: RootState) => state.activeContext.activeFacilityId);
   const activeFacility = useSelector((state: RootState) => {
     const staffCapability = state.activeContext.capabilities.staff;
@@ -95,7 +102,9 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
     return staffCapability.facilities.find((f) => f.facility_id === activeFacilityId);
   });
 
-  const shouldFetch = !activeFacility || !activeFacility.facility_name;
+  const isPatientPortalLetterhead = letterheadVariant === 'patient_portal_personal';
+  const shouldFetch =
+    !isPatientPortalLetterhead && (!activeFacility || !activeFacility.facility_name);
   const { data: identityResponse, isLoading } = useGetFacilityIdentity({
     enabled: shouldFetch && !!activeFacilityId,
   });
@@ -159,21 +168,8 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
     [history]
   );
 
-  if (isLoading && shouldFetch && !!activeFacilityId) {
-    return (
-      <div className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm print:max-w-none print:rounded-none print:border-0 print:p-0">
-        <div className="mb-6 border-b-2 border-blue-600 pb-5 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
-            <Building2 className="h-7 w-7 text-blue-600" />
-          </div>
-          <p className="text-center text-sm text-slate-700">Loading document…</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm print:max-w-none print:rounded-none print:border-0 print:p-0 print:shadow-none">
+  const staffLetterhead = useMemo(
+    () => (
       <div className="mb-6 border-b-2 border-blue-600 pb-5 text-center print:mb-4 print:pb-4">
         <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 print:hidden">
           <Building2 className="h-7 w-7 text-blue-600" />
@@ -229,11 +225,61 @@ export const MedicalHistoryPreviewDocument: React.FC<MedicalHistoryPreviewDocume
           </p>
         </div>
       </div>
+    ),
+    [viewerFacility]
+  );
+
+  const patientPortalLetterhead = useMemo(
+    () => (
+      <div className="mb-6 border-b-2 border-slate-800 pb-6 text-center print:mb-4 print:pb-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 print:text-[9px]">
+          Custocare Patient Portal
+        </p>
+        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-slate-900 print:mt-3 print:text-xl">
+          {patientLabel}
+        </h1>
+        <p className="mt-2 text-xs text-slate-600 print:text-[11px]">Medical history summary</p>
+
+        <div className="mx-auto mt-5 max-w-xl border-y border-slate-200 bg-slate-50 px-5 py-4 print:mt-4 print:border-slate-300 print:bg-transparent print:py-3">
+          <p className="text-base font-semibold uppercase tracking-[0.08em] text-slate-900 print:text-sm">
+            Continuity of care documentation
+          </p>
+          <p className="mx-auto mt-2 max-w-lg text-[11px] leading-relaxed text-slate-600 print:text-[10px]">
+            Information below is compiled from records associated with your care. Each section identifies the facility or
+            location where that documentation originated.
+          </p>
+        </div>
+
+        <p className="mx-auto mt-4 max-w-lg text-[10px] leading-relaxed text-slate-500 print:mt-3 print:text-[9px]">
+          This document is provided for your reference from your patient account. It does not constitute an official
+          facility letterhead record; consult your provider for certified copies when required.
+        </p>
+      </div>
+    ),
+    [patientLabel]
+  );
+
+  if (isLoading && shouldFetch && !!activeFacilityId) {
+    return (
+      <div className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm print:max-w-none print:rounded-none print:border-0 print:p-0">
+        <div className="mb-6 border-b-2 border-blue-600 pb-5 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
+            <Building2 className="h-7 w-7 text-blue-600" />
+          </div>
+          <p className="text-center text-sm text-slate-700">Loading document…</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm print:max-w-none print:rounded-none print:border-0 print:p-0 print:shadow-none">
+      {isPatientPortalLetterhead ? patientPortalLetterhead : staffLetterhead}
 
       <div className="my-6 space-y-2 rounded-lg bg-gray-50 p-4 print:my-4 print:rounded-lg print:border print:border-gray-200 print:bg-transparent print:p-3">
         <InfoRow icon={<Calendar className="h-3.5 w-3.5" />} label="Report generated" value={formatDateTime(reportDate)} />
         <InfoRow icon={<User className="h-3.5 w-3.5" />} label="Patient" value={patientLabel} />
-        <InfoRow icon={<ClipboardList className="h-3.5 w-3.5" />} label="Patient UUID" value={patient.patient_uuid} />
+        <InfoRow icon={<ClipboardList className="h-3.5 w-3.5" />} label="Patient Number" value={patient.patient_uuid} />
         <InfoRow
           icon={<Activity className="h-3.5 w-3.5" />}
           label="Record counts"
