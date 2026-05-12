@@ -11,22 +11,26 @@ import { PrescriptionPreviewModal } from '../../prescription-form-components/Pre
 import { toPrescriptionFormData } from '../../prescription-form-components/prescriptionForm.types';
 import { buildPreviewItems } from '../../prescription-form-components/prescriptionInstructionsUtils';
 import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
+import type { ClinicalReportPortalContext } from './clinicalReportPortalContext';
 
 interface PrescriptionReportLauncherProps {
   isOpen: boolean;
   onClose: () => void;
   initialAction?: 'preview' | 'print' | 'download';
   theme?: 'light' | 'dark';
+  portalContext?: ClinicalReportPortalContext | null;
 }
 
 export const PrescriptionReportLauncher: React.FC<PrescriptionReportLauncherProps> = ({
   isOpen,
   onClose,
   initialAction = 'preview',
+  portalContext = null,
 }) => {
-  const patientId = useSelector(selectActiveVisitPatientId);
+  const reduxPatientId = useSelector(selectActiveVisitPatientId);
   const activePatient = useSelector(selectActivePatient);
-  const patientNumericId = patientId ? Number(patientId) : 0;
+  const patientNumericId =
+    portalContext?.patientId ?? (reduxPatientId ? Number(reduxPatientId) : 0);
   const { showToast } = useToast();
 
   const patientPrescriptionsQuery = useGetPatientPrescriptions(patientNumericId, [], {
@@ -83,6 +87,7 @@ export const PrescriptionReportLauncher: React.FC<PrescriptionReportLauncherProp
   const previewItems = useMemo(() => buildPreviewItems(medications), [medications]);
   const activePatientFromVisit = currentPrescription?.patient;
   const displayPatientName =
+    portalContext?.patientDisplayName?.trim() ||
     activePatient?.name?.trim() ||
     activePatientFromVisit?.name?.trim() ||
     'this patient';

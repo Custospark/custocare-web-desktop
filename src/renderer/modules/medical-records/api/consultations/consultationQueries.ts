@@ -167,9 +167,11 @@ export const useGetVisitConsultations = (
   options?: Omit<
     UseQueryOptions<ConsultationListSuccessResponse, AxiosError<ConsultationSystemErrorResponse>>,
     'queryKey' | 'queryFn'
-  >
+  > & { facilityId?: number | null }
 ) => {
-  const facilityId = useSelector(getActiveFacilityId);
+  const facilityIdFromStore = useSelector(getActiveFacilityId);
+  const { facilityId: facilityOverride, ...queryOptions } = options ?? {};
+  const facilityId = facilityOverride !== undefined && facilityOverride !== null ? facilityOverride : facilityIdFromStore;
   const { showToast } = useToast();
 
   return useQuery<ConsultationListSuccessResponse, AxiosError<ConsultationSystemErrorResponse>>({
@@ -189,7 +191,7 @@ export const useGetVisitConsultations = (
     },
     enabled: !!visitId && !!facilityId,
     staleTime: 5 * 60 * 1000,
-    ...options,
+    ...queryOptions,
   });
 };
 

@@ -17,6 +17,7 @@ import { useGetAllergies } from '../../../../../api/allergies/AllergyQueries';
 
 import { AllergiesPreviewModal, normalizeAllergyResponse } from '../../allergies-form-components';
 import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
+import type { ClinicalReportPortalContext } from './clinicalReportPortalContext';
 
 interface AllergyReportLauncherProps {
   /** Controls modal visibility */
@@ -27,6 +28,8 @@ interface AllergyReportLauncherProps {
   initialAction?: 'preview' | 'print' | 'download';
   /** Theme for the modal */
   theme?: 'light' | 'dark';
+  /** Patient portal: patient id from context when visit slice has no active patient */
+  portalContext?: ClinicalReportPortalContext | null;
 }
 
 export const AllergyReportLauncher: React.FC<AllergyReportLauncherProps> = ({
@@ -34,8 +37,11 @@ export const AllergyReportLauncher: React.FC<AllergyReportLauncherProps> = ({
   onClose,
   initialAction = 'preview',
   theme = 'light',
+  portalContext = null,
 }) => {
-  const patientId = useSelector(selectActiveVisitPatientId);
+  const reduxPatientId = useSelector(selectActiveVisitPatientId);
+  const patientId =
+    portalContext != null ? String(portalContext.patientId) : (reduxPatientId ?? '');
   const activePatient = useSelector(selectActivePatient);
   const { showToast } = useToast();
 
@@ -60,11 +66,12 @@ export const AllergyReportLauncher: React.FC<AllergyReportLauncherProps> = ({
   const patientName = useMemo(() => {
     const activePatientFromVisit = allergies[0]?.patient;
     return (
+      portalContext?.patientDisplayName?.trim() ||
       activePatient?.name?.trim() ||
       activePatientFromVisit?.name?.trim() ||
       'this patient'
     );
-  }, [activePatient?.name, allergies]);
+  }, [activePatient?.name, allergies, portalContext?.patientDisplayName]);
 
   const patientNumber = useMemo(() => {
     if (allergies.length > 0 && allergies[0]?.patient?.patient_number) {

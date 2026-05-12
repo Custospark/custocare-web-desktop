@@ -163,9 +163,11 @@ export const useGetVisitClinicalNotes = (
   options?: Omit<
     UseQueryOptions<ClinicalNoteListSuccessResponse, AxiosError<ClinicalNoteSystemErrorResponse>>,
     'queryKey' | 'queryFn'
-  >
+  > & { facilityId?: number | null }
 ) => {
-  const facilityId = useSelector(getActiveFacilityId);
+  const facilityIdFromStore = useSelector(getActiveFacilityId);
+  const { facilityId: facilityOverride, ...queryOptions } = options ?? {};
+  const facilityId = facilityOverride !== undefined && facilityOverride !== null ? facilityOverride : facilityIdFromStore;
   const { showToast } = useToast();
 
   return useQuery<ClinicalNoteListSuccessResponse, AxiosError<ClinicalNoteSystemErrorResponse>>({
@@ -185,7 +187,7 @@ export const useGetVisitClinicalNotes = (
     },
     enabled: !!visitId && !!facilityId,
     staleTime: 5 * 60 * 1000,
-    ...options,
+    ...queryOptions,
   });
 };
 

@@ -13,7 +13,6 @@
 import React, { useMemo, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { selectActivePatient, selectActiveVisitId } from '../../../../../../../app/store/slices/visitSlice';
-import { useGetActiveVisitClinicalNotes } from '../../../../../api/clinical-notes/clinicalNoteQueries';
 import { ClinicalNotesPreviewModal } from '../../clinical-notes-form-components';
 import {
   pickPrimaryClinicalNote,
@@ -21,6 +20,9 @@ import {
   getClinicalNoteTitle,
 } from '../../clinical-notes-form-components/clinicalNotesForm.utils';
 import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
+import { useGetVisitClinicalNotes } from '../../../../../api/clinical-notes/clinicalNoteQueries';
+import { getActiveFacilityId } from '../../../../../../../app/store/utils/contextSelectors';
+import type { ClinicalReportPortalContext } from './clinicalReportPortalContext';
 
 interface ClinicalNoteReportLauncherProps {
   /** Controls modal visibility */
@@ -31,6 +33,7 @@ interface ClinicalNoteReportLauncherProps {
   initialAction?: 'preview' | 'print' | 'download';
   /** Theme for the modal */
   theme?: 'light' | 'dark';
+  portalContext?: ClinicalReportPortalContext | null;
 }
 
 export const ClinicalNoteReportLauncher: React.FC<ClinicalNoteReportLauncherProps> = ({
@@ -38,17 +41,23 @@ export const ClinicalNoteReportLauncher: React.FC<ClinicalNoteReportLauncherProp
   onClose,
   initialAction = 'preview',
   theme = 'light',
+  portalContext = null,
 }) => {
   const activeVisitId = useSelector(selectActiveVisitId);
+  const facilityFromStore = useSelector(getActiveFacilityId);
   const activePatient = useSelector(selectActivePatient);
   const { showToast } = useToast();
 
-  // Fetch clinical notes - only when modal is open and we have a visit
-  const notesQuery = useGetActiveVisitClinicalNotes({
-    enabled: !!activeVisitId && isOpen,
+  const visitId = portalContext?.visitId ?? activeVisitId ?? null;
+  const resolvedFacilityId =
+    portalContext != null ? portalContext.facilityId ?? facilityFromStore : facilityFromStore;
+
+  const notesQuery = useGetVisitClinicalNotes(visitId ?? 0, {
+    enabled: !!visitId && isOpen && !!resolvedFacilityId,
     retry: 1,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
+    ...(portalContext != null ? { facilityId: portalContext.facilityId ?? undefined } : {}),
   });
 
   const visitNotes = useMemo(() => notesQuery.data?.data ?? [], [notesQuery.data]);
@@ -64,6 +73,7 @@ export const ClinicalNoteReportLauncher: React.FC<ClinicalNoteReportLauncherProp
   );
   const activePatientFromVisit = activeVisitNote?.patient;
   const displayPatientName =
+    portalContext?.patientDisplayName?.trim() ||
     activePatient?.name?.trim() ||
     activePatientFromVisit?.full_name?.trim() ||
     activeVisitNote?.patient_name?.trim() ||
@@ -81,10 +91,9 @@ export const ClinicalNoteReportLauncher: React.FC<ClinicalNoteReportLauncherProp
     }
   }, [isError, isOpen, error, showToast]);
 
-  // Don't render if no active visit
-  if (!activeVisitId) {
+  if (!visitId) {
     if (isOpen) {
-      showToast('warning', 'No active visit selected', 3000);
+      showToast('warning', 'No visit selected', 3000);
       onClose();
     }
     return null;

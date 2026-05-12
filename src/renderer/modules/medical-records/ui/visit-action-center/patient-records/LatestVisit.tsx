@@ -3,14 +3,6 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import {
-  FileText,
-  Activity,
-  Pill,
-  Microscope,
-  ClipboardList,
-  AlertTriangle,
-  Heart,
-  Users,
   ChevronLeft,
   X,
   Clock,
@@ -29,6 +21,7 @@ import PrescriptionForm from '../clinical-forms/PrescriptionForm';
 import LabRequestForm from '../clinical-forms/LabRequestForm';
 import LabResultForm from '../clinical-forms/LabResultForm';
 import ClinicalTemplateForm from '../clinical-forms/ClinicalTemplateForm';
+import { CLINICAL_FORM_GRID_DEFINITIONS, type ClinicalFormModuleId } from './clinicalFormGridDefinitions';
 import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
 import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clinicalNoteQueries';
 import { useGetActiveVisitVitals } from '../../../api/vitals/vitalQueries';
@@ -49,17 +42,7 @@ interface CurrentVisitProps {
   theme?: 'light' | 'dark';
 }
 
-type FormModule = 
-  | 'allergies'
-  | 'clinical-notes'
-  | 'vitals'
-  | 'diagnoses'
-  | 'consultations'
-  | 'prescriptions'
-  | 'lab-requests'
-  | 'lab-results'
-  | 'clinical-template'
-  | null;
+type FormModule = ClinicalFormModuleId | null;
 
 interface FormOption {
   id: FormModule;
@@ -103,90 +86,27 @@ const resolveRequestFromApiPayload = (payload: unknown): LabRequest | null => {
   return null;
 };
 
-// Form Registry - Single source of truth for all forms
-const FORM_REGISTRY: FormOption[] = [
-  {
-    id: 'allergies',
-    label: 'Allergy',
-    icon: <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />,
-    description: 'Document patient allergies, reactions, and severity levels for this visit',
-    category: 'Clinical Assessment',
-    component: AllergyForm,
-    isAvailable: true,
-  },
-  {
-    id: 'clinical-notes',
-    label: 'Clinical Notes',
-    icon: <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />,
-    description: 'Document symptoms, examination findings, and clinical observations',
-    category: 'Documentation',
-    component: ClinicalNotesForm,
-    isAvailable: true,
-  },
-  {
-    id: 'vitals',
-    label: 'Vitals',
-    icon: <Heart className="h-5 w-5 text-rose-600 dark:text-rose-400" />,
-    description: 'Record temperature, blood pressure, heart rate, and vital signs',
-    category: 'Clinical Assessment',
-    component: VitalsForm,
-    isAvailable: true,
-  },
-  {
-    id: 'diagnoses',
-    label: 'Diagnosis',
-    icon: <Activity className="h-5 w-5 text-violet-600 dark:text-violet-400" />,
-    description: 'Record primary and secondary diagnoses for this visit',
-    category: 'Clinical Assessment',
-    component: DiagnosisForm,
-    isAvailable: true,
-  },
-  {
-    id: 'consultations',
-    label: 'Consultation',
-    icon: <Users className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />,
-    description: 'Document consultation notes, referrals, and specialist opinions',
-    category: 'Referrals',
-    component: ConsultationsForm,
-    isAvailable: true,
-  },
-  {
-    id: 'prescriptions',
-    label: 'Prescription',
-    icon: <Pill className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />,
-    description: 'Prescribe medications with dosage, frequency, and duration',
-    category: 'Treatment',
-    component: PrescriptionForm,
-    isAvailable: true,
-  },
-  {
-    id: 'lab-requests',
-    label: 'Lab Request',
-    icon: <Microscope className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />,
-    description: 'Request laboratory tests and diagnostic investigations',
-    category: 'Diagnostics',
-    component: LabRequestForm,
-    isAvailable: true,
-  },
-  {
-    id: 'lab-results',
-    label: 'Lab Result',
-    icon: <ClipboardList className="h-5 w-5 text-purple-600 dark:text-purple-400" />,
-    description: 'Review and document laboratory test results',
-    category: 'Diagnostics',
-    component: LabResultForm,
-    isAvailable: true,
-  },
-  {
-    id: 'clinical-template',
-    label: 'Clinical Template',
-    icon: <FileText className="h-5 w-5 text-slate-600 dark:text-slate-400" />,
-    description: 'Fill out a predefined clinical template for quick patient documentation',
-    category: 'Documentation',
-    component: ClinicalTemplateForm,
-    isAvailable: true,
-  },
-];
+const FORM_COMPONENT_BY_ID: Record<
+  ClinicalFormModuleId,
+  FormOption['component']
+> = {
+  allergies: AllergyForm,
+  'clinical-notes': ClinicalNotesForm,
+  vitals: VitalsForm,
+  diagnoses: DiagnosisForm,
+  consultations: ConsultationsForm,
+  prescriptions: PrescriptionForm,
+  'lab-requests': LabRequestForm,
+  'lab-results': LabResultForm,
+  'clinical-template': ClinicalTemplateForm,
+};
+
+/** Staff encounter forms — metadata shared with Patient Portal read-only grid via {@link CLINICAL_FORM_GRID_DEFINITIONS}. */
+const FORM_REGISTRY: FormOption[] = CLINICAL_FORM_GRID_DEFINITIONS.map((def) => ({
+  ...def,
+  component: FORM_COMPONENT_BY_ID[def.id],
+  isAvailable: true,
+}));
 
 export const CurrentVisit: React.FC<CurrentVisitProps> = ({ theme = 'light' }) => {
   const isDark = theme === 'dark';

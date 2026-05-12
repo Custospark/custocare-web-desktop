@@ -202,9 +202,11 @@ export const useGetVisitVitals = (
   options?: Omit<
     UseQueryOptions<VitalListSuccessResponse, AxiosError<VitalSystemErrorResponse>>,
     'queryKey' | 'queryFn'
-  >
+  > & { facilityId?: number | null }
 ) => {
-  const facilityId = useSelector(getActiveFacilityId);
+  const facilityIdFromStore = useSelector(getActiveFacilityId);
+  const { facilityId: facilityOverride, ...queryOptions } = options ?? {};
+  const facilityId = facilityOverride !== undefined && facilityOverride !== null ? facilityOverride : facilityIdFromStore;
   const { showToast } = useToast();
 
   return useQuery<VitalListSuccessResponse, AxiosError<VitalSystemErrorResponse>>({
@@ -224,7 +226,7 @@ export const useGetVisitVitals = (
     },
     enabled: !!visitId && !!facilityId,
     staleTime: 5 * 60 * 1000,
-    ...options,
+    ...queryOptions,
   });
 };
 

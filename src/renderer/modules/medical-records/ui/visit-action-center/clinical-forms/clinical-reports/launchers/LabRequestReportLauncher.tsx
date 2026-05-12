@@ -5,12 +5,14 @@ import { useGetRequestWithItems, useGetRequestsByVisit } from '../../../../../ap
 import { LabRequestStatus, type LabRequest } from '../../../../../api/lab/LabTypes';
 import { LabRequestPreviewModal } from '../../labrequest-form-components/LabRequestPreviewModal';
 import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
+import type { ClinicalReportPortalContext } from './clinicalReportPortalContext';
 
 interface LabRequestReportLauncherProps {
   isOpen: boolean;
   onClose: () => void;
   initialAction?: 'preview' | 'print' | 'download';
   theme?: 'light' | 'dark';
+  portalContext?: ClinicalReportPortalContext | null;
 }
 
 const extractLabRequest = (payload: unknown): LabRequest | null => {
@@ -28,12 +30,14 @@ export const LabRequestReportLauncher: React.FC<LabRequestReportLauncherProps> =
   isOpen,
   onClose,
   initialAction = 'preview',
+  portalContext = null,
 }) => {
   const activeVisitId = useSelector(selectActiveVisitId);
   const activePatient = useSelector(selectActivePatient);
   const { showToast } = useToast();
 
-  const visitNumericId = activeVisitId ? Number(activeVisitId) : 0;
+  const visitNumericId =
+    portalContext?.visitId ?? (activeVisitId ? Number(activeVisitId) : 0);
   const visitRequestsQuery = useGetRequestsByVisit(visitNumericId, {
     enabled: !!visitNumericId && isOpen,
     staleTime: 0,
@@ -78,6 +82,7 @@ export const LabRequestReportLauncher: React.FC<LabRequestReportLauncherProps> =
     requestQuery.isFetching;
   const activePatientFromVisit = request?.patient;
   const displayPatientName =
+    portalContext?.patientDisplayName?.trim() ||
     activePatient?.name?.trim() ||
     activePatientFromVisit?.full_name?.trim() ||
     'this patient';
@@ -92,9 +97,9 @@ export const LabRequestReportLauncher: React.FC<LabRequestReportLauncherProps> =
     }
   }, [isOpen, requestQuery.error, requestQuery.isError, showToast, visitRequestsQuery.error, visitRequestsQuery.isError]);
 
-  if (!activeVisitId) {
+  if (!visitNumericId) {
     if (isOpen) {
-      showToast('warning', 'No active visit selected', 3000);
+      showToast('warning', 'No visit selected', 3000);
       onClose();
     }
     return null;

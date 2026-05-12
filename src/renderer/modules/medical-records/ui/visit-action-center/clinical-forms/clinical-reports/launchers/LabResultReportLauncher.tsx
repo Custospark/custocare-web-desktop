@@ -6,24 +6,28 @@ import { LabRequestStatus, type LabRequest } from '../../../../../api/lab/LabTyp
 import { LabRequestResultsPreviewModal } from '../../labrequest-form-components/LabRequestResultsPreviewModal';
 import type { LabResultHydratedMap } from '../../labresult-form-components/labResultForm.types';
 import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
+import type { ClinicalReportPortalContext } from './clinicalReportPortalContext';
 
 interface LabResultReportLauncherProps {
   isOpen: boolean;
   onClose: () => void;
   initialAction?: 'preview' | 'print' | 'download';
   theme?: 'light' | 'dark';
+  portalContext?: ClinicalReportPortalContext | null;
 }
 
 export const LabResultReportLauncher: React.FC<LabResultReportLauncherProps> = ({
   isOpen,
   onClose,
   initialAction = 'preview',
+  portalContext = null,
 }) => {
   const activeVisitId = useSelector(selectActiveVisitId);
   const activePatient = useSelector(selectActivePatient);
   const { showToast } = useToast();
 
-  const visitNumericId = activeVisitId ? Number(activeVisitId) : 0;
+  const visitNumericId =
+    portalContext?.visitId ?? (activeVisitId ? Number(activeVisitId) : 0);
   const visitRequestsQuery = useGetRequestsByVisit(visitNumericId, {
     enabled: !!visitNumericId && isOpen,
     staleTime: 0,
@@ -89,6 +93,7 @@ export const LabResultReportLauncher: React.FC<LabResultReportLauncherProps> = (
   }, [request]);
   const activePatientFromVisit = request?.patient;
   const displayPatientName =
+    portalContext?.patientDisplayName?.trim() ||
     activePatient?.name?.trim() ||
     activePatientFromVisit?.full_name?.trim() ||
     'this patient';
@@ -103,9 +108,9 @@ export const LabResultReportLauncher: React.FC<LabResultReportLauncherProps> = (
     }
   }, [isOpen, requestQuery.error, requestQuery.isError, showToast, visitRequestsQuery.error, visitRequestsQuery.isError]);
 
-  if (!activeVisitId) {
+  if (!visitNumericId) {
     if (isOpen) {
-      showToast('warning', 'No active visit selected', 3000);
+      showToast('warning', 'No visit selected', 3000);
       onClose();
     }
     return null;

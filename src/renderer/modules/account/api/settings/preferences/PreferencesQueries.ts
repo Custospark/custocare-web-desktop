@@ -71,18 +71,8 @@ export const extractErrorMessage = (
 /*                                Hooks                                       */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Custom hook to get the current user ID from auth slice
- * Throws error if user is not authenticated
- */
-const useAuthUserId = (): number | string => {
-  const user = useAppSelector(selectUser);
-  
-  if (!user?.id) {
-    throw new Error('User not authenticated');
-  }
-  
-  return user.id;
+const useOptionalAuthUserId = (): number | string | undefined => {
+  return useAppSelector(selectUser)?.id;
 };
 
 /**
@@ -100,16 +90,17 @@ export const useGetUserPreferences = (
     'queryKey' | 'queryFn'
   >,
 ): UseQueryResult<GetUserPreferencesResponse, AxiosError<ApiErrorResponse>> => {
-  const userId = useAuthUserId();
+  const userId = useOptionalAuthUserId();
   const dispatch = useAppDispatch();
-  
+
   const queryResult = useQuery<GetUserPreferencesResponse, AxiosError<ApiErrorResponse>>({
-    queryKey: preferencesKeys.detail(userId),
+    queryKey: preferencesKeys.detail(userId ?? 0),
     queryFn: async () => {
       const res = await axiosInstance.get<GetUserPreferencesResponse>(`users/${userId}/preferences`);
       return res.data;
     },
     ...options,
+    enabled: !!userId && (options?.enabled ?? true),
   });
 
   // Use useEffect to handle side effects when data changes
@@ -157,7 +148,7 @@ export const useUpdateUserPreferences = (
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
-  const userId = useAuthUserId();
+  const userId = useOptionalAuthUserId();
 
   return useMutation<
     UpdateUserPreferencesResponse,
@@ -165,6 +156,9 @@ export const useUpdateUserPreferences = (
     Omit<UpdateUserPreferencesParams, 'userId'> // userId is injected automatically
   >({
     mutationFn: async ({ data }) => {
+      if (userId == null) {
+        throw new Error('User not authenticated');
+      }
       // Normalize locale if present (matches backend prepareForValidation)
       const processedData = {
         ...data,
@@ -182,7 +176,9 @@ export const useUpdateUserPreferences = (
       showToast('success', data.message || 'Preferences updated successfully!', 6000);
 
       // Update cache with new preferences
-      queryClient.setQueryData(preferencesKeys.detail(userId), data);
+      if (userId != null) {
+        queryClient.setQueryData(preferencesKeys.detail(userId), data);
+      }
 
       // Sync theme from backend to UI slice if theme was updated
       if (vars.data.theme_mode) {

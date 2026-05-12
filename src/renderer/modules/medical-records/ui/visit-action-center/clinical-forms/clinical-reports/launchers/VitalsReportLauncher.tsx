@@ -1,35 +1,45 @@
 import React, { useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { selectActivePatient, selectActiveVisitId } from '../../../../../../../app/store/slices/visitSlice';
-import { useGetActiveVisitVitals } from '../../../../../api/vitals/vitalQueries';
+import { useGetVisitVitals } from '../../../../../api/vitals/vitalQueries';
 import { VitalsPreviewModal } from '../../vitals-form-components';
 import {
   extractVitalsFormValues,
   pickPrimaryVitals,
 } from '../../vitals-form-components/vitalsForm.utils';
 import { useToast } from '../../../../../../../app/store/contexts/toast/useToast';
+import { getActiveFacilityId } from '../../../../../../../app/store/utils/contextSelectors';
+import type { ClinicalReportPortalContext } from './clinicalReportPortalContext';
 
 interface VitalsReportLauncherProps {
   isOpen: boolean;
   onClose: () => void;
   initialAction?: 'preview' | 'print' | 'download';
   theme?: 'light' | 'dark';
+  portalContext?: ClinicalReportPortalContext | null;
 }
 
 export const VitalsReportLauncher: React.FC<VitalsReportLauncherProps> = ({
   isOpen,
   onClose,
   initialAction = 'preview',
+  portalContext = null,
 }) => {
   const activeVisitId = useSelector(selectActiveVisitId);
+  const facilityFromStore = useSelector(getActiveFacilityId);
   const activePatient = useSelector(selectActivePatient);
   const { showToast } = useToast();
 
-  const vitalsQuery = useGetActiveVisitVitals({
-    enabled: !!activeVisitId && isOpen,
+  const visitId = portalContext?.visitId ?? activeVisitId ?? null;
+  const resolvedFacilityId =
+    portalContext != null ? portalContext.facilityId ?? facilityFromStore : facilityFromStore;
+
+  const vitalsQuery = useGetVisitVitals(visitId ?? 0, {
+    enabled: !!visitId && isOpen && !!resolvedFacilityId,
     retry: 1,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
+    ...(portalContext != null ? { facilityId: portalContext.facilityId ?? undefined } : {}),
   });
 
   const visitVitals = useMemo(() => vitalsQuery.data?.data ?? [], [vitalsQuery.data]);
@@ -41,6 +51,7 @@ export const VitalsReportLauncher: React.FC<VitalsReportLauncherProps> = ({
   );
   const activePatientFromVisit = activeVitals?.patient;
   const displayPatientName =
+    portalContext?.patientDisplayName?.trim() ||
     activePatient?.name?.trim() ||
     activePatientFromVisit?.full_name?.trim() ||
     'this patient';
@@ -52,9 +63,9 @@ export const VitalsReportLauncher: React.FC<VitalsReportLauncherProps> = ({
     }
   }, [isOpen, showToast, vitalsQuery.error, vitalsQuery.isError]);
 
-  if (!activeVisitId) {
+  if (!visitId) {
     if (isOpen) {
-      showToast('warning', 'No active visit selected', 3000);
+      showToast('warning', 'No visit selected', 3000);
       onClose();
     }
     return null;

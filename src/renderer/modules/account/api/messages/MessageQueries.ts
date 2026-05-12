@@ -112,18 +112,10 @@ export const messageKeys = {
 /*                                  Auth Helper                                */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Custom hook to get the current user ID from auth slice.
- * Throws error if user is not authenticated (same behavior as SecurityQueries.ts).
- */
-const useAuthUserId = (): number | string => {
+/** Resolved user id for query keys; queries stay disabled until id exists (no throw during render). */
+const useOptionalAuthUserId = (): number | string | undefined => {
   const user = useAppSelector(selectUser);
-
-  if (!user?.id) {
-    throw new Error('User not authenticated');
-  }
-
-  return user.id;
+  return user?.id;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -137,10 +129,10 @@ export const useGetMessages = (
     'queryKey' | 'queryFn'
   >,
 ): UseQueryResult<GetMessagesResponse, AxiosError<ApiErrorResponse>> => {
-  const userId = useAuthUserId();
+  const userId = useOptionalAuthUserId();
 
   return useQuery<GetMessagesResponse, AxiosError<ApiErrorResponse>>({
-    queryKey: messageKeys.list(userId, params),
+    queryKey: messageKeys.list(userId ?? 0, params),
     queryFn: async () => {
       const res = await axiosInstance.get<GetMessagesResponse>('messages', { params });
       return res.data;
@@ -155,6 +147,7 @@ export const useGetMessages = (
     refetchOnWindowFocus: true,
 
     ...options,
+    enabled: !!userId && (options?.enabled ?? true),
   });
 };
 
@@ -186,10 +179,10 @@ export const useGetMessageStats = (
     'queryKey' | 'queryFn'
   >,
 ): UseQueryResult<MessageFolderStats, AxiosError<ApiErrorResponse>> => {
-  const userId = useAuthUserId();
+  const userId = useOptionalAuthUserId();
 
   return useQuery<MessageFolderStats, AxiosError<ApiErrorResponse>>({
-    queryKey: messageKeys.statsByUser(userId),
+    queryKey: messageKeys.statsByUser(userId ?? 0),
     queryFn: async () => {
       const res = await axiosInstance.get<MessageFolderStats>('messages/stats');
       return res.data;
@@ -199,6 +192,7 @@ export const useGetMessageStats = (
     refetchInterval: REALTIME_REFETCH_INTERVAL_MS,
     refetchOnWindowFocus: true,
     ...options,
+    enabled: !!userId && (options?.enabled ?? true),
   });
 };
 
@@ -213,10 +207,10 @@ export const useGetMessageDetail = (
     'queryKey' | 'queryFn'
   >,
 ): UseQueryResult<ShowMessageResponse, AxiosError<ApiErrorResponse>> => {
-  const userId = useAuthUserId();
+  const userId = useOptionalAuthUserId();
 
   return useQuery<ShowMessageResponse, AxiosError<ApiErrorResponse>>({
-    queryKey: messageKeys.detail(userId, id),
+    queryKey: messageKeys.detail(userId ?? 0, id),
     queryFn: async () => {
       const res = await axiosInstance.get<ShowMessageResponse>(`messages/${id}`);
       return res.data;
@@ -226,6 +220,7 @@ export const useGetMessageDetail = (
     refetchInterval: REALTIME_REFETCH_INTERVAL_MS,
     refetchOnWindowFocus: true,
     ...options,
+    enabled: !!userId && id > 0 && (options?.enabled ?? true),
   });
 };
 

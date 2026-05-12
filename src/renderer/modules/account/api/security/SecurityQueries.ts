@@ -44,18 +44,8 @@ export const securityKeys = {
 /*                                Hooks                                       */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Custom hook to get the current user ID from auth slice
- * Throws error if user is not authenticated
- */
-const useAuthUserId = (): number | string => {
-  const user = useAppSelector(selectUser);
-  
-  if (!user?.id) {
-    throw new Error('User not authenticated');
-  }
-  
-  return user.id;
+const useOptionalAuthUserId = (): number | string | undefined => {
+  return useAppSelector(selectUser)?.id;
 };
 
 /**
@@ -72,16 +62,17 @@ export const useGetUserSecurity = (
     'queryKey' | 'queryFn'
   >,
 ): UseQueryResult<GetUserSecurityResponse, AxiosError<ApiErrorResponse>> => {
-  const userId = useAuthUserId();
-  
+  const userId = useOptionalAuthUserId();
+
   const queryResult = useQuery<GetUserSecurityResponse, AxiosError<ApiErrorResponse>>({
-    queryKey: securityKeys.detail(userId),
+    queryKey: securityKeys.detail(userId ?? 0),
     queryFn: async () => {
       const res = await axiosInstance.get<GetUserSecurityResponse>(`users/${userId}/security`);
       return res.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     ...options,
+    enabled: !!userId && (options?.enabled ?? true),
   });
 
   return queryResult;
@@ -120,7 +111,7 @@ export const useUpdateUserSecurity = (
 ) => {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
-  const userId = useAuthUserId();
+  const userId = useOptionalAuthUserId();
 
   return useMutation<
     UpdateUserSecurityResponse,
@@ -128,6 +119,9 @@ export const useUpdateUserSecurity = (
     Omit<UpdateUserSecurityParams, 'userId'> // userId is injected automatically
   >({
     mutationFn: async ({ data }) => {
+      if (userId == null) {
+        throw new Error('User not authenticated');
+      }
       const res = await axiosInstance.put<UpdateUserSecurityResponse>(
         `users/${userId}/security`,
         data,
@@ -139,7 +133,9 @@ export const useUpdateUserSecurity = (
       showToast('success', data.message || 'Security settings updated successfully!', 6000);
 
       // Update cache with new security settings
-      queryClient.setQueryData(securityKeys.detail(userId), data);
+      if (userId != null) {
+        queryClient.setQueryData(securityKeys.detail(userId), data);
+      }
 
       // If password was changed, show additional message
       if (data.message?.toLowerCase().includes('password')) {

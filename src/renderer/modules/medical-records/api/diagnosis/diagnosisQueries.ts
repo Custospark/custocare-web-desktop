@@ -235,9 +235,11 @@ export const useGetVisitDiagnoses = (
   options?: Omit<
     UseQueryOptions<DiagnosisListSuccessResponse, AxiosError<DiagnosisSystemErrorResponse>>,
     'queryKey' | 'queryFn'
-  >
+  > & { facilityId?: number | null }
 ) => {
-  const facilityId = useSelector(getActiveFacilityId);
+  const facilityIdFromStore = useSelector(getActiveFacilityId);
+  const { facilityId: facilityOverride, ...queryOptions } = options ?? {};
+  const facilityId = facilityOverride !== undefined && facilityOverride !== null ? facilityOverride : facilityIdFromStore;
   const { showToast } = useToast();
 
   return useQuery<DiagnosisListSuccessResponse, AxiosError<DiagnosisSystemErrorResponse>>({
@@ -257,7 +259,7 @@ export const useGetVisitDiagnoses = (
     },
     enabled: !!visitId && !!facilityId,
     staleTime: 5 * 60 * 1000,
-    ...options,
+    ...queryOptions,
   });
 };
 

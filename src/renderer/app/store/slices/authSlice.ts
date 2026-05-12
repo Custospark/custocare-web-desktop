@@ -132,6 +132,56 @@ const initialState: AuthState = {
   },
 };
 
+/**
+ * Synchronously rebuild auth slice fields from localStorage (same rules as {@link initializeAuth}).
+ * Used for Redux `preloadedState` so the first paint after refresh already has user/token — avoids
+ * hooks that require `user.id` throwing before `useEffect` runs `initializeAuth`.
+ */
+export function buildAuthStateFromStorage(): AuthState {
+  if (typeof localStorage === 'undefined') {
+    return { ...initialState };
+  }
+
+  const token = localStorage.getItem('authToken');
+  const userStr = localStorage.getItem('authUser');
+  const verificationStr = localStorage.getItem('authVerification');
+
+  let user: UnifiedUserProfile | null = null;
+  if (token && userStr) {
+    try {
+      user = JSON.parse(userStr) as UnifiedUserProfile;
+    } catch {
+      /* ignore invalid cached user */
+    }
+  }
+
+  let verification: VerificationContext = { ...initialState.verification };
+  if (verificationStr) {
+    try {
+      const saved = JSON.parse(verificationStr) as Record<string, unknown>;
+      if (saved && typeof saved === 'object') {
+        verification = {
+          type: (saved.type as VerificationContext['type']) ?? null,
+          flow: (saved.flow as VerificationContext['flow']) ?? null,
+          userId: (saved.userId as number | null) ?? null,
+          email: (saved.email as string | null) ?? null,
+        };
+      }
+    } catch {
+      /* ignore corrupted storage */
+    }
+  }
+
+  return {
+    ...initialState,
+    token: token || null,
+    user,
+    isAuthenticated: !!token,
+    verification,
+    isInitialized: true,
+  };
+}
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -141,41 +191,12 @@ const authSlice = createSlice({
     /* ---------------------------------------------------------------------- */
 
     initializeAuth: (state) => {
-      const token           = localStorage.getItem('authToken');
-      const userStr         = localStorage.getItem('authUser');
-      const verificationStr = localStorage.getItem('authVerification');
-
-      if (token) {
-        state.token          = token;
-        state.isAuthenticated = true;
-
-        if (userStr) {
-          try {
-            state.user = JSON.parse(userStr) as UnifiedUserProfile;
-          } catch {
-            // ignore invalid cached user
-          }
-        }
-      }
-
-      // Restore verification context (userId, email, etc.)
-      if (verificationStr) {
-        try {
-          const saved = JSON.parse(verificationStr);
-          if (saved && typeof saved === 'object') {
-            state.verification = {
-              type:   saved.type   || null,
-              flow:   saved.flow   || null,
-              userId: saved.userId || null,
-              email:  saved.email  || null,
-            };
-          }
-        } catch {
-          // ignore corrupted storage
-        }
-      }
-
-      state.isInitialized = true;
+      const next = buildAuthStateFromStorage();
+      state.token = next.token;
+      state.user = next.user;
+      state.isAuthenticated = next.isAuthenticated;
+      state.verification = next.verification;
+      state.isInitialized = next.isInitialized;
     },
 
     logout: (state) => {
