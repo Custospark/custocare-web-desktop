@@ -23,6 +23,7 @@ import {
 import { cn } from '../../../types/cn';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES} from '../../../../app/routes/routeConstants';
+import { ROUTES as ONBOARDING_ROUTES } from '../../../../modules/administration/onboarding/routes/onboardingRouteConstants';
 import { logoutClientSession } from '../../../../app/store/utils/logoutClientSession';
 import { useAppDispatch, useAppSelector } from '../../../../app/store/hooks/useApp';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
@@ -70,6 +71,8 @@ interface ContextOption {
   icon: React.ReactNode;
   color: 'blue' | 'purple' | 'rose' | 'amber' | 'emerald' | 'cyan' | 'indigo' | 'teal';
   isActive: boolean;
+  /** When set, choosing this row navigates here instead of switching Redux capability */
+  navigateTo?: string;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -116,6 +119,19 @@ export const Navbar: React.FC<NavbarProps> = ({
         icon: <Heart className="w-4 h-4" />,
         color: 'rose',
         isActive: activeCapability === 'patient',
+      });
+    } else {
+      options.push({
+        id: 'activate-patient-portal',
+        type: 'personal',
+        capability: 'patient',
+        title: 'Activate Patient Portal',
+        subtitle:
+          'Access your health records, appointments, test results, and billing',
+        icon: <Heart className="w-4 h-4" />,
+        color: 'purple',
+        isActive: false,
+        navigateTo: ONBOARDING_ROUTES.PATIENT_ONBOARDING,
       });
     }
 
@@ -182,7 +198,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [allContextOptions]);
 
   const activeContextOption = useMemo(() => {
-    return allContextOptions.find((opt) => opt.isActive) || allContextOptions[0];
+    const active = allContextOptions.find((opt) => opt.isActive);
+    if (active) return active;
+    const firstSwitchable = allContextOptions.find((opt) => !opt.navigateTo);
+    return firstSwitchable ?? allContextOptions[0];
   }, [allContextOptions]);
 
   useEffect(() => {
@@ -228,6 +247,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   const handleContextSwitch = (option: ContextOption) => {
     try {
       setIsContextSwitcherOpen(false);
+
+      if (option.navigateTo) {
+        navigate(option.navigateTo);
+        showToast('info', 'Complete activation to unlock your patient portal', 3500);
+        return;
+      }
 
       if (option.isActive) {
         showToast('info', `Already in ${option.title}`, 2000);

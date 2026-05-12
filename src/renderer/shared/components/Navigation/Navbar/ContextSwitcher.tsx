@@ -33,6 +33,7 @@ interface ContextOption {
   icon: React.ReactNode;
   color: 'blue' | 'purple' | 'rose' | 'amber' | 'emerald' | 'cyan' | 'indigo' | 'teal';
   isActive: boolean;
+  navigateTo?: string;
 }
 
 interface GroupedContextOptions {

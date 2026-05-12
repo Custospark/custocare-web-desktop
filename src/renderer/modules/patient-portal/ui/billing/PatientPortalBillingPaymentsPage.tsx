@@ -23,7 +23,7 @@ function formatMoney(amount: number, currencyCode?: string | null): string {
   try {
     return new Intl.NumberFormat(undefined, {
       style: 'currency',
-      currency: code ?? 'USD',
+      currency: code ?? 'UGX',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
