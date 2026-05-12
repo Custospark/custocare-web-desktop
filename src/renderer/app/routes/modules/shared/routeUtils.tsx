@@ -96,3 +96,14 @@ export const ProtectedThemeOutlet: React.FC = () => {
   const theme = useSelector((state: RootState) => state.ui.theme as ThemeMode);
   return <Outlet context={{ theme } satisfies ProtectedOutletContext} />;
 };
+
+/**
+ * Re-exposes {@link ProtectedOutletContext} to nested routes when a path segment uses its own `<Outlet />`.
+ * A child `<Outlet />` without `context` does not inherit the parent workspace outlet context, so
+ * `useOutletContext()` would be undefined under that segment (e.g. patient portal `appointments/*`).
+ */
+export function ForwardThemeOutlet(): React.ReactElement {
+  const ctx = useOutletContext<ProtectedOutletContext>();
+  const theme = ctx?.theme ?? 'light';
+  return <Outlet context={{ theme } satisfies ProtectedOutletContext} />;
+}

@@ -108,6 +108,9 @@ export const visitKeys = {
   assignStaff: () => [...visitKeys.all, 'assign-staff'] as const,
   staffForwarding: (filters: StaffForwardingFilters) => 
     [...visitKeys.all, 'staff-forwarding', filters] as const,
+  /** Staff forwarding list scoped by explicit facility (e.g. patient portal booking). */
+  staffForwardingByFacility: (facilityId: number, filters: StaffForwardingFilters) =>
+    [...visitKeys.all, 'staff-forwarding-by-facility', facilityId, filters] as const,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -301,6 +304,39 @@ export const useGetStaffForForwarding = (
     },
     enabled: !!facilityId,
     staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
+    ...options,
+  });
+};
+
+/**
+ * Same as {@link useGetStaffForForwarding} but uses an explicit facility id for `X-Facility-Id`
+ * (patient portal and other flows without an active facility in Redux).
+ */
+export const useGetStaffForForwardingByFacility = (
+  facilityId: number | null | undefined,
+  filters: StaffForwardingFilters = {},
+  options?: Omit<UseQueryOptions<StaffForwardingResponse, AxiosError<ApiErrorResponse>>, 'queryKey' | 'queryFn'>
+) => {
+  const fid = typeof facilityId === 'number' && facilityId > 0 ? facilityId : 0;
+
+  return useQuery<StaffForwardingResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: visitKeys.staffForwardingByFacility(fid, filters),
+    queryFn: async () => {
+      const response = await axiosInstance.get<StaffForwardingResponse>('/visits/staff/forwarding', {
+        params: {
+          limit: 100,
+          exclude_current_staff: false,
+          ...filters,
+        },
+        headers: {
+          'X-Facility-Id': String(fid),
+        },
+      });
+      return response.data;
+    },
+    enabled: fid > 0,
+    staleTime: 30_000,
     gcTime: 5 * 60 * 1000,
     ...options,
   });

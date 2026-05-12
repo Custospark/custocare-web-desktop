@@ -1,13 +1,17 @@
 import React from "react";
 import { Navigate, Outlet, Route } from "react-router-dom";
 import { PATIENT_PORTAL_ROUTES } from "../routeConstants";
-import { PlaceholderPanel, SuspenseWrapper, WithThemeProp } from "./shared/routeUtils";
+import { ForwardThemeOutlet, PlaceholderPanel, SuspenseWrapper, WithThemeProp } from "./shared/routeUtils";
 import PatientPortalMedicalHistoryShell from "../../../modules/patient-portal/ui/medical-history/PatientPortalMedicalHistoryShell";
 import {
   PatientPortalMedicalHistoryFullPage,
   PatientPortalMedicalHistoryLatestPage,
 } from "../../../modules/patient-portal/ui/medical-history/PatientPortalMedicalHistoryPages";
 import { PatientPortalDownloadsReportsPage } from "../../../modules/patient-portal/ui/downloads/PatientPortalDownloadsReportsPage";
+import { PatientPortalMedicationsLatestPage } from "../../../modules/patient-portal/ui/medications/PatientPortalMedicationsLatest";
+import { PatientPortalLaboratoryResultsLatestPage } from "../../../modules/patient-portal/ui/laboratory/PatientPortalLaboratoryResultsLatest";
+import { PatientPortalAppointmentsLatestPage } from "../../../modules/patient-portal/ui/appointments/PatientPortalAppointmentsLatest";
+import { PatientPortalAppointmentSchedulePage } from "../../../modules/patient-portal/ui/appointments/PatientPortalAppointmentSchedulePage";
 import Message from "../../../modules/account/ui/message/Message";
 import Inbox from "../../../modules/account/ui/message/Inbox";
 import Sent from "../../../modules/account/ui/message/Sent";
@@ -72,21 +76,65 @@ export const patientPortalRoutes = [
     <Route path="allergies" element={<Navigate to="../full" replace />} />
   </Route>,
 
-  <Route key="pp-medications" path="medications" element={<Outlet />}>
-    <Route index element={pp("Medications")} />
-    <Route path="current" element={pp("Current medications")} />
-    <Route path="history" element={pp("Medication history")} />
-    <Route path="refill" element={pp("Refills")} />
-    <Route path="interactions" element={pp("Drug interactions")} />
-  </Route>,
+  <Route
+    key="pp-medications"
+    path="medications"
+    element={
+      <SuspenseWrapper variant="dashboard">
+        <PatientPortalMedicationsLatestPage />
+      </SuspenseWrapper>
+    }
+  />,
+  <Route
+    key="pp-medications-legacy-current"
+    path="medications/current"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.MEDICATIONS} replace />}
+  />,
+  <Route
+    key="pp-medications-legacy-history"
+    path="medications/history"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.MEDICATIONS} replace />}
+  />,
+  <Route
+    key="pp-medications-legacy-refill"
+    path="medications/refill"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.MEDICATIONS} replace />}
+  />,
+  <Route
+    key="pp-medications-legacy-interactions"
+    path="medications/interactions"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.MEDICATIONS} replace />}
+  />,
 
-  <Route key="pp-lab-results" path="laboratory-results" element={<Outlet />}>
-    <Route index element={pp("Laboratory results")} />
-    <Route path="view" element={pp("Result details")} />
-    <Route path="history" element={pp("Results history")} />
-    <Route path="compare" element={pp("Compare results")} />
-    <Route path="explain" element={pp("Explain results")} />
-  </Route>,
+  <Route
+    key="pp-lab-results"
+    path="laboratory-results"
+    element={
+      <SuspenseWrapper variant="dashboard">
+        <PatientPortalLaboratoryResultsLatestPage />
+      </SuspenseWrapper>
+    }
+  />,
+  <Route
+    key="pp-lab-results-legacy-view"
+    path="laboratory-results/view"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.LABORATORY_RESULTS} replace />}
+  />,
+  <Route
+    key="pp-lab-results-legacy-history"
+    path="laboratory-results/history"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.LABORATORY_RESULTS} replace />}
+  />,
+  <Route
+    key="pp-lab-results-legacy-compare"
+    path="laboratory-results/compare"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.LABORATORY_RESULTS} replace />}
+  />,
+  <Route
+    key="pp-lab-results-legacy-explain"
+    path="laboratory-results/explain"
+    element={<Navigate to={PATIENT_PORTAL_ROUTES.LABORATORY_RESULTS} replace />}
+  />,
 
   <Route key="pp-billing" path="billing-payments" element={<Outlet />}>
     <Route index element={pp("Billing & payments")} />
@@ -96,11 +144,25 @@ export const patientPortalRoutes = [
     <Route path="invoices" element={pp("Invoices")} />
   </Route>,
 
-  <Route key="pp-appointments" path="appointments" element={<Outlet />}>
-    <Route index element={pp("Appointments")} />
-    <Route path="upcoming" element={pp("Upcoming appointments")} />
-    <Route path="past" element={pp("Past appointments")} />
-    <Route path="schedule" element={pp("Schedule appointment")} />
+  <Route key="pp-appointments" path="appointments" element={<ForwardThemeOutlet />}>
+    <Route
+      index
+      element={
+        <SuspenseWrapper variant="dashboard">
+          <PatientPortalAppointmentsLatestPage />
+        </SuspenseWrapper>
+      }
+    />
+    <Route
+      path="schedule"
+      element={
+        <SuspenseWrapper variant="dashboard">
+          <PatientPortalAppointmentSchedulePage />
+        </SuspenseWrapper>
+      }
+    />
+    <Route path="upcoming" element={<Navigate to={PATIENT_PORTAL_ROUTES.APPOINTMENTS} replace />} />
+    <Route path="past" element={<Navigate to={PATIENT_PORTAL_ROUTES.APPOINTMENTS} replace />} />
     <Route path="cancel" element={pp("Cancel appointment")} />
   </Route>,
 

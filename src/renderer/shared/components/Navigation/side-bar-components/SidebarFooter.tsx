@@ -1,13 +1,6 @@
 import React from 'react';
 import { Bell, HeadphonesIcon, Users } from 'lucide-react';
 import { cn } from '../../../types/cn';
-import { moduleSwitcherShortcutLegend, workspaceShortcutRangeLegend } from '../../../keyboard/workspaceShortcutLabels';
-import {
-  dockSidebarLeftShortcut,
-  dockSidebarRightShortcut,
-  togglePrimarySidebarShortcut,
-} from '../../../keyboard/layoutShortcutLabels';
-
 interface SidebarFooterProps {
   collapsed: boolean;
   isDark: boolean;
@@ -104,28 +97,6 @@ const SidebarFooter: React.FC<SidebarFooterProps> = ({
                 </p>
               </div>
             )}
-
-            <p
-              className={cn(
-                'text-[10px] font-mono leading-relaxed mt-1',
-                isDark ? 'text-gray-500' : 'text-gray-500',
-              )}
-            >
-              {inStaffMode && (
-                <>
-                  <span className={cn('font-semibold', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                    {moduleSwitcherShortcutLegend()}
-                  </span>{' '}
-                  modules ·{' '}
-                </>
-              )}
-              <span className="font-semibold">{workspaceShortcutRangeLegend()}</span> workspace
-              <span className="block mt-1">
-                <span className="font-semibold">{togglePrimarySidebarShortcut()}</span> sidebar ·{' '}
-                <span className="font-semibold">{dockSidebarLeftShortcut()}</span>/
-                <span className="font-semibold">{dockSidebarRightShortcut()}</span> dock
-              </span>
-            </p>
           </div>
         </div>
       ) : (
