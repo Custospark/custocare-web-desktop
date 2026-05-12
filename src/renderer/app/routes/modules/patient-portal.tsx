@@ -13,6 +13,7 @@ import { PatientPortalLaboratoryResultsLatestPage } from "../../../modules/patie
 import { PatientPortalAppointmentsLatestPage } from "../../../modules/patient-portal/ui/appointments/PatientPortalAppointmentsLatest";
 import { PatientPortalAppointmentSchedulePage } from "../../../modules/patient-portal/ui/appointments/PatientPortalAppointmentSchedulePage";
 import { PatientPortalBillingPaymentsPage } from "../../../modules/patient-portal/ui/billing/PatientPortalBillingPaymentsPage";
+import { PatientPortalDashboardPage } from "../../../modules/patient-portal/ui/overview/PatientPortalDashboardPage";
 import Message from "../../../modules/account/ui/message/Message";
 import Inbox from "../../../modules/account/ui/message/Inbox";
 import Sent from "../../../modules/account/ui/message/Sent";
@@ -43,7 +44,15 @@ export const patientPortalRoutes = [
     element={<Navigate to={PATIENT_PORTAL_ROUTES.DASHBOARD} replace />}
   />,
 
-  <Route key="pp-dashboard" path="dashboard" element={pp("Dashboard")} />,
+  <Route
+    key="pp-dashboard"
+    path="dashboard"
+    element={
+      <SuspenseWrapper variant="dashboard">
+        <PatientPortalDashboardPage />
+      </SuspenseWrapper>
+    }
+  />,
 
   <Route
     key="pp-medical-history"
