@@ -136,22 +136,22 @@ export const MEDICAL_RECORDS_SIDEBAR_NESTED_OPERATIONS = mapWorkspaceToSidebar(
 
 export const PATIENT_PORTAL_MODULE_OPERATIONS: ModuleOperation[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+  { id: 'appointments', label: 'Appointments', icon: <Calendar className="w-4 h-4" /> },
   { id: 'medical-history', label: 'Medical History', icon: <FileText className="w-4 h-4" /> },
   { id: 'medications', label: 'Medications', icon: <Pill className="w-4 h-4" /> },
   { id: 'laboratory-results', label: 'Laboratory Results', icon: <FlaskConical className="w-4 h-4" /> },
   { id: 'billing-payments', label: 'Billing & Payments', icon: <CreditCard className="w-4 h-4" /> },
-  { id: 'appointments', label: 'Appointments', icon: <Calendar className="w-4 h-4" /> },
   { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
   { id: 'downloads-reports', label: 'Downloads & Reports', icon: <Download className="w-4 h-4" /> },
 ];
 
 const PATIENT_PORTAL_NESTED_ROUTES: Record<string, string> = {
   dashboard: PATIENT_PORTAL_ROUTES.DASHBOARD,
-  'medical-history': PATIENT_PORTAL_ROUTES.MEDICAL_HISTORY_LATEST_VISIT,
+  appointments: PATIENT_PORTAL_ROUTES.APPOINTMENTS,
+  'medical-history': PATIENT_PORTAL_ROUTES.MEDICAL_HISTORY,
   medications: PATIENT_PORTAL_ROUTES.MEDICATIONS,
   'laboratory-results': PATIENT_PORTAL_ROUTES.LABORATORY_RESULTS,
   'billing-payments': PATIENT_PORTAL_ROUTES.BILLING,
-  appointments: PATIENT_PORTAL_ROUTES.APPOINTMENTS,
   notifications: PATIENT_PORTAL_ROUTES.NOTIFICATIONS,
   'downloads-reports': PATIENT_PORTAL_ROUTES.DOWNLOADS,
 };
