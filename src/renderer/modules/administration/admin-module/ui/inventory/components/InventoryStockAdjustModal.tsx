@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Package, Plus, Minus, X, AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '../../../../../../shared/types/cn';
-import { useGetCurrentStockBalance, useAdjustStock } from '../../../api/admin-inventory/useInventoryItemQueries';
+import { useAdjustStock } from '../../../api/admin-inventory/useInventoryItemQueries';
 import type { InventoryItem } from '../../../api/admin-inventory/inventoryItemTypes';
 
 interface Props {
@@ -25,15 +25,11 @@ export const InventoryStockAdjustModal: React.FC<Props> = ({
   const [quantityInput, setQuantityInput] = useState('');
   const [notes, setNotes] = useState('');
   const [isIncrease, setIsIncrease] = useState(true);
+  const [snapshotBalance, setSnapshotBalance] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const itemId = item?.id ?? 0;
   const facId = facilityId ?? 0;
-
-  const balanceQuery = useGetCurrentStockBalance(
-    { facility_id: facId, inventory_item_id: itemId },
-    { enabled: open && facId > 0 && itemId > 0 }
-  );
 
   const adjustMutation = useAdjustStock({
     onSuccess: () => {
@@ -41,19 +37,16 @@ export const InventoryStockAdjustModal: React.FC<Props> = ({
     },
   });
 
-  const currentBalance = balanceQuery.data?.data?.current_balance ?? 0;
-  const isBalanceLoading = balanceQuery.isLoading;
   const numericQuantity = parseFloat(quantityInput) || 0;
   const signedQuantity = isIncrease ? numericQuantity : -numericQuantity;
-  const newBalance = currentBalance + signedQuantity;
+  const newBalance = snapshotBalance + signedQuantity;
 
   const canSubmit =
     numericQuantity > 0 &&
     staffId != null &&
     facId > 0 &&
     itemId > 0 &&
-    !adjustMutation.isPending &&
-    !balanceQuery.isLoading;
+    !adjustMutation.isPending;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,9 +66,10 @@ export const InventoryStockAdjustModal: React.FC<Props> = ({
       setQuantityInput('');
       setNotes('');
       setIsIncrease(true);
+      setSnapshotBalance(item?.current_balance ?? 0);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [open]);
+  }, [open, item]);
 
   if (!open || !item) return null;
 
@@ -126,20 +120,14 @@ export const InventoryStockAdjustModal: React.FC<Props> = ({
             isDark ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'
           )}>
             <p className={cn('text-xs font-medium uppercase tracking-wide', muted)}>Current Stock</p>
-            {isBalanceLoading ? (
-              <div className="flex justify-center mt-2">
-                <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-              </div>
-            ) : (
-              <p className={cn(
-                'mt-1 text-3xl font-black tabular-nums',
-                currentBalance === 0
-                  ? 'text-red-500'
-                  : currentBalance <= (item.reorder_point ?? 0)
-                    ? 'text-amber-500'
-                    : isDark ? 'text-emerald-400' : 'text-emerald-600'
-              )}>{currentBalance}</p>
-            )}
+            <p className={cn(
+              'mt-1 text-3xl font-black tabular-nums',
+              snapshotBalance === 0
+                ? 'text-red-500'
+                : snapshotBalance <= (item.reorder_point ?? 0)
+                  ? 'text-amber-500'
+                  : isDark ? 'text-emerald-400' : 'text-emerald-600'
+            )}>{snapshotBalance}</p>
             <p className={cn('text-xs mt-1', muted)}>{item.unit_of_measure}</p>
           </div>
 
