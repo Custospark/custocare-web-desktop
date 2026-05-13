@@ -62,52 +62,9 @@ interface Props {
   onPageChange: (page: number) => void;
   itemsPerPage: number;
   onItemsPerPageChange: (value: number) => void;
-  // Optional fallback if parent doesn't provide pagination props
-  defaultPageSize?: number;
 }
 
 // ─── Sub-components (defined OUTSIDE main component) ─────────────────────────
-
-interface BadgeProps {
-  size?: 'sm' | 'md';
-  isDark: boolean;
-}
-
-const HazardBadge: React.FC<BadgeProps> = ({ size = 'sm', isDark }) => {
-  const cls = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
-  return (
-    <div className="relative group">
-      <AlertTriangle className={cn(cls, isDark ? 'text-red-400' : 'text-red-600')} />
-      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-gray-900 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10">
-        Hazardous
-      </span>
-    </div>
-  );
-};
-
-const RefrigBadge: React.FC<BadgeProps> = ({ size = 'sm', isDark }) => {
-  const cls = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
-  return (
-    <div className="relative group">
-      <Thermometer className={cn(cls, isDark ? 'text-blue-400' : 'text-blue-600')} />
-      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-gray-900 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10">
-        Requires Refrigeration
-      </span>
-    </div>
-  );
-};
-
-const PrescriptionBadge: React.FC<BadgeProps> = ({ size = 'sm', isDark }) => {
-  const cls = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
-  return (
-    <div className="relative group">
-      <Shield className={cn(cls, isDark ? 'text-purple-400' : 'text-purple-600')} />
-      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-gray-900 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10">
-        Requires Prescription
-      </span>
-    </div>
-  );
-};
 
 interface RowActionsProps {
   item: InventoryItem;
@@ -511,10 +468,6 @@ export const InventoryCatalogList: React.FC<Props> = ({
     onPageChange(Math.max(1, Math.min(page, paginationData.totalPages)));
   };
 
-  const changeItemsPerPage = (n: number) => {
-    onItemsPerPageChange(n);
-  };
-
   // Reset to page 1 when items change (e.g., after filtering)
   useEffect(() => {
     onPageChange(1);
@@ -642,7 +595,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
           </span>
           <select
             value={itemsPerPage}
-            onChange={(e) => changeItemsPerPage(Number(e.target.value))}
+            onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
             className={cn(
               'px-2 py-1 rounded border text-xs sm:text-sm cursor-pointer',
               'focus:outline-none focus:ring-2 focus:ring-blue-500',
@@ -876,11 +829,18 @@ export const InventoryCatalogList: React.FC<Props> = ({
                     </p>
                     <p
                       className={cn(
-                        'text-xs',
-                        isDark ? 'text-gray-400' : 'text-gray-500'
+                        'text-sm font-bold tabular-nums',
+                        item.current_balance === 0
+                          ? 'text-red-500'
+                          : item.current_balance <= (item.reorder_point ?? 0)
+                            ? 'text-amber-500'
+                            : isDark ? 'text-emerald-400' : 'text-emerald-600'
                       )}
                     >
-                      {item.package_quantity} {item.unit_of_measure}
+                      {item.current_balance}
+                      <span className={cn('text-xs font-normal ml-0.5', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                        {item.unit_of_measure}
+                      </span>
                     </p>
                     <span
                       className={cn(
@@ -993,13 +953,18 @@ export const InventoryCatalogList: React.FC<Props> = ({
                       >
                         {formatPrice(item.unit_cost)}
                       </span>
-                      <span
-                        className={cn(
-                          'text-xs',
-                          isDark ? 'text-gray-400' : 'text-gray-500'
-                        )}
-                      >
-                        {item.package_quantity} {item.unit_of_measure}
+                      <span className={cn(
+                        'text-sm font-bold tabular-nums',
+                        item.current_balance === 0
+                          ? 'text-red-500'
+                          : item.current_balance <= (item.reorder_point ?? 0)
+                            ? 'text-amber-500'
+                            : isDark ? 'text-emerald-400' : 'text-emerald-600'
+                      )}>
+                        {item.current_balance}
+                      </span>
+                      <span className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                        {item.unit_of_measure}
                       </span>
                     </div>
 
