@@ -363,6 +363,7 @@ export interface BillingRetrievalResponse {
 
 export interface BillingAdjustmentPayload {
   line_item_id: number;
+  line_item_service_code?: string;
   action: BillingAdjustmentAction;
   quantity?: number;
   reason?: string;

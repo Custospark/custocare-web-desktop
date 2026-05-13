@@ -530,6 +530,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   ) => {
     await adjustBillingLineItem({
       line_item_id: item.lineItemId,
+      line_item_service_code: item.service?.code,
       action,
       quantity: action === 'remove' ? 0 : deltaQuantity,
       reason: reason?.trim() || undefined,

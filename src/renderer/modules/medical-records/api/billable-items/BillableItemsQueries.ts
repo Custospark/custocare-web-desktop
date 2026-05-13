@@ -453,6 +453,7 @@ export const useAdjustBillingLineItem = (
 
   interface MutationContext {
     previous: BillingRetrievalResponse | undefined;
+    previousBillableItems: unknown[];
   }
 
   return useMutation<
@@ -488,7 +489,44 @@ export const useAdjustBillingLineItem = (
         queryClient.setQueryData(billingItemsKeys.detail(visitId), optimistic);
       }
 
-      return { previous };
+      // Optimistically update billable items list cache (stock badges)
+      const action = payload.action;
+      const changeQty = Math.max(0, Number(payload.quantity ?? 1));
+      const quantityDelta = action === 'decrease' || action === 'remove' ? -changeQty : changeQty;
+      const serviceCode = payload.line_item_service_code ?? '';
+
+      const previousBillableItems: unknown[] = [];
+      const listKeys = queryClient.getQueriesData<{ data: { items_full?: unknown[] } }>({
+        queryKey: billingItemsKeys.lists(),
+      });
+
+      for (const [key, cached] of listKeys) {
+        const items = cached?.data?.items_full;
+        if (!items?.length) continue;
+        previousBillableItems.push([key, structuredClone(cached)]);
+
+        queryClient.setQueryData(key, {
+          ...cached,
+          data: {
+            ...cached.data,
+            items_full: items.map((item: any) => {
+              if (item._type !== 'inventory' || item.code !== serviceCode) return item;
+              const balance = (item.current_balance ?? item.package_quantity ?? 0) + quantityDelta;
+              return {
+                ...item,
+                current_balance: Math.max(0, balance),
+                stock: {
+                  ...item.stock,
+                  has_stock: balance > 0,
+                  is_low_stock: balance > 0 && balance <= (item.stock?.reorder_point ?? 5),
+                },
+              };
+            }),
+          },
+        });
+      }
+
+      return { previous, previousBillableItems };
     },
 
     onSuccess: (data) => {
@@ -499,6 +537,13 @@ export const useAdjustBillingLineItem = (
     onError: (error, _payload, context) => {
       if (context?.previous) {
         queryClient.setQueryData(billingItemsKeys.detail(visitId), context.previous);
+      }
+
+      // Rollback billable items cache
+      if (context?.previousBillableItems) {
+        for (const [key, cached] of context.previousBillableItems) {
+          queryClient.setQueryData(key, cached);
+        }
       }
 
       const apiMessage =
