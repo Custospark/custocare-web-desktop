@@ -6,7 +6,7 @@
  * React Query hooks for inventory item management operations.
  */
 
-import { useMutation, useQuery, type UseQueryOptions } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { axiosInstance } from '../../../../../app/api/axiosConfig';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
@@ -20,6 +20,7 @@ import type {
   CurrentBalanceResponse,
   DeleteInventoryItemParams,
   AdjustStockRequest,
+  InventoryItem,
   LedgerEntryResponse,
   GetCurrentBalanceParams,
   InventoryItemFilters,
@@ -360,6 +361,7 @@ export const useAdjustStock = (
   callbacks: MutationCallbacks<LedgerEntryResponse, AxiosError<ApiErrorResponse>> = {}
 ) => {
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
 
   return useMutation<LedgerEntryResponse, AxiosError<ApiErrorResponse>, AdjustStockRequest>({
     mutationFn: async (data: AdjustStockRequest) => {
@@ -368,6 +370,20 @@ export const useAdjustStock = (
         data
       );
       return response.data;
+    },
+    onMutate: async (data) => {
+      const listKeys = queryClient.getQueriesData<InventoryItemListResponse>({ queryKey: inventoryItemKeys.lists() });
+      for (const [key, cached] of listKeys) {
+        if (!cached?.data) continue;
+        queryClient.setQueryData(key, {
+          ...cached,
+          data: cached.data.map((item: InventoryItem) =>
+            item.id === data.inventory_item_id
+              ? { ...item, current_balance: item.current_balance + data.quantity }
+              : item
+          ),
+        });
+      }
     },
     onSuccess: (data) => {
       const direction = data.data.quantity_change > 0 ? 'increased' : 'decreased';

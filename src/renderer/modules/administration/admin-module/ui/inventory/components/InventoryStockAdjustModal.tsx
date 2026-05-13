@@ -111,7 +111,7 @@ export const InventoryStockAdjustModal: React.FC<Props> = ({
           <button
             onClick={onClose}
             className={cn(
-              'p-2 rounded-lg transition-colors',
+              'p-2 rounded-lg transition-colors cursor-pointer',
               isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
             )}
           >
@@ -149,7 +149,7 @@ export const InventoryStockAdjustModal: React.FC<Props> = ({
               type="button"
               onClick={() => setIsIncrease(true)}
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors',
+                'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors cursor-pointer',
                 isIncrease
                   ? isDark
                     ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500'
@@ -166,7 +166,7 @@ export const InventoryStockAdjustModal: React.FC<Props> = ({
               type="button"
               onClick={() => setIsIncrease(false)}
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors',
+                'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors cursor-pointer',
                 !isIncrease
                   ? isDark
                     ? 'bg-red-600/30 text-red-300 border-red-500'
@@ -269,7 +269,7 @@ export const InventoryStockAdjustModal: React.FC<Props> = ({
               onClick={onClose}
               disabled={adjustMutation.isPending}
               className={cn(
-                'flex-1 px-4 py-3 rounded-xl font-semibold text-sm transition-all border-2',
+                'flex-1 px-4 py-3 rounded-xl font-semibold text-sm transition-all border-2 cursor-pointer',
                 isDark
                   ? 'border-slate-700 text-slate-300 hover:bg-slate-800'
                   : 'border-slate-300 text-slate-700 hover:bg-slate-50'
@@ -283,9 +283,9 @@ export const InventoryStockAdjustModal: React.FC<Props> = ({
               className={cn(
                 'flex-1 px-4 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2',
                 canSubmit
-                  ? isIncrease
+                  ? cn('cursor-pointer', isIncrease
                     ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700'
-                    : 'bg-gradient-to-r from-red-600 to-rose-600 text-white hover:from-red-700 hover:to-rose-700'
+                    : 'bg-gradient-to-r from-red-600 to-rose-600 text-white hover:from-red-700 hover:to-rose-700')
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
               )}
             >

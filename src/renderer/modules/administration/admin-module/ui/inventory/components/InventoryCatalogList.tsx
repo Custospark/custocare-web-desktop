@@ -628,9 +628,10 @@ export const InventoryCatalogList: React.FC<Props> = ({
                 : 'border-gray-200 text-gray-400'
             )}
           >
-            <div className="col-span-6">Item</div>
+            <div className="col-span-5">Item</div>
+            <div className="col-span-1 text-center">Stock</div>
             <div className="col-span-2 hidden md:block">Category</div>
-            <div className="col-span-2">Cost / Qty</div>
+            <div className="col-span-2">Cost</div>
             <div className="col-span-2 text-center">Actions</div>
           </div>
 
