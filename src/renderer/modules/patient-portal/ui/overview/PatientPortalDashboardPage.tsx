@@ -201,7 +201,7 @@ export function PatientPortalDashboardPage() {
             theme={theme}
             icon={<Pill className="h-5 w-5 text-blue-500" />}
             label="Medications (latest visit)"
-            value={effectiveVisitId == null ? '—' : String(rxCount)}
+            value={effectiveVisitId == null ? '0' : String(rxCount)}
             valueSkeleton={!historyReady && !historyQuery.isError}
             hint={effectiveVisitId == null ? 'No visit context yet' : 'Medications page'}
           />
@@ -209,7 +209,7 @@ export function PatientPortalDashboardPage() {
             theme={theme}
             icon={<FlaskConical className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />}
             label="Lab results (latest visit)"
-            value={effectiveVisitId == null ? '—' : String(labCount)}
+            value={effectiveVisitId == null ? '0' : String(labCount)}
             valueSkeleton={!historyReady && !historyQuery.isError}
             hint={effectiveVisitId == null ? 'No visit context yet' : 'Laboratory results'}
           />
