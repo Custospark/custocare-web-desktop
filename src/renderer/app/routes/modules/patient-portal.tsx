@@ -1,4 +1,3 @@
-import React from "react";
 import { Navigate, Outlet, Route } from "react-router-dom";
 import { PATIENT_PORTAL_ROUTES } from "../routeConstants";
 import { ForwardThemeOutlet, PlaceholderPanel, SuspenseWrapper, WithThemeProp } from "./shared/routeUtils";

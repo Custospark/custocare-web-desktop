@@ -1,4 +1,3 @@
-import React from 'react';
 import { formatDate, formatDateTime } from '../../../medical-records/ui/visit-action-center/clinical-forms/allergies-form-components/allergiesForm.utils';
 import type { FacilitySnapshot } from '../../../medical-records/api/patient-medical-history/patientMedicalHistoryTypes';
 

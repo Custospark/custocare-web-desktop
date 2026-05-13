@@ -1,21 +1,27 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, FileText } from 'lucide-react';
-import type { FacilitySnapshot, MedicalHistoryVisit } from '../../../medical-records/api/patient-medical-history/patientMedicalHistoryTypes';
+import type { MedicalHistoryVisit } from '../../../medical-records/api/patient-medical-history/patientMedicalHistoryTypes';
 import { formatDate } from './patientPortalClinicalPreview.utils';
+
+/** Minimal facility shape for the preview header (visit snapshot or portal appointment row). */
+export type PatientPortalPreviewHeaderFacility = {
+  name: string;
+  code?: string | null;
+} | null;
 
 export interface PatientPortalClinicalPreviewShellProps {
   theme: 'light' | 'dark';
   title: string;
   subtitle: string;
   sectionLabel: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   headerVisit: MedicalHistoryVisit | null;
-  headerFacility: FacilitySnapshot | null;
+  headerFacility: PatientPortalPreviewHeaderFacility;
   fullHistoryHref: string;
   fullHistoryLinkLabel: string;
-  children: React.ReactNode;
-  banner?: React.ReactNode;
+  children: ReactNode;
+  banner?: ReactNode;
 }
 
 function visitDateLine(v: MedicalHistoryVisit | null): string | null {

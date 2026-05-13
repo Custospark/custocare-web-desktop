@@ -1,4 +1,3 @@
-import React from 'react';
 import type { PatientMedicalHistoryPayload } from '../../../medical-records/api/patient-medical-history/patientMedicalHistoryTypes';
 import type { ClinicalFormModuleId } from '../../../medical-records/ui/visit-action-center/patient-records/clinicalFormGridDefinitions';
 import { formatDateTime } from '../../../medical-records/ui/visit-action-center/clinical-forms/allergies-form-components/allergiesForm.utils';
