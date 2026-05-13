@@ -161,7 +161,7 @@ export function PatientPortalDashboardPage() {
             <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Patient dashboard</h1>
             <p className={`mt-2 text-sm ${muted}`}>{greeting}</p>
             <p className={`mt-1 text-xs ${subtle}`}>
-              Read-only snapshot across your care. Last refreshed: {lastRefreshed.toLocaleTimeString()}
+              Last refreshed: {lastRefreshed.toLocaleTimeString()}
             </p>
           </div>
           <button

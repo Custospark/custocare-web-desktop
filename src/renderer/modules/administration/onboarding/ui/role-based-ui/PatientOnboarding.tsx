@@ -43,6 +43,7 @@ import { useRegisterPatient } from '../../api/queries/register-patient/queries/r
 import type { RegisterPatientRequest } from '../../api/queries/register-patient/queries/registerPatientTypes';
 import LogoImage from '../../../../../shared/assets/LogoImage';
 import { BrandName } from '../../../../../shared/utils/BrandName';
+import { countryCodes, type CountryCode } from '../auth/countryCodes';
 
 /* ==========================================================================
    TYPE DEFINITIONS
@@ -59,6 +60,7 @@ type BiologicalSex = 'male' | 'female' | 'intersex' | 'unknown';
 interface EmergencyContact {
   full_name: string;
   phone: string;
+  phoneCountryCode: string;
   relationship: string;
 }
 
@@ -98,21 +100,70 @@ const RELATIONSHIP_OPTIONS = [
    ========================================================================== */
 
 export const PatientOnboarding: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-  const theme = useAppSelector((state) => state.ui.theme);
+   const dispatch = useAppDispatch();
+   const navigate = useNavigate();
+   const theme = useAppSelector((state) => state.ui.theme);
+   
+   // Icon styling (reused across form fields)
+   const iconClass = cn(
+     'absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4',
+     theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+   );
+   
+    // Form state
+   const [currentStage, setCurrentStage] = useState<1 | 2>(1);
+   const [formData, setFormData] = useState<PatientFormData>({
+     date_of_birth: '',
+     biological_sex: '',
+     emergency_contact: {
+       full_name: '',
+       phone: '',
+       phoneCountryCode: '+256',
+       relationship: '',
+     },
+   });
+   
+   // Touched state for validation feedback
+   const [touched, setTouched] = useState<Record<string, boolean>>({});
+   
+   // Country selector state
+   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
+   const [filterCountry, setFilterCountry] = useState('');
+   
+   // Selected country memo
+    const selectedCountry = useMemo(
+      () => countryCodes.find((c: CountryCode) => c.dial_code === formData.emergency_contact.phoneCountryCode) || countryCodes.find((c: CountryCode) => c.dial_code === '+256') || countryCodes[0],
+      [formData.emergency_contact.phoneCountryCode]
+    );
+   
+   // Filtered countries
+   const filteredCountries = useMemo(() => {
+     if (!filterCountry) return countryCodes;
+     const search = filterCountry.toLowerCase();
+      return countryCodes.filter(
+        (country: CountryCode) =>
+          country.name.toLowerCase().includes(search) ||
+         country.code.includes(search) ||
+         country.dial_code.includes(search)
+     );
+   }, [filterCountry]);
+   
+   // Handlers
+   const handleCountrySelect = (dial_code: string) => {
+     updateEmergencyContact('phoneCountryCode', dial_code);
+     setIsCountryDropdownOpen(false);
+     setFilterCountry('');
+     // Reset touched state for phoneCountryCode when it changes (if it was previously touched)
+     if (touched['phoneCountryCode']) {
+       setTouched(prev => ({ ...prev, ['phoneCountryCode']: false }));
+     }
+   };
+   
+   const handleBlur = (field: keyof EmergencyContact) => () => {
+     setTouched(prev => ({ ...prev, [field]: true }));
+   };
+   
   
-  // Form state
-  const [currentStage, setCurrentStage] = useState<1 | 2>(1);
-  const [formData, setFormData] = useState<PatientFormData>({
-    date_of_birth: '',
-    biological_sex: '',
-    emergency_contact: {
-      full_name: '',
-      phone: '',
-      relationship: '',
-    },
-  });
   
   // Backend mutation hook
   const registerPatientMutation = useRegisterPatient({
@@ -168,14 +219,22 @@ export const PatientOnboarding: React.FC = () => {
     return formData.date_of_birth !== '' && formData.biological_sex !== '';
   }, [formData.date_of_birth, formData.biological_sex]);
 
-  /**
-   * Validate Stage 2: Emergency Contact
-   */
+/**
+    * Validate Stage 2: Emergency Contact
+    */
   const isStage2Valid = useMemo(() => {
-    const { full_name, phone, relationship } = formData.emergency_contact;
-    return full_name.trim() !== '' && 
-           phone.trim() !== '' && 
-           relationship.trim() !== '';
+    const { full_name, phone, phoneCountryCode, relationship } = formData.emergency_contact;
+    if (full_name.trim() === '' || phone.trim() === '' || phoneCountryCode.trim() === '' || relationship.trim() === '') {
+      return false;
+    }
+    
+    // Validate phone number (digits only, reasonable length)
+    const digitsOnly = phone.replace(/\D/g, '');
+    if (digitsOnly.length < 6 || digitsOnly.length > 15) {
+      return false;
+    }
+    
+    return true;
   }, [formData.emergency_contact]);
 
   /**
@@ -199,12 +258,16 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
       throw new Error('User ID is required to register a patient');
     }
     
+    // Clean phone number (digits only) and combine with country code
+    const cleanPhone = formData.emergency_contact.phone.replace(/\D/g, '');
+    const fullPhone = formData.emergency_contact.phoneCountryCode + cleanPhone;
+    
     return {
       date_of_birth: formData.date_of_birth,
       biological_sex: formData.biological_sex as BiologicalSex,
       emergency_contact_chain_encrypted: {
         full_name: formData.emergency_contact.full_name.trim(),
-        phone: formData.emergency_contact.phone.trim(),
+        phone: fullPhone,
         relationship: formData.emergency_contact.relationship.trim(),
       },
       // Add the user ID
@@ -488,14 +551,171 @@ const prepareSubmissionPayload = useCallback((): RegisterPatientRequest => {
               'John Doe'
             )}
 
-            {renderInput(
-              formData.emergency_contact.phone,
-              (value) => updateEmergencyContact('phone', value),
-              'Phone Number',
-              'tel',
-              <Phone className="w-5 h-5" />,
-              '+1 (555) 123-4567'
+<div className="space-y-2">
+            <label className={cn(
+              "block text-sm font-medium",
+              theme === 'dark' ? "text-white" : "text-slate-900"
+            )}>
+              Phone Number
+            </label>
+            
+            <div className="relative">
+              <div className="flex gap-2">
+                {/* Country Code Selector */}
+                <div className="relative flex-shrink-0 w-36">
+                  <button
+                    type="button"
+                    onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
+                    className={cn(
+                      'w-full py-2.5 px-3 rounded-lg border-2 text-sm text-left',
+                      'focus:outline-none focus:ring-2 transition-all duration-150',
+                      'flex items-center justify-between gap-2',
+                      theme === 'dark'
+                        ? 'bg-gray-900/60 text-white border-gray-700 hover:border-cyan-500 focus:ring-cyan-500/30'
+                        : 'bg-white text-gray-900 border-gray-300 hover:border-blue-500 focus:ring-blue-200'
+                    )}
+                    disabled={isSubmitting}
+                  >
+                    <span className="flex items-center gap-1.5 truncate">
+                      <span className="text-base">{selectedCountry.flag}</span>
+                      <span className="font-medium">{selectedCountry.dial_code}</span>
+                    </span>
+                    <svg
+                      className="w-4 h-4 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* Dropdown */}
+                  {isCountryDropdownOpen && (
+                    <div
+                      className={cn(
+                        'absolute z-50 w-72 mt-1 rounded-lg border-2 shadow-xl',
+                        'max-h-64 overflow-hidden flex flex-col',
+                        theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'
+                      )}
+                    >
+                      <div
+                        className="p-2 border-b"
+                        style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}
+                      >
+                        <input
+                          type="text"
+                          value={filterCountry}
+                          onChange={(e) => setFilterCountry(e.target.value)}
+                          placeholder="Search country..."
+                          className={cn(
+                            'w-full px-3 py-1.5 text-xs rounded border',
+                            'focus:outline-none focus:ring-1',
+                            theme === 'dark'
+                              ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-cyan-500'
+                              : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500'
+                          )}
+                          autoFocus
+                        />
+                      </div>
+
+                      <div className="overflow-y-auto">
+                        {filteredCountries.length > 0 ? (
+                          filteredCountries.map((country: CountryCode) => (
+                            <button
+                              key={country.code}
+                              type="button"
+                              onClick={() => handleCountrySelect(country.dial_code)}
+                              className={cn(
+                                'w-full px-3 py-2 text-left text-sm',
+                                'hover:bg-opacity-50 transition-colors',
+                                'flex items-center gap-2',
+                                theme === 'dark'
+                                  ? 'hover:bg-gray-800 text-white'
+                                  : 'hover:bg-gray-100 text-gray-900',
+                                country.dial_code === formData.emergency_contact.phoneCountryCode &&
+                                  (theme === 'dark' ? 'bg-gray-800' : 'bg-blue-50')
+                              )}
+                            >
+                              <span className="text-lg">{country.flag}</span>
+                              <span className="flex-1 truncate">{country.name}</span>
+                              <span
+                                className={cn(
+                                  'font-medium text-xs',
+                                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                                )}
+                              >
+                                {country.dial_code}
+                              </span>
+                            </button>
+                          ))
+                        ) : (
+                          <div
+                            className={cn(
+                              'px-3 py-4 text-center text-sm',
+                              theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                            )}
+                          >
+                            No countries found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Phone Input */}
+                <div className="relative flex-1">
+                  <Phone className={iconClass} />
+                  <input
+                    type="tel"
+                    value={formData.emergency_contact.phone}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^\d\s\-()]/g, '');
+                      updateEmergencyContact('phone', value);
+                    }}
+                    onBlur={handleBlur('phone')}
+                    placeholder="e.g., 712 345 678"
+                    className={cn(
+                      "w-full px-4 py-3 rounded-xl border-2 pl-11",
+                      "focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all",
+                      theme === 'dark'
+                        ? "bg-slate-800 border-slate-700 text-white placeholder-slate-500"
+                        : "bg-white border-slate-200 text-slate-900 placeholder-slate-400",
+                      formData.emergency_contact.phone && "border-emerald-500"
+                    )}
+                    disabled={isSubmitting}
+                  />
+                  {formData.emergency_contact.phone && (
+                    <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Display formatted number */}
+            {formData.emergency_contact.phone && (
+              <p className={cn('text-xs mt-1', theme === 'dark' ? 'text-gray-400' : 'text-gray-600')}>
+                {formData.emergency_contact.phone.length < 3 ? 'Typing..: ' : 'Number: '}
+                <span className="font-mono text-blue-600">
+                  {formData.emergency_contact.phoneCountryCode} {formData.emergency_contact.phone}
+                </span>
+              </p>
             )}
+            
+            {/* Error message */}
+            {touched['phone'] && formData.emergency_contact.phone && formData.emergency_contact.phone.replace(/\D/g, '').length < 6 && (
+              <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                Phone number too short
+              </p>
+            )}
+          </div>
 
             {renderInput(
               formData.emergency_contact.relationship,
