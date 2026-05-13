@@ -372,9 +372,16 @@ export const useAdjustStock = (
       return response.data;
     },
     onMutate: async (data) => {
+      // Snapshot previous values for rollback
+      const prevListSnapshots: [unknown, unknown][] = [];
+      const balanceKey = inventoryLedgerKeys.balance(data.facility_id, data.inventory_item_id);
+      const prevBalance = queryClient.getQueryData(balanceKey);
+
+      // Optimistically update inventory list cache
       const listKeys = queryClient.getQueriesData<InventoryItemListResponse>({ queryKey: inventoryItemKeys.lists() });
       for (const [key, cached] of listKeys) {
         if (!cached?.data) continue;
+        prevListSnapshots.push([key, cached]);
         queryClient.setQueryData(key, {
           ...cached,
           data: cached.data.map((item: InventoryItem) =>
@@ -384,13 +391,37 @@ export const useAdjustStock = (
           ),
         });
       }
+
+      // Optimistically update balance cache
+      if (prevBalance) {
+        queryClient.setQueryData(balanceKey, {
+          ...prevBalance,
+          data: {
+            ...(prevBalance as any).data,
+            current_balance: (prevBalance as any).data.current_balance + data.quantity,
+          },
+        });
+      }
+
+      // Return snapshot for rollback
+      return { prevListSnapshots, prevBalance, balanceKey };
     },
     onSuccess: (data) => {
       const direction = data.data.quantity_change > 0 ? 'increased' : 'decreased';
       showToast('success', `Stock ${direction} successfully. New balance: ${data.data.balance_after_transaction}`, 6000);
       callbacks.onSuccess?.(data);
     },
-    onError: (error: AxiosError<ApiErrorResponse>) => {
+    onError: (error, data, context) => {
+      // Rollback list cache
+      if (context?.prevListSnapshots) {
+        for (const [key, cached] of context.prevListSnapshots) {
+          queryClient.setQueryData(key, cached);
+        }
+      }
+      // Rollback balance cache
+      if (context?.prevBalance && context?.balanceKey) {
+        queryClient.setQueryData(context.balanceKey, context.prevBalance);
+      }
       const apiMessage = error.response?.data?.message || error.message || 'Failed to adjust stock.';
       showToast('error', apiMessage, 8000);
       callbacks.onError?.(error);
