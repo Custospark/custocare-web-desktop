@@ -144,14 +144,13 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
   // ---------------------------------------------------------------------------
   // Queries
   // ---------------------------------------------------------------------------
-  const { data, isLoading, isError, error } = useGetBillableItems(
+  const { data, isLoading, isError, error, refetch: refetchItems } = useGetBillableItems(
     {
       limit: 500,
       include_inactive: false,
       type: BillableItemType.ALL,
     },
     {
-      staleTime: 5 * 60 * 1000,
       refetchOnWindowFocus: false,
     }
   );
@@ -839,6 +838,7 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
               colors={colors}
               itemsFullData={data?.data?.items_full}
               error={error}
+              onRetry={() => refetchItems()}
               onSearchChange={handleSearchChange}
               onSearchFocus={handleSearchFocus}
               onSearchBlur={handleSearchBlur}

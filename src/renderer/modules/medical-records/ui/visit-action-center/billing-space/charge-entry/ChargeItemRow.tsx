@@ -10,6 +10,18 @@ import {
 import { isInventoryItem } from '../../../../api/billable-items/BillingItemsTypes';
 import { getRoleDisplayName as formatName } from '../../../../../../shared/utils/facilityRoleFormator';
 
+function pluralizeUnit(unit: string, count: number): string {
+  if (count === 1) return unit;
+  const lower = unit.toLowerCase();
+  if (lower.endsWith('s') || lower.endsWith('x') || lower.endsWith('ch') || lower.endsWith('sh') || lower.endsWith('o'))
+    return unit + 'es';
+  if (lower.endsWith('y') && lower.length > 2 && !'aeiou'.includes(lower[lower.length - 2]))
+    return unit.slice(0, -1) + 'ies';
+  if (lower.endsWith('f')) return unit.slice(0, -1) + 'ves';
+  if (lower.endsWith('fe')) return unit.slice(0, -2) + 'ves';
+  return unit + 's';
+}
+
 interface ChargeItemRowProps {
   item: RenderableChargeItem;
   index: number;
@@ -53,14 +65,7 @@ const getStockBadge = (
     const isLow = fullItem.stock.is_low_stock;
     const isOut = balance <= 0;
 
-    const unitName = fullItem.unit_of_measure ?? 'unit';
-    const pluralUnit = unitName.endsWith('y')
-      ? unitName.slice(0, -1) + 'ies'
-      : unitName.endsWith('s')
-      ? unitName
-      : unitName + 's';
-
-    const displayUnit = balance === 1 ? unitName : pluralUnit;
+    const displayUnit = pluralizeUnit(fullItem.unit_of_measure ?? 'unit', balance);
 
     return (
       <span

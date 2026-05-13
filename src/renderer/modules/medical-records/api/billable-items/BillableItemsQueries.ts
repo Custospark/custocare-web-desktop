@@ -64,6 +64,7 @@ export const useGetBillableItems = (
 
   return useQuery<BillableItemsResponse, AxiosError<ApiErrorResponse>>({
     queryKey: billingItemsKeys.list(facilityId ?? 0, filters),
+    staleTime: 30_000,
     queryFn: async () => {
       const response = await axiosInstance.get<BillableItemsResponse>(
         '/billing/billable-items',
