@@ -1019,7 +1019,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         open={adjustStockItem != null}
         item={adjustStockItem}
         facilityId={activeFacilityId ? Number(activeFacilityId) : null}
-        staffId={null}
+        staffId={activeContext.capabilities.staff?.staff_id ?? null}
         onClose={() => setAdjustStockItem(null)}
       />
     </div>
