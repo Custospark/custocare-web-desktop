@@ -17,7 +17,11 @@ import type {
   ControlledSubstancesParams,
   ControlledSubstancesResponse,
   CreateInventoryItemRequest,
+  CurrentBalanceResponse,
   DeleteInventoryItemParams,
+  AdjustStockRequest,
+  LedgerEntryResponse,
+  GetCurrentBalanceParams,
   InventoryItemFilters,
   InventoryItemListResponse,
   InventoryItemResponse,
@@ -318,6 +322,67 @@ export const useRestoreInventoryItem = (
 };
 
 /* -------------------------------------------------------------------------- */
+/*                         INVENTORY LEDGER HOOKS                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Query key for stock balance
+ */
+export const inventoryLedgerKeys = {
+  balance: (facilityId: number, itemId: number) => ['inventory-ledger', 'balance', facilityId, itemId] as const,
+};
+
+/**
+ * Fetches current stock balance for an inventory item at a facility
+ */
+export const useGetCurrentStockBalance = (
+  params: GetCurrentBalanceParams,
+  options?: { enabled?: boolean }
+) => {
+  return useQuery<CurrentBalanceResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: inventoryLedgerKeys.balance(params.facility_id, params.inventory_item_id),
+    queryFn: async () => {
+      const response = await axiosInstance.get<CurrentBalanceResponse>(
+        '/inventory/ledger/balance/current',
+        { params }
+      );
+      return response.data;
+    },
+    enabled: options?.enabled ?? (params.facility_id > 0 && params.inventory_item_id > 0),
+  });
+};
+
+/**
+ * Adjusts stock for an inventory item (increase or decrease)
+ * User enters only the delta — system calculates the new balance.
+ */
+export const useAdjustStock = (
+  callbacks: MutationCallbacks<LedgerEntryResponse, AxiosError<ApiErrorResponse>> = {}
+) => {
+  const { showToast } = useToast();
+
+  return useMutation<LedgerEntryResponse, AxiosError<ApiErrorResponse>, AdjustStockRequest>({
+    mutationFn: async (data: AdjustStockRequest) => {
+      const response = await axiosInstance.post<LedgerEntryResponse>(
+        '/inventory/ledger/adjustment',
+        data
+      );
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const direction = data.data.quantity_change > 0 ? 'increased' : 'decreased';
+      showToast('success', `Stock ${direction} successfully. New balance: ${data.data.balance_after_transaction}`, 6000);
+      callbacks.onSuccess?.(data);
+    },
+    onError: (error: AxiosError<ApiErrorResponse>) => {
+      const apiMessage = error.response?.data?.message || error.message || 'Failed to adjust stock.';
+      showToast('error', apiMessage, 8000);
+      callbacks.onError?.(error);
+    },
+  });
+};
+
+/* -------------------------------------------------------------------------- */
 /*                              UTILITY FUNCTIONS                             */
 /* -------------------------------------------------------------------------- */
 
@@ -354,6 +419,7 @@ export const formatValidationErrors = (errors?: Record<string, string[]>): strin
 export default {
   // Query keys
   inventoryItemKeys,
+  inventoryLedgerKeys,
 
   // Query hooks
   useGetInventoryItems,
@@ -363,12 +429,14 @@ export default {
   useGetInventoryItemsByCategory,
   useGetControlledSubstances,
   useGetSpecialHandlingItems,
+  useGetCurrentStockBalance,
 
   // Mutation hooks
   useCreateInventoryItem,
   useUpdateInventoryItem,
   useDeleteInventoryItem,
   useRestoreInventoryItem,
+  useAdjustStock,
 
   // Utilities
   extractErrorMessage,

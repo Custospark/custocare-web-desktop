@@ -24,6 +24,8 @@ import {
   inventoryItemKeys,
 } from '../../api/admin-inventory/useInventoryItemQueries';
 
+import { useAdjustStock } from '../../api/admin-inventory/useInventoryItemQueries';
+
 import {
   type CreateInventoryItemRequest,
   type UpdateInventoryItemRequest,
@@ -41,6 +43,7 @@ import { InventoryItemHeader } from './components/InventoryItemHeader';
 import { InventoryItemFiltersBar } from './components/InventoryItemFiltersBar';
 import { InventoryItemFormDrawer, type InventoryItemFormData } from './components/InventoryItemFormDrawer';
 import { InventoryCatalogList } from './components/InventoryCatalogList';
+import { InventoryStockAdjustModal } from './components/InventoryStockAdjustModal';
 import { generateItemCode } from './utils/inventoryItemUiUtils';
 
 interface AdminInventoryItemProps {
@@ -152,6 +155,9 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
   // UI state
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  // Stock adjust modal state
+  const [adjustStockItem, setAdjustStockItem] = useState<InventoryItem | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -833,6 +839,10 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
     }
   };
 
+  const handleAdjustStock = useCallback((item: InventoryItem) => {
+    setAdjustStockItem(item);
+  }, []);
+
   const handleDelete = async (item: InventoryItem) => {
     const confirmed = await confirm({
       title: 'Delete Inventory Item',
@@ -975,6 +985,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         onDuplicate={handleDuplicate}
         onDelete={handleDelete}
         onRestore={handleRestore}
+        onAdjustStock={handleAdjustStock}
         onRetry={() => refetch()}
         itemCategoryOptions={itemCategoryOptions}
         currentPage={currentPage}
@@ -1001,6 +1012,15 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         onSubmit={handleSubmit}
         isSubmitting={createMutation.isPending || updateMutation.isPending}
         canSubmit={canSubmit}
+      />
+
+      <InventoryStockAdjustModal
+        theme={theme}
+        open={adjustStockItem != null}
+        item={adjustStockItem}
+        facilityId={activeFacilityId ? Number(activeFacilityId) : null}
+        staffId={null}
+        onClose={() => setAdjustStockItem(null)}
       />
     </div>
   );

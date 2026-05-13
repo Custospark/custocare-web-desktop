@@ -426,3 +426,66 @@ export interface ApiErrorResponse {
   errors?: Record<string, string[]>;
   data: [];
 }
+
+/* -------------------------------------------------------------------------- */
+/*                       INVENTORY LEDGER TYPES                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Current balance response from /inventory/ledger/balance/current
+ */
+export interface CurrentBalanceResponse {
+  success: true;
+  data: {
+    facility_id: number;
+    inventory_item_id: number;
+    current_balance: number;
+    timestamp: string;
+  };
+}
+
+/**
+ * Adjust stock request body for POST /inventory/ledger/adjustment
+ * quantity_change: positive = increase stock, negative = decrease stock
+ */
+export interface AdjustStockRequest {
+  facility_id: number;
+  inventory_item_id: number;
+  quantity: number;
+  unit_of_measure: string;
+  performed_by_staff_id: number;
+  transaction_notes?: string;
+  lot_number?: string;
+  expiry_date?: string;
+}
+
+/**
+ * Ledger entry response after recording a transaction
+ */
+export interface LedgerEntryResponse {
+  success: true;
+  message: string;
+  data: {
+    id: number;
+    transaction_uuid: string;
+    facility_id: number;
+    inventory_item_id: number;
+    transaction_type: string;
+    quantity_change: number;
+    balance_after_transaction: number;
+    unit_of_measure: string;
+    transaction_cause: string;
+    transaction_notes: string | null;
+    performed_by_staff_id: number;
+    transaction_timestamp: string;
+    created_at: string;
+  };
+}
+
+/**
+ * Parameters for getting current stock balance
+ */
+export interface GetCurrentBalanceParams {
+  facility_id: number;
+  inventory_item_id: number;
+}

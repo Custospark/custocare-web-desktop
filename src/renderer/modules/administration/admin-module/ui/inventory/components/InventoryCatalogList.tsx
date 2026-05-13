@@ -7,6 +7,7 @@ import {
   Copy,
   Edit2,
   Package,
+  PackagePlus,
   RefreshCw,
   Shield,
   Thermometer,
@@ -48,6 +49,7 @@ interface Props {
   onDuplicate: (item: InventoryItem) => void;
   onDelete: (item: InventoryItem) => void;
   onRestore: (item: InventoryItem) => void;
+  onAdjustStock?: (item: InventoryItem) => void;
   onRetry: () => void;
   itemCategoryOptions: {
     value: ItemCategory;
@@ -115,6 +117,7 @@ interface RowActionsProps {
   onEdit: (item: InventoryItem) => void;
   onDelete: (item: InventoryItem) => void;
   onRestore: (item: InventoryItem) => void;
+  onAdjustStock?: (item: InventoryItem) => void;
 }
 
 const RowActions: React.FC<RowActionsProps> = ({
@@ -125,6 +128,7 @@ const RowActions: React.FC<RowActionsProps> = ({
   onEdit,
   onDelete,
   onRestore,
+  onAdjustStock,
 }) => {
   const btn = cn(
     'rounded-lg transition-colors cursor-pointer',
@@ -137,6 +141,11 @@ const RowActions: React.FC<RowActionsProps> = ({
 
   return (
     <div className="flex items-center gap-1">
+      {onAdjustStock && (
+        <button onClick={() => onAdjustStock(item)} className={btn} title="Adjust Stock">
+          <PackagePlus className={iconCls} />
+        </button>
+      )}
       <button onClick={() => onDuplicate(item)} className={btn} title="Duplicate">
         <Copy className={iconCls} />
       </button>
@@ -454,6 +463,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
   onDuplicate,
   onDelete,
   onRestore,
+  onAdjustStock,
   onRetry,
   itemCategoryOptions,
   currentPage,
@@ -764,6 +774,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                       onEdit={onEdit}
                       onDelete={onDelete}
                       onRestore={onRestore}
+                      onAdjustStock={onAdjustStock}
                     />
                   </div>
                 </div>
@@ -863,6 +874,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                       onEdit={onEdit}
                       onDelete={onDelete}
                       onRestore={onRestore}
+                      onAdjustStock={onAdjustStock}
                     />
                   </div>
                 </div>

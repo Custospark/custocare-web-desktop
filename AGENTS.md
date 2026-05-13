@@ -33,7 +33,7 @@ Each agent reports to you. You report to me after each agent completes.
 Critical Rules
 #  Rule
 1  Always run lint/type checks (FE) OR php -l / artisan / phpunit (BE) after file changes. Report results.
-2  Be concise. No fluff.
+2  Be concise. No fluff.Explain what you have done comparing what was happening before and what changed
 3  Never assume. Unclear? Stop → Ask.
 4  Check existing files first. Update > Create.
 5  Backend always follows SOLID: interfaces for repos & services, provider bindings in bootstrap/providers.php.
