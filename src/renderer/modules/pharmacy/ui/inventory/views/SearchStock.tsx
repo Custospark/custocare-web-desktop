@@ -3,6 +3,7 @@ import { Search, Package, Eye, Edit, Trash2, Plus, AlertCircle, Filter } from 'l
 import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '../../../../../app/store/store';
 import { navigate } from '../../../../../app/store/slices/moduleNavigationSlice';
+import { formatCurrency as formatCurrencyShared } from '../../../../../shared/utils/formatCurrency';
 import { useSearchInventoryItems, useDeleteInventoryItem } from '../api/useInventoryItemQueries';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
@@ -116,10 +117,7 @@ const SearchStock: React.FC<SearchStockProps> = ({ theme }) => {
   // Format currency
   const formatCurrency = (amount: number | null | undefined, currencyCode: string = 'USD') => {
     if (amount === null || amount === undefined) return 'N/A';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currencyCode,
-    }).format(amount);
+    return formatCurrencyShared(amount, currencyCode);
   };
 
   return (

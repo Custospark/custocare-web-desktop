@@ -5,6 +5,7 @@ import { AlertCircle, ChevronLeft, ChevronRight, CreditCard, Eye, Search } from 
 import type { RootState } from '../../../../app/store/rootReducer';
 import { getPatientId } from '../../../../app/store/utils/contextSelectors';
 import { selectActiveFacilityCurrency } from '../../../../app/store/slices/activeContextSlice';
+import { formatCurrency } from '../../../../shared/utils/formatCurrency';
 import type { BillingReviewItem } from '../../../medical-records/api/billing-review/BillingReviewTypes';
 import { BillingInvoicePreviewModal } from '../../../billling/ui/revenue/BillingInvoicePreviewModal';
 import { invoiceNumberFromBillingItem } from '../../../billling/ui/revenue/billingInvoiceFromReceiptUtils';
@@ -19,17 +20,7 @@ type BillingRow = BillingReviewItem & {
 };
 
 function formatMoney(amount: number, currencyCode?: string | null): string {
-  const code = currencyCode && currencyCode.length === 3 ? currencyCode : undefined;
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: code ?? 'UGX',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  } catch {
-    return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
+  return formatCurrency(amount, currencyCode ?? undefined);
 }
 
 function formatVisitWhen(iso: string | null | undefined): string {

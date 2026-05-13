@@ -1,5 +1,6 @@
 // src/administration/admin-module/inventory-items/inventoryItemUiUtils.ts
-import  { ItemStatus, type InventoryItem } from '../../../api/admin-inventory/inventoryItemTypes';
+import { ItemStatus, type InventoryItem } from '../../../api/admin-inventory/inventoryItemTypes';
+import { formatPrice as sharedFormatPrice } from '../../../../../shared/utils/formatCurrency';
 
 export const normalizeAmount = (value: unknown): number => {
   const num = Number(value);
@@ -7,12 +8,7 @@ export const normalizeAmount = (value: unknown): number => {
 };
 
 export const formatPrice = (amount: unknown, currency: string) => {
-  const safeAmount = normalizeAmount(amount);
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(safeAmount);
+  return sharedFormatPrice(amount, currency);
 };
 
 export const getStatusColor = (status: ItemStatus, isDark: boolean) => {

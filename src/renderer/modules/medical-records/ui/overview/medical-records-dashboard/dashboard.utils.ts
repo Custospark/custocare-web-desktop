@@ -46,6 +46,8 @@ export const AGE_COLORS = [
 
 export type AccentTone = 'blue' | 'green' | 'amber' | 'violet' | 'rose';
 
+import { formatCurrency as sharedFormatCurrency, formatCompactCurrency as sharedFormatCompact, formatCurrencyWithCustomCurrency as sharedFormatCustom } from '../../../../../shared/utils/formatCurrency';
+
 export const formatNumber = (value?: number | null) =>
   new Intl.NumberFormat('en-US').format(Number(value ?? 0));
 
@@ -53,18 +55,33 @@ export const formatPercent = (value?: number | null, digits = 1) =>
   `${Number(value ?? 0).toFixed(digits)}%`;
 
 /**
- * Get the current facility currency from Redux store
- * Falls back to 'USD' if not available
+ * Format currency using facility's configured currency
+ * Falls back to USD if no facility currency is set
  */
-const getCurrentFacilityCurrency = (): string => {
-  try {
-    const state = store.getState();
-    const currency = selectActiveFacilityCurrency(state);
-    return currency && typeof currency === 'string' ? currency : 'USD';
-  } catch (error) {
-    console.warn('Failed to get facility currency, falling back to USD:', error);
-    return 'USD';
-  }
+export const formatCurrency = (value?: number | null) => {
+  return sharedFormatCurrency(value);
+};
+
+/**
+ * Format compact currency using facility's configured currency
+ * Falls back to USD if no facility currency is set
+ */
+export const formatCompactCurrency = (value?: number | null) => {
+  return sharedFormatCompact(value);
+};
+
+/**
+ * Format currency with custom currency (overrides facility config)
+ */
+export const formatCurrencyWithCustomCurrency = (value?: number | null, currencyCode?: string) => {
+  return sharedFormatCustom(value, currencyCode);
+};
+
+/**
+ * Format compact currency with custom currency (overrides facility config)
+ */
+export const formatCompactCurrencyWithCustomCurrency = (value?: number | null, currencyCode?: string) => {
+  return sharedFormatCompact(value || 0, currencyCode);
 };
 
 /**

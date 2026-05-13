@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { FileText, ArrowLeft, Plus, Trash2, Check } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { cn } from '../../../../shared/utils/classNameUtils';
+import { formatCurrency as formatCurrencyShared } from '../../../../shared/utils/formatCurrency';
 import type { RootState } from '../../../../app/store/store';
 import { type AppDispatch } from '../../../../app/store/store';
 
@@ -191,11 +192,7 @@ const CreateInvoice: React.FC<CreateInvoiceProps> = ({ theme }) => {
   }, [invoiceItems, customerName, customerEmail, notes, calculateSubtotal, calculateTax, calculateTotal, dispatch]);
 
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount);
+    return formatCurrencyShared(amount);
   };
 
   return (

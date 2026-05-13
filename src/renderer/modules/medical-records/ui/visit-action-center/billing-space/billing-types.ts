@@ -482,39 +482,21 @@ export const calculateBillingSnapshot = ({
  * Get the current facility currency from Redux store
  * Falls back to 'USD' if not available
  */
-const getCurrentFacilityCurrency = (): string => {
-  try {
-    const state = store.getState();
-    const currency = selectActiveFacilityCurrency(state);
-    return currency && typeof currency === 'string' ? currency : 'USD';
-  } catch (error) {
-    console.warn('Failed to get facility currency, falling back to USD:', error);
-    return 'USD';
-  }
-};
+import { formatCurrency as sharedFormatCurrency, formatCurrencyWithCustomCurrency as sharedFormatCurrencyWithCustom } from '../../../../../shared/utils/formatCurrency';
 
 /**
  * Format currency using facility's configured currency
  * Falls back to USD if no facility currency is set
  */
 export const formatCurrency = (amount: number, currency?: string): string => {
-  const finalCurrency = currency || getCurrentFacilityCurrency();
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: finalCurrency,
-    minimumFractionDigits: 0,
-  }).format(amount);
+  return sharedFormatCurrency(amount, currency);
 };
 
 /**
  * Format currency with custom currency parameter (overrides facility config)
  */
 export const formatCurrencyWithCustomCurrency = (amount: number, currencyCode: string): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currencyCode,
-    minimumFractionDigits: 0,
-  }).format(amount);
+  return sharedFormatCurrencyWithCustom(amount, currencyCode);
 };
 
 export const generateReceiptNumber = (): string => {

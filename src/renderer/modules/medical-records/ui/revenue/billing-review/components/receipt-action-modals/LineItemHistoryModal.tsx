@@ -2,6 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { History, X, User, CalendarClock, Info, CheckCircle, AlertCircle, Clock, Edit, Plus, RefreshCw, Trash2, Minus } from 'lucide-react';
 import type { AuditLogEntry } from '../../../../../api/billing-review/BillingReviewTypes';
+import { formatCurrency as formatCurrencyShared } from '../../../../../shared/utils/formatCurrency';
 
 interface LineItemHistoryModalProps {
   open: boolean;
@@ -31,12 +32,7 @@ export const LineItemHistoryModal: React.FC<LineItemHistoryModalProps> = ({
 
   // Format currency
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'UGX',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+    return formatCurrencyShared(amount);
   };
 
   // Get icon based on event type
