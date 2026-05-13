@@ -24,8 +24,6 @@ import {
   inventoryItemKeys,
 } from '../../api/admin-inventory/useInventoryItemQueries';
 
-import { useAdjustStock } from '../../api/admin-inventory/useInventoryItemQueries';
-
 import {
   type CreateInventoryItemRequest,
   type UpdateInventoryItemRequest,
@@ -741,6 +739,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         reorder_quantity: payload.reorder_quantity ?? null,
         safety_stock_level: payload.safety_stock_level ?? null,
         max_stock_level: payload.max_stock_level ?? null,
+        current_balance: payload.package_quantity,
         status: payload.status,
         metadata: null,
         created_at: now,

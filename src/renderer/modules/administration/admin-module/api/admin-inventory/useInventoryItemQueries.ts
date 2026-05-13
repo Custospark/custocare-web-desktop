@@ -6,7 +6,7 @@
  * React Query hooks for inventory item management operations.
  */
 
-import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseQueryOptions, type QueryKey } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { axiosInstance } from '../../../../../app/api/axiosConfig';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
@@ -357,13 +357,19 @@ export const useGetCurrentStockBalance = (
  * Adjusts stock for an inventory item (increase or decrease)
  * User enters only the delta — system calculates the new balance.
  */
+interface AdjustStockContext {
+  prevListSnapshots: [QueryKey, unknown][];
+  prevBalance: unknown;
+  balanceKey: QueryKey;
+}
+
 export const useAdjustStock = (
   callbacks: MutationCallbacks<LedgerEntryResponse, AxiosError<ApiErrorResponse>> = {}
 ) => {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
 
-  return useMutation<LedgerEntryResponse, AxiosError<ApiErrorResponse>, AdjustStockRequest>({
+  return useMutation<LedgerEntryResponse, AxiosError<ApiErrorResponse>, AdjustStockRequest, AdjustStockContext>({
     mutationFn: async (data: AdjustStockRequest) => {
       const response = await axiosInstance.post<LedgerEntryResponse>(
         '/inventory/ledger/adjustment',
@@ -404,14 +410,14 @@ export const useAdjustStock = (
       }
 
       // Return snapshot for rollback
-      return { prevListSnapshots, prevBalance, balanceKey };
+      return { prevListSnapshots, prevBalance, balanceKey } as AdjustStockContext;
     },
     onSuccess: (data) => {
       const direction = data.data.quantity_change > 0 ? 'increased' : 'decreased';
       showToast('success', `Stock ${direction} successfully. New balance: ${data.data.balance_after_transaction}`, 6000);
       callbacks.onSuccess?.(data);
     },
-    onError: (error, data, context) => {
+    onError: (error, _data, context) => {
       // Rollback list cache
       if (context?.prevListSnapshots) {
         for (const [key, cached] of context.prevListSnapshots) {
