@@ -279,7 +279,11 @@ export const MRBillingReview: React.FC<MRBillingReviewProps> = ({ theme = 'light
   const pillBg = isDark ? 'bg-gray-700' : 'bg-gray-100';
 
   if (isLoading) {
-    return <LoadingSkeleton variant="detail" theme={theme} message="Loading billing records..." />;
+    return (
+      <div className="p-6">
+        <LoadingSkeleton variant="table" theme={theme} message="Loading billing records..." />
+      </div>
+    );
   }
 
   if (error) {

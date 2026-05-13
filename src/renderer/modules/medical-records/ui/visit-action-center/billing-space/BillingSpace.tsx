@@ -225,7 +225,7 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
     return (
       <div className={className}>
         <LoadingSkeleton
-          variant="default"
+          variant="form"
           message="Loading billing information..."
           theme={theme}
           className="rounded-lg"
