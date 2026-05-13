@@ -292,26 +292,35 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
               <BadgeDollarSign className="w-4 h-4 text-purple-500" />
               <span className={`text-sm font-medium ${colors.text.secondary}`}>Billing Status</span>
             </div>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${currentStatus.color}`}>
-              {currentStatus.label}
-            </span>
+            {isBillingDataLoaded ? (
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${currentStatus.color}`}>
+                {currentStatus.label}
+              </span>
+            ) : (
+              <div className={`h-5 w-16 rounded animate-pulse ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
+            )}
           </div>
 
           {/* Source Badges */}
-          <div className="flex flex-wrap gap-2">
-            {persistedCount > 0 && (
-              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${colors.source.persisted}`}>
-                <Database className="w-3 h-3" />
-                {persistedCount} Saved
-              </span>
-            )}
-            {draftCount > 0 && (
-              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${colors.source.draft}`}>
-                <FilePlus2 className="w-3 h-3" />
-                {draftCount} {draftCount === 1 ? 'draft' : 'drafts'}
-              </span>
-            )}
-          </div>
+          {isBillingDataLoaded && (
+            <div className="flex flex-wrap gap-2">
+              {persistedCount > 0 && (
+                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${colors.source.persisted}`}>
+                  <Database className="w-3 h-3" />
+                  {persistedCount} Saved
+                </span>
+              )}
+              {draftCount > 0 && (
+                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${colors.source.draft}`}>
+                  <FilePlus2 className="w-3 h-3" />
+                  {draftCount} {draftCount === 1 ? 'draft' : 'drafts'}
+                </span>
+              )}
+            </div>
+          )}
+          {!isBillingDataLoaded && (
+            <div className={`h-5 w-32 rounded animate-pulse ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
+          )}
 
           {/* Items */}
           <div className="flex items-center justify-between">
@@ -319,7 +328,11 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
               <ShoppingCart className="w-4 h-4 text-green-500" />
               <span className={`text-sm font-medium ${colors.text.secondary}`}>Items</span>
             </div>
-            <span className={`font-medium ${colors.text.primary}`}>{itemsCount}</span>
+            {isBillingDataLoaded ? (
+              <span className={`font-medium ${colors.text.primary}`}>{itemsCount}</span>
+            ) : (
+              <div className={`h-5 w-10 rounded animate-pulse ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
+            )}
           </div>
 
           {/* Subtotal */}
@@ -328,7 +341,11 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
               <Receipt className="w-4 h-4 text-yellow-500" />
               <span className={`text-sm font-medium ${colors.text.secondary}`}>Subtotal</span>
             </div>
-            <span className={`font-bold ${colors.text.primary}`}>{formatCurrency(subtotal)}</span>
+            {isBillingDataLoaded ? (
+              <span className={`font-bold ${colors.text.primary}`}>{formatCurrency(subtotal)}</span>
+            ) : (
+              <div className={`h-5 w-20 rounded animate-pulse ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
+            )}
           </div>
 
           {/* Total Due */}
@@ -337,7 +354,11 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
               <Receipt className="w-4 h-4 text-red-500" />
               <span className={`text-sm font-medium ${colors.text.secondary}`}>Total Due</span>
             </div>
-            <span className={`font-bold ${colors.text.primary}`}>{formatCurrency(totalDue)}</span>
+            {isBillingDataLoaded ? (
+              <span className={`font-bold ${colors.text.primary}`}>{formatCurrency(totalDue)}</span>
+            ) : (
+              <div className={`h-5 w-20 rounded animate-pulse ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
+            )}
           </div>
 
           {/* Action Buttons */}
