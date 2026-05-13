@@ -47,9 +47,9 @@ const getStockBadge = (
   }
 
   if (isInventoryItem(fullItem)) {
-    const units = fullItem.package_quantity;
+    const balance = fullItem.current_balance ?? fullItem.package_quantity;
     const isLow = fullItem.stock.is_low_stock;
-    const isOut = units <= 0;
+    const isOut = balance <= 0;
     
     const unitName = fullItem.unit_of_measure ?? 'unit';
     const pluralUnit = unitName.endsWith('y') 
@@ -58,7 +58,7 @@ const getStockBadge = (
         ? unitName 
         : unitName + 's';
     
-    const displayUnit = units === 1 ? unitName : pluralUnit;
+    const displayUnit = balance === 1 ? unitName : pluralUnit;
 
     return (
       <span className={`text-xs px-1.5 py-0.5 rounded font-medium whitespace-nowrap ${
@@ -68,7 +68,7 @@ const getStockBadge = (
           ? isDark ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'
           : isDark ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'
       }`}>
-        {isOut ? 'Out of stock' : `${units} ${displayUnit}`}
+        {isOut ? 'Out of stock' : `${balance} ${displayUnit}`}
       </span>
     );
   }

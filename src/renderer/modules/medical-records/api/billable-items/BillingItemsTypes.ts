@@ -81,6 +81,7 @@ export interface InventoryItem extends BaseBillableItem {
   strength: string | null;
   unit_of_measure: string;
   package_quantity: number;
+  current_balance: number;
   requires_prescription: boolean;
   currency: string;
   stock: InventoryStock;
