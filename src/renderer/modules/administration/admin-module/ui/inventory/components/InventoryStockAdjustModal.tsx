@@ -131,7 +131,14 @@ export const InventoryStockAdjustModal: React.FC<Props> = ({
                 <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
               </div>
             ) : (
-              <p className="mt-1 text-3xl font-black tabular-nums">{currentBalance}</p>
+              <p className={cn(
+                'mt-1 text-3xl font-black tabular-nums',
+                currentBalance === 0
+                  ? 'text-red-500'
+                  : currentBalance <= (item.reorder_point ?? 0)
+                    ? 'text-amber-500'
+                    : isDark ? 'text-emerald-400' : 'text-emerald-600'
+              )}>{currentBalance}</p>
             )}
             <p className={cn('text-xs mt-1', muted)}>{item.unit_of_measure}</p>
           </div>

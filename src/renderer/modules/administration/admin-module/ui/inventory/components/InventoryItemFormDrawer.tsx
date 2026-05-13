@@ -96,6 +96,8 @@ interface Props {
 
   formData: InventoryItemFormData;
   onChange: (next: InventoryItemFormData) => void;
+  /** Current stock balance from ledger (display-only, not editable here) */
+  currentBalance?: number;
 
   onClose: () => void;
   onSubmit: () => void;
@@ -538,6 +540,31 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
             </div>
 
             <div className="p-4 space-y-4">
+              {/* Current Stock Balance (read-only, from ledger) */}
+              {currentBalance !== undefined && mode === 'edit' && (
+                <div className={cn(
+                  'flex items-center justify-between p-3 rounded-xl border',
+                  isDark ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'
+                )}>
+                  <span className={cn('text-sm font-medium', isDark ? 'text-slate-300' : 'text-slate-700')}>
+                    Current Stock
+                  </span>
+                  <span className={cn(
+                    'text-lg font-black tabular-nums',
+                    currentBalance === 0
+                      ? 'text-red-500'
+                      : currentBalance <= (formData.reorder_point ?? 0)
+                        ? 'text-amber-500'
+                        : isDark ? 'text-emerald-400' : 'text-emerald-600'
+                  )}>
+                    {currentBalance}
+                    <span className={cn('text-sm font-normal ml-1', isDark ? 'text-slate-400' : 'text-slate-500')}>
+                      {formData.unit_of_measure}
+                    </span>
+                  </span>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${labelTheme}`}>
@@ -556,34 +583,48 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
 
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${labelTheme}`}>
-                    Quantity in Stock <span className="text-red-500">*</span>
+                    Quantity in Stock {mode === 'create' && <span className="text-red-500">*</span>}
                   </label>
-                   <input
-                        type="number"
-                        min={1}
-                        value={formData.package_quantity === undefined ? '' : formData.package_quantity}
-                        onChange={(e) => {
-                            const value = e.target.value;
-
-                            if (value === '') {
-                            set({ package_quantity: undefined });
-                            return;
-                            }
-
-                            const numericValue = Number(value);
-                            if (!isNaN(numericValue)) {
-                            set({ package_quantity: numericValue });
-                            }
-                        }}
-                        onBlur={() => {
-                            if (!formData.package_quantity || formData.package_quantity < 1) {
-                            set({ package_quantity: 1 });
-                            }
-                        }}
-                        className={`${inputBase} ${inputTheme}`}
-                        placeholder="e.g., 100"
-                        />
-
+                  {mode === 'create' ? (
+                    <input
+                      type="number"
+                      min={1}
+                      value={formData.package_quantity === undefined ? '' : formData.package_quantity}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          set({ package_quantity: undefined });
+                          return;
+                        }
+                        const numericValue = Number(value);
+                        if (!isNaN(numericValue)) {
+                          set({ package_quantity: numericValue });
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!formData.package_quantity || formData.package_quantity < 1) {
+                          set({ package_quantity: 1 });
+                        }
+                      }}
+                      className={`${inputBase} ${inputTheme}`}
+                      placeholder="e.g., 100"
+                    />
+                  ) : (
+                    <div className={cn(
+                      'w-full px-3 py-2.5 rounded-lg border text-sm font-semibold tabular-nums',
+                      isDark ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-600'
+                    )}>
+                      {currentBalance !== undefined ? currentBalance : formData.package_quantity}
+                      <span className={cn('text-xs ml-1 font-normal', isDark ? 'text-slate-500' : 'text-slate-400')}>
+                        {formData.unit_of_measure}
+                      </span>
+                    </div>
+                  )}
+                  {mode === 'edit' && (
+                    <p className={cn('text-xs mt-1', isDark ? 'text-slate-500' : 'text-slate-400')}>
+                      Use the Adjust Stock button to change quantity
+                    </p>
+                  )}
                 </div>
               </div>
 
