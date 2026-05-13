@@ -22,14 +22,6 @@ export const formatCurrency = (value: number, currency?: string) => {
 export const formatCompactCurrency = (value: number, currency?: string) => {
   return sharedFormatCompact(value, currency);
 };
-
-/**
- * Format compact currency using facility's configured currency
- * Falls back to USD if no facility currency is set
- */
-export const formatCompactCurrency = (value: number, currency?: string) => {
-  const finalCurrency = currency || getCurrentFacilityCurrency();
-  return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: finalCurrency,
     notation: 'compact',

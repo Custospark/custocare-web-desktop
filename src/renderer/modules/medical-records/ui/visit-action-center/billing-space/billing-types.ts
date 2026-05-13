@@ -715,9 +715,19 @@ export const getDraftStorageKey = (visitId?: string) => `billing_draft_${visitId
 
 // Re-export DEFAULT_CURRENCY for backward compatibility
 // This now dynamically gets the facility currency
+function getFacilityCurrency(): string {
+  try {
+    const state = store.getState();
+    const currency = selectActiveFacilityCurrency(state);
+    return currency && typeof currency === 'string' ? currency : 'USD';
+  } catch {
+    return 'USD';
+  }
+}
+
 export const DEFAULT_CURRENCY = (() => {
   try {
-    return getCurrentFacilityCurrency();
+    return getFacilityCurrency();
   } catch {
     return API_DEFAULT_CURRENCY;
   }

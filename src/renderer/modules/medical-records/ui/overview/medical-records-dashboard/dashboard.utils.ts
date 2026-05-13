@@ -12,8 +12,7 @@ import type {
   DashboardAlert,
   DashboardPeriod,
 } from '../../../api/facility-patient-analytics/FacilityPatientAnalyticsTypes';
-import { store } from '../../../../../app/store/store'; 
-import { selectActiveFacilityCurrency } from '../../../../../app/store/slices/activeContextSlice'; 
+import { formatCurrency as sharedFormatCurrency, formatCompactCurrency as sharedFormatCompact, formatCurrencyWithCustomCurrency as sharedFormatCustom } from '../../../../../shared/utils/formatCurrency';
 
 export const cn = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(' ');
@@ -46,8 +45,6 @@ export const AGE_COLORS = [
 
 export type AccentTone = 'blue' | 'green' | 'amber' | 'violet' | 'rose';
 
-import { formatCurrency as sharedFormatCurrency, formatCompactCurrency as sharedFormatCompact, formatCurrencyWithCustomCurrency as sharedFormatCustom } from '../../../../../shared/utils/formatCurrency';
-
 export const formatNumber = (value?: number | null) =>
   new Intl.NumberFormat('en-US').format(Number(value ?? 0));
 
@@ -71,69 +68,17 @@ export const formatCompactCurrency = (value?: number | null) => {
 };
 
 /**
- * Format currency with custom currency (overrides facility config)
+ * Format currency with custom currency parameter (overrides facility config)
  */
 export const formatCurrencyWithCustomCurrency = (value?: number | null, currencyCode?: string) => {
   return sharedFormatCustom(value, currencyCode);
 };
 
 /**
- * Format compact currency with custom currency (overrides facility config)
- */
-export const formatCompactCurrencyWithCustomCurrency = (value?: number | null, currencyCode?: string) => {
-  return sharedFormatCompact(value || 0, currencyCode);
-};
-
-/**
- * Format currency using facility's configured currency
- * Falls back to USD if no facility currency is set
- */
-export const formatCurrency = (value?: number | null) => {
-  const currency = getCurrentFacilityCurrency();
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency,
-    maximumFractionDigits: 0,
-  }).format(Number(value ?? 0));
-};
-
-/**
- * Format compact currency using facility's configured currency
- * Falls back to USD if no facility currency is set
- */
-export const formatCompactCurrency = (value?: number | null) => {
-  const currency = getCurrentFacilityCurrency();
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency,
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(Number(value ?? 0));
-};
-
-/**
- * Format currency with custom currency parameter (overrides facility config)
- */
-export const formatCurrencyWithCustomCurrency = (value?: number | null, currencyCode?: string) => {
-  const currency = currencyCode || getCurrentFacilityCurrency();
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency,
-    maximumFractionDigits: 0,
-  }).format(Number(value ?? 0));
-};
-
-/**
  * Format compact currency with custom currency parameter (overrides facility config)
  */
 export const formatCompactCurrencyWithCustomCurrency = (value?: number | null, currencyCode?: string) => {
-  const currency = currencyCode || getCurrentFacilityCurrency();
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency,
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(Number(value ?? 0));
+  return sharedFormatCompact(value || 0, currencyCode);
 };
 
 export const formatDateLabel = (value: string) => {
