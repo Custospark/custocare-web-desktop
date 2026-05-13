@@ -289,6 +289,20 @@ const ExpandedDetails: React.FC<ExpandedDetailsProps> = ({ item, isDark }) => (
           isDark ? 'text-gray-400' : 'text-gray-600'
         )}
       >
+        <div className="flex items-center gap-2">
+          <dt className="font-medium">On Hand:</dt>
+          <dd className={cn(
+            'font-bold tabular-nums',
+            item.current_balance === 0
+              ? 'text-red-500'
+              : item.current_balance <= (item.reorder_point ?? 0)
+                ? 'text-amber-500'
+                : isDark ? 'text-emerald-400' : 'text-emerald-600'
+          )}>
+            {item.current_balance}
+          </dd>
+          <span className={cn(isDark ? 'text-gray-500' : 'text-gray-400')}>{item.unit_of_measure}</span>
+        </div>
         <div>
           <dt className="inline font-medium">Reorder Point: </dt>
           <dd className="inline">{item.reorder_point ?? 'Not set'}</dd>
@@ -737,6 +751,19 @@ export const InventoryCatalogList: React.FC<Props> = ({
                     </div>
 
                     <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className={cn(
+                        'text-sm font-bold tabular-nums',
+                        item.current_balance === 0
+                          ? 'text-red-500'
+                          : item.current_balance <= (item.reorder_point ?? 0)
+                            ? 'text-amber-500'
+                            : isDark ? 'text-emerald-400' : 'text-emerald-600'
+                      )}>
+                        {item.current_balance}
+                      </span>
+                      <span className={cn('text-[10px] -mt-1', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                        {item.unit_of_measure}
+                      </span>
                       <span className="font-semibold text-sm">
                         {formatPrice(item.unit_cost)}
                       </span>
@@ -753,19 +780,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      {item.is_hazardous && <HazardBadge isDark={isDark} />}
-                      {item.requires_refrigeration && <RefrigBadge isDark={isDark} />}
-                      {item.requires_prescription && <PrescriptionBadge isDark={isDark} />}
-                      <span
-                        className={cn(
-                          'text-xs',
-                          isDark ? 'text-gray-400' : 'text-gray-500'
-                        )}
-                      >
-                        {item.package_quantity} {item.unit_of_measure}
-                      </span>
-                    </div>
+                   
                     <RowActions
                       item={item}
                       size="sm"
@@ -781,7 +796,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
 
                 {/* Desktop view */}
                 <div className="hidden sm:grid grid-cols-12 gap-4 items-center px-4 py-3">
-                  <div className="col-span-6 flex items-center gap-3 min-w-0">
+                  <div className="col-span-5 flex items-center gap-3 min-w-0">
                     <button
                       onClick={() => onToggleExpand(item.item_uuid)}
                       aria-label="Toggle details"
@@ -826,6 +841,22 @@ export const InventoryCatalogList: React.FC<Props> = ({
                     </div>
                   </div>
 
+                  <div className="col-span-1 text-center">
+                    <span className={cn(
+                      'text-sm font-bold tabular-nums',
+                      item.current_balance === 0
+                        ? 'text-red-500'
+                        : item.current_balance <= (item.reorder_point ?? 0)
+                          ? 'text-amber-500'
+                          : isDark ? 'text-emerald-400' : 'text-emerald-600'
+                    )}>
+                      {item.current_balance}
+                    </span>
+                    <p className={cn('text-[10px]', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                      {item.unit_of_measure}
+                    </p>
+                  </div>
+
                   <div className="col-span-2 hidden md:block">
                     <span
                       className={cn(
@@ -863,9 +894,6 @@ export const InventoryCatalogList: React.FC<Props> = ({
                   </div>
 
                   <div className="col-span-2 flex items-center justify-end gap-1.5">
-                    {item.is_hazardous && <HazardBadge size="md" isDark={isDark} />}
-                    {item.requires_refrigeration && <RefrigBadge size="md" isDark={isDark} />}
-                    {item.requires_prescription && <PrescriptionBadge size="md" isDark={isDark} />}
                     <RowActions
                       item={item}
                       size="md"

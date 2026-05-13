@@ -159,6 +159,9 @@ export interface InventoryItem {
   safety_stock_level: number | null;
   max_stock_level: number | null;
 
+  // Live stock balance from ledger (appended by resource)
+  current_balance: number;
+
   // Status
   status: ItemStatus;
 

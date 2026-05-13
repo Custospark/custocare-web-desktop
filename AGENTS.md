@@ -67,7 +67,7 @@ Orchestration Workflow Detail
 
 5. Delegate to Test
    You → Test: "Run checks on updated files"
-   Test (FE): npm run lint, npm run typecheck
+   Test (FE): npm run lint, npm run typecheck(refer to package.jso for commands where need be and use npm)
    Test (BE): php -l <files>, php artisan migrate, phpunit
    Test → You: Pass/fail results
    You → Me: "🧪 Test done. X passed, X failed."

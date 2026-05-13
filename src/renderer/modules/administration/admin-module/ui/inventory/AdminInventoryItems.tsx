@@ -1008,6 +1008,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         unitOfMeasureOptions={unitOfMeasureOptions}
         formData={formData}
         onChange={setFormData}
+        currentBalance={selectedItem?.current_balance}
         onClose={closeDrawer}
         onSubmit={handleSubmit}
         isSubmitting={createMutation.isPending || updateMutation.isPending}
