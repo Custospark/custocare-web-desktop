@@ -2,7 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { History, X, User, CalendarClock, Info, CheckCircle, AlertCircle, Clock, Edit, Plus, RefreshCw, Trash2, Minus } from 'lucide-react';
 import type { AuditLogEntry } from '../../../../../api/billing-review/BillingReviewTypes';
-import { formatCurrency as formatCurrencyShared } from '../../../../../shared/utils/formatCurrency';
+import { formatCurrency as formatCurrencyShared } from '../../../../../../../shared/utils/formatCurrency';
 
 interface LineItemHistoryModalProps {
   open: boolean;

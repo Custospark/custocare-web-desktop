@@ -11,7 +11,7 @@
  * @module billingReviewTypes
  */
 
-import { formatCurrency as sharedFormatCurrency, formatCurrencyWithCustomCurrency as sharedFormatCurrencyWithCustom } from '../../../shared/utils/formatCurrency';
+import { formatCurrency as sharedFormatCurrency, formatCurrencyWithCustomCurrency as sharedFormatCurrencyWithCustom } from '../../../../shared/utils/formatCurrency';
 
 /* -------------------------------------------------------------------------- */
 /*                                   ENUMS                                    */

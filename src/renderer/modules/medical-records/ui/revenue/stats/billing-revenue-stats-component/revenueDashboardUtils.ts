@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { formatCurrency as sharedFormatCurrency, formatCompactCurrency as sharedFormatCompact } from '../../../../../shared/utils/formatCurrency';
+import { formatCurrency as sharedFormatCurrency, formatCompactCurrency as sharedFormatCompact } from '../../../../../../shared/utils/formatCurrency';
 
 export const cx = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(' ');
@@ -21,12 +21,6 @@ export const formatCurrency = (value: number, currency?: string) => {
  */
 export const formatCompactCurrency = (value: number, currency?: string) => {
   return sharedFormatCompact(value, currency);
-};
-    style: 'currency',
-    currency: finalCurrency,
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(Number.isFinite(value) ? value : 0);
 };
 
 export const formatNumber = (value: number) =>

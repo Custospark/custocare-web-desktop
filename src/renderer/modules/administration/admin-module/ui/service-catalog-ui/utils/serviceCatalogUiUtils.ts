@@ -1,5 +1,5 @@
 import { RiskLevel, ServiceStatus } from '../../../api/service-catalog/serviceCatalogTypes';
-import { formatPrice as sharedFormatPrice } from '../../../../../shared/utils/formatCurrency';
+import { formatPrice as sharedFormatPrice } from '../../../../../../shared/utils/formatCurrency';
 
 export const normalizeAmount = (value: unknown): number => {
   const num = Number(value);
