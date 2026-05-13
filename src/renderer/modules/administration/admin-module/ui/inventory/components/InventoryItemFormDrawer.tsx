@@ -1,5 +1,6 @@
 // src/administration/admin-module/inventory-items/components/InventoryItemFormDrawer.tsx
 import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { cn } from '../../../../../../shared/types/cn';
 import {
   AlertTriangle,
   DollarSign,
@@ -122,6 +123,7 @@ export const InventoryItemFormDrawer: React.FC<Props> = ({
   unitOfMeasureOptions,
   formData,
   onChange,
+  currentBalance,
   onClose,
   onSubmit,
   isSubmitting,
