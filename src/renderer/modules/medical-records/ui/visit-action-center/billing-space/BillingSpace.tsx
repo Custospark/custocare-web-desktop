@@ -54,7 +54,7 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
 
   // Check if billing data is loaded from Redux slice
   const isBillingDataLoaded = useSelector((state: any) => 
-    state.billing?.loadedVisits?.includes(String(displayVisitId || ''))
+    state.billing?.billingDataLoaded?.[String(displayVisitId || '')] ?? false
   );
 
   // ---------------------------------------------------------------------------
