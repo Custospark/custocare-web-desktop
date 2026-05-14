@@ -80,7 +80,7 @@ export const ReceiptPreviewSection: React.FC<ReceiptPreviewSectionProps> = ({
           className="flex-1 overflow-y-auto overflow-x-hidden p-4 min-h-0"
           style={{ scrollbarGutter: 'stable' }}
         >
-          <div className="mx-auto w-full max-w-[360px] sm:max-w-[420px]">
+          <div className="mx-auto w-full max-w-[360px] sm:max-w-[420px] space-y-4">
             <PrintableReceipt
               ref={receiptRef}
               selectedTransaction={selectedTransaction}
@@ -89,54 +89,54 @@ export const ReceiptPreviewSection: React.FC<ReceiptPreviewSectionProps> = ({
               changeAmount={derivedFinancials.changeAmount}
               isPrinting={isPrinting}
             />
-          </div>
-        </div>
 
-        {/* Taxes and Additional Notes section */}
-        <div className={`flex-shrink-0 border-t ${colors.border.primary} ${colors.bg.secondary} no-print`}>
-          {/* Additional Notes */}
-          <div className="px-4 py-3">
-            <label className={`block text-sm font-bold mb-1 ${colors.text.primary}`}>
-              Additional Notes{' '}
-              <span className={`text-xs font-normal ${colors.text.secondary}`}>(optional)</span>
-            </label>
-            <textarea
-              value={additionalNotes}
-              onChange={(e) => onAdditionalNotesChange(e.target.value)}
-              placeholder="E.g. patient paid in two installments, waived consultation fee…"
-              rows={2}
-              readOnly={isReadOnly}
-              disabled={isReadOnly}
-              className={`w-full px-3 py-2 text-sm border ${
-                isReadOnly
-                  ? `${colors.border.disabled} ${colors.bg.disabled} ${colors.text.disabled} cursor-not-allowed`
-                  : `${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-2 ${colors.accent.ring}`
-              } rounded-lg transition-shadow resize-none`}
-            />
-          </div>
+            {/* Taxes and Additional Notes — flow naturally below receipt */}
+            <div className={`border-t pt-4 ${colors.border.primary}`}>
+              {/* Additional Notes */}
+              <div className="mb-4">
+                <label className={`block text-sm font-bold mb-1 ${colors.text.primary}`}>
+                  Additional Notes{' '}
+                  <span className={`text-xs font-normal ${colors.text.secondary}`}>(optional)</span>
+                </label>
+                <textarea
+                  value={additionalNotes}
+                  onChange={(e) => onAdditionalNotesChange(e.target.value)}
+                  placeholder="E.g. patient paid in two installments, waived consultation fee…"
+                  rows={2}
+                  readOnly={isReadOnly}
+                  disabled={isReadOnly}
+                  className={`w-full px-3 py-2 text-sm border ${
+                    isReadOnly
+                      ? `${colors.border.disabled} ${colors.bg.disabled} ${colors.text.disabled} cursor-not-allowed`
+                      : `${colors.border.primary} ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-2 ${colors.accent.ring}`
+                  } rounded-lg transition-shadow resize-none`}
+                />
+              </div>
 
-          <div className="px-4 py-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className={`text-sm font-bold ${colors.text.primary}`}>Taxes</div>
-              <div className={`text-xs ${colors.text.secondary}`}>Auto-calculated</div>
-            </div>
-            <div className="space-y-2">
-              {DEFAULT_TAXES.map((tax, idx) => (
-                <div
-                  key={idx}
-                  className={`flex items-center justify-between p-3 border ${colors.border.primary} ${colors.bg.primary} rounded-lg ${
-                    isReadOnly ? 'opacity-75' : ''
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className={`text-sm font-semibold ${colors.text.primary}`}>{tax.name}</p>
-                    <p className={`text-xs ${colors.text.secondary}`}>{tax.rate}% rate</p>
-                  </div>
-                  <p className={`text-sm font-extrabold ${colors.text.primary}`}>
-                    {formatCurrency(billingData.taxes[idx]?.amount || 0)}
-                  </p>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className={`text-sm font-bold ${colors.text.primary}`}>Taxes</div>
+                  <div className={`text-xs ${colors.text.secondary}`}>Auto-calculated</div>
                 </div>
-              ))}
+                <div className="space-y-2">
+                  {DEFAULT_TAXES.map((tax, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex items-center justify-between p-3 border ${colors.border.primary} ${colors.bg.primary} rounded-lg ${
+                        isReadOnly ? 'opacity-75' : ''
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <p className={`text-sm font-semibold ${colors.text.primary}`}>{tax.name}</p>
+                        <p className={`text-xs ${colors.text.secondary}`}>{tax.rate}% rate</p>
+                      </div>
+                      <p className={`text-sm font-extrabold ${colors.text.primary}`}>
+                        {formatCurrency(billingData.taxes[idx]?.amount || 0)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
