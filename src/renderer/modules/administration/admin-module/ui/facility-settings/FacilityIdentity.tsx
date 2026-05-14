@@ -405,7 +405,7 @@ const handleLogoFileChange = useCallback(
     );
   }
 
-  if (isError || !settings || !form) {
+  if (isError) {
     return (
       <div className={cn(
         "flex flex-col items-center justify-center min-h-[400px] gap-4 p-8 w-full",
@@ -416,6 +416,14 @@ const handleLogoFileChange = useCallback(
         <p className={cn("text-sm text-center max-w-md", isDark ? 'text-gray-400' : 'text-gray-600')}>
           {(error as any)?.response?.data?.message ?? (error as any)?.message ?? 'An unexpected error occurred.'}
         </p>
+      </div>
+    );
+  }
+
+  if (!settings || !form) {
+    return (
+      <div className="w-full">
+        <LoadingSkeleton variant="detail" theme={theme} message="Loading facility settings…" />
       </div>
     );
   }
