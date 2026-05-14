@@ -385,7 +385,7 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
           </div>
 
           {/* Background refetch indicator — only shown after initial load */}
-          {isFetchingBilling && !shouldShowSkeleton && (
+          {isLoadingBilling && !shouldShowSkeleton && (
             <div className="flex items-center justify-center gap-1.5 pt-2">
               <RefreshCw className="w-3 h-3 animate-spin text-blue-500" />
               <span className={`text-xs ${colors.text.muted}`}>Updating billing...</span>
@@ -393,7 +393,7 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
           )}
 
           {/* Billable-items prefetch indicator */}
-          {isFetchingBillableItems && !isFetchingBilling && (
+          {isFetchingBillableItems && !isLoadingBilling && (
             <div className="flex items-center justify-center gap-1.5 pt-2">
               <RefreshCw className="w-3 h-3 animate-spin text-blue-500" />
               <span className={`text-xs ${colors.text.muted}`}>Loading available items...</span>
