@@ -1,17 +1,6 @@
 import { store } from '../../app/store/store';
 import { selectActiveFacilityCurrency } from '../../app/store/slices/activeContextSlice';
-
-/**
- * Currency code → symbol mapping.
- * Guarantees correct symbol display regardless of ICU data availability.
- */
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  USD: '$', EUR: '€', GBP: '£', JPY: '¥', CNY: '¥', NGN: '₦', UGX: 'USh',
-  KES: 'KSh', TZS: 'TSh', RWF: 'FRw', ZAR: 'R', GHS: '₵', XOF: 'CFA',
-  XAF: 'FCFA', AED: 'د.إ', SAR: '﷼', INR: '₹', PKR: '₨', BDT: '৳',
-  AUD: 'A$', CAD: 'C$', CHF: 'CHF', SEK: 'kr', NOK: 'kr', DKK: 'kr',
-  BRL: 'R$', MXN: 'Mex$', RUB: '₽', TRY: '₺', ILS: '₪', KRW: '₩',
-};
+import { CURRENCY_SYMBOLS } from './currencies';
 
 /**
  * Get the current facility currency from Redux store.
@@ -27,19 +16,24 @@ function getFacilityCurrency(): string {
   }
 }
 
+function symbolFor(code: string): string {
+  return CURRENCY_SYMBOLS[code] || code;
+}
+
+function formatNumber(num: number): string {
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(num);
+}
+
 /**
  * Format a number as currency using the facility's configured currency.
  * Falls back to USD if no facility currency is set.
  */
 export function formatCurrency(value?: number | null, currencyCode?: string): string {
   const raw = (currencyCode || getFacilityCurrency()).toUpperCase();
-  const symbol = CURRENCY_SYMBOLS[raw] || raw;
-  const num = Number(value ?? 0);
-  const formatted = new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(num);
-  return `${symbol}${formatted}`;
+  return `${symbolFor(raw)}${formatNumber(Number(value ?? 0))}`;
 }
 
 /**
@@ -47,13 +41,7 @@ export function formatCurrency(value?: number | null, currencyCode?: string): st
  */
 export function formatCurrencyWithCustomCurrency(value?: number | null, currencyCode?: string): string {
   const raw = (currencyCode || 'USD').toUpperCase();
-  const symbol = CURRENCY_SYMBOLS[raw] || raw;
-  const num = Number(value ?? 0);
-  const formatted = new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(num);
-  return `${symbol}${formatted}`;
+  return `${symbolFor(raw)}${formatNumber(Number(value ?? 0))}`;
 }
 
 /**
@@ -61,14 +49,13 @@ export function formatCurrencyWithCustomCurrency(value?: number | null, currency
  */
 export function formatCompactCurrency(value?: number | null, currencyCode?: string): string {
   const raw = (currencyCode || getFacilityCurrency()).toUpperCase();
-  const symbol = CURRENCY_SYMBOLS[raw] || raw;
   const num = Number(value ?? 0);
-  const formatted = new Intl.NumberFormat('en-US', {
+  const compact = new Intl.NumberFormat('en-US', {
     notation: 'compact',
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   }).format(num);
-  return `${symbol}${formatted}`;
+  return `${symbolFor(raw)}${compact}`;
 }
 
 /**
