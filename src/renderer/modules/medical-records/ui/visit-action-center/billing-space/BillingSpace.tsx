@@ -15,8 +15,8 @@ import {
 import { formatCurrency } from './billing-types';
 import {
   useGetBillableItems,
-  useGetBillingByVisit,
 } from '../../../api/billable-items/BillableItemsQueries';
+import type { BillingRetrievalResponse } from '../../../api/billable-items/BillingItemsTypes';
 import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 
 interface BillingSpaceProps {
@@ -25,6 +25,8 @@ interface BillingSpaceProps {
   visitId?: string;
   patientId?: string;
   patientName?: string;
+  backendBillingResponse?: BillingRetrievalResponse;
+  isLoadingBilling?: boolean;
 }
 
 export const BillingSpace: React.FC<BillingSpaceProps> = ({
@@ -33,6 +35,8 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
   visitId,
   patientId,
   patientName,
+  backendBillingResponse,
+  isLoadingBilling = false,
 }) => {
   const isDark = theme === 'dark';
   const dispatch = useDispatch();
@@ -47,13 +51,11 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
   const displayPatientName = patientName || patientInfo.patientName;
   const displayPatientId = patientId || patientInfo.patientId;
   const displayVisitId = visitId || patientInfo.visitId;
-  const numericVisitId = Number(displayVisitId || 0);
 
   // Check if billing data is loaded from Redux slice
   const isBillingDataLoaded = useSelector((state: any) => 
     state.billing?.loadedVisits?.includes(String(displayVisitId || ''))
   );
-
 
   // ---------------------------------------------------------------------------
   // Queries
@@ -64,20 +66,8 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
     isFetching: isFetchingBillableItems,
   } = useGetBillableItems({}, { enabled: false });
 
-  const {
-    data: backendBillingResponse,
-    isLoading: isLoadingBilling,
-    isFetching: isFetchingBilling,
-  } = useGetBillingByVisit(numericVisitId, {
-    enabled: !!numericVisitId,
-    staleTime: 60 * 1000,
-    refetchOnWindowFocus: true,
-  });
-
   /**
    * Determine if we should show loading skeleton
-   * Shows skeleton if:
-   * 1. Query is actively loading and data not yet loaded
    */
   const shouldShowSkeleton = useMemo(() => {
     if (isLoadingBilling && !isBillingDataLoaded) return true;
@@ -85,13 +75,11 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
   }, [isBillingDataLoaded, isLoadingBilling]);
 
   // ---------------------------------------------------------------------------
-  // Effect 1: Hydrate backend data and update loaded flag
+  // Effect: Hydrate backend billing data into Redux
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    // Don't process if still loading
     if (isLoadingBilling) return;
 
-    // Process backend response
     if (backendBillingResponse?.data) {
       if (backendBillingResponse.data.has_billing) {
         dispatch(hydrateBackendBilling(backendBillingResponse.data));
@@ -99,7 +87,6 @@ export const BillingSpace: React.FC<BillingSpaceProps> = ({
         dispatch(clearBackendBilling());
       }
 
-      // Mark data as loaded in Redux slice
       if (displayVisitId) {
         dispatch(setBillingDataLoaded({ 
           visitId: String(displayVisitId), 

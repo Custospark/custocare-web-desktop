@@ -10,7 +10,8 @@ import { BillingTray } from './BillingTray';
 import { loadDraft } from './billingSlice';
 import { setPatientInfo } from './billingSlice';
 import { BillingSpace } from './BillingSpace';
-// import {BillingBottomDisplay} from './BillingBottomDisplay'
+import { useGetBillingByVisit } from '../../../api/billable-items/BillableItemsQueries';
+import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 
 interface MRBillingProps {
   theme?: 'light' | 'dark';
@@ -29,13 +30,25 @@ const MRBilling: React.FC<MRBillingProps> = ({
   const activePatient = useSelector(selectActivePatient);
   const visitUuid = useSelector(selectActiveVisitUuid);
 
+  // Derive numeric visit/patient IDs
+  const numericVisitId = Number(visitUuid || 0);
+  const numericPatientId = Number(activePatient?.patient_number || 0);
+
+  // Fetch billing data from backend
+  const {
+    data: backendBillingResponse,
+    isLoading: isLoadingBilling,
+  } = useGetBillingByVisit(numericVisitId, {
+    enabled: !!numericVisitId,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
   // Load billing draft when visit changes
   useEffect(() => {
     if (visitUuid) {
-      // Load draft for this visit
       dispatch(loadDraft(visitUuid));
       
-      // Set patient info in billing state
       if (activePatient) {
         dispatch(setPatientInfo({
           visitId: visitUuid,
@@ -64,16 +77,26 @@ const MRBilling: React.FC<MRBillingProps> = ({
     );
   }
 
+  if (isLoadingBilling) {
+    return (
+      <div className="space-y-6">
+        <LoadingSkeleton variant="form" theme={theme} message="Loading billing information..." />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       
       {/* Billing Space Component */}       
         <BillingSpace 
           theme={theme}
+          visitId={visitUuid}
+          patientId={activePatient.patient_number}
+          patientName={activePatient.name}
+          backendBillingResponse={backendBillingResponse}
+          isLoadingBilling={isLoadingBilling}
         />
-        {/* <BillingBottomDisplay 
-          theme={theme}
-        /> */}
 
       {/* Billing Tray Overlay */}
       <BillingTray />
