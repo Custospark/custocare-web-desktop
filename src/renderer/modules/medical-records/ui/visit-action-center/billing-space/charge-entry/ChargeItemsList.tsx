@@ -7,7 +7,6 @@ import { ChargeItemRow } from './ChargeItemRow';
 
 interface ChargeItemsListProps {
   chargeItems: RenderableChargeItem[];
-  subtotal: number;
   isReadOnly: boolean;
   isSearchSticky: boolean;
   theme: 'light' | 'dark';
@@ -24,7 +23,6 @@ interface ChargeItemsListProps {
 
 export const ChargeItemsList: React.FC<ChargeItemsListProps> = ({
   chargeItems,
-  subtotal,
   isReadOnly,
   isSearchSticky,
   theme,
@@ -196,19 +194,6 @@ export const ChargeItemsList: React.FC<ChargeItemsListProps> = ({
             </div>
           </div>
 
-          {/* Bottom mini footer */}
-          <div
-            className={`px-4 py-3 border-t ${colors.border.primary} ${
-              isDark ? 'bg-gray-800/50' : 'bg-gray-50'
-            } flex min-w-0 items-center justify-between gap-3 sticky bottom-0 z-10 rounded-b-xl`}
-          >
-            <span className={`min-w-0 shrink text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
-              Subtotal
-            </span>
-            <span className="shrink-0 text-lg font-extrabold tabular-nums whitespace-nowrap bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
-              {formatCurrency(subtotal)}
-            </span>
-          </div>
         </motion.div>
       )}
     </div>

@@ -28,6 +28,7 @@ import {
 } from './billingSlice';
 
 import PersistedBillingAdjustmentModal from './charge-entry/PersistedBillingAdjustmentModal';
+import { formatCurrency } from './billing-types';
 import { containerVariants } from '../../../../../shared/components/animations/motionVariants';
 
 import {
@@ -955,7 +956,6 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
 
           <ChargeItemsList
             chargeItems={renderableChargeItems}
-            subtotal={displayedSubtotal}
             isReadOnly={isReadOnly}
             isSearchSticky={isSearchSticky}
             theme={theme}
@@ -969,6 +969,22 @@ export const ChargeEntryStep: React.FC<ChargeEntryStepProps> = ({ theme = 'light
             onQuantityBlur={handleQtyBlur}
             onViewHistory={handleViewHistory}
           />
+
+          {/* Static subtotal bar */}
+          {renderableChargeItems.length > 0 && (
+            <div
+              className={`sticky bottom-0 z-20 px-4 py-3 border-t ${colors.border.primary} ${
+                isDark ? 'bg-gray-800' : 'bg-white'
+              } flex items-center justify-between gap-3`}
+            >
+              <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                Subtotal
+              </span>
+              <span className="text-lg font-extrabold tabular-nums bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">
+                {formatCurrency(displayedSubtotal)}
+              </span>
+            </div>
+          )}
         </motion.div>
 
         <BillingSummary
