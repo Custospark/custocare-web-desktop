@@ -17,6 +17,7 @@ import {
   useQueryClient,
   type UseQueryOptions,
   type MutateOptions,
+  type QueryKey,
 } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { useSelector } from 'react-redux';
@@ -64,7 +65,6 @@ export const useGetBillableItems = (
 
   return useQuery<BillableItemsResponse, AxiosError<ApiErrorResponse>>({
     queryKey: billingItemsKeys.list(facilityId ?? 0, filters),
-    staleTime: 30_000,
     queryFn: async () => {
       const response = await axiosInstance.get<BillableItemsResponse>(
         '/billing/billable-items',
@@ -453,7 +453,7 @@ export const useAdjustBillingLineItem = (
 
   interface MutationContext {
     previous: BillingRetrievalResponse | undefined;
-    previousBillableItems: unknown[];
+    previousBillableItems: [QueryKey, unknown][];
   }
 
   return useMutation<
@@ -495,7 +495,7 @@ export const useAdjustBillingLineItem = (
       const quantityDelta = action === 'decrease' || action === 'remove' ? changeQty : -changeQty;
       const serviceCode = payload.line_item_service_code ?? '';
 
-      const previousBillableItems: unknown[] = [];
+      const previousBillableItems: [QueryKey, unknown][] = [];
       const listKeys = queryClient.getQueriesData<{ data: { items_full?: unknown[] } }>({
         queryKey: billingItemsKeys.lists(),
       });
@@ -508,7 +508,7 @@ export const useAdjustBillingLineItem = (
         queryClient.setQueryData(key, {
           ...cached,
           data: {
-            ...cached.data,
+            ...cached!.data,
             items_full: items.map((item: any) => {
               if (item._type !== 'inventory' || item.code !== serviceCode) return item;
               const balance = (item.current_balance ?? item.package_quantity ?? 0) + quantityDelta;

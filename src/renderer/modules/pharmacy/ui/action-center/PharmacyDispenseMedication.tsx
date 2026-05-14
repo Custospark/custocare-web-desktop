@@ -1522,7 +1522,6 @@ const PharmacyDispenseMedication: React.FC<PharmacyDispenseMedicationProps> = ({
 
                     <ChargeItemsList
                       chargeItems={renderableChargeItems}
-                      subtotal={displayedSubtotal}
                       isReadOnly={isReadOnly}
                       isSearchSticky={isSearchSticky}
                       theme={theme}

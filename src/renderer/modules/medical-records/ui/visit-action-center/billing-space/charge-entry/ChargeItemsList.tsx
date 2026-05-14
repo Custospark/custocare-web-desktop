@@ -2,7 +2,7 @@ import React from 'react';
 import { Calculator, Trash2, Hash } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fadeInUp, itemVariants } from '../../../../../../shared/components/animations/motionVariants';
-import { type RenderableChargeItem, formatCurrency } from '../billing-types';
+import { type RenderableChargeItem } from '../billing-types';
 import { ChargeItemRow } from './ChargeItemRow';
 
 interface ChargeItemsListProps {

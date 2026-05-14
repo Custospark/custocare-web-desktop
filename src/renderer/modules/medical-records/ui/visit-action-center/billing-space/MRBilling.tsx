@@ -30,10 +30,7 @@ const MRBilling: React.FC<MRBillingProps> = ({
   const activeVisit = useSelector(selectActiveVisit);
   const activePatient = useSelector(selectActivePatient);
   const visitUuid = useSelector(selectActiveVisitUuid);
-  const numericVisitId = useSelector(selectActiveVisitId);
-
-  // Derive numeric patient ID
-  const numericPatientId = Number(activePatient?.patient_number || 0);
+  const numericVisitId = useSelector(selectActiveVisitId) ?? 0;
 
   // Fetch billing data from backend
   const {
@@ -90,14 +87,14 @@ const MRBilling: React.FC<MRBillingProps> = ({
     <div className="space-y-6">
       
       {/* Billing Space Component */}       
-        <BillingSpace 
-          theme={theme}
-          visitId={visitUuid}
-          patientId={activePatient.patient_number}
-          patientName={activePatient.name}
-          backendBillingResponse={backendBillingResponse}
-          isLoadingBilling={isLoadingBilling}
-        />
+          <BillingSpace 
+            theme={theme}
+            visitId={visitUuid ?? undefined}
+            patientId={activePatient.patient_number ?? undefined}
+            patientName={activePatient.name ?? undefined}
+            backendBillingResponse={backendBillingResponse}
+            isLoadingBilling={isLoadingBilling}
+          />
 
       {/* Billing Tray Overlay */}
       <BillingTray />
