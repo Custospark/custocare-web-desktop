@@ -1,39 +1,6 @@
-export const POPULAR_CURRENCIES = [
-  { code: 'USD', name: 'US Dollar', symbol: '$' },
-  { code: 'EUR', name: 'Euro', symbol: '€' },
-  { code: 'GBP', name: 'British Pound', symbol: '£' },
-  { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
-  { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
-  { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
-  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$' },
-  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
-  { code: 'CHF', name: 'Swiss Franc', symbol: 'Fr' },
-  { code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$' },
-  { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' },
-  { code: 'SEK', name: 'Swedish Krona', symbol: 'kr' },
-  { code: 'KRW', name: 'South Korean Won', symbol: '₩' },
-  { code: 'NOK', name: 'Norwegian Krone', symbol: 'kr' },
-  { code: 'NZD', name: 'New Zealand Dollar', symbol: 'NZ$' },
-  { code: 'MXN', name: 'Mexican Peso', symbol: 'Mex$' },
-  { code: 'BRL', name: 'Brazilian Real', symbol: 'R$' },
-  { code: 'ZAR', name: 'South African Rand', symbol: 'R' },
-  { code: 'RUB', name: 'Russian Ruble', symbol: '₽' },
-  { code: 'TRY', name: 'Turkish Lira', symbol: '₺' },
-  { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ' },
-  { code: 'SAR', name: 'Saudi Riyal', symbol: '﷼' },
-  { code: 'EGP', name: 'Egyptian Pound', symbol: 'E£' },
-  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦' },
-  { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh' },
-  { code: 'UGX', name: 'Ugandan Shilling', symbol: 'USh' },
-  { code: 'TZS', name: 'Tanzanian Shilling', symbol: 'TSh' },
-  { code: 'GHS', name: 'Ghanaian Cedi', symbol: 'GH₵' },
-  { code: 'PKR', name: 'Pakistani Rupee', symbol: '₨' },
-  { code: 'BDT', name: 'Bangladeshi Taka', symbol: '৳' },
-  { code: 'LKR', name: 'Sri Lankan Rupee', symbol: 'Rs' },
-  { code: 'NPR', name: 'Nepalese Rupee', symbol: 'रू' },
-  { code: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp' },
-  { code: 'THB', name: 'Thai Baht', symbol: '฿' },
-  { code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM' },
-  { code: 'PHP', name: 'Philippine Peso', symbol: '₱' },
-  { code: 'VND', name: 'Vietnamese Dong', symbol: '₫' },
-];
+/**
+ * Currency options for facility settings.
+ * Single source of truth — delegates to shared currencies list.
+ */
+import { CURRENCIES } from '../../../../../shared/utils/currencies';
+export const POPULAR_CURRENCIES = CURRENCIES;
