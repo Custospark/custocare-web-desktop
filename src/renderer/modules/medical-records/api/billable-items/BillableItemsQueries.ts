@@ -492,7 +492,7 @@ export const useAdjustBillingLineItem = (
       // Optimistically update billable items list cache (stock badges)
       const action = payload.action;
       const changeQty = Math.max(0, Number(payload.quantity ?? 1));
-      const quantityDelta = action === 'decrease' || action === 'remove' ? -changeQty : changeQty;
+      const quantityDelta = action === 'decrease' || action === 'remove' ? changeQty : -changeQty;
       const serviceCode = payload.line_item_service_code ?? '';
 
       const previousBillableItems: unknown[] = [];
