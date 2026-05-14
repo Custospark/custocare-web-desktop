@@ -4,6 +4,7 @@ import {
   selectActiveVisit,
   selectActivePatient,
   selectActiveVisitUuid,
+  selectActiveVisitId,
 } from '../../../../../app/store/slices/visitSlice';
 
 import { BillingTray } from './BillingTray';
@@ -29,9 +30,9 @@ const MRBilling: React.FC<MRBillingProps> = ({
   const activeVisit = useSelector(selectActiveVisit);
   const activePatient = useSelector(selectActivePatient);
   const visitUuid = useSelector(selectActiveVisitUuid);
+  const numericVisitId = useSelector(selectActiveVisitId);
 
-  // Derive numeric visit/patient IDs
-  const numericVisitId = Number(visitUuid || 0);
+  // Derive numeric patient ID
   const numericPatientId = Number(activePatient?.patient_number || 0);
 
   // Fetch billing data from backend
