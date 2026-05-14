@@ -563,11 +563,9 @@ useEffect(() => {
         onClick={(e) => void handleClose(e)}
       />
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-3 md:p-4 pointer-events-none">
+      <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
         <div
-          className={`w-full max-w-[98vw] sm:max-w-[95vw] md:max-w-[90vw] lg:max-w-[90vw] xl:max-w-[90vw] 2xl:max-w-[90vw]
-            min-h-[90vh] sm:min-h-[75vh] max-h-[96vh] sm:max-h-[94vh]
-            rounded-lg shadow-2xl pointer-events-auto flex flex-col ${colors.bg.primary}`}
+          className={`w-full h-full rounded-lg shadow-2xl pointer-events-auto flex flex-col ${colors.bg.primary}`}
           onClick={(e) => e.stopPropagation()}
         >
           <div
