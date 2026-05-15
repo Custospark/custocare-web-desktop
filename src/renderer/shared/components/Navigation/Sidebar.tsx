@@ -19,6 +19,7 @@ import {
   Receipt,
   Stethoscope,
   Syringe,
+  Truck,
   UserCog,
 } from 'lucide-react';
 import { type SidebarProps } from '../../types/index';
@@ -30,6 +31,7 @@ import {
   NURSING_ROUTES,
   LABORATORY_ROUTES,
   PHARMACY_ROUTES,
+  AMBULANCE_ROUTES,
   BILLING_ROUTES,
   CUSTOCARE_HUB_ROUTES,
 } from '../../../app/routes/routeConstants';
@@ -45,6 +47,7 @@ import {
   NURSING_SIDEBAR_NESTED_OPERATIONS,
   PATIENT_PORTAL_SIDEBAR_NESTED_OPERATIONS,
   PHARMACY_SIDEBAR_NESTED_OPERATIONS,
+  AMBULANCE_SIDEBAR_NESTED_OPERATIONS,
   PLATFORM_ADMINISTRATION_SIDEBAR_NESTED_OPERATIONS,
 } from '../../navigation/moduleWorkspaceOperations';
 import { useAppSelector } from '../../../app/store/hooks/useApp';
@@ -248,6 +251,20 @@ const menuConfig: MenuItem[] = useMemo(
       stats: 'Dispensing',
       glowColor: 'from-rose-500 to-orange-400',
       moduleCode: 'pharmacy',
+      category: 'clinical',
+      allowedCapabilities: ['staff'],
+    },
+    {
+      id: 'ambulance',
+      label: 'Ambulance Services',
+      icon: <Truck className="w-5 h-5" />,
+      href: AMBULANCE_ROUTES.OVERVIEW,
+      route: ROUTES.AMBULANCE,
+      description: 'Fleet management, dispatch, and trip tracking',
+      operations: AMBULANCE_SIDEBAR_NESTED_OPERATIONS,
+      stats: 'Fleet',
+      glowColor: 'from-red-500 to-orange-400',
+      moduleCode: 'ambulance',
       category: 'clinical',
       allowedCapabilities: ['staff'],
     },

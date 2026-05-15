@@ -48,6 +48,7 @@ export const ROUTES = {
   LABORATORY: '/laboratory',
   PHARMACY: '/pharmacy',
 
+  AMBULANCE: '/ambulance',
   BILLING: '/billing',
   ADMINISTRATION: '/administration',
   ACCOUNT: '/account',

@@ -20,6 +20,7 @@ import billingReducer from '../../modules/medical-records/ui/visit-action-center
 import roleReducer from './slices/roleSlice';
 import auditReducer from './slices/auditSlice';
 import visitReducer from './slices/visitSlice';
+import tripReducer from './slices/tripSlice';
 import patientForwardingReducer from './slices/forwardPatientSlice';
 
 // ==============================
@@ -35,6 +36,7 @@ export const rootReducer = combineReducers({
   activeContext: activeContextReducer, // Role / Facility context
   ui: uiReducer,
   visits:visitReducer,
+  trip: tripReducer,
   patientForwarding: patientForwardingReducer,
 
   /**

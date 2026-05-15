@@ -14,6 +14,8 @@ import {
   Calendar,
   CircleHelp,
   ClipboardList,
+  BarChart3,
+  Activity,
   DoorOpen,
   FileText,
   GraduationCap,
@@ -26,6 +28,7 @@ import {
   Megaphone,
   MessageCircleMore,
   MessageSquareHeart,
+  Navigation,
   Package,
   Pill,
   Receipt,
@@ -33,6 +36,7 @@ import {
   Stethoscope,
   Ticket,
   Users,
+  Truck,
   UsersRound,
   Workflow,
   Download,
@@ -55,6 +59,7 @@ import {
   NURSING_ROUTES,
   PATIENT_PORTAL_ROUTES,
   PHARMACY_ROUTES,
+  AMBULANCE_ROUTES,
 } from '../../app/routes/routeConstants';
 import { ADMIN_ROUTES } from '../../app/routes/constants/administration.paths';
 import { PLATFORM_ADMIN_ROUTES } from '../../app/routes/constants/platform-administration.paths';
@@ -341,6 +346,48 @@ export const PHARMACY_SIDEBAR_NESTED_OPERATIONS = mapWorkspaceToSidebar(
   PHARMACY_MODULE_OPERATIONS,
   PHARMACY_NESTED_ROUTES,
   'ph',
+);
+
+// ─── Ambulance Services ────────────────────────────────────────────────────
+
+export const AMBULANCE_MODULE_OPERATIONS: ModuleOperation[] = [
+  {
+    id: 'overview',
+    label: 'Fleet Intelligence',
+    icon: <LayoutDashboard className="w-4 h-4" />,
+    subtext: 'Active trips, vehicle availability, and fleet status at a glance',
+  },
+  {
+    id: 'dispatch',
+    label: 'Dispatch & Trip Center',
+    icon: <Navigation className="w-4 h-4" />,
+    subtext: 'Active board, new trip requests, and trip history',
+  },
+  {
+    id: 'trip-workspace',
+    label: 'Active Trip Workspace',
+    icon: <Activity className="w-4 h-4" />,
+    subtext: 'Manage active trip: status transitions, timeline, and logs',
+  },
+  {
+    id: 'admin',
+    label: 'Fleet Administration',
+    icon: <Truck className="w-4 h-4" />,
+    subtext: 'Vehicles, crew assignments, and fleet analytics',
+  },
+];
+
+const AMBULANCE_NESTED_ROUTES: Record<string, string> = {
+  overview: AMBULANCE_ROUTES.OVERVIEW,
+  dispatch: AMBULANCE_ROUTES.DISPATCH,
+  'trip-workspace': AMBULANCE_ROUTES.TRIP_WORKSPACE,
+  admin: AMBULANCE_ROUTES.ADMIN,
+};
+
+export const AMBULANCE_SIDEBAR_NESTED_OPERATIONS = mapWorkspaceToSidebar(
+  AMBULANCE_MODULE_OPERATIONS,
+  AMBULANCE_NESTED_ROUTES,
+  'amb',
 );
 
 // ─── Billing ─────────────────────────────────────────────────────────────────
