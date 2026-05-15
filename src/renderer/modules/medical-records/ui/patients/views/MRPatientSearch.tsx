@@ -55,6 +55,17 @@ const getSearchModuleCopy = (module: PatientIntakeModule) => {
         'Create an outpatient visit and open the laboratory workflow for this patient.',
     };
   }
+  if (module === 'ambulance') {
+    return {
+      title: 'Ambulance Patient Search',
+      subtitle: 'Find a patient to register a visit and begin transport services',
+      chiefComplaint: 'Ambulance transport',
+      quickActionTitle: 'Transport intake',
+      quickActionLabel: 'Start transport encounter',
+      quickActionDescription:
+        'Create an outpatient visit and open the ambulance dispatch workflow for this patient.',
+    };
+  }
   if (module === 'clinical') {
     return {
       title: 'Clinical Patient Search',

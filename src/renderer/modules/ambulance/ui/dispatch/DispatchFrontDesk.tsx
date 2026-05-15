@@ -9,10 +9,10 @@ import TripCreate from './views/TripCreate';
 interface DispatchFrontDeskProps { theme: 'light' | 'dark'; }
 
 const tabs = [
-  { key: 'active-board', label: 'Active trips board', icon: <Activity className="w-4 h-4" />, to: AMBULANCE_ROUTES.DISPATCH_ACTIVE_BOARD },
+  { key: 'active-board', label: 'Active trips board', icon: <Activity className="w-4 h-4" />, to: AMBULANCE_ROUTES.ACTION_CENTER_ACTIVE_BOARD },
   { key: 'new-trip', label: 'New trip request', icon: <PlusCircle className="w-4 h-4" /> },
-  { key: 'trip-history', label: 'Trip history', icon: <Clock className="w-4 h-4" />, to: AMBULANCE_ROUTES.DISPATCH_TRIP_HISTORY },
-  { key: 'fleet-view', label: 'Available fleet', icon: <Truck className="w-4 h-4" />, to: AMBULANCE_ROUTES.VEHICLES_ALL },
+  { key: 'trip-history', label: 'Trip history', icon: <Clock className="w-4 h-4" />, to: AMBULANCE_ROUTES.ACTION_CENTER_TRIP_HISTORY },
+  { key: 'fleet-view', label: 'Available fleet', icon: <Truck className="w-4 h-4" />, to: AMBULANCE_ROUTES.FLEET_VEHICLES_ALL },
 ];
 
 const DispatchFrontDesk = ({ theme }: DispatchFrontDeskProps) => {

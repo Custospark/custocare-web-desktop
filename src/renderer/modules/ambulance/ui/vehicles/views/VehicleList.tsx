@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Truck, Search, Clock, Edit3, Trash2, RefreshCw } from 'lucide-react';
+import { Truck, Search, Edit3, Trash2, RefreshCw } from 'lucide-react';
 import { useAmbulances, useDeleteAmbulance } from '../../../api/ambulances/useAmbulanceQueries';
 import { AMBULANCE_ROUTES } from '../../../../../app/routes/routeConstants';
 import VehicleStatusBadge from '../components/VehicleStatusBadge';
 import VehicleTypeIcon from '../components/VehicleTypeIcon';
+import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 import type { Ambulance } from '../../../api/ambulances/ambulanceTypes';
 
-interface VehicleListProps { theme: 'light' | 'dark'; }
+interface VehicleListProps {
+  theme: 'light' | 'dark';
+  embedded?: boolean;
+}
 
-const VehicleList = ({ theme }: VehicleListProps) => {
+const VehicleList = ({ theme, embedded = false }: VehicleListProps) => {
   const navigate = useNavigate();
   const isDark = theme === 'dark';
   const [search, setSearch] = useState('');
@@ -29,19 +33,24 @@ const VehicleList = ({ theme }: VehicleListProps) => {
           className={`cursor-pointer rounded-lg border p-2 transition-all ${isDark ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-200 text-gray-600 hover:bg-gray-50'} ${isFetching ? 'animate-spin' : ''}`} title="Refresh">
           <RefreshCw className="h-4 w-4" />
         </button>
-        <button onClick={() => navigate(AMBULANCE_ROUTES.VEHICLES_CREATE)}
-          className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">+ Add Ambulance</button>
+        {!embedded && (
+          <button
+            type="button"
+            onClick={() => navigate(AMBULANCE_ROUTES.FLEET_ASSETS)}
+            className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            + Add ambulance
+          </button>
+        )}
       </div>
 
       <div className={`overflow-hidden rounded-xl border ${isDark ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}`}>
         {isLoading ? (
-          <div className="flex justify-center p-12"><Clock className={`h-6 w-6 animate-spin ${isDark ? 'text-gray-400' : 'text-gray-500'}`} /></div>
+          <LoadingSkeleton variant="table" theme={theme} message="Loading vehicles…" />
         ) : vehicles.length === 0 ? (
           <div className="flex flex-col items-center p-12">
             <Truck className={`mb-3 h-10 w-10 ${isDark ? 'text-gray-600' : 'text-gray-300'}`} />
             <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No ambulances found</p>
-            <button onClick={() => navigate(AMBULANCE_ROUTES.VEHICLES_CREATE)}
-              className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700">Register your first ambulance</button>
           </div>
         ) : (
           <table className="w-full">
@@ -58,7 +67,7 @@ const VehicleList = ({ theme }: VehicleListProps) => {
             <tbody>
               {vehicles.map((v: Ambulance) => (
                 <tr key={v.id} className={`cursor-pointer ${isDark ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'}`}
-                    onClick={() => navigate(`/ambulance/admin/vehicles/${v.ambulance_uuid}`)}>
+                    onClick={() => navigate(`/ambulance/fleet/vehicles/${v.ambulance_uuid}`)}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <Truck className={`h-4 w-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
@@ -70,7 +79,7 @@ const VehicleList = ({ theme }: VehicleListProps) => {
                   <td className={`px-4 py-3 text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{v.current_mileage?.toLocaleString() ?? 'N/A'}</td>
                   <td className="px-4 py-3 text-sm">{v.next_service_due_date ? new Date(v.next_service_due_date).toLocaleDateString() : 'N/A'}</td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={e => { e.stopPropagation(); navigate(`/ambulance/admin/vehicles/${v.ambulance_uuid}/edit`); }}
+                    <button onClick={e => { e.stopPropagation(); navigate(`/ambulance/fleet/vehicles/${v.ambulance_uuid}/edit`); }}
                       className={`cursor-pointer rounded-lg p-1.5 ${isDark ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}>
                       <Edit3 className="h-4 w-4" />
                     </button>

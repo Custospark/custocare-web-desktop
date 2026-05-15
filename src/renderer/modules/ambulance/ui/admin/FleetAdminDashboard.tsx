@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Truck, Users, BarChart3, ArrowRight, Wrench, UserPlus, Activity } from 'lucide-react';
+import { Truck, Users, BarChart3, ArrowRight } from 'lucide-react';
 import { AMBULANCE_ROUTES } from '../../../../app/routes/routeConstants';
 
 interface FleetAdminDashboardProps { theme: 'light' | 'dark'; }
@@ -13,31 +13,29 @@ const FleetAdminDashboard = ({ theme }: FleetAdminDashboardProps) => {
       label: 'Ambulance Fleet',
       description: 'Register, maintain, and track vehicles',
       icon: <Truck className="h-6 w-6" />,
-      route: AMBULANCE_ROUTES.ADMIN_VEHICLES_ALL,
+      route: AMBULANCE_ROUTES.FLEET_ASSETS,
       color: 'blue',
       sublinks: [
-        { label: 'All Vehicles', route: AMBULANCE_ROUTES.ADMIN_VEHICLES_ALL },
-        { label: 'Add Vehicle', route: AMBULANCE_ROUTES.ADMIN_VEHICLES_CREATE },
-        { label: 'Service Schedule', route: AMBULANCE_ROUTES.ADMIN_VEHICLES_SERVICE },
+        { label: 'Vehicles & crew', route: AMBULANCE_ROUTES.FLEET_ASSETS },
+        { label: 'Service schedule', route: AMBULANCE_ROUTES.FLEET_ASSETS },
       ],
     },
     {
       label: 'Crew Management',
       description: 'Assign staff to vehicles, manage roles',
       icon: <Users className="h-6 w-6" />,
-      route: AMBULANCE_ROUTES.ADMIN_CREW_BY_VEHICLE,
+      route: AMBULANCE_ROUTES.FLEET_DISPATCH,
       color: 'green',
       sublinks: [
-        { label: 'By Vehicle', route: AMBULANCE_ROUTES.ADMIN_CREW_BY_VEHICLE },
-        { label: 'By Staff', route: AMBULANCE_ROUTES.ADMIN_CREW_BY_STAFF },
-        { label: 'Assign Crew', route: AMBULANCE_ROUTES.ADMIN_CREW_ASSIGN },
+        { label: 'Live dispatch', route: AMBULANCE_ROUTES.FLEET_DISPATCH },
+        { label: 'Trip history', route: AMBULANCE_ROUTES.FLEET_DISPATCH },
       ],
     },
     {
       label: 'Fleet Analytics',
       description: 'Trip volume, response times, mileage reports',
       icon: <BarChart3 className="h-6 w-6" />,
-      route: AMBULANCE_ROUTES.ADMIN_ANALYTICS,
+      route: AMBULANCE_ROUTES.FLEET_ANALYTICS,
       color: 'purple',
       sublinks: [],
     },

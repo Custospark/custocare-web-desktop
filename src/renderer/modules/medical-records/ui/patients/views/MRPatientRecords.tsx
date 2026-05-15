@@ -12,7 +12,7 @@ import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clin
 import { useGetActiveVisitDiagnoses } from '../../../api/diagnosis/diagnosisQueries';
 import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
 
-export type MRPatientRecordsPresentation = 'clinical-encounter' | 'nursing' | 'laboratory';
+export type MRPatientRecordsPresentation = 'clinical-encounter' | 'nursing' | 'laboratory' | 'ambulance';
 
 interface MRPatientRecordsProps {
   theme?: 'light' | 'dark';
@@ -211,6 +211,25 @@ const presentationCopy: Record<
     statModeLabel: 'Exploration Mode',
     alertNoVisit:
       'No active visit selected. You can still review historical records, but visit-scoped context may be limited.',
+    visitBadgeActive: 'Current',
+    visitBadgeInactive: 'No Active Visit',
+  },
+  ambulance: {
+    pageTitle: 'Patient Info',
+    pageSubtitle: 'Review visit and chart context before dispatch and transport documentation',
+    latestVisitTitle: 'Current Visit',
+    latestVisitDescription:
+      'Open encounter context for the patient linked to an active or planned ambulance trip',
+    medicalHistoryTitle: 'Medical History',
+    medicalHistoryDescription:
+      'Review allergies, diagnoses, and prior care to support safe transport and handoff',
+    lifetimeBadge: 'Patient History',
+    summaryHeading: 'Transport Context',
+    statVisitLabel: 'Current Visit Status',
+    statAllergiesLabel: 'Known Allergies',
+    statModeLabel: 'Exploration Mode',
+    alertNoVisit:
+      'No active visit selected. Select a patient from the transport queue to load visit context.',
     visitBadgeActive: 'Current',
     visitBadgeInactive: 'No Active Visit',
   },

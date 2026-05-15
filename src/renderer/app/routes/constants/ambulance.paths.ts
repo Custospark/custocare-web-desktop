@@ -1,40 +1,59 @@
-import { ROUTES } from "./shared.paths";
+import { ROUTES } from './shared.paths';
+
+const A = ROUTES.AMBULANCE;
 
 export const AMBULANCE_ROUTES = {
-  ROOT: ROUTES.AMBULANCE,
-  OVERVIEW: `${ROUTES.AMBULANCE}/overview`,
+  ROOT: A,
+  OVERVIEW: `${A}/overview`,
 
-  // Dispatch & Trip Center
-  DISPATCH: `${ROUTES.AMBULANCE}/dispatch`,
-  DISPATCH_ACTIVE_BOARD: `${ROUTES.AMBULANCE}/dispatch/active-board`,
-  DISPATCH_NEW_TRIP: `${ROUTES.AMBULANCE}/dispatch/new-trip`,
-  DISPATCH_TRIP_HISTORY: `${ROUTES.AMBULANCE}/dispatch/trip-history`,
+  // Patient intake (mirrors laboratory / pharmacy)
+  PATIENTS: `${A}/patients`,
+  PATIENTS_SEARCH: `${A}/patients/search`,
+  PATIENTS_REGISTER: `${A}/patients/register`,
+  PATIENT_QUEUE: `${A}/patients/queue`,
+  WALKIN_PATIENT: `${A}/patients/walk-in`,
 
-  // Trip Workspace (separate operation — accessible after Take Action)
-  TRIP_WORKSPACE: `${ROUTES.AMBULANCE}/trip-workspace`,
-  TRIP_WORKSPACE_TIMELINE: `${ROUTES.AMBULANCE}/trip-workspace/timeline`,
-  TRIP_WORKSPACE_LOGS: `${ROUTES.AMBULANCE}/trip-workspace/logs`,
+  // Transport encounter center (visit-scoped only)
+  ACTION_CENTER: `${A}/action-center`,
+  ACTION_CENTER_FORWARD_PATIENT: `${A}/action-center/forward-patient`,
+  ACTION_CENTER_TRANSPORT: `${A}/action-center/transport`,
+  ACTION_CENTER_TRANSPORT_REQUEST: `${A}/action-center/transport-request`,
+  ACTION_CENTER_PATIENT_INFO: `${A}/action-center/patient-info`,
+  ACTION_CENTER_TRANSPORT_TIMELINE: `${A}/action-center/transport/timeline`,
+  ACTION_CENTER_TRANSPORT_LOGS: `${A}/action-center/transport/logs`,
 
-  // Trip detail by UUID (for direct links)
-  DISPATCH_TRIP_DETAIL: `${ROUTES.AMBULANCE}/dispatch/:uuid`,
+  // Fleet (facility-wide — not tied to a loaded visit)
+  FLEET: `${A}/fleet`,
+  FLEET_OVERVIEW: `${A}/fleet/overview`,
+  FLEET_DISPATCH: `${A}/fleet/dispatch`,
+  FLEET_ASSETS: `${A}/fleet/assets`,
+  FLEET_ACTIVE_BOARD: `${A}/fleet/dispatch/active-board`,
+  FLEET_TRIP_HISTORY: `${A}/fleet/dispatch/trip-history`,
+  FLEET_NEW_TRIP: `${A}/fleet/dispatch/new-trip`,
+  FLEET_VEHICLES: `${A}/fleet/vehicles`,
+  FLEET_VEHICLES_ALL: `${A}/fleet/vehicles/all`,
+  FLEET_VEHICLES_CREATE: `${A}/fleet/vehicles/create`,
+  FLEET_VEHICLES_DETAIL: `${A}/fleet/vehicles/:uuid`,
+  FLEET_VEHICLES_EDIT: `${A}/fleet/vehicles/:uuid/edit`,
+  FLEET_VEHICLES_SERVICE_SCHEDULE: `${A}/fleet/vehicles/service-schedule`,
+  FLEET_CREW: `${A}/fleet/crew`,
+  FLEET_CREW_BY_VEHICLE: `${A}/fleet/crew/by-vehicle`,
+  FLEET_CREW_BY_STAFF: `${A}/fleet/crew/by-staff`,
+  FLEET_CREW_ASSIGN: `${A}/fleet/crew/assign`,
+  FLEET_ANALYTICS: `${A}/fleet/analytics`,
 
-  // Vehicle Fleet Management (legacy — now under /admin)
-  VEHICLES: `${ROUTES.AMBULANCE}/admin/vehicles`,
-  VEHICLES_ALL: `${ROUTES.AMBULANCE}/admin/vehicles/all`,
-  VEHICLES_CREATE: `${ROUTES.AMBULANCE}/admin/vehicles/create`,
-  VEHICLES_DETAIL: `${ROUTES.AMBULANCE}/admin/vehicles/:uuid`,
-  VEHICLES_EDIT: `${ROUTES.AMBULANCE}/admin/vehicles/:uuid/edit`,
-  VEHICLES_SERVICE_SCHEDULE: `${ROUTES.AMBULANCE}/admin/vehicles/service-schedule`,
+  RECEIPTS: `${A}/receipts`,
 
-  // Crew Management (legacy — now under /admin)
-  CREW: `${ROUTES.AMBULANCE}/admin/crew`,
-  CREW_BY_VEHICLE: `${ROUTES.AMBULANCE}/admin/crew/by-vehicle`,
-  CREW_BY_STAFF: `${ROUTES.AMBULANCE}/admin/crew/by-staff`,
-  CREW_ASSIGN: `${ROUTES.AMBULANCE}/admin/crew/assign`,
-
-  // Fleet Administration (landing page for /admin operation)
-  ADMIN: `${ROUTES.AMBULANCE}/admin`,
-
-  // Fleet Analytics (legacy — now under /admin)
-  ANALYTICS: `${ROUTES.AMBULANCE}/admin/analytics`,
+  /** @deprecated Use ACTION_CENTER_TRANSPORT */
+  ACTION_CENTER_ACTIVE_BOARD: `${A}/action-center/active-board`,
+  /** @deprecated Use FLEET_TRIP_HISTORY */
+  ACTION_CENTER_TRIP_HISTORY: `${A}/action-center/trip-history`,
+  /** @deprecated Use ACTION_CENTER_TRANSPORT_REQUEST */
+  ACTION_CENTER_NEW_TRIP: `${A}/action-center/new-trip`,
+  /** @deprecated Use ACTION_CENTER_TRANSPORT */
+  ACTION_CENTER_TRIP_WORKSPACE: `${A}/action-center/trip-workspace`,
+  /** @deprecated Use ACTION_CENTER_TRANSPORT_TIMELINE */
+  ACTION_CENTER_TRIP_TIMELINE: `${A}/action-center/trip-workspace/timeline`,
+  /** @deprecated Use ACTION_CENTER_TRANSPORT_LOGS */
+  ACTION_CENTER_TRIP_LOGS: `${A}/action-center/trip-workspace/logs`,
 } as const;

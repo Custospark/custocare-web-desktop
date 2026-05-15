@@ -14,8 +14,6 @@ import {
   Calendar,
   CircleHelp,
   ClipboardList,
-  BarChart3,
-  Activity,
   DoorOpen,
   FileText,
   GraduationCap,
@@ -28,7 +26,6 @@ import {
   Megaphone,
   MessageCircleMore,
   MessageSquareHeart,
-  Navigation,
   Package,
   Pill,
   Receipt,
@@ -358,30 +355,37 @@ export const AMBULANCE_MODULE_OPERATIONS: ModuleOperation[] = [
     subtext: 'Active trips, vehicle availability, and fleet status at a glance',
   },
   {
-    id: 'dispatch',
-    label: 'Dispatch & Trip Center',
-    icon: <Navigation className="w-4 h-4" />,
-    subtext: 'Active board, new trip requests, and trip history',
+    id: 'patients',
+    label: 'Patient Intake & Queue',
+    icon: <Users className="w-4 h-4" />,
+    subtext: 'Search, register, and queue patients for transport encounters',
   },
   {
-    id: 'trip-workspace',
-    label: 'Active Trip Workspace',
-    icon: <Activity className="w-4 h-4" />,
-    subtext: 'Manage active trip: status transitions, timeline, and logs',
+    id: 'action-center',
+    label: 'Transport Encounter Center',
+    icon: <Workflow className="w-4 h-4" />,
+    subtext: 'Dispatch board, trip workspace, timeline, and transport logs',
   },
   {
-    id: 'admin',
-    label: 'Fleet Administration',
+    id: 'fleet',
+    label: 'Fleet & Assets',
     icon: <Truck className="w-4 h-4" />,
     subtext: 'Vehicles, crew assignments, and fleet analytics',
+  },
+  {
+    id: 'receipts',
+    label: 'Billing & Receipts',
+    icon: <Receipt className="w-4 h-4" />,
+    subtext: 'Review captured charges and issued receipts for transport encounters',
   },
 ];
 
 const AMBULANCE_NESTED_ROUTES: Record<string, string> = {
   overview: AMBULANCE_ROUTES.OVERVIEW,
-  dispatch: AMBULANCE_ROUTES.DISPATCH,
-  'trip-workspace': AMBULANCE_ROUTES.TRIP_WORKSPACE,
-  admin: AMBULANCE_ROUTES.ADMIN,
+  patients: AMBULANCE_ROUTES.PATIENTS,
+  'action-center': AMBULANCE_ROUTES.ACTION_CENTER,
+  fleet: AMBULANCE_ROUTES.FLEET,
+  receipts: AMBULANCE_ROUTES.RECEIPTS,
 };
 
 export const AMBULANCE_SIDEBAR_NESTED_OPERATIONS = mapWorkspaceToSidebar(

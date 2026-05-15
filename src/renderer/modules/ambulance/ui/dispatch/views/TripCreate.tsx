@@ -8,6 +8,7 @@ import { AMBULANCE_ROUTES } from '../../../../../app/routes/routeConstants';
 import { useToast } from '../../../../../app/store/contexts/toast/useToast';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../../../app/store/rootReducer';
+import { getActiveFacilityId } from '../../../../../app/store/utils/contextSelectors';
 import type { PatientSearchResult } from '../../../../pharmacy/api/dispensing/patient-search/usePatientTypes';
 
 interface TripCreateProps { theme: 'light' | 'dark'; onClose?: () => void; }
@@ -27,7 +28,7 @@ const TripCreate = ({ theme, onClose }: TripCreateProps) => {
   const isDark = theme === 'dark';
   const { showToast } = useToast();
   const createMutation = useCreateTrip();
-  const activeFacilityId = useSelector((s: RootState) => s.facility?.activeFacilityId);
+  const activeFacilityId = useSelector((s: RootState) => getActiveFacilityId(s));
   const { data: ambData } = useAmbulances({ status: 'available', per_page: 100 });
   const ambulances = ambData?.data ?? [];
 
@@ -44,7 +45,10 @@ const TripCreate = ({ theme, onClose }: TripCreateProps) => {
   const { data: searchData, isLoading: searching } = usePatientSearch({ q: searchQuery });
   const searchResults = searchData?.data ?? [];
 
-  const closeDrawer = () => { if (onClose) onClose(); else navigate(AMBULANCE_ROUTES.DISPATCH); };
+  const closeDrawer = () => {
+    if (onClose) onClose();
+    else navigate(AMBULANCE_ROUTES.FLEET_ACTIVE_BOARD);
+  };
 
   const set = useCallback((f: string) => (e: FormEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm(p => ({ ...p, [f]: (e.target as HTMLInputElement).value }));

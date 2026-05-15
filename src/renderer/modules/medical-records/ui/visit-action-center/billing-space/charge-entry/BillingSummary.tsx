@@ -23,6 +23,7 @@ import {
   selectActiveVisitId,
 } from '../../../../../../app/store/slices/visitSlice';
 import {
+  AMBULANCE_ROUTES,
   BILLING_ROUTES,
   CLINICAL_ROUTES,
   LABORATORY_ROUTES,
@@ -126,6 +127,16 @@ export const BillingSummary: React.FC<BillingSummaryProps> = ({
         forwardState: {
           cancelTo: LABORATORY_ROUTES.ACTION_CENTER_REQUEST,
           queueRedirectTo: LABORATORY_ROUTES.PATIENT_QUEUE,
+        },
+      } as const;
+    }
+    if (pathname.startsWith('/ambulance')) {
+      return {
+        queue: AMBULANCE_ROUTES.PATIENT_QUEUE,
+        forwardTo: FOCUS_MODE_ROUTES.FORWARD_PATIENT_FOCUS,
+        forwardState: {
+          cancelTo: AMBULANCE_ROUTES.ACTION_CENTER_TRANSPORT,
+          queueRedirectTo: AMBULANCE_ROUTES.PATIENT_QUEUE,
         },
       } as const;
     }

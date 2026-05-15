@@ -71,7 +71,7 @@ const VehicleEdit = ({ theme }: VehicleEditProps) => {
       };
       await updateMutation.mutateAsync(payload);
       showToast('success', 'Vehicle updated');
-      navigate(AMBULANCE_ROUTES.VEHICLES_ALL);
+      navigate(AMBULANCE_ROUTES.FLEET_ASSETS);
     } catch { showToast('error', 'Update failed'); }
   };
 
@@ -84,7 +84,7 @@ const VehicleEdit = ({ theme }: VehicleEditProps) => {
   return (
     <div className={`min-h-screen p-6 ${isDark ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
       <div className="mx-auto max-w-2xl">
-        <button onClick={() => navigate(AMBULANCE_ROUTES.VEHICLES_ALL)}
+        <button onClick={() => navigate(AMBULANCE_ROUTES.FLEET_ASSETS)}
           className={`mb-6 inline-flex cursor-pointer items-center gap-2 text-sm font-medium ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}>
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
@@ -134,7 +134,7 @@ const VehicleEdit = ({ theme }: VehicleEditProps) => {
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-4">
-              <button type="button" onClick={() => navigate(AMBULANCE_ROUTES.VEHICLES_ALL)}
+              <button type="button" onClick={() => navigate(AMBULANCE_ROUTES.FLEET_ASSETS)}
                 className={`cursor-pointer rounded-lg border px-4 py-2 text-sm font-medium ${isDark ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}>Cancel</button>
               <button type="submit" disabled={updateMutation.isPending}
                 className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">

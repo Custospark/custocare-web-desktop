@@ -33,7 +33,7 @@ const VehicleDetail = ({ theme }: VehicleDetailProps) => {
   return (
     <div className={`min-h-screen p-6 ${isDark ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
       <div className="mx-auto max-w-3xl">
-        <button onClick={() => navigate(AMBULANCE_ROUTES.VEHICLES_ALL)}
+        <button onClick={() => navigate(AMBULANCE_ROUTES.FLEET_ASSETS)}
           className={`mb-6 inline-flex cursor-pointer items-center gap-2 text-sm font-medium ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}>
           <ArrowLeft className="h-4 w-4" /> Back to fleet
         </button>
@@ -53,11 +53,11 @@ const VehicleDetail = ({ theme }: VehicleDetailProps) => {
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => navigate(`/ambulance/admin/vehicles/${uuid}/edit`)}
+              <button onClick={() => navigate(`/ambulance/fleet/vehicles/${uuid}/edit`)}
                 className="cursor-pointer rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700">Edit</button>
               <button onClick={async () => {
                 if (confirm(`Delete ${v.vehicle_identifier}?`)) {
-                  try { await deleteMutation.mutateAsync(uuid!); showToast('success', 'Deleted'); navigate(AMBULANCE_ROUTES.VEHICLES_ALL); }
+                  try { await deleteMutation.mutateAsync(uuid!); showToast('success', 'Deleted'); navigate(AMBULANCE_ROUTES.FLEET_ASSETS); }
                   catch { showToast('error', 'Delete failed'); }
                 }
               }} className="cursor-pointer rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100">Delete</button>

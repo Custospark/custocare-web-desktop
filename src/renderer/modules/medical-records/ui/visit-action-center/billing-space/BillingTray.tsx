@@ -15,8 +15,10 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
+  AMBULANCE_ROUTES,
   BILLING_ROUTES,
   CLINICAL_ROUTES,
+  LABORATORY_ROUTES,
   MEDICAL_RECORDS_ROUTES,
   PHARMACY_ROUTES,
 } from '../../../../../app/routes/routeConstants';
@@ -97,6 +99,8 @@ export const BillingTray: React.FC<BillingTrayProps> = ({
     const pathname = location.pathname;
     if (pathname.startsWith('/billing')) return BILLING_ROUTES.PATIENT_QUEUE;
     if (pathname.startsWith('/pharmacy')) return PHARMACY_ROUTES.PATIENT_QUEUE;
+    if (pathname.startsWith('/laboratory')) return LABORATORY_ROUTES.PATIENT_QUEUE;
+    if (pathname.startsWith('/ambulance')) return AMBULANCE_ROUTES.PATIENT_QUEUE;
     if (pathname.startsWith('/clinical')) return CLINICAL_ROUTES.PATIENT_QUEUE;
     return MEDICAL_RECORDS_ROUTES.PATIENT_QUEUE;
   }, [location.pathname]);

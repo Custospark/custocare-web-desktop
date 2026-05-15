@@ -1,6 +1,7 @@
 import {
   BILLING_ROUTES,
   CLINICAL_ROUTES,
+  AMBULANCE_ROUTES,
   LABORATORY_ROUTES,
   MEDICAL_RECORDS_ROUTES,
   NURSING_ROUTES,
@@ -14,7 +15,8 @@ export type PatientIntakeModule =
   | 'nursing'
   | 'billing'
   | 'clinical'
-  | 'laboratory';
+  | 'laboratory'
+  | 'ambulance';
 
 export function getPatientIntakeRoutes(module: PatientIntakeModule) {
   if (module === 'pharmacy') {
@@ -60,6 +62,15 @@ export function getPatientIntakeRoutes(module: PatientIntakeModule) {
       walkIn: LABORATORY_ROUTES.WALKIN_PATIENT,
       queue: LABORATORY_ROUTES.PATIENT_QUEUE,
       actionCenter: LABORATORY_ROUTES.ACTION_CENTER_REQUEST,
+    } as const;
+  }
+  if (module === 'ambulance') {
+    return {
+      search: AMBULANCE_ROUTES.PATIENTS_SEARCH,
+      register: AMBULANCE_ROUTES.PATIENTS_REGISTER,
+      walkIn: AMBULANCE_ROUTES.WALKIN_PATIENT,
+      queue: AMBULANCE_ROUTES.PATIENT_QUEUE,
+      actionCenter: AMBULANCE_ROUTES.ACTION_CENTER_TRANSPORT,
     } as const;
   }
   return {

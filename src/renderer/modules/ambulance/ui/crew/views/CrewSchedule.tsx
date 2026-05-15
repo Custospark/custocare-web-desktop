@@ -1,14 +1,11 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { UsersRound, Calendar, Clock, ArrowLeft } from 'lucide-react';
+import { UsersRound, Calendar, Clock } from 'lucide-react';
 import { useCrewByStaff } from '../../../api/ambulance-crew/useAmbulanceCrewMemberQueries';
 import CrewRoleBadge from '../components/CrewRoleBadge';
-import { AMBULANCE_ROUTES } from '../../../../../app/routes/routeConstants';
 
 interface CrewScheduleProps { theme: 'light' | 'dark'; }
 
 const CrewSchedule = ({ theme }: CrewScheduleProps) => {
-  const navigate = useNavigate();
   const isDark = theme === 'dark';
   const [staffId, setStaffId] = useState('');
   const { data, isLoading } = useCrewByStaff(staffId ? parseInt(staffId) : 0);

@@ -61,6 +61,7 @@ const AmbulanceAnalytics = ({ theme }: AmbulanceAnalyticsProps) => {
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {statCard(<TrendingUp className={`h-5 w-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />, 'Total Trips', totalTrips)}
           {statCard(<Activity className={`h-5 w-5 ${isDark ? 'text-green-400' : 'text-green-600'}`} />, 'Completed', completedTrips, `${((completedTrips / (totalTrips || 1)) * 100).toFixed(0)}% completion rate`)}
+          {statCard(<Clock className={`h-5 w-5 ${isDark ? 'text-red-400' : 'text-red-600'}`} />, 'Cancelled', cancelledTrips)}
           {statCard(<Clock className={`h-5 w-5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />, 'Avg Response Time', `${avgDuration} min`)}
           {statCard(<Truck className={`h-5 w-5 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />, 'Total Mileage', `${totalMileage.toLocaleString()} mi`)}
         </div>
@@ -123,7 +124,7 @@ const AmbulanceAnalytics = ({ theme }: AmbulanceAnalyticsProps) => {
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <button
             type="button"
-            onClick={() => navigate(AMBULANCE_ROUTES.DISPATCH_ACTIVE_BOARD)}
+            onClick={() => navigate(AMBULANCE_ROUTES.FLEET_ACTIVE_BOARD)}
             className={`cursor-pointer rounded-xl border p-4 text-center text-sm font-medium transition-all ${
               isDark ? 'border-gray-800 bg-gray-900 text-gray-200 hover:bg-gray-800' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
             }`}
@@ -132,7 +133,7 @@ const AmbulanceAnalytics = ({ theme }: AmbulanceAnalyticsProps) => {
           </button>
           <button
             type="button"
-            onClick={() => navigate(AMBULANCE_ROUTES.VEHICLES_ALL)}
+            onClick={() => navigate(AMBULANCE_ROUTES.FLEET_ASSETS)}
             className={`cursor-pointer rounded-xl border p-4 text-center text-sm font-medium transition-all ${
               isDark ? 'border-gray-800 bg-gray-900 text-gray-200 hover:bg-gray-800' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
             }`}
@@ -141,7 +142,7 @@ const AmbulanceAnalytics = ({ theme }: AmbulanceAnalyticsProps) => {
           </button>
           <button
             type="button"
-            onClick={() => navigate(AMBULANCE_ROUTES.DISPATCH_TRIP_HISTORY)}
+            onClick={() => navigate(AMBULANCE_ROUTES.FLEET_TRIP_HISTORY)}
             className={`cursor-pointer rounded-xl border p-4 text-center text-sm font-medium transition-all ${
               isDark ? 'border-gray-800 bg-gray-900 text-gray-200 hover:bg-gray-800' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
             }`}
@@ -150,7 +151,7 @@ const AmbulanceAnalytics = ({ theme }: AmbulanceAnalyticsProps) => {
           </button>
           <button
             type="button"
-            onClick={() => navigate(AMBULANCE_ROUTES.DISPATCH_NEW_TRIP)}
+            onClick={() => navigate(AMBULANCE_ROUTES.FLEET_NEW_TRIP)}
             className="cursor-pointer rounded-xl border border-blue-200 bg-blue-50 p-4 text-center text-sm font-medium text-blue-700 transition-all hover:bg-blue-100"
           >
             New Trip

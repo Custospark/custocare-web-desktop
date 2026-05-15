@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { Wrench, Calendar, AlertTriangle, Truck } from 'lucide-react';
+import { Calendar, AlertTriangle, Truck } from 'lucide-react';
 import { useAmbulances } from '../../../api/ambulances/useAmbulanceQueries';
-import { AMBULANCE_ROUTES } from '../../../../../app/routes/routeConstants';
 import VehicleStatusBadge from '../components/VehicleStatusBadge';
 
 interface VehicleServiceScheduleProps { theme: 'light' | 'dark'; }
@@ -38,7 +37,7 @@ const VehicleServiceSchedule = ({ theme }: VehicleServiceScheduleProps) => {
               <h2 className={`mb-3 text-sm font-semibold uppercase tracking-wider text-red-500`}>Overdue ({overdue.length})</h2>
               <div className="space-y-2">
                 {overdue.map(v => (
-                  <button key={v.id} type="button" onClick={() => navigate(`/ambulance/admin/vehicles/${v.ambulance_uuid}`)}
+                  <button key={v.id} type="button" onClick={() => navigate(`/ambulance/fleet/vehicles/${v.ambulance_uuid}`)}
                     className={`flex w-full cursor-pointer items-center justify-between rounded-xl border p-4 transition-all ${
                       isDark ? 'border-red-900/30 bg-red-900/10 hover:bg-red-900/20' : 'border-red-100 bg-red-50 hover:bg-red-100'
                     }`}>
@@ -67,7 +66,7 @@ const VehicleServiceSchedule = ({ theme }: VehicleServiceScheduleProps) => {
               <h2 className={`mb-3 text-sm font-semibold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Upcoming ({upcoming.length})</h2>
               <div className="space-y-2">
                 {upcoming.map(v => (
-                  <button key={v.id} type="button" onClick={() => navigate(`/ambulance/admin/vehicles/${v.ambulance_uuid}`)}
+                  <button key={v.id} type="button" onClick={() => navigate(`/ambulance/fleet/vehicles/${v.ambulance_uuid}`)}
                     className={`flex w-full cursor-pointer items-center justify-between rounded-xl border p-4 transition-all ${
                       isDark ? 'border-gray-800 bg-gray-900 hover:bg-gray-800' : 'border-gray-100 bg-white hover:bg-gray-50'
                     }`}>
@@ -96,7 +95,7 @@ const VehicleServiceSchedule = ({ theme }: VehicleServiceScheduleProps) => {
               <h2 className={`mb-3 text-sm font-semibold uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>No Service Date ({noService.length})</h2>
               <div className="space-y-2">
                 {noService.map(v => (
-                  <button key={v.id} type="button" onClick={() => navigate(`/ambulance/admin/vehicles/${v.ambulance_uuid}`)}
+                  <button key={v.id} type="button" onClick={() => navigate(`/ambulance/fleet/vehicles/${v.ambulance_uuid}`)}
                     className={`flex w-full cursor-pointer items-center justify-between rounded-xl border p-4 transition-all ${
                       isDark ? 'border-gray-800 bg-gray-900 hover:bg-gray-800' : 'border-gray-100 bg-white hover:bg-gray-50'
                     }`}>

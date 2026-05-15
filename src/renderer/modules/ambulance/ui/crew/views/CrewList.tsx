@@ -1,23 +1,25 @@
 import { useState } from 'react';
 import { UsersRound, Truck, XCircle, RefreshCw } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import LoadingSkeleton from '../../../../../shared/components/Loading/LoadingSkeletons';
 import { useCrewByAmbulance } from '../../../api/ambulance-crew/useAmbulanceCrewMemberQueries';
 import { useAmbulances } from '../../../api/ambulances/useAmbulanceQueries';
-import { AMBULANCE_ROUTES } from '../../../../../app/routes/routeConstants';
 import CrewRoleBadge from '../components/CrewRoleBadge';
 
 interface CrewListProps { theme: 'light' | 'dark'; }
 
 const CrewList = ({ theme }: CrewListProps) => {
-  const navigate = useNavigate();
   const isDark = theme === 'dark';
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const { data: ambData, refetch: refetchAmbs, isFetching: fetchingAmbs } = useAmbulances({ per_page: 100 });
+  const { data: ambData, refetch: refetchAmbs, isFetching: fetchingAmbs, isLoading: loadingAmbs } = useAmbulances({ per_page: 100 });
   const { data: crewData, refetch: refetchCrew, isFetching: fetchingCrew } = useCrewByAmbulance(selectedId ?? 0);
   const vehicles = ambData?.data ?? [];
   const members = crewData?.data ?? [];
 
   const handleRefresh = () => { refetchAmbs(); if (selectedId) refetchCrew(); };
+
+  if (loadingAmbs) {
+    return <LoadingSkeleton variant="table" theme={theme} message="Loading fleet…" />;
+  }
 
   return (
     <div>

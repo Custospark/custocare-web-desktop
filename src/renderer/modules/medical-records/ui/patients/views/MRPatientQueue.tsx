@@ -60,7 +60,9 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
         ? 'Billing Queue'
         : intakeModule === 'laboratory'
           ? 'Laboratory Queue'
-          : 'Patient Queue';
+          : intakeModule === 'ambulance'
+            ? 'Transport Queue'
+            : 'Patient Queue';
   const queueDescription =
     intakeModule === 'nursing'
       ? 'Visits without a ward assignment; counts match this list. Assign wards from bed board or ward workspace.'
@@ -68,7 +70,9 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
         ? 'Visits ready for billing capture and payment processing'
         : intakeModule === 'laboratory'
           ? 'Visits ready for laboratory diagnostics, test requests, and results workflow'
-          : 'Patients requiring medical documentation and chart updates';
+          : intakeModule === 'ambulance'
+            ? 'Visits ready for EMS transport dispatch and trip workflow'
+            : 'Patients requiring medical documentation and chart updates';
   const actionButtonText =
     intakeModule === 'nursing'
       ? isProcessing
@@ -84,7 +88,9 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
         ? 'Express Intake'
         : intakeModule === 'laboratory'
           ? 'Lab Express Intake'
-        : 'New Patient';
+          : intakeModule === 'ambulance'
+            ? 'Transport Express Intake'
+            : 'New Patient';
 
   // Get staff context
   const facilityId = useAppSelector(getActiveFacilityId);
@@ -143,7 +149,9 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
           ? `Billing queue ready for ${visit.patient?.name || 'patient'}.`
           : intakeModule === 'laboratory'
             ? `Laboratory queue ready for ${visit.patient?.name || 'patient'}.`
-          : `Ready to care for ${visit.patient?.name || 'patient'}. Let's get started!`,
+            : intakeModule === 'ambulance'
+              ? `Transport queue ready for ${visit.patient?.name || 'patient'}.`
+              : `Ready to care for ${visit.patient?.name || 'patient'}. Let's get started!`,
         3000
       );
       
@@ -169,6 +177,7 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
       laboratory: CareDeliveryWorkflow.LABORATORY,
       clinical: CareDeliveryWorkflow.CLINICAL,
       pharmacy: CareDeliveryWorkflow.PHARMACY,
+      ambulance: CareDeliveryWorkflow.AMBULANCE,
     };
 
     const care_delivery_workflow = workflowByModule[intakeModule];

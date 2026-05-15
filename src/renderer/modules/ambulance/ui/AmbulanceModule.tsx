@@ -8,7 +8,7 @@ const AmbulanceModule = () => {
       contextTitle="Ambulance Services"
       operations={AMBULANCE_MODULE_OPERATIONS}
       basePath={ROUTES.AMBULANCE}
-      defaultOperationPath={AMBULANCE_ROUTES.OVERVIEW}
+      defaultOperationPath={AMBULANCE_ROUTES.PATIENT_QUEUE}
     />
   );
 };

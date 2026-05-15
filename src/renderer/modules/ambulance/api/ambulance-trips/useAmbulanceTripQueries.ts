@@ -1,6 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSelector } from 'react-redux';
 import { axiosInstance } from '../../../../app/api/axiosConfig';
+import type { RootState } from '../../../../app/store/rootReducer';
+import {
+  selectActiveVisitId,
+  selectActiveVisitPatientId,
+} from '../../../../app/store/slices/visitSlice';
 import type {
+  AmbulanceTrip,
   AmbulanceTripCollection,
   CreateAmbulanceTripRequest,
   UpdateAmbulanceTripRequest,
@@ -77,6 +84,44 @@ export const useTripsToFacility = (facilityId: number) =>
     enabled: !!facilityId,
   });
 
+const TERMINAL_TRIP_STATUSES = new Set(['completed', 'cancelled']);
+
+function pickVisitTrip(trips: AmbulanceTrip[], visitId: number | null): AmbulanceTrip | null {
+  if (!trips.length) return null;
+  const forVisit = visitId ? trips.filter((t) => t.visit_id === visitId) : trips;
+  const pool = forVisit.length ? forVisit : trips;
+  return (
+    pool.find((t) => !TERMINAL_TRIP_STATUSES.has(t.status)) ??
+    pool[0] ??
+    null
+  );
+}
+
+/** Trips for the visit loaded in visitSlice (transport encounter center). */
+export const useActiveVisitTrip = () => {
+  const visitId = useSelector((s: RootState) => selectActiveVisitId(s));
+  const patientId = useSelector((s: RootState) => selectActiveVisitPatientId(s));
+  const filters =
+    visitId != null
+      ? { visit_id: visitId }
+      : patientId != null
+        ? { patient_id: patientId }
+        : undefined;
+
+  const query = useTrips(filters, 25);
+  const trips = query.data?.data ?? [];
+  const trip = pickVisitTrip(trips, visitId);
+
+  return {
+    ...query,
+    trips,
+    trip,
+    tripUuid: trip?.trip_uuid ?? null,
+    visitId,
+    patientId,
+  };
+};
+
 export const useCreateTrip = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -113,15 +158,6 @@ export const useDeleteTrip = () => {
 };
 
 // ─── Status Transition Mutations ───
-
-const statusMutation = (url: string, qc: ReturnType<typeof useQueryClient>) =>
-  useMutation({
-    mutationFn: async (payload?: Record<string, unknown>) => {
-      const { data } = await axiosInstance.post(url, payload ?? {});
-      return data;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: tripKeys.all }),
-  });
 
 export const useDispatchTrip = () => {
   const qc = useQueryClient();
