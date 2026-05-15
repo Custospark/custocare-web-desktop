@@ -89,7 +89,9 @@ const MRPatientWalkIn: React.FC<MRPatientWalkInProps> = ({
                     ? 'Patient is ready for laboratory services'
                     : intakeModule === 'ambulance'
                       ? 'Patient is ready for ambulance transport'
-                      : 'Patient is ready for clinical care'}
+                      : intakeModule === 'referral'
+                        ? 'Patient is ready for referral coordination'
+                        : 'Patient is ready for clinical care'}
               </p>
               <p className={`mt-2 text-sm font-medium ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
                 Patient: {createdSession.walkin.display_name || 'Walk-in Patient'}
@@ -120,7 +122,9 @@ const MRPatientWalkIn: React.FC<MRPatientWalkInProps> = ({
                       ? 'Proceed to laboratory workflow'
                       : intakeModule === 'ambulance'
                         ? 'Proceed to transport workflow'
-                        : 'Proceed to action center'}
+                        : intakeModule === 'referral'
+                          ? 'Proceed to referral workflow'
+                          : 'Proceed to action center'}
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}

@@ -9,6 +9,7 @@ import { accountRoutes } from './modules/account';
 import { onboardingAndDashboardRoutes } from './modules/shared/OnboardingAndDashboard';
 import { pharmacyRoutes } from './modules/pharmacy';
 import { ambulanceRoutes } from './modules/ambulance';
+import { referralRoutes } from './modules/referral';
 import { billingRoutes } from './modules/billing';
 import { clinicalRoutes } from './modules/clinical';
 import { laboratoryRoutes } from './modules/laboratory';
@@ -25,7 +26,7 @@ import FacilitySettings from '../../modules/administration/admin-module/ui/facil
 import ClinicalSpaceManagement from '../../modules/administration/admin-module/ui/clinical-space/ClinicalSpaceManagement';
 import { ADMIN_ROUTES, ADMINISTRATION_CLINICAL_SPACE_MGT_ROUTES } from './constants/administration.paths';
 import LoadingRedirect from '../../shared/components/Loading/LoadingRedirect';
-import { CLINICAL_ROUTES, MEDICAL_RECORDS_ROUTES, CUSTOCARE_HUB_ROUTES, AMBULANCE_ROUTES } from './routeConstants';
+import { CLINICAL_ROUTES, MEDICAL_RECORDS_ROUTES, CUSTOCARE_HUB_ROUTES, AMBULANCE_ROUTES, REFERRAL_ROUTES } from './routeConstants';
 import FacilityAdminBillingCycle from '../../modules/billling/ui/billling/FacilityAdminBillingCycle';
 import { facilityAdminBillingCycleRoutes } from './modules/adminstration/billing-cycle.routes';
 
@@ -39,6 +40,7 @@ const AdminModule = React.lazy(
 );
 const PharmacyModule = React.lazy(() => import('../../modules/pharmacy/ui/PharmacyModule'));
 const AmbulanceModule = React.lazy(() => import('../../modules/ambulance/ui/AmbulanceModule'));
+const ReferralModule = React.lazy(() => import('../../modules/referral/ui/ReferralModule'));
 const NursingModule = React.lazy(() => import('../../modules/nursing/ui/NursingModule'));
 const ClinicalModule = React.lazy(() => import('../../modules/clinical/ui/ClinicalModule'));
 const LaboratoryModule = React.lazy(() => import('../../modules/laboratory/ui/LaboratoryModule'));
@@ -174,6 +176,30 @@ export const ProtectedRoutes = () => [
               }
             />
             {ambulanceRoutes}
+          </Route>
+
+          {/* Referral Module */}
+          <Route
+            key="referral"
+            path={ROUTES.REFERRAL}
+            element={
+              <SuspenseWrapper variant="table">
+                <WithThemeProp Component={ReferralModule} />
+              </SuspenseWrapper>
+            }
+          >
+            <Route
+              index
+              element={
+                <LoadingRedirect
+                  to={REFERRAL_ROUTES.OVERVIEW}
+                  replace
+                  variant="table"
+                  message="Loading Referral Intelligence..."
+                />
+              }
+            />
+            {referralRoutes}
           </Route>
 
           {/* Billing Module */}

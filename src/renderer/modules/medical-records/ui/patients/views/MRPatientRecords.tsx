@@ -12,7 +12,7 @@ import { useGetActiveVisitClinicalNotes } from '../../../api/clinical-notes/clin
 import { useGetActiveVisitDiagnoses } from '../../../api/diagnosis/diagnosisQueries';
 import { useGetAllergies } from '../../../api/allergies/AllergyQueries';
 
-export type MRPatientRecordsPresentation = 'clinical-encounter' | 'nursing' | 'laboratory' | 'ambulance';
+export type MRPatientRecordsPresentation = 'clinical-encounter' | 'nursing' | 'laboratory' | 'ambulance' | 'referral';
 
 interface MRPatientRecordsProps {
   theme?: 'light' | 'dark';
@@ -230,6 +230,25 @@ const presentationCopy: Record<
     statModeLabel: 'Exploration Mode',
     alertNoVisit:
       'No active visit selected. Select a patient from the transport queue to load visit context.',
+    visitBadgeActive: 'Current',
+    visitBadgeInactive: 'No Active Visit',
+  },
+  referral: {
+    pageTitle: 'Patient Info',
+    pageSubtitle: 'Review visit and chart context before creating or tracking referrals',
+    latestVisitTitle: 'Current Visit',
+    latestVisitDescription:
+      'Open encounter context for the patient linked to referral coordination',
+    medicalHistoryTitle: 'Medical History',
+    medicalHistoryDescription:
+      'Review allergies, diagnoses, and prior care to support referral decisions',
+    lifetimeBadge: 'Patient History',
+    summaryHeading: 'Referral Context',
+    statVisitLabel: 'Current Visit Status',
+    statAllergiesLabel: 'Known Allergies',
+    statModeLabel: 'Exploration Mode',
+    alertNoVisit:
+      'No active visit selected. Select a patient from the referral queue to load visit context.',
     visitBadgeActive: 'Current',
     visitBadgeInactive: 'No Active Visit',
   },

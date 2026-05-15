@@ -49,6 +49,7 @@ export const ROUTES = {
   PHARMACY: '/pharmacy',
 
   AMBULANCE: '/ambulance',
+  REFERRAL: '/referral',
   BILLING: '/billing',
   ADMINISTRATION: '/administration',
   ACCOUNT: '/account',

@@ -99,6 +99,7 @@ export enum CareDeliveryWorkflow {
   NURSING = 'nursing',
   IMAGING = 'imaging',
   AMBULANCE = 'ambulance',
+  REFERRAL = 'referral',
 }
 
 /** Default visit phase applied when a visit is placed in a workflow bucket (backend should mirror this mapping). */
@@ -113,6 +114,7 @@ export const CARE_DELIVERY_WORKFLOW_TARGET_PHASE: Record<CareDeliveryWorkflow, V
   [CareDeliveryWorkflow.NURSING]: VisitPhase.OBSERVATION,
   [CareDeliveryWorkflow.IMAGING]: VisitPhase.PROCEDURES,
   [CareDeliveryWorkflow.AMBULANCE]: VisitPhase.TREATMENT,
+  [CareDeliveryWorkflow.REFERRAL]: VisitPhase.TREATMENT,
 };
 
 /** Short labels for queues, badges, and filters (user-facing). */
@@ -127,6 +129,7 @@ export const CARE_DELIVERY_WORKFLOW_LABELS: Record<CareDeliveryWorkflow, string>
   [CareDeliveryWorkflow.NURSING]: 'Nursing',
   [CareDeliveryWorkflow.IMAGING]: 'Imaging',
   [CareDeliveryWorkflow.AMBULANCE]: 'Ambulance',
+  [CareDeliveryWorkflow.REFERRAL]: 'Referral',
 };
 
 /** Full enum order (e.g. admin / legacy). */
@@ -141,6 +144,7 @@ export const CARE_DELIVERY_WORKFLOW_ORDER: CareDeliveryWorkflow[] = [
   CareDeliveryWorkflow.NURSING,
   CareDeliveryWorkflow.IMAGING,
   CareDeliveryWorkflow.AMBULANCE,
+  CareDeliveryWorkflow.REFERRAL,
 ];
 
 /**
@@ -154,6 +158,7 @@ export const ENCOUNTER_WORKFLOW_STAGE_ORDER: CareDeliveryWorkflow[] = [
   CareDeliveryWorkflow.LABORATORY,
   CareDeliveryWorkflow.NURSING,
   CareDeliveryWorkflow.AMBULANCE,
+  CareDeliveryWorkflow.REFERRAL,
   CareDeliveryWorkflow.BILLING,
 ];
 
@@ -168,6 +173,7 @@ export const ENCOUNTER_WORKFLOW_STAGE_HINTS: Partial<Record<CareDeliveryWorkflow
   [CareDeliveryWorkflow.LABORATORY]: 'Tests & results',
   [CareDeliveryWorkflow.NURSING]: 'Vitals, tasks, bedside care',
   [CareDeliveryWorkflow.AMBULANCE]: 'Transport dispatch & trip workflow',
+  [CareDeliveryWorkflow.REFERRAL]: 'Internal & cross-facility referral coordination',
   [CareDeliveryWorkflow.BILLING]: 'Charges & payment',
 };
 

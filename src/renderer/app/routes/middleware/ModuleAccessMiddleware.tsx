@@ -81,6 +81,7 @@ const MODULE_ACCESS_CONFIG: readonly ModuleAccessConfig[] = [
   { route: ROUTES.LABORATORY, moduleCode: 'laboratory', displayName: 'Laboratory' },
   { route: ROUTES.PHARMACY, moduleCode: 'pharmacy', displayName: 'Pharmacy' },
   { route: ROUTES.AMBULANCE, moduleCode: 'ambulance', displayName: 'Ambulance Services' },
+  { route: ROUTES.REFERRAL, moduleCode: 'referrals', displayName: 'Referrals' },
   { route: ROUTES.BILLING, moduleCode: 'billing', displayName: 'Billing' },
   { route: ROUTES.ADMINISTRATION, moduleCode: 'administration', displayName: 'Administration' },
   

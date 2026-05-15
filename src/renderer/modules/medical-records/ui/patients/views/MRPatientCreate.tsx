@@ -61,6 +61,16 @@ const getCreateModuleCopy = (module: PatientIntakeModule) => {
         'New patients can proceed to trip requests, dispatch, and transport documentation after registration.',
     };
   }
+  if (module === 'referral') {
+    return {
+      subtitle: 'Create a record so you can start visits and referral coordination workflow',
+      chiefComplaint: 'Referral coordination',
+      encounterWorkflow: ' referral encounter workflow',
+      infoTitle: 'Referral Information',
+      infoDescription:
+        'New patients can proceed to referral requests and network coordination after registration.',
+    };
+  }
   if (module === 'clinical') {
     return {
       subtitle: 'Create a new patient record for clinical consultation and care planning',

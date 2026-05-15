@@ -12,6 +12,7 @@ export { CLINICAL_ROUTES } from "./constants/clinical.paths";
 export { LABORATORY_ROUTES } from "./constants/laboratory.paths";
 export { PHARMACY_ROUTES } from "./constants/pharmacy.paths";
 export { AMBULANCE_ROUTES } from "./constants/ambulance.paths";
+export { REFERRAL_ROUTES } from "./constants/referral.paths";
 export { BILLING_ROUTES } from "./constants/billing.paths";
 export { ACCOUNT_ROUTES } from "./constants/account.paths";
 export { PATIENT_PORTAL_ROUTES } from "./constants/patient-portal.paths";

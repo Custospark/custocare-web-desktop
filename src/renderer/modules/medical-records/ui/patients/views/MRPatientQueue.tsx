@@ -62,7 +62,9 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
           ? 'Laboratory Queue'
           : intakeModule === 'ambulance'
             ? 'Transport Queue'
-            : 'Patient Queue';
+            : intakeModule === 'referral'
+              ? 'Referral Queue'
+              : 'Patient Queue';
   const queueDescription =
     intakeModule === 'nursing'
       ? 'Visits without a ward assignment; counts match this list. Assign wards from bed board or ward workspace.'
@@ -72,7 +74,9 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
           ? 'Visits ready for laboratory diagnostics, test requests, and results workflow'
           : intakeModule === 'ambulance'
             ? 'Visits ready for EMS transport dispatch and trip workflow'
-            : 'Patients requiring medical documentation and chart updates';
+            : intakeModule === 'referral'
+              ? 'Visits ready for referral coordination and outbound requests'
+              : 'Patients requiring medical documentation and chart updates';
   const actionButtonText =
     intakeModule === 'nursing'
       ? isProcessing
@@ -151,7 +155,9 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
             ? `Laboratory queue ready for ${visit.patient?.name || 'patient'}.`
             : intakeModule === 'ambulance'
               ? `Transport queue ready for ${visit.patient?.name || 'patient'}.`
-              : `Ready to care for ${visit.patient?.name || 'patient'}. Let's get started!`,
+              : intakeModule === 'referral'
+                ? `Referral queue ready for ${visit.patient?.name || 'patient'}.`
+                : `Ready to care for ${visit.patient?.name || 'patient'}. Let's get started!`,
         3000
       );
       
@@ -178,6 +184,7 @@ const MRPatientQueue: React.FC<MRPatientQueueProps> = ({
       clinical: CareDeliveryWorkflow.CLINICAL,
       pharmacy: CareDeliveryWorkflow.PHARMACY,
       ambulance: CareDeliveryWorkflow.AMBULANCE,
+      referral: CareDeliveryWorkflow.REFERRAL,
     };
 
     const care_delivery_workflow = workflowByModule[intakeModule];

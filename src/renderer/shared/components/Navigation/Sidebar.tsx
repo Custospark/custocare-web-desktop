@@ -20,6 +20,7 @@ import {
   Stethoscope,
   Syringe,
   Truck,
+  Share2,
   UserCog,
 } from 'lucide-react';
 import { type SidebarProps } from '../../types/index';
@@ -32,6 +33,7 @@ import {
   LABORATORY_ROUTES,
   PHARMACY_ROUTES,
   AMBULANCE_ROUTES,
+  REFERRAL_ROUTES,
   BILLING_ROUTES,
   CUSTOCARE_HUB_ROUTES,
 } from '../../../app/routes/routeConstants';
@@ -48,6 +50,7 @@ import {
   PATIENT_PORTAL_SIDEBAR_NESTED_OPERATIONS,
   PHARMACY_SIDEBAR_NESTED_OPERATIONS,
   AMBULANCE_SIDEBAR_NESTED_OPERATIONS,
+  REFERRAL_SIDEBAR_NESTED_OPERATIONS,
   PLATFORM_ADMINISTRATION_SIDEBAR_NESTED_OPERATIONS,
 } from '../../navigation/moduleWorkspaceOperations';
 import { useAppSelector } from '../../../app/store/hooks/useApp';
@@ -265,6 +268,20 @@ const menuConfig: MenuItem[] = useMemo(
       stats: 'Fleet',
       glowColor: 'from-red-500 to-orange-400',
       moduleCode: 'ambulance',
+      category: 'clinical',
+      allowedCapabilities: ['staff'],
+    },
+    {
+      id: 'referral',
+      label: 'Referrals',
+      icon: <Share2 className="w-5 h-5" />,
+      href: REFERRAL_ROUTES.OVERVIEW,
+      route: ROUTES.REFERRAL,
+      description: 'Internal and cross-facility referral coordination',
+      operations: REFERRAL_SIDEBAR_NESTED_OPERATIONS,
+      stats: 'Network',
+      glowColor: 'from-indigo-500 to-violet-400',
+      moduleCode: 'referrals',
       category: 'clinical',
       allowedCapabilities: ['staff'],
     },

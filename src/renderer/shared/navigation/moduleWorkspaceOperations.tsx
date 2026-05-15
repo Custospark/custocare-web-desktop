@@ -34,6 +34,7 @@ import {
   Ticket,
   Users,
   Truck,
+  Share2,
   UsersRound,
   Workflow,
   Download,
@@ -57,6 +58,7 @@ import {
   PATIENT_PORTAL_ROUTES,
   PHARMACY_ROUTES,
   AMBULANCE_ROUTES,
+  REFERRAL_ROUTES,
 } from '../../app/routes/routeConstants';
 import { ADMIN_ROUTES } from '../../app/routes/constants/administration.paths';
 import { PLATFORM_ADMIN_ROUTES } from '../../app/routes/constants/platform-administration.paths';
@@ -392,6 +394,55 @@ export const AMBULANCE_SIDEBAR_NESTED_OPERATIONS = mapWorkspaceToSidebar(
   AMBULANCE_MODULE_OPERATIONS,
   AMBULANCE_NESTED_ROUTES,
   'amb',
+);
+
+// ─── Referral ────────────────────────────────────────────────────────────────
+
+export const REFERRAL_MODULE_OPERATIONS: ModuleOperation[] = [
+  {
+    id: 'overview',
+    label: 'Referral intelligence',
+    icon: <LayoutDashboard className="w-4 h-4" />,
+    subtext: 'Pending, incoming, and outgoing referral volume at a glance',
+  },
+  {
+    id: 'patients',
+    label: 'Referral intake',
+    icon: <Users className="w-4 h-4" />,
+    subtext: 'Queue and intake for visits in the referral workflow',
+  },
+  {
+    id: 'action-center',
+    label: 'Referral encounter center',
+    icon: <Workflow className="w-4 h-4" />,
+    subtext: 'Patient context with referral status, create request, and forward',
+  },
+  {
+    id: 'network',
+    label: 'Referral network',
+    icon: <Share2 className="w-4 h-4" />,
+    subtext: 'Facility-wide pending, incoming, and outgoing referrals',
+  },
+  {
+    id: 'receipts',
+    label: 'Billing & receipts',
+    icon: <Receipt className="w-4 h-4" />,
+    subtext: 'Review charges and receipts for referral encounters',
+  },
+];
+
+const REFERRAL_NESTED_ROUTES: Record<string, string> = {
+  overview: REFERRAL_ROUTES.OVERVIEW,
+  patients: REFERRAL_ROUTES.PATIENTS,
+  'action-center': REFERRAL_ROUTES.ACTION_CENTER,
+  network: REFERRAL_ROUTES.NETWORK,
+  receipts: REFERRAL_ROUTES.RECEIPTS,
+};
+
+export const REFERRAL_SIDEBAR_NESTED_OPERATIONS = mapWorkspaceToSidebar(
+  REFERRAL_MODULE_OPERATIONS,
+  REFERRAL_NESTED_ROUTES,
+  'ref',
 );
 
 // ─── Billing ─────────────────────────────────────────────────────────────────
