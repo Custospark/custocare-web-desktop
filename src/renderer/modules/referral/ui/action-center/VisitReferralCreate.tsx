@@ -1,8 +1,9 @@
-import { type FormEvent, useCallback, useState } from 'react';
+import { type FormEvent, useCallback, useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Save } from 'lucide-react';
+import { Save, Search, Building2, X } from 'lucide-react';
 import { useCreateReferral } from '../../api/referrals/useReferralQueries';
+import { useFacilities } from '../../api/referrals/facilityQueries';
 import { REFERRAL_ROUTES } from '../../../../app/routes/routeConstants';
 import { useToast } from '../../../../app/store/contexts/toast/useToast';
 import type { RootState } from '../../../../app/store/rootReducer';
@@ -13,6 +14,7 @@ import {
 } from '../../../../app/store/slices/visitSlice';
 import FacilityStaffPicker from '../../../ambulance/ui/fleet/FacilityStaffPicker';
 import type { ForwardingStaff } from '../../../pharmacy/api/dispensing/visit-queue/visitTypes';
+import type { FacilityOption } from '../../api/referrals/facilityQueries';
 
 interface VisitReferralCreateProps {
   theme: 'light' | 'dark';
@@ -39,6 +41,21 @@ const VisitReferralCreate = ({ theme }: VisitReferralCreateProps) => {
   });
   const [receivingStaffId, setReceivingStaffId] = useState<number | null>(null);
   const [receivingStaffLabel, setReceivingStaffLabel] = useState('');
+  const [facSearch, setFacSearch] = useState('');
+  const [facOpen, setFacOpen] = useState(false);
+  const [selectedFacility, setSelectedFacility] = useState<FacilityOption | null>(null);
+  const facRef = useRef<HTMLDivElement>(null);
+
+  const { data: facData } = useFacilities(facSearch || undefined);
+  const facilities = facData?.data ?? [];
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (facRef.current && !facRef.current.contains(e.target as Node)) setFacOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   const set = useCallback(
     (f: string) => (e: FormEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -66,9 +83,7 @@ const VisitReferralCreate = ({ theme }: VisitReferralCreateProps) => {
         facility_id: facilityId,
         referring_staff_id: staffId ?? undefined,
         receiving_staff_id: receivingStaffId ?? undefined,
-        receiving_facility_id: form.receiving_facility_id
-          ? parseInt(form.receiving_facility_id, 10)
-          : null,
+        receiving_facility_id: selectedFacility?.id ?? null,
         referral_type: form.referral_type,
         referral_reason: form.referral_reason || null,
         clinical_notes: form.clinical_notes || null,
@@ -110,15 +125,46 @@ const VisitReferralCreate = ({ theme }: VisitReferralCreateProps) => {
           </div>
         </div>
 
-        <div>
-          <label className={labelCls}>Receiving facility ID (optional)</label>
-          <input
-            type="number"
-            className={inputCls}
-            placeholder="Destination facility ID for cross-facility"
-            value={form.receiving_facility_id}
-            onChange={set('receiving_facility_id')}
-          />
+        <div ref={facRef} className="relative">
+          <label className={labelCls}>Receiving facility (optional)</label>
+          {selectedFacility ? (
+            <div className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${isDark ? 'border-blue-800/30 bg-blue-900/10 text-blue-300' : 'border-blue-200 bg-blue-50 text-blue-700'}`}>
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                <span className="font-medium">{selectedFacility.facility_name}</span>
+                <span className={`text-xs ${isDark ? 'text-blue-400' : 'text-blue-500'}`}>({selectedFacility.facility_code})</span>
+              </div>
+              <button type="button" onClick={() => { setSelectedFacility(null); setFacSearch(''); }}
+                className="cursor-pointer p-0.5 hover:opacity-70">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div className={`flex items-center rounded-lg border px-3 py-2 text-sm ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+                <Search className={`mr-2 h-4 w-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+                <input type="text" placeholder="Search facilities..." value={facSearch} onChange={e => { setFacSearch(e.target.value); setFacOpen(true); }}
+                  onFocus={() => setFacOpen(true)}
+                  className={`w-full bg-transparent outline-none ${isDark ? 'text-gray-100 placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'}`} />
+              </div>
+              {facOpen && (
+                <div className={`absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+                  {facilities.length === 0 ? (
+                    <p className={`px-3 py-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No facilities found</p>
+                  ) : facilities.map(f => (
+                    <button key={f.id} type="button" onClick={() => { setSelectedFacility(f); setFacOpen(false); setFacSearch(''); }}
+                      className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm transition-all ${isDark ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-50 text-gray-700'}`}>
+                      <Building2 className={`h-4 w-4 shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{f.facility_name}</p>
+                        <p className={`truncate text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{f.facility_code} — {f.city}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div>
