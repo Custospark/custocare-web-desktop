@@ -1,5 +1,3 @@
-import React from 'react';
-import { useSelector } from 'react-redux';
 import type { RootState } from '../../../../app/store/rootReducer';
 import { getActiveFacilityId } from '../../../../app/store/utils/contextSelectors';
 import {
@@ -16,7 +14,6 @@ interface ReferralNetworkHubProps {
 }
 
 const ReferralNetworkHub = ({ theme, initialTab = 'pending' }: ReferralNetworkHubProps) => {
-  const isDark = theme === 'dark';
   const facilityId = useSelector((s: RootState) => getActiveFacilityId(s)) ?? 0;
 
   const pendingQ = usePendingReferrals({ per_page: 50 } as Record<string, unknown>, 50);
