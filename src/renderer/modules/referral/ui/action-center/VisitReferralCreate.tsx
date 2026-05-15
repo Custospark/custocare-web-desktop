@@ -1,7 +1,7 @@
 import { type FormEvent, useCallback, useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Save, Search, Building2, X } from 'lucide-react';
+import { Save, Search, Building2, X, RefreshCw } from 'lucide-react';
 import { useCreateReferral } from '../../api/referrals/useReferralQueries';
 import { useFacilities } from '../../api/referrals/facilityQueries';
 import { REFERRAL_ROUTES } from '../../../../app/routes/routeConstants';
@@ -46,7 +46,7 @@ const VisitReferralCreate = ({ theme }: VisitReferralCreateProps) => {
   const [selectedFacility, setSelectedFacility] = useState<FacilityOption | null>(null);
   const facRef = useRef<HTMLDivElement>(null);
 
-  const { data: facData } = useFacilities(facSearch || undefined);
+  const { data: facData, refetch: refetchFac } = useFacilities(facSearch || undefined);
   const facilities = facData?.data ?? [];
 
   useEffect(() => {
@@ -126,7 +126,12 @@ const VisitReferralCreate = ({ theme }: VisitReferralCreateProps) => {
         </div>
 
         <div ref={facRef} className="relative">
-          <label className={labelCls}>Receiving facility (optional)</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className={labelCls}>Receiving facility (optional)</label>
+            <button type="button" onClick={() => refetchFac()} className={`cursor-pointer rounded p-0.5 transition-all ${isDark ? 'text-gray-500 hover:text-gray-300 hover:bg-gray-800' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`} title="Refresh facilities">
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
+          </div>
           {selectedFacility ? (
             <div className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${isDark ? 'border-blue-800/30 bg-blue-900/10 text-blue-300' : 'border-blue-200 bg-blue-50 text-blue-700'}`}>
               <div className="flex items-center gap-2">
