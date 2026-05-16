@@ -18,7 +18,7 @@ import {
   Crown,
 } from 'lucide-react';
 import { cn } from '../../utils/classNameUtils';
-import { workspaceShortcutLabelForDigit, workspaceShortcutRangeLegend } from '../../keyboard/workspaceShortcutLabels';
+import { workspaceShortcutLabelForDigit, workspaceShortcutRangeLegend, slotToKey } from '../../keyboard/workspaceShortcutLabels';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { hasTier, tierLabel, type FeatureStatus, type PlanTier } from '../../entitlements/entitlements';
@@ -594,7 +594,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
           const isDisabledUI = isHardDisabled || isGated;
 
           const badgeData = getEffectiveBadge(operation);
-          const digitHint = opIndex < 9 ? workspaceShortcutLabelForDigit(opIndex + 1) : null;
+          const digitHint = slotToKey(opIndex + 1) ? workspaceShortcutLabelForDigit(opIndex + 1) : null;
 
           return (
             <div key={operation.id} className="relative">
@@ -899,7 +899,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                     const isDisabledUI = isHardDisabled || isGated;
 
                     const badgeData = getEffectiveBadge(operation);
-                    const digitHint = index < 9 ? workspaceShortcutLabelForDigit(index + 1) : null;
+                    const digitHint = slotToKey(index + 1) ? workspaceShortcutLabelForDigit(index + 1) : null;
 
                     return (
                       <li key={operation.id} className="relative">
@@ -940,7 +940,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                                   : getEffectiveTitle(operation)
                               }
                               className={cn(
-                                'w-full flex items-center gap-3 px-3.5 py-2.5 relative z-10 cursor-pointer',
+                                'w-full flex items-center gap-3 px-3.5 py-2.5 relative z-10 cursor-pointer text-left',
                                 'text-sm font-medium transition-all duration-200',
                                 'focus:outline-none focus:ring-2 focus:ring-offset-0 group',
                                 theme === 'dark' ? 'focus:ring-cyan-500/50' : 'focus:ring-blue-500/50',

@@ -26,6 +26,7 @@ import {
 import { type SidebarProps } from '../../types/index';
 import { cn } from '../../types/cn';
 import { ROUTES } from '../../../app/routes/routeConstants';
+import { slotToKey } from '../../keyboard/workspaceShortcutLabels';
 import {
   MEDICAL_RECORDS_ROUTES,
   CLINICAL_ROUTES,
@@ -537,13 +538,13 @@ const menuConfig: MenuItem[] = useMemo(
         const shortcutMap: Record<string, string> = {};
 
         currentMenuItems.forEach((item, index) => {
-          if (index < 9) {
-            shortcutMap[(index + 1).toString()] = item.route;
+          const key = slotToKey(index + 1);
+          if (key) {
+            shortcutMap[key] = item.route;
           }
         });
 
-        const route = shortcutMap[e.key];
-
+        const route = shortcutMap[e.key.toLowerCase()];
         if (route) {
           e.preventDefault();
           navigate(route);

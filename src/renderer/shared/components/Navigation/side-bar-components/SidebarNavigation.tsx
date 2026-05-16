@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Circle } from 'lucide-react';
 import { cn } from '../../../types/cn';
 import ExpandableItem from './ExpandableItem';
-import { moduleSwitcherLabelForSlot, workspaceShortcutLabelForDigit } from '../../../keyboard/workspaceShortcutLabels';
+import { moduleSwitcherLabelForSlot, workspaceShortcutLabelForDigit, slotToKey } from '../../../keyboard/workspaceShortcutLabels';
 
 interface MenuItem {
   id: string;
@@ -90,7 +90,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
     const isHovered = activeHover === item.id;
     const moduleSlot = currentMenuItems.findIndex((x) => x.id === item.id);
     const moduleShortcutDisplay =
-      moduleSlot >= 0 && moduleSlot < 9 ? moduleSwitcherLabelForSlot(moduleSlot + 1) : null;
+      slotToKey(moduleSlot + 1) ? moduleSwitcherLabelForSlot(moduleSlot + 1) : null;
 
     const collapsedTitle = [item.label, item.description, moduleShortcutDisplay]
       .filter(Boolean)
@@ -241,7 +241,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
     _parentItem: MenuItem,
   ) => {
     const isOperationActive = isRouteActive(operation.route);
-    const wsHint = opIndex < 9 ? workspaceShortcutLabelForDigit(opIndex + 1) : null;
+    const wsHint = slotToKey(opIndex + 1) ? workspaceShortcutLabelForDigit(opIndex + 1) : null;
     const tipBase = operationTooltip(operation);
     const tip = wsHint ? `${tipBase} · ${wsHint}` : tipBase;
     const glyph = operation.icon ?? <Circle className="w-3.5 h-3.5 opacity-50" aria-hidden />;
@@ -254,7 +254,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         aria-label={operation.label}
         onClick={(e) => handleNavigation(e, operation.route)}
         className={cn(
-          'flex gap-2.5 rounded-lg px-2 py-2 text-sm transition-all duration-200',
+          'flex gap-2.5 rounded-lg px-2 py-2 text-sm text-left transition-all duration-200',
           enableNestedNavigation ? 'items-start' : 'items-center',
           enableNestedNavigation && isOperationActive && 'my-2',
           'border border-transparent',
@@ -337,7 +337,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                       {items.map((item) => {
                         const moduleSlot = currentMenuItems.findIndex((x) => x.id === item.id);
                         const moduleShortcutDisplay =
-                          moduleSlot >= 0 && moduleSlot < 9 ? moduleSwitcherLabelForSlot(moduleSlot + 1) : null;
+                          slotToKey(moduleSlot + 1) ? moduleSwitcherLabelForSlot(moduleSlot + 1) : null;
                         const headerAside = moduleShortcutDisplay ? (
                           <kbd
                             className={cn(
