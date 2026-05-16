@@ -1,4 +1,14 @@
 // app/hooks/useSpaceReminder.ts
+/**
+ * Reminds staff to set their workspace room 10 minutes after going ON_DUTY or BUSY.
+ *
+ * The duty/busy start time is stored in localStorage scoped by facility ID,
+ * set only when the API confirms a status change to ON_DUTY or BUSY (detected
+ * via presence query data transitioning).
+ *
+ * == Testing ==
+ * Uncomment the TEST line and comment out the PRODUCTION line.
+ */
 import { useEffect, useRef, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useConfirm } from '../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
@@ -13,13 +23,15 @@ import type { RootState } from '../store/rootReducer';
 const REMINDER_AFTER_MS = 10 * 60 * 1000;
 
 // ─── Testing (uncomment, comment out the line above) ─────────────────
-// const REMINDER_AFTER_MS = 2 * 60 * 1000;
+// const REMINDER_AFTER_MS = 1 * 60 * 1000;
 
 const CHECK_INTERVAL_MS = 30 * 1000;
+
 const DUTY_STATES = [StaffPresenceStatus.ON_DUTY, StaffPresenceStatus.BUSY];
 
-function dismissKey(facilityId: number) { return `spaceReminderDismissed_${facilityId}`; }
 function baselineKey(facilityId: number) { return `spaceDutySince_${facilityId}`; }
+function dismissKey(facilityId: number) { return `spaceReminderDismissed_${facilityId}`; }
+function lastStatusKey(facilityId: number) { return `spaceLastStoredStatus_${facilityId}`; }
 
 export const useSpaceReminder = (onSetRoom?: () => void) => {
   const facilityId = useSelector((s: RootState) => getActiveFacilityId(s));
@@ -31,20 +43,13 @@ export const useSpaceReminder = (onSetRoom?: () => void) => {
   const isStaff = activeCapability === 'staff';
   const { confirm } = useConfirm();
 
-  // Hooks — called unconditionally (safe because MySpace only renders in staff mode)
   const { data: presenceRes } = useGetMyPresence();
+
   const { data: occupancyRes } = useGetCurrentOccupancy(
     { facility_id: facilityId ?? 0 },
     { enabled: isStaff && !!facilityId },
   );
-
-  // Refs — stable references that don't trigger effect restarts
-  const presenceRef = useRef(presenceRes);
-  presenceRef.current = presenceRes;
-
   const hasRoom = !!occupancyRes?.data;
-  const hasRoomRef = useRef(hasRoom);
-  hasRoomRef.current = hasRoom;
 
   const remindedRef = useRef(false);
 
@@ -80,32 +85,40 @@ export const useSpaceReminder = (onSetRoom?: () => void) => {
     if (!isAuthenticated || !isStaff || !facilityId || !staffId) return;
 
     const check = setInterval(() => {
-      // Guards — using refs to avoid effect restarts on data changes
-      if (hasRoomRef.current) return;
+      if (hasRoom) return;
       if (remindedRef.current) return;
       if (localStorage.getItem(dismissKey(facilityId)) === '1') return;
 
-      const status = presenceRef.current?.data?.status;
-      if (!status || !DUTY_STATES.includes(status as StaffPresenceStatus)) return;
+      const status = presenceRes?.data?.status;
+      const isDuty = DUTY_STATES.includes(status as StaffPresenceStatus);
 
-      // First detection of ON_DUTY / BUSY — store baseline in localStorage
       const bKey = baselineKey(facilityId);
-      const stored = localStorage.getItem(bKey);
-      if (!stored) {
-        localStorage.setItem(bKey, String(Date.now()));
-        return;
+      const lsKey = lastStatusKey(facilityId);
+      const prevStatus = localStorage.getItem(lsKey);
+
+      if (isDuty) {
+        // Status transitioned INTO on_duty or busy — store the current wall time once
+        if (prevStatus !== status) {
+          localStorage.setItem(lsKey, status!);
+          localStorage.setItem(bKey, String(Date.now()));
+          return;
+        }
+
+        // Timer already running — check elapsed from the stored baseline
+        const stored = localStorage.getItem(bKey);
+        if (!stored) return;
+
+        const since = parseInt(stored, 10);
+        if (Date.now() - since < REMINDER_AFTER_MS) return;
+
+        showReminder();
+      } else {
+        // Not in a duty state — clear tracking so timer resets next time
+        if (localStorage.getItem(bKey)) localStorage.removeItem(bKey);
+        if (localStorage.getItem(lsKey)) localStorage.removeItem(lsKey);
       }
-
-      // Check elapsed time since baseline
-      const since = parseInt(stored, 10);
-      if (Date.now() - since < REMINDER_AFTER_MS) return;
-
-      // Threshold crossed — fire reminder once, then clear baseline
-      localStorage.removeItem(bKey);
-      showReminder();
     }, CHECK_INTERVAL_MS);
 
     return () => clearInterval(check);
-    // Stable deps — only restart when auth/staff context changes
-  }, [isAuthenticated, isStaff, facilityId, staffId, showReminder]);
+  }, [isAuthenticated, isStaff, facilityId, staffId, hasRoom, presenceRes, showReminder]);
 };
