@@ -8,7 +8,7 @@
  * change is detected and the reminder enables/disables automatically.
  *
  * == Testing ==
- * Uncomment the TEST_DURATION block below to shorten all thresholds.
+ * Uncomment the TEST block below and comment out the production block.
  */
 import { useEffect, useRef, useCallback } from 'react';
 import { useSelector } from 'react-redux';
@@ -27,7 +27,7 @@ import type { RootState } from '../store/rootReducer';
 //   [StaffPresenceStatus.OFF_DUTY]:    25 * 60 * 1000,
 // };
 
-// ─── Testing: uncomment THESE lines and comment out the block above ──
+// ─── Testing: uncomment THESE and comment out the block above ────────
 const THRESHOLDS: Record<string, number> = {
   [StaffPresenceStatus.BUSY]:        1 * 60 * 1000,
   [StaffPresenceStatus.ON_BREAK]:    1 * 60 * 1000,
@@ -36,26 +36,30 @@ const THRESHOLDS: Record<string, number> = {
 };
 
 const CHECK_INTERVAL_MS = 30 * 1000;
-const STORAGE_PREFIX = 'staffPresenceStatus';
 
-interface StatusRecord {
-  status: string;
-  changedAt: number;
+const STORAGE_PREFIX = 'staffPresenceSeen_';
+
+function pluralize(minutes: number): string {
+  return `${minutes} ${minutes === 1 ? 'min' : 'mins'}`;
 }
 
-function readRecord(facilityId: number): StatusRecord | null {
+function getDismissedFacilities(): number[] {
   try {
-    const raw = localStorage.getItem(`${STORAGE_PREFIX}_${facilityId}`);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+    const raw = localStorage.getItem('staffPresenceDismissedFacilities');
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
 }
 
-function writeRecord(facilityId: number, rec: StatusRecord) {
-  localStorage.setItem(`${STORAGE_PREFIX}_${facilityId}`, JSON.stringify(rec));
+function dismissFacility(facilityId: number) {
+  const list = getDismissedFacilities();
+  if (!list.includes(facilityId)) {
+    list.push(facilityId);
+    localStorage.setItem('staffPresenceDismissedFacilities', JSON.stringify(list));
+  }
 }
 
-function removeRecord(facilityId: number) {
-  localStorage.removeItem(`${STORAGE_PREFIX}_${facilityId}`);
+function isFacilityDismissed(facilityId: number): boolean {
+  return getDismissedFacilities().includes(facilityId);
 }
 
 const DIALOG_CONFIG: Record<string, {
@@ -66,31 +70,29 @@ const DIALOG_CONFIG: Record<string, {
 }> = {
   [StaffPresenceStatus.BUSY]: {
     title: 'Still busy?',
-    message: (name, mins) => `${name}, you've been busy for ${mins} min. Mark yourself as available?`,
+    message: (name, mins) => `${name}, you've been busy for ${pluralize(mins)}. Mark yourself as available?`,
     confirmText: "Yes, I'm free",
     cancelText: 'Still busy',
   },
   [StaffPresenceStatus.ON_BREAK]: {
     title: 'Still on break?',
-    message: (name, mins) => `${name}, you've been on break for ${mins} min. Back at work?`,
+    message: (name, mins) => `${name}, you've been on break for ${pluralize(mins)}. Back at work?`,
     confirmText: "Yes, I'm back",
     cancelText: 'Still on break',
   },
   [StaffPresenceStatus.UNAVAILABLE]: {
     title: 'Still unavailable?',
-    message: (name, mins) => `${name}, you've been unavailable for ${mins} min. Available now?`,
+    message: (name, mins) => `${name}, you've been unavailable for ${pluralize(mins)}. Available now?`,
     confirmText: "Yes, I'm available",
     cancelText: 'Still unavailable',
   },
   [StaffPresenceStatus.OFF_DUTY]: {
     title: 'Start your shift?',
-    message: (name, mins) => `${name}, you've been off duty for ${mins} min. Starting work?`,
+    message: (name, mins) => `${name}, you've been off duty for ${pluralize(mins)}. Starting work?`,
     confirmText: 'Start shift',
     cancelText: 'Dismiss',
   },
 };
-
-/** Fetch presence directly — safe to call even when not in staff mode (query is disabled). */
 
 export const useStaffPresenceReminder = () => {
   const facilityId = useSelector((s: RootState) => getActiveFacilityId(s));
@@ -106,15 +108,16 @@ export const useStaffPresenceReminder = () => {
   const setPresence = useSetMyPresence();
 
   const setOnDuty = useCallback(async () => {
-    try {
-      await setPresence.mutateAsync({ status: StaffPresenceStatus.ON_DUTY });
-    } catch { /* toast handles error */ }
+    try { await setPresence.mutateAsync({ status: StaffPresenceStatus.ON_DUTY }); }
+    catch { /* toast handles error */ }
   }, [setPresence]);
 
   const remindedRef = useRef(false);
 
   const showReminder = useCallback(async (status: string, elapsedMs: number) => {
-    if (remindedRef.current) return;
+    if (remindedRef.current || !facilityId) return;
+    if (isFacilityDismissed(facilityId)) return;
+
     remindedRef.current = true;
 
     const cfg = DIALOG_CONFIG[status];
@@ -122,18 +125,25 @@ export const useStaffPresenceReminder = () => {
 
     const elapsedMin = Math.round(elapsedMs / 60000);
 
-    const ok = await confirm({
+    const result = await confirm({
       title: cfg.title,
       message: cfg.message(firstName, elapsedMin),
       confirmText: cfg.confirmText,
       cancelText: cfg.cancelText,
+      extraActionText: "Don't show again for this facility",
       variant: 'info',
       theme,
     });
 
-    if (ok) await setOnDuty();
+    if (result === 'extra') {
+      dismissFacility(facilityId);
+    } else if (result === true) {
+      await setOnDuty();
+    }
+    // false = cancel, do nothing
+
     remindedRef.current = false;
-  }, [confirm, firstName, theme, setOnDuty]);
+  }, [confirm, firstName, theme, setOnDuty, facilityId]);
 
   useEffect(() => {
     if (!isAuthenticated || !isStaff || !facilityId || !staffId) return;
@@ -143,20 +153,13 @@ export const useStaffPresenceReminder = () => {
       if (!p) return;
 
       const status = p.status;
-      if (!status || status === StaffPresenceStatus.ON_DUTY) {
-        removeRecord(facilityId);
-        return;
-      }
+      if (!status || status === StaffPresenceStatus.ON_DUTY) return;
 
-      const recorded = readRecord(facilityId);
-      const now = Date.now();
+      if (isFacilityDismissed(facilityId)) return;
 
-      if (!recorded || recorded.status !== status) {
-        writeRecord(facilityId, { status, changedAt: now });
-        return;
-      }
-
-      const elapsed = now - recorded.changedAt;
+      // Use the presence record's updated_at as the reference time
+      const refTime = p.updated_at ? new Date(p.updated_at).getTime() : Date.now();
+      const elapsed = Date.now() - refTime;
       const threshold = THRESHOLDS[status];
       if (!threshold || elapsed < threshold) return;
 

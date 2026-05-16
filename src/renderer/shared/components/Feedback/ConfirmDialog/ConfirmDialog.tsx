@@ -10,6 +10,7 @@ interface ConfirmDialogProps {
   options: ConfirmOptions | null;
   onConfirm: () => void;
   onCancel: () => void;
+  onExtra?: () => void;
   theme?: string;
 }
 
@@ -56,6 +57,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   options,
   onConfirm,
   onCancel,
+  onExtra,
   theme
 }) => {
   if (!options) return null;
@@ -67,6 +69,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     cancelText = 'Cancel',
     variant = 'info',
     countdownSec,
+    extraActionText,
   } = options;
 
   const isDark = theme === 'dark';
@@ -209,7 +212,19 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 <div className={`px-6 py-5 ${isDark ? 'bg-gray-900/50' : 'bg-gray-50/80'} border-t ${
                   isDark ? 'border-gray-800' : 'border-gray-100'
                 }`}>
-                  <div className="flex justify-end gap-3">
+                  <div className="flex justify-end gap-3 flex-wrap">
+                    {extraActionText && onExtra && (
+                      <button
+                        onClick={onExtra}
+                        className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
+                          isDark
+                            ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
+                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                        } active:scale-[0.98]`}
+                      >
+                        {extraActionText}
+                      </button>
+                    )}
                     <button
                       onClick={onCancel}
                       className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${

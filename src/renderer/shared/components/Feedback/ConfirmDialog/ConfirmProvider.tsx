@@ -5,29 +5,20 @@ import { ConfirmDialog } from './ConfirmDialog';
 
 export const ConfirmProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [options, setOptions] = useState<ConfirmOptions | null>(null);
-  const [resolver, setResolver] = useState<((value: boolean) => void) | null>(null);
+  const [resolver, setResolver] = useState<((value: boolean | 'extra') => void) | null>(null);
 
-  const confirm = useCallback((opts: ConfirmOptions): Promise<boolean> => {
+  const confirm = useCallback((opts: ConfirmOptions): Promise<boolean | 'extra'> => {
     setOptions(opts);
-    return new Promise<boolean>((resolve) => {
+    return new Promise<boolean | 'extra'>((resolve) => {
       setResolver(() => resolve);
     });
   }, []);
 
-  const handleConfirm = () => {
-    resolver?.(true);
-    cleanup();
-  };
+  const handleConfirm = () => { resolver?.(true); cleanup(); };
+  const handleCancel = () => { resolver?.(false); cleanup(); };
+  const handleExtra = () => { resolver?.('extra'); cleanup(); };
 
-  const handleCancel = () => {
-    resolver?.(false);
-    cleanup();
-  };
-
-  const cleanup = () => {
-    setOptions(null);
-    setResolver(null);
-  };
+  const cleanup = () => { setOptions(null); setResolver(null); };
 
   return (
     <ConfirmContext.Provider value={{ confirm }}>
@@ -37,6 +28,7 @@ export const ConfirmProvider: React.FC<{ children: React.ReactNode }> = ({ child
         options={options}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
+        onExtra={handleExtra}
         theme={options?.theme || 'light'}
       />
     </ConfirmContext.Provider>

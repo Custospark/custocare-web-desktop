@@ -12,10 +12,12 @@ export interface ConfirmOptions {
   theme?: string;
   /** Optional live countdown (seconds). The dialog re-renders to show remaining time. */
   countdownSec?: number;
+  /** Optional third action button. When set, result may be 'extra' instead of boolean. */
+  extraActionText?: string;
 }
 
 export interface ConfirmContextType {
-  confirm: (options: ConfirmOptions) => Promise<boolean>;
+  confirm: (options: ConfirmOptions) => Promise<boolean | 'extra'>;
 }
 
 export const ConfirmContext = createContext<ConfirmContextType | undefined>(undefined);
