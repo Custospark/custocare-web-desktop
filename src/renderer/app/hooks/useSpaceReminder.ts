@@ -97,17 +97,22 @@ export const useSpaceReminder = (onSetRoom?: () => void) => {
       const prevStatus = localStorage.getItem(lsKey);
 
       if (isDuty) {
-        // Status transitioned INTO on_duty or busy — store the success timestamp
+        // Use the API's updated_at as the precise reference time
+        const refTime = presenceRes?.data?.updated_at
+          ? new Date(presenceRes.data.updated_at).getTime()
+          : Date.now();
+
+        // Status transitioned INTO on_duty or busy — store the reference time
         if (prevStatus !== status) {
           localStorage.setItem(lsKey, status!);
-          localStorage.setItem(bKey, String(Date.now()));
+          localStorage.setItem(bKey, String(refTime));
           return;
         }
 
-        // Timer already running — check elapsed
+        // Timer already running — check elapsed from the stored reference
         const stored = localStorage.getItem(bKey);
         if (!stored) {
-          localStorage.setItem(bKey, String(Date.now()));
+          localStorage.setItem(bKey, String(refTime));
           return;
         }
 
