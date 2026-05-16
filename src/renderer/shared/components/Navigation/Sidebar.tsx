@@ -290,7 +290,7 @@ const menuConfig: MenuItem[] = useMemo(
       id: 'billing',
       label: 'Billing',
       icon: <Receipt className="w-5 h-5" />,
-      href: BILLING_ROUTES.INTELLIGENCE,
+      href: BILLING_ROUTES.OVERVIEW,
       route: ROUTES.BILLING,
       description: 'Billing intake, charge capture, receipts, invoices, and reconciliation',
       operations: BILLING_SIDEBAR_NESTED_OPERATIONS,

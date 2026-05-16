@@ -22,7 +22,7 @@ const billingTablePage = <P extends ThemeProp,>(Component: React.ComponentType<P
 );
 
 export const billingRoutes = [
-  <Route key="billing-index" index element={<Navigate to={BILLING_ROUTES.INTELLIGENCE} replace />} />,
+  <Route key="billing-index" index element={<Navigate to={BILLING_ROUTES.OVERVIEW} replace />} />,
 
   <Route key="billing-overview" path="overview" element={billingTablePage(RevenueStats)} />,
 
