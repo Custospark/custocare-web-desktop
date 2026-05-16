@@ -46,7 +46,7 @@ import type { CreateFacilitySpaceRequest } from '../../../../modules/administrat
 
 interface MySpaceProps {
   isDark: boolean;
-  isMobile: boolean; // ✅ added for mobile dropdown positioning
+  isMobile: boolean;
   className?: string;
 }
 
@@ -85,25 +85,19 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddRoom, setShowAddRoom] = useState(false);
+  const [newRoom, setNewRoom] = useState({ 
+    name: '', 
+    type: 'consultation', 
+    floor: '', 
+    building: '' 
+  });
 
-  // Open dropdown and focus search when reminder triggers "Set room"
   const handleSetRoom = useCallback(() => {
     setIsDropdownOpen(true);
     setTimeout(() => searchInputRef.current?.focus(), 150);
   }, []);
 
   useSpaceReminder(handleSetRoom);
-
-  const createSpaceMutation = useCreateFacilitySpace({
-    onSuccess: () => {
-      setShowAddRoom(false);
-      // Refresh both space queries so the new room appears in the occupancy list
-      queryClient.invalidateQueries({ queryKey: staffSpaceAssignmentKeys.all });
-      queryClient.invalidateQueries({ queryKey: facilitySpaceKeys.all });
-    },
-  });
-
-  const [newRoom, setNewRoom] = useState({ name: '', type: 'consultation', floor: '', building: '' });
 
   const activeFacilityId = useAppSelector((state) => state.activeContext.activeFacilityId);
   const currentStaffId = useAppSelector((state) => state.activeContext.capabilities?.staff?.staff_id);
@@ -116,7 +110,6 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
     [activeFacilityId]
   );
 
-  // ✅ Like StaffPresence: Always enabled when facilityId exists
   const {
     data: occupancyData,
     isLoading,
@@ -126,7 +119,6 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
     enabled: !!activeFacilityId && activeFacilityId > 0,
   });
 
-  // ✅ Like StaffPresence: Use query invalidation for auto-refresh, no manual refetch()
   const assignMutation = useAssignMySpace({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: staffSpaceAssignmentKeys.all });
@@ -139,14 +131,20 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
     },
   });
 
+  const createSpaceMutation = useCreateFacilitySpace({
+    onSuccess: () => {
+      setShowAddRoom(false);
+      setNewRoom({ name: '', type: 'consultation', floor: '', building: '' });
+      queryClient.invalidateQueries({ queryKey: staffSpaceAssignmentKeys.all });
+      queryClient.invalidateQueries({ queryKey: facilitySpaceKeys.all });
+    },
+  });
+
   const normalizedSpaces: SpaceWithAssignment[] = useMemo(() => {
     if (!occupancyData?.data || !Array.isArray(occupancyData.data)) return [];
     return occupancyData.data.filter(
       (space): space is SpaceWithAssignment =>
-        space &&
-        typeof space === 'object' &&
-        'id' in space &&
-        typeof space.id === 'number'
+        space && typeof space === 'object' && 'id' in space && typeof space.id === 'number'
     );
   }, [occupancyData]);
 
@@ -180,6 +178,7 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
+        setShowAddRoom(false);
       }
     };
 
@@ -189,7 +188,10 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
 
   const handleToggle = () => {
     setIsDropdownOpen(!isDropdownOpen);
-    if (!isDropdownOpen) setSearchTerm('');
+    if (!isDropdownOpen) {
+      setSearchTerm('');
+      setShowAddRoom(false);
+    }
   };
 
   const handleOccupy = async (space: SpaceWithAssignment) => {
@@ -214,25 +216,32 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
     }
   };
 
+  const handleCreateRoom = () => {
+    if (!newRoom.name.trim() || !activeFacilityId) return;
+    createSpaceMutation.mutate({
+      facility_id: activeFacilityId,
+      name: newRoom.name.trim(),
+      type: newRoom.type,
+      floor: newRoom.floor || null,
+      building: newRoom.building || null,
+    } as CreateFacilitySpaceRequest);
+  };
+
   if (!activeFacilityId) return null;
 
-  // ✅ EXACTLY LIKE StaffPresence: Separate loading states
   const isInitialLoading = isLoading;
   const isSyncing = isRefetching || assignMutation.isPending || releaseMutation.isPending;
   const currentSpaceName = myCurrentSpace?.name || 'No Room';
-
-  // ✅ Button display logic matching StaffPresence:
-  // - Top line: Current room name (or "Loading..." during initial load)
-  // - Bottom line: "Syncing..." when syncing, otherwise "My Room"
   const topLineText = isInitialLoading ? 'Loading...' : currentSpaceName;
   const bottomLineText = isSyncing ? 'Syncing...' : 'My Room';
 
   return (
     <div ref={dropdownRef} className={cn('relative', className)}>
+      {/* Dropdown Button */}
       <button
         onClick={handleToggle}
         disabled={isSyncing}
-        aria-label="Occupy or Leave Room."
+        aria-label="Occupy or Leave Room"
         aria-expanded={isDropdownOpen}
         className={cn(
           'group relative flex items-center gap-2 px-3 py-1.5 rounded-lg',
@@ -263,7 +272,13 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
               : isDark
                 ? 'ring-gray-500/50'
                 : 'ring-gray-400/60',
-            myCurrentSpace ? (isDark ? 'bg-blue-500/15' : 'bg-blue-50') : isDark ? 'bg-gray-500/10' : 'bg-gray-100',
+            myCurrentSpace 
+              ? isDark 
+                ? 'bg-blue-500/15' 
+                : 'bg-blue-50' 
+              : isDark 
+                ? 'bg-gray-500/10' 
+                : 'bg-gray-100',
             isDark ? 'ring-offset-gray-900' : 'ring-offset-white'
           )}
         >
@@ -283,11 +298,9 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
         </div>
 
         <div className="hidden lg:flex flex-col items-start min-w-0">
-          {/* ✅ TOP LINE: Current room name (or "Loading...") */}
           <span className={cn('text-xs font-semibold truncate', isDark ? 'text-gray-100' : 'text-gray-900')}>
             {topLineText}
           </span>
-          {/* ✅ BOTTOM LINE: "Syncing..." when syncing, otherwise "My Room" */}
           <span className={cn('text-xs truncate', isDark ? 'text-gray-100' : 'text-gray-900')}>
             {bottomLineText}
           </span>
@@ -301,7 +314,6 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
           )}
         />
 
-        {/* ✅ Only show spinner when syncing (mutation or refetch) */}
         {isSyncing && (
           <div className="absolute -top-1 -right-1">
             <Loader2 className={cn('w-3 h-3 animate-spin', isDark ? 'text-blue-400' : 'text-blue-600')} />
@@ -309,11 +321,11 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
         )}
       </button>
 
+      {/* Dropdown Content */}
       {isDropdownOpen && (
         <div
           className={cn(
             'rounded-xl border shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200',
-            // ✅ Match UserProfileMenu behavior on small screens
             isMobile
               ? 'fixed left-1/2 -translate-x-1/2 top-20 w-[calc(100vw-2rem)] max-w-md'
               : 'absolute right-0 mt-2 w-80 sm:w-96',
@@ -327,12 +339,18 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
                 My Workspace
               </h3>
               <div className="flex items-center gap-1.5">
-                <button onClick={() => setShowAddRoom(true)}
-                  className={`cursor-pointer px-1.5 py-0.5 text-xs rounded-full transition-all ${
-                    isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                  }`}
-                  title="Add a new room">
-                  <Plus className="w-3 h-3 inline mr-0.5" />Add room
+                <button
+                  onClick={() => setShowAddRoom(true)}
+                  className={cn(
+                    'cursor-pointer px-1.5 py-0.5 text-xs rounded-full transition-all',
+                    isDark 
+                      ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800' 
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  )}
+                  title="Add a new room"
+                >
+                  <Plus className="w-3 h-3 inline mr-0.5" />
+                  Add room
                 </button>
                 <span className="px-1.5 py-0.5 text-xs rounded-full bg-green-500/10 text-green-500">
                   {availableCount} Available
@@ -378,7 +396,9 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
               </div>
             ) : (
               <div className={cn('p-2 rounded-md border text-center', isDark ? 'bg-gray-800/40 border-gray-700' : 'bg-gray-50/70 border-gray-200')}>
-                <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>No room currently occupied</p>
+                <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
+                  No room currently occupied
+                </p>
               </div>
             )}
           </div>
@@ -394,7 +414,7 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
               />
               <input
                 type="text"
-                placeholder="Search rooms to occupy or leave room..."
+                placeholder="Search rooms..."
                 ref={searchInputRef}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -419,13 +439,15 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
             ) : isError ? (
               <div className="p-4 text-center">
                 <AlertCircle className={cn('w-6 h-6 mx-auto mb-2', isDark ? 'text-red-400' : 'text-red-500')} />
-                <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>Failed to load spaces</p>
+                <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
+                  Failed to load spaces
+                </p>
               </div>
             ) : filteredSpaces.length === 0 ? (
               <div className="p-6 text-center">
                 <DoorClosedLocked className={cn('w-8 h-8 mx-auto mb-2', isDark ? 'text-gray-500' : 'text-gray-400')} />
                 <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                  {searchTerm ? 'No Room found' : 'No Rooms available'}
+                  {searchTerm ? 'No rooms found' : 'No rooms available'}
                 </p>
               </div>
             ) : (
@@ -434,8 +456,7 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
                   const isOccupied = !!space.current_assignment;
                   const isMySpace = space.current_assignment?.staff_id === currentStaffId;
                   const canOccupy = !isOccupied && !myCurrentSpace;
-                  const isUpdating =
-                    assignMutation.isPending && assignMutation.variables?.space_id === space.id;
+                  const isUpdating = assignMutation.isPending && assignMutation.variables?.space_id === space.id;
 
                   return (
                     <div
@@ -481,13 +502,17 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
                                 {space.building && (
                                   <div className="flex items-center gap-1">
                                     <Building className={cn('w-3 h-3', isDark ? 'text-gray-500' : 'text-gray-400')} />
-                                    <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>{space.building}</span>
+                                    <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                                      {space.building}
+                                    </span>
                                   </div>
                                 )}
                                 {space.floor && (
                                   <div className="flex items-center gap-1">
                                     <MapPin className={cn('w-3 h-3', isDark ? 'text-gray-500' : 'text-gray-400')} />
-                                    <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>{space.floor}</span>
+                                    <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                                      {space.floor}
+                                    </span>
                                   </div>
                                 )}
                               </div>
@@ -548,53 +573,84 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
             )}
           </div>
 
-          {/* Add Room form (inline drawer) */}
+          {/* Add Room Form */}
           {showAddRoom && (
             <div className={cn('p-3 border-t space-y-2', isDark ? 'border-gray-800 bg-gray-800/30' : 'border-gray-200 bg-gray-50/50')}>
-              <h4 className={cn('text-xs font-semibold', isDark ? 'text-gray-200' : 'text-gray-700')}>Add a new room</h4>
-              <input className={`w-full rounded-lg border px-2.5 py-1.5 text-xs outline-none ${isDark ? 'border-gray-700 bg-gray-800 text-gray-100' : 'border-gray-200 text-gray-900'}`}
-                placeholder="Room name" value={newRoom.name} onChange={e => setNewRoom(p => ({ ...p, name: e.target.value }))} />
+              <h4 className={cn('text-xs font-semibold', isDark ? 'text-gray-200' : 'text-gray-700')}>
+                Add a new room
+              </h4>
+              <input
+                className={cn(
+                  'w-full rounded-lg border px-2.5 py-1.5 text-xs outline-none',
+                  isDark ? 'border-gray-700 bg-gray-800 text-gray-100' : 'border-gray-200 text-gray-900'
+                )}
+                placeholder="Room name"
+                value={newRoom.name}
+                onChange={(e) => setNewRoom((p) => ({ ...p, name: e.target.value }))}
+              />
               <div className="grid grid-cols-3 gap-2">
-                <select className={`rounded-lg border px-2 py-1.5 text-xs outline-none ${isDark ? 'border-gray-700 bg-gray-800 text-gray-100' : 'border-gray-200 text-gray-900'}`}
-                  value={newRoom.type} onChange={e => setNewRoom(p => ({ ...p, type: e.target.value }))}>
+                <select
+                  className={cn(
+                    'rounded-lg border px-2 py-1.5 text-xs outline-none',
+                    isDark ? 'border-gray-700 bg-gray-800 text-gray-100' : 'border-gray-200 text-gray-900'
+                  )}
+                  value={newRoom.type}
+                  onChange={(e) => setNewRoom((p) => ({ ...p, type: e.target.value }))}
+                >
                   <option value="consultation">Consultation</option>
                   <option value="triage">Triage</option>
                   <option value="lab">Lab</option>
                   <option value="office">Office</option>
                   <option value="ward">Ward</option>
                 </select>
-                <input className={`rounded-lg border px-2 py-1.5 text-xs outline-none ${isDark ? 'border-gray-700 bg-gray-800 text-gray-100' : 'border-gray-200 text-gray-900'}`}
-                  placeholder="Floor" value={newRoom.floor} onChange={e => setNewRoom(p => ({ ...p, floor: e.target.value }))} />
-                <input className={`rounded-lg border px-2 py-1.5 text-xs outline-none ${isDark ? 'border-gray-700 bg-gray-800 text-gray-100' : 'border-gray-200 text-gray-900'}`}
-                  placeholder="Building" value={newRoom.building} onChange={e => setNewRoom(p => ({ ...p, building: e.target.value }))} />
+                <input
+                  className={cn(
+                    'rounded-lg border px-2 py-1.5 text-xs outline-none',
+                    isDark ? 'border-gray-700 bg-gray-800 text-gray-100' : 'border-gray-200 text-gray-900'
+                  )}
+                  placeholder="Floor"
+                  value={newRoom.floor}
+                  onChange={(e) => setNewRoom((p) => ({ ...p, floor: e.target.value }))}
+                />
+                <input
+                  className={cn(
+                    'rounded-lg border px-2 py-1.5 text-xs outline-none',
+                    isDark ? 'border-gray-700 bg-gray-800 text-gray-100' : 'border-gray-200 text-gray-900'
+                  )}
+                  placeholder="Building"
+                  value={newRoom.building}
+                  onChange={(e) => setNewRoom((p) => ({ ...p, building: e.target.value }))}
+                />
               </div>
               <div className="flex justify-end gap-2">
-                <button onClick={() => setShowAddRoom(false)}
-                  className={`cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium ${isDark ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'}`}>
+                <button
+                  onClick={() => setShowAddRoom(false)}
+                  className={cn(
+                    'cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium',
+                    isDark ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'
+                  )}
+                >
                   Cancel
                 </button>
-                <button onClick={() => {
-                  if (!newRoom.name.trim() || !activeFacilityId) return;
-                  createSpaceMutation.mutate({
-                    facility_id: activeFacilityId,
-                    name: newRoom.name.trim(),
-                    type: newRoom.type,
-                    floor: newRoom.floor || null,
-                    building: newRoom.building || null,
-                  } as CreateFacilitySpaceRequest);
-                }} disabled={createSpaceMutation.isPending || !newRoom.name.trim()}
-                  className={`cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-white transition-all ${
-                    !newRoom.name.trim() ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-                  }`}>
+                <button
+                  onClick={handleCreateRoom}
+                  disabled={createSpaceMutation.isPending || !newRoom.name.trim()}
+                  className={cn(
+                    'cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-white transition-all',
+                    !newRoom.name.trim() 
+                      ? 'bg-blue-400 cursor-not-allowed' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  )}
+                >
                   {createSpaceMutation.isPending ? 'Creating...' : 'Create'}
                 </button>
               </div>
             </div>
           )}
         </div>
-      </div>
       )}
 
+      {/* Error Indicator */}
       {isError && (
         <div className="absolute -top-1 -right-1 z-10 cursor-help" title="Failed to load space data">
           <div className={cn('p-0.5 rounded-full', isDark ? 'bg-gray-900' : 'bg-white')}>
