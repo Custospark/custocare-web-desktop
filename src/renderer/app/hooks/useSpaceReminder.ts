@@ -20,10 +20,10 @@ import { getActiveFacilityId, getStaffId } from '../store/utils/contextSelectors
 import type { RootState } from '../store/rootReducer';
 
 // ─── Production: 10 minutes ──────────────────────────────────────────
-const REMINDER_AFTER_MS = 10 * 60 * 1000;
+// const REMINDER_AFTER_MS = 10 * 60 * 1000;
 
 // ─── Testing (uncomment, comment out the line above) ─────────────────
-// const REMINDER_AFTER_MS = 1 * 60 * 1000;
+const REMINDER_AFTER_MS = 1 * 60 * 1000;
 
 const CHECK_INTERVAL_MS = 30 * 1000;
 
