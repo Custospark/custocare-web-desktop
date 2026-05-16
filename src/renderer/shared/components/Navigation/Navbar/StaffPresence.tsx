@@ -28,6 +28,7 @@ import {
   useSetMyPresence,
 } from '../../../../modules/administration/admin-module/api/staff-presence/StaffPresenceQueries';
 import { StaffPresenceStatus } from '../../../../modules/administration/admin-module/api/staff-presence/StaffPresenceTypes';
+import { useStaffPresenceReminder } from '../../../../app/hooks/useStaffPresenceReminder';
 
 interface StaffPresenceProps {
   isDark: boolean;
@@ -63,6 +64,9 @@ const StaffPresence: React.FC<StaffPresenceProps> = ({ isDark, isMobile, classNa
 
   const { data: presenceData, isLoading, isError, isRefetching } = useGetMyPresence();
   const setPresenceMutation = useSetMyPresence();
+
+  // Staff presence reminder hook — activates automatically in staff mode
+  useStaffPresenceReminder();
 
   const currentPresence = presenceData?.data;
   const currentStatus = currentPresence?.status || StaffPresenceStatus.OFF_DUTY;

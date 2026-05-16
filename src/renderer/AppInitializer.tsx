@@ -4,7 +4,6 @@ import { useAppDispatch, useAppSelector } from './app/store/hooks/useApp';
 import { initializeAuth } from './app/store/slices/authSlice';
 import { useUserContext } from './app/store/hooks/useUserContext';
 import { useSessionExpiry } from './app/hooks/useSessionExpiry';
-import { useStaffPresenceReminder } from './app/hooks/useStaffPresenceReminder';
 
 interface AppInitializerProps {
   children: React.ReactNode;
@@ -17,7 +16,6 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   const { refetch } = useUserContext();
 
   useSessionExpiry();
-  useStaffPresenceReminder();
 
   useEffect(() => { dispatch(initializeAuth()); }, [dispatch]);
 

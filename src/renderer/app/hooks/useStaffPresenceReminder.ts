@@ -12,29 +12,28 @@
  */
 import { useEffect, useRef, useCallback } from 'react';
 import { useSelector } from 'react-redux';
-import { useQuery } from '@tanstack/react-query';
-import { axiosInstance } from '../api/axiosConfig';
 import { useConfirm } from '../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { selectTheme } from '../store/slices/uiSlice';
-import { getActiveFacilityId, getStaffId } from '../store/utils/contextSelectors';
+import { useGetMyPresence, useSetMyPresence } from '../../modules/administration/admin-module/api/staff-presence/StaffPresenceQueries';
 import { StaffPresenceStatus } from '../../modules/administration/admin-module/api/staff-presence/StaffPresenceTypes';
+import { getActiveFacilityId, getStaffId } from '../store/utils/contextSelectors';
 import type { RootState } from '../store/rootReducer';
 
 // ─── Production: per-status thresholds (ms) ───────────────────────────
-const THRESHOLDS: Record<string, number> = {
-  [StaffPresenceStatus.BUSY]:        25 * 60 * 1000,
-  [StaffPresenceStatus.ON_BREAK]:    25 * 60 * 1000,
-  [StaffPresenceStatus.UNAVAILABLE]: 25 * 60 * 1000,
-  [StaffPresenceStatus.OFF_DUTY]:    25 * 60 * 1000,
-};
+// const THRESHOLDS: Record<string, number> = {
+//   [StaffPresenceStatus.BUSY]:        25 * 60 * 1000,
+//   [StaffPresenceStatus.ON_BREAK]:    25 * 60 * 1000,
+//   [StaffPresenceStatus.UNAVAILABLE]: 25 * 60 * 1000,
+//   [StaffPresenceStatus.OFF_DUTY]:    25 * 60 * 1000,
+// };
 
 // ─── Testing: uncomment THESE lines and comment out the block above ──
-// const THRESHOLDS: Record<string, number> = {
-//   [StaffPresenceStatus.BUSY]:        2 * 60 * 1000,
-//   [StaffPresenceStatus.ON_BREAK]:    2 * 60 * 1000,
-//   [StaffPresenceStatus.UNAVAILABLE]: 2 * 60 * 1000,
-//   [StaffPresenceStatus.OFF_DUTY]:    2 * 60 * 1000,
-// };
+const THRESHOLDS: Record<string, number> = {
+  [StaffPresenceStatus.BUSY]:        1 * 60 * 1000,
+  [StaffPresenceStatus.ON_BREAK]:    1 * 60 * 1000,
+  [StaffPresenceStatus.UNAVAILABLE]: 1 * 60 * 1000,
+  [StaffPresenceStatus.OFF_DUTY]:    1 * 60 * 1000,
+};
 
 const CHECK_INTERVAL_MS = 30 * 1000;
 const STORAGE_PREFIX = 'staffPresenceStatus';
@@ -92,12 +91,6 @@ const DIALOG_CONFIG: Record<string, {
 };
 
 /** Fetch presence directly — safe to call even when not in staff mode (query is disabled). */
-const fetchMyPresence = async (facilityId: number, staffId: number) => {
-  const { data } = await axiosInstance.get('/staff/presence/facility', {
-    params: { facility_id: facilityId, staff_id: staffId },
-  });
-  return data?.data ?? null;
-};
 
 export const useStaffPresenceReminder = () => {
   const facilityId = useSelector((s: RootState) => getActiveFacilityId(s));
@@ -109,27 +102,14 @@ export const useStaffPresenceReminder = () => {
   const isStaff = activeCapability === 'staff';
   const { confirm } = useConfirm();
 
-  // Only query presence when in staff mode with valid IDs
-  const { data: presence } = useQuery({
-    queryKey: ['staff-presence', 'my-presence', facilityId, staffId],
-    queryFn: () => fetchMyPresence(facilityId!, staffId!),
-    enabled: isStaff && !!facilityId && !!staffId,
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: true,
-    retry: false,
-  });
+  const { data: presence } = useGetMyPresence();
+  const setPresence = useSetMyPresence();
 
   const setOnDuty = useCallback(async () => {
-    if (!facilityId || !staffId) return;
     try {
-      await axiosInstance.post('/staff/presence/facility', {
-        facility_id: facilityId,
-        status: StaffPresenceStatus.ON_DUTY,
-        updated_by: 'staff',
-      });
-    } catch { /* silently fail — toast may not be available */ }
-  }, [facilityId, staffId]);
+      await setPresence.mutateAsync({ status: StaffPresenceStatus.ON_DUTY });
+    } catch { /* toast handles error */ }
+  }, [setPresence]);
 
   const remindedRef = useRef(false);
 
