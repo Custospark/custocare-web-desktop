@@ -41,6 +41,9 @@ import type {
   OccupancyFilters,
 } from '../../../../modules/administration/admin-module/api/staff-space-assignment/StaffSpaceAssignmentTypes';
 import { useSpaceReminder } from '../../../../app/hooks/useSpaceReminder';
+import { useCreateFacilitySpace, facilitySpaceKeys } from '../../../../modules/administration/admin-module/api/facility-space/FacilitySpaceQueries';
+import { staffSpaceAssignmentKeys } from '../../../../modules/administration/admin-module/api/staff-space-assignment/StaffSpaceAssignmentQueries';
+import type { CreateFacilitySpaceRequest } from '../../../../modules/administration/admin-module/api/facility-space/FacilitySpaceTypes';
 
 interface MySpaceProps {
   isDark: boolean;
@@ -82,6 +85,7 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddRoom, setShowAddRoom] = useState(false);
 
   // Open dropdown and focus search when reminder triggers "Set room"
   const handleSetRoom = useCallback(() => {
@@ -90,6 +94,17 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
   }, []);
 
   useSpaceReminder(handleSetRoom);
+
+  const createSpaceMutation = useCreateFacilitySpace({
+    onSuccess: () => {
+      setShowAddRoom(false);
+      // Refresh both space queries so the new room appears in the occupancy list
+      queryClient.invalidateQueries({ queryKey: staffSpaceAssignmentKeys.all });
+      queryClient.invalidateQueries({ queryKey: facilitySpaceKeys.all });
+    },
+  });
+
+  const [newRoom, setNewRoom] = useState({ name: '', type: 'consultation', floor: '', building: '' });
 
   const activeFacilityId = useAppSelector((state) => state.activeContext.activeFacilityId);
   const currentStaffId = useAppSelector((state) => state.activeContext.capabilities?.staff?.staff_id);
@@ -313,6 +328,13 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
                 My Workspace
               </h3>
               <div className="flex items-center gap-1.5">
+                <button onClick={() => setShowAddRoom(true)}
+                  className={`cursor-pointer px-1.5 py-0.5 text-xs rounded-full transition-all ${
+                    isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                  title="Add a new room">
+                  <Plus className="w-3 h-3 inline mr-0.5" />Add room
+                </button>
                 <span className="px-1.5 py-0.5 text-xs rounded-full bg-green-500/10 text-green-500">
                   {availableCount} Available
                 </span>
@@ -527,13 +549,51 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
             )}
           </div>
 
-          {/* Footer */}
-          <div className={cn('px-3 py-2 border-t text-center', isDark ? 'border-gray-800 bg-gray-800/20' : 'border-gray-200 bg-gray-50/50')}>
-            <p className={cn('text-xs leading-relaxed', isDark ? 'text-gray-400' : 'text-gray-600')}>
-              Occupy spaces for your work
-            </p>
-          </div>
-        </div>
+          {/* Add Room form (inline drawer) */}
+          {showAddRoom && (
+            <div className={cn('p-3 border-t space-y-2', isDark ? 'border-gray-800 bg-gray-800/30' : 'border-gray-200 bg-gray-50/50')}>
+              <h4 className={cn('text-xs font-semibold', isDark ? 'text-gray-200' : 'text-gray-700')}>Add a new room</h4>
+              <input className={`w-full rounded-lg border px-2.5 py-1.5 text-xs outline-none ${isDark ? 'border-gray-700 bg-gray-800 text-gray-100' : 'border-gray-200 text-gray-900'}`}
+                placeholder="Room name" value={newRoom.name} onChange={e => setNewRoom(p => ({ ...p, name: e.target.value }))} />
+              <div className="grid grid-cols-3 gap-2">
+                <select className={`rounded-lg border px-2 py-1.5 text-xs outline-none ${isDark ? 'border-gray-700 bg-gray-800 text-gray-100' : 'border-gray-200 text-gray-900'}`}
+                  value={newRoom.type} onChange={e => setNewRoom(p => ({ ...p, type: e.target.value }))}>
+                  <option value="consultation">Consultation</option>
+                  <option value="triage">Triage</option>
+                  <option value="lab">Lab</option>
+                  <option value="office">Office</option>
+                  <option value="ward">Ward</option>
+                </select>
+                <input className={`rounded-lg border px-2 py-1.5 text-xs outline-none ${isDark ? 'border-gray-700 bg-gray-800 text-gray-100' : 'border-gray-200 text-gray-900'}`}
+                  placeholder="Floor" value={newRoom.floor} onChange={e => setNewRoom(p => ({ ...p, floor: e.target.value }))} />
+                <input className={`rounded-lg border px-2 py-1.5 text-xs outline-none ${isDark ? 'border-gray-700 bg-gray-800 text-gray-100' : 'border-gray-200 text-gray-900'}`}
+                  placeholder="Building" value={newRoom.building} onChange={e => setNewRoom(p => ({ ...p, building: e.target.value }))} />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setShowAddRoom(false)}
+                  className={`cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium ${isDark ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'}`}>
+                  Cancel
+                </button>
+                <button onClick={() => {
+                  if (!newRoom.name.trim() || !activeFacilityId) return;
+                  createSpaceMutation.mutate({
+                    facility_id: activeFacilityId,
+                    name: newRoom.name.trim(),
+                    type: newRoom.type,
+                    floor: newRoom.floor || null,
+                    building: newRoom.building || null,
+                  } as CreateFacilitySpaceRequest);
+                }} disabled={createSpaceMutation.isPending || !newRoom.name.trim()}
+                  className={`cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-white transition-all ${
+                    !newRoom.name.trim() ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                  }`}>
+                  {createSpaceMutation.isPending ? 'Creating...' : 'Create'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div> {/* close dropdown content */}
+      </div> {/* close dropdown wrapper */}
       )}
 
       {isError && (

@@ -1,8 +1,11 @@
 // app/hooks/useSpaceReminder.ts
 /**
- * Reminds staff to set their workspace room after being on duty for 25 minutes.
+ * Reminds staff to set their workspace room 10 minutes after going ON_DUTY or BUSY.
  *
- * When accepted, it opens the MySpace dropdown / occupancy flow.
+ * When accepted, it triggers a callback (opens MySpace dropdown to occupy a room).
+ *
+ * Tracks the ON_DUTY/BUSY start time in localStorage per facility so the timer
+ * is accurate even after page refresh.
  *
  * == Testing ==
  * Uncomment the test line below.
@@ -11,17 +14,24 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useConfirm } from '../../shared/components/Feedback/ConfirmDialog/ConfirmContext';
 import { selectTheme } from '../store/slices/uiSlice';
+import { useGetMyPresence } from '../../modules/administration/admin-module/api/staff-presence/StaffPresenceQueries';
+import { StaffPresenceStatus } from '../../modules/administration/admin-module/api/staff-presence/StaffPresenceTypes';
 import { useGetCurrentOccupancy } from '../../modules/administration/admin-module/api/staff-space-assignment/StaffSpaceAssignmentQueries';
 import { getActiveFacilityId, getStaffId } from '../store/utils/contextSelectors';
 import type { RootState } from '../store/rootReducer';
 
-// ─── Production: 25 minutes ──────────────────────────────────────────
-const REMINDER_AFTER_MS = 25 * 60 * 1000;
+// ─── Production: 10 minutes ──────────────────────────────────────────
+const REMINDER_AFTER_MS = 10 * 60 * 1000;
 
-// ─── Testing: uncomment and comment the line above ────────────────────
+// ─── Testing (uncomment) ─────────────────────────────────────────────
 // const REMINDER_AFTER_MS = 2 * 60 * 1000;
 
 const CHECK_INTERVAL_MS = 30 * 1000;
+
+const DUTY_STATES = [StaffPresenceStatus.ON_DUTY, StaffPresenceStatus.BUSY];
+
+function getBaselineKey(facilityId: number) { return `spaceDutySince_${facilityId}`; }
+function getDismissKey(facilityId: number) { return `spaceReminderDismissed_${facilityId}`; }
 
 export const useSpaceReminder = (onSetRoom?: () => void) => {
   const facilityId = useSelector((s: RootState) => getActiveFacilityId(s));
@@ -33,7 +43,10 @@ export const useSpaceReminder = (onSetRoom?: () => void) => {
   const isStaff = activeCapability === 'staff';
   const { confirm } = useConfirm();
 
-  // Check if user already has an occupied room
+  // Presence — to detect ON_DUTY / BUSY transitions
+  const { data: presenceRes } = useGetMyPresence();
+
+  // Current occupancy — to check if already in a room
   const { data: occupancyRes } = useGetCurrentOccupancy(
     { facility_id: facilityId ?? 0 },
     { enabled: isStaff && !!facilityId },
@@ -46,12 +59,14 @@ export const useSpaceReminder = (onSetRoom?: () => void) => {
     if (remindedRef.current || !facilityId) return;
     remindedRef.current = true;
 
-    const dismissed = localStorage.getItem(`spaceReminderDismissed_${facilityId}`);
-    if (dismissed === '1') { remindedRef.current = false; return; }
+    if (localStorage.getItem(getDismissKey(facilityId)) === '1') {
+      remindedRef.current = false;
+      return;
+    }
 
     const result = await confirm({
       title: 'Set your workspace?',
-      message: `${firstName}, you've been on duty for a while. Let your team know where you're working from.`,
+      message: `${firstName}, let your team know where you're working from.`,
       confirmText: 'Set room',
       cancelText: 'Not now',
       extraActionText: "Don't ask again for this facility",
@@ -60,7 +75,7 @@ export const useSpaceReminder = (onSetRoom?: () => void) => {
     });
 
     if (result === 'extra') {
-      localStorage.setItem(`spaceReminderDismissed_${facilityId}`, '1');
+      localStorage.setItem(getDismissKey(facilityId), '1');
     } else if (result === true) {
       onSetRoom?.();
     }
@@ -72,31 +87,37 @@ export const useSpaceReminder = (onSetRoom?: () => void) => {
     if (!isAuthenticated || !isStaff || !facilityId || !staffId) return;
 
     const check = setInterval(() => {
-      // Already has a room — skip
+      // Already has a room — skip entirely
       if (hasRoom) return;
 
       if (remindedRef.current) return;
+      if (localStorage.getItem(getDismissKey(facilityId)) === '1') return;
 
-      const dismissed = localStorage.getItem(`spaceReminderDismissed_${facilityId}`);
-      if (dismissed === '1') return;
+      // Current presence status
+      const status = presenceRes?.data?.status;
+      const isDuty = DUTY_STATES.includes(status as StaffPresenceStatus);
 
-      // Use on_duty start time from presence if available, or fallback
-      const refTime = Date.now();
-      const elapsed = Date.now() - refTime;
+      const baselineKey = getBaselineKey(facilityId);
+      const stored = localStorage.getItem(baselineKey);
 
-      // First time — store a baseline
-      const stored = localStorage.getItem(`spaceReminderOnDutySince_${facilityId}`);
-      if (!stored) {
-        localStorage.setItem(`spaceReminderOnDutySince_${facilityId}`, String(Date.now()));
-        return;
+      if (isDuty) {
+        if (!stored) {
+          // Just entered ON_DUTY or BUSY — set baseline
+          localStorage.setItem(baselineKey, String(Date.now()));
+          return;
+        }
+
+        // Check elapsed time since baseline
+        const since = parseInt(stored, 10);
+        if (Date.now() - since < REMINDER_AFTER_MS) return;
+
+        showReminder();
+      } else {
+        // Not ON_DUTY or BUSY — clear baseline so timer resets next time
+        if (stored) localStorage.removeItem(baselineKey);
       }
-
-      const since = parseInt(stored, 10);
-      if (Date.now() - since < REMINDER_AFTER_MS) return;
-
-      showReminder();
     }, CHECK_INTERVAL_MS);
 
     return () => clearInterval(check);
-  }, [isAuthenticated, isStaff, facilityId, staffId, hasRoom, showReminder]);
+  }, [isAuthenticated, isStaff, facilityId, staffId, hasRoom, presenceRes, showReminder]);
 };
