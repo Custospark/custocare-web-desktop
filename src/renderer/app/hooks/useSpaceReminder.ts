@@ -9,13 +9,17 @@ import { useGetCurrentOccupancy } from '../../modules/administration/admin-modul
 import { getActiveFacilityId, getStaffId } from '../store/utils/contextSelectors';
 import type { RootState } from '../store/rootReducer';
 
+// ─── Production: 10 minutes ──────────────────────────────────────────
 const REMINDER_AFTER_MS = 10 * 60 * 1000;
+
+// ─── Testing (uncomment, comment out the line above) ─────────────────
 // const REMINDER_AFTER_MS = 2 * 60 * 1000;
 
 const CHECK_INTERVAL_MS = 30 * 1000;
 const DUTY_STATES = [StaffPresenceStatus.ON_DUTY, StaffPresenceStatus.BUSY];
 
 function dismissKey(facilityId: number) { return `spaceReminderDismissed_${facilityId}`; }
+function baselineKey(facilityId: number) { return `spaceDutySince_${facilityId}`; }
 
 export const useSpaceReminder = (onSetRoom?: () => void) => {
   const facilityId = useSelector((s: RootState) => getActiveFacilityId(s));
@@ -27,21 +31,22 @@ export const useSpaceReminder = (onSetRoom?: () => void) => {
   const isStaff = activeCapability === 'staff';
   const { confirm } = useConfirm();
 
+  // Hooks — called unconditionally (safe because MySpace only renders in staff mode)
   const { data: presenceRes } = useGetMyPresence();
   const { data: occupancyRes } = useGetCurrentOccupancy(
     { facility_id: facilityId ?? 0 },
     { enabled: isStaff && !!facilityId },
   );
 
-  // Stable refs to avoid interval restarts
+  // Refs — stable references that don't trigger effect restarts
   const presenceRef = useRef(presenceRes);
   presenceRef.current = presenceRes;
+
   const hasRoom = !!occupancyRes?.data;
   const hasRoomRef = useRef(hasRoom);
   hasRoomRef.current = hasRoom;
 
   const remindedRef = useRef(false);
-  const baselineRef = useRef<number | null>(null);
 
   const showReminder = useCallback(async () => {
     if (remindedRef.current || !facilityId) return;
@@ -74,32 +79,33 @@ export const useSpaceReminder = (onSetRoom?: () => void) => {
   useEffect(() => {
     if (!isAuthenticated || !isStaff || !facilityId || !staffId) return;
 
-    baselineRef.current = null;
-
     const check = setInterval(() => {
+      // Guards — using refs to avoid effect restarts on data changes
       if (hasRoomRef.current) return;
       if (remindedRef.current) return;
       if (localStorage.getItem(dismissKey(facilityId)) === '1') return;
 
       const status = presenceRef.current?.data?.status;
-      if (!status || !DUTY_STATES.includes(status as StaffPresenceStatus)) {
-        baselineRef.current = null;
+      if (!status || !DUTY_STATES.includes(status as StaffPresenceStatus)) return;
+
+      // First detection of ON_DUTY / BUSY — store baseline in localStorage
+      const bKey = baselineKey(facilityId);
+      const stored = localStorage.getItem(bKey);
+      if (!stored) {
+        localStorage.setItem(bKey, String(Date.now()));
         return;
       }
 
-      // First detection of ON_DUTY / BUSY — set baseline
-      if (baselineRef.current === null) {
-        baselineRef.current = Date.now();
-        return;
-      }
+      // Check elapsed time since baseline
+      const since = parseInt(stored, 10);
+      if (Date.now() - since < REMINDER_AFTER_MS) return;
 
-      // Check elapsed
-      if (Date.now() - baselineRef.current >= REMINDER_AFTER_MS) {
-        showReminder();
-      }
+      // Threshold crossed — fire reminder once, then clear baseline
+      localStorage.removeItem(bKey);
+      showReminder();
     }, CHECK_INTERVAL_MS);
 
     return () => clearInterval(check);
-    // Intentionally stable — only restart when auth/staff context changes
+    // Stable deps — only restart when auth/staff context changes
   }, [isAuthenticated, isStaff, facilityId, staffId, showReminder]);
 };
