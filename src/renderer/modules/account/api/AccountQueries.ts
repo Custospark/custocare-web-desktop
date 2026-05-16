@@ -37,6 +37,7 @@ import {
   loginStart,
   loginSuccess,
   loginFailure,
+  setSessionStart,
   registerStart,
   registerSuccess,
   registerFailure,
@@ -275,6 +276,7 @@ export const useLogin = (
         try {
           const context = await fetchUserContext();
           dispatch(setUserContext(context));
+          dispatch(setSessionStart());
           showToast('success', data.message || 'Login successful.', 8000);
           navigate(ROUTES.PORTAL_SELECTOR);
         } catch {
@@ -370,6 +372,7 @@ export const useLogin = (
               try {
                 const context = await fetchUserContext();
                 dispatch(setUserContext(context));
+                dispatch(setSessionStart());
               } catch {
                 showToast('error', 'Authentication successful, but failed to load user context.', 8000);
               }
@@ -390,6 +393,7 @@ export const useLogin = (
               try {
                 const context = await fetchUserContext();
                 dispatch(setUserContext(context));
+                dispatch(setSessionStart());
               } catch {
                 showToast('error', 'Logged in, but failed to load user context.', 8000);
               }
@@ -469,6 +473,7 @@ export const useVerifyMfa = (
       try {
         const context = await fetchUserContext();
         dispatch(setUserContext(context));
+        dispatch(setSessionStart());
       } catch {
         showToast('error', 'Logged in, but failed to load user context.', 8000);
       }
