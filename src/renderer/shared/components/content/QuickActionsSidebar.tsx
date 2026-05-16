@@ -980,8 +980,8 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                                 </span>
                               )}
 
-                              <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                                <span className="truncate text-left">{operation.label}</span>
+                              <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
+                                <span className="text-sm leading-snug break-words whitespace-normal min-w-0">{operation.label}</span>
 
                                 {/* Always show status badges via badgeData */}
                                 {badgeData !== undefined && !Array.isArray(operation.badge) && (
@@ -1005,7 +1005,7 @@ export const QuickActionsSidebar: React.FC<QuickActionsSidebarProps> = ({
                                 {digitHint && (
                                   <kbd
                                     className={cn(
-                                      'shrink-0 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold border',
+                                      'shrink-0 px-1 py-0.5 rounded text-[9px] leading-none font-mono font-semibold border',
                                       theme === 'dark'
                                         ? 'border-gray-600 bg-gray-800/80 text-gray-300'
                                         : 'border-gray-200 bg-gray-50 text-gray-600',
