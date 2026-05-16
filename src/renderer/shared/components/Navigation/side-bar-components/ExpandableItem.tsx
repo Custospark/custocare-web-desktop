@@ -204,7 +204,7 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
         aria-expanded={open}
         aria-controls={regionId}
         className={cn(
-          'w-full flex justify-between gap-3 px-3 py-2 rounded-xl border',
+          'w-full flex justify-between gap-1.5 px-3 py-2 rounded-xl border',
           allowMultilineLabel ? 'items-start' : 'items-center',
           'transition-all duration-200 ease-out',
           'focus:outline-none focus:ring-2 focus:ring-offset-0',
@@ -231,7 +231,7 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
       >
         <span
           className={cn(
-            'flex gap-2 min-w-0 flex-1',
+            'flex gap-1.5 min-w-0 flex-1',
             allowMultilineLabel ? 'items-start' : 'items-center',
           )}
         >
@@ -267,7 +267,7 @@ export const ExpandableItem: React.FC<ExpandableItemProps> = ({
         </span>
 
         {headerAside != null ? (
-          <span className="shrink-0 mr-0.5 flex items-center">{headerAside}</span>
+          <span className="shrink-0 ml-auto flex items-center">{headerAside}</span>
         ) : null}
 
         <ChevronRight

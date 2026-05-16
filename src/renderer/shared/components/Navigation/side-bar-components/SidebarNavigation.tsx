@@ -299,7 +299,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
           {wsHint && (
             <kbd
               className={cn(
-                'shrink-0 px-1.5 py-0.5 text-[10px] rounded border font-mono',
+                'shrink-0 px-1 py-0.5 text-[9px] leading-none rounded border font-mono',
                 isDark
                   ? 'bg-gray-800/90 text-gray-300 border-gray-600'
                   : 'bg-gray-50 text-gray-600 border-gray-200',
@@ -341,7 +341,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                         const headerAside = moduleShortcutDisplay ? (
                           <kbd
                             className={cn(
-                              'px-1.5 py-0.5 text-[10px] rounded border font-mono shrink-0',
+                              'px-1 py-0.5 text-[9px] leading-none rounded border font-mono shrink-0',
                               isDark
                                 ? 'bg-gray-800 text-gray-400 border-gray-700'
                                 : 'bg-gray-100 text-gray-600 border-gray-300',
