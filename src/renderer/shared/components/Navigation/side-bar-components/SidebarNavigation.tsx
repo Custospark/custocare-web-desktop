@@ -165,7 +165,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
             <div className="flex items-center justify-between gap-2">
               <span
                 className={cn(
-                  'font-semibold text-sm truncate',
+                  'font-semibold text-sm sm:text-sm leading-snug break-words whitespace-normal',
                   isActive
                     ? isDark
                       ? 'text-white font-bold'
@@ -181,7 +181,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
 
             <p
               className={cn(
-                'text-xs truncate leading-relaxed',
+                'text-xs sm:text-[11px] leading-relaxed break-words whitespace-normal',
                 isActive
                   ? isDark
                     ? 'text-gray-300'
