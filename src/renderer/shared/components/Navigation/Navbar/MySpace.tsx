@@ -10,7 +10,7 @@
  * - ✅ Consistent loading/error states
  */
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Search,
@@ -26,6 +26,7 @@ import {
   LogIn,
   LogOut,
   DoorClosedLocked,
+  Plus,
 } from 'lucide-react';
 import { cn } from '../../../../shared/utils/classNameUtils';
 import { useAppSelector } from '../../../../app/store/hooks/useApp';
@@ -39,6 +40,7 @@ import type {
   SpaceWithAssignment,
   OccupancyFilters,
 } from '../../../../modules/administration/admin-module/api/staff-space-assignment/StaffSpaceAssignmentTypes';
+import { useSpaceReminder } from '../../../../app/hooks/useSpaceReminder';
 
 interface MySpaceProps {
   isDark: boolean;
@@ -76,9 +78,18 @@ const getSpaceTypeColor = (type: string | null | undefined): string => {
 export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className }) => {
   const queryClient = useQueryClient();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Open dropdown and focus search when reminder triggers "Set room"
+  const handleSetRoom = useCallback(() => {
+    setIsDropdownOpen(true);
+    setTimeout(() => searchInputRef.current?.focus(), 150);
+  }, []);
+
+  useSpaceReminder(handleSetRoom);
 
   const activeFacilityId = useAppSelector((state) => state.activeContext.activeFacilityId);
   const currentStaffId = useAppSelector((state) => state.activeContext.capabilities?.staff?.staff_id);
@@ -363,6 +374,7 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
               <input
                 type="text"
                 placeholder="Search rooms to occupy or leave room..."
+                ref={searchInputRef}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className={cn(
