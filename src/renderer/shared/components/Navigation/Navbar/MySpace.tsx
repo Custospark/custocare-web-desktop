@@ -591,8 +591,8 @@ export const MySpace: React.FC<MySpaceProps> = ({ isDark, isMobile, className })
               </div>
             </div>
           )}
-        </div> {/* close dropdown content */}
-      </div> {/* close dropdown wrapper */}
+        </div>
+      </div>
       )}
 
       {isError && (
