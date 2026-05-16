@@ -42,7 +42,6 @@ import type {
 } from '../../../../modules/administration/admin-module/api/staff-space-assignment/StaffSpaceAssignmentTypes';
 import { useSpaceReminder } from '../../../../app/hooks/useSpaceReminder';
 import { useCreateFacilitySpace, facilitySpaceKeys } from '../../../../modules/administration/admin-module/api/facility-space/FacilitySpaceQueries';
-import { staffSpaceAssignmentKeys } from '../../../../modules/administration/admin-module/api/staff-space-assignment/StaffSpaceAssignmentQueries';
 import type { CreateFacilitySpaceRequest } from '../../../../modules/administration/admin-module/api/facility-space/FacilitySpaceTypes';
 
 interface MySpaceProps {
