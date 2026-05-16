@@ -19,10 +19,10 @@ import { logout, extendSession, selectSessionStartedAt } from '../store/slices/a
 import type { RootState } from '../store/rootReducer';
 
 // ─── Production: 8 hours ─────────────────────────────────────────────
-const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours
+// const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours
 
 // ─── Testing: uncomment one of the lines below ──────────────────────
-// const SESSION_DURATION_MS = 3 * 60 * 1000;       // 3 minutes
+ const SESSION_DURATION_MS = 2 * 60 * 1000;       // 2 minutes
 // const SESSION_DURATION_MS = 0;                     // immediate (dialog shows on next tick)
 
 const CHECK_INTERVAL_MS = 60 * 1000; // check every 60s

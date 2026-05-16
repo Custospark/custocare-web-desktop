@@ -36,7 +36,9 @@ export const useUserContext = () => {
     enabled: false, // Manual fetch only
   });
 
-  // Mutation to refresh context
+  // Mutations
+
+  // Refresh mutation — used for explicit refresh calls
   const refreshMutation = useMutation<UserContext, Error, void>({
     mutationFn: fetchUserContext,
     onMutate: () => {

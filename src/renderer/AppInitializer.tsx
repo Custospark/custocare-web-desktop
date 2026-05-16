@@ -19,7 +19,7 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { user } = useAppSelector((state) => state.activeContext);
-  const { refetch } = useUserContext();
+  const { refresh } = useUserContext(); // use refresh (mutation with setSessionStart)
 
   // Monitor session expiry
   useSessionExpiry();
@@ -31,10 +31,10 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
 
   // 2️⃣ Fetch backend context if needed
   useEffect(() => {
-    if (isAuthenticated && !user ) {
-      refetch();
+    if (isAuthenticated && !user) {
+      refresh(); // triggers mutation → onSuccess → setUserContext + setSessionStart
     }
-  }, [isAuthenticated, user, refetch]);
+  }, [isAuthenticated, user, refresh]);
 
   return <>{children}</>;
 };
