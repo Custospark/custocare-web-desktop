@@ -21,10 +21,10 @@ import type { RootState } from '../store/rootReducer';
 
 // ─── Production: per-status thresholds (ms) ───────────────────────────
 const THRESHOLDS: Record<string, number> = {
-  [StaffPresenceStatus.BUSY]:        25 * 60 * 1000,
-  [StaffPresenceStatus.ON_BREAK]:    25 * 60 * 1000,
-  [StaffPresenceStatus.UNAVAILABLE]: 25 * 60 * 1000,
-  [StaffPresenceStatus.OFF_DUTY]:    25 * 60 * 1000,
+  [StaffPresenceStatus.BUSY]:        15 * 60 * 1000,
+  [StaffPresenceStatus.ON_BREAK]:    15 * 60 * 1000,
+  [StaffPresenceStatus.UNAVAILABLE]: 15 * 60 * 1000,
+  [StaffPresenceStatus.OFF_DUTY]:    15 * 60 * 1000,
 };
 
 // ─── Testing: uncomment THESE and comment out the block above ────────
