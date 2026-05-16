@@ -20,10 +20,10 @@ import { getActiveFacilityId, getStaffId } from '../store/utils/contextSelectors
 import type { RootState } from '../store/rootReducer';
 
 // ─── Production: 10 minutes ──────────────────────────────────────────
-const REMINDER_AFTER_MS = 10 * 60 * 1000;
+// const REMINDER_AFTER_MS = 10 * 60 * 1000;
 
 // ─── Testing (uncomment, comment out the line above) ─────────────────
-// const REMINDER_AFTER_MS = 2 * 60 * 1000;
+const REMINDER_AFTER_MS = 2 * 60 * 1000;
 
 const CHECK_INTERVAL_MS = 30 * 1000;
 
@@ -97,24 +97,16 @@ export const useSpaceReminder = (onSetRoom?: () => void) => {
       const prevStatus = localStorage.getItem(lsKey);
 
       if (isDuty) {
-        // Use the API's updated_at as the precise reference time
-        const refTime = presenceRes?.data?.updated_at
-          ? new Date(presenceRes.data.updated_at).getTime()
-          : Date.now();
-
-        // Status transitioned INTO on_duty or busy — store the reference time
+        // Status transitioned INTO on_duty or busy — store the current wall time once
         if (prevStatus !== status) {
           localStorage.setItem(lsKey, status!);
-          localStorage.setItem(bKey, String(refTime));
+          localStorage.setItem(bKey, String(Date.now()));
           return;
         }
 
-        // Timer already running — check elapsed from the stored reference
+        // Timer already running — check elapsed from the stored baseline
         const stored = localStorage.getItem(bKey);
-        if (!stored) {
-          localStorage.setItem(bKey, String(refTime));
-          return;
-        }
+        if (!stored) return;
 
         const since = parseInt(stored, 10);
         if (Date.now() - since < REMINDER_AFTER_MS) return;
