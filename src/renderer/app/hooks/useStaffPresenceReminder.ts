@@ -35,8 +35,10 @@ const THRESHOLDS: Record<string, number> = {
 //   [StaffPresenceStatus.OFF_DUTY]:    1 * 60 * 1000,
 // };
 
-const CHECK_INTERVAL_MS = 30 * 1000;
+const CHECK_INTERVAL_MS = 60 * 1000;
+const SNOOZE_DURATION_MS = 10 * 60 * 1000;
 
+function snoozeKey(facilityId: number) { return `staffPresenceSnoozedUntil_${facilityId}`; }
 
 function pluralize(minutes: number): string {
   return `${minutes} ${minutes === 1 ? 'min' : 'mins'}`;
@@ -106,6 +108,9 @@ export const useStaffPresenceReminder = () => {
   const { data: presenceResponse } = useGetMyPresence();
   const setPresence = useSetMyPresence();
 
+  const presenceRef = useRef(presenceResponse);
+  presenceRef.current = presenceResponse;
+
   const setOnDuty = useCallback(async () => {
     try { await setPresence.mutateAsync({ status: StaffPresenceStatus.ON_DUTY }); }
     catch { /* toast handles error */ }
@@ -138,8 +143,10 @@ export const useStaffPresenceReminder = () => {
       dismissFacility(facilityId);
     } else if (result === true) {
       await setOnDuty();
+    } else {
+      // cancel → snooze 10 minutes instead of re-prompting next tick
+      localStorage.setItem(snoozeKey(facilityId), String(Date.now() + SNOOZE_DURATION_MS));
     }
-    // false = cancel, do nothing
 
     remindedRef.current = false;
   }, [confirm, firstName, theme, setOnDuty, facilityId]);
@@ -148,13 +155,17 @@ export const useStaffPresenceReminder = () => {
     if (!isAuthenticated || !isStaff || !facilityId || !staffId) return;
 
     const check = setInterval(() => {
-      const p = presenceResponse?.data;
+      const p = presenceRef.current?.data;
       if (!p) return;
 
       const status = p.status;
       if (!status || status === StaffPresenceStatus.ON_DUTY) return;
 
       if (isFacilityDismissed(facilityId)) return;
+
+      // Check snooze
+      const snoozedUntil = localStorage.getItem(snoozeKey(facilityId));
+      if (snoozedUntil && Date.now() < parseInt(snoozedUntil, 10)) return;
 
       // Use the presence record's updated_at as the reference time
       const refTime = p.updated_at ? new Date(p.updated_at).getTime() : Date.now();
@@ -166,5 +177,5 @@ export const useStaffPresenceReminder = () => {
     }, CHECK_INTERVAL_MS);
 
     return () => clearInterval(check);
-  }, [isAuthenticated, isStaff, facilityId, staffId, presenceResponse, showReminder]);
+  }, [isAuthenticated, isStaff, facilityId, staffId, showReminder]);
 };
