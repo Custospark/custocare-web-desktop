@@ -1,5 +1,5 @@
 // shared/components/Feedback/ConfirmDialog/ConfirmDialog.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Info, Trash, X } from 'lucide-react';
 
@@ -66,11 +66,23 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     confirmText = 'Confirm',
     cancelText = 'Cancel',
     variant = 'info',
+    countdownSec,
   } = options;
 
   const isDark = theme === 'dark';
   const config = variantConfig[variant];
   const Icon = config.icon;
+
+  // Live countdown when countdownSec is provided
+  const [countdown, setCountdown] = useState(countdownSec ?? 0);
+  useEffect(() => {
+    if (!open || countdownSec === undefined || countdownSec <= 0) return;
+    setCountdown(countdownSec);
+    const timer = setInterval(() => {
+      setCountdown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [open, countdownSec]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') onCancel();
@@ -161,6 +173,36 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                   }`}>
                     {message}
                   </div>
+
+                  {countdown > 0 && (
+                    <div className="mt-4">
+                      <div className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${
+                        isDark ? 'border-red-900/30 bg-red-900/10' : 'border-red-100 bg-red-50'
+                      }`}>
+                        <div className="relative flex items-center justify-center w-9 h-9">
+                          <svg className="absolute inset-0 w-9 h-9 -rotate-90" viewBox="0 0 36 36">
+                            <circle cx="18" cy="18" r="15" fill="none"
+                              className={isDark ? 'stroke-gray-700' : 'stroke-gray-200'}
+                              strokeWidth="3" />
+                            <circle cx="18" cy="18" r="15" fill="none"
+                              className="stroke-red-500"
+                              strokeWidth="3"
+                              strokeDasharray={`${(countdown / 120) * 94.2} 94.2`}
+                              strokeLinecap="round" />
+                          </svg>
+                          <span className="text-sm font-bold tabular-nums text-red-500">{countdown}</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className={`text-sm font-medium ${isDark ? 'text-red-300' : 'text-red-700'}`}>
+                            Logging out in {countdown}s
+                          </p>
+                          <p className={`text-xs ${isDark ? 'text-red-400' : 'text-red-500'}`}>
+                            Extend your session to continue working
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Actions - clean and professional */}

@@ -9,7 +9,9 @@ export interface ConfirmOptions {
   confirmText?: string;
   cancelText?: string;
   variant?: ConfirmVariant;
-  theme?:string
+  theme?: string;
+  /** Optional live countdown (seconds). The dialog re-renders to show remaining time. */
+  countdownSec?: number;
 }
 
 export interface ConfirmContextType {

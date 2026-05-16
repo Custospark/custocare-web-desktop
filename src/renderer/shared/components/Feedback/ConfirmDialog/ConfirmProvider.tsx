@@ -37,7 +37,7 @@ export const ConfirmProvider: React.FC<{ children: React.ReactNode }> = ({ child
         options={options}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
-        theme={options?.theme || 'light'}  // extract theme from options
+        theme={options?.theme || 'light'}
       />
     </ConfirmContext.Provider>
   );
