@@ -20,10 +20,10 @@ import { getActiveFacilityId, getStaffId } from '../store/utils/contextSelectors
 import type { RootState } from '../store/rootReducer';
 
 // ─── Production: 10 minutes ──────────────────────────────────────────
-// const REMINDER_AFTER_MS = 10 * 60 * 1000;
+const REMINDER_AFTER_MS = 2 * 60 * 1000;
 
 // ─── Testing (uncomment, comment out the line above) ─────────────────
-const REMINDER_AFTER_MS = 1 * 60 * 1000;
+// const REMINDER_AFTER_MS = 1 * 60 * 1000;
 
 const CHECK_INTERVAL_MS = 30 * 1000;
 
@@ -49,7 +49,9 @@ export const useSpaceReminder = (onSetRoom?: () => void) => {
     { facility_id: facilityId ?? 0 },
     { enabled: isStaff && !!facilityId },
   );
-  const hasRoom = !!occupancyRes?.data;
+  const hasRoom = !!occupancyRes?.data?.some(
+    (space) => space.current_assignment?.staff_id === staffId,
+  );
 
   const remindedRef = useRef(false);
 

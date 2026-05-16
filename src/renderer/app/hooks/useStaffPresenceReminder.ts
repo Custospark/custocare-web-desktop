@@ -28,12 +28,12 @@ const THRESHOLDS: Record<string, number> = {
 };
 
 // ─── Testing: uncomment THESE and comment out the block above ────────
-const THRESHOLDS: Record<string, number> = {
-  [StaffPresenceStatus.BUSY]:        1 * 60 * 1000,
-  [StaffPresenceStatus.ON_BREAK]:    1 * 60 * 1000,
-  [StaffPresenceStatus.UNAVAILABLE]: 1 * 60 * 1000,
-  [StaffPresenceStatus.OFF_DUTY]:    1 * 60 * 1000,
-};
+// const THRESHOLDS: Record<string, number> = {
+//   [StaffPresenceStatus.BUSY]:        1 * 60 * 1000,
+//   [StaffPresenceStatus.ON_BREAK]:    1 * 60 * 1000,
+//   [StaffPresenceStatus.UNAVAILABLE]: 1 * 60 * 1000,
+//   [StaffPresenceStatus.OFF_DUTY]:    1 * 60 * 1000,
+// };
 
 const CHECK_INTERVAL_MS = 30 * 1000;
 
