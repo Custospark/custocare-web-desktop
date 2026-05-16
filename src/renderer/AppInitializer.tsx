@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from './app/store/hooks/useApp';
 import { initializeAuth } from './app/store/slices/authSlice';
 import { useUserContext } from './app/store/hooks/useUserContext';
+import { useSessionExpiry } from './app/hooks/useSessionExpiry';
 
 interface AppInitializerProps {
   children: React.ReactNode;
@@ -19,6 +20,9 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { user } = useAppSelector((state) => state.activeContext);
   const { refetch } = useUserContext();
+
+  // Monitor session expiry
+  useSessionExpiry();
 
   // 1️⃣ Restore auth once
   useEffect(() => {

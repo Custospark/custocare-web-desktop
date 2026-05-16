@@ -35,6 +35,9 @@ interface AuthState {
   isLoading: boolean;
   isInitialized: boolean;
 
+  /** Timestamp (ms) when the session was started or last extended. Null if not set. */
+  sessionStartedAt: number | null;
+
   error: string | null;
   loginError: string | null;
 
@@ -87,6 +90,7 @@ const initialState: AuthState = {
   isAuthenticated: false,
   isLoading: false,
   isInitialized: false,
+  sessionStartedAt: null,
 
   error: null,
   loginError: null,
@@ -145,6 +149,7 @@ export function buildAuthStateFromStorage(): AuthState {
   const token = localStorage.getItem('authToken');
   const userStr = localStorage.getItem('authUser');
   const verificationStr = localStorage.getItem('authVerification');
+  const sessionStr = localStorage.getItem('authSessionStartedAt');
 
   let user: UnifiedUserProfile | null = null;
   if (token && userStr) {
@@ -172,12 +177,20 @@ export function buildAuthStateFromStorage(): AuthState {
     }
   }
 
+  let sessionStartedAt: number | null = null;
+  if (sessionStr) {
+    try {
+      sessionStartedAt = JSON.parse(sessionStr);
+    } catch { /* ignore */ }
+  }
+
   return {
     ...initialState,
     token: token || null,
     user,
     isAuthenticated: !!token,
     verification,
+    sessionStartedAt,
     isInitialized: true,
   };
 }
@@ -204,6 +217,24 @@ const authSlice = createSlice({
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');
       localStorage.removeItem('authVerification');
+      localStorage.removeItem('authSessionStartedAt');
+    },
+
+    /**
+     * setSessionStart records when the session began (after successful context resolution).
+     * Persisted to localStorage so it survives tab refresh.
+     */
+    setSessionStart: (state) => {
+      state.sessionStartedAt = Date.now();
+      localStorage.setItem('authSessionStartedAt', JSON.stringify(state.sessionStartedAt));
+    },
+
+    /**
+     * extendSession resets the session timer (user chose to extend).
+     */
+    extendSession: (state) => {
+      state.sessionStartedAt = Date.now();
+      localStorage.setItem('authSessionStartedAt', JSON.stringify(state.sessionStartedAt));
     },
 
     /* ---------------------------------------------------------------------- */
@@ -520,6 +551,9 @@ export const {
   resetPasswordFailure,
 
   clearError,
+
+  setSessionStart,
+  extendSession,
 } = authSlice.actions;
 
 /* -------------------------------------------------------------------------- */
@@ -529,6 +563,7 @@ export const {
 export const selectAuth = (state: { auth: AuthState }) => state.auth;
 export const selectToken = (state: { auth: AuthState }) => state.auth.token;
 export const selectUser  = (state: { auth: AuthState }) => state.auth.user;
+export const selectSessionStartedAt = (state: { auth: AuthState }) => state.auth.sessionStartedAt;
 
 /**
  * Returns the best available display name for the authenticated user.

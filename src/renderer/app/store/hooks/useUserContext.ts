@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAppDispatch } from '../../../app/store/hooks/useApp';
 import { setUserContext, setLoading, setError, type UserContext } from '../slices/activeContextSlice';
+import { setSessionStart } from '../slices/authSlice';
 import axiosInstance from '../../api/axiosConfig';
 
 /**
@@ -43,6 +44,7 @@ export const useUserContext = () => {
     },
     onSuccess: (data) => {
       dispatch(setUserContext(data));
+      dispatch(setSessionStart()); // record session start time
       dispatch(setLoading(false));
       queryClient.setQueryData(['userContext'], data);
     },
