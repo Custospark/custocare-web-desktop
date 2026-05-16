@@ -22,7 +22,7 @@ import type { RootState } from '../store/rootReducer';
 // const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours
 
 // ─── Testing: uncomment one of the lines below ──────────────────────
- const SESSION_DURATION_MS = 2 * 60 * 1000;       // 2 minutes
+ const SESSION_DURATION_MS = 1 * 60 * 1000;       // 2 minutes
 // const SESSION_DURATION_MS = 0;                     // immediate (dialog shows on next tick)
 
 const CHECK_INTERVAL_MS = 60 * 1000; // check every 60s
@@ -64,7 +64,7 @@ export const useSessionExpiry = () => {
           'Your session has been active for over 8 hours. For security, please extend or log out.',
         confirmText: 'Extend Session',
         cancelText: 'Log Out',
-        variant: 'warning',
+        variant: 'info',
       });
 
       if (extended) {
