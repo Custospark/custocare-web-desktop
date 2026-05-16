@@ -18,7 +18,7 @@ import { selectTheme } from '../store/slices/uiSlice';
 import type { RootState } from '../store/rootReducer';
 
 // ─── Production: 8 hours ─────────────────────────────────────────────
-// const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours
+const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours
 
 // ─── Testing (uncomment one) ─────────────────────────────────────────
 // const SESSION_DURATION_MS = 1 * 60 * 1000;       // 3 minutes

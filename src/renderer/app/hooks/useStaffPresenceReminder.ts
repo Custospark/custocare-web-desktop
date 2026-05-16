@@ -28,7 +28,7 @@ const THRESHOLDS: Record<string, number> = {
   [StaffPresenceStatus.OFF_DUTY]:    25 * 60 * 1000,
 };
 
-// ─── Testing: uncomment to override all thresholds ────────────────────
+// ─── Testing: uncomment THESE lines and comment out the block above ──
 // const THRESHOLDS: Record<string, number> = {
 //   [StaffPresenceStatus.BUSY]:        2 * 60 * 1000,
 //   [StaffPresenceStatus.ON_BREAK]:    2 * 60 * 1000,
@@ -105,6 +105,7 @@ export const useStaffPresenceReminder = () => {
   const theme = useSelector(selectTheme);
   const firstName = useSelector((s: RootState) => s.activeContext.user?.first_name ?? 'There');
   const activeCapability = useSelector((s: RootState) => s.activeContext.activeCapability);
+  const isAuthenticated = useSelector((s: RootState) => s.auth.isAuthenticated);
   const isStaff = activeCapability === 'staff';
   const { confirm } = useConfirm();
 
@@ -155,7 +156,7 @@ export const useStaffPresenceReminder = () => {
   }, [confirm, firstName, theme, setOnDuty]);
 
   useEffect(() => {
-    if (!isStaff || !facilityId || !staffId) return;
+    if (!isAuthenticated || !isStaff || !facilityId || !staffId) return;
 
     const check = setInterval(() => {
       if (!presence) return;
@@ -182,5 +183,5 @@ export const useStaffPresenceReminder = () => {
     }, CHECK_INTERVAL_MS);
 
     return () => clearInterval(check);
-  }, [isStaff, facilityId, staffId, presence, showReminder]);
+  }, [isAuthenticated, isStaff, facilityId, staffId, presence, showReminder]);
 };
