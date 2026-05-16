@@ -2,13 +2,12 @@
 /**
  * Reminds staff to set their workspace room 10 minutes after going ON_DUTY or BUSY.
  *
- * When accepted, it triggers a callback (opens MySpace dropdown to occupy a room).
- *
- * Tracks the ON_DUTY/BUSY start time in localStorage per facility so the timer
- * is accurate even after page refresh.
+ * The duty/busy start time is stored in localStorage scoped by facility ID,
+ * set only when the API confirms a status change to ON_DUTY or BUSY (detected
+ * via presence query data transitioning).
  *
  * == Testing ==
- * Uncomment the test line below.
+ * Uncomment the TEST line and comment out the PRODUCTION line.
  */
 import { useEffect, useRef, useCallback } from 'react';
 import { useSelector } from 'react-redux';
@@ -21,17 +20,18 @@ import { getActiveFacilityId, getStaffId } from '../store/utils/contextSelectors
 import type { RootState } from '../store/rootReducer';
 
 // ─── Production: 10 minutes ──────────────────────────────────────────
-// const REMINDER_AFTER_MS = 10 * 60 * 1000;
+const REMINDER_AFTER_MS = 10 * 60 * 1000;
 
-// ─── Testing (uncomment) ─────────────────────────────────────────────
-const REMINDER_AFTER_MS = 2 * 60 * 1000;
+// ─── Testing (uncomment, comment out the line above) ─────────────────
+// const REMINDER_AFTER_MS = 2 * 60 * 1000;
 
 const CHECK_INTERVAL_MS = 30 * 1000;
 
 const DUTY_STATES = [StaffPresenceStatus.ON_DUTY, StaffPresenceStatus.BUSY];
 
-function getBaselineKey(facilityId: number) { return `spaceDutySince_${facilityId}`; }
-function getDismissKey(facilityId: number) { return `spaceReminderDismissed_${facilityId}`; }
+function baselineKey(facilityId: number) { return `spaceDutySince_${facilityId}`; }
+function dismissKey(facilityId: number) { return `spaceReminderDismissed_${facilityId}`; }
+function lastStatusKey(facilityId: number) { return `spaceLastStoredStatus_${facilityId}`; }
 
 export const useSpaceReminder = (onSetRoom?: () => void) => {
   const facilityId = useSelector((s: RootState) => getActiveFacilityId(s));
@@ -43,10 +43,8 @@ export const useSpaceReminder = (onSetRoom?: () => void) => {
   const isStaff = activeCapability === 'staff';
   const { confirm } = useConfirm();
 
-  // Presence — to detect ON_DUTY / BUSY transitions
   const { data: presenceRes } = useGetMyPresence();
 
-  // Current occupancy — to check if already in a room
   const { data: occupancyRes } = useGetCurrentOccupancy(
     { facility_id: facilityId ?? 0 },
     { enabled: isStaff && !!facilityId },
@@ -59,7 +57,7 @@ export const useSpaceReminder = (onSetRoom?: () => void) => {
     if (remindedRef.current || !facilityId) return;
     remindedRef.current = true;
 
-    if (localStorage.getItem(getDismissKey(facilityId)) === '1') {
+    if (localStorage.getItem(dismissKey(facilityId)) === '1') {
       remindedRef.current = false;
       return;
     }
@@ -75,7 +73,7 @@ export const useSpaceReminder = (onSetRoom?: () => void) => {
     });
 
     if (result === 'extra') {
-      localStorage.setItem(getDismissKey(facilityId), '1');
+      localStorage.setItem(dismissKey(facilityId), '1');
     } else if (result === true) {
       onSetRoom?.();
     }
@@ -87,34 +85,40 @@ export const useSpaceReminder = (onSetRoom?: () => void) => {
     if (!isAuthenticated || !isStaff || !facilityId || !staffId) return;
 
     const check = setInterval(() => {
-      // Already has a room — skip entirely
       if (hasRoom) return;
-
       if (remindedRef.current) return;
-      if (localStorage.getItem(getDismissKey(facilityId)) === '1') return;
+      if (localStorage.getItem(dismissKey(facilityId)) === '1') return;
 
-      // Current presence status
       const status = presenceRes?.data?.status;
       const isDuty = DUTY_STATES.includes(status as StaffPresenceStatus);
 
-      const baselineKey = getBaselineKey(facilityId);
-      const stored = localStorage.getItem(baselineKey);
+      const bKey = baselineKey(facilityId);
+      const lsKey = lastStatusKey(facilityId);
+      const prevStatus = localStorage.getItem(lsKey);
 
       if (isDuty) {
-        if (!stored) {
-          // Just entered ON_DUTY or BUSY — set baseline
-          localStorage.setItem(baselineKey, String(Date.now()));
+        // Status transitioned INTO on_duty or busy — store the success timestamp
+        if (prevStatus !== status) {
+          localStorage.setItem(lsKey, status!);
+          localStorage.setItem(bKey, String(Date.now()));
           return;
         }
 
-        // Check elapsed time since baseline
+        // Timer already running — check elapsed
+        const stored = localStorage.getItem(bKey);
+        if (!stored) {
+          localStorage.setItem(bKey, String(Date.now()));
+          return;
+        }
+
         const since = parseInt(stored, 10);
         if (Date.now() - since < REMINDER_AFTER_MS) return;
 
         showReminder();
       } else {
-        // Not ON_DUTY or BUSY — clear baseline so timer resets next time
-        if (stored) localStorage.removeItem(baselineKey);
+        // Not in a duty state — clear tracking so timer resets next time
+        if (localStorage.getItem(bKey)) localStorage.removeItem(bKey);
+        if (localStorage.getItem(lsKey)) localStorage.removeItem(lsKey);
       }
     }, CHECK_INTERVAL_MS);
 
