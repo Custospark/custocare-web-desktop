@@ -102,7 +102,7 @@ export const useStaffPresenceReminder = () => {
   const isStaff = activeCapability === 'staff';
   const { confirm } = useConfirm();
 
-  const { data: presence } = useGetMyPresence();
+  const { data: presenceResponse } = useGetMyPresence();
   const setPresence = useSetMyPresence();
 
   const setOnDuty = useCallback(async () => {
@@ -139,9 +139,10 @@ export const useStaffPresenceReminder = () => {
     if (!isAuthenticated || !isStaff || !facilityId || !staffId) return;
 
     const check = setInterval(() => {
-      if (!presence) return;
+      const p = presenceResponse?.data;
+      if (!p) return;
 
-      const status = presence?.status;
+      const status = p.status;
       if (!status || status === StaffPresenceStatus.ON_DUTY) {
         removeRecord(facilityId);
         return;
@@ -163,5 +164,5 @@ export const useStaffPresenceReminder = () => {
     }, CHECK_INTERVAL_MS);
 
     return () => clearInterval(check);
-  }, [isAuthenticated, isStaff, facilityId, staffId, presence, showReminder]);
+  }, [isAuthenticated, isStaff, facilityId, staffId, presenceResponse, showReminder]);
 };
