@@ -59,7 +59,7 @@ export const generateItemCodeFromName = (name: string) => {
 export const calculateTotalInventoryValue = (items: InventoryItem[]): number => {
   return items.reduce((total, item) => {
     const unitCost = normalizeAmount(item.unit_cost || 0);
-    const quantity = item.package_quantity || 0;
+    const quantity = item.current_balance ?? 0;
     return total + (unitCost * quantity);
   }, 0);
 };

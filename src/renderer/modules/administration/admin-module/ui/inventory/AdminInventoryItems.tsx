@@ -935,7 +935,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
     <div className="space-y-6">
       <InventoryItemHeader
         theme={theme}
-        items={filteredItems}
+        items={items}
         onRefresh={() => refetch()}
         onCreate={openCreate}
         onImport={() => {

@@ -21,7 +21,7 @@ export const InventoryItemHeader: React.FC<Props> = ({
 }) => {
   const isDark = theme === 'dark';
 
-  const totalValue = items.reduce((sum, item) => sum + normalizeAmount(item.unit_cost || 0) * item.package_quantity, 0);
+  const totalValue = items.reduce((sum, item) => sum + normalizeAmount(item.unit_cost || 0) * (item.current_balance ?? 0), 0);
   const activeCount = items.filter(item => item.status === ItemStatus.ACTIVE).length;
   const avgUnitCost = items.length > 0 
     ? items.reduce((sum, item) => sum + normalizeAmount(item.unit_cost || 0), 0) / items.length 

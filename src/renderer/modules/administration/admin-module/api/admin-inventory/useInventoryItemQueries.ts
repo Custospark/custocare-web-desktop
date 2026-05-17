@@ -399,12 +399,13 @@ export const useAdjustStock = (
       }
 
       // Optimistically update balance cache
-      if (prevBalance) {
+      const prevBalanceData = prevBalance as CurrentBalanceResponse | undefined;
+      if (prevBalanceData) {
         queryClient.setQueryData(balanceKey, {
-          ...prevBalance,
+          ...prevBalanceData,
           data: {
-            ...(prevBalance as any).data,
-            current_balance: (prevBalance as any).data.current_balance + data.quantity,
+            ...prevBalanceData.data,
+            current_balance: prevBalanceData.data.current_balance + data.quantity,
           },
         });
       }
@@ -412,9 +413,39 @@ export const useAdjustStock = (
       // Return snapshot for rollback
       return { prevListSnapshots, prevBalance, balanceKey } as AdjustStockContext;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
+      const actualBalance = data.data.balance_after_transaction;
+      const affectedItemId = variables.inventory_item_id;
+
+      // Sync list caches with actual server balance_after_transaction
+      const listKeys = queryClient.getQueriesData<InventoryItemListResponse>({ queryKey: inventoryItemKeys.lists() });
+      for (const [key, cached] of listKeys) {
+        if (!cached?.data) continue;
+        queryClient.setQueryData(key, {
+          ...cached,
+          data: cached.data.map((item: InventoryItem) =>
+            item.id === affectedItemId
+              ? { ...item, current_balance: actualBalance }
+              : item
+          ),
+        });
+      }
+
+      // Sync balance cache
+      const balanceKey = inventoryLedgerKeys.balance(variables.facility_id, affectedItemId);
+      const existingBalanceData = queryClient.getQueryData(balanceKey) as CurrentBalanceResponse | undefined;
+      if (existingBalanceData) {
+        queryClient.setQueryData(balanceKey, {
+          ...existingBalanceData,
+          data: {
+            ...existingBalanceData.data,
+            current_balance: actualBalance,
+          },
+        });
+      }
+
       const direction = data.data.quantity_change > 0 ? 'increased' : 'decreased';
-      showToast('success', `Stock ${direction} successfully. New balance: ${data.data.balance_after_transaction}`, 6000);
+      showToast('success', `Stock ${direction} successfully. New balance: ${actualBalance}`, 6000);
       callbacks.onSuccess?.(data);
     },
     onError: (error, _data, context) => {
