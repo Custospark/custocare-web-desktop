@@ -15,6 +15,10 @@ import {
   Sparkles,
   Clock,
   CheckCircle,
+  Compass,
+  GraduationCap,
+  LifeBuoy,
+  ExternalLink,
 } from 'lucide-react';
 import { cn } from '../../../shared/utils/classNameUtils';
 import { 
@@ -24,7 +28,7 @@ import {
   getUserEmail,
 } from '../../../app/store/utils/contextSelectors';
 import type { RootState } from '../../../app/store/rootReducer';
-import { ACCOUNT_ROUTES } from '../../../app/routes/routeConstants';
+import { ACCOUNT_ROUTES, CUSTOCARE_HUB_ROUTES } from '../../../app/routes/routeConstants';
 import LoadingSkeleton from '../../../shared/components/Loading/LoadingSkeletons';
 
 interface StaffWithoutFacilityMessageProps {
@@ -497,6 +501,136 @@ export const StaffWithoutFacilityMessage: React.FC<StaffWithoutFacilityMessagePr
                     </div>
                   </motion.div>
                 </div>
+
+                {/* Explore Custocare Hub */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.55 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'p-2 rounded-xl',
+                      isDark ? 'bg-sky-500/20' : 'bg-sky-100'
+                    )}>
+                      <Compass className={cn(
+                        'w-5 h-5',
+                        isDark ? 'text-sky-400' : 'text-sky-600'
+                      )} />
+                    </div>
+                    <div>
+                      <h2 className={cn(
+                        'text-lg md:text-xl font-semibold',
+                        isDark ? 'text-white' : 'text-gray-900'
+                      )}>
+                        Explore Custocare Hub
+                      </h2>
+                      <p className={cn(
+                        'text-xs',
+                        isDark ? 'text-gray-500' : 'text-gray-500'
+                      )}>
+                        Discover resources and learn the platform while you wait
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3">
+                    {/* Learning Center */}
+                    <motion.button
+                      custom={0}
+                      variants={stepVariants}
+                      initial="hidden"
+                      animate="visible"
+                      onClick={() => navigate(CUSTOCARE_HUB_ROUTES.LEARNING_CENTER)}
+                      className={cn(
+                        'flex items-start gap-4 p-4 rounded-xl border-2 transition-all duration-300 text-left w-full',
+                        isDark 
+                          ? 'border-gray-700 hover:border-sky-500/30 hover:bg-gray-800/30' 
+                          : 'border-gray-200 hover:border-sky-200 hover:bg-sky-50/30',
+                        'group cursor-pointer'
+                      )}
+                    >
+                      <div className={cn(
+                        'p-2 rounded-xl shrink-0 transition-all',
+                        isDark 
+                          ? 'bg-sky-500/20 text-sky-400 group-hover:bg-sky-500/30' 
+                          : 'bg-sky-100 text-sky-600 group-hover:bg-sky-200',
+                        'shadow-md'
+                      )}>
+                        <GraduationCap className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={cn(
+                            'font-semibold',
+                            isDark ? 'text-white' : 'text-gray-900'
+                          )}>
+                            Learning Center
+                          </p>
+                          <ExternalLink className={cn(
+                            'w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5',
+                            isDark ? 'text-gray-500' : 'text-gray-400'
+                          )} />
+                        </div>
+                        <p className={cn(
+                          'text-sm',
+                          isDark ? 'text-gray-400' : 'text-gray-600'
+                        )}>
+                          New to Custocare? Start with guided tutorials, watch training 
+                          videos, and track your learning progress
+                        </p>
+                      </div>
+                    </motion.button>
+
+                    {/* Support Center */}
+                    <motion.button
+                      custom={1}
+                      variants={stepVariants}
+                      initial="hidden"
+                      animate="visible"
+                      onClick={() => navigate(CUSTOCARE_HUB_ROUTES.SUPPORT_CENTER)}
+                      className={cn(
+                        'flex items-start gap-4 p-4 rounded-xl border-2 transition-all duration-300 text-left w-full',
+                        isDark 
+                          ? 'border-gray-700 hover:border-sky-500/30 hover:bg-gray-800/30' 
+                          : 'border-gray-200 hover:border-sky-200 hover:bg-sky-50/30',
+                        'group cursor-pointer'
+                      )}
+                    >
+                      <div className={cn(
+                        'p-2 rounded-xl shrink-0 transition-all',
+                        isDark 
+                          ? 'bg-sky-500/20 text-sky-400 group-hover:bg-sky-500/30' 
+                          : 'bg-sky-100 text-sky-600 group-hover:bg-sky-200',
+                        'shadow-md'
+                      )}>
+                        <LifeBuoy className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={cn(
+                            'font-semibold',
+                            isDark ? 'text-white' : 'text-gray-900'
+                          )}>
+                            Help Center
+                          </p>
+                          <ExternalLink className={cn(
+                            'w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5',
+                            isDark ? 'text-gray-500' : 'text-gray-400'
+                          )} />
+                        </div>
+                        <p className={cn(
+                          'text-sm',
+                          isDark ? 'text-gray-400' : 'text-gray-600'
+                        )}>
+                          Browse frequently asked questions, search help articles, 
+                          or open a support ticket
+                        </p>
+                      </div>
+                    </motion.button>
+                  </div>
+                </motion.div>
 
                 {/* Action Buttons */}
                 <motion.div
