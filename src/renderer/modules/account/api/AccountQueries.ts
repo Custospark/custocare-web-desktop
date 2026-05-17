@@ -237,16 +237,7 @@ export const useLogin = (
         return;
       }
 
-      // Case 2: API returned failure
-      if (!data.success) {
-        const msg = data.message || 'Login failed.';
-        dispatch(loginFailure(msg));
-        showToast('error', msg, 8000);
-        callbacks.onSuccess?.(data);
-        return;
-      }
-
-      // Case 3: Email not verified
+      // Case 2: Email not verified (must come before generic failure catch-all)
       if (data.code === 'EMAIL_NOT_VERIFIED') {
         const userId = (data.user as any)?.id ?? null;
 
@@ -259,8 +250,17 @@ export const useLogin = (
           })
         );
 
-        showToast('error', data.message || 'Please verify your email before logging in.', 8000);
+        showToast('info', data.message || 'Please verify your email before logging in.', 8000);
         navigate(ROUTES.TWO_FACTOR_AUTH);
+        callbacks.onSuccess?.(data);
+        return;
+      }
+
+      // Case 3: API returned failure (catch-all for remaining failures)
+      if (!data.success) {
+        const msg = data.message || 'Login failed.';
+        dispatch(loginFailure(msg));
+        showToast('error', msg, 8000);
         callbacks.onSuccess?.(data);
         return;
       }

@@ -142,6 +142,19 @@ export const TwoFactorAuthPage: React.FC = () => {
     };
   }, []);
 
+  // Auto-send verification code on mount when coming from login flow
+  const hasAutoSent = useRef(false);
+
+  useEffect(() => {
+    if (verification.flow === 'login' && !hasAutoSent.current && !isResending) {
+      hasAutoSent.current = true;
+      const timer = setTimeout(() => {
+        resendMutation.mutate({});
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [verification.flow, isResending, resendMutation]);
+
   /* =========================================================================
      COUNTDOWN TIMER FOR RESEND
      ========================================================================= */
