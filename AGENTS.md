@@ -35,12 +35,12 @@ Keep our interaction **conversational**—just like two teammates working side b
 
 ## Sub-Agents
 
-| Agent | Responsibility |
-|-------|----------------|
-| **Planning** | Analyzes requirements, checks existing code (FE + BE), creates task manifest |
-| **Architect** | Designs component structure (FE) / class design + providers (BE), types/interfaces |
-| **Code** | Generates/updates files (checks existing first) — both FE (.tsx/.ts) and BE (Laravel) |
-| **Test** | Runs lint/type checks (FE), `php -l`/artisan/phpunit (BE), verifies imports & routes |
+| Agent | Name | Responsibility |
+|-------|------|----------------|
+| **Planning** | **Sage** | Analyzes requirements, checks existing code (FE + BE), creates task manifest |
+| **Architect** | **Blue** | Designs component structure (FE) / class design + providers (BE), types/interfaces |
+| **Code** | **Rex** | Generates/updates files (checks existing first) — both FE (.tsx/.ts) and BE (Laravel) |
+| **Test** | **Vera** | Runs lint/type checks (FE), `php -l`/artisan/phpunit (BE), verifies imports & routes |
 
 ---
 
@@ -76,6 +76,8 @@ Route → Controller → Service (interface → impl) → Repository (interface 
 | 3 | Never assume. Unclear? Stop → Ask. |
 | 4 | Check existing files first. Update > Create. |
 | 5 | Backend always follows SOLID: interfaces for repos & services, provider bindings in `bootstrap/providers.php`. |
+| 6 | **Go/No-Go gate before commit.** After Code completes, run targeted checks on changed files only — FE: `npm run lint`, BE: `php -l <files>`. Report results to me. If checks fail, do NOT commit. |
+| 7 | **Architect trigger.** Run Blue only when the change touches 3+ files or crosses FE+BE boundaries. For single-file or single-stack changes (<=2 files), skip to Code directly after Planning. |
 
 ---
 
@@ -292,12 +294,12 @@ If any agent fails:
 
 ## Summary Format (Per Agent) — With Context
 
-| Agent | Report Format |
+| Agent (Name) | Report Format |
 |-------|---------------|
-| Planning | `📋 Planning: Done. Found 2 existing FE files, 1 existing BE file. Nothing to duplicate.` |
-| Architect | `🏗️ Architect: Done. Designed to reuse existing hook. New component will have 3 props.` |
-| Code | `💻 Code: Done. Created 3 files, updated 4 files. No breaking changes.` |
-| Test | `🧪 Test: Done. FE lint passed (0 errors). BE phpunit passed (12/12 tests).` |
+| Planning (Sage) | `📋 Sage: Done. Found 2 existing FE files, 1 existing BE file. Nothing to duplicate.` |
+| Architect (Blue) | `🏗️ Blue: Done. Designed to reuse existing hook. New component will have 3 props.` |
+| Code (Rex) | `💻 Rex: Done. Created 3 files, updated 4 files. No breaking changes.` |
+| Test (Vera) | `🧪 Vera: Done. FE lint passed (0 errors). BE phpunit passed (12/12 tests).` |
 | Final | `✅ Complete. Ready for next task, Oscar.` |
 
 ---
