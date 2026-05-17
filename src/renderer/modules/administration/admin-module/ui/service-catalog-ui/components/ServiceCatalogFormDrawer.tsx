@@ -379,10 +379,10 @@ export const ServiceCatalogFormDrawer: React.FC<Props> = ({
                   </div>
                 </div>
 
-                {/* Price Amount */}
+                {/* Service fee */}
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${labelTheme}`}>
-                    Price Amount <span className="text-red-500">*</span>
+                    Service fee <span className="text-red-500">*</span>
                   </label>
 
                   <div
@@ -426,7 +426,7 @@ export const ServiceCatalogFormDrawer: React.FC<Props> = ({
                         isDark ? 'text-white placeholder:text-gray-500' : 'text-gray-900 placeholder:text-gray-400'
                       }`}
                       placeholder="0.00"
-                      aria-label="Price amount"
+                      aria-label="Service fee"
                     />
                   </div>
 
