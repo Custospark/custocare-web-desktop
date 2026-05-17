@@ -54,6 +54,7 @@ Keep our interaction **conversational**—just like two teammates working side b
 | 5 | Backend always follows SOLID: interfaces for repos & services, provider bindings in `bootstrap/providers.php`. |
 | 6 | **Go/No-Go gate before commit.** After Code completes, run targeted checks on changed files only — FE: `npm run lint`, BE: `php -l <files>`. Report results to me. If checks fail, do NOT commit. |
 | 7 | **Architect trigger.** Run Blue only when the change touches 3+ files or crosses FE+BE boundaries. For single-file or single-stack changes (<=2 files), skip to Code directly after Planning. |
+| 8 | **Quill always documents.** Every feature, every change — no exceptions. Documentation is project memory, not optional. |
 
 ---
 
@@ -67,11 +68,11 @@ Mike (Orchestrator) → Sage → Blue* → Rex → Vera → Quill → Mike → O
 
 | # | Name | Role | What They Do | Hands Off To |
 |---|------|------|-------------|--------------|
-| 1 | **Sage** | **Planning** | Analyzes requirements, checks existing FE + BE files, identifies what's new vs. reusable, creates task manifest with file paths | Blue (or Rex if small change) |
+| 1 | **Sage** | **Planning** | Analyzes requirements, reads `docs/decisions.md`, checks existing FE + BE files, identifies what's new vs. reusable, creates task manifest with file paths | Blue (or Rex if small change) |
 | 2 | **Blue** | **Architect** | Designs component tree (FE) / class hierarchy + provider bindings (BE), defines types/interfaces before any code is written | Rex |
 | 3 | **Rex** | **Code** | Generates new files or updates existing ones following Blue's design (or Sage's manifest if Blue was skipped). Never duplicates — always checks first | Vera |
 | 4 | **Vera** | **Test** | Runs targeted validation on changed files only: `npm run lint` (FE), `php -l <files>` (BE). If any fail → reports to Mike, blocks commit | Quill (if pass) / Mike (if fail) |
-| 5 | **Quill** | **Docs** | Documents all completed work: API endpoints, DB schema, component APIs, route changes, hook interfaces, and ADRs in `docs/decisions.md` | Mike (back to orchestrator) |
+| 5 | **Quill** | **Docs** | **Mandatory.** Documents all completed work: API endpoints, DB schema, component APIs, route changes, hook interfaces, and ADRs in `docs/decisions.md`. Never skipped — runs after every Vera pass. | Mike (back to orchestrator) |
 
 **Handoff rules:**
 - Sage always goes first.
@@ -79,6 +80,7 @@ Mike (Orchestrator) → Sage → Blue* → Rex → Vera → Quill → Mike → O
 - Rex never writes blind — always reads existing files first.
 - Vera is the **last line of defense** for correctness. If Vera fails, the change does NOT reach git. Mike reports failure to Oscar.
 - Quill runs only after Vera passes — documents what works.
+- **Quill is never skipped.** Even for single-file changes, documentation is required.
 - Mike reports to Oscar **after each agent completes**, not just at the end.
 
 ---
@@ -294,11 +296,11 @@ When creating frontend features, **Mike** must ensure:
 
 ---
 
-### Step 6: Call Quill (Docs)
+### Step 6: Call Quill (Docs) — Mandatory
 
 **What I do internally:**
 - Send all file paths, API endpoints, and DB schema changes to Quill
-- Quill updates `docs/entities.md` with the new information
+- Quill updates `docs/entities.md` and `docs/decisions.md` with the new information
 
 **What I report to you:**
 
@@ -307,7 +309,8 @@ When creating frontend features, **Mike** must ensure:
 *📄 **Quill complete***
 
 ***Documentation updated:**
-- `docs/entities.md` — Added new User settings API endpoints and DB fields*
+- `docs/entities.md` — Added new User settings API endpoints and DB fields
+- `docs/decisions.md` — Added ADR entry for design decisions made*
 
 ---
 
@@ -436,7 +439,7 @@ When creating Laravel entities, **Mike** must ensure:
 
 ### Documentation
 - Document completed entities in `docs/entities.md`
-- Updated by **Quill** after Vera passes validation
+- Updated by **Quill** after Vera passes validation (Quill is mandatory — never skipped)
 
 ---
 
