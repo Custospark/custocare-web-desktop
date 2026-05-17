@@ -21,6 +21,7 @@ import {
   useUpdateInventoryItem,
   useDeleteInventoryItem,
   useRestoreInventoryItem,
+  useGetInventoryItemLedgerHistory,
   inventoryItemKeys,
 } from '../../api/admin-inventory/useInventoryItemQueries';
 
@@ -42,6 +43,7 @@ import { InventoryItemFiltersBar } from './components/InventoryItemFiltersBar';
 import { InventoryItemFormDrawer, type InventoryItemFormData } from './components/InventoryItemFormDrawer';
 import { InventoryCatalogList } from './components/InventoryCatalogList';
 import { InventoryStockAdjustModal } from './components/InventoryStockAdjustModal';
+import { InventoryItemLedgerHistoryModal } from './components/InventoryItemLedgerHistoryModal';
 import { generateItemCode } from './utils/inventoryItemUiUtils';
 
 interface AdminInventoryItemProps {
@@ -156,6 +158,9 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
 
   // Stock adjust modal state
   const [adjustStockItem, setAdjustStockItem] = useState<InventoryItem | null>(null);
+
+  // Ledger history modal state
+  const [historyItem, setHistoryItem] = useState<InventoryItem | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -842,6 +847,19 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
     setAdjustStockItem(item);
   }, []);
 
+  const handleViewHistory = useCallback((item: InventoryItem) => {
+    setHistoryItem(item);
+  }, []);
+
+  const {
+    data: historyData,
+    isLoading: historyLoading,
+  } = useGetInventoryItemLedgerHistory(
+    activeFacilityId ? Number(activeFacilityId) : 0,
+    historyItem?.id ?? 0,
+    { enabled: historyItem != null && !!activeFacilityId }
+  );
+
   const handleDelete = async (item: InventoryItem) => {
     const confirmed = await confirm({
       title: 'Delete Inventory Item',
@@ -985,6 +1003,7 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         onDelete={handleDelete}
         onRestore={handleRestore}
         onAdjustStock={handleAdjustStock}
+        onViewHistory={handleViewHistory}
         onRetry={() => refetch()}
         itemCategoryOptions={itemCategoryOptions}
         currentPage={currentPage}
@@ -1021,6 +1040,15 @@ export const AdminInventoryItem: React.FC<AdminInventoryItemProps> = ({ theme })
         facilityId={activeFacilityId ? Number(activeFacilityId) : null}
         staffId={activeContext.capabilities.staff?.staff_id ?? null}
         onClose={() => setAdjustStockItem(null)}
+      />
+
+      <InventoryItemLedgerHistoryModal
+        theme={theme}
+        open={historyItem != null}
+        itemName={historyItem?.item_name}
+        logs={historyData?.data ?? []}
+        isLoading={historyLoading}
+        onClose={() => setHistoryItem(null)}
       />
     </div>
   );

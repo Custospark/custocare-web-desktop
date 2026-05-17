@@ -486,6 +486,64 @@ export interface LedgerEntryResponse {
 }
 
 /**
+ * Staff reference returned in ledger history entries
+ */
+export interface LedgerStaffInfo {
+  id: number;
+  staff_uuid: string;
+  employee_id: string | null;
+  professional_title: string | null;
+  staff_name: string | null;
+  global_role_level: string | null;
+  employment_status: string | null;
+}
+
+/**
+ * A single ledger history entry for the timeline modal
+ * Matches the backend InventoryLedgerResource response with staff eager-loaded
+ */
+export interface LedgerHistoryEntry {
+  id: number;
+  transaction_uuid: string;
+  facility_id: number;
+  inventory_item_id: number;
+  transaction_type: string;
+  transaction_type_label: string;
+  quantity_change: number;
+  balance_after_transaction: number;
+  unit_of_measure: string;
+  lot_number: string | null;
+  serial_number: string | null;
+  expiry_date: string | null;
+  manufacture_date: string | null;
+  unit_cost_at_transaction: number | null;
+  total_cost: number | null;
+  transaction_cause: string;
+  transaction_cause_label: string;
+  transaction_notes: string | null;
+  reference_document_number: string | null;
+  performed_by_staff: LedgerStaffInfo | null;
+  performed_by_staff_id: number | null;
+  verified_by_staff: LedgerStaffInfo | null;
+  verified_by_staff_id: number | null;
+  verified_at: string | null;
+  is_verified: boolean;
+  transaction_timestamp: string;
+  created_at: string;
+  is_incoming: boolean;
+  is_outgoing: boolean;
+  absolute_quantity: number;
+}
+
+/**
+ * Response from the item history endpoint
+ */
+export interface LedgerHistoryResponse {
+  success: boolean;
+  data: LedgerHistoryEntry[];
+}
+
+/**
  * Parameters for getting current stock balance
  */
 export interface GetCurrentBalanceParams {

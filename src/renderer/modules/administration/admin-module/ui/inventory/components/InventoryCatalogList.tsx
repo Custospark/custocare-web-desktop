@@ -6,6 +6,7 @@ import {
   ChevronUp,
   Copy,
   Edit2,
+  Eye,
   Package,
   PackagePlus,
   RefreshCw,
@@ -50,6 +51,7 @@ interface Props {
   onDelete: (item: InventoryItem) => void;
   onRestore: (item: InventoryItem) => void;
   onAdjustStock?: (item: InventoryItem) => void;
+  onViewHistory?: (item: InventoryItem) => void;
   onRetry: () => void;
   itemCategoryOptions: {
     value: ItemCategory;
@@ -75,6 +77,7 @@ interface RowActionsProps {
   onDelete: (item: InventoryItem) => void;
   onRestore: (item: InventoryItem) => void;
   onAdjustStock?: (item: InventoryItem) => void;
+  onViewHistory?: (item: InventoryItem) => void;
 }
 
 const RowActions: React.FC<RowActionsProps> = ({
@@ -86,6 +89,7 @@ const RowActions: React.FC<RowActionsProps> = ({
   onDelete,
   onRestore,
   onAdjustStock,
+  onViewHistory,
 }) => {
   const btn = cn(
     'rounded-lg transition-colors cursor-pointer',
@@ -98,6 +102,11 @@ const RowActions: React.FC<RowActionsProps> = ({
 
   return (
     <div className="flex items-center gap-1">
+      {onViewHistory && (
+        <button onClick={() => onViewHistory(item)} className={btn} title="View History">
+          <Eye className={iconCls} />
+        </button>
+      )}
       {onAdjustStock && (
         <button onClick={() => onAdjustStock(item)} className={btn} title="Adjust Stock">
           <PackagePlus className={iconCls} />
@@ -435,6 +444,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
   onDelete,
   onRestore,
   onAdjustStock,
+  onViewHistory,
   onRetry,
   itemCategoryOptions,
   currentPage,
@@ -628,15 +638,16 @@ export const InventoryCatalogList: React.FC<Props> = ({
                 : 'border-gray-200 text-gray-400'
             )}
           >
-            <div className="col-span-5">Item</div>
-            <div className="col-span-1 text-center">Stock</div>
-            <div className="col-span-2 hidden md:block">Category</div>
-            <div className="col-span-2">Cost</div>
-            <div className="col-span-2 text-center">Actions</div>
+            <div className="col-span-1 text-center">#</div>
+            <div className="col-span-2 text-center">Item</div>
+            <div className="col-span-2 text-center">Stock</div>
+            <div className="col-span-2 text-center">Category</div>
+            <div className="col-span-2 text-center">Cost</div>
+            <div className="col-span-3 text-center">Actions</div>
           </div>
 
           {/* Rows */}
-          {paginationData.currentItems.map((item) => {
+          {paginationData.currentItems.map((item, index) => {
             const category = itemCategoryOptions.find(
               (c) => c.value === item.item_category
             );
@@ -744,13 +755,17 @@ export const InventoryCatalogList: React.FC<Props> = ({
                       onDelete={onDelete}
                       onRestore={onRestore}
                       onAdjustStock={onAdjustStock}
+                      onViewHistory={onViewHistory}
                     />
                   </div>
                 </div>
 
                 {/* Desktop view */}
                 <div className="hidden sm:grid grid-cols-12 gap-4 items-center px-4 py-3">
-                  <div className="col-span-5 flex items-center gap-3 min-w-0">
+                  <div className="col-span-1 text-center text-sm tabular-nums text-gray-500">
+                    {paginationData.startIndex + index + 1}
+                  </div>
+                  <div className="col-span-2 flex items-center justify-center gap-2 min-w-0">
                     <button
                       onClick={() => onToggleExpand(item.item_uuid)}
                       aria-label="Toggle details"
@@ -770,16 +785,16 @@ export const InventoryCatalogList: React.FC<Props> = ({
 
                     <div
                       className={cn(
-                        'p-2 rounded-lg shrink-0',
+                        'p-1.5 rounded-lg shrink-0',
                         isDark ? 'bg-gray-800' : 'bg-gray-100'
                       )}
                     >
                       <CategoryIcon
-                        className={cn('w-4 h-4', category?.color ?? '')}
+                        className={cn('w-3.5 h-3.5', category?.color ?? '')}
                       />
                     </div>
 
-                    <div className="min-w-0">
+                    <div className="min-w-0 text-center">
                       <p className="font-medium truncate">{item.item_name}</p>
                       <p
                         className={cn(
@@ -795,7 +810,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  <div className="col-span-1 text-center">
+                  <div className="col-span-2 text-center">
                     <span className={cn(
                       'text-sm font-bold tabular-nums',
                       item.current_balance === 0
@@ -811,7 +826,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                     </p>
                   </div>
 
-                  <div className="col-span-2 hidden md:block">
+                  <div className="col-span-2 text-center">
                     <span
                       className={cn(
                         'inline-block px-2 py-0.5 rounded-full text-xs font-medium',
@@ -824,7 +839,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                     </span>
                   </div>
 
-                  <div className="col-span-2">
+                  <div className="col-span-2 text-center">
                     <p className="font-semibold text-sm">
                       {formatPrice(item.unit_cost)}
                     </p>
@@ -854,7 +869,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                     </span>
                   </div>
 
-                  <div className="col-span-2 flex items-center justify-end gap-1.5">
+                  <div className="col-span-3 flex items-center justify-center gap-1.5">
                     <RowActions
                       item={item}
                       size="md"
@@ -864,6 +879,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
                       onDelete={onDelete}
                       onRestore={onRestore}
                       onAdjustStock={onAdjustStock}
+                      onViewHistory={onViewHistory}
                     />
                   </div>
                 </div>
@@ -887,7 +903,7 @@ export const InventoryCatalogList: React.FC<Props> = ({
           )}
         >
           <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-            {paginationData.currentItems.map((item) => {
+          {paginationData.currentItems.map((item, index) => {
               const category = itemCategoryOptions.find(
                 (c) => c.value === item.item_category
               );
@@ -1035,6 +1051,20 @@ export const InventoryCatalogList: React.FC<Props> = ({
                     )}
                   >
                     <div className="flex items-center gap-1">
+                      {onViewHistory && (
+                        <button
+                          onClick={() => onViewHistory(item)}
+                          title="View History"
+                          className={cn(
+                            'p-1.5 rounded cursor-pointer transition-colors',
+                            isDark
+                              ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                              : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'
+                          )}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       <button
                         onClick={() => onEdit(item)}
                         title="Edit"

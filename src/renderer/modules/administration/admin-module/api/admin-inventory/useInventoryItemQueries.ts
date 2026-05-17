@@ -22,6 +22,7 @@ import type {
   AdjustStockRequest,
   InventoryItem,
   LedgerEntryResponse,
+  LedgerHistoryResponse,
   GetCurrentBalanceParams,
   InventoryItemFilters,
   InventoryItemListResponse,
@@ -334,6 +335,36 @@ export const inventoryLedgerKeys = {
 };
 
 /**
+ * Query key for inventory item ledger history
+ */
+export const inventoryHistoryKeys = {
+  itemHistory: (facilityId: number, inventoryItemId: number) =>
+    ['inventory-items', 'history', facilityId, inventoryItemId] as const,
+};
+
+/**
+ * Fetches full ledger history for a specific inventory item at a facility.
+ * Returns all entries ordered by timestamp DESC with staff details.
+ */
+export const useGetInventoryItemLedgerHistory = (
+  facilityId: number,
+  inventoryItemId: number,
+  options?: { enabled?: boolean }
+) => {
+  return useQuery<LedgerHistoryResponse, AxiosError<ApiErrorResponse>>({
+    queryKey: inventoryHistoryKeys.itemHistory(facilityId, inventoryItemId),
+    queryFn: async () => {
+      const response = await axiosInstance.get<LedgerHistoryResponse>(
+        `/inventory/ledger/item/${inventoryItemId}/history`,
+        { params: { facility_id: facilityId } }
+      );
+      return response.data;
+    },
+    enabled: options?.enabled ?? (facilityId > 0 && inventoryItemId > 0),
+  });
+};
+
+/**
  * Fetches current stock balance for an inventory item at a facility
  */
 export const useGetCurrentStockBalance = (
@@ -443,6 +474,11 @@ export const useAdjustStock = (
           },
         });
       }
+
+      // Invalidate history cache so the timeline modal reflects the new entry
+      queryClient.invalidateQueries({
+        queryKey: inventoryHistoryKeys.itemHistory(variables.facility_id, affectedItemId),
+      });
 
       const direction = data.data.quantity_change > 0 ? 'increased' : 'decreased';
       showToast('success', `Stock ${direction} successfully. New balance: ${actualBalance}`, 6000);
