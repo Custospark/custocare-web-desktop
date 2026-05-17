@@ -71,7 +71,7 @@ Mike (Orchestrator) → Sage → Blue* → Rex → Vera → Quill → Mike → O
 | 2 | **Blue** | **Architect** | Designs component tree (FE) / class hierarchy + provider bindings (BE), defines types/interfaces before any code is written | Rex |
 | 3 | **Rex** | **Code** | Generates new files or updates existing ones following Blue's design (or Sage's manifest if Blue was skipped). Never duplicates — always checks first | Vera |
 | 4 | **Vera** | **Test** | Runs targeted validation on changed files only: `npm run lint` (FE), `php -l <files>` (BE). If any fail → reports to Mike, blocks commit | Quill (if pass) / Mike (if fail) |
-| 5 | **Quill** | **Docs** | Updates `docs/entities.md` and any relevant documentation after code passes validation. Documents file paths, API endpoints, DB changes, and usage notes | Mike (back to orchestrator) |
+| 5 | **Quill** | **Docs** | Documents all completed work: API endpoints, DB schema, component APIs, route changes, hook interfaces, and ADRs in `docs/decisions.md` | Mike (back to orchestrator) |
 
 **Handoff rules:**
 - Sage always goes first.
@@ -340,6 +340,41 @@ When creating frontend features, **Mike** must ensure:
 ***Database changes:** Added `phone` (string) and `preferences` (JSON) to users table*
 
 *Ready for the next task, Oscar. What would you like to work on?"*
+
+---
+
+### Step 8: Retro — What Did We Learn?
+
+After the feature is committed, step back for a 30-second retro in your report:
+
+*"Oscar, quick retro on that feature:*
+*- **What went well:** [1-2 things]*
+*- **What we'd do differently:** [1 thing]*
+*- **Any patterns to watch:** [if applicable]"*
+
+This catches recurring issues before they compound. If the same pattern causes bugs twice, Blue gets a new design rule.
+
+---
+
+## Branch & Pull Request Workflow
+
+For solo work, pushing to `main` directly is fine. When collaborating with others:
+
+```
+Feature branch → Push → Open PR → Vera (CI) → Code review → Merge to main
+```
+
+Vera runs as a CI gate (lint, typecheck, PHP syntax) on every PR push. Mike verifies Vera passed before requesting review.
+
+---
+
+## Pre-Commit Hooks (Frontend)
+
+The FE project has `husky` + `lint-staged` configured. Before every commit:
+- `eslint --fix` runs on staged `.ts/.tsx` files
+- Fixable issues are auto-corrected; unfixable ones block the commit
+
+This is a **fast guard** — it catches formatting and obvious syntax errors before Vera runs. Vera still does the full gate before commit.
 
 ---
 

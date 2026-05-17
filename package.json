@@ -29,7 +29,8 @@
     "publish:mac": "npm run transpile:electron && npm run react:build && npx electron-builder --mac --arm64 --publish always",
     "publish:win": "npm run transpile:electron && npm run react:build && npx electron-builder --win --x64 --publish always",
     "publish:linux": "npm run transpile:electron && npm run react:build && npx electron-builder --linux --x64 --publish always",
-    "publish:all": "npm run transpile:electron && npm run react:build && npx electron-builder --mac --win --linux --publish always"
+    "publish:all": "npm run transpile:electron && npm run react:build && npx electron-builder --mac --win --linux --publish always",
+    "prepare": "husky"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -69,6 +70,8 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"
@@ -128,5 +131,10 @@
       "owner": "Custospark",
       "repo": "custocare-web-desktop"
     }
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix"
+    ]
   }
 }
