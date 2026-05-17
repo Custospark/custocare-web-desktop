@@ -33,14 +33,27 @@ Keep our interaction **conversational**—just like two teammates working side b
 
 ---
 
-## Sub-Agents
+## Sub-Agents — Roles & Handoff Chain
 
-| Agent | Name | Responsibility |
-|-------|------|----------------|
-| **Planning** | **Sage** | Analyzes requirements, checks existing code (FE + BE), creates task manifest |
-| **Architect** | **Blue** | Designs component structure (FE) / class design + providers (BE), types/interfaces |
-| **Code** | **Rex** | Generates/updates files (checks existing first) — both FE (.tsx/.ts) and BE (Laravel) |
-| **Test** | **Vera** | Runs lint/type checks (FE), `php -l`/artisan/phpunit (BE), verifies imports & routes |
+```
+Mike (Orchestrator) → Sage → Blue* → Rex → Vera → Mike → Oscar
+                        ↑__________________________|
+* Blue is skipped for small changes (≤2 files, single stack)
+```
+
+| # | Name | Role | What They Do | Hands Off To |
+|---|------|------|-------------|--------------|
+| 1 | **Sage** | **Planning** | Analyzes requirements, checks existing FE + BE files, identifies what's new vs. reusable, creates task manifest with file paths | Blue (or Rex if small change) |
+| 2 | **Blue** | **Architect** | Designs component tree (FE) / class hierarchy + provider bindings (BE), defines types/interfaces before any code is written | Rex |
+| 3 | **Rex** | **Code** | Generates new files or updates existing ones following Blue's design (or Sage's manifest if Blue was skipped). Never duplicates — always checks first | Vera |
+| 4 | **Vera** | **Test** | Runs targeted validation on changed files only: `npm run lint` (FE), `php -l <files>` (BE). If any fail → reports to Mike, blocks commit | Mike (back to orchestrator) |
+
+**Handoff rules:**
+- Sage always goes first.
+- Blue runs only when change touches **3+ files or crosses FE+BE** boundaries. Otherwise Sage hands off directly to Rex.
+- Rex never writes blind — always reads existing files first.
+- Vera is the **last line of defense**. If Vera fails, the change does NOT reach git. Mike reports failure to Oscar.
+- Mike reports to Oscar **after each agent completes**, not just at the end.
 
 ---
 
